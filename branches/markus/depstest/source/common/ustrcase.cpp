@@ -19,7 +19,6 @@
 */
 
 #include "unicode/utypes.h"
-#include "unicode/uloc.h"
 #include "unicode/ustring.h"
 #include "unicode/ucasemap.h"
 #include "unicode/ubrk.h"
@@ -169,7 +168,17 @@ ustrcase_setTempCaseMapLocale(UCaseMap *csm, const char *locale) {
 
     /* the internal functions require locale!=NULL */
     if(locale==NULL) {
-        locale=uloc_getDefault();
+        // Same comment as in unistr_case.cpp:
+        //
+        // Do not call uloc_getDefault() or Locale::getDefault().getName()
+        // because that has too many dependencies.
+        // We only care about a small set of language subtags,
+        // and we do not need the locale ID to be canonicalized.
+        //
+        // This is inefficient if used frequently because uprv_getDefaultLocaleID()
+        // does not cache the locale ID.
+        // Best is to not call case mapping functions with a NULL locale ID.
+        locale=uprv_getDefaultLocaleID();
     }
     for(i=0; i<4 && (c=locale[i])!=0 && c!='-' && c!='_'; ++i) {
         csm->locale[i]=c;

@@ -63,7 +63,7 @@ library: common
     unistr_props.o uscript.o uiter.o propsvec.o usetiter.o
     loclikely.o unames.o stringtriebuilder.o locdispnames.o
     uchriter.o parsepos.o normlzr.o servslkf.o unormcmp.o schriter.o
-    bytestriebuilder.o ruleiter.o servlkf.o
+    bytestriebuilder.o servlkf.o
     servnotf.o unorm.o
     propname.o messagepattern.o ucharstriebuilder.o
     ustrfmt.o uvectr64.o ucharstrieiterator.o
@@ -80,7 +80,6 @@ library: common
     unistr_core unistr_case unistr_titlecase_brkiter
     uprops ubidi_props ucase
     resourcebundle
-    locale_id
     conversion
     hashtable uhash uvector utrie2 utrie2_builder
     sort
@@ -94,7 +93,7 @@ group: breakiterator
     rbbidata.o rbbirb.o
     dictbe.o
   deps
-    resourcebundle locale_id utext uniset_props uhash ustack utrie
+    resourcebundle utext uniset_props uhash ustack utrie
 
 group: uts46
     uts46.o
@@ -122,9 +121,10 @@ group: punycode
     platform
 
 group: uniset_props
-    uniset_props.o
+    uniset_props.o ruleiter.o
   deps
-    uniset_core uprops
+    uniset_core uprops unistr_case # unistr_titlecase_brkiter
+    resourcebundle
 
 group: uniset_core
     unifilt.o unifunct.o
@@ -196,7 +196,6 @@ group: ustr_titlecase_brkiter
 group: ustring_case
     ustrcase.o
   deps
-    locale_id  # for uloc_getDefault
     ucase
 
 group: ucase
@@ -226,19 +225,26 @@ group: ucnv_io
 
 group: resourcebundle
     resbund.o uresbund.o uresdata.o
+    # uloc_tag.c converts between old ICU/LDML/CLDR locale IDs and newer BCP 47 IDs.
+    # It uses data from resource bundles for some of the mappings.
+    # We might want to generate .c files for that data, to #include rather than load,
+    # to minimize dependencies from this code.
+    # Then we could separate this higher-level locale ID code from the resource bundle code.
+    uloc.o uloc_tag.o
+    # Even basic locid.cpp via Locale constructors and Locale::getDefault()
+    # depend on canonicalization and data loading.
+    # We can probably only disentangle basic locale ID handling from resource bundle code
+    # by hardcoding all of the locale ID data.
+    locid.o locmap.o
   deps
-    locale_id udata ucol_swp
+    udata ucol_swp
+    sort stringenumeration uhash
 
 group: udata
     udata.o ucmndata.o udatamem.o
     umapfile.o
   deps
     uhash charstr stringpiece platform stubdata
-
-group: locale_id
-    locid.o locmap.o uloc.o uloc_tag.o
-  deps
-    sort stringenumeration uhash
 
 group: utrie2_builder
     utrie2_builder.o

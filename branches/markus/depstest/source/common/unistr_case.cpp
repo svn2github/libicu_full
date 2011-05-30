@@ -29,6 +29,21 @@
 
 U_NAMESPACE_BEGIN
 
+static const char *
+getDefaultLocaleID() {
+  // Same comment as in ustrcase.cpp:
+  //
+  // Do not call uloc_getDefault() or Locale::getDefault().getName()
+  // because that has too many dependencies.
+  // We only care about a small set of language subtags,
+  // and we do not need the locale ID to be canonicalized.
+  //
+  // This is inefficient if used frequently because uprv_getDefaultLocaleID()
+  // does not cache the locale ID.
+  // Best is to not call case mapping functions with a NULL locale ID.
+  return uprv_getDefaultLocaleID();
+}
+
 //========================================
 // Read-only implementation
 //========================================
@@ -161,7 +176,7 @@ UnicodeString::caseMap(const char *locale, uint32_t options, int32_t toWhichCase
 
 UnicodeString &
 UnicodeString::toLower() {
-  return caseMap(Locale::getDefault().getName(), 0, TO_LOWER);
+  return caseMap(getDefaultLocaleID(), 0, TO_LOWER);
 }
 
 UnicodeString &
@@ -171,7 +186,7 @@ UnicodeString::toLower(const Locale &locale) {
 
 UnicodeString &
 UnicodeString::toUpper() {
-  return caseMap(Locale::getDefault().getName(), 0, TO_UPPER);
+  return caseMap(getDefaultLocaleID(), 0, TO_UPPER);
 }
 
 UnicodeString &
