@@ -391,6 +391,9 @@
     <ClCompile Include="uniset.cpp">
       <Filter>properties &amp; sets</Filter>
     </ClCompile>
+    <ClCompile Include="uniset_closure.cpp">
+      <Filter>properties &amp; sets</Filter>
+    </ClCompile>
     <ClCompile Include="uniset_props.cpp">
       <Filter>properties &amp; sets</Filter>
     </ClCompile>

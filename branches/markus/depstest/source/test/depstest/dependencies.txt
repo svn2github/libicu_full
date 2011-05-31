@@ -50,25 +50,24 @@ library: stubdata
 
 library: common
     # Files in the common library that are not in its dependencies.
-    uvectr32.o locavailable.o
-    ushape.o servls.o bytestrie.o
+    ushape.o
     ucnvsel.o resbund_cnv.o
-    icudataver.o servrbf.o unistr_cnv.o uset.o
-    unorm_it.o uidna.o bytestrieiterator.o servlk.o
+    icudataver.o unistr_cnv.o uset.o
+    unorm_it.o uidna.o bytestrieiterator.o
     filterednormalizer2.o
-    ustr_wcs.o ubidi.o serv.o ures_cnv.o
-    chariter.o caniter.o errorcode.o
+    ustr_wcs.o ubidi.o ures_cnv.o
+    caniter.o errorcode.o
     ubidiwrt.o ubidiln.o usprep.o wintz.o
-    locutil.o triedict.o util_props.o ustr_cnv.o
-    unistr_props.o uscript.o uiter.o propsvec.o usetiter.o
-    loclikely.o unames.o stringtriebuilder.o locdispnames.o
-    uchriter.o parsepos.o normlzr.o servslkf.o unormcmp.o schriter.o
-    bytestriebuilder.o servlkf.o
-    servnotf.o unorm.o
-    propname.o messagepattern.o ucharstriebuilder.o
-    ustrfmt.o uvectr64.o ucharstrieiterator.o
+    util_props.o
+    unistr_props.o uiter.o propsvec.o usetiter.o
+    loclikely.o stringtriebuilder.o
+    normlzr.o unormcmp.o
+    bytestriebuilder.o
+    unorm.o
+    messagepattern.o ucharstriebuilder.o
+    uvectr64.o ucharstrieiterator.o
     usc_impl.o ulist.o
-    locbased.o ucasemap.o locresdata.o ucnv_set.o uset_props.o dtintrv.o
+    ucasemap.o ucnv_set.o uset_props.o dtintrv.o
     ucnvdisp.o ucharstrie.o ucat.o
     utypes.o
   deps
@@ -78,8 +77,9 @@ library: common
     uniset_core
     stringenumeration
     unistr_core unistr_case unistr_titlecase_brkiter
-    uprops ubidi_props ucase
-    resourcebundle
+    uniset_props uniset_closure
+    uprops ubidi_props ucase uscript
+    resourcebundle service_registration
     conversion
     hashtable uhash uvector utrie2 utrie2_builder
     sort
@@ -88,12 +88,19 @@ library: common
     platform
 
 group: breakiterator
+    # We could try to split off a breakiterator_builder group,
+    # but we still need uniset_props for code like in the ThaiBreakEngine constructor
+    # which does
+    #   fThaiWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Thai:]&[:LineBreak=SA:]]"), status)
     brkiter.o brkeng.o ubrk.o
     rbbi.o rbbinode.o rbbiscan.o rbbisetb.o rbbistbl.o rbbitblb.o
     rbbidata.o rbbirb.o
-    dictbe.o
+    triedict.o dictbe.o
   deps
-    resourcebundle utext uniset_props uhash ustack utrie
+    resourcebundle service_registration
+    schriter utext uniset_core uniset_props
+    uhash ustack utrie
+    uvector32  # for triedict.o
 
 group: uts46
     uts46.o
@@ -120,11 +127,23 @@ group: punycode
   deps
     platform
 
+group: uniset_closure
+    uniset_closure.o
+  deps
+    uniset_core unistr_titlecase_brkiter
+
 group: uniset_props
     uniset_props.o ruleiter.o
   deps
-    uniset_core uprops unistr_case # unistr_titlecase_brkiter
+    uniset_core uprops unistr_case # TODO: unistr_titlecase_brkiter
+    parsepos
     resourcebundle
+    propname unames
+
+group: parsepos
+    parsepos.o
+  deps
+    platform
 
 group: uniset_core
     unifilt.o unifunct.o
@@ -149,10 +168,29 @@ group: stringenumeration
   deps
     unistr_core
 
+group: schriter
+    schriter.o
+    # The UCharCharacterIterator implements virtual void getText(UnicodeString& result)
+    # so it depends on UnicodeString, therefore it makes little sense to split
+    # schriter and uchriter into separate groups.
+    uchriter.o
+  deps
+    chariter unistr_core
+
+group: chariter
+    chariter.o
+  deps
+    platform
+
 group: unistr_core
     unistr.o
   deps
     ustrtrns appendable
+
+group: uscript
+    uscript.o  # uscript_getCode() accepts a locale ID and loads its script code data
+  deps
+    propname resourcebundle
 
 group: uprops
     uprops.o
@@ -162,6 +200,16 @@ group: uprops
     ubidi_props
     unistr_case ustring_case  # only for case folding
     ucase
+
+group: propname
+    propname.o
+  deps
+    bytestrie
+
+group: unames
+    unames.o
+  deps
+    uchar udata
 
 group: uchar
     uchar.o
@@ -191,7 +239,7 @@ group: ustr_titlecase_brkiter
     ustr_titlecase_brkiter.o
   deps
     breakiterator
-    ucase
+    ustring_case ucase
 
 group: ustring_case
     ustrcase.o
@@ -209,6 +257,7 @@ group: uinit
     ucnv_io icuplug
 
 group: conversion
+    ustr_cnv.o
     ucnv.o ucnv_cnv.o ucnv_bld.o ucnv_cb.o ucnv_err.o
     ucnv_ct.o
     ucnvmbcs.o ucnv_ext.o
@@ -223,8 +272,28 @@ group: ucnv_io
   deps
     sort stringenumeration udata
 
+group: service_registration
+    serv.o servnotf.o servlkf.o servlk.o servls.o servrbf.o servslkf.o
+    locutil.o
+  deps
+    locale_display_names resourcebundle
+    hashtable uvector
+
+group: locale_display_names
+    locdispnames.o
+  deps
+    locresdata
+
+group: locresdata
+    # This was intended to collect locale functions that load resource bundle data.
+    # See the resourcebundle group about what else loads data.
+    locresdata.o
+  deps
+    resourcebundle
+
 group: resourcebundle
     resbund.o uresbund.o uresdata.o
+    locavailable.o
     # uloc_tag.c converts between old ICU/LDML/CLDR locale IDs and newer BCP 47 IDs.
     # It uses data from resource bundles for some of the mappings.
     # We might want to generate .c files for that data, to #include rather than load,
@@ -236,6 +305,8 @@ group: resourcebundle
     # We can probably only disentangle basic locale ID handling from resource bundle code
     # by hardcoding all of the locale ID data.
     locid.o locmap.o
+    # Do we need class LocaleBased? http://bugs.icu-project.org/trac/ticket/8608
+    locbased.o
   deps
     udata ucol_swp
     sort stringenumeration uhash
@@ -245,6 +316,11 @@ group: udata
     umapfile.o
   deps
     uhash charstr stringpiece platform stubdata
+
+group: bytestrie
+    bytestrie.o
+  deps
+    platform
 
 group: utrie2_builder
     utrie2_builder.o
@@ -285,6 +361,11 @@ group: uvector
   deps
     platform
     sort  # for UVector::sort()
+
+group: uvector32
+    uvectr32.o
+  deps
+    platform
 
 group: sort
     uarrsort.o
@@ -330,6 +411,7 @@ group: platform
     cmemory.o uobject.o
     cstring.o cwchar.o uinvchar.o
     ustring.o  # Other platform files really just need u_strlen
+    ustrfmt.o  # uprv_itou
     utf_impl.o
     putil.o
     ucln_cmn.o  # for putil.o which calls ucln_common_registerCleanup; TODO: make it not depend on uinit; test UCLN_TYPE in ucln_imp.h?

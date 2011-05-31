@@ -1141,12 +1141,11 @@ void RBBIRuleScanner::scanSet() {
     pos.setIndex(fScanIndex);
     startPos = fScanIndex;
     UErrorCode localStatus = U_ZERO_ERROR;
-    uset = new UnicodeSet(fRB->fRules, pos, USET_IGNORE_SPACE,
-                         fSymbolTable,
-                         localStatus);
+    uset = new UnicodeSet();
     if (uset == NULL) {
         localStatus = U_MEMORY_ALLOCATION_ERROR;
     }
+    uset->applyPatternIgnoreSpace(fRB->fRules, pos, fSymbolTable, localStatus);
     if (U_FAILURE(localStatus)) {
         //  TODO:  Get more accurate position of the error from UnicodeSet's return info.
         //         UnicodeSet appears to not be reporting correctly at this time.

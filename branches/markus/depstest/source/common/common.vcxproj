@@ -383,6 +383,7 @@
     <ClCompile Include="unifilt.cpp" />
     <ClCompile Include="unifunct.cpp" />
     <ClCompile Include="uniset.cpp" />
+    <ClCompile Include="uniset_closure.cpp" />
     <ClCompile Include="uniset_props.cpp" />
     <ClCompile Include="unisetspan.cpp" />
     <ClCompile Include="uprops.cpp" />
