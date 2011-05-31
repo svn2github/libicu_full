@@ -49,42 +49,39 @@ library: stubdata
     stubdata.o  # Exports icudt48_dat.
 
 library: common
-    # Files in the common library that are not in its dependencies.
-    ushape.o
-    ucnvsel.o resbund_cnv.o
-    icudataver.o unistr_cnv.o uset.o
-    unorm_it.o uidna.o bytestrieiterator.o
-    filterednormalizer2.o
-    ustr_wcs.o ubidi.o ures_cnv.o
-    caniter.o errorcode.o
-    ubidiwrt.o ubidiln.o usprep.o wintz.o
-    util_props.o
-    unistr_props.o uiter.o propsvec.o usetiter.o
-    loclikely.o stringtriebuilder.o
-    normlzr.o unormcmp.o
-    bytestriebuilder.o
-    unorm.o
-    messagepattern.o ucharstriebuilder.o
-    uvectr64.o ucharstrieiterator.o
-    usc_impl.o ulist.o
-    ucasemap.o ucnv_set.o uset_props.o dtintrv.o
-    ucnvdisp.o ucharstrie.o ucat.o
-    utypes.o
+    # All files in the common library are listed in its dependencies.
   deps
     # Libraries and groups that the common library depends on.
+    date_interval
     breakiterator
-    uts46 normalizer2
-    uniset_core
+    uts46 filterednormalizer2 normalizer2 canonical_iterator
+    normlzr unormcmp unorm_it unorm
+    idna2003 stringprep
     stringenumeration
-    unistr_core unistr_case unistr_titlecase_brkiter
-    uniset_props uniset_closure
+    unistr_core unistr_case unistr_props unistr_titlecase_brkiter unistr_cnv
+    uniset_core uniset_props uniset_closure usetiter uset uset_props
+    uiter
+    ucasemap script_runs
     uprops ubidi_props ucase uscript
-    resourcebundle service_registration
-    conversion
-    hashtable uhash uvector utrie2 utrie2_builder
+    ubidi ushape
+    resourcebundle service_registration resbund_cnv ures_cnv icudataver ucat
+    loclikely
+    conversion converter_selector ucnv_set ucnvdisp
+    messagepattern
+    icu_utility icu_utility_with_props
+    ustr_wcs
+    ucharstriebuilder ucharstrieiterator
+    bytestriebuilder bytestrieiterator
+    hashtable uhash uvector uvector32 uvector64 ulist
+    propsvec utrie2 utrie2_builder
     sort
-    uinit
+    uinit utypes errorcode
     icuplug
+    platform
+
+group: date_interval  # class DateInterval
+    dtintrv.o
+  deps
     platform
 
 group: breakiterator
@@ -102,6 +99,32 @@ group: breakiterator
     uhash ustack utrie
     uvector32  # for triedict.o
 
+group: unormcmp  # unorm_compare()
+    unormcmp.o
+  deps
+    filterednormalizer2
+    uniset_props  # for uniset_getUnicode32Instance()
+    ucase
+
+group: unorm_it  # UNormIterator
+    unorm_it.o
+  deps
+    unorm uiter
+
+group: unorm  # old normalization C API
+    unorm.o
+  deps
+    filterednormalizer2
+    uniset_props  # for uniset_getUnicode32Instance()
+    uiter
+
+group: normlzr  # old Normalizer C++ class
+    normlzr.o
+  deps
+    filterednormalizer2
+    uniset_props  # for uniset_getUnicode32Instance()
+    schriter
+
 group: uts46
     uts46.o
   deps
@@ -110,6 +133,28 @@ group: uts46
     ubidi_props  # for u_charDirection() & ubidi_getJoiningType()
     unistr_core
     stringpiece bytestream
+
+group: filterednormalizer2
+    filterednormalizer2.o
+  deps
+    normalizer2
+
+group: idna2003
+    uidna.o
+  deps
+    stringprep punycode
+
+group: stringprep
+    usprep.o
+  deps
+    unorm  # could change to use filterednormalizer2 directly for Unicode 3.2 normalization
+    normalizer2
+    ubidi_props
+
+group: canonical_iterator
+    caniter.o
+  deps
+    normalizer2 usetiter
 
 group: normalizer2
     normalizer2.o
@@ -126,6 +171,16 @@ group: punycode
     punycode.o
   deps
     platform
+
+group: uset_props
+    uset_props.o
+  deps
+    uniset_closure uniset_props uniset_core
+
+group: uset
+    uset.o
+  deps
+    uniset_core
 
 group: uniset_closure
     uniset_closure.o
@@ -145,6 +200,11 @@ group: parsepos
   deps
     platform
 
+group: usetiter  # UnicodeSetIterator
+    usetiter.o
+  deps
+    uniset_core
+
 group: uniset_core
     unifilt.o unifunct.o
     uniset.o bmpset.o unisetspan.o
@@ -152,6 +212,11 @@ group: uniset_core
     patternprops
     unistr_core icu_utility
     uvector
+
+group: icu_utility_with_props
+    util_props.o
+  deps
+    icu_utility uchar ucase
 
 group: icu_utility
     util.o
@@ -182,6 +247,16 @@ group: chariter
   deps
     platform
 
+group: uiter
+    uiter.o
+  deps
+    platform
+
+group: unistr_cnv
+    unistr_cnv.o
+  deps
+    conversion unistr_core
+
 group: unistr_core
     unistr.o
   deps
@@ -211,18 +286,44 @@ group: unames
   deps
     uchar udata
 
+group: script_runs
+    usc_impl.o
+  deps
+    uchar
+
 group: uchar
     uchar.o
   deps
     utrie2
 
+group: messagepattern  # for MessageFormat and tools
+    messagepattern.o
+  deps
+    patternprops unistr_core
+
 group: patternprops
     patternprops.o
+
+group: ushape
+    ushape.o
+  deps
+    ubidi_props
+
+group: ubidi
+    ubidi.o ubidiln.o ubidiwrt.o
+  deps
+    ubidi_props
+    uchar  # for doWriteReverse() which uses IS_COMBINING(u_charType(c))
 
 group: ubidi_props
     ubidi_props.o
   deps
     utrie2
+
+group: unistr_props
+    unistr_props.o
+  deps
+    unistr_core uchar
 
 group: unistr_case
     unistr_case.o
@@ -241,6 +342,13 @@ group: ustr_titlecase_brkiter
     breakiterator
     ustring_case ucase
 
+group: ucasemap
+    ucasemap.o
+  deps
+    ustring_case breakiterator
+    resourcebundle  # uloc_getName() etc.
+    utext
+
 group: ustring_case
     ustrcase.o
   deps
@@ -255,6 +363,21 @@ group: uinit
     uinit.o
   deps
     ucnv_io icuplug
+
+group: converter_selector
+    ucnvsel.o
+  deps
+    conversion propsvec utrie2_builder uset ucnv_set
+
+group: ucnvdisp  # ucnv_getDisplayName()
+    ucnvdisp.o
+  deps
+    conversion resourcebundle
+
+group: ucnv_set  # ucnv_getUnicodeSet
+    ucnv_set.o
+  deps
+    uset
 
 group: conversion
     ustr_cnv.o
@@ -279,10 +402,25 @@ group: service_registration
     locale_display_names resourcebundle
     hashtable uvector
 
+group: ucat  # message-catalog-like API
+    ucat.o
+  deps
+    resourcebundle
+
 group: locale_display_names
     locdispnames.o
   deps
     locresdata
+
+group: icudataver  # u_getDataVersion()
+    icudataver.o
+  deps
+    resourcebundle
+
+group: loclikely
+    loclikely.o
+  deps
+    resourcebundle
 
 group: locresdata
     # This was intended to collect locale functions that load resource bundle data.
@@ -290,6 +428,16 @@ group: locresdata
     locresdata.o
   deps
     resourcebundle
+
+group: resbund_cnv  # paths are Unicode strings
+    resbund_cnv.o
+  deps
+    conversion resourcebundle ures_cnv
+
+group: ures_cnv  # ures_openU, path is a Unicode string
+    ures_cnv.o
+  deps
+    conversion resourcebundle
 
 group: resourcebundle
     resbund.o uresbund.o uresdata.o
@@ -304,7 +452,7 @@ group: resourcebundle
     # depend on canonicalization and data loading.
     # We can probably only disentangle basic locale ID handling from resource bundle code
     # by hardcoding all of the locale ID data.
-    locid.o locmap.o
+    locid.o locmap.o wintz.o
     # Do we need class LocaleBased? http://bugs.icu-project.org/trac/ticket/8608
     locbased.o
   deps
@@ -317,10 +465,47 @@ group: udata
   deps
     uhash charstr stringpiece platform stubdata
 
+group: ucharstriebuilder
+    ucharstriebuilder.o
+  deps
+    ucharstrie stringtriebuilder sort
+    unistr_core
+
+group: ucharstrieiterator
+    ucharstrieiterator.o
+  deps
+    ucharstrie unistr_core uvector32
+
+group: ucharstrie
+    ucharstrie.o
+  deps
+    platform
+
+group: bytestriebuilder
+    bytestriebuilder.o
+  deps
+    bytestrie stringtriebuilder sort
+    charstr stringpiece
+
+group: bytestrieiterator
+    bytestrieiterator.o
+  deps
+    bytestrie charstr uvector32
+
 group: bytestrie
     bytestrie.o
   deps
     platform
+
+group: stringtriebuilder
+    stringtriebuilder.o
+  deps
+    uhash
+
+group: propsvec
+    propsvec.o
+  deps
+    sort utrie2_builder
 
 group: utrie2_builder
     utrie2_builder.o
@@ -367,10 +552,26 @@ group: uvector32
   deps
     platform
 
+group: uvector64
+    uvectr64.o
+  deps
+    platform
+
+group: ulist
+    ulist.o
+  deps
+    platform
+
 group: sort
     uarrsort.o
   deps
     platform
+
+group: ustr_wcs
+    ustr_wcs.o
+  deps
+    ustrtrns  # on platforms where wchar_t is UTF-32
+    # platform -- on other platforms
 
 group: ustrtrns
     ustrtrns.o
@@ -406,6 +607,14 @@ group: ucol_swp
   deps
     platform
 
+group: errorcode  # ErrorCode base class
+    errorcode.o
+  deps
+    utypes
+
+group: utypes  # u_errorName()
+    utypes.o
+
 group: platform
     # Files in the "platform" group.
     cmemory.o uobject.o
@@ -420,8 +629,6 @@ group: platform
     mutex.o umutex.o
     utrace.o
   # The "platform" group has no ICU dependencies.
-
-# TODO: messagepattern should depend on only few things
 
 # TODO: library: i18n
 #  deps
