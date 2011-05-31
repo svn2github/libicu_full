@@ -95,16 +95,3 @@ uscript_getCode(const char* nameOrAbbrOrLocale,
     }
     return numFilled;
 }
-
-U_CAPI const char*  U_EXPORT2
-uscript_getName(UScriptCode scriptCode){
-    return u_getPropertyValueName(UCHAR_SCRIPT, scriptCode,
-                                  U_LONG_PROPERTY_NAME);
-}
-
-U_CAPI const char*  U_EXPORT2
-uscript_getShortName(UScriptCode scriptCode){
-    return u_getPropertyValueName(UCHAR_SCRIPT, scriptCode,
-                                  U_SHORT_PROPERTY_NAME);
-}
-
