@@ -90,7 +90,7 @@ def _GetExports(name, parents):
       obj_file = _obj_files[file_name]
       imports |= obj_file["imports"]
       exports |= obj_file["exports"]
-  imports -= exports | dependencies.system_symbols | _ignored_symbols
+  imports -= exports | _ignored_symbols
   deps = item.get("deps")
   if deps:
     for dep in deps:
@@ -120,6 +120,10 @@ def main():
     sys.exit(("Command line error: " +
              "need one argument with the root path to the built ICU libraries/*.o files."))
   dependencies.Load()
+  system_symbols = dependencies.items.get("system_symbols")
+  if system_symbols:
+    for symbol in system_symbols["exports"]:
+      _symbols_to_files[symbol] = "system_symbols"
   for library_name in dependencies.libraries:
     _ReadLibrary(sys.argv[1], library_name)
   o_files_set = set(_obj_files.keys())
@@ -127,21 +131,21 @@ def main():
   files_missing_from_build = dependencies.files - o_files_set
   if files_missing_from_deps:
     sys.stderr.write("Error: files missing from dependencies.txt:\n%s\n" %
-                     files_missing_from_deps)
+                     sorted(files_missing_from_deps))
     _return_value = 1
   if files_missing_from_build:
     sys.stderr.write("Error: files in dependencies.txt but not built:\n%s\n" %
-                     files_missing_from_build)
+                     sorted(files_missing_from_build))
     _return_value = 1
   if _ignored_symbols:
-    print "Info: ignored symbols:\n%s" % _ignored_symbols
+    print "Info: ignored symbols:\n%s" % sorted(_ignored_symbols)
   if not _return_value:
     for library_name in dependencies.libraries:
       _GetExports(library_name, [])
   # TODO: print ".o files:\n%s" % _obj_files
   # TODO: print "items:\n%s" % dependencies.items
   if not _return_value:
-    print "Specified and actual dependencies match."
+    print "OK: Specified and actual dependencies match."
   return _return_value
 
 if __name__ == "__main__":

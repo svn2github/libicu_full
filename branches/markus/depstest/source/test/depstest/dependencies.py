@@ -15,11 +15,13 @@ Reads dependencies.txt and makes the data available.
 Attributes:
   files: Set of "library/filename.o" files mentioned in the dependencies file.
   items: Map from library or group names to item maps.
-         Each item has a "type" ("library" or "group") and optional
-         sets of "files" (as in the files attribute) and "deps" (libraries & groups).
-         A group item also has a "library" name.
+    Each item has a "type" ("library" or "group" or "system_symbols").
+    A library or group item can have an optional set of "files" (as in the files attribute).
+    Each item can have an optional set of "deps" (libraries & groups).
+    A group item also has a "library" name unless it is a group of system symbols.
+    The one "system_symbols" item and its groups have sets of "exports"
+    with standard-library system symbol names.
   libraries: Set of library names mentioned in the dependencies file.
-  system_symbols: Set of standard-library symbols specified in the dependencies file.
 """
 __author__ = "Markus W. Scherer"
 
@@ -28,7 +30,6 @@ import sys
 files = set()
 items = {}
 libraries = set()
-system_symbols = set()
 
 _line_number = 0
 _groups_to_be_defined = set()
@@ -72,9 +73,7 @@ def _ReadFiles(deps_file, item, library_name):
     line = _ReadLine(deps_file)
     if not line: continue
     if not line.startswith("    "): return line
-    if item_files == None:
-      item["files"] = set()
-      item_files = item["files"]
+    if item_files == None: item_files = item["files"] = set()
     for file_name in line.split():
       _CheckFileName(file_name)
       file_name = library_name + "/" + file_name
@@ -83,6 +82,10 @@ def _ReadFiles(deps_file, item, library_name):
       files.add(file_name)
       item_files.add(file_name)
 
+def _IsLibrary(item): return item and item["type"] == "library"
+
+def _IsLibraryGroup(item): return item and "library" in item
+
 def _ReadDeps(deps_file, item, library_name):
   global items, _line_number, _groups_to_be_defined
   item_deps = item.get("deps")
@@ -90,22 +93,34 @@ def _ReadDeps(deps_file, item, library_name):
     line = _ReadLine(deps_file)
     if not line: continue
     if not line.startswith("    "): return line
-    if item_deps == None:
-      item["deps"] = set()
-      item_deps = item["deps"]
+    if item_deps == None: item_deps = item["deps"] = set()
     for dep in line.split():
       _CheckGroupName(dep)
-      if item["type"] == "library" and dep in items and items[dep]["type"] != "library":
-            sys.exit("Error:%d: library %s depends on previously defined group %s" %
-                     (_line_number, library_name, dep))
-      if dep not in items:
+      dep_item = items.get(dep)
+      if item["type"] == "group":
+        pass
+      elif item["type"] == "library":
+        if _IsLibraryGroup(dep_item):
+          sys.exit("Error:%d: library %s depends on previously defined library group %s" %
+                   (_line_number, library_name, dep))
+      elif item["type"] == "system_symbols":
+        if _IsLibraryGroup(dep_item) or _IsLibrary(dep_item):
+          sys.exit(("Error:%d: system_symbols depend on previously defined " +
+                    "library or library group %s") % (_line_number, dep))
+      if dep_item == None:
         # Add this dependency as a new group.
-        items[dep] = {"type": "group", "library": library_name}
+        items[dep] = {"type": "group"}
+        if library_name: items[dep]["library"] = library_name
         _groups_to_be_defined.add(dep)
       item_deps.add(dep)
 
-def _ReadSystemSymbols(deps_file):
-  global system_symbols, _line_number
+def _AddSystemSymbol(item, symbol):
+  exports = item.get("exports")
+  if exports == None: exports = item["exports"] = set()
+  exports.add(symbol)
+
+def _ReadSystemSymbols(deps_file, item):
+  global _line_number
   while True:
     line = _ReadLine(deps_file)
     if not line: continue
@@ -115,12 +130,31 @@ def _ReadSystemSymbols(deps_file):
       # One double-quote-enclosed symbol on the line, allows spaces in a symbol name.
       symbol = line[1:-1]
       if line.startswith('"') and line.endswith('"') and '"' not in symbol:
-        system_symbols.add(symbol)
+        _AddSystemSymbol(item, symbol)
       else:
         sys.exit("Error:%d: invalid quoted symbol name %s" % (_line_number, line))
     else:
       # One or more space-separate symbols.
-      for symbol in line.split(): system_symbols.add(symbol)
+      for symbol in line.split(): _AddSystemSymbol(item, symbol)
+
+def _GetExports(name, parents):
+  global items
+  item = items[name]
+  item_type = item["type"]
+  if name in parents:
+    sys.exit("Error: %s %s has a circular dependency on itself: %s" %
+             (item_type, name, parents))
+  # TODO: print "** %s %s" % (parents, name)
+  exports = item.get("exports")
+  if exports == None: exports = set()
+  # Calculcate recursively.
+  deps = item.get("deps")
+  if deps:
+    parents.append(name)
+    for dep in deps: exports |= _GetExports(dep, parents)
+    del parents[-1]
+  item["exports"] = exports
+  return exports
 
 def Load():
   """Reads "dependencies.txt" and populates the module attributes."""
@@ -142,8 +176,8 @@ def Load():
           sys.exit("Error:%d: library definition using duplicate name %s" % (_line_number, name))
         # TODO: print "D  adding library " + name
         libraries.add(name)
-        items[name] = {"type": "library"}
-        line = _ReadFiles(deps_file, items[name], name)
+        item = items[name] = {"type": "library"}
+        line = _ReadFiles(deps_file, item, name)
       elif line.startswith("group: "):
         current_type = "group"
         name = line[7:].lstrip()
@@ -155,20 +189,36 @@ def Load():
           sys.exit("Error:%d: group definition using duplicate name %s" % (_line_number, name))
         _groups_to_be_defined.remove(name)
         item = items[name]
-        line = _ReadFiles(deps_file, item, item["library"])
+        library_name = item.get("library")
+        if library_name:
+          line = _ReadFiles(deps_file, item, library_name)
+        else:
+          line = _ReadSystemSymbols(deps_file, item)
       elif line == "  deps":
         if current_type == "library":
           line = _ReadDeps(deps_file, items[name], name)
         elif current_type == "group":
           item = items[name]
-          line = _ReadDeps(deps_file, item, item["library"])
+          line = _ReadDeps(deps_file, item, item.get("library"))
+        elif current_type == "system_symbols":
+          item = items[current_type]
+          line = _ReadDeps(deps_file, item, None)
         else:
           sys.exit("Error:%d: deps before any library or group" % _line_number)
       elif line == "system_symbols:":
-        line = _ReadSystemSymbols(deps_file)
+        current_type = "system_symbols"
+        if current_type in items:
+          sys.exit("Error:%d: duplicate entry for system_symbols" % _line_number)
+        item = items[current_type] = {"type": current_type}
+        line = _ReadSystemSymbols(deps_file, item)
       else:
         sys.exit("Syntax error:%d: %s" % (_line_number, line))
   except StopIteration:
     pass
   if _groups_to_be_defined:
     sys.exit("Error: some groups mentioned in dependencies are undefined: %s" % _groups_to_be_defined)
+  # Propagate system_symbols exports.
+  if "system_symbols" in items:
+    _GetExports("system_symbols", [])
+  else:
+    items["system_symbols"] = {"type": "system_symbols", "exports": set()}

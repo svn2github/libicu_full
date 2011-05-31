@@ -6,31 +6,70 @@
 # created on: 2011may26
 # created by: Markus W. Scherer
 
+# Standard library symbols used by ICU --------------------------------------- #
+
 system_symbols:
-    # Standard C library symbols used by ICU.
-    dlopen dlclose dlsym  # called by putil.o only for icuplug.o
-    fopen fclose fgets fread fseek ftell rewind
-    opendir closedir readdir
-    readlink  # putil.cpp uprv_tzname() calls this in a hack to get the time zone name
-    open close stat mmap munmap  # for memory-mapped data loading
-    free malloc realloc
-    getenv
-    nl_langinfo setlocale
-    gettimeofday localtime_r tzname tzset __timezone
-    memcmp memcpy memmove memset
-    perror  # putil.cpp uprv_dl_open() calls perror("dlopen")
-    isspace
-    __ctype_b_loc  # for <ctype.h>
-    strlen strchr strrchr strstr strcmp strncmp strcpy strncpy strcat strncat
-    atol strtod strtol strtoul
-    sprintf
-    pthread_mutex_init pthread_mutex_destroy pthread_mutex_lock pthread_mutex_unlock
-    floor ceil modf fmod log pow
-    __assert_fail __stack_chk_fail
+  deps
+    # C
+    PIC system_debug errno_perror malloc_functions c_strings c_string_formatting
+    floating_point pthread system_locale
+    stdio file_io readlink_function dir_io mmap_functions dlfcn
+    # C++
+    cplusplus
+
+group: PIC
     # Position-Independent Code (-fPIC) requires a Global Offset Table.
     _GLOBAL_OFFSET_TABLE_
 
-    # C++
+group: system_debug
+    __assert_fail __stack_chk_fail
+
+group: errno_perror
+    perror  # putil.cpp uprv_dl_open() calls perror("dlopen")
+
+group: malloc_functions
+    free malloc realloc
+
+group: c_strings
+    isspace
+    __ctype_b_loc  # for <ctype.h>
+    strlen strchr strrchr strstr strcmp strncmp strcpy strncpy strcat strncat
+    memcmp memcpy memmove memset
+
+group: c_string_formatting
+    atol strtod strtol strtoul
+    sprintf
+
+group: floating_point
+    floor ceil modf fmod log pow
+
+group: pthread
+    pthread_mutex_init pthread_mutex_destroy pthread_mutex_lock pthread_mutex_unlock
+
+group: system_locale
+    getenv
+    nl_langinfo setlocale
+    gettimeofday localtime_r tzname tzset __timezone
+
+group: stdio
+    fopen fclose fgets fread fseek ftell rewind
+
+group: file_io
+    open close stat
+
+group: readlink_function
+    readlink  # putil.cpp uprv_tzname() calls this in a hack to get the time zone name
+
+group: dir_io
+    opendir closedir readdir  # for a hack to get the time zone name
+
+group: mmap_functions  # for memory-mapped data loading
+    mmap munmap
+
+group: dlfcn
+    dlopen dlclose dlsym  # called by putil.o only for icuplug.o
+
+group: cplusplus
     __dynamic_cast
     # The compiler generates references to the global operator delete
     # even when no code actually uses it.
@@ -44,6 +83,8 @@ system_symbols:
     # (Linux Standard Base Specification 1.3)
     # Even though ICU does not actually use (nor handle) exceptions.
     _Unwind_Resume
+
+# ICU common library --------------------------------------------------------- #
 
 library: stubdata
     stubdata.o  # Exports icudt48_dat.
@@ -303,6 +344,8 @@ group: messagepattern  # for MessageFormat and tools
 
 group: patternprops
     patternprops.o
+  deps
+    PIC
 
 group: ushape
     ushape.o
@@ -464,6 +507,7 @@ group: udata
     umapfile.o
   deps
     uhash charstr stringpiece platform stubdata
+    file_io mmap_functions
 
 group: ucharstriebuilder
     ucharstriebuilder.o
@@ -586,6 +630,8 @@ group: charstr
 
 group: stringpiece
     stringpiece.o
+  deps
+    PIC c_strings
 
 group: bytestream
     bytestream.o
@@ -611,6 +657,7 @@ group: errorcode  # ErrorCode base class
     errorcode.o
   deps
     utypes
+    PIC
 
 group: utypes  # u_errorName()
     utypes.o
@@ -628,11 +675,21 @@ group: platform
     umath.o
     mutex.o umutex.o
     utrace.o
-  # The "platform" group has no ICU dependencies.
+  deps
+    # The "platform" group has no ICU dependencies.
+    PIC system_debug malloc_functions c_strings c_string_formatting
+    floating_point pthread system_locale
+    stdio readlink_function dir_io
+    errno_perror dlfcn  # Move related code into icuplug.c?
+    cplusplus
+
+# ICU i18n library ----------------------------------------------------------- #
 
 # TODO: library: i18n
 #  deps
 #    common
 # with groups: collation, formatting (depends on collation via RBNF), regex, translit
+
+# ICU io library ------------------------------------------------------------- #
 
 # TODO: library: io
