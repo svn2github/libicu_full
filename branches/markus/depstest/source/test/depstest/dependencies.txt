@@ -99,7 +99,7 @@ library: common
     normlzr unormcmp unorm_it unorm
     idna2003 stringprep
     stringenumeration
-    unistr_core unistr_case unistr_props unistr_titlecase_brkiter unistr_cnv
+    unistr_core unistr_props unistr_case unistr_case_locale unistr_titlecase_brkiter unistr_cnv
     uniset_core uniset_props uniset_closure usetiter uset uset_props
     uiter
     ucasemap script_runs
@@ -226,12 +226,12 @@ group: uset
 group: uniset_closure
     uniset_closure.o
   deps
-    uniset_core unistr_titlecase_brkiter
+    uniset_core unistr_case_locale unistr_titlecase_brkiter
 
 group: uniset_props
     uniset_props.o ruleiter.o
   deps
-    uniset_core uprops unistr_case # TODO: unistr_titlecase_brkiter
+    uniset_core uprops unistr_case
     parsepos
     resourcebundle
     propname unames
@@ -368,6 +368,11 @@ group: unistr_props
   deps
     unistr_core uchar
 
+group: unistr_case_locale
+    unistr_case_locale.o
+  deps
+    unistr_case ustring_case_locale
+
 group: unistr_case
     unistr_case.o
   deps
@@ -383,7 +388,7 @@ group: ustr_titlecase_brkiter
     ustr_titlecase_brkiter.o
   deps
     breakiterator
-    ustring_case ucase
+    ustring_case_locale ucase
 
 group: ucasemap
     ucasemap.o
@@ -391,6 +396,12 @@ group: ucasemap
     ustring_case breakiterator
     resourcebundle  # uloc_getName() etc.
     utext
+
+group: ustring_case_locale
+    ustrcase_locale.o
+  deps
+    ustring_case
+    resourcebundle  # for uloc_getDefault()
 
 group: ustring_case
     ustrcase.o
