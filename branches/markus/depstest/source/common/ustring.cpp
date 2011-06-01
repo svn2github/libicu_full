@@ -1494,16 +1494,16 @@ u_terminateWChars(wchar_t *dest, int32_t destCapacity, int32_t length, UErrorCod
 
 /* Used by UnicodeString to compute its hashcode - Not public API. */
 U_CAPI int32_t U_EXPORT2
-uhash_hashUCharsN(const UChar *str, int32_t length) {
+ustr_hashUCharsN(const UChar *str, int32_t length) {
     STRING_HASH(UChar, str, length, *p);
 }
 
 U_CAPI int32_t U_EXPORT2
-uhash_hashCharsN(const char *str, int32_t length) {
+ustr_hashCharsN(const char *str, int32_t length) {
     STRING_HASH(uint8_t, str, length, *p);
 }
 
 U_CAPI int32_t U_EXPORT2
-uhash_hashICharsN(const char *str, int32_t length) {
+ustr_hashICharsN(const char *str, int32_t length) {
     STRING_HASH(char, str, length, (uint8_t)uprv_tolower(*p));
 }

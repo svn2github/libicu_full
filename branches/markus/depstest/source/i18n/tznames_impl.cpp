@@ -866,7 +866,7 @@ ZNameSearchHandler::handleMatch(int32_t matchLength, const CharacterNode *node, 
             if ((nameinfo->type & fTypes) != 0) {
                 // matches a requested type
                 if (fResults == NULL) {
-                    fResults = new UVector(uhash_freeBlock, NULL, status);
+                    fResults = new UVector(uprv_free, NULL, status);
                     if (fResults == NULL) {
                         status = U_MEMORY_ALLOCATION_ERROR;
                     }

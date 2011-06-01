@@ -170,6 +170,15 @@ ustrcase_map(const UCaseMap *csm,
              UStringCaseMapper *stringCaseMapper,
              UErrorCode *pErrorCode);
 
+U_CAPI int32_t U_EXPORT2 
+ustr_hashUCharsN(const UChar *str, int32_t length);
+
+U_CAPI int32_t U_EXPORT2 
+ustr_hashCharsN(const char *str, int32_t length);
+
+U_CAPI int32_t U_EXPORT2
+ustr_hashICharsN(const char *str, int32_t length);
+
 /**
  * NUL-terminate a UChar * string if possible.
  * If length  < destCapacity then NUL-terminate.

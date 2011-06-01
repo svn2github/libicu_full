@@ -1482,7 +1482,7 @@ UnicodeString::doHashCode() const
 {
     /* Delegate hash computation to uhash.  This makes UnicodeString
      * hashing consistent with UChar* hashing.  */
-    int32_t hashCode = uhash_hashUCharsN(getArrayStart(), length());
+    int32_t hashCode = ustr_hashUCharsN(getArrayStart(), length());
     if (hashCode == kInvalidHashCode) {
         hashCode = kEmptyHashCode;
     }

@@ -15,6 +15,7 @@
 #include "cstring.h"
 #include "cmemory.h"
 #include "uassert.h"
+#include "ustr_imp.h"
 
 /* This hashtable is implemented as a double hash.  All elements are
  * stored in a single array with no secondary storage for collision
@@ -835,19 +836,19 @@ uhash_tokp(void* p) {
 U_CAPI int32_t U_EXPORT2
 uhash_hashUChars(const UHashTok key) {
     const UChar *s = (const UChar *)key.pointer;
-    return s == NULL ? 0 : uhash_hashUCharsN(s, u_strlen(s));
+    return s == NULL ? 0 : ustr_hashUCharsN(s, u_strlen(s));
 }
 
 U_CAPI int32_t U_EXPORT2
 uhash_hashChars(const UHashTok key) {
     const char *s = (const char *)key.pointer;
-    return s == NULL ? 0 : uhash_hashCharsN(s, uprv_strlen(s));
+    return s == NULL ? 0 : ustr_hashCharsN(s, uprv_strlen(s));
 }
 
 U_CAPI int32_t U_EXPORT2
 uhash_hashIChars(const UHashTok key) {
     const char *s = (const char *)key.pointer;
-    return s == NULL ? 0 : uhash_hashICharsN(s, uprv_strlen(s));
+    return s == NULL ? 0 : ustr_hashICharsN(s, uprv_strlen(s));
 }
 
 U_CAPI UBool U_EXPORT2 
@@ -970,13 +971,3 @@ U_CAPI UBool U_EXPORT2
 uhash_compareLong(const UHashTok key1, const UHashTok key2) {
     return (UBool)(key1.integer == key2.integer);
 }
-
-/********************************************************************
- * PUBLIC Deleter Functions
- ********************************************************************/
-
-U_CAPI void U_EXPORT2
-uhash_freeBlock(void *obj) {
-    uprv_free(obj);
-}
-

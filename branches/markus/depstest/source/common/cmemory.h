@@ -92,6 +92,15 @@ U_CFUNC UBool
 cmemory_cleanup(void);
 
 /**
+ * A function called by <TT>uhash_remove</TT>,
+ * <TT>uhash_close</TT>, or <TT>uhash_put</TT> to delete
+ * an existing key or value.
+ * @param obj A key or value stored in a hashtable
+ * @see uprv_deleteUObject
+ */
+typedef void U_CALLCONV UObjectDeleter(void* obj);
+
+/**
  * Deleter for UObject instances.
  * Works for all subclasses of UObject because it has a virtual destructor.
  */

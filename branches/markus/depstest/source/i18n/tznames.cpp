@@ -132,7 +132,7 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& s
             if (!gTimeZoneNamesCacheInitialized) {
                 gTimeZoneNamesCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
                 if (U_SUCCESS(status)) {
-                    uhash_setKeyDeleter(gTimeZoneNamesCache, uhash_freeBlock);
+                    uhash_setKeyDeleter(gTimeZoneNamesCache, uprv_free);
                     uhash_setValueDeleter(gTimeZoneNamesCache, deleteTimeZoneNamesCacheEntry);
                     gTimeZoneNamesCacheInitialized = TRUE;
                     ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONENAMES, timeZoneNames_cleanup);

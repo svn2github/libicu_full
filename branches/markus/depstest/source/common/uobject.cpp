@@ -117,14 +117,3 @@ U_CAPI void U_EXPORT2
 uprv_deleteUObject(void *obj) {
     delete reinterpret_cast<UObject *>(obj);
 }
-
-/* TODO: change call sites to use uprv_deleteUObject() directly */
-U_CAPI void U_EXPORT2 
-uhash_deleteUObject(void *obj) {
-    uprv_deleteUObject(obj);
-}
-
-U_CAPI void U_EXPORT2 
-uhash_deleteUnicodeString(void *obj) {
-    uprv_deleteUObject(obj);
-}
