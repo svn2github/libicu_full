@@ -423,6 +423,7 @@
     <ClCompile Include="uiter.cpp" />
     <ClCompile Include="unistr.cpp" />
     <ClCompile Include="unistr_case.cpp" />
+    <ClCompile Include="unistr_case_locale.cpp" />
     <ClCompile Include="unistr_cnv.cpp" />
     <ClCompile Include="unistr_props.cpp" />
     <ClCompile Include="unistr_titlecase_brkiter.cpp" />
@@ -430,6 +431,7 @@
     <ClCompile Include="ustr_titlecase_brkiter.cpp" />
     <ClCompile Include="ustr_wcs.cpp" />
     <ClCompile Include="ustrcase.cpp" />
+    <ClCompile Include="ustrcase_locale.cpp" />
     <ClCompile Include="ustring.cpp" />
     <ClCompile Include="ustrtrns.cpp" />
     <ClCompile Include="utext.cpp" />

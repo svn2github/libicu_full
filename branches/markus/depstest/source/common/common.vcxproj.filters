@@ -484,6 +484,9 @@
     <ClCompile Include="unistr_case.cpp">
       <Filter>strings</Filter>
     </ClCompile>
+    <ClCompile Include="unistr_case_locale.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
     <ClCompile Include="unistr_cnv.cpp">
       <Filter>strings</Filter>
     </ClCompile>
@@ -503,6 +506,9 @@
       <Filter>strings</Filter>
     </ClCompile>
     <ClCompile Include="ustrcase.cpp">
+      <Filter>strings</Filter>
+    </ClCompile>
+    <ClCompile Include="ustrcase_locale.cpp">
       <Filter>strings</Filter>
     </ClCompile>
     <ClCompile Include="ustring.cpp">

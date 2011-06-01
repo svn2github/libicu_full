@@ -19,7 +19,7 @@
 #include "unicode/uiter.h"
 #include "ucase.h"
 
-/** Simple declaration for u_strToTitle() to avoid including unicode/ubrk.h. */
+/** Simple declaration to avoid including unicode/ubrk.h. */
 #ifndef UBRK_TYPEDEF_UBREAK_ITERATOR
 #   define UBRK_TYPEDEF_UBREAK_ITERATOR
     typedef struct UBreakIterator UBreakIterator;
@@ -85,14 +85,6 @@ uprv_loadPropsData(UErrorCode *errorCode);*/
  * ustring.h/ustrcase.c and UnicodeString case mapping functions.
  */
 
-/** Appends a full case mapping result, see UCASE_MAX_STRING_LENGTH. */
-U_CFUNC int32_t
-ustrcase_appendResultU16(UChar *dest, int32_t destIndex, int32_t destCapacity,
-                         int32_t result, const UChar *s);
-
-U_CFUNC UChar32 U_CALLCONV
-utf16_caseContextIterator(void *context, int8_t dir);
-
 struct UCaseMap {
     const UCaseProps *csp;
 #if !UCONFIG_NO_BREAK_ITERATION
@@ -116,17 +108,6 @@ typedef struct UCaseMap UCaseMap;
 U_CFUNC void
 ustrcase_setTempCaseMapLocale(UCaseMap *csm, const char *locale);
 
-/**
- * Case-maps [srcStart..srcLimit[ but takes
- * context [0..srcLength[ into account.
- */
-U_CFUNC int32_t
-ustrcase_map(const UCaseMap *csm, UCaseMapFull *map,
-             UChar *dest, int32_t destCapacity,
-             const UChar *src, UCaseContext *csc,
-             int32_t srcStart, int32_t srcLimit,
-             UErrorCode *pErrorCode);
-
 enum {
     TO_LOWER,
     TO_UPPER,
@@ -134,41 +115,60 @@ enum {
     FOLD_CASE
 };
 
-U_CFUNC int32_t
-ustr_toLower(const UCaseProps *csp,
-             UChar *dest, int32_t destCapacity,
-             const UChar *src, int32_t srcLength,
-             const char *locale,
-             UErrorCode *pErrorCode);
+/**
+ * String case mapping function type, used by ustrcase_map().
+ * All error checking must be done.
+ * The UCaseMap must be fully initialized, with locale and/or iter set as needed.
+ * src and dest must not overlap.
+ */
+typedef int32_t U_CALLCONV
+UStringCaseMapper(const UCaseMap *csm,
+                  UChar *dest, int32_t destCapacity,
+                  const UChar *src, int32_t srcLength,
+                  UErrorCode *pErrorCode);
 
-U_CFUNC int32_t
-ustr_toUpper(const UCaseProps *csp,
-             UChar *dest, int32_t destCapacity,
-             const UChar *src, int32_t srcLength,
-             const char *locale,
-             UErrorCode *pErrorCode);
+/** Implements UStringCaseMapper. */
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalToLower(const UCaseMap *csm,
+                         UChar *dest, int32_t destCapacity,
+                         const UChar *src, int32_t srcLength,
+                         UErrorCode *pErrorCode);
+
+/** Implements UStringCaseMapper. */
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalToUpper(const UCaseMap *csm,
+                         UChar *dest, int32_t destCapacity,
+                         const UChar *src, int32_t srcLength,
+                         UErrorCode *pErrorCode);
 
 #if !UCONFIG_NO_BREAK_ITERATION
 
-U_CFUNC int32_t
-ustr_toTitle(const UCaseProps *csp,
-             UChar *dest, int32_t destCapacity,
-             const UChar *src, int32_t srcLength,
-             UBreakIterator *titleIter,
-             const char *locale, uint32_t options,
-             UErrorCode *pErrorCode);
+/** Implements UStringCaseMapper. */
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalToTitle(const UCaseMap *csm,
+                         UChar *dest, int32_t destCapacity,
+                         const UChar *src, int32_t srcLength,
+                         UErrorCode *pErrorCode);
 
 #endif
 
+/** Implements UStringCaseMapper. */
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalFold(const UCaseMap *csm,
+                      UChar *dest, int32_t destCapacity,
+                      const UChar *src, int32_t srcLength,
+                      UErrorCode *pErrorCode);
+
 /**
- * Internal case folding function.
+ * Implements argument checking and buffer handling
+ * for string case mapping as a common function.
  */
 U_CFUNC int32_t
-ustr_foldCase(const UCaseProps *csp,
-              UChar *dest, int32_t destCapacity,
-              const UChar *src, int32_t srcLength,
-              uint32_t options,
-              UErrorCode *pErrorCode);
+ustrcase_map(const UCaseMap *csm,
+             UChar *dest, int32_t destCapacity,
+             const UChar *src, int32_t srcLength,
+             UStringCaseMapper *stringCaseMapper,
+             UErrorCode *pErrorCode);
 
 /**
  * NUL-terminate a UChar * string if possible.

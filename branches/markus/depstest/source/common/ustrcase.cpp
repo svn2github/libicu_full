@@ -19,6 +19,7 @@
 */
 
 #include "unicode/utypes.h"
+#include "unicode/brkiter.h"
 #include "unicode/ustring.h"
 #include "unicode/ucasemap.h"
 #include "unicode/ubrk.h"
@@ -30,9 +31,10 @@
 
 /* string casing ------------------------------------------------------------ */
 
-U_CFUNC int32_t
-ustrcase_appendResultU16(UChar *dest, int32_t destIndex, int32_t destCapacity,
-                         int32_t result, const UChar *s) {
+/* Appends a full case mapping result, see UCASE_MAX_STRING_LENGTH. */
+static inline int32_t
+appendResult(UChar *dest, int32_t destIndex, int32_t destCapacity,
+             int32_t result, const UChar *s) {
     UChar32 c;
     int32_t length;
 
@@ -82,7 +84,7 @@ ustrcase_appendResultU16(UChar *dest, int32_t destIndex, int32_t destCapacity,
     return destIndex;
 }
 
-U_CFUNC UChar32 U_CALLCONV
+static UChar32 U_CALLCONV
 utf16_caseContextIterator(void *context, int8_t dir) {
     UCaseContext *csc=(UCaseContext *)context;
     UChar32 c;
@@ -114,12 +116,16 @@ utf16_caseContextIterator(void *context, int8_t dir) {
     return U_SENTINEL;
 }
 
-U_CFUNC int32_t
-ustrcase_map(const UCaseMap *csm, UCaseMapFull *map,
-             UChar *dest, int32_t destCapacity,
-             const UChar *src, UCaseContext *csc,
-             int32_t srcStart, int32_t srcLimit,
-             UErrorCode *pErrorCode) {
+/*
+ * Case-maps [srcStart..srcLimit[ but takes
+ * context [0..srcLength[ into account.
+ */
+static int32_t
+_caseMap(const UCaseMap *csm, UCaseMapFull *map,
+         UChar *dest, int32_t destCapacity,
+         const UChar *src, UCaseContext *csc,
+         int32_t srcStart, int32_t srcLimit,
+         UErrorCode *pErrorCode) {
     const UChar *s;
     UChar32 c, c2 = 0;
     int32_t srcIndex, destIndex;
@@ -136,10 +142,10 @@ ustrcase_map(const UCaseMap *csm, UCaseMapFull *map,
         csc->cpLimit=srcIndex;
         c=map(csm->csp, c, utf16_caseContextIterator, csc, &s, csm->locale, &locCache);
         if((destIndex<destCapacity) && (c<0 ? (c2=~c)<=0xffff : UCASE_MAX_STRING_LENGTH<c && (c2=c)<=0xffff)) {
-            /* fast path version of ustrcase_appendResultU16() for BMP results */
+            /* fast path version of appendResult() for BMP results */
             dest[destIndex++]=(UChar)c2;
         } else {
-            destIndex=ustrcase_appendResultU16(dest, destIndex, destCapacity, c, s);
+            destIndex=appendResult(dest, destIndex, destCapacity, c, s);
         }
     }
 
@@ -149,108 +155,174 @@ ustrcase_map(const UCaseMap *csm, UCaseMapFull *map,
     return destIndex;
 }
 
-U_CFUNC void
-ustrcase_setTempCaseMapLocale(UCaseMap *csm, const char *locale) {
-    /*
-     * We could call ucasemap_setLocale(), but here we really only care about
-     * the initial language subtag, we need not return the real string via
-     * ucasemap_getLocale(), and we don't care about only getting "x" from
-     * "x-some-thing" etc.
-     *
-     * We ignore locales with a longer-than-3 initial subtag.
-     *
-     * We also do not fill in the locCache because it is rarely used,
-     * and not worth setting unless we reuse it for many case mapping operations.
-     * (That's why UCaseMap was created.)
-     */
-    int i;
-    char c;
+#if !UCONFIG_NO_BREAK_ITERATION
 
-    /* the internal functions require locale!=NULL */
-    if(locale==NULL) {
-        // Same comment as in unistr_case.cpp:
-        //
-        // Do not call uloc_getDefault() or Locale::getDefault().getName()
-        // because that has too many dependencies.
-        // We only care about a small set of language subtags,
-        // and we do not need the locale ID to be canonicalized.
-        //
-        // This is inefficient if used frequently because uprv_getDefaultLocaleID()
-        // does not cache the locale ID.
-        // Best is to not call case mapping functions with a NULL locale ID.
-        locale=uprv_getDefaultLocaleID();
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalToTitle(const UCaseMap *csm,
+                         UChar *dest, int32_t destCapacity,
+                         const UChar *src, int32_t srcLength,
+                         UErrorCode *pErrorCode) {
+    const UChar *s;
+    UChar32 c;
+    int32_t prev, titleStart, titleLimit, idx, destIndex, length;
+    UBool isFirstIndex;
+
+    if(U_FAILURE(*pErrorCode)) {
+        return 0;
     }
-    for(i=0; i<4 && (c=locale[i])!=0 && c!='-' && c!='_'; ++i) {
-        csm->locale[i]=c;
+
+    // Use the C++ abstract base class to minimize dependencies.
+    // TODO: Change UCaseMap.iter to store a BreakIterator directly.
+    BreakIterator *bi=reinterpret_cast<BreakIterator *>(csm->iter);
+
+    /* set up local variables */
+    int32_t locCache=csm->locCache;
+    UCaseContext csc=UCASECONTEXT_INITIALIZER;
+    csc.p=(void *)src;
+    csc.limit=srcLength;
+    destIndex=0;
+    prev=0;
+    isFirstIndex=TRUE;
+
+    /* titlecasing loop */
+    while(prev<srcLength) {
+        /* find next index where to titlecase */
+        if(isFirstIndex) {
+            isFirstIndex=FALSE;
+            idx=bi->first();
+        } else {
+            idx=bi->next();
+        }
+        if(idx==UBRK_DONE || idx>srcLength) {
+            idx=srcLength;
+        }
+
+        /*
+         * Unicode 4 & 5 section 3.13 Default Case Operations:
+         *
+         * R3  toTitlecase(X): Find the word boundaries based on Unicode Standard Annex
+         * #29, "Text Boundaries." Between each pair of word boundaries, find the first
+         * cased character F. If F exists, map F to default_title(F); then map each
+         * subsequent character C to default_lower(C).
+         *
+         * In this implementation, segment [prev..index[ into 3 parts:
+         * a) uncased characters (copy as-is) [prev..titleStart[
+         * b) first case letter (titlecase)         [titleStart..titleLimit[
+         * c) subsequent characters (lowercase)                 [titleLimit..index[
+         */
+        if(prev<idx) {
+            /* find and copy uncased characters [prev..titleStart[ */
+            titleStart=titleLimit=prev;
+            U16_NEXT(src, titleLimit, idx, c);
+            if((csm->options&U_TITLECASE_NO_BREAK_ADJUSTMENT)==0 && UCASE_NONE==ucase_getType(csm->csp, c)) {
+                /* Adjust the titlecasing index (titleStart) to the next cased character. */
+                for(;;) {
+                    titleStart=titleLimit;
+                    if(titleLimit==idx) {
+                        /*
+                         * only uncased characters in [prev..index[
+                         * stop with titleStart==titleLimit==index
+                         */
+                        break;
+                    }
+                    U16_NEXT(src, titleLimit, idx, c);
+                    if(UCASE_NONE!=ucase_getType(csm->csp, c)) {
+                        break; /* cased letter at [titleStart..titleLimit[ */
+                    }
+                }
+                length=titleStart-prev;
+                if(length>0) {
+                    if((destIndex+length)<=destCapacity) {
+                        uprv_memcpy(dest+destIndex, src+prev, length*U_SIZEOF_UCHAR);
+                    }
+                    destIndex+=length;
+                }
+            }
+
+            if(titleStart<titleLimit) {
+                /* titlecase c which is from [titleStart..titleLimit[ */
+                csc.cpStart=titleStart;
+                csc.cpLimit=titleLimit;
+                c=ucase_toFullTitle(csm->csp, c, utf16_caseContextIterator, &csc, &s, csm->locale, &locCache);
+                destIndex=appendResult(dest, destIndex, destCapacity, c, s); 
+
+                /* Special case Dutch IJ titlecasing */
+                if ( titleStart+1 < idx && 
+                     ucase_getCaseLocale(csm->locale,&locCache) == UCASE_LOC_DUTCH &&
+                     ( src[titleStart] == (UChar32) 0x0049 || src[titleStart] == (UChar32) 0x0069 ) &&
+                     ( src[titleStart+1] == (UChar32) 0x004A || src[titleStart+1] == (UChar32) 0x006A )) { 
+                            c=(UChar32) 0x004A;
+                            destIndex=appendResult(dest, destIndex, destCapacity, c, s);
+                            titleLimit++;
+                }
+
+                /* lowercase [titleLimit..index[ */
+                if(titleLimit<idx) {
+                    if((csm->options&U_TITLECASE_NO_LOWERCASE)==0) {
+                        /* Normal operation: Lowercase the rest of the word. */
+                        destIndex+=
+                            _caseMap(
+                                csm, ucase_toFullLower,
+                                dest+destIndex, destCapacity-destIndex,
+                                src, &csc,
+                                titleLimit, idx,
+                                pErrorCode);
+                    } else {
+                        /* Optionally just copy the rest of the word unchanged. */
+                        length=idx-titleLimit;
+                        if((destIndex+length)<=destCapacity) {
+                            uprv_memcpy(dest+destIndex, src+titleLimit, length*U_SIZEOF_UCHAR);
+                        }
+                        destIndex+=length;
+                    }
+                }
+            }
+        }
+
+        prev=idx;
     }
-    if(i<=3) {
-        csm->locale[i]=0;  /* Up to 3 non-separator characters. */
-    } else {
-        csm->locale[0]=0;  /* Longer-than-3 initial subtag: Ignore. */
+
+    if(destIndex>destCapacity) {
+        *pErrorCode=U_BUFFER_OVERFLOW_ERROR;
     }
+    return destIndex;
 }
 
-/*
- * Set parameters on an empty UCaseMap, for UCaseMap-less API functions.
- * Do this fast because it is called with every function call.
- */
-static inline void
-setTempCaseMap(UCaseMap *csm, const char *locale) {
-    if(csm->csp==NULL) {
-        csm->csp=ucase_getSingleton();
-    }
-    if(locale!=NULL && locale[0]==0) {
-        csm->locale[0]=0;
-    } else {
-        ustrcase_setTempCaseMapLocale(csm, locale);
-    }
-}
+#endif  // !UCONFIG_NO_BREAK_ITERATION
 
 /* functions available in the common library (for unistr_case.cpp) */
 
-U_CFUNC int32_t
-ustr_toLower(const UCaseProps *csp,
-             UChar *dest, int32_t destCapacity,
-             const UChar *src, int32_t srcLength,
-             const char *locale,
-             UErrorCode *pErrorCode) {
-    UCaseMap csm=UCASEMAP_INITIALIZER;
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalToLower(const UCaseMap *csm,
+                         UChar *dest, int32_t destCapacity,
+                         const UChar *src, int32_t srcLength,
+                         UErrorCode *pErrorCode) {
     UCaseContext csc=UCASECONTEXT_INITIALIZER;
-
-    csm.csp=csp;
-    setTempCaseMap(&csm, locale);
     csc.p=(void *)src;
     csc.limit=srcLength;
-
-    return ustrcase_map(
-        &csm, ucase_toFullLower,
+    return _caseMap(
+        csm, ucase_toFullLower,
         dest, destCapacity,
         src, &csc, 0, srcLength,
         pErrorCode);
 }
 
-U_CFUNC int32_t
-ustr_toUpper(const UCaseProps *csp,
-             UChar *dest, int32_t destCapacity,
-             const UChar *src, int32_t srcLength,
-             const char *locale,
-             UErrorCode *pErrorCode) {
-    UCaseMap csm=UCASEMAP_INITIALIZER;
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalToUpper(const UCaseMap *csm,
+                         UChar *dest, int32_t destCapacity,
+                         const UChar *src, int32_t srcLength,
+                         UErrorCode *pErrorCode) {
     UCaseContext csc=UCASECONTEXT_INITIALIZER;
-
-    csm.csp=csp;
-    setTempCaseMap(&csm, locale);
     csc.p=(void *)src;
     csc.limit=srcLength;
-
-    return ustrcase_map(
-        &csm, ucase_toFullUpper,
+    return _caseMap(
+        csm, ucase_toFullUpper,
         dest, destCapacity,
         src, &csc, 0, srcLength,
         pErrorCode);
 }
 
-U_CFUNC int32_t
+static int32_t
 ustr_foldCase(const UCaseProps *csp,
               UChar *dest, int32_t destCapacity,
               const UChar *src, int32_t srcLength,
@@ -267,10 +339,10 @@ ustr_foldCase(const UCaseProps *csp,
         U16_NEXT(src, srcIndex, srcLength, c);
         c=ucase_toFullFolding(csp, c, &s, options);
         if((destIndex<destCapacity) && (c<0 ? (c2=~c)<=0xffff : UCASE_MAX_STRING_LENGTH<c && (c2=c)<=0xffff)) {
-            /* fast path version of ustrcase_appendResultU16() for BMP results */
+            /* fast path version of appendResult() for BMP results */
             dest[destIndex++]=(UChar)c2;
         } else {
-            destIndex=ustrcase_appendResultU16(dest, destIndex, destCapacity, c, s);
+            destIndex=appendResult(dest, destIndex, destCapacity, c, s);
         }
     }
 
@@ -280,17 +352,20 @@ ustr_foldCase(const UCaseProps *csp,
     return destIndex;
 }
 
-/*
- * Implement argument checking and buffer handling
- * for string case mapping as a common function.
- * Note: ustr_titlecase_brkiter.cpp has a near-duplicate of this function.
- */
-static int32_t
-caseMap(const UCaseMap *csm,
-        UChar *dest, int32_t destCapacity,
-        const UChar *src, int32_t srcLength,
-        int32_t toWhichCase,
-        UErrorCode *pErrorCode) {
+U_CFUNC int32_t U_CALLCONV
+ustrcase_internalFold(const UCaseMap *csm,
+                      UChar *dest, int32_t destCapacity,
+                      const UChar *src, int32_t srcLength,
+                      UErrorCode *pErrorCode) {
+    return ustr_foldCase(csm->csp, dest, destCapacity, src, srcLength, csm->options, pErrorCode);
+}
+
+U_CFUNC int32_t
+ustrcase_map(const UCaseMap *csm,
+             UChar *dest, int32_t destCapacity,
+             const UChar *src, int32_t srcLength,
+             UStringCaseMapper *stringCaseMapper,
+             UErrorCode *pErrorCode) {
     UChar buffer[300];
     UChar *temp;
 
@@ -335,35 +410,7 @@ caseMap(const UCaseMap *csm,
         temp=dest;
     }
 
-    destLength=0;
-
-    if(toWhichCase==FOLD_CASE) {
-        destLength=ustr_foldCase(csm->csp, temp, destCapacity, src, srcLength,
-                                 csm->options, pErrorCode);
-    } else {
-        UCaseContext csc=UCASECONTEXT_INITIALIZER;
-
-        csc.p=(void *)src;
-        csc.limit=srcLength;
-
-        if(toWhichCase==TO_LOWER) {
-            destLength=ustrcase_map(
-                csm, ucase_toFullLower,
-                temp, destCapacity,
-                src, &csc,
-                0, srcLength,
-                pErrorCode);
-        } else /* toWhichCase==TO_UPPER */ {
-            destLength=ustrcase_map(
-                csm, ucase_toFullUpper,
-                temp, destCapacity,
-                src, &csc,
-                0, srcLength,
-                pErrorCode);
-        }
-        // We will never see toWhichCase==TO_TITLE here because that code
-        // was moved to ustr_titlecase_brkiter.cpp.
-    }
+    destLength=stringCaseMapper(csm, temp, destCapacity, src, srcLength, pErrorCode);
     if(temp!=dest) {
         /* copy the result string to the destination buffer */
         if(destLength>0) {
@@ -383,32 +430,6 @@ caseMap(const UCaseMap *csm,
 /* public API functions */
 
 U_CAPI int32_t U_EXPORT2
-u_strToLower(UChar *dest, int32_t destCapacity,
-             const UChar *src, int32_t srcLength,
-             const char *locale,
-             UErrorCode *pErrorCode) {
-    UCaseMap csm=UCASEMAP_INITIALIZER;
-    setTempCaseMap(&csm, locale);
-    return caseMap(&csm,
-                   dest, destCapacity,
-                   src, srcLength,
-                   TO_LOWER, pErrorCode);
-}
-
-U_CAPI int32_t U_EXPORT2
-u_strToUpper(UChar *dest, int32_t destCapacity,
-             const UChar *src, int32_t srcLength,
-             const char *locale,
-             UErrorCode *pErrorCode) {
-    UCaseMap csm=UCASEMAP_INITIALIZER;
-    setTempCaseMap(&csm, locale);
-    return caseMap(&csm,
-                   dest, destCapacity,
-                   src, srcLength,
-                   TO_UPPER, pErrorCode);
-}
-
-U_CAPI int32_t U_EXPORT2
 u_strFoldCase(UChar *dest, int32_t destCapacity,
               const UChar *src, int32_t srcLength,
               uint32_t options,
@@ -416,10 +437,11 @@ u_strFoldCase(UChar *dest, int32_t destCapacity,
     UCaseMap csm=UCASEMAP_INITIALIZER;
     csm.csp=ucase_getSingleton();
     csm.options=options;
-    return caseMap(&csm,
-                   dest, destCapacity,
-                   src, srcLength,
-                   FOLD_CASE, pErrorCode);
+    return ustrcase_map(
+        &csm,
+        dest, destCapacity,
+        src, srcLength,
+        ustrcase_internalFold, pErrorCode);
 }
 
 /* case-insensitive string comparisons -------------------------------------- */

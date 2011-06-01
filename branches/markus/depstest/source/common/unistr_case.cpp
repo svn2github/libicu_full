@@ -18,7 +18,6 @@
 
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
-#include "unicode/locid.h"
 #include "cstring.h"
 #include "cmemory.h"
 #include "unicode/ustring.h"
@@ -28,21 +27,6 @@
 #include "uhash.h"
 
 U_NAMESPACE_BEGIN
-
-static const char *
-getDefaultLocaleID() {
-  // Same comment as in ustrcase.cpp:
-  //
-  // Do not call uloc_getDefault() or Locale::getDefault().getName()
-  // because that has too many dependencies.
-  // We only care about a small set of language subtags,
-  // and we do not need the locale ID to be canonicalized.
-  //
-  // This is inefficient if used frequently because uprv_getDefaultLocaleID()
-  // does not cache the locale ID.
-  // Best is to not call case mapping functions with a NULL locale ID.
-  return uprv_getDefaultLocaleID();
-}
 
 //========================================
 // Read-only implementation
@@ -98,19 +82,13 @@ UnicodeString::doCaseCompare(int32_t start,
 // Write implementation
 //========================================
 
-/*
- * Implement argument checking and buffer handling
- * for string case mapping as a common function.
- * Note: unistr_titlecase_brkiter.cpp has a near-duplicate of this function.
- */
 UnicodeString &
-UnicodeString::caseMap(const char *locale, uint32_t options, int32_t toWhichCase) {
+UnicodeString::caseMap(const UCaseMap *csm,
+                       UStringCaseMapper *stringCaseMapper) {
   if(isEmpty() || !isWritable()) {
     // nothing to do
     return *this;
   }
-
-  const UCaseProps *csp=ucase_getSingleton();
 
   // We need to allocate a new buffer for the internal string case mapping function.
   // This is very similar to how doReplace() keeps the old array pointer
@@ -146,22 +124,8 @@ UnicodeString::caseMap(const char *locale, uint32_t options, int32_t toWhichCase
   int32_t newLength;
   do {
     errorCode = U_ZERO_ERROR;
-    if(toWhichCase==TO_LOWER) {
-      newLength = ustr_toLower(csp, getArrayStart(), getCapacity(),
-                               oldArray, oldLength,
-                               locale, &errorCode);
-    } else if(toWhichCase==TO_UPPER) {
-      newLength = ustr_toUpper(csp, getArrayStart(), getCapacity(),
-                               oldArray, oldLength,
-                               locale, &errorCode);
-    } else /* toWhichCase==FOLD_CASE */ {
-      newLength = ustr_foldCase(csp, getArrayStart(), getCapacity(),
-                                oldArray, oldLength,
-                                options,
-                                &errorCode);
-    }
-    // We will never see toWhichCase==TO_TITLE here because that code
-    // was moved to unistr_titlecase_brkiter.cpp.
+    newLength = stringCaseMapper(csm, getArrayStart(), getCapacity(),
+                                 oldArray, oldLength, &errorCode);
     setLength(newLength);
   } while(errorCode==U_BUFFER_OVERFLOW_ERROR && cloneArrayIfNeeded(newLength, newLength, FALSE));
 
@@ -175,29 +139,11 @@ UnicodeString::caseMap(const char *locale, uint32_t options, int32_t toWhichCase
 }
 
 UnicodeString &
-UnicodeString::toLower() {
-  return caseMap(getDefaultLocaleID(), 0, TO_LOWER);
-}
-
-UnicodeString &
-UnicodeString::toLower(const Locale &locale) {
-  return caseMap(locale.getName(), 0, TO_LOWER);
-}
-
-UnicodeString &
-UnicodeString::toUpper() {
-  return caseMap(getDefaultLocaleID(), 0, TO_UPPER);
-}
-
-UnicodeString &
-UnicodeString::toUpper(const Locale &locale) {
-  return caseMap(locale.getName(), 0, TO_UPPER);
-}
-
-UnicodeString &
 UnicodeString::foldCase(uint32_t options) {
-    /* The Locale parameter isn't used. Use "" instead. */
-    return caseMap("", options, FOLD_CASE);
+  UCaseMap csm=UCASEMAP_INITIALIZER;
+  csm.csp=ucase_getSingleton();
+  csm.options=options;
+  return caseMap(&csm, ustrcase_internalFold);
 }
 
 U_NAMESPACE_END

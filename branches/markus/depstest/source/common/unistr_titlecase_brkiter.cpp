@@ -26,80 +26,61 @@
 #include "cmemory.h"
 #include "ustr_imp.h"
 
-// Duplicate of unistr_case.cpp/caseMap() except this version only handles titlecasing
-// while the other one handles all other case mappings.
-// Duplicated and separated for simpler dependencies.
-UnicodeString &
-UnicodeString::caseMap(BreakIterator *titleIter, const char *locale, uint32_t options) {
-  if(isEmpty() || !isWritable()) {
-    // nothing to do
-    return *this;
-  }
+static int32_t U_CALLCONV
+unistr_case_internalToTitle(const UCaseMap *csm,
+                            UChar *dest, int32_t destCapacity,
+                            const UChar *src, int32_t srcLength,
+                            UErrorCode *pErrorCode) {
+  ubrk_setText(csm->iter, src, srcLength, pErrorCode);
+  return ustrcase_internalToTitle(csm, dest, destCapacity, src, srcLength, pErrorCode);
+}
 
-  const UCaseProps *csp=ucase_getSingleton();
-
-  // We need to allocate a new buffer for the internal string case mapping function.
-  // This is very similar to how doReplace() keeps the old array pointer
-  // and deletes the old array itself after it is done.
-  // In addition, we are forcing cloneArrayIfNeeded() to always allocate a new array.
-  UChar oldStackBuffer[US_STACKBUF_SIZE];
-  UChar *oldArray;
-  int32_t oldLength;
-
-  if(fFlags&kUsingStackBuffer) {
-    // copy the stack buffer contents because it will be overwritten
-    u_memcpy(oldStackBuffer, fUnion.fStackBuffer, fShortLength);
-    oldArray = oldStackBuffer;
-    oldLength = fShortLength;
-  } else {
-    oldArray = getArrayStart();
-    oldLength = length();
-  }
-
-  int32_t capacity;
-  if(oldLength <= US_STACKBUF_SIZE) {
-    capacity = US_STACKBUF_SIZE;
-  } else {
-    capacity = oldLength + 20;
-  }
-  int32_t *bufferToDelete = 0;
-  if(!cloneArrayIfNeeded(capacity, capacity, FALSE, &bufferToDelete, TRUE)) {
-    return *this;
-  }
-
-  // Case-map, and if the result is too long, then reallocate and repeat.
-  UErrorCode errorCode;
-  int32_t newLength;
-  do {
-    errorCode = U_ZERO_ERROR;
-    newLength = ustr_toTitle(csp, getArrayStart(), getCapacity(),
-                             oldArray, oldLength,
-                             (UBreakIterator *)titleIter, locale, options, &errorCode);
-    setLength(newLength);
-  } while(errorCode==U_BUFFER_OVERFLOW_ERROR && cloneArrayIfNeeded(newLength, newLength, FALSE));
-
-  if (bufferToDelete) {
-    uprv_free(bufferToDelete);
-  }
-  if(U_FAILURE(errorCode)) {
-    setToBogus();
-  }
-  return *this;
+/*
+ * Set parameters on an empty UCaseMap, for UCaseMap-less API functions.
+ * Do this fast because it is called with every function call.
+ */
+static inline void
+setTempCaseMap(UCaseMap *csm, const char *locale) {
+    if(csm->csp==NULL) {
+        csm->csp=ucase_getSingleton();
+    }
+    if(locale!=NULL && locale[0]==0) {
+        csm->locale[0]=0;
+    } else {
+        ustrcase_setTempCaseMapLocale(csm, locale);
+    }
 }
 
 UnicodeString &
 UnicodeString::toTitle(BreakIterator *titleIter) {
-  return caseMap(titleIter, Locale::getDefault().getName(), 0);
+  return toTitle(titleIter, Locale::getDefault(), 0);
 }
 
 UnicodeString &
 UnicodeString::toTitle(BreakIterator *titleIter, const Locale &locale) {
-  return caseMap(titleIter, locale.getName(), 0);
+  return toTitle(titleIter, locale, 0);
 }
 
 UnicodeString &
 UnicodeString::toTitle(BreakIterator *titleIter, const Locale &locale, uint32_t options) {
-  return caseMap(titleIter, locale.getName(), options);
+  UCaseMap csm=UCASEMAP_INITIALIZER;
+  csm.options=options;
+  setTempCaseMap(&csm, locale.getName());
+  BreakIterator *bi=titleIter;
+  if(bi==NULL) {
+    UErrorCode errorCode=U_ZERO_ERROR;
+    bi=BreakIterator::createWordInstance(locale, errorCode);
+    if(U_FAILURE(errorCode)) {
+      setToBogus();
+      return *this;
+    }
+  }
+  csm.iter=reinterpret_cast<UBreakIterator *>(bi);
+  caseMap(&csm, unistr_case_internalToTitle);
+  if(titleIter==NULL) {
+    delete bi;
+  }
+  return *this;
 }
 
 #endif  // !UCONFIG_NO_BREAK_ITERATION
