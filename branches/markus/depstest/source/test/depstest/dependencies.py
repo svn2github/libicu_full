@@ -97,16 +97,9 @@ def _ReadDeps(deps_file, item, library_name):
     for dep in line.split():
       _CheckGroupName(dep)
       dep_item = items.get(dep)
-      if item["type"] == "group":
-        pass
-      elif item["type"] == "library":
-        if _IsLibraryGroup(dep_item):
-          sys.exit("Error:%d: library %s depends on previously defined library group %s" %
-                   (_line_number, library_name, dep))
-      elif item["type"] == "system_symbols":
-        if _IsLibraryGroup(dep_item) or _IsLibrary(dep_item):
-          sys.exit(("Error:%d: system_symbols depend on previously defined " +
-                    "library or library group %s") % (_line_number, dep))
+      if item["type"] == "system_symbols" and (_IsLibraryGroup(dep_item) or _IsLibrary(dep_item)):
+        sys.exit(("Error:%d: system_symbols depend on previously defined " +
+                  "library or library group %s") % (_line_number, dep))
       if dep_item == None:
         # Add this dependency as a new group.
         items[dep] = {"type": "group"}

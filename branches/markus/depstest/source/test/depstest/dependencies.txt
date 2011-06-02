@@ -12,10 +12,12 @@ system_symbols:
   deps
     # C
     PIC system_debug errno_perror malloc_functions c_strings c_string_formatting
-    floating_point pthread system_locale
-    stdio file_io readlink_function dir_io mmap_functions dlfcn
+    floating_point trigonometry
+    stdlib_qsort
+    pthread system_locale
+    stdio_input stdio_output file_io readlink_function dir_io mmap_functions dlfcn
     # C++
-    cplusplus
+    cplusplus iostream
 
 group: PIC
     # Position-Independent Code (-fPIC) requires a Global Offset Table.
@@ -33,15 +35,22 @@ group: malloc_functions
 group: c_strings
     isspace
     __ctype_b_loc  # for <ctype.h>
+    # We must not use tolower and toupper because they are system-locale-sensitive (Turkish i).
     strlen strchr strrchr strstr strcmp strncmp strcpy strncpy strcat strncat
     memcmp memcpy memmove memset
 
 group: c_string_formatting
-    atol strtod strtol strtoul
+    atoi atol strtod strtol strtoul
     sprintf
 
 group: floating_point
-    floor ceil modf fmod log pow
+    floor ceil modf fmod log pow sqrt
+
+group: trigonometry
+    acos asin atan atan2 cos sin tan
+
+group: stdlib_qsort
+    qsort
 
 group: pthread
     pthread_mutex_init pthread_mutex_destroy pthread_mutex_lock pthread_mutex_unlock
@@ -51,8 +60,11 @@ group: system_locale
     nl_langinfo setlocale
     gettimeofday localtime_r tzname tzset __timezone
 
-group: stdio
-    fopen fclose fgets fread fseek ftell rewind
+group: stdio_input
+    fopen fclose fgets fread fseek ftell rewind feof fileno
+
+group: stdio_output
+    fflush fwrite
 
 group: file_io
     open close stat
@@ -83,6 +95,14 @@ group: cplusplus
     # (Linux Standard Base Specification 1.3)
     # Even though ICU does not actually use (nor handle) exceptions.
     _Unwind_Resume
+
+group: iostream
+    "std::basic_ios<char, std::char_traits<char> >::clear(std::_Ios_Iostate)"
+    "std::basic_ios<char, std::char_traits<char> >::eof() const"
+    "std::basic_ios<char, std::char_traits<char> >::fail() const"
+    "std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)"
+    std::istream::get()
+    std::istream::putback(char)
 
 # ICU common library --------------------------------------------------------- #
 
@@ -690,17 +710,162 @@ group: platform
     # The "platform" group has no ICU dependencies.
     PIC system_debug malloc_functions c_strings c_string_formatting
     floating_point pthread system_locale
-    stdio readlink_function dir_io
+    stdio_input readlink_function dir_io
     errno_perror dlfcn  # Move related code into icuplug.c?
     cplusplus
 
 # ICU i18n library ----------------------------------------------------------- #
 
-# TODO: library: i18n
-#  deps
-#    common
-# with groups: collation, formatting (depends on collation via RBNF), regex, translit
+library: i18n
+  deps
+    localedata charset_detector spoof_detection
+    alphabetic_index collation formatting regex translit
+    universal_time_scale
+    uclean_i18n
+
+group: localedata
+    ulocdata.o
+  deps
+    uniset_props resourcebundle
+    uset_props  # TODO: change to using C++ UnicodeSet, remove this dependency
+
+group: charset_detector
+    csdetect.o csmatch.o csr2022.o csrecog.o csrmbcs.o csrsbcs.o csrucode.o csrutf8.o inputext.o ucsdet.o
+  deps
+    conversion
+    uclean_i18n
+
+group: spoof_detection
+    uspoof.o uspoof_build.o uspoof_conf.o uspoof_impl.o uspoof_wsconf.o
+  deps
+    uniset_props regex unorm uscript
+
+group: alphabetic_index
+    alphaindex.o
+  deps
+    collation localedata
+    uclean_i18n
+
+group: collation
+    bocsu.o coleitr.o coll.o colldata.o sortkey.o tblcoll.o ucol.o
+    ucol_bld.o ucol_cnt.o ucol_elm.o ucol_res.o ucol_sit.o ucol_tok.o ucol_wgt.o ucoleitr.o
+    bms.o bmsearch.o search.o stsearch.o usearch.o
+  deps
+    common  # TODO: Could be narrower.
+    uclean_i18n
+
+group: formatting
+    # TODO: Try to subdivide this ball of wax.
+    # locale_display_names2
+    locdspnm.o
+    # currency
+    ucurr.o
+    # currencyformat
+    curramt.o currfmt.o currpinf.o currunit.o
+    # decimalformat
+    dcfmtsym.o decfmtst.o decimfmt.o
+    numfmt.o numsys.o unum.o winnmfmt.o
+    # rbnf
+    nfrs.o nfrule.o nfsubs.o rbnf.o
+    # measureformat
+    measfmt.o
+    # dateformat
+    astro.o buddhcal.o calendar.o cecal.o chnsecal.o coptccal.o ethpccal.o
+    gregocal.o gregoimp.o hebrwcal.o indiancal.o islamcal.o japancal.o persncal.o taiwncal.o
+    ucal.o
+    basictz.o olsontz.o rbtz.o simpletz.o timezone.o tzrule.o tztrans.o
+    vtzone.o vzone.o wintzimpl.o zonemeta.o zrule.o ztrans.o
+    tzfmt.o tzgnames.o tznames.o tznames_impl.o
+    datefmt.o dtfmtsym.o dtitvfmt.o dtitvinf.o dtptngen.o dtrule.o reldtfmt.o
+    smpdtfmt.o smpdtfst.o udateintervalformat.o udatpg.o windtfmt.o
+    udat.o
+    tmunit.o tmutamt.o tmutfmt.o
+    # messageformat
+    choicfmt.o msgfmt.o plurfmt.o selfmt.o umsg.o
+  deps
+    digitlist formattable formattable_cnv format
+    pluralrules
+    collation  # for rbnf
+    common
+    floating_point  # sqrt() for astro.o
+    trigonometry  # for astro.o
+    stdlib_qsort  # for ucurr.o (which does not use ICU's uarrsort.o)
+    uclean_i18n
+
+group: digitlist
+    digitlst.o decContext.o decNumber.o
+  deps
+    charstr stringpiece unistr_core
+
+group: formattable
+    fmtable.o
+    measure.o
+  deps
+    unistr_core digitlist stringpiece charstr
+
+group: formattable_cnv
+    fmtable_cnv.o
+  deps
+    formattable unistr_cnv conversion
+
+group: format
+    format.o fphdlimp.o fpositer.o
+  deps
+    resourcebundle parsepos unistr_core uvector32
+
+group: pluralrules
+    plurrule.o upluralrules.o
+  deps
+    patternprops resourcebundle uvector
+    unistr_case_locale
+
+group: regex
+    regexcmp.o regexst.o regextxt.o rematch.o repattrn.o uregex.o uregexc.o
+  deps
+    uniset_closure utext uvector32 uvector64 ustack
+    breakiterator
+    unistr_cnv  # TODO: Probably don't need default conversion from char*.
+    uinit  # TODO: Really needed?
+    uclean_i18n
+
+group: translit
+    anytrans.o brktrans.o casetrn.o cpdtrans.o name2uni.o uni2name.o nortrans.o remtrans.o titletrn.o tolowtrn.o toupptrn.o
+    esctrn.o unesctrn.o nultrans.o
+    funcrepl.o quant.o rbt.o rbt_data.o rbt_pars.o rbt_rule.o rbt_set.o strmatch.o strrepl.o translit.o transreg.o tridpars.o utrans.o
+  deps
+    common
+    formatting  # for Transliterator::getDisplayName()
+    uclean_i18n
+
+group: universal_time_scale
+    utmscale.o
+
+group: uclean_i18n
+    ucln_in.o
+  deps
+    platform
 
 # ICU io library ------------------------------------------------------------- #
 
-# TODO: library: io
+library: io
+  deps
+    ustdio ustream uclean_io
+
+group: ustdio
+    locbund.o sprintf.o sscanf.o ufile.o ufmt_cmn.o uprintf.o uprntf_p.o uscanf.o uscanf_p.o ustdio.o
+  deps
+    formatting conversion translit
+    uclean_io
+    stdio_output
+
+group: ustream
+    ustream.o
+  deps
+    unistr_cnv
+    uchar  # for u_isWhitespace()
+    iostream
+
+group: uclean_io
+    ucln_io.o
+  deps
+    platform

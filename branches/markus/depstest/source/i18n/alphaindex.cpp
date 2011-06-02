@@ -32,7 +32,7 @@
 #include "uvector.h"
 
 #include <string>
-#include <iostream>
+//#include <iostream>
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(AlphabeticIndex)
