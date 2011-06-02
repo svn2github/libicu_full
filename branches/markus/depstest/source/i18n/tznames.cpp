@@ -277,7 +277,8 @@ TimeZoneNames::getExemplarLocationName(const UnicodeString& tzID, UnicodeString&
     int32_t sep = tzID.lastIndexOf((UChar)0x2F /* '/' */);
     if (sep > 0 && sep + 1 < tzID.length()) {
         name.setTo(tzID, sep + 1);
-        name.findAndReplace("_", " ");
+        name.findAndReplace(UnicodeString((UChar)0x5f /* _ */),
+                            UnicodeString((UChar)0x20 /* space */));
     } else {
         name.setToBogus();
     }

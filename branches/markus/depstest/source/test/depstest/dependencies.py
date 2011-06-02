@@ -25,6 +25,11 @@ Attributes:
 """
 __author__ = "Markus W. Scherer"
 
+# TODO: Support binary items.
+# .txt syntax:   binary: tools/genrb
+# item contents: {"type": "binary"} with optional files & deps
+# A binary must not be used as a dependency for anything else.
+
 import sys
 
 files = set()
@@ -56,7 +61,6 @@ def _CheckFileName(name):
 def _RemoveComment(line):
   global _line_number
   _line_number = _line_number + 1
-  # TODO: print ">>" + line.rstrip()
   index = line.find("#")  # Remove trailing comment.
   if index >= 0: line = line[:index]
   return line.rstrip()  # Remove trailing newlines etc.
@@ -138,9 +142,7 @@ def Load():
     line = None
     current_type = None
     while True:
-      # TODO: print "D  Load() before reading a line"
       while not line: line = _RemoveComment(deps_file.next())
-      # TODO: print "D  Load() after reading line >>" + line
 
       if line.startswith("library: "):
         current_type = "library"
@@ -148,7 +150,6 @@ def Load():
         _CheckLibraryName(name)
         if name in items:
           sys.exit("Error:%d: library definition using duplicate name %s" % (_line_number, name))
-        # TODO: print "D  adding library " + name
         libraries.add(name)
         item = items[name] = {"type": "library"}
         line = _ReadFiles(deps_file, item, name)

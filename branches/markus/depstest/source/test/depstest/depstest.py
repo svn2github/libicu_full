@@ -36,7 +36,8 @@ def _ReadObjFile(root_path, library_name, obj_name):
   global _ignored_symbols, _obj_files, _symbols_to_files
   lib_obj_name = library_name + "/" + obj_name
   if lib_obj_name in _obj_files:
-    print "duplicate " + lib_obj_name
+    print "Warning: duplicate .o file " + lib_obj_name
+    _return_value = 2
     return
 
   path = os.path.join(root_path, library_name, obj_name)
@@ -76,7 +77,6 @@ def _Resolve(name, parents):
   if name in parents:
     sys.exit("Error: %s %s has a circular dependency on itself: %s" %
              (item_type, name, parents))
-  # TODO: print "** %s %s" % (parents, name)
   # Check if already cached.
   exports = item.get("exports")
   if exports != None: return item

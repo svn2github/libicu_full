@@ -1090,7 +1090,7 @@ TimeZoneNamesImpl::getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeS
 
 UnicodeString&
 TimeZoneNamesImpl::getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const {
-    ZoneMeta::getZoneIdByMetazone(mzID, UnicodeString(region), tzID);
+    ZoneMeta::getZoneIdByMetazone(mzID, UnicodeString(region, -1, US_INV), tzID);
     return tzID;
 }
 

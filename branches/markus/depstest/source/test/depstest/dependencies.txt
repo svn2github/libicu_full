@@ -701,7 +701,7 @@ group: platform
     ustrfmt.o  # uprv_itou
     utf_impl.o
     putil.o
-    ucln_cmn.o  # for putil.o which calls ucln_common_registerCleanup; TODO: make it not depend on uinit; test UCLN_TYPE in ucln_imp.h?
+    ucln_cmn.o  # for putil.o which calls ucln_common_registerCleanup
     udataswp.o  # for uinvchar.o; TODO: move uinvchar.o swapper functions to udataswp.o?
     umath.o
     mutex.o umutex.o
@@ -719,7 +719,7 @@ group: platform
 library: i18n
   deps
     localedata charset_detector spoof_detection
-    alphabetic_index collation formatting regex translit
+    alphabetic_index collation formatting formattable_cnv regex regex_cnv translit
     universal_time_scale
     uclean_i18n
 
@@ -783,7 +783,7 @@ group: formatting
     # messageformat
     choicfmt.o msgfmt.o plurfmt.o selfmt.o umsg.o
   deps
-    digitlist formattable formattable_cnv format
+    digitlist formattable format
     pluralrules
     collation  # for rbnf
     common
@@ -819,12 +819,17 @@ group: pluralrules
     patternprops resourcebundle uvector
     unistr_case_locale
 
+group: regex_cnv
+    uregexc.o
+  deps
+    regex unistr_cnv
+
 group: regex
-    regexcmp.o regexst.o regextxt.o rematch.o repattrn.o uregex.o uregexc.o
+    regexcmp.o regexst.o regextxt.o rematch.o repattrn.o uregex.o
   deps
     uniset_closure utext uvector32 uvector64 ustack
     breakiterator
-    unistr_cnv  # TODO: Probably don't need default conversion from char*.
+    unistr_core
     uinit  # TODO: Really needed?
     uclean_i18n
 
