@@ -122,7 +122,7 @@ library: common
     unistr_core unistr_props unistr_case unistr_case_locale unistr_titlecase_brkiter unistr_cnv
     uniset_core uniset_props uniset_closure usetiter uset uset_props
     uiter
-    ucasemap script_runs
+    ucasemap ucasemap_titlecase_brkiter script_runs
     uprops ubidi_props ucase uscript
     ubidi ushape
     resourcebundle service_registration resbund_cnv ures_cnv icudataver ucat
@@ -410,12 +410,16 @@ group: ustr_titlecase_brkiter
     breakiterator
     ustring_case_locale ucase
 
+group: ucasemap_titlecase_brkiter
+    ucasemap_titlecase_brkiter.o
+  deps
+    ucasemap breakiterator utext
+
 group: ucasemap
     ucasemap.o
   deps
-    ustring_case breakiterator
+    ustring_case
     resourcebundle  # uloc_getName() etc.
-    utext
 
 group: ustring_case_locale
     ustrcase_locale.o

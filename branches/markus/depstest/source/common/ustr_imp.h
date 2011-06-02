@@ -108,13 +108,6 @@ typedef struct UCaseMap UCaseMap;
 U_CFUNC void
 ustrcase_setTempCaseMapLocale(UCaseMap *csm, const char *locale);
 
-enum {
-    TO_LOWER,
-    TO_UPPER,
-    TO_TITLE,
-    FOLD_CASE
-};
-
 #ifndef U_STRING_CASE_MAPPER_DEFINED
 #define U_STRING_CASE_MAPPER_DEFINED
 
@@ -174,6 +167,37 @@ ustrcase_map(const UCaseMap *csm,
              const UChar *src, int32_t srcLength,
              UStringCaseMapper *stringCaseMapper,
              UErrorCode *pErrorCode);
+
+/**
+ * UTF-8 string case mapping function type, used by ucasemap_mapUTF8().
+ * UTF-8 version of UStringCaseMapper.
+ * All error checking must be done.
+ * The UCaseMap must be fully initialized, with locale and/or iter set as needed.
+ * src and dest must not overlap.
+ */
+typedef int32_t U_CALLCONV
+UTF8CaseMapper(const UCaseMap *csm,
+               uint8_t *dest, int32_t destCapacity,
+               const uint8_t *src, int32_t srcLength,
+               UErrorCode *pErrorCode);
+
+/** Implements UTF8CaseMapper. */
+U_CFUNC int32_t U_CALLCONV
+ucasemap_internalUTF8ToTitle(const UCaseMap *csm,
+         uint8_t *dest, int32_t destCapacity,
+         const uint8_t *src, int32_t srcLength,
+         UErrorCode *pErrorCode);
+
+/**
+ * Implements argument checking and buffer handling
+ * for UTF-8 string case mapping as a common function.
+ */
+U_CFUNC int32_t
+ucasemap_mapUTF8(const UCaseMap *csm,
+                 uint8_t *dest, int32_t destCapacity,
+                 const uint8_t *src, int32_t srcLength,
+                 UTF8CaseMapper *stringCaseMapper,
+                 UErrorCode *pErrorCode);
 
 U_CAPI int32_t U_EXPORT2 
 ustr_hashUCharsN(const UChar *str, int32_t length);
