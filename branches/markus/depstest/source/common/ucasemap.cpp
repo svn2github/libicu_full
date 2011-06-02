@@ -30,6 +30,8 @@
 #include "ucase.h"
 #include "ustr_imp.h"
 
+U_NAMESPACE_USE
+
 /* UCaseMap service object -------------------------------------------------- */
 
 U_CAPI UCaseMap * U_EXPORT2

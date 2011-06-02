@@ -29,6 +29,8 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
+U_NAMESPACE_USE
+
 /* string casing ------------------------------------------------------------ */
 
 /* Appends a full case mapping result, see UCASE_MAX_STRING_LENGTH. */

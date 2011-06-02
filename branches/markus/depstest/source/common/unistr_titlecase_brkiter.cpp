@@ -51,6 +51,8 @@ setTempCaseMap(UCaseMap *csm, const char *locale) {
     }
 }
 
+U_NAMESPACE_BEGIN
+
 UnicodeString &
 UnicodeString::toTitle(BreakIterator *titleIter) {
   return toTitle(titleIter, Locale::getDefault(), 0);
@@ -82,5 +84,7 @@ UnicodeString::toTitle(BreakIterator *titleIter, const Locale &locale, uint32_t 
   }
   return *this;
 }
+
+U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_BREAK_ITERATION

@@ -26,6 +26,8 @@
 #include "ucase.h"
 #include "ustr_imp.h"
 
+U_NAMESPACE_USE
+
 U_CAPI const UBreakIterator * U_EXPORT2
 ucasemap_getBreakIterator(const UCaseMap *csm) {
     return csm->iter;
