@@ -19,7 +19,7 @@ Attributes:
     A library or group item can have an optional set of "files" (as in the files attribute).
     Each item can have an optional set of "deps" (libraries & groups).
     A group item also has a "library" name unless it is a group of system symbols.
-    The one "system_symbols" item and its groups have sets of "exports"
+    The one "system_symbols" item and its groups have sets of "system_symbols"
     with standard-library system symbol names.
   libraries: Set of library names mentioned in the dependencies file.
 """
@@ -115,8 +115,8 @@ def _ReadDeps(deps_file, item, library_name):
       item_deps.add(dep)
 
 def _AddSystemSymbol(item, symbol):
-  exports = item.get("exports")
-  if exports == None: exports = item["exports"] = set()
+  exports = item.get("system_symbols")
+  if exports == None: exports = item["system_symbols"] = set()
   exports.add(symbol)
 
 def _ReadSystemSymbols(deps_file, item):
@@ -136,25 +136,6 @@ def _ReadSystemSymbols(deps_file, item):
     else:
       # One or more space-separate symbols.
       for symbol in line.split(): _AddSystemSymbol(item, symbol)
-
-def _GetExports(name, parents):
-  global items
-  item = items[name]
-  item_type = item["type"]
-  if name in parents:
-    sys.exit("Error: %s %s has a circular dependency on itself: %s" %
-             (item_type, name, parents))
-  # TODO: print "** %s %s" % (parents, name)
-  exports = item.get("exports")
-  if exports == None: exports = set()
-  # Calculcate recursively.
-  deps = item.get("deps")
-  if deps:
-    parents.append(name)
-    for dep in deps: exports |= _GetExports(dep, parents)
-    del parents[-1]
-  item["exports"] = exports
-  return exports
 
 def Load():
   """Reads "dependencies.txt" and populates the module attributes."""
@@ -217,8 +198,3 @@ def Load():
     pass
   if _groups_to_be_defined:
     sys.exit("Error: some groups mentioned in dependencies are undefined: %s" % _groups_to_be_defined)
-  # Propagate system_symbols exports.
-  if "system_symbols" in items:
-    _GetExports("system_symbols", [])
-  else:
-    items["system_symbols"] = {"type": "system_symbols", "exports": set()}
