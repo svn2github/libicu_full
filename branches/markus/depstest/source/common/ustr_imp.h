@@ -115,6 +115,9 @@ enum {
     FOLD_CASE
 };
 
+#ifndef U_STRING_CASE_MAPPER_DEFINED
+#define U_STRING_CASE_MAPPER_DEFINED
+
 /**
  * String case mapping function type, used by ustrcase_map().
  * All error checking must be done.
@@ -126,6 +129,8 @@ UStringCaseMapper(const UCaseMap *csm,
                   UChar *dest, int32_t destCapacity,
                   const UChar *src, int32_t srcLength,
                   UErrorCode *pErrorCode);
+
+#endif
 
 /** Implements UStringCaseMapper. */
 U_CFUNC int32_t U_CALLCONV

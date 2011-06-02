@@ -54,6 +54,21 @@ U_STABLE int32_t U_EXPORT2
 u_strlen(const UChar *s);
 #endif
 
+#ifndef U_STRING_CASE_MAPPER_DEFINED
+#define U_STRING_CASE_MAPPER_DEFINED
+
+/**
+ * Internal string case mapping function type.
+ * @internal
+ */
+typedef int32_t U_CALLCONV
+UStringCaseMapper(const UCaseMap *csm,
+                  UChar *dest, int32_t destCapacity,
+                  const UChar *src, int32_t srcLength,
+                  UErrorCode *pErrorCode);
+
+#endif
+
 U_NAMESPACE_BEGIN
 
 class BreakIterator;        // unicode/brkiter.h
@@ -3362,12 +3377,7 @@ private:
    * as in ustr_imp.h for ustrcase_map().
    */
   UnicodeString &
-  caseMap(const UCaseMap *csm,
-          int32_t U_CALLCONV (*stringCaseMapper)(
-              const UCaseMap *csm,
-              UChar *dest, int32_t destCapacity,
-              const UChar *src, int32_t srcLength,
-              UErrorCode *pErrorCode));
+  caseMap(const UCaseMap *csm, UStringCaseMapper *stringCaseMapper);
 
   // ref counting
   void addRef(void);
