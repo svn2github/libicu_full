@@ -38,16 +38,23 @@ group: c_strings
     # We must not use tolower and toupper because they are system-locale-sensitive (Turkish i).
     strlen strchr strrchr strstr strcmp strncmp strcpy strncpy strcat strncat
     memcmp memcpy memmove memset
+    # Additional symbols in an optimized build.
+    __strcpy_chk __strncpy_chk __strcat_chk __strncat_chk
+    __rawmemchr __memcpy_chk __memmove_chk
 
 group: c_string_formatting
     atoi atol strtod strtol strtoul
     sprintf
+    # Additional symbols in an optimized build.
+    __sprintf_chk
 
 group: floating_point
     floor ceil modf fmod log pow sqrt
 
 group: trigonometry
     acos asin atan atan2 cos sin tan
+    # Additional symbols in an optimized build.
+    sincos
 
 group: stdlib_qsort
     qsort
@@ -62,12 +69,16 @@ group: system_locale
 
 group: stdio_input
     fopen fclose fgets fread fseek ftell rewind feof fileno
+    # Additional symbols in an optimized build.
+    __fgets_chk __fread_chk
 
 group: stdio_output
     fflush fwrite
 
 group: file_io
     open close stat
+    # Additional symbols in an optimized build.
+    __xstat
 
 group: readlink_function
     readlink  # putil.cpp uprv_tzname() calls this in a hack to get the time zone name
@@ -103,6 +114,8 @@ group: iostream
     "std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)"
     std::istream::get()
     std::istream::putback(char)
+    # Additional symbols in an optimized build.
+    "std::basic_ostream<char, std::char_traits<char> >& std::__ostream_insert<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*, long)"
 
 # ICU common library --------------------------------------------------------- #
 
