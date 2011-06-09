@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-*   Copyright (C) 1997-2010, International Business Machines
+*   Copyright (C) 1997-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -539,7 +539,7 @@ public:
      *
      * @draft ICU 5.0
      */
-    virtual BreakIterator &refreshInputText(UText *input, UErrorCode &status);
+    virtual BreakIterator &refreshInputText(UText *input, UErrorCode &status) = 0;
 
  private:
     static BreakIterator* buildInstance(const Locale& loc, const char *type, int32_t kind, UErrorCode& status);

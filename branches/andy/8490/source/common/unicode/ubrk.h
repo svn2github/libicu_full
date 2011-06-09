@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-* Copyright (C) 1996-2010, International Business Machines Corporation and others.
+* Copyright (C) 1996-2011, International Business Machines Corporation and others.
 * All Rights Reserved.
 ******************************************************************************
 */
@@ -521,7 +521,8 @@ ubrk_getLocaleByType(const UBreakIterator *bi, ULocDataLocaleType type, UErrorCo
   *
   * @draft ICU 5.0
   */
-void ubrk_refreshUText(UBreakIterator *bi,
+U_DRAFT void U_EXPORT2
+ubrk_refreshUText(UBreakIterator *bi,
                        UText          *text,
                        UErrorCode     *status);
 
