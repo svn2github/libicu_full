@@ -6966,6 +6966,11 @@ ucol_setVariableTop(UCollator *coll, const UChar *varTop, int32_t len, UErrorCod
         return 0;
     }
 
+    if(coll->delegate!=NULL) {
+      return coll->delegate->setVariableTop(varTop, len, *status);
+    }
+
+
     collIterate s;
     IInit_collIterate(coll, varTop, len, &s, status);
     if(U_FAILURE(*status)) {
@@ -7003,6 +7008,9 @@ U_CAPI uint32_t U_EXPORT2 ucol_getVariableTop(const UCollator *coll, UErrorCode 
     if(U_FAILURE(*status) || coll == NULL) {
         return 0;
     }
+    if(coll->delegate!=NULL) {
+      return coll->delegate->getVariableTop(*status);
+    }
     return coll->variableTopValue<<16;
 }
 
@@ -7021,6 +7029,11 @@ ucol_restoreVariableTop(UCollator *coll, const uint32_t varTop, UErrorCode *stat
 U_CAPI void  U_EXPORT2
 ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value, UErrorCode *status) {
     if(U_FAILURE(*status) || coll == NULL) {
+      return;
+    }
+
+    if(coll->delegate != NULL) {
+      coll->delegate->setAttribute(attr,value,*status);
       return;
     }
 
@@ -7161,6 +7174,11 @@ ucol_getAttribute(const UCollator *coll, UColAttribute attr, UErrorCode *status)
     if(U_FAILURE(*status) || coll == NULL) {
       return UCOL_DEFAULT;
     }
+
+    if(coll->delegate != NULL) {
+      return coll->delegate->getAttribute(attr,*status);
+    }
+
     switch(attr) {
     case UCOL_NUMERIC_COLLATION:
       return coll->numericCollation;
@@ -7210,6 +7228,10 @@ ucol_getReorderCodes(const UCollator *coll,
         return 0;
     }
 
+    if(coll->delegate!=NULL) {
+      return coll->delegate->getReorderCodes(dest, destCapacity, *status);
+    }
+
     if (destCapacity < 0 || (destCapacity > 0 && dest == NULL)) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
@@ -7242,6 +7264,11 @@ ucol_setReorderCodes(UCollator* coll,
     if (reorderCodesLength < 0 || (reorderCodesLength > 0 && reorderCodes == NULL)) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
+    }
+
+    if(coll->delegate!=NULL) {
+      coll->delegate->setReorderCodes(reorderCodes, reorderCodesLength, *status);
+      return;
     }
     
     if (coll->reorderCodes != NULL && coll->freeReorderCodesOnClose == TRUE) {
@@ -7341,6 +7368,10 @@ U_CAPI void U_EXPORT2
 ucol_getVersion(const UCollator* coll,
                 UVersionInfo versionInfo)
 {
+    if(coll->delegate!=NULL) {
+      coll->delegate->getVersion(versionInfo);
+      return;
+    }
     /* RunTime version  */
     uint8_t rtVersion = UCOL_RUNTIME_VERSION;
     /* Builder version*/
@@ -8599,6 +8630,11 @@ ucol_strcoll( const UCollator    *coll,
     if (source==target && sourceLength==targetLength) {
         UTRACE_EXIT_VALUE(UCOL_EQUAL);
         return UCOL_EQUAL;
+    }
+
+    if(coll->delegate != NULL) {
+      UErrorCode status = U_ZERO_ERROR;
+      return coll->delegate->compare(source,sourceLength,target,targetLength, status);
     }
 
     /* Scan the strings.  Find:                                                             */
