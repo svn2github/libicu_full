@@ -46,6 +46,7 @@
 #include "unicode/unistr.h"
 #endif
 #include "unicode/ucol.h"
+#include "ucol_data.h"
 #include "utrie.h"
 #include "cmemory.h"
 #if defined(XP_CPLUSPLUS)
@@ -176,8 +177,7 @@ typedef void Collator;
  * Header is followed by the table and continuation table.
 */
 
-/* let us know whether reserved fields are reset to zero or junked */
-#define UCOL_HEADER_MAGIC 0x20030618
+/* definition of UCOL_HEADER_MAGIC moved to common/ucol_data.h */
 
 /* UDataInfo for UCA mapping table */
 /* dataFormat="UCol"            */
@@ -187,7 +187,7 @@ typedef void Collator;
 #define UCA_DATA_FORMAT_3 ((uint8_t)0x6c)
 
 #define UCA_FORMAT_VERSION_0 ((uint8_t)3)
-#define UCA_FORMAT_VERSION_1 ((uint8_t)0)
+#define UCA_FORMAT_VERSION_1 0
 #define UCA_FORMAT_VERSION_2 ((uint8_t)0)
 #define UCA_FORMAT_VERSION_3 ((uint8_t)0)
 
@@ -378,12 +378,12 @@ typedef struct UCollationPCE UCollationPCE;
 
 U_NAMESPACE_END
 
-struct UCollationElements : public U_NAMESPACE_QUALIFIER UMemory
+struct UCollationElements : public icu::UMemory
 {
   /**
   * Struct wrapper for source data
   */
-        U_NAMESPACE_QUALIFIER collIterate iteratordata_;
+        icu::collIterate iteratordata_;
   /**
   * Indicates if this data has been reset.
   */
@@ -396,7 +396,7 @@ struct UCollationElements : public U_NAMESPACE_QUALIFIER UMemory
 /**
  * Data for getNextProcessed, getPreviousProcessed.
  */
-        U_NAMESPACE_QUALIFIER UCollationPCE     *pce;
+        icu::UCollationPCE     *pce;
 };
 
 #else
@@ -550,42 +550,59 @@ U_CAPI uint32_t U_EXPORT2 ucol_getNextCE(const UCollator *coll,
 U_CFUNC uint32_t U_EXPORT2 ucol_getPrevCE(const UCollator *coll,
                                           U_NAMESPACE_QUALIFIER collIterate *collationSource,
                                           UErrorCode *status);
+/* get some memory */
+void *ucol_getABuffer(const UCollator *coll, uint32_t size);
+
+#ifdef XP_CPLUSPLUS
+
+U_NAMESPACE_BEGIN
+
+class SortKeyByteSink;
+
+U_NAMESPACE_END
+
 /* function used by C++ getCollationKey to prevent restarting the calculation */
 U_CFUNC int32_t
 ucol_getSortKeyWithAllocation(const UCollator *coll,
                               const UChar *source, int32_t sourceLength,
-                              uint8_t **pResult,
+                              uint8_t *&result, int32_t &resultCapacity,
                               UErrorCode *pErrorCode);
 
-/* get some memory */
-void *ucol_getABuffer(const UCollator *coll, uint32_t size);
+typedef void U_CALLCONV
+SortKeyGenerator(const    UCollator    *coll,
+        const    UChar        *source,
+        int32_t        sourceLength,
+        icu::SortKeyByteSink &result,
+        UErrorCode *status);
 
 /* worker function for generating sortkeys */
 U_CFUNC
-int32_t U_CALLCONV
+void U_CALLCONV
 ucol_calcSortKey(const    UCollator    *coll,
         const    UChar        *source,
         int32_t        sourceLength,
-        uint8_t        **result,
-        uint32_t        resultLength,
-        UBool allocatePrimary,
+        icu::SortKeyByteSink &result,
         UErrorCode *status);
 
 U_CFUNC
-int32_t U_CALLCONV
+void U_CALLCONV
 ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
         const    UChar        *source,
         int32_t        sourceLength,
-        uint8_t        **result,
-        uint32_t        resultLength,
-        UBool allocatePrimary,
+        icu::SortKeyByteSink &result,
         UErrorCode *status);
 
-U_CFUNC
-int32_t 
-ucol_getSortKeySize(const UCollator *coll, U_NAMESPACE_QUALIFIER collIterate *s, 
-                    int32_t currentSize, UColAttributeValue strength, 
-                    int32_t len);
+#else
+
+typedef void U_CALLCONV
+SortKeyGenerator(const    UCollator    *coll,
+        const    UChar        *source,
+        int32_t        sourceLength,
+        void *result,
+        UErrorCode *status);
+
+#endif
+
 /**
  * Makes a copy of the Collator's rule data. The format is
  * that of .col files.
@@ -843,46 +860,7 @@ typedef struct {
   uint32_t UCA_PRIMARY_SPECIAL_MAX; /*0xF0000000*/
 } UCAConstants;
 
-typedef struct {
-      int32_t size;
-      /* all the offsets are in bytes */
-      /* to get the address add to the header address and cast properly */
-      uint32_t options; /* these are the default options for the collator */
-      uint32_t UCAConsts; /* structure which holds values for indirect positioning and implicit ranges */
-      uint32_t contractionUCACombos;        /* this one is needed only for UCA, to copy the appropriate contractions */
-      uint32_t magic;            /* magic number - lets us know whether reserved data is reset or junked */
-      uint32_t mappingPosition;  /* const uint8_t *mappingPosition; */
-      uint32_t expansion;        /* uint32_t *expansion;            */
-      uint32_t contractionIndex; /* UChar *contractionIndex;        */
-      uint32_t contractionCEs;   /* uint32_t *contractionCEs;       */
-      uint32_t contractionSize;  /* needed for various closures */
-      /*int32_t latinOneMapping;*/ /* this is now handled in the trie itself *//* fast track to latin1 chars      */
-
-      uint32_t endExpansionCE;      /* array of last collation element in
-                                       expansion */
-      uint32_t expansionCESize;     /* array of maximum expansion size
-                                       corresponding to the expansion
-                                       collation elements with last element
-                                       in endExpansionCE*/
-      int32_t  endExpansionCECount; /* size of endExpansionCE */
-      uint32_t unsafeCP;            /* hash table of unsafe code points */
-      uint32_t contrEndCP;          /* hash table of final code points  */
-                                    /*   in contractions.               */
-
-      int32_t contractionUCACombosSize;     /* number of UCA contraction items. */
-                                            /*Length is contractionUCACombosSize*contractionUCACombosWidth*sizeof(UChar) */
-      UBool jamoSpecial;                    /* is jamoSpecial */
-      UBool isBigEndian;                    /* is this data big endian? from the UDataInfo header*/
-      uint8_t charSetFamily;                /* what is the charset family of this data from the UDataInfo header*/
-      uint8_t contractionUCACombosWidth;    /* width of UCA combos field */
-      UVersionInfo version;
-      UVersionInfo UCAVersion;              /* version of the UCA, read from file */
-      UVersionInfo UCDVersion;              /* UCD version, obtained by u_getUnicodeVersion */
-      UVersionInfo formatVersion;           /* format version from the UDataInfo header */
-      uint32_t scriptToLeadByte;            /* offset to script to lead collation byte mapping data */
-      uint32_t leadByteToScript;            /* offset to lead collation byte to script mapping data */
-      uint8_t reserved[76];                 /* for future use */
-} UCATableHeader;
+/* definition of UCATableHeader moved to common/ucol_data.h */
 
 #define U_UNKNOWN_STATE 0
 #define U_COLLATOR_STATE 0x01
@@ -953,24 +931,7 @@ typedef struct {
 
 U_CDECL_BEGIN
 
-typedef struct {
-  uint32_t byteSize;
-  uint32_t tableSize;
-  uint32_t contsSize;
-  uint32_t table;
-  uint32_t conts;
-  UVersionInfo UCAVersion;              /* version of the UCA, read from file */
-  uint8_t padding[8];
-} InverseUCATableHeader;
-
-typedef int32_t U_CALLCONV
-SortKeyGenerator(const    UCollator    *coll,
-        const    UChar        *source,
-        int32_t        sourceLength,
-        uint8_t        **result,
-        uint32_t        resultLength,
-        UBool allocatePrimary,
-        UErrorCode *status);
+/* definition of InverseUCATableHeader moved to common/ucol_data.h */
 
 typedef void U_CALLCONV
 ResourceCleaner(UCollator *coll);

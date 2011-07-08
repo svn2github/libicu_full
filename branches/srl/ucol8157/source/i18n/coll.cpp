@@ -52,9 +52,9 @@
 #include "uresimp.h"
 #include "ucln_in.h"
 
-static U_NAMESPACE_QUALIFIER Locale* availableLocaleList = NULL;
+static icu::Locale* availableLocaleList = NULL;
 static int32_t  availableLocaleListCount;
-static U_NAMESPACE_QUALIFIER ICULocaleService* gService = NULL;
+static icu::ICULocaleService* gService = NULL;
 
 /**
  * Release all static memory held by collator.
@@ -846,9 +846,9 @@ Collator::getFunctionalEquivalent(const char* keyword, const Locale& locale,
 }
 
 int32_t U_EXPORT2 
-Collator::getReorderCodes(int32_t *dest,
-                                 int32_t destCapacity,
-                                 UErrorCode& status) const
+Collator::getReorderCodes(int32_t* /* dest*/,
+                          int32_t /* destCapacity*/,
+                          UErrorCode& status) const
 {
     if (U_SUCCESS(status)) {
         status = U_UNSUPPORTED_ERROR;
@@ -857,9 +857,9 @@ Collator::getReorderCodes(int32_t *dest,
 }
 
 void U_EXPORT2 
-Collator::setReorderCodes(const int32_t *reorderCodes,
-                              int32_t reorderCodesLength,
-                              UErrorCode& status)
+Collator::setReorderCodes(const int32_t* /* reorderCodes */,
+                          int32_t /* reorderCodesLength */,
+                          UErrorCode& status)
 {
     if (U_SUCCESS(status)) {
         status = U_UNSUPPORTED_ERROR;
@@ -867,9 +867,9 @@ Collator::setReorderCodes(const int32_t *reorderCodes,
 }
 
 int32_t U_EXPORT2
-Collator::getEquivalentReorderCodes(int32_t reorderCode,
-                                    int32_t *dest,
-                                    int32_t destCapacity,
+Collator::getEquivalentReorderCodes(int32_t /* reorderCode */,
+                                    int32_t* /* dest */,
+                                    int32_t /* destCapacity */,
                                     UErrorCode& status)
 {
     if (U_SUCCESS(status)) {

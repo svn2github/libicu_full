@@ -38,14 +38,13 @@
 #include "unicode/fpositer.h"
 #include "unicode/stringpiece.h"
 
-union UHashTok;
-
 U_NAMESPACE_BEGIN
 
 class DigitList;
 class ChoiceFormat;
 class CurrencyPluralInfo;
 class Hashtable;
+class UnicodeSet;
 class FieldPositionHandler;
 
 /**
@@ -350,7 +349,8 @@ class FieldPositionHandler;
  * DecimalFormatSymbols object.  During formatting, the
  * DecimalFormatSymbols-based digits are output.
  *
- * <p>During parsing, grouping separators are ignored.
+ * <p>During parsing, grouping separators are ignored if in lenient mode;
+ * otherwise, if present, they must be in appropriate positions.
  *
  * <p>For currency parsing, the formatter is able to parse every currency
  * style formats no matter which style the formatter is constructed with.
@@ -655,9 +655,13 @@ public:
                              towards the nearest even integer if equidistant */
         kRoundHalfDown, /**< Round towards the nearest integer, or
                              towards zero if equidistant */
-        kRoundHalfUp    /**< Round towards the nearest integer, or
+        kRoundHalfUp,   /**< Round towards the nearest integer, or
                              away from zero if equidistant */
-        // We don't support ROUND_UNNECESSARY
+        /**
+          *  Return U_FORMAT_INEXACT_ERROR if number does not format exactly. 
+          *  @draft ICU 4.8 
+          */
+        kRoundUnnecessary 
     };
 
     /**
@@ -732,14 +736,14 @@ public:
      * @param pattern           a non-localized pattern string
      * @param symbolsToAdopt    the set of symbols to be used.  The caller should not
      *                          delete this object after making this call.
-     * @param style             style of decimal format, kNumberStyle etc.
+     * @param style             style of decimal format
      * @param status            Output param set to success/failure code. If the
      *                          pattern is invalid this will be set to a failure code.
      * @internal ICU 4.2
      */
     DecimalFormat(  const UnicodeString& pattern,
                     DecimalFormatSymbols* symbolsToAdopt,
-                    NumberFormat::EStyles style,
+                    UNumberFormatStyle style,
                     UErrorCode& status);
 
     /**
@@ -1978,7 +1982,8 @@ private:
 
     static int32_t compareSimpleAffix(const UnicodeString& affix,
                                       const UnicodeString& input,
-                                      int32_t pos);
+                                      int32_t pos,
+                                      UBool lenient);
 
     static int32_t skipPatternWhiteSpace(const UnicodeString& text, int32_t pos);
 
@@ -1993,6 +1998,9 @@ private:
     static int32_t match(const UnicodeString& text, int32_t pos, UChar32 ch);
 
     static int32_t match(const UnicodeString& text, int32_t pos, const UnicodeString& str);
+
+    static UBool matchSymbol(const UnicodeString &text, int32_t position, int32_t length, const UnicodeString &symbol,
+                             UnicodeSet *sset, UChar32 schar);
 
     /**
      * Get a decimal format symbol.

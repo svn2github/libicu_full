@@ -122,6 +122,13 @@ PluralFormat::PluralFormat(const PluralFormat& other)
 void
 PluralFormat::copyObjects(const PluralFormat& other) {
     UErrorCode status = U_ZERO_ERROR;
+    if (numberFormat != NULL) {
+        delete numberFormat;
+    }
+    if (pluralRulesWrapper.pluralRules != NULL) {
+        delete pluralRulesWrapper.pluralRules;
+    }
+
     if (other.numberFormat == NULL) {
         numberFormat = NumberFormat::createInstance(locale, status);
     } else {
@@ -412,10 +419,10 @@ int32_t PluralFormat::findSubMessage(const MessagePattern& pattern, int32_t part
                         // We have already seen an "other" sub-message.
                         // Do not match "other" again.
                         haveKeywordMatch=TRUE;
-                        continue;
+                        // Skip keyword matching but do getLimitPartIndex().
                     }
                 }
-                if(pattern.partSubstringMatches(*part, keyword)) {
+                if(!haveKeywordMatch && pattern.partSubstringMatches(*part, keyword)) {
                     // keyword matches
                     msgStart=partIndex;
                     // Do not match this keyword again.

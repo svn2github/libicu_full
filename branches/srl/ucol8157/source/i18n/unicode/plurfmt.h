@@ -481,7 +481,10 @@ public:
 
   private:
 
-    class  PluralSelector {
+     /**
+      * @internal 
+      */
+    class U_I18N_API PluralSelector : public UMemory {
       public:
         /**
          * Given a number, returns the appropriate PluralFormat keyword.
@@ -493,7 +496,10 @@ public:
         virtual UnicodeString select(double number, UErrorCode& ec) const = 0;
     };
 
-    class PluralSelectorAdapter : public PluralSelector {
+    /**
+     * @internal
+     */
+    class U_I18N_API PluralSelectorAdapter : public PluralSelector {
       public:
         PluralSelectorAdapter() : pluralRules(NULL) {
         }

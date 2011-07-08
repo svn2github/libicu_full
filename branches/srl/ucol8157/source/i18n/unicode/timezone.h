@@ -731,6 +731,16 @@ private:
     static TimeZone*        createCustomTimeZone(const UnicodeString&); // Creates a time zone based on the string.
 
     /**
+     * Finds the given ID in the Olson tzdata. If the given ID is found in the tzdata,
+     * returns the pointer to the ID resource. This method is exposed through ZoneMeta class
+     * for ICU internal implementation and useful for building hashtable using a time zone
+     * ID as a key.
+     * @param id zone id string
+     * @return the pointer of the ID resource, or NULL.
+     */
+    static const UChar* findID(const UnicodeString& id);
+
+    /**
      * Resolve a link in Olson tzdata.  When the given id is known and it's not a link,
      * the id itself is returned.  When the given id is known and it is a link, then
      * dereferenced zone id is returned.  When the given id is unknown, then it returns
@@ -768,7 +778,7 @@ private:
      * @return Returns TRUE when the given custom id is valid.
      */
     static UBool parseCustomID(const UnicodeString& id, int32_t& sign, int32_t& hour,
-        int32_t& min, int32_t& sec);
+        int32_t& minute, int32_t& second);
 
     /**
      * Parse a custom time zone identifier and return the normalized
@@ -788,7 +798,7 @@ private:
      * @param hour offset hours
      * @param min offset minutes
      * @param sec offset seconds
-     * @param netative sign of the offset, TRUE for negative offset.
+     * @param negative sign of the offset, TRUE for negative offset.
      * @param id Receves the format result (normalized custom ID)
      * @return The reference to id
      */

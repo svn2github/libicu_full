@@ -30,7 +30,7 @@
 /**
  * Value returned by PluralRules::getUniqueKeywordValue() when there is no
  * unique value to return.
- * draft ICU 4.8
+ * @draft ICU 4.8
  */
 #define UPLRULES_NO_UNIQUE_VALUE ((double)-0.00123456777)
 
@@ -42,12 +42,16 @@ class RuleParser;
 class PluralKeywordEnumeration;
 
 /**
- * Defines rules for mapping positive long values onto a small set of
+ * Defines rules for mapping non-negative numeric values onto a small set of
  * keywords. Rules are constructed from a text description, consisting
  * of a series of keywords and conditions.  The {@link #select} method
  * examines each condition in order and returns the keyword for the
  * first condition that matches the number.  If none match,
  * default rule(other) is returned.
+ *
+ * For more information, details, and tips for writing rules, see the
+ * LDML spec, C.11 Language Plural Rules:
+ * http://www.unicode.org/draft/reports/tr35/tr35.html#Language_Plural_Rules
  *
  * Examples:<pre>
  *   "one: n is 1; few: n in 2..4"</pre>
@@ -82,9 +86,10 @@ class PluralKeywordEnumeration;
  * and_condition = relation ('and' relation)*
  * relation      = is_relation | in_relation | within_relation | 'n' <EOL>
  * is_relation   = expr 'is' ('not')? value
- * in_relation   = expr ('not')? 'in' range
+ * in_relation   = expr ('not')? 'in' range_list
  * within_relation = expr ('not')? 'within' range
  * expr          = 'n' ('mod' value)?
+ * range_list    = (range | value) (',' range_list)*
  * value         = digit+
  * digit         = 0|1|2|3|4|5|6|7|8|9
  * range         = value'..'value
@@ -156,7 +161,7 @@ public:
 
     /**
      * Creates a PluralRules from a description if it is parsable, otherwise
-     * returns null.
+     * returns NULL.
      *
      * @param description rule description
      * @param status      Output param set to success/failure code on exit, which
@@ -250,15 +255,17 @@ public:
      *
      * @param keyword      The keyword.
      * @param dest         Array into which to put the returned values.  May
-     *                     be null if destCapacity is 0.
+     *                     be NULL if destCapacity is 0.
      * @param destCapacity The capacity of the array, must be at least 0.
      * @param status       The error code.
      * @return             The count of values available, or -1.  This count
      *                     can be larger than destCapacity, but no more than
      *                     destCapacity values will be written.
+     * @draft ICU 4.8
      */
-    int32_t getAllKeywordValues(const UnicodeString &keyword, double *dest,
-                      int32_t destCapacity, UErrorCode& status);
+    int32_t getAllKeywordValues(const UnicodeString &keyword,
+                                double *dest, int32_t destCapacity,
+                                UErrorCode& status);
 
     /**
      * Returns sample values for which select() would return the keyword.  If
@@ -268,15 +275,19 @@ public:
      *
      * @param keyword      The keyword.
      * @param dest         Array into which to put the returned values.  May
-     *                     be null if destCapacity is 0.
+     *                     be NULL if destCapacity is 0.
      * @param destCapacity The capacity of the array, must be at least 0.
      * @param status       The error code.
-     * @return             The count of values available, or -1 if error.
-     *                     This can be larger than destCapacity, but no
-     *                     more than destCapacity values will be written.
+     * @return             The count of values written.
+     *                     If more than destCapacity samples are available, then
+     *                     only destCapacity are written, and destCapacity is returned as the count,
+     *                     rather than setting a U_BUFFER_OVERFLOW_ERROR.
+     *                     (The actual number of keyword values could be unlimited.)
+     * @draft ICU 4.8
      */
-    int32_t getSamples(const UnicodeString &keyword, double *dest,
-                       int32_t destCapacity, UErrorCode& status);
+    int32_t getSamples(const UnicodeString &keyword,
+                       double *dest, int32_t destCapacity,
+                       UErrorCode& status);
 
     /**
      * Returns TRUE if the given keyword is defined in this

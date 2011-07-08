@@ -70,6 +70,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "putilimp.h"
+#include "ustr_imp.h"
 
 /* public RuleBasedCollator constructor ---------------------------------- */
 
@@ -453,21 +454,46 @@ CollationKey& RuleBasedCollator::getCollationKey(const UChar* source,
                                                     CollationKey& sortkey,
                                                     UErrorCode& status) const
 {
-    if (U_FAILURE(status))
-    {
+    if (U_FAILURE(status)) {
+        return sortkey.setToBogus();
+    }
+    if (sourceLen < -1 || (source == NULL && sourceLen != 0)) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
         return sortkey.setToBogus();
     }
 
-    if ((!source) || (sourceLen == 0)) {
+    if (sourceLen < 0) {
+        sourceLen = u_strlen(source);
+    }
+    if (sourceLen == 0) {
         return sortkey.reset();
     }
 
     uint8_t *result;
-    int32_t resultLen = ucol_getSortKeyWithAllocation(ucollator,
-                                                      source, sourceLen,
-                                                      &result,
-                                                      &status);
-    sortkey.adopt(result, resultLen);
+    int32_t resultCapacity;
+    if (sortkey.fCapacity >= (sourceLen * 3)) {
+        // Try to reuse the CollationKey.fBytes.
+        result = sortkey.fBytes;
+        resultCapacity = sortkey.fCapacity;
+    } else {
+        result = NULL;
+        resultCapacity = 0;
+    }
+    int32_t resultLen = ucol_getSortKeyWithAllocation(ucollator, source, sourceLen,
+                                                      result, resultCapacity, &status);
+
+    if (U_SUCCESS(status)) {
+        if (result == sortkey.fBytes) {
+            sortkey.setLength(resultLen);
+        } else {
+            sortkey.adopt(result, resultCapacity, resultLen);
+        }
+    } else {
+        if (result != sortkey.fBytes) {
+            uprv_free(result);
+        }
+        sortkey.setToBogus();
+    }
     return sortkey;
 }
 
@@ -619,7 +645,7 @@ int32_t RuleBasedCollator::hashCode() const
 {
     int32_t length;
     const UChar *rules = ucol_getRules(ucollator, &length);
-    return uhash_hashUCharsN(rules, length);
+    return ustr_hashUCharsN(rules, length);
 }
 
 /**

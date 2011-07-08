@@ -31,8 +31,8 @@
 #include "uhash.h"
 #include "uvector.h"
 
-#include <string>
-#include <iostream>
+//#include <string>
+//#include <iostream>
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(AlphabeticIndex)
@@ -46,15 +46,6 @@ sortCollateComparator(const void *context, const void *left, const void *right);
 
 static int32_t U_CALLCONV
 recordCompareFn(const void *context, const void *left, const void *right);
-
-//
-//  UHash support function, delete a UnicodeSet
-//     TODO:  move this function into uhash.
-//
-static void U_CALLCONV
-uhash_deleteUnicodeSet(void *obj) {
-    delete static_cast<UnicodeSet *>(obj);
-}
 
 //  UVector<Bucket *> support function, delete a Bucket.
 static void U_CALLCONV
@@ -183,7 +174,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     // that are the same according to the collator
 
     UVector preferenceSorting(status);   // Vector of UnicodeStrings; owned by the vector.
-    preferenceSorting.setDeleter(uhash_deleteUnicodeString);
+    preferenceSorting.setDeleter(uprv_deleteUObject);
     appendUnicodeSetToUVector(preferenceSorting, *initialLabels_, status);
     preferenceSorting.sortWithUComparator(PreferenceComparator, &status, status);
 
@@ -236,7 +227,7 @@ void AlphabeticIndex::buildIndex(UErrorCode &status) {
     const int32_t size = labelSet.size() - 1;
     if (size > maxLabelCount_) {
         UVector *newLabels = new UVector(status);
-        newLabels->setDeleter(uhash_deleteUnicodeString);
+        newLabels->setDeleter(uprv_deleteUObject);
         int32_t count = 0;
         int32_t old = -1;
         for (int32_t srcIndex=0; srcIndex<labels_->size(); srcIndex++) {
@@ -580,13 +571,13 @@ void AlphabeticIndex::init(UErrorCode &status) {
                                         uhash_compareUnicodeString, // key Comparator,
                                         NULL,                       // value Comparator
                                         &status);
-    uhash_setKeyDeleter(alreadyIn_, uhash_deleteUnicodeString);
-    uhash_setValueDeleter(alreadyIn_, uhash_deleteUnicodeSet);
+    uhash_setKeyDeleter(alreadyIn_, uprv_deleteUObject);
+    uhash_setValueDeleter(alreadyIn_, uprv_deleteUObject);
 
     bucketList_            = new UVector(status);
     bucketList_->setDeleter(alphaIndex_deleteBucket);
     labels_                = new UVector(status);
-    labels_->setDeleter(uhash_deleteUnicodeString);
+    labels_->setDeleter(uprv_deleteUObject);
     labels_->setComparer(uhash_compareUnicodeString);
     inputRecords_          = new UVector(status);
     inputRecords_->setDeleter(alphaIndex_deleteRecord);
@@ -733,10 +724,10 @@ void AlphabeticIndex::staticInit(UErrorCode &status) {
 //
 static int32_t U_CALLCONV
 sortCollateComparator(const void *context, const void *left, const void *right) {
-    const UHashTok *leftTok = static_cast<const UHashTok *>(left);
-    const UHashTok *rightTok = static_cast<const UHashTok *>(right);
-    const UnicodeString *leftString  = static_cast<const UnicodeString *>(leftTok->pointer);
-    const UnicodeString *rightString = static_cast<const UnicodeString *>(rightTok->pointer);
+    const UElement *leftElement = static_cast<const UElement *>(left);
+    const UElement *rightElement = static_cast<const UElement *>(right);
+    const UnicodeString *leftString  = static_cast<const UnicodeString *>(leftElement->pointer);
+    const UnicodeString *rightString = static_cast<const UnicodeString *>(rightElement->pointer);
     const Collator *col = static_cast<const Collator *>(context);
 
     if (leftString == rightString) {
@@ -758,10 +749,10 @@ sortCollateComparator(const void *context, const void *left, const void *right) 
 //
 static int32_t U_CALLCONV
 recordCompareFn(const void *context, const void *left, const void *right) {
-    const UHashTok *leftTok = static_cast<const UHashTok *>(left);
-    const UHashTok *rightTok = static_cast<const UHashTok *>(right);
-    const AlphabeticIndex::Record *leftRec  = static_cast<const AlphabeticIndex::Record *>(leftTok->pointer);
-    const AlphabeticIndex::Record *rightRec = static_cast<const AlphabeticIndex::Record *>(rightTok->pointer);
+    const UElement *leftElement = static_cast<const UElement *>(left);
+    const UElement *rightElement = static_cast<const UElement *>(right);
+    const AlphabeticIndex::Record *leftRec  = static_cast<const AlphabeticIndex::Record *>(leftElement->pointer);
+    const AlphabeticIndex::Record *rightRec = static_cast<const AlphabeticIndex::Record *>(rightElement->pointer);
     const Collator *col = static_cast<const Collator *>(context);
 
     Collator::EComparisonResult r = col->compare(leftRec->sortingName_, rightRec->sortingName_);
@@ -839,7 +830,7 @@ UVector *AlphabeticIndex::firstStringsInScript(Collator *ruleBasedCollator, UErr
     }
 
     UVector *dest = new UVector(status);
-    dest->setDeleter(uhash_deleteUnicodeString);
+    dest->setDeleter(uprv_deleteUObject);
     for (uint32_t i = 0; i < sizeof(results) / sizeof(results[0]); ++i) {
         if (results[i].length() > 0) {
             dest->addElement(results[i].clone(), status);
@@ -876,10 +867,11 @@ UVector *AlphabeticIndex::firstStringsInScript(UErrorCode &status) {
         return NULL;
     }
     UVector *dest = new UVector(status);
-    dest->setDeleter(uhash_deleteUnicodeString);
     if (dest == NULL && U_SUCCESS(status)) {
         status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
     }
+    dest->setDeleter(uprv_deleteUObject);
     const UChar *src  = HACK_FIRST_CHARS_IN_SCRIPTS;
     const UChar *limit = src + sizeof(HACK_FIRST_CHARS_IN_SCRIPTS) / sizeof(HACK_FIRST_CHARS_IN_SCRIPTS[0]);
     do {
@@ -1056,7 +1048,7 @@ void AlphabeticIndex::hackName(UnicodeString &dest, const UnicodeString &name, c
             index--;
             break;
         }
-        int32_t compareResult = col->compare(name, (*HACK_PINYIN_LOOKUP)[index]); 
+        int32_t compareResult = col->compare(name, UnicodeString(TRUE, (*HACK_PINYIN_LOOKUP)[index], -1));
         if (compareResult < 0) {
             index--;
         }
@@ -1078,16 +1070,16 @@ void AlphabeticIndex::hackName(UnicodeString &dest, const UnicodeString &name, c
  *
  * For use with array sort or UVector.
  * @param context  A UErrorCode pointer.
- * @param left     A UHashTok pointer, which must refer to a UnicodeString *
- * @param right    A UHashTok pointer, which must refer to a UnicodeString *
+ * @param left     A UElement pointer, which must refer to a UnicodeString *
+ * @param right    A UElement pointer, which must refer to a UnicodeString *
  */
 
 static int32_t U_CALLCONV
 PreferenceComparator(const void *context, const void *left, const void *right) {
-    const UHashTok *leftTok  = static_cast<const UHashTok *>(left);
-    const UHashTok *rightTok = static_cast<const UHashTok *>(right);
-    const UnicodeString *s1  = static_cast<const UnicodeString *>(leftTok->pointer);
-    const UnicodeString *s2  = static_cast<const UnicodeString *>(rightTok->pointer);
+    const UElement *leftElement  = static_cast<const UElement *>(left);
+    const UElement *rightElement = static_cast<const UElement *>(right);
+    const UnicodeString *s1  = static_cast<const UnicodeString *>(leftElement->pointer);
+    const UnicodeString *s2  = static_cast<const UnicodeString *>(rightElement->pointer);
     UErrorCode &status       = *(UErrorCode *)(context);   // Cast off both static and const.
     if (s1 == s2) {
         return 0;

@@ -32,6 +32,12 @@
 #include "stdio.h"
 #endif
 
+typedef struct IsoCodeEntry {
+    const UChar *isoCode; /* const because it's a reference to a resource bundle string. */
+    UDate from;
+    UDate to;
+} IsoCodeEntry;
+
 //------------------------------------------------------------
 // Constants
 
@@ -236,16 +242,17 @@ idForLocale(const char* locale, char* countryAndVariant, int capacity, UErrorCod
 
 // don't use ICUService since we don't need fallback
 
-#if !UCONFIG_NO_SERVICE
 U_CDECL_BEGIN
 static UBool U_CALLCONV currency_cleanup(void);
 U_CDECL_END
+
+#if !UCONFIG_NO_SERVICE
 struct CReg;
 
 static UMTX gCRegLock = 0;
 static CReg* gCRegHead = 0;
 
-struct CReg : public U_NAMESPACE_QUALIFIER UMemory {
+struct CReg : public icu::UMemory {
     CReg *next;
     UChar iso[ISO_COUNTRY_CODE_LENGTH+1];
     char  id[ULOC_FULLNAME_CAPACITY];
@@ -331,30 +338,6 @@ struct CReg : public U_NAMESPACE_QUALIFIER UMemory {
     }
 };
 
-/**
- * Release all static memory held by currency.
- */
-/*The declaration here is needed so currency_cleanup(void)
- * can call this function.
- */
-static UBool U_CALLCONV
-currency_cache_cleanup(void);
-
-U_CDECL_BEGIN
-static UBool U_CALLCONV currency_cleanup(void) {
-#if !UCONFIG_NO_SERVICE
-    CReg::cleanup();
-#endif
-    /*
-     * There might be some cached currency data or isoCodes data.
-     */
-    currency_cache_cleanup();
-    isoCodes_cleanup();
-
-    return TRUE;
-}
-U_CDECL_END
-
 // -------------------------------------
 
 U_CAPI UCurrRegistryKey U_EXPORT2
@@ -379,6 +362,32 @@ ucurr_unregister(UCurrRegistryKey key, UErrorCode* status)
     return FALSE;
 }
 #endif /* UCONFIG_NO_SERVICE */
+
+// -------------------------------------
+
+/**
+ * Release all static memory held by currency.
+ */
+/*The declaration here is needed so currency_cleanup(void)
+ * can call this function.
+ */
+static UBool U_CALLCONV
+currency_cache_cleanup(void);
+
+U_CDECL_BEGIN
+static UBool U_CALLCONV currency_cleanup(void) {
+#if !UCONFIG_NO_SERVICE
+    CReg::cleanup();
+#endif
+    /*
+     * There might be some cached currency data or isoCodes data.
+     */
+    currency_cache_cleanup();
+    isoCodes_cleanup();
+
+    return TRUE;
+}
+U_CDECL_END
 
 // -------------------------------------
 
@@ -760,7 +769,7 @@ getCurrencyNameCount(const char* loc, int32_t* total_currency_name_count, int32_
                 }
             }
             if (isChoice) {
-                ChoiceFormat fmt(s, ec2);
+                ChoiceFormat fmt(UnicodeString(TRUE, s, len), ec2);
                 int32_t fmt_count;
                 fmt.getFormats(fmt_count);
                 *total_currency_symbol_count += fmt_count;
@@ -883,7 +892,7 @@ collectCurrencyNames(const char* locale,
                 }
             }
             if (isChoice) {
-                ChoiceFormat fmt(s, ec2);
+                ChoiceFormat fmt(UnicodeString(TRUE, s, len), ec2);
                 int32_t fmt_count;
                 const UnicodeString* formats = fmt.getFormats(fmt_count);
                 for (int i = 0; i < fmt_count; ++i) {
@@ -1259,8 +1268,8 @@ currency_cache_cleanup(void) {
 
 U_CFUNC void
 uprv_parseCurrency(const char* locale,
-                   const U_NAMESPACE_QUALIFIER UnicodeString& text,
-                   U_NAMESPACE_QUALIFIER ParsePosition& pos,
+                   const icu::UnicodeString& text,
+                   icu::ParsePosition& pos,
                    int8_t type,
                    UChar* result,
                    UErrorCode& ec)
@@ -1412,7 +1421,7 @@ uprv_parseCurrency(const char* locale,
  */
 U_CFUNC void
 uprv_getStaticCurrencyName(const UChar* iso, const char* loc,
-                           U_NAMESPACE_QUALIFIER UnicodeString& result, UErrorCode& ec)
+                           icu::UnicodeString& result, UErrorCode& ec)
 {
     U_NAMESPACE_USE
 
@@ -1425,14 +1434,14 @@ uprv_getStaticCurrencyName(const UChar* iso, const char* loc,
         // arbitrary value; pick something != 1; more common.
         result.truncate(0);
         if (isChoiceFormat) {
-            ChoiceFormat f(currname, ec);
+            ChoiceFormat f(UnicodeString(TRUE, currname, len), ec);
             if (U_SUCCESS(ec)) {
                 f.format(2.0, result);
             } else {
-                result = iso;
+                result.setTo(iso, -1);
             }
         } else {
-            result = currname;
+            result.setTo(currname, -1);
         }
     }
 }
