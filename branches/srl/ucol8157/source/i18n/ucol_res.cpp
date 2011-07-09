@@ -947,6 +947,9 @@ ucol_getLocaleByType(const UCollator *coll, ULocDataLocaleType type, UErrorCode 
     UTRACE_ENTRY(UTRACE_UCOL_GETLOCALE);
     UTRACE_DATA1(UTRACE_INFO, "coll=%p", coll);
 
+    if(coll->delegate!=NULL) {
+      return coll->delegate->getLocale(type, *status).getName();
+    }
     switch(type) {
     case ULOC_ACTUAL_LOCALE:
         result = coll->actualLocale;

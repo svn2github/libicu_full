@@ -49,6 +49,11 @@
 #include "ucol_data.h"
 #include "utrie.h"
 #include "cmemory.h"
+#if defined(XP_CPLUSPLUS)
+#include "unicode/coll.h" // for class Collator
+#else
+typedef void Collator;
+#endif
 
 /* This is the internal header file which contains important declarations for 
  * the collation framework. 
@@ -1013,6 +1018,7 @@ struct UCollator {
     int32_t* reorderCodes;
     int32_t reorderCodesLength;
     uint8_t* leadBytePermutationTable;
+    Collator  *delegate;  /* if non-null: C++ object to delegate all API calls to. */
 };
 
 U_CDECL_END
