@@ -2103,8 +2103,8 @@ uprv_dl_open(const char *libName, UErrorCode *status) {
   if(U_FAILURE(*status)) return ret;
   ret =  dlopen(libName, RTLD_NOW|RTLD_GLOBAL);
   if(ret==NULL) {
-#ifndef U_TRACE_DYLOAD
-    perror("dlopen");
+#ifdef U_TRACE_DYLOAD
+    printf("dlerror on dlopen(%s): %s\n", libName, dlerror());
 #endif
     *status = U_MISSING_RESOURCE_ERROR;
   }
@@ -2127,6 +2127,9 @@ uprv_dlsym_func(void *lib, const char* sym, UErrorCode *status) {
   if(U_FAILURE(*status)) return uret.fp;
   uret.vp = dlsym(lib, sym);
   if(uret.vp == NULL) {
+#ifdef U_TRACE_DYLOAD
+    printf("dlerror on dlsym(%p,%s): %s\n", lib,sym, dlerror());
+#endif
     *status = U_MISSING_RESOURCE_ERROR;
   }
   return uret.fp;
