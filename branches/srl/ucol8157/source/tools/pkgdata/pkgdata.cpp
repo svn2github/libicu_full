@@ -30,8 +30,8 @@
 #include "unicode/utypes.h"
 
 #if U_HAVE_POPEN
-#if defined(U_CYGWIN) && defined(__STRICT_ANSI__)
-/* popen/pclose aren't defined in strict ANSI on Cygwin */
+#if (defined(U_CYGWIN) || defined(U_MINGW)) && defined(__STRICT_ANSI__)
+/* popen/pclose aren't defined in strict ANSI on Cygwin and MinGW */
 #undef __STRICT_ANSI__
 #endif
 #endif
@@ -99,6 +99,7 @@ U_CDECL_END
 
 #define LARGE_BUFFER_MAX_SIZE 2048
 #define SMALL_BUFFER_MAX_SIZE 512
+#define SMALL_BUFFER_FLAG_NAMES 32
 #define BUFFER_PADDING_SIZE 20
 
 static void loadLists(UPKGOptions *o, UErrorCode *status);
@@ -187,6 +188,7 @@ static UOption options[]={
     /*19*/    UOPTION_DEF( "quiet", 'q', UOPT_NO_ARG)
 };
 
+/* This enum and the following char array should be kept in sync. */
 enum {
     GENCCODE_ASSEMBLY_TYPE,
     SO_EXT,
@@ -206,6 +208,25 @@ enum {
     RANLIB,
     INSTALL_CMD,
     PKGDATA_FLAGS_SIZE
+};
+static const char* FLAG_NAMES[PKGDATA_FLAGS_SIZE] = {
+        "GENCCODE_ASSEMBLY_TYPE",
+        "SO",
+        "SOBJ",
+        "A",
+        "LIBPREFIX",
+        "LIB_EXT_ORDER",
+        "COMPILE",
+        "LIBFLAGS",
+        "GENLIB",
+        "LDICUDTFLAGS",
+        "LD_SONAME",
+        "RPATH_FLAGS",
+        "BIR_LDFLAGS",
+        "AR",
+        "ARFLAGS",
+        "RANLIB",
+        "INSTALL_CMD"
 };
 static char **pkgDataFlags = NULL;
 
@@ -507,7 +528,7 @@ normal_command_mode:
     printf("pkgdata: %s\n", cmd);
     int result = system(cmd);
     if (result != 0) {
-        printf("-- return status = %d\n", result);
+        fprintf(stderr, "-- return status = %d\n", result);
     }
 
     if (cmd != cmdBuffer && cmd != command) {
@@ -655,7 +676,10 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 }
             }
 
-            pkg_checkFlag(o);
+            if (pkg_checkFlag(o) == NULL) {
+                /* Error occurred. */
+                return result;
+            }
 #endif
 
             if (pkgDataFlags[GENCCODE_ASSEMBLY_TYPE][0] != 0) {
@@ -786,7 +810,7 @@ static int32_t initializePkgDataFlags(UPKGOptions *o) {
           fprintf(stdout, "# Reading options file %s\n", o->options);
         }
         status = U_ZERO_ERROR;
-        tmpResult = parseFlagsFile(o->options, pkgDataFlags, currentBufferSize, (int32_t)PKGDATA_FLAGS_SIZE, &status);
+        tmpResult = parseFlagsFile(o->options, pkgDataFlags, currentBufferSize, FLAG_NAMES, (int32_t)PKGDATA_FLAGS_SIZE, &status);
         if (status == U_BUFFER_OVERFLOW_ERROR) {
             for (int32_t i = 0; i < PKGDATA_FLAGS_SIZE; i++) {
                 uprv_free(pkgDataFlags[i]);
@@ -798,9 +822,9 @@ static int32_t initializePkgDataFlags(UPKGOptions *o) {
         }
 #endif
         if(o->verbose) {
-            fprintf(stdout, "# pkgDataFlags=");
-            for(int32_t i=0;i<PKGDATA_FLAGS_SIZE && pkgDataFlags[i][0];i++) {
-                fprintf(stdout, "%c \"%s\"", (i>0)?',':' ',pkgDataFlags[i]);
+            fprintf(stdout, "# pkgDataFlags=\n");
+            for(int32_t i=0;i<PKGDATA_FLAGS_SIZE;i++) {
+                fprintf(stdout, "  [%d] %s:  %s\n", i, FLAG_NAMES[i], pkgDataFlags[i]);
             }
             fprintf(stdout, "\n");
         }
@@ -826,7 +850,7 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
         }
 
         if (version != NULL) {
-#ifdef U_CYGWIN
+#if defined(U_CYGWIN)
             sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s.%s",
                     libName,
                     pkgDataFlags[SO_EXT]);
@@ -865,8 +889,8 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
               fprintf(stdout, "# libFileName[LIB_FILE_VERSION] = %s\n", libFileNames[LIB_FILE_VERSION]);
             }
 
-#ifdef U_CYGWIN
-            /* Cygwin only deals with the version major number. */
+#if defined(U_CYGWIN) || defined(U_MINGW)
+            /* Cygwin and MinGW only deals with the version major number. */
             uprv_strcpy(libFileNames[LIB_FILE_VERSION_TMP], libFileNames[LIB_FILE_VERSION_MAJOR]);
 #endif
         }
@@ -886,6 +910,11 @@ static int32_t pkg_createSymLinks(const char *targetDir, UBool specialHandling) 
     char name1[SMALL_BUFFER_MAX_SIZE]; /* symlink file name */
     char name2[SMALL_BUFFER_MAX_SIZE]; /* file name to symlink */
 
+#if defined (U_MINGW)
+    /* On MINGW, symbolic links don't need to be created. */
+    return result;
+#endif
+
 #ifndef USING_CYGWIN
     /* No symbolic link to make. */
     if (uprv_strlen(libFileNames[LIB_FILE_VERSION]) == 0 || uprv_strlen(libFileNames[LIB_FILE_VERSION_MAJOR]) == 0 ||
@@ -902,6 +931,7 @@ static int32_t pkg_createSymLinks(const char *targetDir, UBool specialHandling) 
             libFileNames[LIB_FILE_VERSION_MAJOR]);
     result = runCommand(cmd);
     if (result != 0) {
+        fprintf(stderr, "Error creating symbolic links. Failed command: %s\n", cmd);
         return result;
     }
 #endif
@@ -946,6 +976,7 @@ static int32_t pkg_installLibrary(const char *installDir, const char *targetDir)
     result = runCommand(cmd);
 
     if (result != 0) {
+        fprintf(stderr, "Error installing library. Failed command: %s\n", cmd);
         return result;
     }
 
@@ -959,9 +990,10 @@ static int32_t pkg_installLibrary(const char *installDir, const char *targetDir)
     result = runCommand(cmd);
 
     if (result != 0) {
+        fprintf(stderr, "Error installing library. Failed command: %s\n", cmd);
         return result;
     }
-#elif defined (U_CYGWIN)
+#elif defined(U_CYGWIN)
     sprintf(cmd, "cd %s && %s %s %s",
             targetDir,
             pkgDataFlags[INSTALL_CMD],
@@ -971,6 +1003,7 @@ static int32_t pkg_installLibrary(const char *installDir, const char *targetDir)
     result = runCommand(cmd);
 
     if (result != 0) {
+        fprintf(stderr, "Error installing library. Failed command: %s\n", cmd);
         return result;
     }
 #endif
@@ -1094,6 +1127,7 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
 
         result = runCommand(cmd); 
         if (result != 0) { 
+            fprintf(stderr, "Error creating archive library. Failed command: %s\n", cmd);
             return result; 
         } 
         
@@ -1104,6 +1138,7 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
         
         result = runCommand(cmd); 
         if (result != 0) {
+            fprintf(stderr, "Error creating archive library. Failed command: %s\n", cmd);
             return result;
         }
 
@@ -1115,6 +1150,7 @@ static int32_t pkg_archiveLibrary(const char *targetDir, const char *version, UB
 
         result = runCommand(cmd);
         if (result != 0) {
+            fprintf(stderr, "Error creating archive library. Failed command: %s\n", cmd);
             return result;
         }
 
@@ -1172,7 +1208,7 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
     } else /* if (mode == MODE_DLL) */ {
         if (cmd == NULL) {
             length = uprv_strlen(pkgDataFlags[GENLIB]) + uprv_strlen(pkgDataFlags[LDICUDTFLAGS]) +
-                     uprv_strlen(targetDir) + uprv_strlen(libFileNames[LIB_FILE_VERSION_TMP]) +
+                     ((uprv_strlen(targetDir) + uprv_strlen(libFileNames[LIB_FILE_VERSION_TMP])) * 2) +
                      uprv_strlen(objectFile) + uprv_strlen(pkgDataFlags[LD_SONAME]) +
                      uprv_strlen(pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileNames[LIB_FILE_VERSION_MAJOR]) +
                      uprv_strlen(pkgDataFlags[RPATH_FLAGS]) + uprv_strlen(pkgDataFlags[BIR_FLAGS]) + BUFFER_PADDING_SIZE;
@@ -1185,13 +1221,22 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
             }
             freeCmd = TRUE;
         }
-#ifdef U_CYGWIN
+#if defined(U_CYGWIN)
         sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
                 pkgDataFlags[GENLIB],
                 targetDir,
                 libFileNames[LIB_FILE_VERSION_TMP],
                 pkgDataFlags[LDICUDTFLAGS],
                 targetDir, libFileNames[LIB_FILE_CYGWIN_VERSION],
+#elif defined(U_AIX)
+        sprintf(cmd, "%s %s%s;%s %s -o %s%s %s %s%s %s %s",
+                RM_CMD,
+                targetDir,
+                libFileNames[LIB_FILE_VERSION_TMP],
+                pkgDataFlags[GENLIB],
+                pkgDataFlags[LDICUDTFLAGS],
+                targetDir,
+                libFileNames[LIB_FILE_VERSION_TMP],
 #else
         sprintf(cmd, "%s %s -o %s%s %s %s%s %s %s",
                 pkgDataFlags[GENLIB],
@@ -1207,6 +1252,10 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
 
         /* Generate the library file. */
         result = runCommand(cmd);
+    }
+
+    if (result != 0) {
+        fprintf(stderr, "Error generating library file. Failed command: %s\n", cmd);
     }
 
     if (freeCmd) {
@@ -1245,6 +1294,7 @@ static int32_t pkg_createWithAssemblyCode(const char *targetDir, const char mode
     result = runCommand(cmd);
     uprv_free(cmd);
     if (result != 0) {
+        fprintf(stderr, "Error creating with assembly code. Failed command: %s\n", cmd);
         return result;
     }
 
@@ -1411,6 +1461,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
                     gencmnFile);
         result = runCommand(cmd);
         if (result != 0) {
+            fprintf(stderr, "Error creating library without assembly code. Failed command: %s\n", cmd);
             break;
         }
 
@@ -1439,6 +1490,8 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
     if (result == 0) {
         uprv_strcat(buffer, " ");
         uprv_strcat(buffer, tempObjectFile);
+    } else {
+        fprintf(stderr, "Error creating library without assembly code. Failed command: %s\n", cmd);
     }
 #endif
 
@@ -1463,6 +1516,7 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
 #define DLL_EXT UDATA_SO_SUFFIX
 
 static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, UPKGOptions *o) {
+    int32_t result = 0;
     char cmd[LARGE_BUFFER_MAX_SIZE];
     if (mode == MODE_STATIC) {
         char staticLibFilePath[SMALL_BUFFER_MAX_SIZE] = "";
@@ -1535,7 +1589,12 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
                 );
     }
 
-    return runCommand(cmd, TRUE);
+    result = runCommand(cmd, TRUE);
+    if (result != 0) {
+        fprintf(stderr, "Error creating Windows DLL library. Failed command: %s\n", cmd);
+    }
+
+    return result;
 }
 #endif
 
@@ -1549,7 +1608,39 @@ static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
     FileStream *f = NULL;
     char mapFile[SMALL_BUFFER_MAX_SIZE] = "";
     int32_t start = -1;
-    int32_t count = 0;
+    uint32_t count = 0;
+    const char rm_cmd[] = "rm -f all ;";
+
+    flag = pkgDataFlags[GENLIB];
+
+    /* This portion of the code removes 'rm -f all' in the GENLIB.
+     * Only occurs in AIX.
+     */
+    if (uprv_strstr(flag, rm_cmd) != NULL) {
+        char *tmpGenlibFlagBuffer = NULL;
+        int32_t i, offset;
+
+        length = uprv_strlen(flag) + 1;
+        tmpGenlibFlagBuffer = (char *)uprv_malloc(length);
+        if (tmpGenlibFlagBuffer == NULL) {
+            /* Memory allocation error */
+            fprintf(stderr,"Unable to allocate buffer of size: %d.\n", length);
+            return NULL;
+        }
+
+        uprv_strcpy(tmpGenlibFlagBuffer, flag);
+
+        offset = uprv_strlen(rm_cmd);
+
+        for (i = 0; i < (length - offset); i++) {
+            flag[i] = tmpGenlibFlagBuffer[offset + i];
+        }
+
+        /* Zero terminate the string */
+        flag[i] = 0;
+
+        uprv_free(tmpGenlibFlagBuffer);
+    }
 
     flag = pkgDataFlags[BIR_FLAGS];
     length = uprv_strlen(pkgDataFlags[BIR_FLAGS]);
@@ -1597,6 +1688,7 @@ static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
         f = T_FileStream_open(mapFile, "w");
         if (f == NULL) {
             fprintf(stderr,"Unable to create map file: %s.\n", mapFile);
+            return NULL;
         } else {
             sprintf(tmpbuffer, "%s%s ", o->entryName, UDATA_CMN_INTERMEDIATE_SUFFIX);
     
