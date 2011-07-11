@@ -57,9 +57,6 @@ DYNAMICCXXFLAGS = $(SHAREDLIBCXXFLAGS)
 CFLAGS += $(LIBCFLAGS)
 CXXFLAGS += $(LIBCXXFLAGS)
 
-ifneq ($(top_builddir),$(top_srcdir))
-CPPFLAGS += -I$(top_builddir)/common
-endif
 CPPFLAGS += -I$(srcdir) $(LIBCPPFLAGS) $(CPPFLAGSICUUC)
 # we want DEFS here, because we want icucfg.h
 DEFS += -DU_COMMON_IMPLEMENTATION -DU_HAVE_ICUCFG 

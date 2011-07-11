@@ -28,15 +28,15 @@
 /* Generic data types                                                        */
 /*===========================================================================*/
 
-/* If your platform does not have the <inttypes.h> header, you may
-   need to edit the typedefs below. */
+/* If your platform does not have the <stdint.h> header, you may
+   need to edit the typedefs below.
+   Use #if...#else...#endif with predefined compiler macros if possible. */
 #if U_HAVE_INTTYPES_H
 
-/* autoconf 2.13 sometimes can't properly find the data types in <inttypes.h> */
-/* os/390 needs <inttypes.h>, but it doesn't have int8_t, and it sometimes */
+/* os/390 needs <stdint.h>, but it doesn't have int8_t, and it sometimes */
 /* doesn't have uint8_t depending on the OS version. */
 /* So we have this work around. */
-#ifdef OS390
+#if U_PLATFORM == U_PF_OS390
 /* The features header is needed to get (u)int64_t sometimes. */
 #include <features.h>
 #if ! U_HAVE_INT8_T
@@ -48,7 +48,12 @@ typedef unsigned char uint8_t;
 #endif
 #endif /* OS390 */
 
-#include <inttypes.h>
+/*
+ * We mostly need <stdint.h> (which defines the standard integer types) but not <inttypes.h>.
+ * <inttypes.h> includes <stdint.h> and adds the printf/scanf helpers PRId32, SCNx16 etc.
+ * which we almost never use, plus stuff like imaxabs() which we never use.
+ */
+#include <stdint.h>
 
 #else /* U_HAVE_INTTYPES_H */
 
@@ -77,13 +82,19 @@ typedef unsigned int uint32_t;
 #endif
 
 #if ! U_HAVE_INT64_T
+#ifdef _MSC_VER
+    typedef signed __int64 int64_t;
+#else
     typedef signed long long int64_t;
-/* else we may not have a 64-bit type */
+#endif
 #endif
 
 #if ! U_HAVE_UINT64_T
+#ifdef _MSC_VER
+    typedef unsigned __int64 uint64_t;
+#else
     typedef unsigned long long uint64_t;
-/* else we may not have a 64-bit type */
+#endif
 #endif
 
 #endif /* U_HAVE_INTTYPES_H */

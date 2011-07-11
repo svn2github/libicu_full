@@ -23,7 +23,7 @@ CLEANFILES = *~ $(DEPS)
 TARGET = srtest
 
 DEFS = @DEFS@
-CPPFLAGS = @CPPFLAGS@ -I$(top_builddir)/common -I$(top_srcdir)/common -I$(top_srcdir) 
+CPPFLAGS = @CPPFLAGS@ -I$(top_srcdir)/common -I$(top_srcdir) 
 CFLAGS = @CFLAGS@
 CXXFLAGS = @CXXFLAGS@
 ENABLE_RPATH = @ENABLE_RPATH@

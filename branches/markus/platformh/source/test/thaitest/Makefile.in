@@ -20,7 +20,7 @@ CLEANFILES = *~ $(DEPS)
 TARGET = thaitest$(EXEEXT)
 
 DEFS = @DEFS@
-CPPFLAGS += -I$(top_builddir)/common -I$(top_srcdir)/common -I$(top_srcdir)/i18n 
+CPPFLAGS += -I$(top_srcdir)/common -I$(top_srcdir)/i18n 
 #CFLAGS += @CFLAGS@
 #CXXFLAGS = @CXXFLAGS@
 
