@@ -19,6 +19,8 @@
 #ifndef _PLATFORM_H
 #define _PLATFORM_H
 
+#include "unicode/uvernum.h"
+
 /**
  * \file
  * \brief Basic types for the platform.
@@ -43,17 +45,12 @@
  * <code>-x c++</code> is for C++.)
  */
 
-/* This file should be included before uvernum.h. */
-#if defined(UVERNUM_H)
-# error Do not include unicode/uvernum.h before #including unicode/platform.h.  Instead of unicode/uvernum.h, #include unicode/uversion.h
-#endif
-
 /**
  * Determines wheter to enable auto cleanup of libraries. 
  * @internal
  */
 #ifndef UCLN_NO_AUTO_CLEANUP
-#define UCLN_NO_AUTO_CLEANUP 0
+#define UCLN_NO_AUTO_CLEANUP 1
 #endif
 
 /**
@@ -125,7 +122,7 @@
 #   define U_PLATFORM U_PF_MINGW
 #elif defined(__CYGWIN__)
 #   define U_PLATFORM U_PF_CYGWIN
-#elif defined(_WIN32)
+#elif defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
 #   define U_PLATFORM U_PF_WINDOWS
 #elif defined(__ANDROID__)
 #   define U_PLATFORM U_PF_ANDROID
@@ -247,6 +244,9 @@
     /* Use the predefined value. */
 #elif defined(BYTE_ORDER) && defined(BIG_ENDIAN)
 #   define U_IS_BIG_ENDIAN (BYTE_ORDER == BIG_ENDIAN)
+#elif defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
+    /* gcc */
+#   define U_IS_BIG_ENDIAN (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
 #elif defined(__BIG_ENDIAN__)
 #   define U_IS_BIG_ENDIAN 1
 #elif defined(__LITTLE_ENDIAN__)
@@ -288,40 +288,85 @@
 #define U_DISABLE_RENAMING 0
 #endif
 
-/* Determine whether to override new and delete. */
+/**
+ * \def U_OVERRIDE_CXX_ALLOCATION
+ * Determines whether to override new and delete.
+ * ICU is normally built such that all of its C++ classes, via their UMemory base,
+ * override operators new and delete to use its internal, customizable,
+ * non-exception-throwing memory allocation functions. (Default value 1 for this macro.)
+ *
+ * This is especially important when the application and its libraries use multiple heaps.
+ * For example, on Windows, this allows the ICU DLL to be used by
+ * applications that statically link the C Runtime library.
+ *
+ * @stable ICU 2.2
+ */
 #ifndef U_OVERRIDE_CXX_ALLOCATION
-#define U_OVERRIDE_CXX_ALLOCATION @U_OVERRIDE_CXX_ALLOCATION@
-#endif
-/* Determine whether to override placement new and delete for STL. */
-#ifndef U_HAVE_PLACEMENT_NEW
-#define U_HAVE_PLACEMENT_NEW @U_HAVE_PLACEMENT_NEW@
-#endif
-
-/* Determine whether to enable tracing. */
-#ifndef U_ENABLE_TRACING
-#define U_ENABLE_TRACING @U_ENABLE_TRACING@
+#define U_OVERRIDE_CXX_ALLOCATION 1
 #endif
 
 /**
- * Whether to enable Dynamic loading in ICU
+ * \def U_HAVE_PLACEMENT_NEW
+ * Determines whether to override placement new and delete for STL.
+ * @stable ICU 2.6
+ */
+#ifdef U_HAVE_PLACEMENT_NEW
+    /* Use the predefined value. */
+#elif defined(__BORLANDC__)
+#   define U_HAVE_PLACEMENT_NEW 0
+#else
+#   define U_HAVE_PLACEMENT_NEW 1
+#endif
+
+/**
+ * \def U_HAVE_DEBUG_LOCATION_NEW 
+ * Define this to define the MFC debug version of the operator new.
+ *
+ * @stable ICU 3.4
+ */
+#ifdef U_HAVE_DEBUG_LOCATION_NEW
+    /* Use the predefined value. */
+#elif defined(_MSC_VER)
+#   define U_HAVE_DEBUG_LOCATION_NEW 1
+#else
+#   define U_HAVE_DEBUG_LOCATION_NEW 0
+#endif
+
+/**
+ * \def U_ENABLE_TRACING
+ * Determine whether to enable tracing.
+ * @internal
+ */
+#ifndef U_ENABLE_TRACING
+#define U_ENABLE_TRACING 0
+#endif
+
+/**
+ * \def U_ENABLE_DYLOAD
+ * Whether to enable Dynamic loading in ICU.
  * @internal
  */
 #ifndef U_ENABLE_DYLOAD
-#define U_ENABLE_DYLOAD @U_ENABLE_DYLOAD@
+#define U_ENABLE_DYLOAD 1
 #endif
 
 /**
- * Whether to test Dynamic loading as an OS capabilty
+ * \def U_CHECK_DYLOAD
+ * Whether to test Dynamic loading as an OS capability.
  * @internal
  */
 #ifndef U_CHECK_DYLOAD
-#define U_CHECK_DYLOAD @U_CHECK_DYLOAD@
+#define U_CHECK_DYLOAD 1
 #endif
 
 
-/** Do we allow ICU users to use the draft APIs by default? */
+/**
+ * \def U_DEFAULT_SHOW_DRAFT
+ * Do we allow ICU users to use the draft APIs by default?
+ * @internal
+ */
 #ifndef U_DEFAULT_SHOW_DRAFT
-#define U_DEFAULT_SHOW_DRAFT @U_DEFAULT_SHOW_DRAFT@
+#define U_DEFAULT_SHOW_DRAFT 1
 #endif
 
 /** @} */
@@ -429,32 +474,49 @@
 /** @} */
 
 /**
- * @{
- * \def U_DECLARE_UTF16
- * Do not use this macro. Use the UNICODE_STRING or U_STRING_DECL macros
- * instead.
- * @internal
- *
- * \def U_GNUC_UTF16_STRING
+ * \def U_HAVE_CHAR16_T
+ * Defines whether the char16_t type is available for UTF-16
+ * and u"abc" UTF-16 string literals are supported.
+ * This is a new standard type and standard string literal syntax in C++0x
+ * but has been available in some compilers before.
  * @internal
  */
-#ifndef U_GNUC_UTF16_STRING
-#define U_GNUC_UTF16_STRING @U_CHECK_GNUC_UTF16_STRING@
+#ifdef U_HAVE_CHAR16_T
+    /* Use the predefined value. */
+#else
+    /*
+     * Notes:
+     * Visual Studio 10 (_MSC_VER>=1600) defines char16_t but
+     * does not support u"abc" string literals.
+     * gcc 4.4 defines the __CHAR16_TYPE__ macro to a usable type but
+     * does not support u"abc" string literals.
+     */
+#   define U_HAVE_CHAR16_T 0
 #endif
-#if @U_CHECK_UTF16_STRING@ || defined(U_CHECK_UTF16_STRING)
-#if (defined(__xlC__) && defined(__IBM_UTF_LITERAL) && U_SIZEOF_WCHAR_T != 2) \
+
+/**
+ * @{
+ * \def U_DECLARE_UTF16
+ * Do not use this macro because it is not defined on all platforms.
+ * Use the UNICODE_STRING or U_STRING_DECL macros instead.
+ * @internal
+ */
+#ifdef U_DECLARE_UTF16
+    /* Use the predefined value. */
+#elif (defined(__xlC__) && defined(__IBM_UTF_LITERAL) && U_SIZEOF_WCHAR_T != 2) \
     || (defined(__HP_aCC) && __HP_aCC >= 035000) \
     || (defined(__HP_cc) && __HP_cc >= 111106) \
-    || U_GNUC_UTF16_STRING
-#define U_DECLARE_UTF16(string) u ## string
+    || U_HAVE_CHAR16_T
+#   define U_DECLARE_UTF16(string) u ## string
 #elif (defined(__SUNPRO_CC) && __SUNPRO_CC >= 0x550)
 /* || (defined(__SUNPRO_C) && __SUNPRO_C >= 0x580) */
 /* Sun's C compiler has issues with this notation, and it's unreliable. */
-#define U_DECLARE_UTF16(string) U ## string
+#   define U_DECLARE_UTF16(string) U ## string
 #elif U_SIZEOF_WCHAR_T == 2 \
     && (U_CHARSET_FAMILY == 0 || ((defined(OS390) || defined(OS400)) && defined(__UCS2__)))
-#define U_DECLARE_UTF16(string) L ## string
-#endif
+#   define U_DECLARE_UTF16(string) L ## string
+#else
+    /* Leave U_DECLARE_UTF16 undefined. See unistr.h. */
 #endif
 
 /** @} */
@@ -463,26 +525,63 @@
 /** @{ Information about POSIX support                                           */
 /*===========================================================================*/
 
-#ifndef U_HAVE_NL_LANGINFO_CODESET
-#define U_HAVE_NL_LANGINFO_CODESET  @U_HAVE_NL_LANGINFO_CODESET@
+#ifdef U_HAVE_NL_LANGINFO_CODESET
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_HAVE_NL_LANGINFO_CODESET 0
+#else
+#   define U_HAVE_NL_LANGINFO_CODESET 1
 #endif
 
-#ifndef U_NL_LANGINFO_CODESET
-#define U_NL_LANGINFO_CODESET       @U_NL_LANGINFO_CODESET@
+#ifdef U_NL_LANGINFO_CODESET
+    /* Use the predefined value. */
+#elif !U_HAVE_NL_LANGINFO_CODESET
+#   define U_NL_LANGINFO_CODESET -1
+#else
+#   define U_NL_LANGINFO_CODESET CODESET
 #endif
 
-#if @U_HAVE_TZSET@
-#define U_TZSET         @U_TZSET@
-#endif
-#if @U_HAVE_TIMEZONE@
-#define U_TIMEZONE      @U_TIMEZONE@
-#endif
-#if @U_HAVE_TZNAME@
-#define U_TZNAME        @U_TZNAME@
+#ifdef U_TZSET
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_TZSET _tzset
+#else
+#   define U_TZSET tzset
 #endif
 
-#define U_HAVE_MMAP     @HAVE_MMAP@
-#define U_HAVE_POPEN    @U_HAVE_POPEN@
+#ifdef U_TIMEZONE
+    /* Use the predefined value. */
+#elif U_PF_LINUX <= U_PLATFORM && U_PLATFORM <= U_PF_ANDROID
+#   define U_TIMEZONE __timezone
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_TIMEZONE _timezone
+#else
+#   define U_TIMEZONE timezone
+#endif
+
+#ifdef U_TZNAME
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_TZNAME _tzname
+#else
+#   define U_TZNAME tzname
+#endif
+
+#ifdef U_HAVE_MMAP
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_HAVE_MMAP 0
+#else
+#   define U_HAVE_MMAP 1
+#endif
+
+#ifdef U_HAVE_POPEN
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_HAVE_POPEN 0
+#else
+#   define U_HAVE_POPEN 1
+#endif
 
 /** @} */
 
@@ -490,27 +589,39 @@
 /** @{ Symbol import-export control                                          */
 /*===========================================================================*/
 
-#ifdef U_STATIC_IMPLEMENTATION
-#define U_EXPORT
-#elif @U_USE_GCC_VISIBILITY_ATTRIBUTE@
-#define U_EXPORT __attribute__((visibility("default")))
+#ifdef U_EXPORT
+    /* Use the predefined value. */
+#elif defined(U_STATIC_IMPLEMENTATION)
+#   define U_EXPORT
+#elif defined(__GNUC__)
+#   define U_EXPORT __attribute__((visibility("default")))
 #elif (defined(__SUNPRO_CC) && __SUNPRO_CC >= 0x550) \
    || (defined(__SUNPRO_C) && __SUNPRO_C >= 0x550) 
-#define U_EXPORT __global
+#   define U_EXPORT __global
 /*#elif defined(__HP_aCC) || defined(__HP_cc)
-#define U_EXPORT __declspec(dllexport)*/
+#   define U_EXPORT __declspec(dllexport)*/
+#elif defined(_MSC_VER)
+#   define U_EXPORT __declspec(dllexport)
 #else
-#define U_EXPORT
+#   define U_EXPORT
 #endif
 
 /* U_CALLCONV is releated to U_EXPORT2 */
-#define U_EXPORT2
-
-/* cygwin needs to export/import data */
-#if defined(U_CYGWIN) && !defined(__GNUC__)
-#define U_IMPORT __declspec(dllimport)
+#ifdef U_EXPORT2
+    /* Use the predefined value. */
+#elif defined(_MSC_VER)
+#   define U_EXPORT2 __cdecl
 #else
-#define U_IMPORT 
+#   define U_EXPORT2
+#endif
+
+#ifdef U_IMPORT
+    /* Use the predefined value. */
+#elif defined(_MSC_VER)
+    /* Windows needs to export/import data. */
+#   define U_IMPORT __declspec(dllimport)
+#else
+#   define U_IMPORT 
 #endif
 
 /* @} */
@@ -519,11 +630,30 @@
 /** @{ Code alignment                                                        */
 /*===========================================================================*/
 
-#ifndef U_ALIGN_CODE
-#define U_ALIGN_CODE(n) 
+/**
+ * \def U_ALIGN_CODE
+ * This is used to align code fragments to a specific byte boundary.
+ * This is useful for getting consistent performance test results.
+ * @internal
+ */
+#ifdef U_ALIGN_CODE
+    /* Use the predefined value. */
+#elif defined(_MSC_VER) && defined(_M_IX86) && !defined(_MANAGED)
+#   define U_ALIGN_CODE(n) __asm  align val
+#else
+#   define U_ALIGN_CODE(n) 
 #endif
 
 /** @} */
+
+/**
+ * \def U_HAVE_MSVC_2003_OR_EARLIER
+ * Flag for workaround of MSVC 2003 optimization bugs
+ * @internal
+ */
+#if !defined(U_HAVE_MSVC_2003_OR_EARLIER) && defined(_MSC_VER) && (_MSC_VER < 1400)
+#define U_HAVE_MSVC_2003_OR_EARLIER
+#endif
 
 /*===========================================================================*/
 /** @{ GCC built in functions for atomic memory operations                   */
@@ -533,8 +663,12 @@
  * \def U_HAVE_GCC_ATOMICS
  * @internal
  */
-#ifndef U_HAVE_GCC_ATOMICS
-#define U_HAVE_GCC_ATOMICS @U_HAVE_GCC_ATOMICS@
+#ifdef U_HAVE_GCC_ATOMICS
+    /* Use the predefined value. */
+#elif defined(__GNUC__)
+#   define U_HAVE_GCC_ATOMICS 1
+#else
+#   define U_HAVE_GCC_ATOMICS 0
 #endif
 
 /** @} */
@@ -544,11 +678,15 @@
 /*===========================================================================*/
 
 /**
- * \def U_MAKE
- * What program to execute to run 'make'
+ * \def U_MAKE_IS_NMAKE
+ * Defines whether the "make" program is Windows nmake.
  */
-#ifndef U_MAKE
-#define U_MAKE  "@U_MAKE@"
+#ifdef U_MAKE_IS_NMAKE
+    /* Use the predefined value. */
+#elif U_PLATFORM == U_WINDOWS
+#   define U_MAKE_IS_NMAKE 1
+#else
+#   define U_MAKE_IS_NMAKE 0
 #endif
 
 /** @} */
@@ -558,26 +696,47 @@
 /*===========================================================================*/
 
 /**
- * Define the library suffix with C syntax.
+ * \def U_HAVE_LIB_SUFFIX
+ * 1 if a custom library suffix is set.
  * @internal
  */
-# define U_LIB_SUFFIX_C_NAME @ICULIBSUFFIXCNAME@
+#ifdef U_HAVE_LIB_SUFFIX
+    /* Use the predefined value. */
+#elif defined(U_LIB_SUFFIX_C_NAME) || defined(U_LIB_SUFFIX_C_NAME_STRING)
+#   define U_HAVE_LIB_SUFFIX 1
+#else
+#   define U_HAVE_LIB_SUFFIX 0
+#endif
+
 /**
- * Define the library suffix as a string with C syntax
+ * \def U_LIB_SUFFIX_C_NAME_STRING
+ * Defines the library suffix as a string with C syntax.
  * @internal
  */
-# define U_LIB_SUFFIX_C_NAME_STRING "@ICULIBSUFFIXCNAME@"
+#ifdef U_LIB_SUFFIX_C_NAME_STRING
+    /* Use the predefined value. */
+#elif defined(U_LIB_SUFFIX_C_NAME)
+#   define U_LIB_SUFFIX_C_NAME_STRING #U_LIB_SUFFIX_C_NAME
+#else
+#   define U_LIB_SUFFIX_C_NAME_STRING ""
+#endif
+
 /**
- * 1 if a custom library suffix is set
+ * \def U_LIB_SUFFIX_C_NAME
+ * Defines the library suffix with C syntax.
  * @internal
  */
-# define U_HAVE_LIB_SUFFIX @U_HAVE_LIB_SUFFIX@
+#ifdef U_LIB_SUFFIX_C_NAME
+    /* Use the predefined value. */
+#else
+#   define U_LIB_SUFFIX_C_NAME
+#endif
 
 #if U_HAVE_LIB_SUFFIX
 # ifndef U_ICU_ENTRY_POINT_RENAME
 /* Renaming pattern:    u_strcpy_41_suffix */
-#  define U_ICU_ENTRY_POINT_RENAME(x)    x ## _ ## @LIB_VERSION_MAJOR@ ## @ICULIBSUFFIXCNAME@
-#  define U_DEF_ICUDATA_ENTRY_POINT(major) icudt##@ICULIBSUFFIXCNAME@##major##_dat
+#  define U_ICU_ENTRY_POINT_RENAME(x)    x ## _ ## U_ICU_VERSION_MAJOR_NUM ## U_LIB_SUFFIX_C_NAME
+#  define U_DEF_ICUDATA_ENTRY_POINT(major) icudt ## U_LIB_SUFFIX_C_NAME ## major ##_dat
 
 # endif
 #endif

@@ -24,7 +24,7 @@
 #include "unicode/uloc.h"
 #include "unicode/locid.h"
 #include "putilimp.h"
-#if !defined(U_WINDOWS) && !defined(XP_MAC) && !defined(U_RHAPSODY)
+#if !defined(U_WINDOWS) && U_PLATFORM != U_PF_CLASSIC_MACOS && !defined(U_RHAPSODY)
 #define POSIX 1
 #endif
 

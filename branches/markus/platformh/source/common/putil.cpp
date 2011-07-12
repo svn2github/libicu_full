@@ -92,7 +92,7 @@ Cleanly installed Solaris can use this #define.
 #   include <qusrjobi.h>
 #   include <qliept.h>      /* EPT_CALL macro  - this include must be after all other "QSYSINCs" */
 #   include <mih/testptr.h> /* For uprv_maximumPtr */
-#elif defined(XP_MAC)
+#elif U_PLATFORM == U_PF_CLASSIC_MACOS
 #   include <Files.h>
 #   include <IntlResources.h>
 #   include <Script.h>
@@ -178,7 +178,7 @@ static const BitPatternConversion gInf = { (int64_t) INT64_C(0x7FF0000000000000)
   functions).
   ---------------------------------------------------------------------------*/
 
-#if defined(U_WINDOWS) || defined(XP_MAC) || defined(OS400) || defined(U_MINGW)
+#if defined(U_WINDOWS) || U_PLATFORM == U_PF_CLASSIC_MACOS || defined(OS400) || defined(U_MINGW)
 #   undef U_POSIX_LOCALE
 #else
 #   define U_POSIX_LOCALE    1
@@ -297,7 +297,7 @@ uprv_getUTCtime()
 U_CAPI UDate U_EXPORT2
 uprv_getRawUTCtime()
 {
-#if defined(XP_MAC)
+#if U_PLATFORM == U_PF_CLASSIC_MACOS
     time_t t, t1, t2;
     struct tm tmrec;
 
@@ -1580,7 +1580,7 @@ The leftmost codepage (.xxx) wins.
     }
     return locID;
 
-#elif defined(XP_MAC)
+#elif U_PLATFORM == U_PF_CLASSIC_MACOS
     int32_t script = MAC_LC_INIT_NUMBER;
     /* = IntlScript(); or GetScriptManagerVariable(smSysScript);*/
     int32_t region = MAC_LC_INIT_NUMBER;
@@ -1896,7 +1896,7 @@ int_getDefaultCodepage()
 
     return codepage;
 
-#elif defined(XP_MAC)
+#elif U_PLATFORM == U_PF_CLASSIC_MACOS
     return "macintosh"; /* TODO: Macintosh Roman. There must be a better way. fixme! */
 
 #elif defined(U_WINDOWS)

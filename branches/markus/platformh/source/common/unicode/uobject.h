@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 2002-2010, International Business Machines
+*   Copyright (C) 2002-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -26,43 +26,6 @@ U_NAMESPACE_BEGIN
  * \brief C++ API: Common ICU base class UObject.
  */
 
-/**  U_OVERRIDE_CXX_ALLOCATION - Define this to override operator new and
- *                               delete in UMemory. Enabled by default for ICU.
- *
- *         Enabling forces all allocation of ICU object types to use ICU's
- *         memory allocation. On Windows, this allows the ICU DLL to be used by
- *         applications that statically link the C Runtime library, meaning that
- *         the app and ICU will be using different heaps.
- *
- * @stable ICU 2.2
- */                              
-#ifndef U_OVERRIDE_CXX_ALLOCATION
-#define U_OVERRIDE_CXX_ALLOCATION 1
-#endif
-
-/** 
- * \def U_HAVE_PLACEMENT_NEW
- *  Define this to define the placement new and
- *                          delete in UMemory for STL.
- *
- * @stable ICU 2.6
- */                              
-#ifndef U_HAVE_PLACEMENT_NEW
-#define U_HAVE_PLACEMENT_NEW 1
-#endif
-
-
-/** 
- * \def U_HAVE_DEBUG_LOCATION_NEW 
- * Define this to define the MFC debug
- * version of the operator new.
- *
- * @stable ICU 3.4
- */                              
-#ifndef U_HAVE_DEBUG_LOCATION_NEW
-#define U_HAVE_DEBUG_LOCATION_NEW 0
-#endif
-
 /**
  * @{
  * \def U_NO_THROW
@@ -76,7 +39,7 @@ U_NAMESPACE_BEGIN
  *         data, (which it typically does), the result is a segmentation violation.
  *
  * @draft ICU 4.2
- */                              
+ */
 #ifndef U_NO_THROW
 #define U_NO_THROW throw()
 #endif

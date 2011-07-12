@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1999-2009, International Business Machines Corporation and
+ * Copyright (c) 1999-2011, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -28,7 +28,7 @@
 #include <string.h>
 #include <ctype.h>    // tolower, toupper
 
-#if !defined(U_WINDOWS) && !defined(XP_MAC) && !defined(U_RHAPSODY)
+#if !defined(U_WINDOWS) && U_PLATFORM != U_PF_CLASSIC_MACOS && !defined(U_RHAPSODY)
 #define POSIX 1
 #endif
 
@@ -255,7 +255,7 @@ void SimpleThread::sleep(int32_t millis)
 //   class SimpleThread   NULL  Implementation
 //
 //-----------------------------------------------------------------------------------
-#elif defined XP_MAC
+#elif U_PLATFORM == U_PF_CLASSIC_MACOS
 
 // since the Mac has no preemptive threading (at least on MacOS 8), only
 // cooperative threading, threads are a no-op.  We have no yield() calls
