@@ -281,7 +281,7 @@
  * you must use the U_CAPI and U_EXPORT2 qualifiers.
  * @stable ICU 2.0
  */
-#if defined(OS390) && defined(XP_CPLUSPLUS)
+#if U_PLATFORM == U_PF_OS390 && defined(XP_CPLUSPLUS)
 #    define U_CALLCONV __cdecl
 #else
 #    define U_CALLCONV U_EXPORT2

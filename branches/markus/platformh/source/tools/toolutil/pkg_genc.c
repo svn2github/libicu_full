@@ -1,5 +1,5 @@
 /******************************************************************************
- *   Copyright (C) 2009-2010, International Business Machines
+ *   Copyright (C) 2009-2011, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *******************************************************************************
  */
@@ -19,7 +19,7 @@
 #   endif
 #endif
 
-#ifdef U_LINUX
+#if U_PLATFORM == U_PF_LINUX
 #   define U_ELF
 #endif
 
@@ -65,7 +65,7 @@ write8(FileStream *out, uint8_t byte, uint32_t column);
 static uint32_t
 write32(FileStream *out, uint32_t byte, uint32_t column);
 
-#ifdef OS400
+#if U_PLATFORM == U_PF_OS400
 static uint32_t
 write8str(FileStream *out, uint8_t byte, uint32_t column);
 #endif
@@ -359,7 +359,7 @@ writeCCode(const char *filename, const char *destdir, const char *optName, const
         }
     }
 
-#ifdef OS400
+#if U_PLATFORM == U_PF_OS400
     /*
     TODO: Fix this once the compiler implements this feature. Keep in sync with udatamem.c
 
@@ -531,7 +531,7 @@ write8(FileStream *out, uint8_t byte, uint32_t column) {
     return column;
 }
 
-#ifdef OS400
+#if U_PLATFORM == U_PF_OS400
 static uint32_t
 write8str(FileStream *out, uint8_t byte, uint32_t column) {
     char s[8];

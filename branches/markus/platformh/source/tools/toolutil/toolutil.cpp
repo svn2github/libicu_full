@@ -37,7 +37,7 @@
 #endif
 
 /* In MinGW environment, io.h needs to be included for _mkdir() */
-#ifdef U_MINGW
+#if U_PLATFORM == U_PF_MINGW
 #include <io.h>
 #endif
 

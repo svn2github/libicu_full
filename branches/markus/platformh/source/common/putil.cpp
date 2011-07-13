@@ -86,7 +86,7 @@ Cleanly installed Solaris can use this #define.
 #   define NOMCX
 #   include <windows.h>
 #   include "wintz.h"
-#elif defined(OS400)
+#elif U_PLATFORM == U_PF_OS400
 #   include <float.h>
 #   include <qusec.h>       /* error code structure */
 #   include <qusrjobi.h>
@@ -100,20 +100,20 @@ Cleanly installed Solaris can use this #define.
 #   include <MacTypes.h>
 #   include <TextUtils.h>
 #   define ICU_NO_USER_DATA_OVERRIDE 1
-#elif defined(OS390)
+#elif U_PLATFORM == U_PF_OS390
 #   include "unicode/ucnv.h"   /* Needed for UCNV_SWAP_LFNL_OPTION_STRING */
-#elif defined(U_DARWIN) || defined(U_LINUX) || defined(U_BSD)
+#elif U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_LINUX || U_PLATFORM == U_PF_BSD
 #   include <limits.h>
 #   include <unistd.h>
-#elif defined(U_QNX)
+#elif U_PLATFORM == U_PF_QNX
 #   include <sys/neutrino.h>
-#elif defined(U_SOLARIS)
+#elif U_PLATFORM == U_PF_SOLARIS
 #   ifndef _XPG4_2
 #       define _XPG4_2
 #   endif
 #endif
 
-#if (defined(U_CYGWIN) || defined(U_MINGW)) && defined(__STRICT_ANSI__)
+#if (U_PF_MINGW <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN) && defined(__STRICT_ANSI__)
 /* tzset isn't defined in strict ANSI on Cygwin and MinGW. */
 #undef __STRICT_ANSI__
 #endif
@@ -122,10 +122,6 @@ Cleanly installed Solaris can use this #define.
  * Cygwin with GCC requires inclusion of time.h after the above disabling strict asci mode statement.
  */
 #include <time.h>
-
-#if defined(U_DARWIN)
-#include <TargetConditionals.h>
-#endif
 
 #if U_PLATFORM != U_PF_WINDOWS
 #include <sys/time.h>
@@ -178,7 +174,7 @@ static const BitPatternConversion gInf = { (int64_t) INT64_C(0x7FF0000000000000)
   functions).
   ---------------------------------------------------------------------------*/
 
-#if (U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW) || U_PLATFORM == U_PF_CLASSIC_MACOS || defined(OS400)
+#if (U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW) || U_PLATFORM == U_PF_CLASSIC_MACOS || U_PLATFORM == U_PF_OS400
 #   undef U_POSIX_LOCALE
 #else
 #   define U_POSIX_LOCALE    1
@@ -350,7 +346,7 @@ uprv_isNaN(double number)
     /* Infinity is 0x7FF0000000000000U. Anything greater than that is a NaN */
     return (UBool)((convertedNumber.i64 & U_INT64_MAX) > gInf.i64);
 
-#elif defined(OS390)
+#elif U_PLATFORM == U_PF_OS390
     uint32_t highBits = *(uint32_t*)u_topNBytesOfDouble(&number,
                         sizeof(uint32_t));
     uint32_t lowBits  = *(uint32_t*)u_bottomNBytesOfDouble(&number,
@@ -375,7 +371,7 @@ uprv_isInfinite(double number)
     convertedNumber.d64 = number;
     /* Infinity is exactly 0x7FF0000000000000U. */
     return (UBool)((convertedNumber.i64 & U_INT64_MAX) == gInf.i64);
-#elif defined(OS390)
+#elif U_PLATFORM == U_PF_OS390
     uint32_t highBits = *(uint32_t*)u_topNBytesOfDouble(&number,
                         sizeof(uint32_t));
     uint32_t lowBits  = *(uint32_t*)u_bottomNBytesOfDouble(&number,
@@ -394,7 +390,7 @@ uprv_isInfinite(double number)
 U_CAPI UBool U_EXPORT2
 uprv_isPositiveInfinity(double number)
 {
-#if IEEE_754 || defined(OS390)
+#if IEEE_754 || U_PLATFORM == U_PF_OS390
     return (UBool)(number > 0 && uprv_isInfinite(number));
 #else
     return uprv_isInfinite(number);
@@ -404,7 +400,7 @@ uprv_isPositiveInfinity(double number)
 U_CAPI UBool U_EXPORT2
 uprv_isNegativeInfinity(double number)
 {
-#if IEEE_754 || defined(OS390)
+#if IEEE_754 || U_PLATFORM == U_PF_OS390
     return (UBool)(number < 0 && uprv_isInfinite(number));
 
 #else
@@ -418,7 +414,7 @@ uprv_isNegativeInfinity(double number)
 U_CAPI double U_EXPORT2
 uprv_getNaN()
 {
-#if IEEE_754 || defined(OS390)
+#if IEEE_754 || U_PLATFORM == U_PF_OS390
     return gNan.d64;
 #else
     /* If your platform doesn't support IEEE 754 but *does* have an NaN value,*/
@@ -431,7 +427,7 @@ uprv_getNaN()
 U_CAPI double U_EXPORT2
 uprv_getInfinity()
 {
-#if IEEE_754 || defined(OS390)
+#if IEEE_754 || U_PLATFORM == U_PF_OS390
     return gInf.d64;
 #else
     /* If your platform doesn't support IEEE 754 but *does* have an infinity*/
@@ -573,7 +569,7 @@ uprv_log(double d)
 U_CAPI void * U_EXPORT2
 uprv_maximumPtr(void * base)
 {
-#if defined(OS400)
+#if U_PLATFORM == U_PF_OS400
     /*
      * With the provided function we should never be out of range of a given segment
      * (a traditional/typical segment that is).  Our segments have 5 bytes for the
@@ -651,15 +647,15 @@ uprv_timezone()
 /* Note that U_TZNAME does *not* have to be tzname, but if it is,
    some platforms need to have it declared here. */
 
-#if defined(U_TZNAME) && (defined(U_IRIX) || defined(U_DARWIN) || defined(U_CYGWIN))
+#if defined(U_TZNAME) && (U_PLATFORM == U_PF_IRIX || U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_CYGWIN)
 /* RS6000 and others reject char **tzname.  */
 extern U_IMPORT char *U_TZNAME[];
 #endif
 
-#if !UCONFIG_NO_FILE_IO && (defined(U_DARWIN) || defined(U_LINUX) || defined(U_BSD))
+#if !UCONFIG_NO_FILE_IO && (U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_LINUX || U_PLATFORM == U_PF_BSD)
 /* These platforms are likely to use Olson timezone IDs. */
 #define CHECK_LOCALTIME_LINK 1
-#if defined(U_DARWIN)
+#if U_PLATFORM == U_PF_DARWIN
 #include <tzfile.h>
 #define TZZONEINFO      (TZDIR "/")
 #else
@@ -977,7 +973,7 @@ uprv_tzname(int n)
     }
 #else
 
-/*#if defined(U_DARWIN)
+/*#if U_PLATFORM == U_PF_DARWIN
     int ret;
 
     tzid = getenv("TZFILE");
@@ -1182,7 +1178,7 @@ uprv_pathIsAbsolute(const char *path)
 
 /* Temporary backup setting of ICU_DATA_DIR_PREFIX_ENV_VAR
    until some client wrapper makefiles are updated */
-#if defined(U_DARWIN) && TARGET_IPHONE_SIMULATOR
+#if U_PLATFORM == U_PF_DARWIN && TARGET_IPHONE_SIMULATOR
 # if !defined(ICU_DATA_DIR_PREFIX_ENV_VAR)
 #  define ICU_DATA_DIR_PREFIX_ENV_VAR "IPHONE_SIMULATOR_ROOT"
 # endif
@@ -1260,7 +1256,7 @@ u_getDataDirectory(void) {
 
 
 /* Macintosh-specific locale information ------------------------------------ */
-#ifdef XP_MAC
+#if U_PLATFORM == U_PF_CLASSIC_MACOS
 
 typedef struct {
     int32_t script;
@@ -1615,7 +1611,7 @@ The leftmost codepage (.xxx) wins.
 
     return posixID;
 
-#elif defined(OS400)
+#elif U_PLATFORM == U_PF_OS400
     /* locales are process scoped and are by definition thread safe */
     static char correctedLocale[64];
     const  char *localeID = getenv("LC_ALL");
@@ -1728,7 +1724,7 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
     if (name == NULL) {
         return NULL;
     }
-#if defined(U_AIX)
+#if U_PLATFORM == U_PF_AIX
     if (uprv_strcmp(name, "IBM-943") == 0) {
         /* Use the ASCII compatible ibm-943 */
         name = "Shift-JIS";
@@ -1737,7 +1733,7 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
         /* Use the windows-1252 that contains the Euro */
         name = "IBM-5348";
     }
-#elif defined(U_SOLARIS)
+#elif U_PLATFORM == U_PF_SOLARIS
     if (locale != NULL && uprv_strcmp(name, "EUC") == 0) {
         /* Solaris underspecifies the "EUC" name. */
         if (uprv_strcmp(locale, "zh_CN") == 0) {
@@ -1764,7 +1760,7 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
          */
         name = "ISO-8859-1";
     }
-#elif defined(U_DARWIN)
+#elif U_PLATFORM == U_PF_DARWIN
     if (locale == NULL && *name == 0) {
         /*
         No locale was specified, and an empty name was passed in.
@@ -1783,12 +1779,12 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
          */
         name = "UTF-8";
     }
-#elif defined(U_BSD)
+#elif U_PLATFORM == U_PF_BSD
     if (uprv_strcmp(name, "CP949") == 0) {
         /* Remap CP949 to a similar codepage to avoid issues with backslash and won symbol. */
         name = "EUC-KR";
     }
-#elif defined(U_HPUX)
+#elif U_PLATFORM == U_PF_HPUX
     if (locale != NULL && uprv_strcmp(locale, "zh_HK") == 0 && uprv_strcmp(name, "big5") == 0) {
         /* HP decided to extend big5 as hkbig5 even though it's not compatible :-( */
         /* zh_TW.big5 is not the same charset as zh_HK.big5! */
@@ -1802,7 +1798,7 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
         */
         name = "eucjis";
     }
-#elif defined(U_LINUX)
+#elif U_PLATFORM == U_PF_LINUX
     if (locale != NULL && uprv_strcmp(name, "euc") == 0) {
         /* Linux underspecifies the "EUC" name. */
         if (uprv_strcmp(locale, "korean") == 0) {
@@ -1866,7 +1862,7 @@ getCodepageFromPOSIXID(const char *localeName, char * buffer, int32_t buffCapaci
 static const char*
 int_getDefaultCodepage()
 {
-#if defined(OS400)
+#if U_PLATFORM == U_PF_OS400
     uint32_t ccsid = 37; /* Default to ibm-37 */
     static char codepage[64];
     Qwc_JOBI0400_t jobinfo;
@@ -1887,7 +1883,7 @@ int_getDefaultCodepage()
     sprintf(codepage,"ibm-%d", ccsid);
     return codepage;
 
-#elif defined(OS390)
+#elif U_PLATFORM == U_PF_OS390
     static char codepage[64];
 
     strncpy(codepage, nl_langinfo(CODESET),63-strlen(UCNV_SWAP_LFNL_OPTION_STRING));
@@ -1917,7 +1913,7 @@ int_getDefaultCodepage()
        nl_langinfo may use the same buffer as setlocale. */
     {
         const char *codeset = nl_langinfo(U_NL_LANGINFO_CODESET);
-#if defined(U_DARWIN) || defined(U_LINUX)
+#if U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_LINUX
         /*
          * On Linux and MacOSX, ensure that default codepage for non C/POSIX locale is UTF-8
          * instead of ASCII.

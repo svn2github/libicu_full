@@ -269,7 +269,7 @@ typedef int8_t UBool;
 #           define  U_WCHAR_IS_UTF32
 #       endif
 #   elif defined __UCS2__
-#       if (__OS390__ || __OS400__) && (U_SIZEOF_WCHAR_T==2)
+#       if (U_PF_OS390 <= U_PLATFORM && U_PLATFORM <= U_PF_OS400) && (U_SIZEOF_WCHAR_T==2)
 #           define U_WCHAR_IS_UTF16
 #       endif
 #   elif defined(__UCS4__) || (U_PLATFORM == U_PF_OS400 && defined(__UTF32__))

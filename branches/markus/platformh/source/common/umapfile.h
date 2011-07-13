@@ -40,8 +40,8 @@ U_CFUNC void  uprv_unmapFile(UDataMemory *pData);
 #   define MAP_IMPLEMENTATION MAP_NONE
 #elif U_PLATFORM == U_PF_WINDOWS
 #   define MAP_IMPLEMENTATION MAP_WIN32
-#elif U_HAVE_MMAP || defined(OS390)
-#   if defined(OS390) && defined (OS390_STUBDATA)
+#elif U_HAVE_MMAP || U_PLATFORM == U_PF_OS390
+#   if U_PLATFORM == U_PF_OS390 && defined (OS390_STUBDATA)
         /*   No memory mapping for 390 batch mode.  Fake it using dll loading.  */
 #       define MAP_IMPLEMENTATION MAP_390DLL
 #   else

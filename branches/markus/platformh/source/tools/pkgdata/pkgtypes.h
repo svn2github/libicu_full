@@ -141,7 +141,7 @@ char * convertToNativePathSeparators(char *path);
 # define OBJ_SUFFIX ".obj"
 # define UDATA_LIB_SUFFIX ".lib"
 
-#elif defined(U_CYGWIN)
+#elif U_PLATFORM == U_PF_CYGWIN
 # define LIB_PREFIX "cyg"
 # define LIB_STATIC_PREFIX "lib"
 # define OBJ_SUFFIX ".o"

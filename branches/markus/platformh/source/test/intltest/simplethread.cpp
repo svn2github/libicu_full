@@ -33,7 +33,7 @@
 #endif
 
 /* Needed by z/OS to get usleep */
-#if defined(OS390)
+#if U_PLATFORM == U_PF_OS390
 #define __DOT1 1
 #define __UU
 #define _XOPEN_SOURCE_EXTENDED 1
@@ -44,7 +44,7 @@
 /*#include "platform_xopen_source_extended.h"*/
 #endif
 
-#if defined(POSIX) || defined(U_SOLARIS) || defined(U_AIX) || defined(U_HPUX)
+#if defined(POSIX)
 #define HAVE_IMP
 
 #if (ICU_USE_THREADS == 1)
@@ -62,11 +62,11 @@
 #define __EXTENSIONS__
 #endif
 
-#if defined(OS390)
+#if U_PLATFORM == U_PF_OS390
 #include <sys/types.h>
 #endif
 
-#if !defined(OS390)
+#if U_PLATFORM != U_PF_OS390
 #include <signal.h>
 #endif
 
@@ -310,7 +310,7 @@ SimpleThread::isRunning() {
 //        system level cleanup has happened.
 //
 //-----------------------------------------------------------------------------------
-#if defined(POSIX)||defined(U_SOLARIS)||defined(U_AIX)||defined(U_HPUX)
+#if defined(POSIX)
 #define HAVE_IMP
 
 struct PosixThreadImplementation
@@ -373,7 +373,7 @@ int32_t SimpleThread::start()
 #else
     if (attrIsInitialized == FALSE) {
         rc = pthread_attr_init(&attr);
-#if defined(OS390)
+#if U_PLATFORM == U_PF_OS390
         {
             int detachstate = 0;  // jdc30: detach state of zero causes
                                   //threads created with this attr to be in
@@ -417,13 +417,13 @@ SimpleThread::isRunning() {
 
 void SimpleThread::sleep(int32_t millis)
 {
-#ifdef U_SOLARIS
+#if U_PLATFORM == U_PF_SOLARIS
     sigignore(SIGALRM);
 #endif
 
 #ifdef HPUX_CMA
     cma_sleep(millis/100);
-#elif defined(U_HPUX) || defined(OS390)
+#elif U_PLATFORM == U_PF_HPUX || U_PLATFORM == U_PF_OS390
     millis *= 1000;
     while(millis >= 1000000) {
         usleep(999999);

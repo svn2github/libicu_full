@@ -15,7 +15,7 @@
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
 #else
-#   if defined(OS390)
+#   if U_PLATFORM == U_PF_OS390
 #     define __UU  /* Universal Unix - for struct timeval */
 #   endif
 #   include <time.h>

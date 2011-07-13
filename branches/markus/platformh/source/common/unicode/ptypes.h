@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2010, International Business Machines
+*   Copyright (C) 1997-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -46,7 +46,7 @@ typedef signed char int8_t;
 #define __uint8_t 1
 typedef unsigned char uint8_t;
 #endif
-#endif /* OS390 */
+#endif /* U_PLATFORM == U_PF_OS390 */
 
 /*
  * We mostly need <stdint.h> (which defines the standard integer types) but not <inttypes.h>.

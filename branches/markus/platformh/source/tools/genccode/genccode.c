@@ -30,7 +30,7 @@
 #include <time.h>
 #endif
 
-#ifdef U_LINUX
+#if U_PLATFORM == U_PF_LINUX
 #   define U_ELF
 #endif
 

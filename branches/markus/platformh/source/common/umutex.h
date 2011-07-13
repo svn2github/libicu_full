@@ -25,7 +25,7 @@
 # include <intrin.h>
 #endif
 
-#if defined(U_DARWIN)
+#if U_PLATFORM == U_PF_DARWIN
 #if defined(__STRICT_ANSI__)
 #define UPRV_REMAP_INLINE
 #define inline
@@ -72,7 +72,7 @@
 #  define UMTX_FULL_BARRIER __sync_synchronize();
 # elif U_PLATFORM == U_PF_WINDOWS
 #  define UMTX_FULL_BARRIER _ReadWriteBarrier();
-# elif defined(U_DARWIN)
+# elif U_PLATFORM == U_PF_DARWIN
 #  define UMTX_FULL_BARRIER OSMemoryBarrier();
 # else
 #  define UMTX_FULL_BARRIER \

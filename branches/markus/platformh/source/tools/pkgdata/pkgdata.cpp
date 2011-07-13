@@ -30,7 +30,7 @@
 #include "unicode/utypes.h"
 
 #if U_HAVE_POPEN
-#if (defined(U_CYGWIN) || defined(U_MINGW)) && defined(__STRICT_ANSI__)
+#if (U_PF_MINGW <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN) && defined(__STRICT_ANSI__)
 /* popen/pclose aren't defined in strict ANSI on Cygwin and MinGW */
 #undef __STRICT_ANSI__
 #endif
@@ -70,13 +70,13 @@ U_CDECL_END
 #define WINDOWS_WITH_MSVC
 #endif
 #endif
-#if !defined(WINDOWS_WITH_MSVC) && !defined(U_LINUX)
+#if !defined(WINDOWS_WITH_MSVC) && U_PLATFORM != U_PF_LINUX
 #define BUILD_DATA_WITHOUT_ASSEMBLY
 #endif
-#if defined(WINDOWS_WITH_MSVC) || defined(U_LINUX)
+#if defined(WINDOWS_WITH_MSVC) || U_PLATFORM == U_PF_LINUX
 #define CAN_WRITE_OBJ_CODE
 #endif
-#if defined(U_CYGWIN) || defined(CYGWINMSVC)
+#if U_PLATFORM == U_PF_CYGWIN || defined(CYGWINMSVC)
 #define USING_CYGWIN
 #endif
 
@@ -86,7 +86,7 @@ U_CDECL_END
  * the data to generate the final data library. This can
  * increase the performance of the pkdata tool.
  */
-#if defined(OS400)
+#if U_PLATFORM == U_PF_OS400
 #define USE_SINGLE_CCODE_FILE
 #endif
 
@@ -235,7 +235,7 @@ enum {
     LIB_FILE_VERSION_MAJOR,
     LIB_FILE_VERSION,
     LIB_FILE_VERSION_TMP,
-#ifdef U_CYGWIN
+#if U_PLATFORM == U_PF_CYGWIN
     LIB_FILE_CYGWIN,
 	LIB_FILE_CYGWIN_VERSION,
 #endif
@@ -505,7 +505,7 @@ static int runCommand(const char* command, UBool specialHandling) {
     }
 
     if (!specialHandling) {
-#if defined(USING_CYGWIN) || defined(OS400)
+#if defined(USING_CYGWIN) || U_PLATFORM == U_PF_OS400
         if ((len + BUFFER_PADDING_SIZE) >= SMALL_BUFFER_MAX_SIZE) {
             cmd = (char *)uprv_malloc(len + BUFFER_PADDING_SIZE);
         } else {
@@ -514,7 +514,7 @@ static int runCommand(const char* command, UBool specialHandling) {
 #ifdef USING_CYGWIN
         sprintf(cmd, "bash -c \"%s\"", command);
 
-#elif defined(OS400)
+#elif U_PLATFORM == U_PF_OS400
         sprintf(cmd, "QSH CMD('%s')", command);
 #endif
 #else
@@ -641,7 +641,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 }
             }
 
-#ifndef OS400
+#if U_PLATFORM != U_PF_OS400
             /* Certain platforms have different library extension ordering. (e.g. libicudata.##.so vs libicudata.so.##)
              * reverseExt is FALSE if the suffix should be the version number.
              */
@@ -718,7 +718,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 }
 #ifdef CAN_WRITE_OBJ_CODE
                 writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
-#ifdef U_LINUX
+#if U_PLATFORM == U_PF_LINUX
                 result = pkg_generateLibraryFile(targetDir, mode, gencFilePath);
 #elif defined(WINDOWS_WITH_MSVC)
                 result = pkg_createWindowsDLL(mode, gencFilePath, o);
@@ -742,7 +742,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     fprintf(stderr, "Error creating data archive library file.\n");
                    return result;
                 }
-#ifndef OS400
+#if U_PLATFORM != U_PF_OS400
                 /* Create symbolic links for the final library file. */
                 result = pkg_createSymLinks(targetDir);
                 if (result != 0) {
@@ -850,7 +850,7 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
         }
 
         if (version != NULL) {
-#if defined(U_CYGWIN)
+#if U_PLATFORM == U_PF_CYGWIN
             sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s.%s",
                     libName,
                     pkgDataFlags[SO_EXT]);
@@ -862,7 +862,7 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
             uprv_strcat(pkgDataFlags[SO_EXT], ".");
             uprv_strcat(pkgDataFlags[SO_EXT], pkgDataFlags[A_EXT]);
 
-#elif defined(OS400) || defined(_AIX)
+#elif U_PLATFORM == U_PF_OS400 || defined(_AIX)
             sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s.%s",
                     libFileNames[LIB_FILE],
                     pkgDataFlags[SOBJ_EXT]);
@@ -889,7 +889,7 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
               fprintf(stdout, "# libFileName[LIB_FILE_VERSION] = %s\n", libFileNames[LIB_FILE_VERSION]);
             }
 
-#if defined(U_CYGWIN) || defined(U_MINGW)
+#if U_PF_MINGW <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
             /* Cygwin and MinGW only deals with the version major number. */
             uprv_strcpy(libFileNames[LIB_FILE_VERSION_TMP], libFileNames[LIB_FILE_VERSION_MAJOR]);
 #endif
@@ -910,7 +910,7 @@ static int32_t pkg_createSymLinks(const char *targetDir, UBool specialHandling) 
     char name1[SMALL_BUFFER_MAX_SIZE]; /* symlink file name */
     char name2[SMALL_BUFFER_MAX_SIZE]; /* file name to symlink */
 
-#if defined (U_MINGW)
+#if U_PLATFORM == U_PF_MINGW
     /* On MINGW, symbolic links don't need to be created. */
     return result;
 #endif
@@ -937,7 +937,7 @@ static int32_t pkg_createSymLinks(const char *targetDir, UBool specialHandling) 
 #endif
 
     if (specialHandling) {
-#ifdef U_CYGWIN
+#if U_PLATFORM == U_PF_CYGWIN
         sprintf(name1, "%s", libFileNames[LIB_FILE_CYGWIN]);
         sprintf(name2, "%s", libFileNames[LIB_FILE_CYGWIN_VERSION]);
 #else
@@ -993,7 +993,7 @@ static int32_t pkg_installLibrary(const char *installDir, const char *targetDir)
         fprintf(stderr, "Error installing library. Failed command: %s\n", cmd);
         return result;
     }
-#elif defined(U_CYGWIN)
+#elif U_PLATFORM == U_PF_CYGWIN
     sprintf(cmd, "cd %s && %s %s %s",
             targetDir,
             pkgDataFlags[INSTALL_CMD],
@@ -1212,7 +1212,7 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
                      uprv_strlen(objectFile) + uprv_strlen(pkgDataFlags[LD_SONAME]) +
                      uprv_strlen(pkgDataFlags[LD_SONAME][0] == 0 ? "" : libFileNames[LIB_FILE_VERSION_MAJOR]) +
                      uprv_strlen(pkgDataFlags[RPATH_FLAGS]) + uprv_strlen(pkgDataFlags[BIR_FLAGS]) + BUFFER_PADDING_SIZE;
-#ifdef U_CYGWIN
+#if U_PLATFORM == U_PF_CYGWIN
             length += uprv_strlen(targetDir) + uprv_strlen(libFileNames[LIB_FILE_CYGWIN_VERSION]);
 #endif
             if ((cmd = (char *)uprv_malloc(sizeof(char) * length)) == NULL) {
@@ -1221,14 +1221,14 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
             }
             freeCmd = TRUE;
         }
-#if defined(U_CYGWIN)
+#if U_PLATFORM == U_PF_CYGWIN
         sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
                 pkgDataFlags[GENLIB],
                 targetDir,
                 libFileNames[LIB_FILE_VERSION_TMP],
                 pkgDataFlags[LDICUDTFLAGS],
                 targetDir, libFileNames[LIB_FILE_CYGWIN_VERSION],
-#elif defined(U_AIX)
+#elif U_PLATFORM == U_PF_AIX
         sprintf(cmd, "%s %s%s;%s %s -o %s%s %s %s%s %s %s",
                 RM_CMD,
                 targetDir,
@@ -1599,7 +1599,7 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
 #endif
 
 static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
-#ifdef U_AIX
+#if U_PLATFORM == U_PF_AIX
     /* AIX needs a map file. */
     char *flag = NULL;
     int32_t length = 0;
@@ -1697,7 +1697,7 @@ static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
             T_FileStream_close(f);
         }
     }
-#elif defined(U_CYGWIN)
+#elif U_PLATFORM == U_PF_CYGWIN
     /* Cygwin needs to change flag options. */
     char *flag = NULL;
     int32_t length = 0;
@@ -1715,8 +1715,8 @@ static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
     }
 
     uprv_memset(flag + position, 0, length - position);
-#elif defined(OS400)
-    /* OS400 needs to fix the ld options (swap single quote with double quote) */
+#elif U_PLATFORM == U_PF_OS400
+    /* OS/400 needs to fix the ld options (swap single quote with double quote) */
     char *flag = NULL;
     int32_t length = 0;
 

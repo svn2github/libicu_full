@@ -60,7 +60,7 @@ UDataMemory_normalizeDataPointer(const void *p) {
     if(pdh==NULL || (pdh->dataHeader.magic1==0xda && pdh->dataHeader.magic2==0x27)) {
         return pdh;
     } else {
-#ifdef OS400
+#if U_PLATFORM == U_PF_OS400
         /*
         TODO: Fix this once the compiler implements this feature. Keep in sync with genccode.c
 

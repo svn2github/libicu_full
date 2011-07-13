@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-* Copyright (c) 2002-2005, International Business Machines
+* Copyright (c) 2002-2011, International Business Machines
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 **********************************************************************
@@ -104,7 +104,7 @@ public:
 };
 
 class DarwinBreakFunction : public UPerfFunction {
-#ifdef U_DARWIN
+#if U_PLATFORM == U_PF_DARWIN
 public:
   virtual void call(UErrorCode *status) {};
 #else
