@@ -122,7 +122,7 @@ U_INTERNAL const char*  U_EXPORT2 uprv_getDefaultLocaleID(void);
  * Example: '/' and ':' on Unix, '\\' and ';' on Windows.
  * @stable ICU 2.0
  */
-#ifdef U_PLATFORM == U_PF_CLASSIC_MACOS
+#if U_PLATFORM == U_PF_CLASSIC_MACOS
 #   define U_FILE_SEP_CHAR ':'
 #   define U_FILE_ALT_SEP_CHAR ':'
 #   define U_PATH_SEP_CHAR ';'

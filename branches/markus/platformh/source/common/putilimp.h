@@ -19,6 +19,75 @@
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
 
+/**
+ * \def U_PLATFORM_USES_ONLY_WIN32_API
+ * Defines whether the platform uses only the Win32 API.
+ * Set to 1 for Windows/MSVC and MinGW but not Cygwin.
+ * @internal
+ */
+#ifdef U_PLATFORM_USES_ONLY_WIN32_API
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW
+#   define U_PLATFORM_USES_ONLY_WIN32_API 1
+#else
+    /* Cygwin implements POSIX. */
+#   define U_PLATFORM_USES_ONLY_WIN32_API 0
+#endif
+
+/**
+ * \def U_PLATFORM_HAS_WIN32_API
+ * Defines whether the Win32 API is available on the platform.
+ * Set to 1 for Windows/MSVC, MinGW and Cygwin.
+ * @internal
+ */
+#ifdef U_PLATFORM_HAS_WIN32_API
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_PLATFORM_HAS_WIN32_API 1
+#else
+#   define U_PLATFORM_HAS_WIN32_API 0
+#endif
+
+/**
+ * \def U_PLATFORM_IMPLEMENTS_POSIX
+ * Defines whether the platform implements (most of) the POSIX API.
+ * Set to 1 for Cygwin and most other platforms.
+ * @internal
+ */
+#ifdef U_PLATFORM_IMPLEMENTS_POSIX
+    /* Use the predefined value. */
+#elif U_PLATFORM_USES_ONLY_WIN32_API || U_PLATFORM == U_PF_CLASSIC_MACOS
+#   define U_PLATFORM_IMPLEMENTS_POSIX 0
+#else
+#   define U_PLATFORM_IMPLEMENTS_POSIX 1
+#endif
+
+/**
+ * \def U_PLATFORM_IS_LINUX_BASED
+ * Defines whether the platform is Linux or one of its derivatives.
+ * @internal
+ */
+#ifdef U_PLATFORM_IS_LINUX_BASED
+    /* Use the predefined value. */
+#elif U_PF_LINUX <= U_PLATFORM && U_PLATFORM <= U_PF_ANDROID
+#   define U_PLATFORM_IS_LINUX_BASED 1
+#else
+#   define U_PLATFORM_IS_LINUX_BASED 0
+#endif
+
+/**
+ * \def U_PLATFORM_IS_DARWIN_BASED
+ * Defines whether the platform is Darwin or one of its derivatives.
+ * @internal
+ */
+#ifdef U_PLATFORM_IS_DARWIN_BASED
+    /* Use the predefined value. */
+#elif U_PF_DARWIN <= U_PLATFORM && U_PLATFORM <= U_PF_IPHONE
+#   define U_PLATFORM_IS_DARWIN_BASED 1
+#else
+#   define U_PLATFORM_IS_DARWIN_BASED 0
+#endif
+
 /*==========================================================================*/
 /* Platform utilities                                                       */
 /*==========================================================================*/

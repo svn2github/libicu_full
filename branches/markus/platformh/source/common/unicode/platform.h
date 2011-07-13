@@ -513,7 +513,7 @@
 /* Sun's C compiler has issues with this notation, and it's unreliable. */
 #   define U_DECLARE_UTF16(string) U ## string
 #elif U_SIZEOF_WCHAR_T == 2 \
-    && (U_CHARSET_FAMILY == 0 || (U_PF_OS390 <= U_PLATFORM && U_PLATFORM <= U_PF_OS400) && defined(__UCS2__)))
+    && (U_CHARSET_FAMILY == 0 || (U_PF_OS390 <= U_PLATFORM && U_PLATFORM <= U_PF_OS400 && defined(__UCS2__)))
 #   define U_DECLARE_UTF16(string) L ## string
 #else
     /* Leave U_DECLARE_UTF16 undefined. See unistr.h. */

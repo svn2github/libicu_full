@@ -102,7 +102,7 @@ Cleanly installed Solaris can use this #define.
 #   define ICU_NO_USER_DATA_OVERRIDE 1
 #elif U_PLATFORM == U_PF_OS390
 #   include "unicode/ucnv.h"   /* Needed for UCNV_SWAP_LFNL_OPTION_STRING */
-#elif U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_LINUX || U_PLATFORM == U_PF_BSD
+#elif U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM_IS_LINUX_BASED || U_PLATFORM == U_PF_BSD
 #   include <limits.h>
 #   include <unistd.h>
 #elif U_PLATFORM == U_PF_QNX
@@ -142,7 +142,15 @@ Cleanly installed Solaris can use this #define.
  * icucfg.h via autoheader.
  */
 #if defined(U_HAVE_ICUCFG)
-#include "icucfg.h"
+#   include "icucfg.h"
+#elif U_PLATFORM_IMPLEMENTS_POSIX
+#   define HAVE_DLFCN_H 1
+#   define HAVE_DLOPEN 1
+#   define HAVE_GETTIMEOFDAY 1
+#else
+#   undef HAVE_DLFCN_H
+#   undef HAVE_DLOPEN
+#   undef HAVE_GETTIMEOFDAY
 #endif
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -647,15 +655,15 @@ uprv_timezone()
 /* Note that U_TZNAME does *not* have to be tzname, but if it is,
    some platforms need to have it declared here. */
 
-#if defined(U_TZNAME) && (U_PLATFORM == U_PF_IRIX || U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_CYGWIN)
+#if defined(U_TZNAME) && (U_PLATFORM == U_PF_IRIX || U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM == U_PF_CYGWIN)
 /* RS6000 and others reject char **tzname.  */
 extern U_IMPORT char *U_TZNAME[];
 #endif
 
-#if !UCONFIG_NO_FILE_IO && (U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_LINUX || U_PLATFORM == U_PF_BSD)
+#if !UCONFIG_NO_FILE_IO && (U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM_IS_LINUX_BASED || U_PLATFORM == U_PF_BSD)
 /* These platforms are likely to use Olson timezone IDs. */
 #define CHECK_LOCALTIME_LINK 1
-#if U_PLATFORM == U_PF_DARWIN
+#if U_PLATFORM_IS_DARWIN_BASED
 #include <tzfile.h>
 #define TZZONEINFO      (TZDIR "/")
 #else
@@ -973,7 +981,7 @@ uprv_tzname(int n)
     }
 #else
 
-/*#if U_PLATFORM == U_PF_DARWIN
+/*#if U_PLATFORM_IS_DARWIN_BASED
     int ret;
 
     tzid = getenv("TZFILE");
@@ -1178,7 +1186,7 @@ uprv_pathIsAbsolute(const char *path)
 
 /* Temporary backup setting of ICU_DATA_DIR_PREFIX_ENV_VAR
    until some client wrapper makefiles are updated */
-#if U_PLATFORM == U_PF_DARWIN && TARGET_IPHONE_SIMULATOR
+#if U_PLATFORM_IS_DARWIN_BASED && TARGET_IPHONE_SIMULATOR
 # if !defined(ICU_DATA_DIR_PREFIX_ENV_VAR)
 #  define ICU_DATA_DIR_PREFIX_ENV_VAR "IPHONE_SIMULATOR_ROOT"
 # endif
@@ -1760,7 +1768,7 @@ remapPlatformDependentCodepage(const char *locale, const char *name) {
          */
         name = "ISO-8859-1";
     }
-#elif U_PLATFORM == U_PF_DARWIN
+#elif U_PLATFORM_IS_DARWIN_BASED
     if (locale == NULL && *name == 0) {
         /*
         No locale was specified, and an empty name was passed in.
@@ -1913,7 +1921,7 @@ int_getDefaultCodepage()
        nl_langinfo may use the same buffer as setlocale. */
     {
         const char *codeset = nl_langinfo(U_NL_LANGINFO_CODESET);
-#if U_PLATFORM == U_PF_DARWIN || U_PLATFORM == U_PF_LINUX
+#if U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM_IS_LINUX_BASED
         /*
          * On Linux and MacOSX, ensure that default codepage for non C/POSIX locale is UTF-8
          * instead of ASCII.
@@ -2082,9 +2090,10 @@ u_getVersion(UVersionInfo versionArray) {
  
 #if defined(U_CHECK_DYLOAD)
 
-#if defined(HAVE_DLOPEN) 
+#if defined(HAVE_DLOPEN) && !U_PLATFORM_HAS_WIN32_API
 
 #ifdef HAVE_DLFCN_H
+
 #ifdef __MVS__
 #ifndef __SUSV3
 #define __SUSV3 1
@@ -2159,7 +2168,7 @@ uprv_dlsym_func(void *lib, const char* sym, UErrorCode *status) {
 
 #endif
 
-#elif U_PLATFORM == U_PF_WINDOWS
+#elif U_PLATFORM_HAS_WIN32_API
 
 U_INTERNAL void * U_EXPORT2
 uprv_dl_open(const char *libName, UErrorCode *status) {
