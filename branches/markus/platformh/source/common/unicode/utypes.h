@@ -54,7 +54,7 @@
  * \def U_SHOW_CPLUSPLUS_API
  * @internal
  */
-#ifdef XP_CPLUSPLUS
+#ifdef __cplusplus
 #   ifndef U_SHOW_CPLUSPLUS_API
 #       define U_SHOW_CPLUSPLUS_API 1
 #   endif
@@ -281,7 +281,7 @@
  * you must use the U_CAPI and U_EXPORT2 qualifiers.
  * @stable ICU 2.0
  */
-#if U_PLATFORM == U_PF_OS390 && defined(XP_CPLUSPLUS)
+#if U_PLATFORM == U_PF_OS390 && defined(__cplusplus)
 #    define U_CALLCONV __cdecl
 #else
 #    define U_CALLCONV U_EXPORT2
@@ -293,7 +293,7 @@
  * @stable ICU 2.0
  */
 #ifndef NULL
-#ifdef XP_CPLUSPLUS
+#ifdef __cplusplus
 #define NULL    0
 #else
 #define NULL    ((void *)0)
@@ -562,7 +562,7 @@ typedef void* UClassID;
  * some Linux/Unix compilers have problems with defining global new/delete.
  * On Windows, it is _MSC_VER>=1200 for MSVC 6.0 and higher.
  */
-#if defined(XP_CPLUSPLUS) && U_DEBUG && U_OVERRIDE_CXX_ALLOCATION && (_MSC_VER>=1200) && !defined(U_STATIC_IMPLEMENTATION) && (defined(U_COMMON_IMPLEMENTATION) || defined(U_I18N_IMPLEMENTATION) || defined(U_IO_IMPLEMENTATION) || defined(U_LAYOUT_IMPLEMENTATION) || defined(U_LAYOUTEX_IMPLEMENTATION))
+#if defined(__cplusplus) && U_DEBUG && U_OVERRIDE_CXX_ALLOCATION && (_MSC_VER>=1200) && !defined(U_STATIC_IMPLEMENTATION) && (defined(U_COMMON_IMPLEMENTATION) || defined(U_I18N_IMPLEMENTATION) || defined(U_IO_IMPLEMENTATION) || defined(U_LAYOUT_IMPLEMENTATION) || defined(U_LAYOUTEX_IMPLEMENTATION))
 
 #ifndef U_HIDE_INTERNAL_API
 /**
@@ -847,7 +847,7 @@ typedef enum UErrorCode {
 /* Use the following to determine if an UErrorCode represents */
 /* operational success or failure. */
 
-#ifdef XP_CPLUSPLUS
+#ifdef __cplusplus
     /**
      * Does the error code indicate success?
      * @stable ICU 2.0

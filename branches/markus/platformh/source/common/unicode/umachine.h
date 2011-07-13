@@ -50,19 +50,6 @@
 #include <stddef.h>
 
 /*==========================================================================*/
-/* XP_CPLUSPLUS is a cross-platform symbol which should be defined when     */
-/* using C++.  It should not be defined when compiling under C.             */
-/*==========================================================================*/
-
-#ifdef __cplusplus
-#   ifndef XP_CPLUSPLUS
-#       define XP_CPLUSPLUS
-#   endif
-#else
-#   undef XP_CPLUSPLUS
-#endif
-
-/*==========================================================================*/
 /* For C wrappers, we use the symbol U_STABLE.                                */
 /* This works properly if the includer is C or C++.                         */
 /* Functions are declared   U_STABLE return-type U_EXPORT2 function-name()... */
@@ -86,7 +73,7 @@
  * @stable ICU 2.4
  */
 
-#ifdef XP_CPLUSPLUS
+#ifdef __cplusplus
 #   define U_CFUNC extern "C"
 #   define U_CDECL_BEGIN extern "C" {
 #   define U_CDECL_END   }
