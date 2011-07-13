@@ -174,23 +174,23 @@
 #endif
 
 /**
- * \def U_HAVE_INTTYPES_H
+ * \def U_HAVE_STDINT_H
  * Defines whether stdint.h is available. It is a C99 standard header.
  * We used to include inttypes.h which includes stdint.h but we usually do not need
  * the additional definitions from inttypes.h.
  * @internal
  */
-#ifdef U_HAVE_INTTYPES_H
+#ifdef U_HAVE_STDINT_H
     /* Use the predefined value. */
 #elif U_PLATFORM == U_PF_WINDOWS
 #   if defined(__BORLANDC__) || (defined(_MSC_VER) && _MSC_VER>=1600)
         /* Windows Visual Studio 9 and below do not have stdint.h & inttypes.h, but VS 2010 adds them. */
-#       define U_HAVE_INTTYPES_H 1
+#       define U_HAVE_STDINT_H 1
 #   else
-#       define U_HAVE_INTTYPES_H 0
+#       define U_HAVE_STDINT_H 0
 #   endif
 #else
-#   define U_HAVE_INTTYPES_H 1
+#   define U_HAVE_STDINT_H 1
 #endif
 
 /**
