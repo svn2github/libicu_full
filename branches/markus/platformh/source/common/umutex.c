@@ -30,7 +30,7 @@
 /* Assume POSIX, and modify as necessary below */
 #define POSIX
 
-#if defined(U_WINDOWS)
+#if U_PLATFORM == U_PF_WINDOWS
 #undef POSIX
 #endif
 #if defined(macintosh)
@@ -45,7 +45,7 @@
 
 #endif /* POSIX && (ICU_USE_THREADS==1) */
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 # define WIN32_LEAN_AND_MEAN
 # define VC_EXTRALEAN
 # define NOUSER
@@ -100,7 +100,7 @@
             mutexed_compare_and_swap(dest, newval, oldval)
 
 
-#elif defined(U_WINDOWS)
+#elif U_PLATFORM == U_PF_WINDOWS
 #define MUTEX_TYPE CRITICAL_SECTION
 #define PLATFORM_MUTEX_INIT(m) InitializeCriticalSection(m)
 #define PLATFORM_MUTEX_LOCK(m) EnterCriticalSection(m)
@@ -493,7 +493,7 @@ umtx_atomic_inc(int32_t *p)  {
     if (pIncFn) {
         retVal = (*pIncFn)(gIncDecContext, p);
     } else {
-        #if defined (U_WINDOWS) && ICU_USE_THREADS == 1
+        #if U_PLATFORM == U_PF_WINDOWS && ICU_USE_THREADS == 1
             retVal = InterlockedIncrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicIncrement32Barrier(p);
@@ -517,7 +517,7 @@ umtx_atomic_dec(int32_t *p) {
     if (pDecFn) {
         retVal = (*pDecFn)(gIncDecContext, p);
     } else {
-        #if defined (U_WINDOWS) && ICU_USE_THREADS == 1
+        #if U_PLATFORM == U_PF_WINDOWS && ICU_USE_THREADS == 1
             retVal = InterlockedDecrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicDecrement32Barrier(p);

@@ -129,7 +129,7 @@ U_INTERNAL const char*  U_EXPORT2 uprv_getDefaultLocaleID(void);
 #   define U_FILE_SEP_STRING ":"
 #   define U_FILE_ALT_SEP_STRING ":"
 #   define U_PATH_SEP_STRING ";"
-#elif defined(U_WINDOWS)
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW
 #   define U_FILE_SEP_CHAR '\\'
 #   define U_FILE_ALT_SEP_CHAR '/'
 #   define U_PATH_SEP_CHAR ';'

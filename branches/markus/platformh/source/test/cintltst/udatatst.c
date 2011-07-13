@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 #include <io.h>
 #else
 #include <unistd.h>

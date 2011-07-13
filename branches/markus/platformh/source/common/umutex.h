@@ -21,7 +21,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uclean.h"
 
-#if defined(U_WINDOWS)
+#if U_PLATFORM == U_PF_WINDOWS
 # include <intrin.h>
 #endif
 
@@ -70,7 +70,7 @@
 #  define UMTX_FULL_BARRIER
 # elif U_HAVE_GCC_ATOMICS
 #  define UMTX_FULL_BARRIER __sync_synchronize();
-# elif defined(U_WINDOWS)
+# elif U_PLATFORM == U_PF_WINDOWS
 #  define UMTX_FULL_BARRIER _ReadWriteBarrier();
 # elif defined(U_DARWIN)
 #  define UMTX_FULL_BARRIER OSMemoryBarrier();

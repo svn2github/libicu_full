@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-*   Copyright (C) 2009, International Business Machines
+*   Copyright (C) 2009-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -11,7 +11,7 @@
 
 #include "unicode/utypes.h"
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 
 #include "wintzimpl.h"
 

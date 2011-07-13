@@ -63,7 +63,7 @@ U_CDECL_BEGIN
 #include "pkgtypes.h"
 U_CDECL_END
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 #ifdef __GNUC__
 #define WINDOWS_WITH_GNUC
 #else
@@ -154,7 +154,7 @@ static struct {
     const char *desc;
 } modes[] = {
         { "files", 0,           "Uses raw data files (no effect). Installation copies all files to the target location." },
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
         { "dll",    "library",  "Generates one common data file and one shared library, <package>.dll"},
         { "common", "archive",  "Generates just the common file, <package>.dat"},
         { "static", "static",   "Generates one statically linked library, " LIB_PREFIX "<package>" UDATA_LIB_SUFFIX }
@@ -731,7 +731,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     return result;
                 }
             }
-#ifndef U_WINDOWS
+#if U_PLATFORM != U_PF_WINDOWS
             if(mode != MODE_STATIC) {
                 /* Certain platforms uses archive library. (e.g. AIX) */
                 if(o->verbose) {
@@ -753,7 +753,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             } /* !MODE_STATIC */
 #endif
 
-#if !defined(U_WINDOWS) || defined(USING_CYGWIN)
+#if U_PLATFORM != U_PF_WINDOWS || defined(USING_CYGWIN)
             /* Install the libraries if option was set. */
             if (o->install != NULL) {
                 if(o->verbose) {

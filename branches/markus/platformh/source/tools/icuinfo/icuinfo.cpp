@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2010, International Business Machines
+*   Copyright (C) 1999-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -60,16 +60,12 @@ static void do_init() {
  */
 static const char *getPlatform()
 {
-#if defined(U_PLATFORM)
-	return U_PLATFORM;
-#elif defined(U_WINDOWS)
-	return "Windows";
-#elif defined(U_PALMOS)
-	return "PalmOS";
-#elif defined(_PLATFORM_H)
-	return "Other (POSIX-like)";
+#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+    return "Windows";
+#elif U_PLATFORM == U_PF_UNKNOWN
+    return "unknown"
 #else
-	return "unknown"
+    return "Other (POSIX-like)";
 #endif
 }
 

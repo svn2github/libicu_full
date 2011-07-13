@@ -1,6 +1,6 @@
 /*
  *******************************************************************************
- *   Copyright (C) 1999-2008, International Business Machines
+ *   Copyright (C) 1999-2011, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *******************************************************************************
  *   file name:  gennames.c
@@ -19,7 +19,7 @@
 
 #include "unicode/utypes.h"
 
-#ifdef U_WINDOWS
+#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
 #   define VC_EXTRALEAN
 #   define WIN32_LEAN_AND_MEAN
 #   define NOUSER
@@ -57,7 +57,7 @@
 #include "uoptions.h"
 #include "pkg_genc.h"
 
-#if defined(U_WINDOWS) || defined(U_ELF)
+#if (U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN) || defined(U_ELF)
 #define CAN_GENERATE_OBJECTS
 #endif
 

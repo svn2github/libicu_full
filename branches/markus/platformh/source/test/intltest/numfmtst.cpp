@@ -2620,7 +2620,7 @@ void NumberFormatTest::TestJB3832(){
 
 void NumberFormatTest::TestHost()
 {
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
     Win32NumberTest::testLocales(this);
 #endif
     Locale loc("en_US@compat=host");

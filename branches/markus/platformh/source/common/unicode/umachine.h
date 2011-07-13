@@ -109,7 +109,7 @@
  * This is used for Visual C++ specific attributes 
  * @internal
  */
-#elif defined(U_WINDOWS) && defined(_MSC_VER) && (_MSC_VER >= 1400)
+#elif defined(_MSC_VER) && (_MSC_VER >= 1400)
 #    define U_ATTRIBUTE_DEPRECATED __declspec(deprecated)
 #else
 #    define U_ATTRIBUTE_DEPRECATED
@@ -276,7 +276,7 @@ typedef int8_t UBool;
 #       if (U_SIZEOF_WCHAR_T==4)
 #           define U_WCHAR_IS_UTF32
 #       endif
-#   elif defined(U_WINDOWS)
+#   elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
 #       define U_WCHAR_IS_UTF16
 #   endif
 #endif

@@ -30,7 +30,7 @@
 #include "cstring.h"
 #include "cmemory.h"
 
-#if defined(U_WINDOWS) && defined(_MSC_VER) && (_MSC_VER >= 1500)
+#if U_PLATFORM == U_PF_WINDOWS && defined(_MSC_VER) && (_MSC_VER >= 1500)
 #define USE_WINDOWS_LOCALE_API
 #endif
 

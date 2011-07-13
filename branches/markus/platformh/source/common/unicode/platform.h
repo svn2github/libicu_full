@@ -182,7 +182,7 @@
  */
 #ifdef U_HAVE_INTTYPES_H
     /* Use the predefined value. */
-#elif U_PLATFORM == U_WINDOWS
+#elif U_PLATFORM == U_PF_WINDOWS
 #   if defined(__BORLANDC__) || (defined(_MSC_VER) && _MSC_VER>=1600)
         /* Windows Visual Studio 9 and below do not have stdint.h & inttypes.h, but VS 2010 adds them. */
 #       define U_HAVE_INTTYPES_H 1
@@ -411,7 +411,7 @@
     /* Use the predefined value. */
 #elif U_PLATFORM == U_PF_ANDROID && __ANDROID_API__ < 9
 #   define U_SIZEOF_WCHAR_T 1
-#elif U_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
 #   define U_SIZEOF_WCHAR_T 2
 #elif (U_PF_DARWIN <= U_PLATFORM && U_PLATFORM <= U_PF_IPHONE) || U_PLATFORM == U_PF_CLASSIC_MACOS
 #   define U_SIZEOF_WCHAR_T 2
@@ -683,7 +683,7 @@
  */
 #ifdef U_MAKE_IS_NMAKE
     /* Use the predefined value. */
-#elif U_PLATFORM == U_WINDOWS
+#elif U_PLATFORM == U_PF_WINDOWS
 #   define U_MAKE_IS_NMAKE 1
 #else
 #   define U_MAKE_IS_NMAKE 0

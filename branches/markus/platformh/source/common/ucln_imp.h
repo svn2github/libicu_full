@@ -119,7 +119,7 @@ static void ucln_destructor()
 }
 
 /* Windows: DllMain */
-#elif defined (U_WINDOWS)
+#elif U_PLATFORM == U_PF_WINDOWS
 /* 
  * ICU's own DllMain.
  */

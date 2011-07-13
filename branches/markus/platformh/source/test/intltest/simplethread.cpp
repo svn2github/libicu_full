@@ -28,7 +28,7 @@
 #include <string.h>
 #include <ctype.h>    // tolower, toupper
 
-#if !defined(U_WINDOWS) && U_PLATFORM != U_PF_CLASSIC_MACOS && !defined(U_RHAPSODY)
+#if U_PLATFORM != U_PF_WINDOWS && U_PLATFORM != U_PF_CLASSIC_MACOS && !defined(U_RHAPSODY)
 #define POSIX 1
 #endif
 
@@ -130,7 +130,7 @@
 #include "unicode/calendar.h"
 #include "ucaconf.h"
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 #define HAVE_IMP
 
 #   define VC_EXTRALEAN

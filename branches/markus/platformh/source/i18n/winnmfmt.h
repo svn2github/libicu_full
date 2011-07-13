@@ -14,7 +14,7 @@
 
 #include "unicode/utypes.h"
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 
 #include "unicode/format.h"
 #include "unicode/datefmt.h"
@@ -156,6 +156,6 @@ U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
-#endif // #ifdef U_WINDOWS
+#endif // U_PLATFORM == U_PF_WINDOWS
 
 #endif // __WINNMFMT

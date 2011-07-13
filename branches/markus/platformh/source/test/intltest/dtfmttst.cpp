@@ -21,7 +21,7 @@
 #include "caltest.h"  // for fieldName
 #include <stdio.h> // for sprintf
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 #include "windttst.h"
 #endif
 
@@ -2098,7 +2098,7 @@ void DateFormatTest::TestZTimeZoneParsing(void) {
 
 void DateFormatTest::TestHost(void)
 {
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
     Win32DateTimeTest::testLocales(this);
 #endif
 }

@@ -1,6 +1,6 @@
 /********************************************************************
 * COPYRIGHT:
-* Copyright (C) 2001-2006 IBM, Inc.   All Rights Reserved.
+* Copyright (C) 2001-2011 IBM, Inc.   All Rights Reserved.
 *
 ********************************************************************/
 
@@ -575,7 +575,7 @@ public:
             locale = "en_US";   // set default locale
         }
 
-        //#ifdef U_WINDOWS
+        //#if U_PLATFORM == U_PF_WINDOWS
         if (options[i].doesOccur) {
             char *endp;
             int tmp = strtol(options[i].value, &endp, 0);

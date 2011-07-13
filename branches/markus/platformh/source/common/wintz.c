@@ -11,7 +11,7 @@
 
 #include "unicode/utypes.h"
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 
 #include "wintz.h"
 
@@ -287,4 +287,4 @@ uprv_detectWindowsTimeZone() {
     return icuid;
 }
 
-#endif /* #ifdef U_WINDOWS */
+#endif /* U_PLATFORM == U_PF_WINDOWS */

@@ -1,6 +1,6 @@
 /**************************************************************************
 *
-*   Copyright (C) 2000-2009, International Business Machines
+*   Copyright (C) 2000-2011, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ***************************************************************************
@@ -132,7 +132,7 @@ char * convertToNativePathSeparators(char *path);
 
 /* set up common defines for library naming */
 
-#ifdef U_WINDOWS
+#if U_PLATFORM == U_PF_WINDOWS
 # ifndef UDATA_SO_SUFFIX
 #  define UDATA_SO_SUFFIX ".dll"
 # endif
