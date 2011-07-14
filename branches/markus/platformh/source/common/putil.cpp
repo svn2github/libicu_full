@@ -77,7 +77,12 @@ Cleanly installed Solaris can use this #define.
 #include <float.h>
 
 /* include system headers */
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW
+#if U_PLATFORM_USES_ONLY_WIN32_API
+    /*
+     * TODO: U_PLATFORM_USES_ONLY_WIN32_API includes MinGW.
+     * Should Cygwin be included as well (U_PLATFORM_HAS_WIN32_API)
+     * to use native APIs as much as possible?
+     */
 #   define WIN32_LEAN_AND_MEAN
 #   define VC_EXTRALEAN
 #   define NOUSER
@@ -123,7 +128,7 @@ Cleanly installed Solaris can use this #define.
  */
 #include <time.h>
 
-#if U_PLATFORM != U_PF_WINDOWS
+#if !U_PLATFORM_USES_ONLY_WIN32_API
 #include <sys/time.h>
 #endif
 
@@ -182,7 +187,7 @@ static const BitPatternConversion gInf = { (int64_t) INT64_C(0x7FF0000000000000)
   functions).
   ---------------------------------------------------------------------------*/
 
-#if (U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW) || U_PLATFORM == U_PF_CLASSIC_MACOS || U_PLATFORM == U_PF_OS400
+#if U_PLATFORM_USES_ONLY_WIN32_API || U_PLATFORM == U_PF_CLASSIC_MACOS || U_PLATFORM == U_PF_OS400
 #   undef U_POSIX_LOCALE
 #else
 #   define U_POSIX_LOCALE    1
@@ -268,7 +273,7 @@ static UDate getUTCtime_fake() {
 }
 #endif
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
 typedef union {
     int64_t int64;
     FILETIME fileTime;
@@ -315,7 +320,7 @@ uprv_getRawUTCtime()
     uprv_memcpy( &tmrec, gmtime(&t), sizeof(tmrec) );
     t2 = mktime(&tmrec);    /* seconds of current GMT*/
     return (UDate)(t2 - t1) * U_MILLIS_PER_SECOND;         /* GMT (or UTC) in seconds since 1970*/
-#elif U_PLATFORM == U_PF_WINDOWS
+#elif U_PLATFORM_USES_ONLY_WIN32_API
 
     FileTimeConversion winTime;
     GetSystemTimeAsFileTime(&winTime.fileTime);
@@ -683,7 +688,7 @@ static char gTimeZoneBuffer[PATH_MAX];
 static char *gTimeZoneBufferPtr = NULL;
 #endif
 
-#if U_PLATFORM != U_PF_WINDOWS
+#if !U_PLATFORM_USES_ONLY_WIN32_API
 #define isNonDigit(ch) (ch < '0' || '9' < ch)
 static UBool isValidOlsonID(const char *id) {
     int32_t idx = 0;
@@ -726,7 +731,7 @@ static void skipZoneIDPrefix(const char** id) {
 }
 #endif
 
-#if defined(U_TZNAME) && U_PLATFORM != U_PF_WINDOWS
+#if defined(U_TZNAME) && !U_PLATFORM_USES_ONLY_WIN32_API
 
 #define CONVERT_HOURS_TO_SECONDS(offset) (int32_t)(offset*3600)
 typedef struct OffsetZoneMapping {
@@ -973,7 +978,7 @@ U_CAPI const char* U_EXPORT2
 uprv_tzname(int n)
 {
     const char *tzid = NULL;
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
     tzid = uprv_detectWindowsTimeZone();
 
     if (tzid != NULL) {
@@ -1054,7 +1059,7 @@ uprv_tzname(int n)
 #endif
 
 #ifdef U_TZNAME
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW
+#if U_PLATFORM_USES_ONLY_WIN32_API
     /* The return value is free'd in timezone.cpp on Windows because
      * the other code path returns a pointer to a heap location. */
     return uprv_strdup(U_TZNAME[n]);
@@ -1173,7 +1178,7 @@ uprv_pathIsAbsolute(const char *path)
   }
 #endif
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
   if( (((path[0] >= 'A') && (path[0] <= 'Z')) ||
        ((path[0] >= 'a') && (path[0] <= 'z'))) &&
       path[1] == ':' ) {
@@ -1574,7 +1579,7 @@ The leftmost codepage (.xxx) wins.
 
     return posixID;
 
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW
+#elif U_PLATFORM_USES_ONLY_WIN32_API
     UErrorCode status = U_ZERO_ERROR;
     LCID id = GetThreadLocale();
     const char* locID = uprv_convertToPosix(id, &status);
@@ -1903,7 +1908,7 @@ int_getDefaultCodepage()
 #elif U_PLATFORM == U_PF_CLASSIC_MACOS
     return "macintosh"; /* TODO: Macintosh Roman. There must be a better way. fixme! */
 
-#elif U_PLATFORM == U_PF_WINDOWS
+#elif U_PLATFORM_USES_ONLY_WIN32_API
     static char codepage[64];
     sprintf(codepage, "windows-%d", GetACP());
     return codepage;

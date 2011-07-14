@@ -242,9 +242,9 @@ typedef int8_t UBool;
 #       if (U_SIZEOF_WCHAR_T==4)
 #           define U_WCHAR_IS_UTF32
 #       endif
-#   elif U_PF_DARWIN <= U_PLATFORM && U_PLATFORM <= U_PF_IPHONE
+#   elif U_PLATFORM_IS_DARWIN_BASED || (U_SIZEOF_WCHAR_T==4 && U_PLATFORM_IS_LINUX_BASED)
 #       define U_WCHAR_IS_UTF32
-#   elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   elif U_PLATFORM_HAS_WIN32_API
 #       define U_WCHAR_IS_UTF16
 #   endif
 #endif

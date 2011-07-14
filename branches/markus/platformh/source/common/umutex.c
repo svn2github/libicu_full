@@ -27,17 +27,13 @@
  * platform independent set of mutex operations.  For internal ICU use only.
  */
 
-/* Assume POSIX, and modify as necessary below */
-#define POSIX
-
-#if U_PLATFORM == U_PF_WINDOWS
-#undef POSIX
-#endif
-#if defined(macintosh)
-#undef POSIX
-#endif
-#if defined(OS2)
-#undef POSIX
+#if U_PLATFORM_HAS_WIN32_API
+    /* Prefer native Windows APIs even if POSIX is implemented (i.e., on Cygwin). */
+#   undef POSIX
+#elif U_PLATFORM_IMPLEMENTS_POSIX
+#   define POSIX
+#else
+#   undef POSIX
 #endif
 
 #if defined(POSIX) && (ICU_USE_THREADS==1)
@@ -45,7 +41,7 @@
 
 #endif /* POSIX && (ICU_USE_THREADS==1) */
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 # define WIN32_LEAN_AND_MEAN
 # define VC_EXTRALEAN
 # define NOUSER
@@ -100,7 +96,7 @@
             mutexed_compare_and_swap(dest, newval, oldval)
 
 
-#elif U_PLATFORM == U_PF_WINDOWS
+#elif U_PLATFORM_HAS_WIN32_API
 #define MUTEX_TYPE CRITICAL_SECTION
 #define PLATFORM_MUTEX_INIT(m) InitializeCriticalSection(m)
 #define PLATFORM_MUTEX_LOCK(m) EnterCriticalSection(m)
@@ -493,13 +489,13 @@ umtx_atomic_inc(int32_t *p)  {
     if (pIncFn) {
         retVal = (*pIncFn)(gIncDecContext, p);
     } else {
-        #if U_PLATFORM == U_PF_WINDOWS && ICU_USE_THREADS == 1
+        #if U_PLATFORM_HAS_WIN32_API && ICU_USE_THREADS
             retVal = InterlockedIncrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicIncrement32Barrier(p);
         #elif (U_HAVE_GCC_ATOMICS == 1)
             retVal = __sync_add_and_fetch(p, 1);
-        #elif defined (POSIX) && ICU_USE_THREADS == 1
+        #elif defined (POSIX) && ICU_USE_THREADS
             umtx_lock(&gIncDecMutex);
             retVal = ++(*p);
             umtx_unlock(&gIncDecMutex);
@@ -517,7 +513,7 @@ umtx_atomic_dec(int32_t *p) {
     if (pDecFn) {
         retVal = (*pDecFn)(gIncDecContext, p);
     } else {
-        #if U_PLATFORM == U_PF_WINDOWS && ICU_USE_THREADS == 1
+        #if U_PLATFORM_HAS_WIN32_API && ICU_USE_THREADS
             retVal = InterlockedDecrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicDecrement32Barrier(p);

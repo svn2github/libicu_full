@@ -24,9 +24,8 @@
 #include "unicode/uloc.h"
 #include "unicode/locid.h"
 #include "putilimp.h"
-#if U_PLATFORM != U_PF_WINDOWS && U_PLATFORM != U_PF_CLASSIC_MACOS && !defined(U_RHAPSODY)
-#define POSIX 1
-#endif
+
+#define POSIX U_PLATFORM_IMPLEMENTS_POSIX
 
 /* Needed by z/OS to get usleep */
 #if U_PLATFORM == U_PF_OS390

@@ -43,7 +43,7 @@ U_CAPI FileStream* U_EXPORT2
 T_FileStream_wopen(const wchar_t* filename, const wchar_t* mode)
 {
    // TBD: _wfopen is believed to be MS-specific? 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
     FILE* result = _wfopen(filename, mode);
     return (FileStream*)result;
 #else

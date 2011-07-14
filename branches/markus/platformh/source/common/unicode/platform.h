@@ -161,13 +161,82 @@
 #endif
 
 /**
+ * \def U_PLATFORM_USES_ONLY_WIN32_API
+ * Defines whether the platform uses only the Win32 API.
+ * Set to 1 for Windows/MSVC and MinGW but not Cygwin.
+ * @internal
+ */
+#ifdef U_PLATFORM_USES_ONLY_WIN32_API
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW
+#   define U_PLATFORM_USES_ONLY_WIN32_API 1
+#else
+    /* Cygwin implements POSIX. */
+#   define U_PLATFORM_USES_ONLY_WIN32_API 0
+#endif
+
+/**
+ * \def U_PLATFORM_HAS_WIN32_API
+ * Defines whether the Win32 API is available on the platform.
+ * Set to 1 for Windows/MSVC, MinGW and Cygwin.
+ * @internal
+ */
+#ifdef U_PLATFORM_HAS_WIN32_API
+    /* Use the predefined value. */
+#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#   define U_PLATFORM_HAS_WIN32_API 1
+#else
+#   define U_PLATFORM_HAS_WIN32_API 0
+#endif
+
+/**
+ * \def U_PLATFORM_IMPLEMENTS_POSIX
+ * Defines whether the platform implements (most of) the POSIX API.
+ * Set to 1 for Cygwin and most other platforms.
+ * @internal
+ */
+#ifdef U_PLATFORM_IMPLEMENTS_POSIX
+    /* Use the predefined value. */
+#elif U_PLATFORM_USES_ONLY_WIN32_API || U_PLATFORM == U_PF_CLASSIC_MACOS
+#   define U_PLATFORM_IMPLEMENTS_POSIX 0
+#else
+#   define U_PLATFORM_IMPLEMENTS_POSIX 1
+#endif
+
+/**
+ * \def U_PLATFORM_IS_LINUX_BASED
+ * Defines whether the platform is Linux or one of its derivatives.
+ * @internal
+ */
+#ifdef U_PLATFORM_IS_LINUX_BASED
+    /* Use the predefined value. */
+#elif U_PF_LINUX <= U_PLATFORM && U_PLATFORM <= U_PF_ANDROID
+#   define U_PLATFORM_IS_LINUX_BASED 1
+#else
+#   define U_PLATFORM_IS_LINUX_BASED 0
+#endif
+
+/**
+ * \def U_PLATFORM_IS_DARWIN_BASED
+ * Defines whether the platform is Darwin or one of its derivatives.
+ * @internal
+ */
+#ifdef U_PLATFORM_IS_DARWIN_BASED
+    /* Use the predefined value. */
+#elif U_PF_DARWIN <= U_PLATFORM && U_PLATFORM <= U_PF_IPHONE
+#   define U_PLATFORM_IS_DARWIN_BASED 1
+#else
+#   define U_PLATFORM_IS_DARWIN_BASED 0
+#endif
+
+/**
  * \def U_HAVE_DIRENT_H
  * Defines whether dirent.h is available.
  * @internal
  */
 #ifdef U_HAVE_DIRENT_H
     /* Use the predefined value. */
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_HAVE_DIRENT_H 0
 #else
 #   define U_HAVE_DIRENT_H 1
@@ -182,7 +251,7 @@
  */
 #ifdef U_HAVE_STDINT_H
     /* Use the predefined value. */
-#elif U_PLATFORM == U_PF_WINDOWS
+#elif U_PLATFORM_USES_ONLY_WIN32_API
 #   if defined(__BORLANDC__) || (defined(_MSC_VER) && _MSC_VER>=1600)
         /* Windows Visual Studio 9 and below do not have stdint.h & inttypes.h, but VS 2010 adds them. */
 #       define U_HAVE_STDINT_H 1
@@ -516,7 +585,7 @@
      * Newer Mac OS X has size 4.
      */
 #   define U_SIZEOF_WCHAR_T 1
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_SIZEOF_WCHAR_T 2
 #elif U_PLATFORM == U_PF_AIX
     /*
@@ -630,7 +699,7 @@
 
 #ifdef U_HAVE_NL_LANGINFO_CODESET
     /* Use the predefined value. */
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_HAVE_NL_LANGINFO_CODESET 0
 #else
 #   define U_HAVE_NL_LANGINFO_CODESET 1
@@ -646,7 +715,7 @@
 
 #ifdef U_TZSET
     /* Use the predefined value. */
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_TZSET _tzset
 #else
 #   define U_TZSET tzset
@@ -654,9 +723,9 @@
 
 #ifdef U_TIMEZONE
     /* Use the predefined value. */
-#elif U_PF_LINUX <= U_PLATFORM && U_PLATFORM <= U_PF_ANDROID
+#elif U_PLATFORM_IS_LINUX_BASED
 #   define U_TIMEZONE __timezone
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_TIMEZONE _timezone
 #else
 #   define U_TIMEZONE timezone
@@ -664,7 +733,7 @@
 
 #ifdef U_TZNAME
     /* Use the predefined value. */
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_TZNAME _tzname
 #else
 #   define U_TZNAME tzname
@@ -672,7 +741,7 @@
 
 #ifdef U_HAVE_MMAP
     /* Use the predefined value. */
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_HAVE_MMAP 0
 #else
 #   define U_HAVE_MMAP 1
@@ -680,7 +749,7 @@
 
 #ifdef U_HAVE_POPEN
     /* Use the predefined value. */
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 #   define U_HAVE_POPEN 0
 #else
 #   define U_HAVE_POPEN 1

@@ -32,7 +32,7 @@ extern  AbstractThreadTest *createConvertTest();
 //   Windows specific code for starting threads
 //
 //------------------------------------------------------------------------------
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
 
 #include "Windows.h"
 #include "process.h"

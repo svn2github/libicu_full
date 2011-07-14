@@ -109,17 +109,9 @@ U_CAPI void U_EXPORT2 UCLN_FINI ()
     /* This function must be defined, if UCLN_FINI is defined, else link error. */
      UCLN_CLEAN_ME_UP;
 }
-#elif defined(__GNUC__)
-/* GCC - use __attribute((destructor)) */
-static void ucln_destructor()   __attribute__((destructor)) ;
-
-static void ucln_destructor() 
-{
-    UCLN_CLEAN_ME_UP;
-}
 
 /* Windows: DllMain */
-#elif U_PLATFORM == U_PF_WINDOWS
+#elif U_PLATFORM_HAS_WIN32_API
 /* 
  * ICU's own DllMain.
  */
@@ -168,6 +160,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     }
     return status;
 }
+
+#elif defined(__GNUC__)
+/* GCC - use __attribute((destructor)) */
+static void ucln_destructor()   __attribute__((destructor)) ;
+
+static void ucln_destructor() 
+{
+    UCLN_CLEAN_ME_UP;
+}
+
 #endif
 
 #endif /* UCLN_NO_AUTO_CLEANUP */

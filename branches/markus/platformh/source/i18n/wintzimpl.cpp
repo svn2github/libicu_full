@@ -11,7 +11,7 @@
 
 #include "unicode/utypes.h"
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 
 #include "wintzimpl.h"
 

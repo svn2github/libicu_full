@@ -10,7 +10,7 @@
 
 #include "unicode/utypes.h"
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 #   define VC_EXTRALEAN
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
@@ -88,7 +88,7 @@
  *                  }
  *
  *                  retVal= fn(fileLines[line].name,len,dest,destCapacity,&error);
- *      #if U_PLATFORM == U_PF_WINDOWS
+ *      #if U_PLATFORM_HAS_WIN32_API
  *                  if(retVal==0 ){
  *                      fprintf(stderr,"Normalization of string in Windows API failed for mode %s. ErrorNo: %i at line number %i\n",mode,GetLastError(),line);
  *                      return 0;
@@ -160,7 +160,7 @@ typedef struct UTimer UTimer;
 typedef void FuntionToBeTimed(void* param);
 
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 
     struct UTimer{
         LARGE_INTEGER start;

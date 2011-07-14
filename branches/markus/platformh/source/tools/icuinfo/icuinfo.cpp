@@ -60,7 +60,7 @@ static void do_init() {
  */
 static const char *getPlatform()
 {
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#if U_PLATFORM_HAS_WIN32_API
     return "Windows";
 #elif U_PLATFORM == U_PF_UNKNOWN
     return "unknown"

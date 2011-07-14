@@ -104,13 +104,8 @@ public:
 };
 
 class DarwinBreakFunction : public UPerfFunction {
-#if U_PLATFORM == U_PF_DARWIN
 public:
   virtual void call(UErrorCode *status) {};
-#else
-public:
-  virtual void call(UErrorCode *status) {};
-#endif
 };
 
 class BreakIteratorPerformanceTest : public UPerfTest {

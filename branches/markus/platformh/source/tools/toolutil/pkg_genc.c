@@ -5,7 +5,7 @@
  */
 #include "unicode/utypes.h"
 
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#if U_PLATFORM_HAS_WIN32_API
 #   define VC_EXTRALEAN
 #   define WIN32_LEAN_AND_MEAN
 #   define NOUSER
@@ -19,7 +19,7 @@
 #   endif
 #endif
 
-#if U_PLATFORM == U_PF_LINUX
+#if U_PLATFORM_IS_LINUX_BASED
 #   define U_ELF
 #endif
 
@@ -51,7 +51,7 @@
 #define HEX_0X 0 /*  0x1234 */
 #define HEX_0H 1 /*  01234h */
 
-#if (U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN) || defined(U_ELF)
+#if U_PLATFORM_HAS_WIN32_API || defined(U_ELF)
 #define CAN_GENERATE_OBJECTS
 #endif
 
@@ -628,7 +628,7 @@ getArchitecture(uint16_t *pCPU, uint16_t *pBits, UBool *pIsBigEndian, const char
 #ifdef U_ELF
         Elf32_Ehdr  header32;
         /* Elf32_Ehdr and ELF64_Ehdr are identical for the necessary fields. */
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
         IMAGE_FILE_HEADER header;
 #endif
     } buffer;
@@ -639,7 +639,7 @@ getArchitecture(uint16_t *pCPU, uint16_t *pBits, UBool *pIsBigEndian, const char
 
 #ifdef U_ELF
 
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
     const IMAGE_FILE_HEADER *pHeader;
 #else
 #   error "Unknown platform for CAN_GENERATE_OBJECTS."
@@ -654,7 +654,7 @@ getArchitecture(uint16_t *pCPU, uint16_t *pBits, UBool *pIsBigEndian, const char
         *pCPU=EM_386;
         *pBits=32;
         *pIsBigEndian=(UBool)(U_IS_BIG_ENDIAN ? ELFDATA2MSB : ELFDATA2LSB);
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
 /* _M_IA64 should be defined in windows.h */
 #   if defined(_M_IA64)
         *pCPU=IMAGE_FILE_MACHINE_IA64;
@@ -715,7 +715,7 @@ getArchitecture(uint16_t *pCPU, uint16_t *pBits, UBool *pIsBigEndian, const char
     /* TODO: Support byte swapping */
 
     *pCPU=buffer.header32.e_machine;
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
     if(length<sizeof(IMAGE_FILE_HEADER)) {
         fprintf(stderr, "genccode: match-arch file %s is too short\n", filename);
         exit(U_UNSUPPORTED_ERROR);
@@ -975,7 +975,7 @@ writeObjectCode(const char *filename, const char *destdir, const char *optEntryP
 
     newSuffix=".o";
 
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
     struct {
         IMAGE_FILE_HEADER fileHeader;
         IMAGE_SECTION_HEADER sections[2];
@@ -1002,7 +1002,7 @@ writeObjectCode(const char *filename, const char *destdir, const char *optEntryP
     /* deal with options, files and the entry point name */
     getArchitecture(&cpu, &bits, &makeBigEndian, optMatchArch);
     printf("genccode: --match-arch cpu=%hu bits=%hu big-endian=%hu\n", cpu, bits, makeBigEndian);
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#if U_PLATFORM_HAS_WIN32_API
     if(cpu==IMAGE_FILE_MACHINE_I386) {
         entryOffset=1;
     }
@@ -1087,7 +1087,7 @@ writeObjectCode(const char *filename, const char *destdir, const char *optEntryP
     if(paddingSize!=0) {
         T_FileStream_write(out, padding, paddingSize);
     }
-#elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#elif U_PLATFORM_HAS_WIN32_API
     /* populate the .obj headers */
     uprv_memset(&objHeader, 0, sizeof(objHeader));
     uprv_memset(&symbols, 0, sizeof(symbols));
@@ -1148,7 +1148,7 @@ writeObjectCode(const char *filename, const char *destdir, const char *optEntryP
         T_FileStream_write(out, buffer, (int32_t)length);
     }
 
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#if U_PLATFORM_HAS_WIN32_API
     /* write the symbol table */
     T_FileStream_write(out, symbols, IMAGE_SIZEOF_SYMBOL);
     T_FileStream_write(out, &symbolNames, symbolNames.sizeofLongNames);

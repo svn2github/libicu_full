@@ -37,7 +37,7 @@
 #include "cstring.h"
 #include "cmemory.h"
 
-#if U_PLATFORM == U_PF_WINDOWS && !defined(fileno)
+#if U_PLATFORM_USES_ONLY_WIN32_API && !defined(fileno)
 /* Windows likes to rename Unix-like functions */
 #define fileno _fileno
 #endif
@@ -62,7 +62,7 @@ finit_owner(FILE         *f,
     uprv_memset(result, 0, sizeof(UFILE));
     result->fFileno = fileno(f);
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
     if (0 <= result->fFileno && result->fFileno <= 2) {
         /* stdin, stdout and stderr need to be special cased for Windows 98 */
 #if _MSC_VER >= 1400

@@ -21,7 +21,7 @@ U_NAMESPACE_BEGIN
 
 // Windows needs us to DLL-export the MaybeStackArray template specialization,
 // but MacOS X cannot handle it. Same as in digitlst.h.
-#if U_PLATFORM != U_PF_DARWIN
+#if !U_PLATFORM_IS_DARWIN_BASED
 template class U_COMMON_API MaybeStackArray<char, 40>;
 #endif
 

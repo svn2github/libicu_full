@@ -21,7 +21,7 @@
 
 
 #if 0
-#if U_PLATFORM == U_PF_DARWIN
+#if U_PLATFORM_IS_DARWIN_BASED
 #include <ApplicationServices/ApplicationServices.h>
 enum{
   kUCTextBreakAllMask = (kUCTextBreakClusterMask | kUCTextBreakWordMask | kUCTextBreakLineMask)
@@ -83,7 +83,7 @@ void doForwardTest() {
 
     elapsedTime = timeGetTime()-startTime;
   } else if(opt_mac) {
-#if U_PLATFORM == U_PF_DARWIN
+#if U_PLATFORM_IS_DARWIN_BASED
     createMACBrkIt();
     UniChar* filePtr = text;
     OSStatus status = noErr;

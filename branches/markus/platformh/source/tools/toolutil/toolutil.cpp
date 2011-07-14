@@ -22,7 +22,7 @@
 #include <sys/stat.h>
 #include "unicode/utypes.h"
 
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#if U_PLATFORM_HAS_WIN32_API
 #   define VC_EXTRALEAN
 #   define WIN32_LEAN_AND_MEAN
 #   define NOUSER
@@ -86,7 +86,7 @@ U_CAPI int32_t U_EXPORT2 getCurrentYear() {
 
 U_CAPI const char * U_EXPORT2
 getLongPathname(const char *pathname) {
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#if U_PLATFORM_HAS_WIN32_API
     /* anticipate problems with "short" pathnames */
     static WIN32_FIND_DATAA info;
     HANDLE file=FindFirstFileA(pathname, &info);
@@ -166,7 +166,7 @@ U_CAPI void U_EXPORT2
 uprv_mkdir(const char *pathname, UErrorCode *status) {
 
     int retVal = 0;
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_MINGW
+#if U_PLATFORM_USES_ONLY_WIN32_API
     retVal = _mkdir(pathname);
 #else
     retVal = mkdir(pathname, S_IRWXU | (S_IROTH | S_IXOTH) | (S_IROTH | S_IXOTH));

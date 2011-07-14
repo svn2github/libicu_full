@@ -21,11 +21,11 @@
 #include "unicode/utypes.h"
 #include "unicode/uclean.h"
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 # include <intrin.h>
 #endif
 
-#if U_PLATFORM == U_PF_DARWIN
+#if U_PLATFORM_IS_DARWIN_BASED
 #if defined(__STRICT_ANSI__)
 #define UPRV_REMAP_INLINE
 #define inline
@@ -54,9 +54,9 @@
 #  define UMTX_FULL_BARRIER
 # elif U_HAVE_GCC_ATOMICS
 #  define UMTX_FULL_BARRIER __sync_synchronize();
-# elif U_PLATFORM == U_PF_WINDOWS
+# elif U_PLATFORM_HAS_WIN32_API
 #  define UMTX_FULL_BARRIER _ReadWriteBarrier();
-# elif U_PLATFORM == U_PF_DARWIN
+# elif U_PLATFORM_IS_DARWIN_BASED
 #  define UMTX_FULL_BARRIER OSMemoryBarrier();
 # else
 #  define UMTX_FULL_BARRIER \

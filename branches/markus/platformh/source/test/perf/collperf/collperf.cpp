@@ -575,7 +575,7 @@ public:
             locale = "en_US";   // set default locale
         }
 
-        //#if U_PLATFORM == U_PF_WINDOWS
+        //#if U_PLATFORM_USES_ONLY_WIN32_API
         if (options[i].doesOccur) {
             char *endp;
             int tmp = strtol(options[i].value, &endp, 0);

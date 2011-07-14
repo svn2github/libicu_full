@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
 #include <io.h>
 #else
 #include <unistd.h>

@@ -39,7 +39,7 @@ using namespace std;
 
 //  Stubs for Windows API functions when building on UNIXes.
 //
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
 // do nothing
 #else
 #define _UNICODE

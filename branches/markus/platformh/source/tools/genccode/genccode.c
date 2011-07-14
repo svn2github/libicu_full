@@ -19,7 +19,7 @@
 
 #include "unicode/utypes.h"
 
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
+#if U_PLATFORM_HAS_WIN32_API
 #   define VC_EXTRALEAN
 #   define WIN32_LEAN_AND_MEAN
 #   define NOUSER
@@ -30,7 +30,7 @@
 #include <time.h>
 #endif
 
-#if U_PLATFORM == U_PF_LINUX
+#if U_PLATFORM_IS_LINUX_BASED
 #   define U_ELF
 #endif
 
@@ -57,7 +57,7 @@
 #include "uoptions.h"
 #include "pkg_genc.h"
 
-#if (U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN) || defined(U_ELF)
+#if U_PLATFORM_HAS_WIN32_API || defined(U_ELF)
 #define CAN_GENERATE_OBJECTS
 #endif
 

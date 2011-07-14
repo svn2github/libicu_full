@@ -69,7 +69,7 @@ const char gUsageString[] =
 #include <unicode/brkiter.h>
 
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 #include <windows.h>
 #else
 //
@@ -165,7 +165,7 @@ int32_t textSize = 0;
 
 
 
-#if U_PLATFORM == U_PF_DARWIN
+#if U_PLATFORM_IS_DARWIN_BASED
 #include <ApplicationServices/ApplicationServices.h>
 enum{
   kUCTextBreakAllMask = (kUCTextBreakClusterMask | kUCTextBreakWordMask | kUCTextBreakLineMask)
@@ -309,7 +309,7 @@ void doForwardTest() {
 
     elapsedTime = timeGetTime()-startTime;
   } else if(opt_mac) {
-#if U_PLATFORM == U_PF_DARWIN
+#if U_PLATFORM_IS_DARWIN_BASED
     createMACBrkIt();
     UniChar* filePtr = text;
     OSStatus status = noErr;

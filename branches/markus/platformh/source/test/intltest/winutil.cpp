@@ -11,7 +11,7 @@
 
 #include "unicode/utypes.h"
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -88,4 +88,4 @@ void Win32Utilities::freeLocales(LCIDRecord *records)
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
-#endif /* U_PLATFORM == U_PF_WINDOWS */
+#endif /* U_PLATFORM_HAS_WIN32_API */

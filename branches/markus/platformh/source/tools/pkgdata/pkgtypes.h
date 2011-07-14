@@ -132,7 +132,7 @@ char * convertToNativePathSeparators(char *path);
 
 /* set up common defines for library naming */
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 # ifndef UDATA_SO_SUFFIX
 #  define UDATA_SO_SUFFIX ".dll"
 # endif

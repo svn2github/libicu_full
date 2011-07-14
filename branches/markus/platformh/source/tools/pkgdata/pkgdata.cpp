@@ -63,17 +63,17 @@ U_CDECL_BEGIN
 #include "pkgtypes.h"
 U_CDECL_END
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
 #ifdef __GNUC__
 #define WINDOWS_WITH_GNUC
 #else
 #define WINDOWS_WITH_MSVC
 #endif
 #endif
-#if !defined(WINDOWS_WITH_MSVC) && U_PLATFORM != U_PF_LINUX
+#if !defined(WINDOWS_WITH_MSVC) && !U_PLATFORM_IS_LINUX_BASED
 #define BUILD_DATA_WITHOUT_ASSEMBLY
 #endif
-#if defined(WINDOWS_WITH_MSVC) || U_PLATFORM == U_PF_LINUX
+#if defined(WINDOWS_WITH_MSVC) || U_PLATFORM_IS_LINUX_BASED
 #define CAN_WRITE_OBJ_CODE
 #endif
 #if U_PLATFORM == U_PF_CYGWIN || defined(CYGWINMSVC)
@@ -154,7 +154,7 @@ static struct {
     const char *desc;
 } modes[] = {
         { "files", 0,           "Uses raw data files (no effect). Installation copies all files to the target location." },
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_HAS_WIN32_API
         { "dll",    "library",  "Generates one common data file and one shared library, <package>.dll"},
         { "common", "archive",  "Generates just the common file, <package>.dat"},
         { "static", "static",   "Generates one statically linked library, " LIB_PREFIX "<package>" UDATA_LIB_SUFFIX }
@@ -718,7 +718,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                 }
 #ifdef CAN_WRITE_OBJ_CODE
                 writeObjectCode(datFileNamePath, o->tmpDir, o->entryName, NULL, NULL, gencFilePath);
-#if U_PLATFORM == U_PF_LINUX
+#if U_PLATFORM_IS_LINUX_BASED
                 result = pkg_generateLibraryFile(targetDir, mode, gencFilePath);
 #elif defined(WINDOWS_WITH_MSVC)
                 result = pkg_createWindowsDLL(mode, gencFilePath, o);
@@ -731,7 +731,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
                     return result;
                 }
             }
-#if U_PLATFORM != U_PF_WINDOWS
+#if !U_PLATFORM_USES_ONLY_WIN32_API
             if(mode != MODE_STATIC) {
                 /* Certain platforms uses archive library. (e.g. AIX) */
                 if(o->verbose) {
@@ -753,7 +753,7 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
             } /* !MODE_STATIC */
 #endif
 
-#if U_PLATFORM != U_PF_WINDOWS || defined(USING_CYGWIN)
+#if !U_PLATFORM_USES_ONLY_WIN32_API
             /* Install the libraries if option was set. */
             if (o->install != NULL) {
                 if(o->verbose) {

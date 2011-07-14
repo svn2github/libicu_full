@@ -28,9 +28,7 @@
 #include <string.h>
 #include <ctype.h>    // tolower, toupper
 
-#if U_PLATFORM != U_PF_WINDOWS && U_PLATFORM != U_PF_CLASSIC_MACOS && !defined(U_RHAPSODY)
-#define POSIX 1
-#endif
+#define POSIX U_PLATFORM_IMPLEMENTS_POSIX
 
 /* Needed by z/OS to get usleep */
 #if U_PLATFORM == U_PF_OS390
@@ -130,7 +128,7 @@
 #include "unicode/calendar.h"
 #include "ucaconf.h"
 
-#if U_PLATFORM == U_PF_WINDOWS
+#if U_PLATFORM_USES_ONLY_WIN32_API
 #define HAVE_IMP
 
 #   define VC_EXTRALEAN
