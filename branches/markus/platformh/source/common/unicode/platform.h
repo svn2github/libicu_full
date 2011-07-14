@@ -255,9 +255,23 @@
 #   define U_IS_BIG_ENDIAN 0
 #endif
 
-/* 1 or 0 to enable or disable threads.  If undefined, default is: enable threads. */
-#ifndef ICU_USE_THREADS
-#define ICU_USE_THREADS 1
+/**
+ * \def ICU_USE_THREADS
+ *
+ * Allows thread support (use of mutexes) to be compiled out of ICU.
+ * Default: use threads.
+ *
+ * Even with thread support compiled out, applications may override the
+ * (empty) mutex implementation with the u_setMutexFunctions() functions.
+ * @internal
+ */
+#ifdef ICU_USE_THREADS
+    /* Use the predefined value. */
+#elif defined(APP_NO_THREADS)
+    /* APP_NO_THREADS is an old symbol. We'll honour it if present. */
+#   define ICU_USE_THREADS 0
+#else
+#   define ICU_USE_THREADS 1
 #endif
 
 #ifdef U_DEBUG
@@ -372,28 +386,109 @@
 /** @} */
 
 /*===========================================================================*/
-/** @{ Character data types                                                      */
+/** @{ Character data types                                                  */
 /*===========================================================================*/
 
+/**
+ * U_CHARSET_FAMILY is equal to this value when the platform is an ASCII based platform.
+ * @stable ICU 2.0
+ */
+#define U_ASCII_FAMILY 0
+
+/**
+ * U_CHARSET_FAMILY is equal to this value when the platform is an EBCDIC based platform.
+ * @stable ICU 2.0
+ */
+#define U_EBCDIC_FAMILY 1
+
+/**
+ * \def U_CHARSET_FAMILY
+ *
+ * <p>These definitions allow to specify the encoding of text
+ * in the char data type as defined by the platform and the compiler.
+ * It is enough to determine the code point values of "invariant characters",
+ * which are the ones shared by all encodings that are in use
+ * on a given platform.</p>
+ *
+ * <p>Those "invariant characters" should be all the uppercase and lowercase
+ * latin letters, the digits, the space, and "basic punctuation".
+ * Also, '\\n', '\\r', '\\t' should be available.</p>
+ *
+ * <p>The list of "invariant characters" is:<br>
+ * \code
+ *    A-Z  a-z  0-9  SPACE  "  %  &amp;  '  (  )  *  +  ,  -  .  /  :  ;  <  =  >  ?  _
+ * \endcode
+ * <br>
+ * (52 letters + 10 numbers + 20 punc/sym/space = 82 total)</p>
+ *
+ * <p>This matches the IBM Syntactic Character Set (CS 640).</p>
+ *
+ * <p>In other words, all the graphic characters in 7-bit ASCII should
+ * be safely accessible except the following:</p>
+ *
+ * \code
+ *    '\' <backslash>
+ *    '[' <left bracket>
+ *    ']' <right bracket>
+ *    '{' <left brace>
+ *    '}' <right brace>
+ *    '^' <circumflex>
+ *    '~' <tilde>
+ *    '!' <exclamation mark>
+ *    '#' <number sign>
+ *    '|' <vertical line>
+ *    '$' <dollar sign>
+ *    '@' <commercial at>
+ *    '`' <grave accent>
+ * \endcode
+ * @stable ICU 2.0
+ */
 #ifdef U_CHARSET_FAMILY
     /* Use the predefined value. */
 #elif U_PLATFORM == U_PF_OS390 && (!defined(__CHARSET_LIB) || !__CHARSET_LIB)
-    /* U_EBCDIC_FAMILY, see utypes.h */
-#   define U_CHARSET_FAMILY 1
+#   define U_CHARSET_FAMILY U_EBCDIC_FAMILY
 #elif U_PLATFORM == U_PF_OS400 && !defined(__UTF32__)
-    /* U_EBCDIC_FAMILY, see utypes.h */
-#   define U_CHARSET_FAMILY 1
+#   define U_CHARSET_FAMILY U_EBCDIC_FAMILY
 #else
-    /* U_ASCII_FAMILY, see utypes.h */
-#   define U_CHARSET_FAMILY 0
+#   define U_CHARSET_FAMILY U_ASCII_FAMILY
+#endif
+
+/**
+ * \def U_CHARSET_IS_UTF8
+ *
+ * Hardcode the default charset to UTF-8.
+ *
+ * If this is set to 1, then
+ * - ICU will assume that all non-invariant char*, StringPiece, std::string etc.
+ *   contain UTF-8 text, regardless of what the system API uses
+ * - some ICU code will use fast functions like u_strFromUTF8()
+ *   rather than the more general and more heavy-weight conversion API (ucnv.h)
+ * - ucnv_getDefaultName() always returns "UTF-8"
+ * - ucnv_setDefaultName() is disabled and will not change the default charset
+ * - static builds of ICU are smaller
+ * - more functionality is available with the UCONFIG_NO_CONVERSION build-time
+ *   configuration option (see unicode/uconfig.h)
+ * - the UCONFIG_NO_CONVERSION build option in uconfig.h is more usable
+ *
+ * @stable ICU 4.2
+ * @see UCONFIG_NO_CONVERSION
+ */
+#ifndef U_CHARSET_IS_UTF8
+#   define U_CHARSET_IS_UTF8 0
 #endif
 
 /** @} */
 
 /*===========================================================================*/
-/** @{ Information about wchar support                                           */
+/** @{ Information about wchar support                                       */
 /*===========================================================================*/
 
+/**
+ * \def U_HAVE_WCHAR_H
+ * Indicates whether <wchar.h> is available (1) or not (0). Set to 1 by default.
+ *
+ * @stable ICU 2.0
+ */
 #ifdef U_HAVE_WCHAR_H
     /* Use the predefined value. */
 #elif U_PLATFORM == U_PF_ANDROID && __ANDROID_API__ < 9
@@ -407,13 +502,21 @@
 #   define U_HAVE_WCHAR_H 1
 #endif
 
+/**
+ * \def U_SIZEOF_WCHAR_T
+ * U_SIZEOF_WCHAR_T==sizeof(wchar_t)
+ *
+ * @stable ICU 2.0
+ */
 #ifdef U_SIZEOF_WCHAR_T
     /* Use the predefined value. */
-#elif U_PLATFORM == U_PF_ANDROID && __ANDROID_API__ < 9
+#elif (U_PLATFORM == U_PF_ANDROID && __ANDROID_API__ < 9) || U_PLATFORM == U_PF_CLASSIC_MACOS
+    /*
+     * Classic Mac OS and Mac OS X before 10.3 (Panther) did not support wchar_t or wstring.
+     * Newer Mac OS X has size 4.
+     */
 #   define U_SIZEOF_WCHAR_T 1
 #elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
-#   define U_SIZEOF_WCHAR_T 2
-#elif (U_PF_DARWIN <= U_PLATFORM && U_PLATFORM <= U_PF_IPHONE) || U_PLATFORM == U_PF_CLASSIC_MACOS
 #   define U_SIZEOF_WCHAR_T 2
 #elif U_PLATFORM == U_PF_AIX
     /*

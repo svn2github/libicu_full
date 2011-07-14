@@ -215,27 +215,6 @@ typedef int8_t UBool;
 
 /* wchar_t-related definitions -------------------------------------------- */
 
-/**
- * \def U_HAVE_WCHAR_H
- * Indicates whether <wchar.h> is available (1) or not (0). Set to 1 by default.
- *
- * @stable ICU 2.0
- */
-#ifndef U_HAVE_WCHAR_H
-#   define U_HAVE_WCHAR_H 1
-#endif
-
-/**
- * \def U_SIZEOF_WCHAR_T
- * U_SIZEOF_WCHAR_T==sizeof(wchar_t) (0 means it is not defined or autoconf could not set it)
- *
- * @stable ICU 2.0
- */
-#if U_SIZEOF_WCHAR_T==0
-#   undef U_SIZEOF_WCHAR_T
-#   define U_SIZEOF_WCHAR_T 4
-#endif
-
 /*
  * \def U_WCHAR_IS_UTF16
  * Defined if wchar_t uses UTF-16.
@@ -263,6 +242,8 @@ typedef int8_t UBool;
 #       if (U_SIZEOF_WCHAR_T==4)
 #           define U_WCHAR_IS_UTF32
 #       endif
+#   elif U_PF_DARWIN <= U_PLATFORM && U_PLATFORM <= U_PF_IPHONE
+#       define U_WCHAR_IS_UTF32
 #   elif U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
 #       define U_WCHAR_IS_UTF16
 #   endif

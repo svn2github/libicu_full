@@ -49,22 +49,6 @@
 # define ANNOTATE_UNPROTECTED_READ(x) (x)
 #endif
 
-/* APP_NO_THREADS is an old symbol. We'll honour it if present. */
-#ifdef APP_NO_THREADS
-# define ICU_USE_THREADS 0
-#endif
-
-/* ICU_USE_THREADS
- *
- *   Allows thread support (use of mutexes) to be compiled out of ICU.
- *   Default: use threads.
- *   Even with thread support compiled out, applications may override the
- *   (empty) mutex implementation with the u_setMutexFunctions() functions.
- */
-#ifndef ICU_USE_THREADS
-# define ICU_USE_THREADS 1
-#endif
-
 #ifndef UMTX_FULL_BARRIER
 # if !ICU_USE_THREADS
 #  define UMTX_FULL_BARRIER
