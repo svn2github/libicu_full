@@ -29,7 +29,7 @@
 /*===========================================================================*/
 
 /* If your platform does not have the <stdint.h> header, you may
-   need to edit the typedefs below.
+   need to edit the typedefs in the #else section below.
    Use #if...#else...#endif with predefined compiler macros if possible. */
 #if U_HAVE_STDINT_H
 
@@ -55,7 +55,11 @@ typedef unsigned char uint8_t;
  */
 #include <stdint.h>
 
-#else /* U_HAVE_STDINT_H */
+#elif U_HAVE_INTTYPES_H
+
+#   include <inttypes.h>
+
+#else /* neither U_HAVE_STDINT_H nor U_HAVE_INTTYPES_H */
 
 #if ! U_HAVE_INT8_T
 typedef signed char int8_t;
@@ -97,7 +101,6 @@ typedef unsigned int uint32_t;
 #endif
 #endif
 
-#endif /* U_HAVE_STDINT_H */
+#endif /* U_HAVE_STDINT_H / U_HAVE_INTTYPES_H */
 
 #endif /* _PTYPES_H */
-

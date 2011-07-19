@@ -258,8 +258,27 @@
 #   else
 #       define U_HAVE_STDINT_H 0
 #   endif
+#elif U_PLATFORM == U_PF_SOLARIS
+    /* Solaris has inttypes.h but not stdint.h. */
+#   define U_HAVE_STDINT_H 0
 #else
 #   define U_HAVE_STDINT_H 1
+#endif
+
+/**
+ * \def U_HAVE_INTTYPES_H
+ * Defines whether inttypes.h is available. It is a C99 standard header.
+ * We include inttypes.h where it is available but stdint.h is not.
+ * @internal
+ */
+#ifdef U_HAVE_INTTYPES_H
+    /* Use the predefined value. */
+#elif U_PLATFORM == U_PF_SOLARIS
+    /* Solaris has inttypes.h but not stdint.h. */
+#   define U_HAVE_INTTYPES_H 1
+#else
+    /* Most platforms have both inttypes.h and stdint.h, or neither. */
+#   define U_HAVE_INTTYPES_H U_HAVE_STDINT_H
 #endif
 
 /**
