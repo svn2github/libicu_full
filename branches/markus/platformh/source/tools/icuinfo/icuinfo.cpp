@@ -74,7 +74,7 @@ void cmd_millis()
   printf("Milliseconds since Epoch: %.0f\n", uprv_getUTCtime());
 }
 
-void cmd_version(UBool noLoad)
+void cmd_version(UBool noLoad, UErrorCode &errorCode)
 {
     UVersionInfo icu;
     char str[200];
@@ -88,8 +88,47 @@ void cmd_version(UBool noLoad)
     printf("Compiled-Unicode-Version: %s\n", U_UNICODE_VERSION);
     u_getUnicodeVersion(icu);
     u_versionToString(icu, str);
-    printf("Runtime-Unicode-Version: %s\n", U_UNICODE_VERSION);
+    printf("Runtime-Unicode-Version: %s\n", str);
     printf("Platform: %s\n", getPlatform());
+    printf("U_PLATFORM = %d\n", U_PLATFORM);
+
+    union {
+        uint8_t byte;
+        uint16_t word;
+    } u;
+    u.word=0x0100;
+    if(U_IS_BIG_ENDIAN==u.byte) {
+        printf("U_IS_BIG_ENDIAN: %d\n", U_IS_BIG_ENDIAN);
+    } else {
+        fprintf(stderr, "  error: U_IS_BIG_ENDIAN=%d != %d=actual 'is big endian'\n",
+                U_IS_BIG_ENDIAN, u.byte);
+        errorCode=U_INTERNAL_PROGRAM_ERROR;
+    }
+
+    if(U_SIZEOF_WCHAR_T==sizeof(wchar_t)) {
+        printf("U_SIZEOF_WCHAR_T: %d\n", U_SIZEOF_WCHAR_T);
+    } else {
+        fprintf(stderr, "  error: U_SIZEOF_WCHAR_T=%d != %d=sizeof(wchar_t)\n",
+                U_SIZEOF_WCHAR_T, (int)sizeof(wchar_t));
+        errorCode=U_INTERNAL_PROGRAM_ERROR;
+    }
+
+    int charsetFamily;
+    if('A'==0x41) {
+        charsetFamily=U_ASCII_FAMILY;
+    } else if('A'==0xc1) {
+        charsetFamily=U_EBCDIC_FAMILY;
+    } else {
+        charsetFamily=-1;  // unknown
+    }
+    if(U_CHARSET_FAMILY==charsetFamily) {
+        printf("U_CHARSET_FAMILY: %d\n", U_CHARSET_FAMILY);
+    } else {
+        fprintf(stderr, "  error: U_CHARSET_FAMILY=%d != %d=actual charset family\n",
+                U_CHARSET_FAMILY, charsetFamily);
+        errorCode=U_INTERNAL_PROGRAM_ERROR;
+    }
+
 #if defined(U_BUILD)
     printf("Build: %s\n", U_BUILD);
 #if defined(U_HOST)
@@ -294,19 +333,19 @@ main(int argc, char* argv[]) {
       cmd_listplugins();
       didSomething = TRUE;
     }
-    
+
     if(options[3].doesOccur) {
-      cmd_version(FALSE);
+      cmd_version(FALSE, errorCode);
       didSomething = TRUE;
     }
-        
+
     if(options[6].doesOccur) {  /* 2nd part of version: cleanup */
       cmd_cleanup();
       didSomething = TRUE;
     }
-        
+
     if(!didSomething) {
-      cmd_version(FALSE);  /* at least print the version # */
+      cmd_version(FALSE, errorCode);  /* at least print the version # */
     }
 
     return U_FAILURE(errorCode);
