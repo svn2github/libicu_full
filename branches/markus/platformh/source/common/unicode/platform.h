@@ -316,9 +316,9 @@
 #elif defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
     /* gcc */
 #   define U_IS_BIG_ENDIAN (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-#elif defined(__BIG_ENDIAN__)
+#elif defined(__BIG_ENDIAN__) || defined(_BIG_ENDIAN)
 #   define U_IS_BIG_ENDIAN 1
-#elif defined(__LITTLE_ENDIAN__)
+#elif defined(__LITTLE_ENDIAN__) || defined(_LITTLE_ENDIAN)
 #   define U_IS_BIG_ENDIAN 0
 #else
 #   define U_IS_BIG_ENDIAN 0
