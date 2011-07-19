@@ -817,10 +817,10 @@
     <CustomBuild Include="unicode\icudataver.h">
       <Filter>configuration</Filter>
     </CustomBuild>
-    <CustomBuild Include="unicode\putil.h">
+    <CustomBuild Include="unicode\ptypes.h">
       <Filter>configuration</Filter>
     </CustomBuild>
-    <CustomBuild Include="unicode\pwin32.h">
+    <CustomBuild Include="unicode\putil.h">
       <Filter>configuration</Filter>
     </CustomBuild>
     <CustomBuild Include="unicode\std_string.h">
