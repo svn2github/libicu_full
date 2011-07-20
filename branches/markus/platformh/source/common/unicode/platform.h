@@ -79,7 +79,11 @@
 #define U_PF_WINDOWS 1000
 /** MinGW. Windows, calls to Win32 API, but using GNU gcc and binutils. @internal */
 #define U_PF_MINGW 1800
-/** Cygwin. Windows, calls to cygwin1.dll for Posix functions, using GNU gcc and binutils. @internal */
+/**
+ * Cygwin. Windows, calls to cygwin1.dll for Posix functions,
+ * using MSVC or GNU gcc and binutils.
+ * @internal
+ */
 #define U_PF_CYGWIN 1900
 /* Reserve 2000 for U_PF_UNIX? */
 /** HP-UX is based on UNIX System V. @internal */
@@ -201,6 +205,16 @@
 #   define U_PLATFORM_IMPLEMENTS_POSIX 0
 #else
 #   define U_PLATFORM_IMPLEMENTS_POSIX 1
+#endif
+
+/**
+ * \def CYGWINMSVC
+ * Defined if this is Windows with Cygwin, but using MSVC rather than gcc.
+ * Otherwise undefined.
+ * @internal
+ */
+#if U_PLATFORM == U_PF_CYGWIN && defined(_MSC_VER)
+#   define CYGWINMSVC
 #endif
 
 /**

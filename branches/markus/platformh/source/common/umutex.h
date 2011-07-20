@@ -21,7 +21,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uclean.h"
 
-#if U_PLATFORM_HAS_WIN32_API
+#if defined(_MSC_VER)
 # include <intrin.h>
 #endif
 
@@ -54,7 +54,8 @@
 #  define UMTX_FULL_BARRIER
 # elif U_HAVE_GCC_ATOMICS
 #  define UMTX_FULL_BARRIER __sync_synchronize();
-# elif U_PLATFORM_HAS_WIN32_API
+# elif defined(_MSC_VER)
+    /* from MSVC intrin.h */
 #  define UMTX_FULL_BARRIER _ReadWriteBarrier();
 # elif U_PLATFORM_IS_DARWIN_BASED
 #  define UMTX_FULL_BARRIER OSMemoryBarrier();

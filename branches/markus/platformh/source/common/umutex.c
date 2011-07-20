@@ -489,18 +489,21 @@ umtx_atomic_inc(int32_t *p)  {
     if (pIncFn) {
         retVal = (*pIncFn)(gIncDecContext, p);
     } else {
-        #if U_PLATFORM_HAS_WIN32_API && ICU_USE_THREADS
+        #if !ICU_USE_THREADS
+            /* ICU thread support compiled out. */
+            retVal = ++(*p);
+        #elif U_PLATFORM_HAS_WIN32_API
             retVal = InterlockedIncrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicIncrement32Barrier(p);
         #elif (U_HAVE_GCC_ATOMICS == 1)
             retVal = __sync_add_and_fetch(p, 1);
-        #elif defined (POSIX) && ICU_USE_THREADS
+        #elif defined (POSIX)
             umtx_lock(&gIncDecMutex);
             retVal = ++(*p);
             umtx_unlock(&gIncDecMutex);
         #else
-            /* Unknown Platform, or ICU thread support compiled out. */
+            /* Unknown Platform. */
             retVal = ++(*p);
         #endif
     }
@@ -513,18 +516,21 @@ umtx_atomic_dec(int32_t *p) {
     if (pDecFn) {
         retVal = (*pDecFn)(gIncDecContext, p);
     } else {
-        #if U_PLATFORM_HAS_WIN32_API && ICU_USE_THREADS
+        #if !ICU_USE_THREADS
+            /* ICU thread support compiled out. */
+            retVal = --(*p);
+        #elif U_PLATFORM_HAS_WIN32_API
             retVal = InterlockedDecrement((LONG*)p);
         #elif defined(USE_MAC_OS_ATOMIC_INCREMENT)
             retVal = OSAtomicDecrement32Barrier(p);
         #elif (U_HAVE_GCC_ATOMICS == 1)
             retVal = __sync_sub_and_fetch(p, 1);
-        #elif defined (POSIX) && ICU_USE_THREADS == 1
+        #elif defined (POSIX)
             umtx_lock(&gIncDecMutex);
             retVal = --(*p);
             umtx_unlock(&gIncDecMutex);
         #else
-            /* Unknown Platform, or ICU thread support compiled out. */
+            /* Unknown Platform. */
             retVal = --(*p);
         #endif
     }
