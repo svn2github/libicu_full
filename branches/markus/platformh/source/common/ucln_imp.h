@@ -32,8 +32,7 @@
  * 3) Implementing own automatic cleanup functions
  *
  * For option 1, ensure that UCLN_NO_AUTO_CLEANUP is set to 0 by using --enable-auto-cleanup
- * configure option or by setting UCLN_NO_AUTO_CLEANUP to 0 in pwin32.h (For Visual Studio
- * solution file builds)
+ * configure option or by otherwise setting UCLN_NO_AUTO_CLEANUP to 0
  * For option 2, follow option 1 and also define UCLN_AUTO_ATEXIT
  * For option 3, follow option 1 and also define UCLN_AUTO_LOCAL (see below for more information)
  */
