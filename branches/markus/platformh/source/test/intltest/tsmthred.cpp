@@ -25,7 +25,14 @@
 #include "unicode/locid.h"
 #include "putilimp.h"
 
-#define POSIX U_PLATFORM_IMPLEMENTS_POSIX
+#if U_PLATFORM_HAS_WIN32_API
+    /* Prefer native Windows APIs even if POSIX is implemented (i.e., on Cygwin). */
+#   undef POSIX
+#elif U_PLATFORM_IMPLEMENTS_POSIX
+#   define POSIX
+#else
+#   undef POSIX
+#endif
 
 /* Needed by z/OS to get usleep */
 #if U_PLATFORM == U_PF_OS390

@@ -90,7 +90,7 @@ void cmd_version(UBool noLoad, UErrorCode &errorCode)
     u_versionToString(icu, str);
     printf("Runtime-Unicode-Version: %s\n", str);
     printf("Platform: %s\n", getPlatform());
-    printf("U_PLATFORM = %d\n", U_PLATFORM);
+    printf("U_PLATFORM: %d\n", U_PLATFORM);
 
     union {
         uint8_t byte;

@@ -28,7 +28,14 @@
 #include <string.h>
 #include <ctype.h>    // tolower, toupper
 
-#define POSIX U_PLATFORM_IMPLEMENTS_POSIX
+#if U_PLATFORM_HAS_WIN32_API
+    /* Prefer native Windows APIs even if POSIX is implemented (i.e., on Cygwin). */
+#   undef POSIX
+#elif U_PLATFORM_IMPLEMENTS_POSIX
+#   define POSIX
+#else
+#   undef POSIX
+#endif
 
 /* Needed by z/OS to get usleep */
 #if U_PLATFORM == U_PF_OS390
@@ -128,7 +135,7 @@
 #include "unicode/calendar.h"
 #include "ucaconf.h"
 
-#if U_PLATFORM_USES_ONLY_WIN32_API
+#if U_PLATFORM_HAS_WIN32_API
 #define HAVE_IMP
 
 #   define VC_EXTRALEAN
