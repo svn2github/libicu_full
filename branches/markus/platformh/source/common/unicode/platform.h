@@ -339,6 +339,9 @@
 #   define U_IS_BIG_ENDIAN 1
 #elif defined(__LITTLE_ENDIAN__) || defined(_LITTLE_ENDIAN)
 #   define U_IS_BIG_ENDIAN 0
+#elif U_PLATFORM == U_PF_OS390 || U_PLATFORM == U_PF_OS400
+    /* These platforms do not appear to predefine any endianness macros. */
+#   define U_IS_BIG_ENDIAN 1
 #else
 #   define U_IS_BIG_ENDIAN 0
 #endif
