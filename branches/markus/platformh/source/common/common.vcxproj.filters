@@ -817,6 +817,9 @@
     <CustomBuild Include="unicode\icudataver.h">
       <Filter>configuration</Filter>
     </CustomBuild>
+    <CustomBuild Include="unicode\platform.h">
+      <Filter>configuration</Filter>
+    </CustomBuild>
     <CustomBuild Include="unicode\ptypes.h">
       <Filter>configuration</Filter>
     </CustomBuild>
