@@ -40,14 +40,12 @@
  */
 #include <stdint.h>
 
-/* os/390 has <stdint.h>, but it doesn't have int8_t, and it sometimes */
-/* doesn't have uint8_t depending on the OS version. */
-/* So we have this work around. */
+/* z/OS has <stdint.h>, but some versions are missing int8_t and/or uint8_t (APAR PK62248). */
 #if U_PLATFORM == U_PF_OS390
 /* The features header is needed to get (u)int64_t sometimes. */
 #include <features.h>
-#if ! U_HAVE_INT8_T
-#define U_HAVE_INT8_T
+#if !defined(__int8_t)
+#define __int8_t 1
 typedef signed char int8_t;
 #endif
 #if !defined(__uint8_t)
