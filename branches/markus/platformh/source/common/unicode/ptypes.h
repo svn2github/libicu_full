@@ -33,13 +33,21 @@
    Use #if...#else...#endif with predefined compiler macros if possible. */
 #if U_HAVE_STDINT_H
 
-/* os/390 needs <stdint.h>, but it doesn't have int8_t, and it sometimes */
+/*
+ * We mostly need <stdint.h> (which defines the standard integer types) but not <inttypes.h>.
+ * <inttypes.h> includes <stdint.h> and adds the printf/scanf helpers PRId32, SCNx16 etc.
+ * which we almost never use, plus stuff like imaxabs() which we never use.
+ */
+#include <stdint.h>
+
+/* os/390 has <stdint.h>, but it doesn't have int8_t, and it sometimes */
 /* doesn't have uint8_t depending on the OS version. */
 /* So we have this work around. */
 #if U_PLATFORM == U_PF_OS390
 /* The features header is needed to get (u)int64_t sometimes. */
 #include <features.h>
 #if ! U_HAVE_INT8_T
+#define U_HAVE_INT8_T
 typedef signed char int8_t;
 #endif
 #if !defined(__uint8_t)
@@ -47,13 +55,6 @@ typedef signed char int8_t;
 typedef unsigned char uint8_t;
 #endif
 #endif /* U_PLATFORM == U_PF_OS390 */
-
-/*
- * We mostly need <stdint.h> (which defines the standard integer types) but not <inttypes.h>.
- * <inttypes.h> includes <stdint.h> and adds the printf/scanf helpers PRId32, SCNx16 etc.
- * which we almost never use, plus stuff like imaxabs() which we never use.
- */
-#include <stdint.h>
 
 #elif U_HAVE_INTTYPES_H
 
