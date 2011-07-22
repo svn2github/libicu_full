@@ -96,7 +96,7 @@ void UVector32Test::UVector32_API() {
     a->addElement(30, status);
     b = new UVector32(status);
     b->assign(*a, status);
-    TEST_ASSERT(b->size() == 3);
+    ASSERT_TRUE(b->size() == 4);
     TEST_ASSERT(b->elementAti(1) == 20);
     TEST_CHECK_STATUS(status);
     delete a;

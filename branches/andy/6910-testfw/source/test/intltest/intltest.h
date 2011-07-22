@@ -219,6 +219,23 @@ protected:
     virtual UBool callTest( IntlTest& testToBeCalled, char* par );
 
 
+// #pragma GCC diagnostic ignored "-Wno-variadic-macros"
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+
+    /*
+     * Macro-based assertions
+     *   Produce a default message based on the condition tested and the file & line number.
+     *   Optional message with printf-style arguements.
+     */
+     #define ASSERT_TRUE(...) assertTrueImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
+    UBool       assertTrueImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UBool condition, 
+                               const char *message, ...);
+    UBool       assertTrueImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UBool condition);
+
     UBool       verbose;
     UBool       no_err_msg;
     UBool       quick;
@@ -245,6 +262,10 @@ private:
 
 protected:
 
+    /**
+      * Write out the message string, with all line(s) indented by the current indent amount,
+      *  and an optional added newline at the end.
+      */
     virtual void LL_message( UnicodeString message, UBool newline );
 
     // used for collation result reporting, defined here for convenience

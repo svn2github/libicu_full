@@ -1617,7 +1617,98 @@ static UnicodeString& escape(const UnicodeString& s, UnicodeString& result) {
     return result;
 }
 
-#define VERBOSE_ASSERTIONS
+
+// Parse the options at the start of an assertion message.
+//  Syntax is [QUIET DATA]
+//  with one or both of the keywords.
+// Return a pointer to the message that skips over the options if they were present.
+
+static const int32_t QUIET = 1;
+static const int32_t DATA  = 2;
+static const char *parseAssertOpts(const char *message, int32_t &opts) {
+    opts = 0;
+    if (*message != '[') {
+        return message;
+    }
+    const char *inp = message+1;
+    for (;;) {
+        while(*inp++ == ' ');
+
+        if (uprv_strcmp(inp, "DATA") == 0 && ((opts & DATA) == 0)) {
+            opts |= DATA;
+            inp += 4;
+            continue;
+        }
+        if (uprv_strcmp(inp, "QUIET") == 0 && ((opts & QUIET) == 0)) {
+            opts |= QUIET;
+            inp += 5;
+            continue;
+        }
+        if (opts != 0 && *inp == ']') {
+            // completed options.  Skip any following spaces and return
+            //   the remainder of the message.
+            while(*inp++ == ' ');
+            break;
+        }
+        // got something unexpected.  Not valid options.
+        opts = 0;
+        inp = message;
+        break;
+    }
+    return inp;
+}
+
+
+UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UBool condition, 
+                               const char *message, ...) {
+
+    const int32_t bufferSize = 4000;
+    char messageBuffer[bufferSize];
+    int32_t msgLen = 0;   // unused size in buffer.
+
+    msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "File %s, Line %d: Expected TRUE, got FALSE\n", 
+                           fileName, lineNumber);
+    if (msgLen > bufferSize) {
+        msgLen = bufferSize;
+    }
+
+    msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "      testing: %s\n", argList);
+    if (msgLen > bufferSize) {
+        msgLen = bufferSize;
+    }
+
+    if (message[0] != 0) {
+        msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "      message: ");
+        if (msgLen > bufferSize) {
+            msgLen = bufferSize;
+        }
+        va_list vaList;
+        va_start(vaList, message);
+        msgLen += vsnprintf(messageBuffer+msgLen, bufferSize-msgLen, message, vaList);
+        va_end(vaList);
+        if (msgLen > bufferSize) {
+            msgLen = bufferSize;
+        }
+    }
+
+    if (condition) {
+        logln("Ok: %s", messageBuffer);
+    } else {
+        errln("FAIL: %s", messageBuffer);
+    }
+    return condition;
+}
+
+
+// Shorter overload, macro expansion will match this when user provides no message.
+UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UBool condition) {
+    return assertTrueImpl(fileName, lineNumber, argList, condition, "");
+}
+
 
 UBool IntlTest::assertTrue(const char* message, UBool condition, UBool quiet, UBool possibleDataError) {
     if (!condition) {
@@ -1670,11 +1761,9 @@ UBool IntlTest::assertEquals(const char* message,
         }
         return FALSE;
     }
-#ifdef VERBOSE_ASSERTIONS
     else {
         logln((UnicodeString)"Ok: " + message + "; got " + prettify(actual));
     }
-#endif
     return TRUE;
 }
 
@@ -1687,11 +1776,9 @@ UBool IntlTest::assertEquals(const char* message,
               "\"; expected \"" + expected + "\"");
         return FALSE;
     }
-#ifdef VERBOSE_ASSERTIONS
     else {
         logln((UnicodeString)"Ok: " + message + "; got \"" + actual + "\"");
     }
-#endif
     return TRUE;
 }
 
@@ -1705,11 +1792,9 @@ UBool IntlTest::assertEquals(const char* message,
               "; expected " + toString(expected));
         return FALSE;
     }
-#ifdef VERBOSE_ASSERTIONS
     else {
         logln((UnicodeString)"Ok: " + message + "; got " + toString(actual));
     }
-#endif
     return TRUE;
 }
 #endif
