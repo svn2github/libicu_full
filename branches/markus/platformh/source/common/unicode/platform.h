@@ -19,6 +19,7 @@
 #ifndef _PLATFORM_H
 #define _PLATFORM_H
 
+#include "unicode/uconfig.h"
 #include "unicode/uvernum.h"
 
 /**
@@ -35,6 +36,10 @@
  * and/or from other macros that are predefined by the compiler
  * or defined in standard (POSIX or platform or compiler) headers.
  *
+ * As a temporary workaround, you can add an explicit #define for some macros
+ * before it is first tested, or add an equivalent -D macro definition
+ * to the compiler's command line.
+ *
  * Note: Some compilers provide ways to show the predefined macros.
  * For example, with gcc you can compile an empty .c file and have the compiler
  * print the predefined macros with
@@ -44,14 +49,6 @@
  * (You can provide an actual empty .c file rather than /dev/null.
  * <code>-x c++</code> is for C++.)
  */
-
-/**
- * Determines wheter to enable auto cleanup of libraries. 
- * @internal
- */
-#ifndef UCLN_NO_AUTO_CLEANUP
-#define UCLN_NO_AUTO_CLEANUP 1
-#endif
 
 /**
  * \def U_PLATFORM
@@ -361,70 +358,6 @@
 #endif
 
 /**
- * \def ICU_USE_THREADS
- *
- * Allows thread support (use of mutexes) to be compiled out of ICU.
- * Default: use threads.
- *
- * Even with thread support compiled out, applications may override the
- * (empty) mutex implementation with the u_setMutexFunctions() functions.
- * @internal
- */
-#ifdef ICU_USE_THREADS
-    /* Use the predefined value. */
-#elif defined(APP_NO_THREADS)
-    /* APP_NO_THREADS is an old symbol. We'll honour it if present. */
-#   define ICU_USE_THREADS 0
-#else
-#   define ICU_USE_THREADS 1
-#endif
-
-#ifdef U_DEBUG
-    /* Use the predefined value. */
-#elif defined(_DEBUG)
-    /*
-     * _DEBUG is defined by Visual Studio debug compilation.
-     * Do *not* test for its NDEBUG macro: It is an orthogonal macro
-     * which disables assert().
-     */
-#   define U_DEBUG 1
-#elif defined(U_RELEASE)
-#   define U_DEBUG (!U_RELEASE)
-# else
-#   define U_DEBUG 0
-#endif
-
-#ifndef U_RELEASE
-#define U_RELEASE (!U_DEBUG)
-#endif
-
-/**
- * \def U_DISABLE_RENAMING
- * Determines whether to disable renaming or not.
- * @internal
- */
-#ifndef U_DISABLE_RENAMING
-#define U_DISABLE_RENAMING 0
-#endif
-
-/**
- * \def U_OVERRIDE_CXX_ALLOCATION
- * Determines whether to override new and delete.
- * ICU is normally built such that all of its C++ classes, via their UMemory base,
- * override operators new and delete to use its internal, customizable,
- * non-exception-throwing memory allocation functions. (Default value 1 for this macro.)
- *
- * This is especially important when the application and its libraries use multiple heaps.
- * For example, on Windows, this allows the ICU DLL to be used by
- * applications that statically link the C Runtime library.
- *
- * @stable ICU 2.2
- */
-#ifndef U_OVERRIDE_CXX_ALLOCATION
-#define U_OVERRIDE_CXX_ALLOCATION 1
-#endif
-
-/**
  * \def U_HAVE_PLACEMENT_NEW
  * Determines whether to override placement new and delete for STL.
  * @stable ICU 2.6
@@ -449,43 +382,6 @@
 #   define U_HAVE_DEBUG_LOCATION_NEW 1
 #else
 #   define U_HAVE_DEBUG_LOCATION_NEW 0
-#endif
-
-/**
- * \def U_ENABLE_TRACING
- * Determine whether to enable tracing.
- * @internal
- */
-#ifndef U_ENABLE_TRACING
-#define U_ENABLE_TRACING 0
-#endif
-
-/**
- * \def U_ENABLE_DYLOAD
- * Whether to enable Dynamic loading in ICU.
- * @internal
- */
-#ifndef U_ENABLE_DYLOAD
-#define U_ENABLE_DYLOAD 1
-#endif
-
-/**
- * \def U_CHECK_DYLOAD
- * Whether to test Dynamic loading as an OS capability.
- * @internal
- */
-#ifndef U_CHECK_DYLOAD
-#define U_CHECK_DYLOAD 1
-#endif
-
-
-/**
- * \def U_DEFAULT_SHOW_DRAFT
- * Do we allow ICU users to use the draft APIs by default?
- * @internal
- */
-#ifndef U_DEFAULT_SHOW_DRAFT
-#define U_DEFAULT_SHOW_DRAFT 1
 #endif
 
 /** @} */
@@ -730,7 +626,7 @@
 /** @} */
 
 /*===========================================================================*/
-/** @{ Information about POSIX support                                           */
+/** @{ Information about POSIX support                                       */
 /*===========================================================================*/
 
 #ifdef U_HAVE_NL_LANGINFO_CODESET
@@ -832,6 +728,23 @@
 #   define U_IMPORT 
 #endif
 
+/**
+ * \def U_CALLCONV
+ * Similar to U_CDECL_BEGIN/U_CDECL_END, this qualifier is necessary
+ * in callback function typedefs to make sure that the calling convention
+ * is compatible.
+ *
+ * This is only used for non-ICU-API functions.
+ * When a function is a public ICU API,
+ * you must use the U_CAPI and U_EXPORT2 qualifiers.
+ * @stable ICU 2.0
+ */
+#if U_PLATFORM == U_PF_OS390 && defined(__cplusplus)
+#    define U_CALLCONV __cdecl
+#else
+#    define U_CALLCONV U_EXPORT2
+#endif
+
 /* @} */
 
 /*===========================================================================*/
@@ -882,7 +795,7 @@
 /** @} */
 
 /*===========================================================================*/
-/** @{ Programs used by ICU code                                                 */
+/** @{ Programs used by ICU code                                             */
 /*===========================================================================*/
 
 /**
@@ -900,45 +813,8 @@
 /** @} */
 
 /*===========================================================================*/
-/* Custom icu entry point renaming                                                  */
+/* Custom icu entry point renaming                                           */
 /*===========================================================================*/
-
-/**
- * \def U_HAVE_LIB_SUFFIX
- * 1 if a custom library suffix is set.
- * @internal
- */
-#ifdef U_HAVE_LIB_SUFFIX
-    /* Use the predefined value. */
-#elif defined(U_LIB_SUFFIX_C_NAME) || defined(U_LIB_SUFFIX_C_NAME_STRING)
-#   define U_HAVE_LIB_SUFFIX 1
-#else
-#   define U_HAVE_LIB_SUFFIX 0
-#endif
-
-/**
- * \def U_LIB_SUFFIX_C_NAME_STRING
- * Defines the library suffix as a string with C syntax.
- * @internal
- */
-#ifdef U_LIB_SUFFIX_C_NAME_STRING
-    /* Use the predefined value. */
-#elif defined(U_LIB_SUFFIX_C_NAME)
-#   define U_LIB_SUFFIX_C_NAME_STRING #U_LIB_SUFFIX_C_NAME
-#else
-#   define U_LIB_SUFFIX_C_NAME_STRING ""
-#endif
-
-/**
- * \def U_LIB_SUFFIX_C_NAME
- * Defines the library suffix with C syntax.
- * @internal
- */
-#ifdef U_LIB_SUFFIX_C_NAME
-    /* Use the predefined value. */
-#else
-#   define U_LIB_SUFFIX_C_NAME
-#endif
 
 #if U_HAVE_LIB_SUFFIX
 # ifndef U_ICU_ENTRY_POINT_RENAME

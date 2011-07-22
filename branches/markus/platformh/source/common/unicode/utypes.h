@@ -183,23 +183,6 @@
 #endif
 
 /**
- * \def U_CALLCONV
- * Similar to U_CDECL_BEGIN/U_CDECL_END, this qualifier is necessary
- * in callback function typedefs to make sure that the calling convention
- * is compatible.
- *
- * This is only used for non-ICU-API functions.
- * When a function is a public ICU API,
- * you must use the U_CAPI and U_EXPORT2 qualifiers.
- * @stable ICU 2.0
- */
-#if U_PLATFORM == U_PF_OS390 && defined(__cplusplus)
-#    define U_CALLCONV __cdecl
-#else
-#    define U_CALLCONV U_EXPORT2
-#endif
-
-/**
  * \def NULL
  * Define NULL if necessary, to 0 for C++ and to ((void *)0) for C.
  * @stable ICU 2.0
@@ -245,56 +228,6 @@ typedef double UDate;
  * @draft ICU 4.8 
  */ 
 #define U_DATE_MIN -U_DATE_MAX
-
-
-
-/*===========================================================================*/
-/* UClassID-based RTTI */
-/*===========================================================================*/
-
-/**
- * UClassID is used to identify classes without using RTTI, since RTTI
- * is not yet supported by all C++ compilers.  Each class hierarchy which needs
- * to implement polymorphic clone() or operator==() defines two methods,
- * described in detail below.  UClassID values can be compared using
- * operator==(). Nothing else should be done with them.
- *
- * \par
- * getDynamicClassID() is declared in the base class of the hierarchy as
- * a pure virtual.  Each concrete subclass implements it in the same way:
- *
- * \code
- *      class Base {
- *      public:
- *          virtual UClassID getDynamicClassID() const = 0;
- *      }
- *
- *      class Derived {
- *      public:
- *          virtual UClassID getDynamicClassID() const
- *            { return Derived::getStaticClassID(); }
- *      }
- * \endcode
- *
- * Each concrete class implements getStaticClassID() as well, which allows
- * clients to test for a specific type.
- *
- * \code
- *      class Derived {
- *      public:
- *          static UClassID U_EXPORT2 getStaticClassID();
- *      private:
- *          static char fgClassID;
- *      }
- *
- *      // In Derived.cpp:
- *      UClassID Derived::getStaticClassID()
- *        { return (UClassID)&Derived::fgClassID; }
- *      char Derived::fgClassID = 0; // Value is irrelevant
- * \endcode
- * @stable ICU 2.0
- */
-typedef void* UClassID;
 
 /*===========================================================================*/
 /* Shared library/DLL import-export API control                              */
