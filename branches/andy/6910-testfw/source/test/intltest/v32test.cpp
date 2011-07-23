@@ -78,12 +78,12 @@ void UVector32Test::UVector32_API() {
     UVector32     *b;
 
     a = new UVector32(status);
-    TEST_CHECK_STATUS(status);
+    ASSERT_SUCCESS(status);
     delete a;
 
     status = U_ZERO_ERROR;
     a = new UVector32(2000, status);
-    TEST_CHECK_STATUS(status);
+    ASSERT_SUCCESS(status);
     delete a;
 
     //
@@ -96,9 +96,9 @@ void UVector32Test::UVector32_API() {
     a->addElement(30, status);
     b = new UVector32(status);
     b->assign(*a, status);
-    ASSERT_TRUE(b->size() == 4);
-    TEST_ASSERT(b->elementAti(1) == 20);
-    TEST_CHECK_STATUS(status);
+    ASSERT_EQUALS(3, b->size());
+    ASSERT_EQUALS(20, b->elementAti(1));
+    ASSERT_SUCCESS(status);
     delete a;
     delete b;
 

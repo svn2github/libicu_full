@@ -28,6 +28,7 @@
 
 #include "intltest.h"
 #include "caltztst.h"
+#include "charstr.h"
 #include "itmajor.h"
 #include "cstring.h"
 #include "umutex.h"
@@ -1632,22 +1633,24 @@ static const char *parseAssertOpts(const char *message, int32_t &opts) {
     }
     const char *inp = message+1;
     for (;;) {
-        while(*inp++ == ' ');
-
-        if (uprv_strcmp(inp, "DATA") == 0 && ((opts & DATA) == 0)) {
+        while(*inp == ' ') {
+            ++inp;
+        }
+        if (uprv_strncmp(inp, "DATA", 4) == 0 && ((opts & DATA) == 0)) {
+            printf("found DATA\n");
             opts |= DATA;
             inp += 4;
             continue;
         }
-        if (uprv_strcmp(inp, "QUIET") == 0 && ((opts & QUIET) == 0)) {
+        if (uprv_strncmp(inp, "QUIET", 5) == 0 && ((opts & QUIET) == 0)) {
             opts |= QUIET;
             inp += 5;
             continue;
         }
         if (opts != 0 && *inp == ']') {
-            // completed options.  Skip any following spaces and return
+            // completed options.  Skip over the ']' and any following spaces and return
             //   the remainder of the message.
-            while(*inp++ == ' ');
+            while(*++inp == ' ');
             break;
         }
         // got something unexpected.  Not valid options.
@@ -1659,56 +1662,199 @@ static const char *parseAssertOpts(const char *message, int32_t &opts) {
 }
 
 
-UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
-                               UBool condition, 
-                               const char *message, ...) {
+static char * composeAssertMsg(const char *fileName, int32_t lineNumber, 
+                              const char *argList, int32_t &options,
+                              const char *message, va_list messageArgs,
+                              const char *resultFormat, ...) {
 
     const int32_t bufferSize = 4000;
-    char messageBuffer[bufferSize];
-    int32_t msgLen = 0;   // unused size in buffer.
+    char *messageBuffer = static_cast<char *>(malloc(bufferSize));
+    if (messageBuffer == NULL) {
+        return NULL;
+    }
+    int32_t msgLen = 0;
 
-    msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "File %s, Line %d: Expected TRUE, got FALSE\n", 
-                           fileName, lineNumber);
+    const char *trimmedMessage = parseAssertOpts(message, options);
+
+    msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "File %s, Line %d: ", fileName, lineNumber);
     if (msgLen > bufferSize) {
         msgLen = bufferSize;
     }
-
+    
+    // Append the expeted and actual results.  The format and the number of values varies
+    //   depending on the type of ASSERT.
+    va_list resultArgs;
+    va_start(resultArgs, resultFormat);
+    msgLen += vsnprintf(messageBuffer+msgLen, bufferSize-msgLen, resultFormat, resultArgs);
+    va_end(resultArgs);
+    if (msgLen > bufferSize) {
+        msgLen = bufferSize;
+    }
+    
+    // Append the condition being tested.  Stringified parameter from the user's code.
     msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "      testing: %s\n", argList);
     if (msgLen > bufferSize) {
         msgLen = bufferSize;
     }
 
-    if (message[0] != 0) {
+    // Append the user's message, if any.
+    if (trimmedMessage[0] != 0) {
         msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "      message: ");
         if (msgLen > bufferSize) {
             msgLen = bufferSize;
         }
-        va_list vaList;
-        va_start(vaList, message);
-        msgLen += vsnprintf(messageBuffer+msgLen, bufferSize-msgLen, message, vaList);
-        va_end(vaList);
+        msgLen += vsnprintf(messageBuffer+msgLen, bufferSize-msgLen, trimmedMessage, messageArgs);
         if (msgLen > bufferSize) {
             msgLen = bufferSize;
         }
     }
+    return messageBuffer;
+}
 
-    if (condition) {
-        logln("Ok: %s", messageBuffer);
+
+void IntlTest::displayAssert(const char *formattedMessage, UBool passing, int32_t options) {
+    if (passing) {
+        if ((options & QUIET) == 0) {
+            logln("Ok: %s", formattedMessage);
+        }
     } else {
-        errln("FAIL: %s", messageBuffer);
+        if ((options & DATA) != 0) {
+            dataerrln("FAIL: %s", formattedMessage);
+        } else {
+            errln("FAIL: %s", formattedMessage);
+        }
     }
+}
+ 
+
+static const char *boolToStr(UBool b) {
+    return b? "TRUE":"FALSE";
+}
+
+UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UBool condition, 
+                               const char *message, ...) {
+    int32_t options = 0;
+    va_list  messageArgs;
+    va_start(messageArgs, message);
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options,
+                                              message, messageArgs, "Expected TRUE, got %s\n", boolToStr(condition));
+    va_end(messageArgs);
+    displayAssert(formattedMessage, condition, options);
+    free(formattedMessage);
     return condition;
 }
 
 
-// Shorter overload, macro expansion will match this when user provides no message.
 UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber, 
                                const char *argList, 
                                UBool condition) {
     return assertTrueImpl(fileName, lineNumber, argList, condition, "");
 }
 
+
+UBool IntlTest::assertSuccessImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UErrorCode ec, 
+                               const char *message, ...) {
+    int32_t options = 0;
+    va_list  messageArgs;
+    va_start(messageArgs, message);
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options,
+                                              message, messageArgs, "Expected U_ZERO_ERROR(), got %s\n", u_errorName(ec));
+    va_end(messageArgs);
+    UBool pass = U_SUCCESS(ec);
+    displayAssert(formattedMessage, pass, options);
+    free(formattedMessage);
+    return pass;
+}
+
+
+UBool IntlTest::assertSuccessImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UErrorCode ec){
+    return assertSuccessImpl(fileName, lineNumber, argList, ec, "");
+}
+
+
+UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               int32_t expected, int32_t actual,
+                               const char *message, ...) {
+                               
+    int32_t  options = 0;
+    va_list  messageArgs;
+    va_start(messageArgs, message);
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options, message, messageArgs,
+                                           "Expected %d, got %d\n", expected, actual);
+    va_end(messageArgs);
+    UBool pass = (expected == actual);
+    displayAssert(formattedMessage, pass, options);
+    free(formattedMessage);
+    return pass;
+}
+
+
+
+UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               int32_t expected, int32_t actual){
+    return assertEqualsImpl(fileName, lineNumber, argList, expected, actual, "");
+}
+
+static void UnistrToCharStr(const UnicodeString &in, CharString &out) {
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t resultCapacity = 0;
+    int32_t inLength = in.length();
+    char *buf = out.getAppendBuffer(inLength*3, inLength*3, resultCapacity, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+#if U_CHARSET_IS_UTF8 || !UCONFIG_NO_CONVERSION
+    int32_t outLength = in.extract(0, inLength, buf, inLength*3);
+#else
+    // TODO:  Use something with well defined substitution for non-invariant chars.
+    //        Lossy doesn't matter, the error text can be incomplete.
+    int32_t outLength = in.extract(0, inLength, buf, inLength*3, US_INV);
+#endif
+    out.append(buf, outLength, status);
+}
+
+UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UnicodeString expected, UnicodeString actual,
+                               const char *message, ...) {
+                               
+    CharString   exp, act;
+    UnistrToCharStr(expected, exp);
+    UnistrToCharStr(actual, act);
+
+    int32_t  options = 0;
+    va_list  messageArgs;
+    va_start(messageArgs, message);
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options, message, messageArgs,
+                                           "Expected \"%s\", got \"%s\"\n", exp.data(), act.data());
+    va_end(messageArgs);
+    UBool pass = (expected == actual);
+    displayAssert(formattedMessage, pass, options);
+    free(formattedMessage);
+    return pass;
+}
+
+
+
+UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UnicodeString expected, UnicodeString actual){
+    return assertEqualsImpl(fileName, lineNumber, argList, expected, actual, "");
+}
+
+
+
+//
+//   Old style assert functions
+//
 
 UBool IntlTest::assertTrue(const char* message, UBool condition, UBool quiet, UBool possibleDataError) {
     if (!condition) {

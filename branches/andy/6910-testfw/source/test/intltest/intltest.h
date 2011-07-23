@@ -228,6 +228,10 @@ protected:
      *   Optional message with printf-style arguements.
      */
      #define ASSERT_TRUE(...) assertTrueImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
+     #define ASSERT_SUCCESS(...) assertSuccessImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
+     #define ASSERT_EQUALS(...) assertEqualsImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
+
+
     UBool       assertTrueImpl(const char *fileName, int32_t lineNumber, 
                                const char *argList, 
                                UBool condition, 
@@ -235,6 +239,36 @@ protected:
     UBool       assertTrueImpl(const char *fileName, int32_t lineNumber, 
                                const char *argList, 
                                UBool condition);
+
+    UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UErrorCode ec, 
+                               const char *message, ...);
+    UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UErrorCode ec);
+    
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               int32_t expected, int32_t actual,
+                               const char *message, ...);
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               int32_t expected, int32_t actual);
+
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UnicodeString expected, UnicodeString actual);
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *argList, 
+                               UnicodeString expected, UnicodeString actual,
+                               const char *message, ...);
+
+
+
+    void        displayAssert(const char *formattedMessage, UBool passing, int32_t options);
+
+
 
     UBool       verbose;
     UBool       no_err_msg;
