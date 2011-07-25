@@ -6197,16 +6197,16 @@ const char* attrString(int32_t attrId) {
 //      API test, not a comprehensive test. 
 //      See DecimalFormatTest/DataDrivenTests
 //
-#define ASSERT_SUCCESS(status) {if (U_FAILURE(status)) errln("file %s, line %d: status: %s", \
-                                                __FILE__, __LINE__, u_errorName(status));}
-#define ASSERT_EQUALS(expected, actual) {if ((expected) != (actual)) \
-                  errln("file %s, line %d: %s != %s", __FILE__, __LINE__, #expected, #actual);}
+// #define ASSERT_SUCCESS(status) {if (U_FAILURE(status)) errln("file %s, line %d: status: %s", \
+//                                                 __FILE__, __LINE__, u_errorName(status));}
+// #define ASSERT_EQUALS(expected, actual) {if ((expected) != (actual)) \
+//                   errln("file %s, line %d: %s != %s", __FILE__, __LINE__, #expected, #actual);}
 
-static UBool operator != (const char *s1, UnicodeString &s2) {
-    // This function lets ASSERT_EQUALS("literal", UnicodeString) work.
-    UnicodeString us1(s1);
-    return us1 != s2;
-}
+// static UBool operator != (const char *s1, UnicodeString &s2) {
+//     // This function lets ASSERT_EQUALS("literal", UnicodeString) work.
+//     UnicodeString us1(s1);
+//     return us1 != s2;
+//}
 
 void NumberFormatTest::TestDecimal() {
     {

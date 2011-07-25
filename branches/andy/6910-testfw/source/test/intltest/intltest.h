@@ -224,44 +224,83 @@ protected:
 
     /*
      * Macro-based assertions
-     *   Produce a default message based on the condition tested and the file & line number.
-     *   Optional message with printf-style arguements.
+     *
+     *  ASSERT_TRUE(UBool condition [, const char *message [, message parameters ..]])
+     *  ASSERT_FALSE(UBool condition [, const char *message [, message parameters ..]])
+     *  ASSERT_SUCCESS(UErrorCode ec [, const char *message [, message parameters ..]])
+     *  ASSERT_EQUALS(int expected, int actual [, const char *message [, message parameters ..]]) 
+     *  ASSERT_EQUALS(String expected, String actual [, const char *message [, message parameters ..]]) 
+     *
+     * Notes:
+     *  The macros may only be invoked from within a member function of a class derived from IntlTest.
+     *  
+     *  On failure they will display a default error message with the file and line number of the error,
+     *  the condition being tested, and the expected and actual values.  Any additional caller-supplied
+     *  message is optional, and is typically only useful for providing additional context for tests
+     *  that are looping over data.
+     *
+     *  ASSERT_EQUALS(String, String) will work with UnicodeString, (const char *)strings or "quoted" strings,
+     *  in any combination.  For portability, char * strings should be restricted to invariant characters.
+     *
      */
      #define ASSERT_TRUE(...) assertTrueImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
+     #define ASSERT_FALSE(...) assertFalseImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
      #define ASSERT_SUCCESS(...) assertSuccessImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
      #define ASSERT_EQUALS(...) assertEqualsImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
 
 
     UBool       assertTrueImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UBool condition, 
                                const char *message, ...);
     UBool       assertTrueImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
+                               UBool condition);
+
+    UBool       assertFalseImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UBool condition, 
+                               const char *message, ...);
+    UBool       assertFalseImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
                                UBool condition);
 
     UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UErrorCode ec, 
                                const char *message, ...);
     UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UErrorCode ec);
     
     UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                int32_t expected, int32_t actual,
                                const char *message, ...);
     UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                int32_t expected, int32_t actual);
 
     UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UnicodeString expected, UnicodeString actual);
     UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UnicodeString expected, UnicodeString actual,
+                               const char *message, ...);
+
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               StringPiece expected, StringPiece actual);
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               StringPiece expected, StringPiece actual,
+                               const char *message, ...);
+     
+    template <typename T>
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               const T& expected, const T& actual,
                                const char *message, ...);
 
 

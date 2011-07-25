@@ -1663,7 +1663,7 @@ static const char *parseAssertOpts(const char *message, int32_t &opts) {
 
 
 static char * composeAssertMsg(const char *fileName, int32_t lineNumber, 
-                              const char *argList, int32_t &options,
+                              const char *macroArgs, int32_t &options,
                               const char *message, va_list messageArgs,
                               const char *resultFormat, ...) {
 
@@ -1692,7 +1692,7 @@ static char * composeAssertMsg(const char *fileName, int32_t lineNumber,
     }
     
     // Append the condition being tested.  Stringified parameter from the user's code.
-    msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "      testing: %s\n", argList);
+    msgLen += snprintf(messageBuffer+msgLen, bufferSize-msgLen, "      testing: %s\n", macroArgs);
     if (msgLen > bufferSize) {
         msgLen = bufferSize;
     }
@@ -1732,13 +1732,13 @@ static const char *boolToStr(UBool b) {
 }
 
 UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UBool condition, 
                                const char *message, ...) {
     int32_t options = 0;
     va_list  messageArgs;
     va_start(messageArgs, message);
-    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options,
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, macroArgs, options,
                                               message, messageArgs, "Expected TRUE, got %s\n", boolToStr(condition));
     va_end(messageArgs);
     displayAssert(formattedMessage, condition, options);
@@ -1748,20 +1748,43 @@ UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber,
 
 
 UBool IntlTest::assertTrueImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UBool condition) {
-    return assertTrueImpl(fileName, lineNumber, argList, condition, "");
+    return assertTrueImpl(fileName, lineNumber, macroArgs, condition, "");
+}
+
+
+UBool IntlTest::assertFalseImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UBool condition, 
+                               const char *message, ...) {
+    int32_t options = 0;
+    va_list  messageArgs;
+    va_start(messageArgs, message);
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, macroArgs, options,
+                                              message, messageArgs, "Expected FALSE, got %s\n", boolToStr(condition));
+    va_end(messageArgs);
+    displayAssert(formattedMessage, !condition, options);
+    free(formattedMessage);
+    return !condition;
+}
+
+
+UBool IntlTest::assertFalseImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UBool condition) {
+    return assertFalseImpl(fileName, lineNumber, macroArgs, condition, "");
 }
 
 
 UBool IntlTest::assertSuccessImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UErrorCode ec, 
                                const char *message, ...) {
     int32_t options = 0;
     va_list  messageArgs;
     va_start(messageArgs, message);
-    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options,
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, macroArgs, options,
                                               message, messageArgs, "Expected U_ZERO_ERROR(), got %s\n", u_errorName(ec));
     va_end(messageArgs);
     UBool pass = U_SUCCESS(ec);
@@ -1772,21 +1795,21 @@ UBool IntlTest::assertSuccessImpl(const char *fileName, int32_t lineNumber,
 
 
 UBool IntlTest::assertSuccessImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UErrorCode ec){
-    return assertSuccessImpl(fileName, lineNumber, argList, ec, "");
+    return assertSuccessImpl(fileName, lineNumber, macroArgs, ec, "");
 }
 
 
 UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                int32_t expected, int32_t actual,
                                const char *message, ...) {
                                
     int32_t  options = 0;
     va_list  messageArgs;
     va_start(messageArgs, message);
-    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options, message, messageArgs,
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, macroArgs, options, message, messageArgs,
                                            "Expected %d, got %d\n", expected, actual);
     va_end(messageArgs);
     UBool pass = (expected == actual);
@@ -1798,9 +1821,9 @@ UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber,
 
 
 UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                int32_t expected, int32_t actual){
-    return assertEqualsImpl(fileName, lineNumber, argList, expected, actual, "");
+    return assertEqualsImpl(fileName, lineNumber, macroArgs, expected, actual, "");
 }
 
 static void UnistrToCharStr(const UnicodeString &in, CharString &out) {
@@ -1822,7 +1845,7 @@ static void UnistrToCharStr(const UnicodeString &in, CharString &out) {
 }
 
 UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UnicodeString expected, UnicodeString actual,
                                const char *message, ...) {
                                
@@ -1833,7 +1856,7 @@ UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber,
     int32_t  options = 0;
     va_list  messageArgs;
     va_start(messageArgs, message);
-    char *formattedMessage = composeAssertMsg(fileName, lineNumber, argList, options, message, messageArgs,
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, macroArgs, options, message, messageArgs,
                                            "Expected \"%s\", got \"%s\"\n", exp.data(), act.data());
     va_end(messageArgs);
     UBool pass = (expected == actual);
@@ -1845,10 +1868,38 @@ UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber,
 
 
 UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *argList, 
+                               const char *macroArgs, 
                                UnicodeString expected, UnicodeString actual){
-    return assertEqualsImpl(fileName, lineNumber, argList, expected, actual, "");
+    return assertEqualsImpl(fileName, lineNumber, macroArgs, expected, actual, "");
 }
+
+UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               StringPiece expected, StringPiece actual,
+                               const char *message, ...) {
+                               
+    int32_t  options = 0;
+    va_list  messageArgs;
+    va_start(messageArgs, message);
+    char *formattedMessage = composeAssertMsg(fileName, lineNumber, macroArgs, options, message, messageArgs,
+                                           "Expected \"%s\", got \"%s\"\n", expected.data(), actual.data());
+    va_end(messageArgs);
+    UBool pass = (expected.data() == NULL && actual.data() == NULL) ||
+                 (expected.data() != NULL && actual.data() != NULL && 
+                     uprv_strcmp(expected.data(), actual.data()) == 0);
+    displayAssert(formattedMessage, pass, options);
+    free(formattedMessage);
+    return pass;
+}
+
+
+
+UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               StringPiece expected, StringPiece actual){
+    return assertEqualsImpl(fileName, lineNumber, macroArgs, expected, actual, "");
+}
+
 
 
 
