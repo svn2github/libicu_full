@@ -49,9 +49,6 @@ static const UChar ISO_CURRENCY_USD[] = {0x55, 0x53, 0x44, 0}; // "USD"
 
 #define CASE(id,test) case id: name = #test; if (exec) { logln(#test "---"); logln((UnicodeString)""); test(); } break
 
-#define CHECK(status,str) if (U_FAILURE(status)) { errcheckln(status, UnicodeString("FAIL: ") + str + " - " + u_errorName(status)); return; }
-#define CHECK_DATA(status,str) if (U_FAILURE(status)) { dataerrln(UnicodeString("FAIL: ") + str + " - " + u_errorName(status)); return; }
-
 void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
 {
     // if (exec) logln((UnicodeString)"TestSuite DateFormatTest");
@@ -1129,21 +1126,21 @@ NumberFormatTest::TestRounding487(void)
 void NumberFormatTest::TestSecondaryGrouping(void) {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols US(Locale::getUS(), status);
-    CHECK(status, "DecimalFormatSymbols ct");
+    ASSERT_SUCCESS(status);
 
     DecimalFormat f("#,##,###", US, status);
-    CHECK(status, "DecimalFormat ct");
+    ASSERT_SUCCESS(status);
 
     expect2(f, (int32_t)123456789L, "12,34,56,789");
     expectPat(f, "#,##,###");
     f.applyPattern("#,###", status);
-    CHECK(status, "applyPattern");
+    ASSERT_SUCCESS(status);
 
     f.setSecondaryGroupingSize(4);
     expect2(f, (int32_t)123456789L, "12,3456,789");
     expectPat(f, "#,####,###");
     NumberFormat *g = NumberFormat::createInstance(Locale("hi", "IN"), status);
-    CHECK_DATA(status, "createInstance(hi_IN)");
+    ASSERT_SUCCESS(status, "[data]");
 
     UnicodeString out;
     int32_t l = (int32_t)1876543210L;
@@ -1238,11 +1235,11 @@ NumberFormatTest::roundingTest(NumberFormat& nf, double x, int32_t maxFractionDi
 void NumberFormatTest::TestExponent(void) {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols US(Locale::getUS(), status);
-    CHECK(status, "DecimalFormatSymbols constructor");
+    ASSERT_SUCCESS(status);
     DecimalFormat fmt1(UnicodeString("0.###E0"), US, status);
-    CHECK(status, "DecimalFormat(0.###E0)");
+    ASSERT_SUCCESS(status);
     DecimalFormat fmt2(UnicodeString("0.###E+0"), US, status);
-    CHECK(status, "DecimalFormat(0.###E+0)");
+    ASSERT_SUCCESS(status);
     int32_t n = 1234;
     expect2(fmt1, n, "1.234E3");
     expect2(fmt2, n, "1.234E+3");
@@ -1255,7 +1252,7 @@ void NumberFormatTest::TestExponent(void) {
 void NumberFormatTest::TestScientific(void) {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols US(Locale::getUS(), status);
-    CHECK(status, "DecimalFormatSymbols constructor");
+    ASSERT_SUCCESS(status);
 
     // Test pattern round-trip
     const char* PAT[] = { "#E0", "0.####E0", "00.000E00", "##0.####E000",
@@ -1272,7 +1269,7 @@ void NumberFormatTest::TestScientific(void) {
     for (int32_t i=0; i<PAT_length; ++i) {
         UnicodeString pat(PAT[i]);
         DecimalFormat df(pat, US, status);
-        CHECK(status, "DecimalFormat constructor");
+        ASSERT_SUCCESS(status);
         UnicodeString pat2;
         df.toPattern(pat2);
         if (pat == pat2) {
@@ -1435,7 +1432,7 @@ void NumberFormatTest::TestScientific(void) {
 void NumberFormatTest::TestPad(void) {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols US(Locale::getUS(), status);
-    CHECK(status, "DecimalFormatSymbols constructor");
+    ASSERT_SUCCESS(status);
 
     expect2(new DecimalFormat("*^##.##", US, status),
            int32_t(0), "^^^^0", status);
@@ -1525,7 +1522,7 @@ void NumberFormatTest::TestPad(void) {
 
     //testing the setPadCharacter(UnicodeString) and getPadCharacterString()
     DecimalFormat fmt("#", US, status);
-    CHECK(status, "DecimalFormat constructor");
+    ASSERT_SUCCESS(status);
     UnicodeString padString("P");
     fmt.setPadCharacter(padString);
     expectPad(fmt, "*P##.##", DecimalFormat::kPadBeforePrefix, 5, padString);
@@ -1551,10 +1548,10 @@ void NumberFormatTest::TestPad(void) {
 void NumberFormatTest::TestPatterns2(void) {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols US(Locale::getUS(), status);
-    CHECK(status, "DecimalFormatSymbols constructor");
+    ASSERT_SUCCESS(status);
 
     DecimalFormat fmt("#", US, status);
-    CHECK(status, "DecimalFormat constructor");
+    ASSERT_SUCCESS(status);
 
     UChar hat = 0x005E; /*^*/
 
@@ -1572,7 +1569,7 @@ void NumberFormatTest::TestPatterns2(void) {
               10, (UChar)0x0061 /*a*/);
 
     fmt.applyPattern("AA#,##0.00ZZ", status);
-    CHECK(status, "applyPattern");
+    ASSERT_SUCCESS(status);
     fmt.setPadCharacter(hat);
 
     fmt.setFormatWidth(10);
@@ -1612,7 +1609,7 @@ void NumberFormatTest::TestPatterns2(void) {
 void NumberFormatTest::TestSurrogateSupport(void) {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols custom(Locale::getUS(), status);
-    CHECK(status, "DecimalFormatSymbols constructor");
+    ASSERT_SUCCESS(status);
 
     custom.setSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol, "decimal");
     custom.setSymbol(DecimalFormatSymbols::kPlusSignSymbol, "plus");
@@ -2390,21 +2387,19 @@ void NumberFormatTest::expect(NumberFormat& fmt, const UnicodeString& str, const
     UErrorCode status = U_ZERO_ERROR;
     Formattable num;
     fmt.parse(str, num, status);
+    if (!ASSERT_SUCCESS(status, "[DATA] Parsing, str = \"%s\"", CString(str).c_str())) {
+        return;
+    }
+#if 0
     if (U_FAILURE(status)) {
         dataerrln(UnicodeString("FAIL: Parse failed for \"") + str + "\" - " + u_errorName(status));
         return;
     }
+#endif
     UnicodeString pat;
     ((DecimalFormat*) &fmt)->toPattern(pat);
-    if (equalValue(num, n)) {
-        logln(UnicodeString("Ok   \"") + str + "\" x " +
-              pat + " = " +
-              toString(num));
-    } else {
-        dataerrln(UnicodeString("FAIL \"") + str + "\" x " +
-              pat + " = " +
-              toString(num) + ", expected " + toString(n));
-    }
+    ASSERT_TRUE(equalValue(num, n), "[DATA] \"%s\" x %s = %s, expected %s",
+          CString(str).c_str(), CString(pat).c_str(), CString(toString(num)).c_str(), CString(toString(n)).c_str());
 }
 
 void NumberFormatTest::expect_rbnf(NumberFormat& fmt, const UnicodeString& str, const Formattable& n) {
@@ -2430,7 +2425,7 @@ void NumberFormatTest::expect_rbnf(NumberFormat& fmt, const Formattable& n,
     FieldPosition pos;
     UErrorCode status = U_ZERO_ERROR;
     fmt.format(n, saw, pos, status);
-    CHECK(status, "NumberFormat::format");
+    ASSERT_SUCCESS(status);
     if (saw == exp) {
         logln(UnicodeString("Ok   ") + toString(n) +
               " = \"" +
@@ -2447,7 +2442,7 @@ void NumberFormatTest::expect_rbnf(NumberFormat& fmt, const Formattable& n,
             }
             UnicodeString saw2;
             fmt.format(n2, saw2, pos, status);
-            CHECK(status, "NumberFormat::format");
+            ASSERT_SUCCESS(status);
             if (saw2 != exp) {
                 errln((UnicodeString)"FAIL \"" + exp + "\" => " + toString(n2) +
                       " => \"" + saw2 + "\"");
@@ -2466,7 +2461,7 @@ void NumberFormatTest::expect(NumberFormat& fmt, const Formattable& n,
     FieldPosition pos;
     UErrorCode status = U_ZERO_ERROR;
     fmt.format(n, saw, pos, status);
-    CHECK(status, "NumberFormat::format");
+    ASSERT_SUCCESS(status);
     UnicodeString pat;
     ((DecimalFormat*) &fmt)->toPattern(pat);
     if (saw == exp) {
@@ -2485,7 +2480,7 @@ void NumberFormatTest::expect(NumberFormat& fmt, const Formattable& n,
             }
             UnicodeString saw2;
             fmt.format(n2, saw2, pos, status);
-            CHECK(status, "NumberFormat::format");
+            ASSERT_SUCCESS(status);
             if (saw2 != exp) {
                 errln((UnicodeString)"FAIL \"" + exp + "\" => " + toString(n2) +
                       " => \"" + saw2 + "\"");
@@ -2819,9 +2814,9 @@ double NumberFormatTest::checkRound(DecimalFormat* df, double iValue, double las
 void NumberFormatTest::TestNonpositiveMultiplier() {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols US(Locale::getUS(), status);
-    CHECK(status, "DecimalFormatSymbols constructor");
+    ASSERT_SUCCESS(status);
     DecimalFormat df(UnicodeString("0"), US, status);
-    CHECK(status, "DecimalFormat(0)");
+    ASSERT_SUCCESS(status);
 
     // test zero multiplier
 
@@ -6197,10 +6192,6 @@ const char* attrString(int32_t attrId) {
 //      API test, not a comprehensive test. 
 //      See DecimalFormatTest/DataDrivenTests
 //
-// #define ASSERT_SUCCESS(status) {if (U_FAILURE(status)) errln("file %s, line %d: status: %s", \
-//                                                 __FILE__, __LINE__, u_errorName(status));}
-// #define ASSERT_EQUALS(expected, actual) {if ((expected) != (actual)) \
-//                   errln("file %s, line %d: %s != %s", __FILE__, __LINE__, #expected, #actual);}
 
 // static UBool operator != (const char *s1, UnicodeString &s2) {
 //     // This function lets ASSERT_EQUALS("literal", UnicodeString) work.

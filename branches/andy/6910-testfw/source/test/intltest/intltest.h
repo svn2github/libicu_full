@@ -43,6 +43,22 @@ UnicodeString operator+(const UnicodeString& left, float num);
 UnicodeString toString(const Formattable& f); // liu
 UnicodeString toString(int32_t n);
 #endif
+
+// CString - A convenience class for converting UnicodeStrings to (char *) strings
+//           intended for use in composing error messages.
+//           Depending on the default charset, the conversion may be lossy.
+//    Typical Usage:
+//       errln("the string was: %s", CString(some_unicode_string).data());
+
+class CString {
+  public:
+    CString(const UnicodeString &us);
+    ~CString();
+    const char *c_str() {return data_;};
+  private:
+    char *data_;
+};
+
 //-----------------------------------------------------------------------------
 
 // Use the TESTCASE macro in subclasses of IntlTest.  Define the
@@ -275,11 +291,11 @@ protected:
     
     UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
                                const char *macroArgs, 
-                               int32_t expected, int32_t actual,
+                               int64_t expected, int64_t actual,
                                const char *message, ...);
     UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
                                const char *macroArgs, 
-                               int32_t expected, int32_t actual);
+                               int64_t expected, int64_t actual);
 
     UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
                                const char *macroArgs, 
