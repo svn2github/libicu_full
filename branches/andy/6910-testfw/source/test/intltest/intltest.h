@@ -356,6 +356,7 @@ protected:
       *  and an optional added newline at the end.
       */
     virtual void LL_message( UnicodeString message, UBool newline );
+    virtual void LL_message(const char *message, UBool newline);
 
     // used for collation result reporting, defined here for convenience
 

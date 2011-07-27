@@ -863,6 +863,27 @@ void IntlTest::dataerrln( const UnicodeString &message )
     if (!no_err_msg) LL_message( msg + " - (Are you missing data?)", TRUE );
 }
 
+void IntlTest::dataerrln(const char *fmt, ...)
+{
+    char buffer[4000];
+    const char *datam = "[DATA] ";
+    strcpy(buffer, datam);
+    va_list ap;
+    va_start(ap, fmt);
+    vsprintf(buffer+7, fmt, ap);
+    va_end(ap);
+    IncDataErrorCount();
+    strcat(buffer, " - (Are you missing data?)");
+    const char *msg;
+    if (!warn_on_missing_data) {
+        IncErrorCount();
+        msg = buffer + 7;
+    } else {
+        msg = buffer;
+    }
+    LL_message(buffer, TRUE);
+}
+
 void IntlTest::errcheckln(UErrorCode status, const UnicodeString &message ) {
     if (status == U_FILE_ACCESS_ERROR || status == U_MISSING_RESOURCE_ERROR) {
         dataerrln(message);
@@ -882,7 +903,7 @@ void IntlTest::log(const char *fmt, ...)
     vsprintf(buffer, fmt, ap);
     va_end(ap);
     if( verbose ) {
-        log(UnicodeString(buffer, ""));
+        LL_message( buffer, FALSE );
     }
 }
 
@@ -896,7 +917,7 @@ void IntlTest::logln(const char *fmt, ...)
     vsprintf(buffer, fmt, ap);
     va_end(ap);
     if( verbose ) {
-        logln(UnicodeString(buffer, ""));
+        LL_message(buffer, TRUE);
     }
 }
 
@@ -910,7 +931,7 @@ void IntlTest::info(const char *fmt, ...)
     /* sprintf it just to make sure that the information is valid */
     vsprintf(buffer, fmt, ap);
     va_end(ap);
-    info(UnicodeString(buffer, ""));
+    LL_message( buffer, FALSE );
 }
 
 void IntlTest::infoln(const char *fmt, ...)
@@ -922,7 +943,7 @@ void IntlTest::infoln(const char *fmt, ...)
     /* sprintf it just to make sure that the information is valid */
     vsprintf(buffer, fmt, ap);
     va_end(ap);
-    infoln(UnicodeString(buffer, ""));
+    LL_message( buffer, TRUE );
 }
 
 void IntlTest::err(const char *fmt, ...)
@@ -933,7 +954,8 @@ void IntlTest::err(const char *fmt, ...)
     va_start(ap, fmt);
     vsprintf(buffer, fmt, ap);
     va_end(ap);
-    err(UnicodeString(buffer, ""));
+    IncErrorCount();
+    if (!no_err_msg) LL_message( buffer, FALSE );
 }
 
 void IntlTest::errln(const char *fmt, ...)
@@ -944,19 +966,11 @@ void IntlTest::errln(const char *fmt, ...)
     va_start(ap, fmt);
     vsprintf(buffer, fmt, ap);
     va_end(ap);
-    errln(UnicodeString(buffer, ""));
+    IncErrorCount();
+    if (!no_err_msg) LL_message( buffer, TRUE );
 }
 
-void IntlTest::dataerrln(const char *fmt, ...)
-{
-    char buffer[4000];
-    va_list ap;
 
-    va_start(ap, fmt);
-    vsprintf(buffer, fmt, ap);
-    va_end(ap);
-    dataerrln(UnicodeString(buffer, ""));
-}
 
 void IntlTest::errcheckln(UErrorCode status, const char *fmt, ...)
 {
@@ -968,9 +982,9 @@ void IntlTest::errcheckln(UErrorCode status, const char *fmt, ...)
     va_end(ap);
     
     if (status == U_FILE_ACCESS_ERROR || status == U_MISSING_RESOURCE_ERROR) {
-        dataerrln(UnicodeString(buffer, ""));
+        dataerrln(buffer);
     } else {
-        errln(UnicodeString(buffer, ""));
+        errln(buffer);
     }
 }
 
@@ -979,47 +993,37 @@ void IntlTest::printErrors()
      IntlTest::LL_message(errorList, TRUE);
 }
 
-void IntlTest::LL_message( UnicodeString message, UBool newline )
+void IntlTest::LL_message( UnicodeString message, UBool newline ) {
+    LL_message(CString(message).c_str(), newline);
+}
+
+/**
+  *  Write the message out with each line preceded by indentlevel spaces.
+  *   and an optional added newline at the end.
+  */
+void IntlTest::LL_message( const char *message, UBool newline )
 {
-    // string that starts with a LineFeed character and continues
-    // with spaces according to the current indentation
-    static const UChar indentUChars[] = {
-        '\n',
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32
-    };
-    UnicodeString indent(FALSE, indentUChars, 1 + LL_indentlevel);
-
-    char buffer[10000];
-    int32_t length;
-
-    // stream out the indentation string first if necessary
-    length = indent.extract(1, indent.length(), buffer, sizeof(buffer));
-    if (length > 0) {
-        fwrite(buffer, sizeof(*buffer), length, (FILE *)testoutfp);
+    const char *lineLimit = NULL;
+    for(const char *lineStart = message; ; lineStart=lineLimit) {
+        lineLimit = uprv_strchr(lineStart, '\n');
+        if (lineLimit == NULL) {
+            lineLimit = lineStart + uprv_strlen(lineStart);
+        } else {
+            lineLimit += 1;   // include the terminating new-line
+        }
+        int32_t lineLength = lineLimit - lineStart;
+        if (lineLength > 0) {
+            for (int i=0; i<LL_indentlevel; ++i) {
+                fputc(' ', (FILE *)testoutfp);
+            }
+            fwrite(lineStart, 1, lineLength, (FILE *)testoutfp);
+        }
+        if (*lineLimit==0) {
+            break;
+        }
     }
-
-    // replace each LineFeed by the indentation string
-    message.findAndReplace(UnicodeString((UChar)'\n'), indent);
-
-    // stream out the message
-    length = message.extract(0, message.length(), buffer, sizeof(buffer));
-    if (length > 0) {
-        length = length > 10000 ? 10000 : length;
-        fwrite(buffer, sizeof(*buffer), length, (FILE *)testoutfp);
-    }
-
     if (newline) {
-        char newLine = '\n';
-        fwrite(&newLine, sizeof(newLine), 1, (FILE *)testoutfp);
+        fputc('\n', (FILE *)testoutfp);
     }
 
     // A newline usually flushes the buffer, but
@@ -1637,7 +1641,6 @@ static const char *parseAssertOpts(const char *message, int32_t &opts) {
             ++inp;
         }
         if (uprv_strncmp(inp, "DATA", 4) == 0 && ((opts & DATA) == 0)) {
-            printf("found DATA\n");
             opts |= DATA;
             inp += 4;
             continue;
