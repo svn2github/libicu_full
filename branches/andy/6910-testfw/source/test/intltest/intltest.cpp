@@ -29,11 +29,12 @@
 #include "intltest.h"
 #include "caltztst.h"
 #include "charstr.h"
-#include "itmajor.h"
-#include "cstring.h"
-#include "umutex.h"
-#include "uassert.h"
 #include "cmemory.h"
+#include "cstring.h"
+#include "itmajor.h"
+#include "uassert.h"
+#include "uinvchar.h"
+#include "umutex.h"
 #include "uoptions.h"
 
 #include "putilimp.h" // for uprv_getRawUTCtime()
@@ -840,49 +841,43 @@ void IntlTest::errln( const UnicodeString &message )
 
 void IntlTest::dataerr( const UnicodeString &message )
 {
-    IncDataErrorCount();
-
-    if (!warn_on_missing_data) {
-        IncErrorCount();
-    }
-
-    if (!no_err_msg) LL_message( message, FALSE );
+    dataerrln(CString(message).c_str(), FALSE);
 }
 
 void IntlTest::dataerrln( const UnicodeString &message )
 {
-    IncDataErrorCount();
-    UnicodeString msg;
-    if (!warn_on_missing_data) {
-        IncErrorCount();
-        msg = message;
-    } else {
-        msg = UnicodeString("[DATA] " + message);
-    }
-
-    if (!no_err_msg) LL_message( msg + " - (Are you missing data?)", TRUE );
+    dataerrln(CString(message).c_str(), TRUE);
 }
 
 void IntlTest::dataerrln(const char *fmt, ...)
 {
     char buffer[4000];
-    const char *datam = "[DATA] ";
-    strcpy(buffer, datam);
     va_list ap;
     va_start(ap, fmt);
-    vsprintf(buffer+7, fmt, ap);
+    vsprintf(buffer, fmt, ap);
     va_end(ap);
-    IncDataErrorCount();
-    strcat(buffer, " - (Are you missing data?)");
-    const char *msg;
-    if (!warn_on_missing_data) {
-        IncErrorCount();
-        msg = buffer + 7;
-    } else {
-        msg = buffer;
-    }
-    LL_message(buffer, TRUE);
+    dataerr(buffer, TRUE);
 }
+
+
+void IntlTest::dataerr(const char *message, UBool newLine) {
+    // Helper function, handle the common formatting tasks for
+    //   all variants of dataerr() and dataerrln().
+    IncDataErrorCount();
+    UErrorCode status = U_ZERO_ERROR;
+    CharString  augmentedMessage;
+    if (warn_on_missing_data) {
+        augmentedMessage.append("[DATA] ", status);
+    } else {
+        IncErrorCount();
+    }
+    augmentedMessage.append(message, status);
+    if (!no_err_msg) {
+        augmentedMessage.append(" - (Are you missing data?)", status);
+        LL_message(augmentedMessage.data(), newLine);
+    }
+}
+
 
 void IntlTest::errcheckln(UErrorCode status, const UnicodeString &message ) {
     if (status == U_FILE_ACCESS_ERROR || status == U_MISSING_RESOURCE_ERROR) {
@@ -1690,7 +1685,7 @@ static char * composeAssertMsg(const char *fileName,      // __FILE__ from user
         msgLen = bufferSize;
     }
     
-    // Append the expeted and actual results.  The format and the number of values varies
+    // Append the expected and actual results.  The format and the number of values varies
     //   depending on the type of ASSERT.
     va_list resultArgs;
     va_start(resultArgs, resultFormat);
@@ -1838,17 +1833,29 @@ UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber,
 }
 
 CString::CString(const UnicodeString &us) : data_(NULL) {
-    int32_t outLength = 0;
 #if U_CHARSET_IS_UTF8 || !UCONFIG_NO_CONVERSION
+    int32_t outLength = 0;
     outLength = us.extract(0, us.length(), data_, outLength);
     data_ = new char[outLength+1];
     us.extract(0, us.length(), data_, outLength+1);
 #else
-    // TODO:  Use something with well defined substitution for non-invariant chars.
-    //        Lossy doesn't matter, the error text can be incomplete.
-    outLength = in.extract(0, us.length(), data_, outLength, US_INV);
-    data_ = new char[outLength+1];
-    in.extract(0, us.length(), data_, outLength+1, US_INV);
+    // No general UChar -> char conversion is available.
+    // Convert invariant characters, substitute the rest.
+    // Lossy doesn't matter, error texts can be incomplete, and that is all this
+    //   is being used for.
+    // ICU functions to do an invariant UChar -> char conversion all have assertion failures
+    //   if a non-invariant char is encountered.
+
+    const UChar *ubuf= us.getBuffer();
+    data_ = new char[us.length()+1];
+    for (int i=0; i<us.length(); i++) {
+        if (uprv_isInvariantUString(ubuf+i, 1)) {
+            u_UCharsToChars(ubuf+i, data_+i, 1);
+        } else {
+            data_[i] = '?';
+        }
+    }
+    data_[us.length()] = 0;
 #endif
 }
 

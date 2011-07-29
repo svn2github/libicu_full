@@ -169,6 +169,10 @@ public:
     void dataerrln(const char *fmt, ...);
     void errcheckln(UErrorCode status, const char *fmt, ...);
 
+  private:
+    void dataerr(const char *message, UBool newLine);
+  public:
+
     // Print ALL named errors encountered so far
     void printErrors(); 
         
