@@ -316,5 +316,5 @@ icu4c0:	samples/c0test/Makefile $(NEWLIBDIR)/$(C0DATALIB)
 	@echo === Running tests ===
 	@echo testing samples/c0test/c0test ...
 	@$(MAKE) -C samples/c0test check
-	@$(MAKE) -C test/cintltst ICU4C0=1 check
+	@$(MAKE) -C test/cintltst ICU4C0=1 check CINTLTST_OPTS=-w
 

@@ -94,3 +94,4 @@ COLLATION_SOURCE = $(COLLATION_EMPTY_SOURCE) af.txt ar.txt as.txt az.txt\
  tr.txt uk.txt ur.txt vi.txt yo.txt\
  zh.txt zh_Hant.txt
 
+COLLATION_SOURCE=

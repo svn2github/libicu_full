@@ -22,6 +22,11 @@
 #include "unicode/ucnv_cb.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+
+void *c_malloc(size_t s);
+void c_cleanup(void);
+
 #define log_data_err printf
 #define log_verbose printf
 #define log_err printf
@@ -55,7 +60,7 @@ void *c_malloc(size_t s) {
   return (void*)(next+1);
 }
 
-void c_cleanup() {
+void c_cleanup(void) {
   while(chainDel) {
     void **chainNext = *chainDel;
     free(chainDel);
@@ -457,11 +462,32 @@ void TestQuickCheck()
 }
 
 
+/** 
+ * Print the current platform 
+ */
+static const char *getPlatform(void)
+{
+#if defined(U_PLATFORM)
+	return U_PLATFORM;
+#elif defined(U_WINDOWS)
+	return "Windows";
+#elif defined(U_PALMOS)
+	return "PalmOS";
+#elif defined(_PLATFORM_H)
+	return "Other (POSIX-like)";
+#else
+	return "unknown"
+#endif
+}
+
 int main()
 {
   char *dl = NULL;
   UErrorCode status = U_ZERO_ERROR;
   int fail=0;
+  UVersionInfo icu;
+    char str[200];
+
 
   u_init(&status);
 
@@ -469,6 +495,130 @@ int main()
     fprintf(stderr, "Error: u_init returned %s - check that data was built properly.\n\n\n\n", u_errorName(status));
     return 1;
   }
+
+    printf("<ICUINFO>\n");
+    printf("International Components for Unicode for C/C++\n");
+    printf("%s\n", U_COPYRIGHT_STRING);
+    printf("Compiled-Version: %s\n", U_ICU_VERSION);
+    u_getVersion(icu);
+    u_versionToString(icu, str);
+    printf("Runtime-Version: %s\n", str);
+    printf("Compiled-Unicode-Version: %s\n", U_UNICODE_VERSION);
+    u_getUnicodeVersion(icu);
+    u_versionToString(icu, str);
+    printf("Runtime-Unicode-Version: %s\n", str);
+    printf("Platform: %s\n", getPlatform());
+    {
+      union {
+        uint8_t byte;
+        uint16_t word;
+      } u;
+      u.word=0x0100;
+      if(U_IS_BIG_ENDIAN==u.byte) {
+        printf("U_IS_BIG_ENDIAN: %d\n", U_IS_BIG_ENDIAN);
+      } else {
+        fprintf(stderr, "  error: U_IS_BIG_ENDIAN=%d != %d=actual 'is big endian'\n",
+                U_IS_BIG_ENDIAN, u.byte);
+        status=U_INTERNAL_PROGRAM_ERROR;
+      }
+    }
+    if(U_SIZEOF_WCHAR_T==sizeof(wchar_t)) {
+        printf("U_SIZEOF_WCHAR_T: %d\n", U_SIZEOF_WCHAR_T);
+    } else {
+        fprintf(stderr, "  error: U_SIZEOF_WCHAR_T=%d != %d=sizeof(wchar_t)\n",
+                U_SIZEOF_WCHAR_T, (int)sizeof(wchar_t));
+        status=U_INTERNAL_PROGRAM_ERROR;
+    }
+
+    int charsetFamily;
+    if('A'==0x41) {
+        charsetFamily=U_ASCII_FAMILY;
+    } else if('A'==0xc1) {
+        charsetFamily=U_EBCDIC_FAMILY;
+    } else {
+      charsetFamily=-1;  /* unknown */
+    }
+    if(U_CHARSET_FAMILY==charsetFamily) {
+        printf("U_CHARSET_FAMILY: %d\n", U_CHARSET_FAMILY);
+    } else {
+        fprintf(stderr, "  error: U_CHARSET_FAMILY=%d != %d=actual charset family\n",
+                U_CHARSET_FAMILY, charsetFamily);
+        status=U_INTERNAL_PROGRAM_ERROR;
+    }
+
+#if defined(U_BUILD)
+    printf("Build: %s\n", U_BUILD);
+#if defined(U_HOST)
+    if(strcmp(U_BUILD,U_HOST)) {
+      printf("Host: %s\n", U_HOST);
+    }
+#endif
+#endif
+#if defined(U_CC)
+    printf("C compiler: %s\n", U_CC);
+#endif
+#if defined(U_CXX)
+    printf("C++ compiler: %s\n", U_CXX);
+#endif
+#if defined(CYGWINMSVC)
+    printf("Cygwin: CYGWINMSVC\n");
+#endif
+    printf("ICUDATA: %s\n", U_ICUDATA_NAME);
+    /*do_init();*/
+    /* printf("Data Directory: %s\n", u_getDataDirectory()); */
+    printf("ICU Initialization returned: %s\n", u_errorName(status));
+      /* printf( "Default locale: %s\n", uloc_getDefault()); */
+    {
+      UErrorCode subStatus = U_ZERO_ERROR;
+      /*ulocdata_getCLDRVersion(icu, &subStatus); */
+      printf("CLDR-Version: n/a\n");
+      /* if(U_SUCCESS(subStatus)) { */
+      /*   u_versionToString(icu, str); */
+      /*   printf("CLDR-Version: %s\n", str); */
+      /* } else { */
+      /*   printf("CLDR-Version: %s\n", u_errorName(subStatus)); */
+      /* } */
+    }
+    
+#if !UCONFIG_NO_CONVERSION
+    /*if(noLoad == FALSE)*/
+    {
+      printf("Default converter: %s\n", ucnv_getDefaultName());
+    }
+#endif
+#if !UCONFIG_NO_FORMATTING
+    {
+      UChar buf[100];
+      char buf2[100];
+      UErrorCode subsubStatus= U_ZERO_ERROR;
+      int32_t len;
+
+      len = ucal_getDefaultTimeZone(buf, 100, &subsubStatus);
+      if(U_SUCCESS(subsubStatus)&&len>0) {
+	u_UCharsToChars(buf, buf2, len+1);
+	printf("Default TZ: %s\n", buf2);
+      } else {
+	printf("Default TZ: %s\n", u_errorName(subsubStatus));
+      }
+    }
+    {
+      UErrorCode subStatus = U_ZERO_ERROR;
+      const char *tzVer = ucal_getTZDataVersion(&subStatus);
+      if(U_FAILURE(subStatus)) {
+	tzVer = u_errorName(subStatus);
+      }
+      printf("TZ data version: %s\n", tzVer);
+    }
+#endif
+    
+/* #if U_ENABLE_DYLOAD */
+/*     const char *pluginFile = uplug_getPluginFile(); */
+/*     printf("Plugin file is: %s\n", (pluginFile&&*pluginFile)?pluginFile:"(not set. try setting ICU_PLUGINS to a directory.)"); */
+/* #else */
+/*     fprintf(stderr, "Dynamic Loading: is disabled. No plugins will be loaded at start-up.\n"); */
+/* #endif */
+    printf("</ICUINFO>\n\n");
+  
 
 #if 1
   dl = uloc_getDefault();

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python
 # Copyright (c) 2009 International Business Machines
 # Corporation and others. All Rights Reserved.
 #

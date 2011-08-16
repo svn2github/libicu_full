@@ -125,3 +125,4 @@ GENRB_SOURCE = af.txt af_NA.txt af_ZA.txt ak.txt\
  zh_Hans_CN.txt zh_Hans_HK.txt zh_Hans_MO.txt zh_Hans_SG.txt zh_Hant.txt\
  zh_Hant_HK.txt zh_Hant_MO.txt zh_Hant_TW.txt zu.txt zu_ZA.txt
 
+GENRB_SOURCE=

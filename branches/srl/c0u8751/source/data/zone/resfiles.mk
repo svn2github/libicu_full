@@ -80,3 +80,4 @@ ZONE_SOURCE = af.txt ak.txt am.txt ar.txt\
  zh_Hans_CN.txt zh_Hans_SG.txt zh_Hant.txt zh_Hant_HK.txt zh_Hant_MO.txt\
  zh_Hant_TW.txt zu.txt
 
+ZONE_SOURCE=

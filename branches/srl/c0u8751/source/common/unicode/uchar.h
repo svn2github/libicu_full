@@ -39,7 +39,7 @@ U_CDECL_BEGIN
  * @see u_getUnicodeVersion
  * @stable ICU 2.0
  */
-#define U_UNICODE_VERSION "5.2"
+#define U_UNICODE_VERSION "6.0"
 
 /**
  * \file
@@ -1340,8 +1340,35 @@ enum UBlockCode {
     /** @draft ICU 4.4 */
     UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_C = 197, /*[2A700]*/
 
+    /* New blocks in Unicode 6.0 */
+
+    /** @stable ICU 4.6 */
+    UBLOCK_MANDAIC = 198, /*[0840]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_BATAK = 199, /*[1BC0]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_ETHIOPIC_EXTENDED_A = 200, /*[AB00]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_BRAHMI = 201, /*[11000]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_BAMUM_SUPPLEMENT = 202, /*[16800]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_KANA_SUPPLEMENT = 203, /*[1B000]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_PLAYING_CARDS = 204, /*[1F0A0]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS = 205, /*[1F300]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_EMOTICONS = 206, /*[1F600]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_TRANSPORT_AND_MAP_SYMBOLS = 207, /*[1F680]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_ALCHEMICAL_SYMBOLS = 208, /*[1F700]*/
+    /** @stable ICU 4.6 */
+    UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_D = 209, /*[2B740]*/
+
     /** @stable ICU 2.0 */
-    UBLOCK_COUNT = 198,
+    UBLOCK_COUNT = 210,
 
     /** @stable ICU 2.0 */
     UBLOCK_INVALID_CODE=-1
