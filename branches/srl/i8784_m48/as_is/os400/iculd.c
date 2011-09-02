@@ -44,10 +44,10 @@ static int runcmd(const char *cmd) {
 int main(int argc, const char *argv[]) {
   int i;
 
-  char buf[2048];
-  char opt[100];
-  char objs[1024];
-  char libs[1024];
+  char buf[8048];
+  char opt[4100];
+  char objs[4024];
+  char libs[4024];
   const char *prog="icuprog";
   const char *progshort=prog;
   const char *outputdir=getenv("OUTPUTDIR");
@@ -98,9 +98,37 @@ int main(int argc, const char *argv[]) {
       int n = strlen(argv[i]);
       if(argv[i][n-1]=='o' &&
          argv[i][n-2]=='.') {
+        const char *b = argv[i];
+        char linkbuf[200];
+        char outbuf[100];
+        int nlen = n-2;
+
+        if(nlen >= 10) {
+          nlen = 10;
+        }
+
+        if(readlink(b,linkbuf,200)>0) {
+          /* printf("linkbuf %s for %s\n", linkbuf, b); */
+          /* /qsys.lib/srlicu.lib/currtest.module */
+          char *mend = strrchr(linkbuf,'.');  
+          if(mend) {
+            *mend=0;
+            mend = strrchr(linkbuf,'/');
+            if(mend) {
+              mend++;
+              strcpy(outbuf,mend);
+              b=outbuf;
+              nlen=strlen(b);
+            }
+          }
+        } else {
+          /* perror("readlink");
+             puts(b); */
+        }
+
         strcat(objs,outputdir);
         strcat(objs,"/");
-        strncat(objs,argv[i],n-2);
+        strncat(objs,b,nlen);
         strcat(objs, " ");
       } else if(argv[i][n-1]=='o' &&
          argv[i][n-2]=='s' &&
