@@ -24,6 +24,7 @@
 ********************************************************************************
 */
 
+#define LENIENT_PARSE_TZ_ALL_STYLES TRUE
 #define ZID_KEY_MAX 128
 
 #include "unicode/utypes.h"
@@ -3068,7 +3069,8 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             // Step 4
             // At this point, check for named time zones by looking through
             // the locale data.
-            if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD) {
+            UBool tzParseAllStyles = LENIENT_PARSE_TZ_ALL_STYLES ? lenient : FALSE;
+            if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD || tzParseAllStyles) {
                 UTimeZoneTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
                 ParsePosition tmpPos(start);
                 UnicodeString parsedID;
@@ -3076,26 +3078,29 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                 switch (patternCharIndex) {
                 case UDAT_TIMEZONE_FIELD:
                     if (count < 4) {
-                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType, tzParseAllStyles);
                     } else {
-                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_LONG, text, tmpPos, parsedID, &parsedTimeType, tzParseAllStyles);
                     }
                     break;
                 case UDAT_TIMEZONE_GENERIC_FIELD:
                     if (count < 4) {
-                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_SHORT, text, tmpPos, parsedID, &parsedTimeType, tzParseAllStyles);
                     } else {
-                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_LONG, text, tmpPos, parsedID, &parsedTimeType, tzParseAllStyles);
                     }
                     break;
                 case UDAT_TIMEZONE_SPECIAL_FIELD:
                     if (count < 4) {
-                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType, tzParseAllStyles);
                     } else {
-                        tzFormat()->parse(UTZFMT_STYLE_LOCATION, text, tmpPos, parsedID, &parsedTimeType);
+                        tzFormat()->parse(UTZFMT_STYLE_LOCATION, text, tmpPos, parsedID, &parsedTimeType, tzParseAllStyles);
                     }
                     break;
                 default:
+                    // This block is only used when lenient and pattern is UDAT_TIMEZONE_RFC_FIELD.
+                    // The style used for parse does not matter
+                    tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType, tzParseAllStyles);
                     break;
                 }
                 if (tmpPos.getErrorIndex() < 0) {

@@ -14,14 +14,17 @@
 #include "unicode/timezone.h"
 #include "unicode/simpletz.h"
 #include "unicode/calendar.h"
+#include "unicode/localpointer.h"
 #include "unicode/strenum.h"
 #include "unicode/smpdtfmt.h"
 #include "unicode/uchar.h"
 #include "unicode/basictz.h"
 #include "cstring.h"
 
+#define LENGTHOF(array) (int32_t)((sizeof(array)/sizeof((array)[0])))
+
 static const char* PATTERNS[] = {"z", "zzzz", "Z", "ZZZZ", "v", "vvvv", "V", "VVVV"};
-static const int NUM_PATTERNS = sizeof(PATTERNS)/sizeof(const char*);
+static const int NUM_PATTERNS = LENGTHOF(PATTERNS);
 
 void
 TimeZoneFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
@@ -32,6 +35,7 @@ TimeZoneFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name
     switch (index) {
         TESTCASE(0, TestTimeZoneRoundTrip);
         TESTCASE(1, TestTimeRoundTrip);
+        TESTCASE(2, TestParseAllStyles);
         default: name = ""; break;
     }
 }
@@ -549,6 +553,43 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
     logln((UnicodeString) "Iteration: " + data.testCounts);
 
     delete cal;
+}
+
+void
+TimeZoneFormatTest::TestParseAllStyles() {
+    IcuTestErrorCode errorCode(*this, "TestParseAllStyles");
+    static const char *tzNames[] = {
+        "PT", "PDT", "PST", "United States Time (Los Angeles)"
+    };
+    SimpleTimeZone unknownZone(0, UNICODE_STRING_SIMPLE("Etc/Unknown"));
+    LocalPointer<Calendar> cal(Calendar::createInstance(unknownZone, errorCode));
+    if (errorCode.logIfFailureAndReset("Calendar::createInstance(unknownZone) failed")) {
+        return;
+    }
+    SimpleDateFormat sdf(UNICODE_STRING_SIMPLE("z"), Locale::getEnglish(), errorCode);
+    if (errorCode.logIfFailureAndReset("SimpleDateFormat(z, en) failed")) {
+        return;
+    }
+    for (int32_t patternIndex = 0; patternIndex < NUM_PATTERNS; ++patternIndex) {
+        const char *pattern = PATTERNS[patternIndex];
+        sdf.applyPattern(UnicodeString(pattern, -1, US_INV));
+        for (int32_t nameIndex = 0; nameIndex < LENGTHOF(tzNames); ++nameIndex) {
+            const char *name = tzNames[nameIndex];
+            sdf.setTimeZone(unknownZone);
+            cal->setTimeZone(unknownZone);
+            FieldPosition fpos(0);
+            ParsePosition pos(0);
+            sdf.parse(UnicodeString(name, -1, US_INV), *cal, pos);
+            const TimeZone &tz = cal->getTimeZone();
+            if (pos.getErrorIndex() >= 0 || tz == unknownZone) {
+                errln("SimpleDateFormat(%s).parse(%s) did not recognize the time zone name",
+                      pattern, name);
+            } else {
+                logln("SimpleDateFormat(%s).parse(%s) yields TimeZone.getRawOffset()=%g hours",
+                      pattern, name, tz.getRawOffset() / 3600000.);
+            }
+        }
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
