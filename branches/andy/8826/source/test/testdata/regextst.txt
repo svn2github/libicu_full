@@ -1030,6 +1030,14 @@
 #
 "((.??)+|A)*"                     "<0><1><2></2></1></0>AAAAABBBBBCCCCCDDDDEEEEE"
 
+#
+#    Bug 8826.  Incorrect results with case insensitive matches.
+#
+"AS(X)"                         i "aßx"
+"aßx"                           i "<0>aßx</0>"
+"ASS(X)"                        i "<0>aßx</0>"
+
+
 #  Random debugging, Temporary
 #
 #"^(?:a?b?)*$"	                  "a--"
