@@ -566,7 +566,7 @@ if test $ac_cv_func_mmap_ok = yes
 then
     HAVE_MMAP=1
 else
-    CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_MMAP 0"
+    CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_MMAP=0"
 fi
 AC_SUBST(HAVE_MMAP)
 
