@@ -1,10 +1,10 @@
-# NameAliases-6.0.0.txt
-# Date: 2010-05-10, 11:58:00 PDT [KW]
+# NameAliases-6.1.0.txt
+# Date: 2011-01-19, 19:20:00 UTC [KW]
 #
 # This file is a normative contributory data file in the
 # Unicode Character Database.
 #
-# Copyright (c) 2005-2010 Unicode, Inc.
+# Copyright (c) 2005-2011 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 #
 # This file defines the formal name aliases for Unicode characters.
@@ -31,10 +31,13 @@
 0EA3;LAO LETTER RO
 0EA5;LAO LETTER LO
 0FD0;TIBETAN MARK BKA- SHOG GI MGO RGYAN
+2118;WEIERSTRASS ELLIPTIC FUNCTION
+2448;MICR ON US SYMBOL
+2449;MICR DASH SYMBOL
 A015;YI SYLLABLE ITERATION MARK
 FE18;PRESENTATION FORM FOR VERTICAL RIGHT WHITE LENTICULAR BRACKET
 1D0C5;BYZANTINE MUSICAL SYMBOL FTHORA SKLIRON CHROMA VASIS
 
-# Total code points: 11
+# Total code points: 14
 
 # EOF

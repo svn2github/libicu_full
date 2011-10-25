@@ -1,8 +1,8 @@
-# PropertyValueAliases-6.0.0.txt
-# Date: 2010-07-17, 22:44:06 GMT [MD]
+# PropertyValueAliases-6.1.0.txt
+# Date: 2011-09-16, 21:06:35 GMT [MD]
 #
 # Unicode Character Database
-# Copyright (c) 1991-2010 Unicode, Inc.
+# Copyright (c) 1991-2011 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 # For documentation, see http://www.unicode.org/reports/tr44/
 #
@@ -74,6 +74,7 @@ age; n/a       ; 5.0
 age; n/a       ; 5.1
 age; n/a       ; 5.2
 age; n/a       ; 6.0
+age; n/a       ; 6.1
 age; n/a       ; unassigned
 
 # Alphabetic (Alpha)
@@ -126,6 +127,8 @@ blk; n/a       ; Ancient_Greek_Musical_Notation
 blk; n/a       ; Ancient_Greek_Numbers
 blk; n/a       ; Ancient_Symbols
 blk; n/a       ; Arabic
+blk; n/a       ; Arabic_Extended_A
+blk; n/a       ; Arabic_Mathematical_Alphabetic_Symbols
 blk; n/a       ; Arabic_Presentation_Forms_A      ; Arabic_Presentation_Forms-A
 blk; n/a       ; Arabic_Presentation_Forms_B
 blk; n/a       ; Arabic_Supplement
@@ -148,6 +151,7 @@ blk; n/a       ; Buginese
 blk; n/a       ; Buhid
 blk; n/a       ; Byzantine_Musical_Symbols
 blk; n/a       ; Carian
+blk; n/a       ; Chakma
 blk; n/a       ; Cham
 blk; n/a       ; Cherokee
 blk; n/a       ; CJK_Compatibility
@@ -253,6 +257,10 @@ blk; n/a       ; Mandaic
 blk; n/a       ; Mathematical_Alphanumeric_Symbols
 blk; n/a       ; Mathematical_Operators
 blk; n/a       ; Meetei_Mayek
+blk; n/a       ; Meetei_Mayek_Extensions
+blk; n/a       ; Meroitic_Cursive
+blk; n/a       ; Meroitic_Hieroglyphs
+blk; n/a       ; Miao
 blk; n/a       ; Miscellaneous_Mathematical_Symbols_A
 blk; n/a       ; Miscellaneous_Mathematical_Symbols_B
 blk; n/a       ; Miscellaneous_Symbols
@@ -289,12 +297,15 @@ blk; n/a       ; Rumi_Numeral_Symbols
 blk; n/a       ; Runic
 blk; n/a       ; Samaritan
 blk; n/a       ; Saurashtra
+blk; n/a       ; Sharada
 blk; n/a       ; Shavian
 blk; n/a       ; Sinhala
 blk; n/a       ; Small_Form_Variants
+blk; n/a       ; Sora_Sompeng
 blk; n/a       ; Spacing_Modifier_Letters
 blk; n/a       ; Specials
 blk; n/a       ; Sundanese
+blk; n/a       ; Sundanese_Supplement
 blk; n/a       ; Superscripts_And_Subscripts
 blk; n/a       ; Supplemental_Arrows_A
 blk; n/a       ; Supplemental_Arrows_B
@@ -311,6 +322,7 @@ blk; n/a       ; Tai_Le
 blk; n/a       ; Tai_Tham
 blk; n/a       ; Tai_Viet
 blk; n/a       ; Tai_Xuan_Jing_Symbols
+blk; n/a       ; Takri
 blk; n/a       ; Tamil
 blk; n/a       ; Telugu
 blk; n/a       ; Thaana
@@ -505,7 +517,7 @@ gc ; Lm        ; Modifier_Letter
 gc ; Lo        ; Other_Letter
 gc ; Lt        ; Titlecase_Letter
 gc ; Lu        ; Uppercase_Letter
-gc ; M         ; Mark                             # Mc | Me | Mn
+gc ; M         ; Mark                             ; Combining_Mark                   # Mc | Me | Mn
 gc ; Mc        ; Spacing_Mark
 gc ; Me        ; Enclosing_Mark
 gc ; Mn        ; Nonspacing_Mark
@@ -709,6 +721,7 @@ jg ; n/a       ; Qaf
 jg ; n/a       ; Qaph
 jg ; n/a       ; Reh
 jg ; n/a       ; Reversed_Pe
+jg ; n/a       ; Rohingya_Yeh
 jg ; n/a       ; Sad
 jg ; n/a       ; Sadhe
 jg ; n/a       ; Seen
@@ -756,6 +769,7 @@ lb ; EX        ; Exclamation
 lb ; GL        ; Glue
 lb ; H2        ; H2
 lb ; H3        ; H3
+lb ; HL        ; Hebrew_Letter
 lb ; HY        ; Hyphen
 lb ; ID        ; Ideographic
 lb ; IN        ; Inseparable                      ; Inseperable
@@ -928,6 +942,7 @@ sc ; Brah      ; Brahmi
 sc ; Brai      ; Braille
 sc ; Bugi      ; Buginese
 sc ; Buhd      ; Buhid
+sc ; Cakm      ; Chakma
 sc ; Cans      ; Canadian_Aboriginal
 sc ; Cari      ; Carian
 sc ; Cham      ; Cham
@@ -969,6 +984,8 @@ sc ; Lisu      ; Lisu
 sc ; Lyci      ; Lycian
 sc ; Lydi      ; Lydian
 sc ; Mand      ; Mandaic
+sc ; Merc      ; Meroitic_Cursive
+sc ; Mero      ; Meroitic_Hieroglyphs
 sc ; Mlym      ; Malayalam
 sc ; Mong      ; Mongolian
 sc ; Mtei      ; Meetei_Mayek
@@ -982,6 +999,7 @@ sc ; Osma      ; Osmanya
 sc ; Phag      ; Phags_Pa
 sc ; Phli      ; Inscriptional_Pahlavi
 sc ; Phnx      ; Phoenician
+sc ; Plrd      ; Miao
 sc ; Prti      ; Inscriptional_Parthian
 sc ; Rjng      ; Rejang
 sc ; Runr      ; Runic
@@ -989,11 +1007,14 @@ sc ; Samr      ; Samaritan
 sc ; Sarb      ; Old_South_Arabian
 sc ; Saur      ; Saurashtra
 sc ; Shaw      ; Shavian
+sc ; Shrd      ; Sharada
 sc ; Sinh      ; Sinhala
+sc ; Sora      ; Sora_Sompeng
 sc ; Sund      ; Sundanese
 sc ; Sylo      ; Syloti_Nagri
 sc ; Syrc      ; Syriac
 sc ; Tagb      ; Tagbanwa
+sc ; Takr      ; Takri
 sc ; Tale      ; Tai_Le
 sc ; Talu      ; New_Tai_Lue
 sc ; Taml      ; Tamil

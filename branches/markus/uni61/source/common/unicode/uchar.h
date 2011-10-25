@@ -39,7 +39,7 @@ U_CDECL_BEGIN
  * @see u_getUnicodeVersion
  * @stable ICU 2.0
  */
-#define U_UNICODE_VERSION "6.0"
+#define U_UNICODE_VERSION "6.1"
 
 /**
  * \file
@@ -1383,8 +1383,33 @@ enum UBlockCode {
     /** @stable ICU 4.6 */
     UBLOCK_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_D = 209, /*[2B740]*/
 
+    /* New blocks in Unicode 6.1 */
+
+    /** @stable ICU 49 */
+    UBLOCK_ARABIC_EXTENDED_A = 210, /*[08A0]*/
+    /** @stable ICU 49 */
+    UBLOCK_ARABIC_MATHEMATICAL_ALPHABETIC_SYMBOLS = 211, /*[1EE00]*/
+    /** @stable ICU 49 */
+    UBLOCK_CHAKMA = 212, /*[11100]*/
+    /** @stable ICU 49 */
+    UBLOCK_MEETEI_MAYEK_EXTENSIONS = 213, /*[AAE0]*/
+    /** @stable ICU 49 */
+    UBLOCK_MEROITIC_CURSIVE = 214, /*[109A0]*/
+    /** @stable ICU 49 */
+    UBLOCK_MEROITIC_HIEROGLYPHS = 215, /*[10980]*/
+    /** @stable ICU 49 */
+    UBLOCK_MIAO = 216, /*[16F00]*/
+    /** @stable ICU 49 */
+    UBLOCK_SHARADA = 217, /*[11180]*/
+    /** @stable ICU 49 */
+    UBLOCK_SORA_SOMPENG = 218, /*[110D0]*/
+    /** @stable ICU 49 */
+    UBLOCK_SUNDANESE_SUPPLEMENT = 219, /*[1CC0]*/
+    /** @stable ICU 49 */
+    UBLOCK_TAKRI = 220, /*[11680]*/
+
     /** @stable ICU 2.0 */
-    UBLOCK_COUNT = 210,
+    UBLOCK_COUNT = 221,
 
     /** @stable ICU 2.0 */
     UBLOCK_INVALID_CODE=-1
