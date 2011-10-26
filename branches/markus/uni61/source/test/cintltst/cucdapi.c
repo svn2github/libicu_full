@@ -306,22 +306,24 @@ void TestUScriptCodeAPI(){
         static const char* expectedLong[] = {
             "Balinese", "Batak", "Blis", "Brahmi", "Cham", "Cirt", "Cyrs", "Egyd", "Egyh", "Egyptian_Hieroglyphs", 
             "Geok", "Hans", "Hant", "Hmng", "Hung", "Inds", "Javanese", "Kayah_Li", "Latf", "Latg", 
-            "Lepcha", "Lina", "Mandaic", "Maya", "Mero", "Nko", "Old_Turkic", "Perm", "Phags_Pa", "Phoenician", 
-            "Plrd", "Roro", "Sara", "Syre", "Syrj", "Syrn", "Teng", "Vai", "Visp", "Cuneiform", 
+            "Lepcha", "Lina", "Mandaic", "Maya", "Meroitic_Hieroglyphs", "Nko", "Old_Turkic", "Perm", "Phags_Pa", "Phoenician", 
+            "Miao", "Roro", "Sara", "Syre", "Syrj", "Syrn", "Teng", "Vai", "Visp", "Cuneiform", 
             "Zxxx", "Unknown",
             "Carian", "Jpan", "Tai_Tham", "Lycian", "Lydian", "Ol_Chiki", "Rejang", "Saurashtra", "Sgnw", "Sundanese",
             "Moon", "Meetei_Mayek",
             /* new in ICU 4.0 */
-            "Imperial_Aramaic", "Avestan", "Cakm", "Kore",
+            "Imperial_Aramaic", "Avestan", "Chakma", "Kore",
             "Kaithi", "Mani", "Inscriptional_Pahlavi", "Phlp", "Phlv", "Inscriptional_Parthian", "Samaritan", "Tai_Viet",
             "Zmth", "Zsym",
             /* new in ICU 4.4 */
             "Bamum", "Lisu", "Nkgb", "Old_South_Arabian",
             /* new in ICU 4.6 */
-            "Bass", "Dupl", "Elba", "Gran", "Kpel", "Loma", "Mend", "Merc",
+            "Bass", "Dupl", "Elba", "Gran", "Kpel", "Loma", "Mend", "Meroitic_Cursive",
             "Narb", "Nbat", "Palm", "Sind", "Wara",
             /* new in ICU 4.8 */
-            "Afak", "Jurc", "Mroo", "Nshu", "Shrd", "Sora", "Takr", "Tang", "Wole",
+            "Afak", "Jurc", "Mroo", "Nshu", "Sharada", "Sora_Sompeng", "Takri", "Tang", "Wole",
+            /* new in ICU 49 */
+            "Khoj", "Tirh",
         };
         static const char* expectedShort[] = {
             "Bali", "Batk", "Blis", "Brah", "Cham", "Cirt", "Cyrs", "Egyd", "Egyh", "Egyp", 
@@ -342,6 +344,8 @@ void TestUScriptCodeAPI(){
             "Narb", "Nbat", "Palm", "Sind", "Wara",
             /* new in ICU 4.8 */
             "Afak", "Jurc", "Mroo", "Nshu", "Shrd", "Sora", "Takr", "Tang", "Wole",
+            /* new in ICU 49 */
+            "Khoj", "Tirh",
         };
         int32_t j = 0;
         if(LENGTHOF(expectedLong)!=(USCRIPT_CODE_LIMIT-USCRIPT_BALINESE)) {

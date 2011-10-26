@@ -1586,6 +1586,7 @@ typedef enum UJoiningGroup {
     U_JG_BURUSHASKI_YEH_BARREE, /**< @stable ICU 4.0 */
     U_JG_FARSI_YEH, /**< @stable ICU 4.4 */
     U_JG_NYA,       /**< @stable ICU 4.4 */
+    U_JG_ROHINGYA_YEH,  /**< @stable ICU 49 */
     U_JG_COUNT
 } UJoiningGroup;
 
@@ -1706,7 +1707,8 @@ typedef enum ULineBreak {
     U_LB_JT = 34,                /*[JT]*/
     U_LB_JV = 35,                /*[JV]*/
     U_LB_CLOSE_PARENTHESIS = 36, /*[CP]*/ /* new in Unicode 5.2/ICU 4.4 */
-    U_LB_COUNT = 37
+    U_LB_HEBREW_LETTER = 37,     /*[HL]*/ /* new in Unicode 6.1/ICU 49 */
+    U_LB_COUNT = 38
 } ULineBreak;
 
 /**

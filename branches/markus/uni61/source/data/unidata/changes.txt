@@ -52,9 +52,6 @@ Unicode 6.1 update
   -> add to UCharacter.UnicodeBlock objects
     Eclipse find     UBLOCK_([^ ]+) = [0-9]+, (/.+)
             replace  public static final UnicodeBlock \1 = new UnicodeBlock("\1", \1_ID); \2
-
-@@@ TODO @@@
-
 - 1 new Joining_Group (jg) value:
   Rohingya_Yeh
   -> uchar.h & UCharacter.JoiningGroup
@@ -70,7 +67,6 @@ Unicode 6.1 update
   sc ; Sora      ; Sora_Sompeng
   sc ; Takr      ; Takri
   -> remove these from SyntheticPropertyValueAliases.txt
-  -> add alias USCRIPT_MANDAIC to USCRIPT_MANDAEAN
   -> fix expectedLong names in cucdapi.c/TestUScriptCodeAPI()
       and in com.ibm.icu.dev.test.lang.TestUScript.java
 - 2 new script codes from ISO 15924 http://www.unicode.org/iso15924/codechanges.html
@@ -106,6 +102,7 @@ Unicode 6.1 update
   the default Other value to explicit Control;
   should not matter to ICU?
 
+* build ICU (make install)
 * build Unicode tools using CMake+make
 
 * run genpname/preparse.pl (on Linux)
@@ -123,6 +120,8 @@ Unicode 6.1 update
 - ~/svn.icu/tools/trunk/bld/unicode/c$ genpname/genpname -v -d ~/svn.icu/trunk/src/source/data/in
 - ~/svn.icu/tools/trunk/bld/unicode/c$ genpname/genpname -v -d ~/svn.icu/trunk/src/source/common --csource
 - rebuild ICU & tools
+
+@@@ TODO @@@
 
 * update source/data/unidata/norm2/nfkc_cf.txt
 - follow the instructions in nfkc_cf.txt for updating it from DerivedNormalizationProps.txt
