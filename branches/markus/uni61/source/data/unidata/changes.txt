@@ -141,39 +141,18 @@ Unicode 6.1 update
 - nothing new in 6.1, no test file to update
 
 * generate core properties data files
+- change the UCA version in source/data/unidata/FractionalUCA.txt to match the new Unicode version
 - ~/svn.icu/tools/trunk/src/unicode$ ./makeprops.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
-
-@@@ TODO @@@
-
-ICU coll/root.res build error:
-
-make[1]: Entering directory `/home/mscherer/svn.icu/trunk/dbg/data'
-LD_LIBRARY_PATH=../lib:../stubdata:../tools/ctestfw:$LD_LIBRARY_PATH  ../bin/genrb -k -i ./out/build/icudt49l -s ../../src/source/data/coll -d ./out/build/icudt49l/coll root.txt
-../../src/source/data/coll/root.txt:18: warning: %Collation could not be constructed from CollationElements - check context!
-../../src/source/data/coll/root.txt:18: warning:   UErrorCode=U_INVALID_FORMAT_ERROR  UParseError={ line=0 offset=0 pre=<> post=<> }
-../../src/source/data/coll/root.txt:15: parse error. Stopped parsing resource with U_INVALID_FORMAT_ERROR
-couldn't parse the file root.txt. Error:U_INVALID_FORMAT_ERROR
-make[1]: *** [out/build/icudt49l/coll/root.res] Error 3
-make[1]: Leaving directory `/home/mscherer/svn.icu/trunk/dbg/data'
-make: *** [all-recursive] Error 2
-
 - rebuild ICU & tools
+  + if genrb fails to build coll/root.res with an U_INVALID_FORMAT_ERROR,
+    check if the UCA version in FractionalUCA.txt matches the new Unicode version
+    (see step above)
 - run makeuca.sh so that genuca picks up the new nfc.nrm:
   ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
+  (not necessary any more as an additional step since the NFC/NFD data is currently loaded??)
 - rebuild ICU & tools
 
-* implement new Script_Extensions property (provisional)
-- parser & generator: genprops & uprops.icu
-- uscript.h, uprops.h, uchar.c, uniset_props.cpp and others, plus cintltst/cucdapi.c & intltest/usettest.cpp
-- UScript.java, UCharacterProperty.java, UnicodeSet.java, TestUScript.java, UnicodeSetTest.java
-
-* switch ubidi.icu, ucase.icu and uprops.icu from UTrie to UTrie2
-- (one-time change)
-- genbidi/gencase/genprops tools changes
-- re-run makeprops.sh (see above)
-- UCharacterProperty.java, UCharacterTypeIterator.java,
-  UBiDiProps.java, UCaseProps.java, and several others with minor changes;
-  UCharacterPropertyReader.java deleted and its code folded into UCharacterProperty.java
+@@@ TODO @@@
 
 * update Java data files
 - refresh just the UCD-related files, just to be safe

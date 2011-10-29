@@ -3,7 +3,8 @@
 # VERSION: UCA=6.0.0, UCD=6.0.0
 # For a description of the format and usage, see CollationAuxiliary.html
 
-[UCA version = 6.0.0]
+# UCA 6.0 data, but we need to update this temporarily to match the new UCD version.
+[UCA version = 6.1.0]
 
 0000; [,,]
 0001; [,,]

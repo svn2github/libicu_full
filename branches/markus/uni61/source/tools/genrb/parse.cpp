@@ -985,11 +985,14 @@ addCollation(ParseState* state, struct SResource  *result, uint32_t startline, U
                       *status = intStatus;
                       return NULL;
                     }
-                    warning(line, "%%Collation could not be constructed from CollationElements - check context!");
                     char preBuffer[100], postBuffer[100];
                     escape(parseError.preContext, preBuffer);
                     escape(parseError.postContext, postBuffer);
-                    warning(line, "  UErrorCode=%s  UParseError={ line=%d offset=%d pre=<> post=<> }",
+                    warning(line,
+                            "%%%%CollationBin could not be constructed from CollationElements\n"
+                            "  check context, check that the FractionalUCA.txt UCA version "
+                            "matches the current UCD version\n"
+                            "  UErrorCode=%s  UParseError={ line=%d offset=%d pre=<> post=<> }",
                             u_errorName(intStatus),
                             parseError.line,
                             parseError.offset,
