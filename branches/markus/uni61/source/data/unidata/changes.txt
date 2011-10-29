@@ -24,6 +24,9 @@ Unicode 6.1 update
 - uchar.h
   (configure.in & configure: have been modified to extract the version from uchar.h)
 - com.ibm.icu.util.VersionInfo
+- icutools/unicode/makedefs.sh
+  + also review & update other definitions in that file,
+    e.g. the ICU version in this path: BLD_DATA_FILES=$ICU_BLD/data/out/build/icudt49l
 
 *** data files & enums & parser code
 
@@ -121,25 +124,39 @@ Unicode 6.1 update
 - ~/svn.icu/tools/trunk/bld/unicode/c$ genpname/genpname -v -d ~/svn.icu/trunk/src/source/common --csource
 - rebuild ICU & tools
 
-@@@ TODO @@@
-
 * update source/data/unidata/norm2/nfkc_cf.txt
 - follow the instructions in nfkc_cf.txt for updating it from DerivedNormalizationProps.txt
 
 * update source/data/unidata/norm2/uts46.txt
-- download http://www.unicode.org/Public/idna/6.0.0/IdnaMappingTable.txt
+- download http://www.unicode.org/Public/idna/6.1.0/IdnaMappingTable.txt
   to ~/svn.icu/tools/trunk/src/unicode/py
-- adjust idna2nrm.py to handle new disallowed_STD3_valid and disallowed_STD3_mapped values
+- adjust idna2nrm.py to remove "; NV8": For UTS #46, we do not care about "not valid in IDNA2008".
 - ~/svn.icu/tools/trunk/src/unicode/py$ ./idna2nrm.py
 - ~/svn.icu/tools/trunk/src/unicode/py$ cp uts46.txt ~/svn.icu/trunk/src/source/data/unidata/norm2
 
 * update uts46test.cpp and UTS46Test.java if there are new characters that are equivalent to
   sequences with non-LDH ASCII (that is, their decompositions contain '=' or similar)
 - grep IdnaMappingTable.txt or uts46.txt for "disallowed_STD3_valid" on non-ASCII characters
-- Unicode 6.0: U+2260, U+226E, U+226F
+- Unicode 6.0..6.1: U+2260, U+226E, U+226F
+- nothing new in 6.1, no test file to update
 
 * generate core properties data files
 - ~/svn.icu/tools/trunk/src/unicode$ ./makeprops.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
+
+@@@ TODO @@@
+
+ICU coll/root.res build error:
+
+make[1]: Entering directory `/home/mscherer/svn.icu/trunk/dbg/data'
+LD_LIBRARY_PATH=../lib:../stubdata:../tools/ctestfw:$LD_LIBRARY_PATH  ../bin/genrb -k -i ./out/build/icudt49l -s ../../src/source/data/coll -d ./out/build/icudt49l/coll root.txt
+../../src/source/data/coll/root.txt:18: warning: %Collation could not be constructed from CollationElements - check context!
+../../src/source/data/coll/root.txt:18: warning:   UErrorCode=U_INVALID_FORMAT_ERROR  UParseError={ line=0 offset=0 pre=<> post=<> }
+../../src/source/data/coll/root.txt:15: parse error. Stopped parsing resource with U_INVALID_FORMAT_ERROR
+couldn't parse the file root.txt. Error:U_INVALID_FORMAT_ERROR
+make[1]: *** [out/build/icudt49l/coll/root.res] Error 3
+make[1]: Leaving directory `/home/mscherer/svn.icu/trunk/dbg/data'
+make: *** [all-recursive] Error 2
+
 - rebuild ICU & tools
 - run makeuca.sh so that genuca picks up the new nfc.nrm:
   ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
