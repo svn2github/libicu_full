@@ -798,11 +798,11 @@ LMBCSConversionWorker (
    {
    case 4:
       *pLMBCS++ = (ulmbcs_byte_t)(value >> 24);
-   case 3:
+   case 3: /*fall through*/
       *pLMBCS++ = (ulmbcs_byte_t)(value >> 16);
-   case 2:
+   case 2: /*fall through*/
       *pLMBCS++ = (ulmbcs_byte_t)(value >> 8);
-   case 1:
+   case 1: /*fall through*/
       *pLMBCS++ = (ulmbcs_byte_t)value;
    default:
       /* will never occur */

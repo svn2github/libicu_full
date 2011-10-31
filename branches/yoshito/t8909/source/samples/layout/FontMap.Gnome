@@ -3,6 +3,6 @@
 # This is a sample FontMap file for Linux.
 # Fonts are specified by file names.
 
- DEVANAGARI: raghu.ttf
-       THAI: angsd___.ttf
-	DEFAULT: CODE2000.TTF
+# DEVANAGARI: raghu.ttf
+       #THAI: angsd___.ttf
+	DEFAULT: Arial.ttf

@@ -1083,7 +1083,7 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
             }
         }
 
-        #ifdef RBBI_DEBUG
+       #ifdef RBBI_DEBUG
             if (fTrace) {
                 RBBIDebugPrintf("             %4ld   ", utext_getNativeIndex(fText));
                 if (0x20<=c && c<0x7f) {
@@ -1097,6 +1097,7 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
 
         // State Transition - move machine to its next state
         //
+        U_ASSERT(category<fData->fHeader->fCatCount);
         state = row->fNextState[category];
         row = (RBBIStateTableRow *)
             // (statetable->fTableData + (statetable->fRowLen * state));
@@ -1312,6 +1313,7 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable)
 
         // State Transition - move machine to its next state
         //
+        U_ASSERT(category<fData->fHeader->fCatCount);
         state = row->fNextState[category];
         row = (RBBIStateTableRow *)
             (statetable->fTableData + (statetable->fRowLen * state));

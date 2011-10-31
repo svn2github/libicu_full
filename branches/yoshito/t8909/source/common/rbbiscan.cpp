@@ -992,6 +992,7 @@ void RBBIRuleScanner::parse() {
             if (tableEl->fCharClass >= 128 && tableEl->fCharClass < 240 &&   // Table specs a char class &&
                 fC.fEscaped == FALSE &&                                      //   char is not escaped &&
                 fC.fChar != (UChar32)-1) {                                   //   char is not EOF
+                U_ASSERT((tableEl->fCharClass-128) < sizeof(fRuleSets)/sizeof(fRuleSets[0]));
                 if (fRuleSets[tableEl->fCharClass-128].contains(fC.fChar)) {
                     // Table row specified a character class, or set of characters,
                     //   and the current char matches it.
