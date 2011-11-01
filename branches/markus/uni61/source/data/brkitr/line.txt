@@ -69,6 +69,7 @@ $CP = [:LineBreak =  Close_Parenthesis:];
 $CR = [:LineBreak =  Carriage_Return:];
 $EX = [:LineBreak =  Exclamation:];
 $GL = [:LineBreak =  Glue:];
+$HL = [:LineBreak =  Hebrew_Letter:];
 $HY = [:LineBreak =  Hyphen:];
 $H2 = [:LineBreak =  H2:];
 $H3 = [:LineBreak =  H3:];
@@ -121,6 +122,7 @@ $CLcm = $CL $CM*;
 $CPcm = $CP $CM*;
 $EXcm = $EX $CM*;
 $GLcm = $GL $CM*;
+$HLcm = $HL $CM*;
 $HYcm = $HY $CM*;
 $H2cm = $H2 $CM*;
 $H3cm = $H3 $CM*;
@@ -154,6 +156,7 @@ $CL $CM+;
 $CP $CM+;
 $EX $CM+;
 $GL $CM+;
+$HL $CM+;
 $HY $CM+;
 $H2 $CM+;
 $H3 $CM+;
@@ -190,7 +193,7 @@ $CANT_CM = [ $SP $BK $CR $LF $NL $ZW $CM];       # Bases that can't take CMs
 #            so for this one case we need to manually list out longer sequences.
 #
 $AL_FOLLOW_NOCM = [$BK $CR $LF $NL $ZW $SP];
-$AL_FOLLOW_CM   = [$CL $CP $EX $IS $SY $WJ $GL $OP $QU $BA $HY $NS $IN $NU $ALPlus];
+$AL_FOLLOW_CM   = [$CL $CP $EX $HL $IS $SY $WJ $GL $OP $QU $BA $HY $NS $IN $NU $ALPlus];
 $AL_FOLLOW      = [$AL_FOLLOW_NOCM $AL_FOLLOW_CM];
 
 
@@ -330,8 +333,14 @@ $LB20NonBreaks $CM* ($BAcm | $HYcm | $NScm);
 $BBcm [^$CB];                                  #  $BB  x
 $BBcm $LB20NonBreaks $CM*;
 
+# LB 21a Don't brak after Hebrew + Hyphen
+#   HL (HL | BA) x
+#  
+# $HLcm $HYcm;
+# $HLcm $BAcm;
+
 # LB 22
-$ALcm    $INcm;
+($ALcm | $HLcm) $INcm;
 $CM+     $INcm;     #  by rule 10, any otherwise unattached CM behaves as AL
 $IDcm    $INcm;
 $INcm    $INcm;
@@ -341,15 +350,17 @@ $NUcm    $INcm;
 # $LB 23
 $IDcm  $POcm;
 $ALcm  $NUcm;       # includes $LB19
+$HLcm  $NUcm;
 $CM+   $NUcm;       # Rule 10, any otherwise unattached CM behaves as AL
 $NUcm  $ALcm;
+$NUcm  $HLcm;
 
 #
 # LB 24
 #
 $PRcm $IDcm;
-$PRcm $ALcm;
-$POcm $ALcm;
+$PRcm ($ALcm | $HLcm);
+$POcm ($ALcm | $HLcm);
 
 #
 # LB 25   Numbers.
@@ -370,16 +381,16 @@ $PRcm ($JLcm | $JVcm | $JTcm | $H2cm | $H3cm);
 
 # LB 28   Do not break between alphabetics
 #
-$ALcm $ALcm;
-$CM+ $ALcm;      # The $CM+ is from rule 10, an unattached CM is treated as AL
+($ALcm | $HLcm) ($ALcm | $HLcm);
+$CM+ ($ALcm | $HLcm);      # The $CM+ is from rule 10, an unattached CM is treated as AL
 
 # LB 29
-$IScm $ALcm;
+$IScm ($ALcm | $HLcm);
 
 # LB 30
-($ALcm | $NUcm) $OPcm;
+($ALcm | $HLcm | $NUcm) $OPcm;
 $CM+ $OPcm;         # The $CM+ is from rule 10, an unattached CM is treated as AL.          
-$CPcm ($ALcm | $NUcm);
+$CPcm ($ALcm | $HLcm | $NUcm);
 
 
 #
@@ -397,6 +408,7 @@ $CM+ $CL;
 $CM+ $CP;
 $CM+ $EX;
 $CM+ $GL;
+$CM+ $HL;
 $CM+ $HY;
 $CM+ $H2;
 $CM+ $H3;
@@ -557,20 +569,20 @@ $CM* [$LB20NonBreaks-$CM] $CM* $BB;                   #  BB x .
 
 
 # LB 22
-$CM* $IN $CM* $ALPlus;
+$CM* $IN $CM* ($ALPlus | $HL);
 $CM* $IN $CM* $ID;
 $CM* $IN $CM* $IN;
 $CM* $IN $CM* $NU;
 
 # LB 23
 $CM* $PO $CM* $ID;
-$CM* $NU $CM* $ALPlus;
-$CM* $ALPlus $CM* $NU;
+$CM* $NU $CM* ($ALPlus | $HL);
+$CM* ($ALPlus | $HL) $CM* $NU;
 
 # LB 24
 $CM* $ID $CM* $PR;
-$CM* $ALPlus $CM* $PR;
-$CM* $ALPlus $CM* $PO;
+$CM* ($ALPlus | $HL) $CM* $PR;
+$CM* ($ALPlus | $HL) $CM* $PO;
 
 
 # LB 25
@@ -587,15 +599,15 @@ $CM* $PO $CM* ($H3 | $H2 | $JT | $JV | $JL);
 $CM* ($H3 | $H2 | $JT | $JV | $JL) $CM* $PR;
 
 # LB 28
-$CM* $ALPlus $CM* $ALPlus;
+$CM* ($ALPlus | $HL) $CM* ($ALPlus | $HL);
 
 
 # LB 29
-$CM* $ALPlus $CM* $IS;
+$CM* ($ALPlus | $HL) $CM* $IS;
 
 # LB 30
-$CM* $OP $CM* ($ALPlus | $NU);
-$CM* ($ALPlus | $NU) $CM* $CP;
+$CM* $OP $CM* ($ALPlus | $HL | $NU);
+$CM* ($ALPlus | $HL | $NU) $CM* $CP;
 
 
 ## -------------------------------------------------
