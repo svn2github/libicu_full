@@ -53,6 +53,7 @@ Disclaimer and license
 #include "cstring.h"
 #include "cmemory.h"
 #include "punycode.h"
+#include "uassert.h"
 
 
 /* Punycode ----------------------------------------------------------------- */
@@ -407,6 +408,7 @@ u_strFromPunycode(const UChar *src, int32_t srcLength,
         }
     }
     destLength=basicLength=destCPCount=j;
+    U_ASSERT(destLength>=0);
 
     while(j>0) {
         b=src[--j];
@@ -573,6 +575,7 @@ u_strFromPunycode(const UChar *src, int32_t srcLength,
             }
         }
         destLength+=cpLength;
+        U_ASSERT(destLength>=0);
         ++i;
     }
 
