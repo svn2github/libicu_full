@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1996-2010, International Business Machines Corporation and    *
+* Copyright (C) 1996-2011, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 */
@@ -418,7 +418,7 @@ const CollationElementIterator& CollationElementIterator::operator=(
         }
 
         /* start and end of string */
-        coliter->endp = coliter->string + length;
+        coliter->endp = coliter->string == NULL ? NULL : coliter->string + length;
 
         /* handle writable buffer here */
 
