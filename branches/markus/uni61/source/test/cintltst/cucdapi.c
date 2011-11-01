@@ -445,31 +445,31 @@ void TestGetScriptExtensions() {
     errorCode=U_PARSE_ERROR;
     length=uscript_getScriptExtensions(0x0640, scripts, LENGTHOF(scripts), &errorCode);
     if(errorCode!=U_PARSE_ERROR) {
-        log_err("uscript_getScriptExtensions(U_PARSE_ERROR) did not preserve the UErrorCode - %s\n",
+        log_err("uscript_getScriptExtensions(U+0640, U_PARSE_ERROR) did not preserve the UErrorCode - %s\n",
               u_errorName(errorCode));
     }
     errorCode=U_ZERO_ERROR;
     length=uscript_getScriptExtensions(0x0640, NULL, LENGTHOF(scripts), &errorCode);
     if(errorCode!=U_ILLEGAL_ARGUMENT_ERROR) {
-        log_err("uscript_getScriptExtensions(NULL) did not set U_ILLEGAL_ARGUMENT_ERROR - %s\n",
+        log_err("uscript_getScriptExtensions(U+0640, NULL) did not set U_ILLEGAL_ARGUMENT_ERROR - %s\n",
               u_errorName(errorCode));
     }
     errorCode=U_ZERO_ERROR;
     length=uscript_getScriptExtensions(0x0640, scripts, -1, &errorCode);
     if(errorCode!=U_ILLEGAL_ARGUMENT_ERROR) {
-        log_err("uscript_getScriptExtensions(capacity<0) did not set U_ILLEGAL_ARGUMENT_ERROR - %s\n",
+        log_err("uscript_getScriptExtensions(U+0640, capacity<0) did not set U_ILLEGAL_ARGUMENT_ERROR - %s\n",
               u_errorName(errorCode));
     }
     errorCode=U_ZERO_ERROR;
     length=uscript_getScriptExtensions(0x0640, scripts, 0, &errorCode);
-    if(errorCode!=U_BUFFER_OVERFLOW_ERROR || length!=2) {
-        log_err("uscript_getScriptExtensions(capacity=0: pure preflighting)=%d != 2 - %s\n",
+    if(errorCode!=U_BUFFER_OVERFLOW_ERROR || length!=3) {
+        log_err("uscript_getScriptExtensions(U+0640, capacity=0: pure preflighting)=%d != 3 - %s\n",
               (int)length, u_errorName(errorCode));
     }
     errorCode=U_ZERO_ERROR;
     length=uscript_getScriptExtensions(0x0640, scripts, 1, &errorCode);
-    if(errorCode!=U_BUFFER_OVERFLOW_ERROR || length!=2) {
-        log_err("uscript_getScriptExtensions(capacity=1: preflighting)=%d != 2 - %s\n",
+    if(errorCode!=U_BUFFER_OVERFLOW_ERROR || length!=3) {
+        log_err("uscript_getScriptExtensions(U+0640, capacity=1: preflighting)=%d != 3 - %s\n",
               (int)length, u_errorName(errorCode));
     }
 
@@ -481,7 +481,9 @@ void TestGetScriptExtensions() {
               (int)length, u_errorName(errorCode));
     }
     length=uscript_getScriptExtensions(0x0640, scripts, LENGTHOF(scripts), &errorCode);
-    if(U_FAILURE(errorCode) || length!=2 || scripts[0]!=USCRIPT_ARABIC || scripts[1]!=USCRIPT_SYRIAC) {
+    if(U_FAILURE(errorCode) || length!=3 ||
+       scripts[0]!=USCRIPT_ARABIC || scripts[1]!=USCRIPT_SYRIAC || scripts[2]!=USCRIPT_MANDAIC
+    ) {
         log_err("uscript_getScriptExtensions(U+0640)=%d failed - %s\n",
               (int)length, u_errorName(errorCode));
     }

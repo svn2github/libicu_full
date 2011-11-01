@@ -88,6 +88,7 @@ Unicode 6.1 update
 - the last Unihan code point changes from U+9FCB to U+9FCC
   search for both 9FCB (end) and 9FCC (limit) (regex 9FC[BC], case-insensitive)
   + do change gennames.c
+  + do change swapCJK() in ucol.cpp & ImplicitCEGenerator.java
 
 * DerivedBidiClass.txt changes
 - 2 new default-AL blocks:
@@ -147,12 +148,9 @@ Unicode 6.1 update
   + if genrb fails to build coll/root.res with an U_INVALID_FORMAT_ERROR,
     check if the UCA version in FractionalUCA.txt matches the new Unicode version
     (see step above)
-- run makeuca.sh so that genuca picks up the new nfc.nrm:
+- run makeuca.sh so that genuca picks up the new case mappings and nfc.nrm:
   ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
-  (not necessary any more as an additional step since the NFC/NFD data is currently loaded??)
 - rebuild ICU & tools
-
-@@@ TODO @@@
 
 * update Java data files
 - refresh just the UCD-related files, just to be safe
@@ -161,70 +159,63 @@ Unicode 6.1 update
 - ~/svn.icu/trunk/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
   output:
     ...
-    Unicode .icu files built to ./out/build/icudt45l
-    mkdir -p ./out/icu4j/com/ibm/icu/impl/data/icudt45b
-    echo ubidi.icu ucase.icu uprops.icu > ./out/icu4j/add.txt
-    LD_LIBRARY_PATH=../lib:../stubdata:../tools/ctestfw:$LD_LIBRARY_PATH  ../bin/icupkg ./out/tmp/icudt45l.dat ./out/icu4j/icudt45b.dat -a ./out/icu4j/add.txt -s ./out/build/icudt45l -x '*' -tb -d ./out/icu4j/com/ibm/icu/impl/data/icudt45b
-    jar cf ./out/icu4j/icudata.jar -C ./out/icu4j com/ibm/icu/impl/data/icudt45b
+    Unicode .icu files built to ./out/build/icudt49l
+    mkdir -p ./out/icu4j/com/ibm/icu/impl/data/icudt49b
+    mkdir -p ./out/icu4j/tzdata/com/ibm/icu/impl/data/icudt49b
+    echo pnames.icu ubidi.icu ucase.icu uprops.icu > ./out/icu4j/add.txt
+    LD_LIBRARY_PATH=../lib:../stubdata:../tools/ctestfw:$LD_LIBRARY_PATH  ../bin/icupkg ./out/tmp/icudt49l.dat ./out/icu4j/icudt49b.dat -a ./out/icu4j/add.txt -s ./out/build/icudt49l -x '*' -tb -d ./out/icu4j/com/ibm/icu/impl/data/icudt49b
+    mv ./out/icu4j/"com/ibm/icu/impl/data/icudt49b/zoneinfo64.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt49b/metaZones.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt49b/timezoneTypes.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt49b/windowsZones.res" "./out/icu4j/tzdata/com/ibm/icu/impl/data/icudt49b"
+    jar cf ./out/icu4j/icudata.jar -C ./out/icu4j com/ibm/icu/impl/data/icudt49b/
     mkdir -p /tmp/icu4j/main/shared/data
     cp ./out/icu4j/icudata.jar /tmp/icu4j/main/shared/data
+    jar cf ./out/icu4j/icutzdata.jar -C ./out/icu4j/tzdata com/ibm/icu/impl/data/icudt49b/
+    mkdir -p /tmp/icu4j/main/shared/data
+    cp ./out/icu4j/icutzdata.jar /tmp/icu4j/main/shared/data
+    make[1]: Leaving directory `/home/mscherer/svn.icu/trunk/bld/data'
 - copy the big-endian Unicode data files to another location,
   separate from the other data files
-    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
-    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/brkitr
-    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt45b
-    ~/svn.icu/trunk/bld/data/out/icu4j$ rm /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/cnvalias.icu
-    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt45b
-    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
-    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/brkitr/* /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/brkitr
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/coll
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/brkitr
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt49b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt49b
+    ~/svn.icu/trunk/bld/data/out/icu4j$ rm /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/cnvalias.icu
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt49b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt49b
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt49b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/coll
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt49b/brkitr/* /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/brkitr
 - refresh ICU4J
-    ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt45b
+    ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt49b
 
 * refresh Java test .txt files
 - copy new .txt files into ICU4J's main/tests/core/src/com/ibm/icu/dev/data/unicode
 
-* un-hardcode normalization skippable (NF*_Inert) test data
-- removes one manual step from the Unicode upgrade, and removes dependency on one of Mark's tools
-
-* copy updated break iterator test files
-- now handled by early ucdcopy.py and
-  copying the uni60/processed/testdata files to ~/svn.icu/trunk/src/source/test/testdata
-  (old instructions:
-   copy from (Unicode 6.0)/ucd/auxiliary/*BreakTest-6....txt
-   to ~/svn.icu/trunk/src/source/test/testdata)
-- they are not used in ICU4J
+* test ICU so far, fix test code where necessary
+- temporarily ignore collation issues that look like UCA/UCD mismatches,
+  until UCA data is updated
 
 * UCA
 
 - get output from Mark's tools; look in
-    http://www.unicode.org/~book/incoming/mark/uca6.0.0/
-    http://www.macchiato.com/unicode/utc/additional-uca-files
-    http://www.unicode.org/Public/UCA/6.0.0/
-    http://www.unicode.org/~mdavis/uca/
+    http://www.unicode.org/Public/UCA/6.1.0/
 - update source/data/unidata/FractionalUCA.txt with FractionalUCA_SHORT.txt
 - update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt
-- update Han-implicit ranges for new CJK extensions:
-  swapCJK() in ucol.cpp & ImplicitCEGenerator.java
-- genuca: allow bytes 02 for U+FFFE, new merge-sort character;
-  do not add it into invuca so that tailoring primary-after an ignorable works
-- genuca: permit space between [variable top] bytes
-- ucol.cpp: treat noncharacters like unassigned rather than ignorable
+  (note removing the underscore before "Rules")
 - run makeuca.sh:
   ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
 - rebuild ICU4C
 - refresh ICU4J collation data:
   (subset of instructions above for properties data refresh, except copies all coll/*)
     ~/svn.icu/trunk/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
-    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
-    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt45b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt45b/coll
-    ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt45b
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/coll
+    ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt49b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/coll
+    ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt49b
 - update (ICU)/source/test/testdata/CollationTest_*.txt
   and (ICU4J)/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_*.txt
   with output from Mark's Unicode tools
-- run all tests with the *_SHORT.txt or the full files (the full ones have comments)
+- run all tests with the *_SHORT.txt or the full files (the full ones have comments, useful for debugging)
 - note on intltest: if collate/UCAConformanceTest fails, then
   utility/MultithreadTest/TestCollators will fail as well;
   fix the conformance test before looking into the multi-thread test
+
+@@@ TODO @@@
 
 * When refreshing all of ICU4J data from ICU4C
 - ~/svn.icu/trunk/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install

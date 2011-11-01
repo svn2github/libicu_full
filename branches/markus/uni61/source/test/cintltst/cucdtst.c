@@ -1112,12 +1112,13 @@ enumTypeRange(const void *context, UChar32 start, UChar32 limit, UCharCategory t
 
 static UBool U_CALLCONV
 enumDefaultsRange(const void *context, UChar32 start, UChar32 limit, UCharCategory type) {
-    /* default Bidi classes for unassigned code points */
+    /* default Bidi classes for unassigned code points, from the DerivedBidiClass.txt header */
     static const int32_t defaultBidi[][2]={ /* { limit, class } */
         { 0x0590, U_LEFT_TO_RIGHT },
         { 0x0600, U_RIGHT_TO_LEFT },
         { 0x07C0, U_RIGHT_TO_LEFT_ARABIC },
-        { 0x0900, U_RIGHT_TO_LEFT },
+        { 0x08A0, U_RIGHT_TO_LEFT },
+        { 0x0900, U_RIGHT_TO_LEFT_ARABIC },  /* Unicode 6.1 changes U+08A0..U+08FF from R to AL */
         { 0xFB1D, U_LEFT_TO_RIGHT },
         { 0xFB50, U_RIGHT_TO_LEFT },
         { 0xFE00, U_RIGHT_TO_LEFT_ARABIC },
@@ -1126,6 +1127,8 @@ enumDefaultsRange(const void *context, UChar32 start, UChar32 limit, UCharCatego
         { 0x10800, U_LEFT_TO_RIGHT },
         { 0x11000, U_RIGHT_TO_LEFT },
         { 0x1E800, U_LEFT_TO_RIGHT },  /* new default-R range in Unicode 5.2: U+1E800 - U+1EFFF */
+        { 0x1EE00, U_RIGHT_TO_LEFT },
+        { 0x1EF00, U_RIGHT_TO_LEFT_ARABIC },  /* Unicode 6.1 changes U+1EE00..U+1EEFF from R to AL */
         { 0x1F000, U_RIGHT_TO_LEFT },
         { 0x110000, U_LEFT_TO_RIGHT }
     };
@@ -2303,7 +2306,7 @@ TestAdditionalProperties() {
         { 0x05ed, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
         { 0x07f2, UCHAR_BIDI_CLASS, U_DIR_NON_SPACING_MARK }, /* Nko, new in Unicode 5.0 */
         { 0x07fe, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT }, /* unassigned R */
-        { 0x08ba, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
+        { 0x08ba, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT_ARABIC },  /* Unicode 6.1 changed this from R to AL */
         { 0xfb37, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
         { 0xfb42, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
         { 0x10806, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
@@ -3232,7 +3235,16 @@ caseFoldingLineFn(void *context,
     char status;
 
     /* get code point */
-    c=(UChar32)strtoul(u_skipWhitespace(fields[0][0]), &end, 16);
+    const char *s=u_skipWhitespace(fields[0][0]);
+    if(0==strncmp(s, "0000..10FFFF", 12)) {
+        /*
+         * Ignore the line
+         * # @missing: 0000..10FFFF; C; <code point>
+         * because maps-to-self is already our default, and this line breaks this parser.
+         */
+        return;
+    }
+    c=(UChar32)strtoul(s, &end, 16);
     end=(char *)u_skipWhitespace(end);
     if(end<=fields[0][0] || end!=fields[0][1]) {
         log_err("syntax error in CaseFolding.txt field 0 at %s\n", fields[0][0]);
