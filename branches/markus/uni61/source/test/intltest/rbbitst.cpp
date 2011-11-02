@@ -105,16 +105,13 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
              break;
 #endif
 
+#if !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_FILE_IO
+        case 16:  name = "TestMonkey";
+             if(exec)  TestMonkey(params);                      break;
+#else
         case 16:
-             if(exec) {
- #if !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_FILE_IO
-               name = "TestMonkey";
-               TestMonkey(params);
- #else
-               name = "skip";
- #endif
-             }
-                                                               break;
+              name = "skip";                                    break;
+#endif
 
 #if !UCONFIG_NO_FILE_IO
         case 17: name = "TestBug3818";
@@ -3247,6 +3244,7 @@ private:
     UnicodeSet  *fSY;
     UnicodeSet  *fAI;
     UnicodeSet  *fAL;
+    UnicodeSet  *fHL;
     UnicodeSet  *fID;
     UnicodeSet  *fSA;
     UnicodeSet  *fXX;
@@ -3300,6 +3298,7 @@ RBBILineMonkey::RBBILineMonkey()
     fSY    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=SY}]"), status);
     fAI    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=AI}]"), status);
     fAL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=AL}]"), status);
+    fHL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=HL}]"), status);
     fID    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=ID}]"), status);
     fSA    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=SA}]"), status);
     fSG    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\ud800-\\udfff]"), status);
@@ -3350,6 +3349,7 @@ RBBILineMonkey::RBBILineMonkey()
     fSets->addElement(fSY, status);
     fSets->addElement(fAI, status);
     fSets->addElement(fAL, status);
+    fSets->addElement(fHL, status);
     fSets->addElement(fID, status);
     fSets->addElement(fWJ, status);
     fSets->addElement(fSA, status);
@@ -3441,6 +3441,9 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
                           //   and thisChar may not be adjacent because combining
                           //   characters between them will be ignored.
 
+    int32_t    prevPosX2; //  Second previous character.  Wider context for LB21a.
+    UChar32    prevCharX2;
+
     int32_t    nextPos;   //  Index of the next character following pos.
                           //     Usually skips over combining marks.
     int32_t    nextCPPos; //  Index of the code point following "pos."
@@ -3460,14 +3463,17 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
     // Initial values for loop.  Loop will run the first time without finding breaks,
     //                           while the invalid values shift out and the "this" and
     //                           "prev" positions are filled in with good values.
-    pos      = prevPos   = -1;    // Invalid value, serves as flag for initial loop iteration.
-    thisChar = prevChar  = 0;
+    pos      = prevPos   = prevPosX2  = -1;    // Invalid value, serves as flag for initial loop iteration.
+    thisChar = prevChar  = prevCharX2 = 0;
     nextPos  = nextCPPos = startPos;
 
 
     // Loop runs once per position in the test text, until a break position
     //  is found.
     for (;;) {
+        prevPosX2 = prevPos;
+        prevCharX2 = prevChar;
+
         prevPos   = pos;
         prevChar  = thisChar;
 
@@ -3672,8 +3678,16 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
             continue;
         }
 
+        // LB 21a
+        //   HL (HY | BA) x
+        if (fHL->contains(prevCharX2) && 
+                (fHY->contains(prevChar) || fBA->contains(prevChar))) {
+            continue;
+        }
+
         // LB 22
         if ((fAL->contains(prevChar) && fIN->contains(thisChar)) ||
+            (fHL->contains(prevChar) && fIN->contains(thisChar)) ||
             (fID->contains(prevChar) && fIN->contains(thisChar)) ||
             (fIN->contains(prevChar) && fIN->contains(thisChar)) ||
             (fNU->contains(prevChar) && fIN->contains(thisChar)) )   {
@@ -3683,20 +3697,23 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
 
         // LB 23    ID x PO
         //          AL x NU
+        //          HL x NU
         //          NU x AL
         if ((fID->contains(prevChar) && fPO->contains(thisChar)) ||
             (fAL->contains(prevChar) && fNU->contains(thisChar)) ||
-            (fNU->contains(prevChar) && fAL->contains(thisChar)) )   {
+            (fHL->contains(prevChar) && fNU->contains(thisChar)) ||
+            (fNU->contains(prevChar) && fAL->contains(thisChar)) ||
+            (fNU->contains(prevChar) && fHL->contains(thisChar)) )   {
             continue;
         }
 
         // LB 24  Do not break between prefix and letters or ideographs.
         //        PR x ID
-        //        PR x AL
-        //        PO x AL
+        //        PR x (AL | HL)
+        //        PO x (AL | HL)
         if ((fPR->contains(prevChar) && fID->contains(thisChar)) ||
-            (fPR->contains(prevChar) && fAL->contains(thisChar)) ||
-            (fPO->contains(prevChar) && fAL->contains(thisChar)) )   {
+            (fPR->contains(prevChar) && (fAL->contains(thisChar) || fHL->contains(thisChar))) ||
+            (fPO->contains(prevChar) && (fAL->contains(thisChar) || fHL->contains(thisChar))))  {
             continue;
         }
 
@@ -3764,22 +3781,22 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
 
 
         // LB 28  Do not break between alphabetics ("at").
-        if (fAL->contains(prevChar) && fAL->contains(thisChar)) {
+        if ((fAL->contains(prevChar) || fHL->contains(prevChar)) && (fAL->contains(thisChar) || fHL->contains(thisChar))) {
             continue;
         }
 
         // LB 29  Do not break between numeric punctuation and alphabetics ("e.g.").
-        if (fIS->contains(prevChar) && fAL->contains(thisChar)) {
+        if (fIS->contains(prevChar) && (fAL->contains(thisChar) || fHL->contains(thisChar))) {
             continue;
         }
 
         // LB 30    Do not break between letters, numbers, or ordinary symbols and opening or closing punctuation.
         //          (AL | NU) x OP
         //          CP x (AL | NU)
-        if ((fAL->contains(prevChar) || fNU->contains(prevChar)) && fOP->contains(thisChar)) {
+        if ((fAL->contains(prevChar) || fHL->contains(prevChar) || fNU->contains(prevChar)) && fOP->contains(thisChar)) {
             continue;
         }
-        if (fCP->contains(prevChar) && (fAL->contains(thisChar) || fNU->contains(thisChar))) {
+        if (fCP->contains(prevChar) && (fAL->contains(thisChar) || fHL->contains(thisChar) || fNU->contains(thisChar))) {
             continue;
         }
 

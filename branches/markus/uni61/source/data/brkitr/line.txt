@@ -334,10 +334,9 @@ $BBcm [^$CB];                                  #  $BB  x
 $BBcm $LB20NonBreaks $CM*;
 
 # LB 21a Don't brak after Hebrew + Hyphen
-#   HL (HL | BA) x
+#   HL (HY | BA) x
 #  
-# $HLcm $HYcm;
-# $HLcm $BAcm;
+$HLcm ($HYcm | $BAcm) [^$CB]?;
 
 # LB 22
 ($ALcm | $HLcm) $INcm;
@@ -566,6 +565,8 @@ $CM* ($BA | $HY | $NS) $CM* [$LB20NonBreaks-$CM];     #  . x (BA | HY | NS)
 $CM* [$LB20NonBreaks-$CM] $CM* $BB;                   #  BB x .
 [^$CB] $CM* $BB;                                      # 
 
+# LB21a
+[^$CB] $CM* ($HY | $BA) $CM* $HL;
 
 
 # LB 22
@@ -630,6 +631,9 @@ $SP+ $CM* ($CL | $CP);
 # LB 17
 $SP+ $CM* $B2;
 
+# LB 21
+$CM* ($HY | $BA) $CM* $HL;
+
 # LB 25
 ($CM* ($IS | $SY))+ $CM* $NU;
 ($CL | $CP) $CM* ($NU | $IS | $SY);
@@ -650,6 +654,6 @@ $dictionary $dictionary;
 #  turn off rule chaining.  We don't want to move more
 #  than necessary.
 #
-[$CM $OP $QU $CL $CP $B2 $PR $HY $SP $dictionary]+ [^$CM $OP $QU $CL $CP $B2 $PR $HY $dictionary];
+[$CM $OP $QU $CL $CP $B2 $PR $HY $BA $SP $dictionary]+ [^$CM $OP $QU $CL $CP $B2 $PR $HY $BA $dictionary];
 $dictionary $dictionary;
 
