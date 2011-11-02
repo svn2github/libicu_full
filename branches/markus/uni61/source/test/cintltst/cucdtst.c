@@ -2306,7 +2306,7 @@ TestAdditionalProperties() {
         { 0x05ed, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
         { 0x07f2, UCHAR_BIDI_CLASS, U_DIR_NON_SPACING_MARK }, /* Nko, new in Unicode 5.0 */
         { 0x07fe, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT }, /* unassigned R */
-        { 0x08ba, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT_ARABIC },  /* Unicode 6.1 changed this from R to AL */
+        { 0x089f, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
         { 0xfb37, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
         { 0xfb42, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
         { 0x10806, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
@@ -2501,6 +2501,10 @@ TestAdditionalProperties() {
 
         { -1, 0x520, 0 }, /* version break for Unicode 5.2 */
 
+        /* unassigned code points in new default Bidi R blocks */
+        { 0x1ede4, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
+        { 0x1efe4, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT },
+
         /* test some script codes >127 */
         { 0xa6e6,  UCHAR_SCRIPT, USCRIPT_BAMUM },
         { 0xa4d0,  UCHAR_SCRIPT, USCRIPT_LISU },
@@ -2510,6 +2514,12 @@ TestAdditionalProperties() {
 
         /* value changed in Unicode 6.0 */
         { 0x06C3, UCHAR_JOINING_GROUP, U_JG_TEH_MARBUTA_GOAL },
+
+        { -1, 0x610, 0 }, /* version break for Unicode 6.1 */
+
+        /* unassigned code points in new/changed default Bidi AL blocks */
+        { 0x08ba, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT_ARABIC },
+        { 0x1eee4, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT_ARABIC },
 
         /* undefined UProperty values */
         { 0x61, 0x4a7, 0 },
