@@ -522,7 +522,7 @@ u_strFromPunycode(const UChar *src, int32_t srcLength,
 
         /* Insert n at position i of the output: */
         cpLength=U16_LENGTH(n);
-        if((destLength+cpLength)<=destCapacity) {
+        if(dest!=NULL && ((destLength+cpLength)<=destCapacity)) {
             int32_t codeUnitIndex;
 
             /*
