@@ -1752,7 +1752,7 @@ utext_strFromUTF8(UChar *dest,
 {
 
     UChar *pDest = dest;
-    UChar *pDestLimit = dest+destCapacity;
+    UChar *pDestLimit = (dest!=NULL)?(dest+destCapacity):NULL;
     UChar32 ch=0;
     int32_t index = 0;
     int32_t reqLength = 0;
@@ -2884,6 +2884,7 @@ ucstrTextExtract(UText *ut,
                 // We have filled the destination buffer, and the string length is known.
                 //  Cut the loop short.  There is no need to scan string termination.
                 di = limit32 - start32;
+                U_ASSERT(di>=0);
                 si = limit32;
                 break;
             }
@@ -3118,6 +3119,7 @@ charIterTextExtract(UText *ut,
     while (srci<limit32) {
         UChar32 c = ci->next32PostInc();
         int32_t  len = U16_LENGTH(c);
+        U_ASSERT(len>=1&&len<=2); /* to ensure that [desti+len>destCapacity] when destCapacity=0 */
         if (desti+len <= destCapacity) {
             U16_APPEND_UNSAFE(dest, desti, c);
             copyLimit = srci+len;

@@ -874,6 +874,7 @@ uloc_getKeywordValue(const char* localeID,
           /* trim trailing spaces */
           while(startSearchHere[i-1] == ' ') {
               i--;
+              U_ASSERT(i>=0);
           }
           localeKeywordNameBuffer[i] = 0;
         
@@ -1015,6 +1016,7 @@ uloc_setKeywordValue(const char* keywordName,
         while(keywordStart[i-1] == ' ') {
             i--;
         }
+        U_ASSERT(i>=0);
         localeKeywordNameBuffer[i] = 0;
 
         nextSeparator = uprv_strchr(nextEqualsign, ';');
@@ -1232,6 +1234,7 @@ ulocimp_getLanguage(const char *localeID,
             language[i]=(char)uprv_tolower(*localeID);
         }
         if(i<3) {
+            U_ASSERT(i>=0);
             lang[i]=(char)uprv_tolower(*localeID);
         }
         i++;

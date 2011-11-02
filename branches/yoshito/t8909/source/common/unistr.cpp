@@ -664,7 +664,7 @@ UnicodeString::doCompareCodePointOrder(int32_t start,
     srcStart = srcLength = 0;
   }
 
-  int32_t diff = uprv_strCompare(getArrayStart() + start, length, srcChars + srcStart, srcLength, FALSE, TRUE);
+  int32_t diff = uprv_strCompare(getArrayStart() + start, length, (srcChars!=NULL)?(srcChars + srcStart):NULL, srcLength, FALSE, TRUE);
   /* translate the 32-bit result into an 8-bit one */
   if(diff!=0) {
     return (int8_t)(diff >> 15 | 1);

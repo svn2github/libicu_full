@@ -1773,7 +1773,7 @@ uprv_uca_addFCD4AccentedContractions(tempUCATable *t,
         uprv_uca_setMapCE(t, el, status);
         uprv_uca_addAnElement(t, el, status);
     }
-    U_ASSERT(el->cPoints != comp);
+    el->cPoints=NULL; /* don't leak reference to stack */
 }
 
 static void
