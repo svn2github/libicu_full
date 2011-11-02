@@ -31,6 +31,7 @@
 #include "unicode/coleitr.h"
 #include "unicode/ustring.h"
 #include "ucol_imp.h"
+#include "uassert.h"
 #include "cmemory.h"
 
 
@@ -431,6 +432,7 @@ const CollationElementIterator& CollationElementIterator::operator=(
         if (othercoliter->pos >= othercoliter->string && 
             othercoliter->pos <= othercoliter->endp)
         {
+            U_ASSERT(coliter->string != NULL);
             coliter->pos = coliter->string + 
                 (othercoliter->pos - othercoliter->string);
         }
@@ -462,6 +464,7 @@ const CollationElementIterator& CollationElementIterator::operator=(
         }
 
         if (othercoliter->fcdPosition != NULL) {
+            U_ASSERT(coliter->string != NULL);
             coliter->fcdPosition = coliter->string + 
                 (othercoliter->fcdPosition 
                 - othercoliter->string);
