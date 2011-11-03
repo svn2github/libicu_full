@@ -6236,7 +6236,11 @@ static void TestEquivalentReorderingScripts(void) {
         USCRIPT_UGARITIC,
         USCRIPT_OLD_PERSIAN,
         USCRIPT_CUNEIFORM,
-        USCRIPT_EGYPTIAN_HIEROGLYPHS
+        USCRIPT_EGYPTIAN_HIEROGLYPHS,
+        USCRIPT_PHONETIC_POLLARD,
+        USCRIPT_SORA_SOMPENG,
+        USCRIPT_MEROITIC_CURSIVE,
+        USCRIPT_MEROITIC_HIEROGLYPHS
     };
 
     qsort(equivalentScriptsResult, LEN(equivalentScriptsResult), sizeof(int32_t), compareUScriptCodes);
