@@ -2864,7 +2864,6 @@ ucstrTextExtract(UText *ut,
     } else {
         limit32 = pinIndex(limit, INT32_MAX);
     }
-
     di = 0;
     for (si=start32; si<limit32; si++) {
         if (strLength<0 && s[si]==0) {
@@ -2876,6 +2875,7 @@ ucstrTextExtract(UText *ut,
             strLength               = si;
             break;
         }
+        U_ASSERT(di>=0); /* to ensure di never exceeds INT32_MAX, which must not happen logically */
         if (di<destCapacity) {
             // only store if there is space.
             dest[di] = s[si];
@@ -2884,7 +2884,6 @@ ucstrTextExtract(UText *ut,
                 // We have filled the destination buffer, and the string length is known.
                 //  Cut the loop short.  There is no need to scan string termination.
                 di = limit32 - start32;
-                U_ASSERT(di>=0);
                 si = limit32;
                 break;
             }
@@ -3119,7 +3118,7 @@ charIterTextExtract(UText *ut,
     while (srci<limit32) {
         UChar32 c = ci->next32PostInc();
         int32_t  len = U16_LENGTH(c);
-        U_ASSERT(len>=1&&len<=2); /* to ensure that [desti+len>destCapacity] when destCapacity=0 */
+        U_ASSERT(desti+len>0); /* to ensure desti+len never exceeds MAX_INT32, which must not happen logically */
         if (desti+len <= destCapacity) {
             U16_APPEND_UNSAFE(dest, desti, c);
             copyLimit = srci+len;
