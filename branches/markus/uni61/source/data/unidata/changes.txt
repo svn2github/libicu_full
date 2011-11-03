@@ -15,9 +15,11 @@
 
 Unicode 6.1 update
 
-*** related ICU Trac tickets
+*** ICU Trac
 
-8827 update ICU to Unicode 6.1
+- ticket 8827 "update ICU to Unicode 6.1"
+- C++ branches/markus/uni61 at r30864 from trunk at r30843
+- Java branches/markus/uni61 at r30865 from trunk at r30863
 
 *** Unicode version numbers
 - makedata.mak
@@ -34,6 +36,8 @@ Unicode 6.1 update
 
 ~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni61/20111025/ucd ~/uni61/processed
 - This prepares both unidata and testdata files in respective output subfolders.
+- Check test file diffs for previously commented-out, known-failing data lines;
+  probably need to keep those commented out.
 
 * PropertyValueAliases.txt changes
 - 11 new block names:
@@ -210,6 +214,8 @@ Unicode 6.1 update
 - update (ICU)/source/test/testdata/CollationTest_*.txt
   and (ICU4J)/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_*.txt
   with output from Mark's Unicode tools
+- check test file diffs for previously commented-out, known-failing data lines;
+  probably need to keep those commented out
 - run all tests with the *_SHORT.txt or the full files (the full ones have comments, useful for debugging)
 - note on intltest: if collate/UCAConformanceTest fails, then
   utility/MultithreadTest/TestCollators will fail as well;
@@ -240,6 +246,10 @@ or
 - if you just copy the above files, then
   fix mixed line endings, review the diffs as above and restore changes to API tags etc.;
   manually re-add the "Indic script xyz v.2" tags in ScriptAndLanguageTags.h
+
+*** merge the Unicode update branches back onto the trunk
+- do not merge the icudata.jar and testdata.jar,
+  instead rebuild them from merged & tested ICU4C
 
 ---------------------------------------------------------------------------- ***
 
@@ -297,6 +307,8 @@ ICU 4.8 (no Unicode update, just new script codes)
     ~/svn.icu/trunk/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt48b/uprops.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt48b
 - refresh ICU4J
     ~/svn.icu/trunk/dbg/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt48b
+
+* should have updated the layout engine script codes but forgot
 
 ---------------------------------------------------------------------------- ***
 
