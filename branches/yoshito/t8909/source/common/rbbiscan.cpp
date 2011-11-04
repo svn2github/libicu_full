@@ -1150,8 +1150,9 @@ void RBBIRuleScanner::scanSet() {
     uset = new UnicodeSet();
     if (uset == NULL) {
         localStatus = U_MEMORY_ALLOCATION_ERROR;
+    } else {
+        uset->applyPatternIgnoreSpace(fRB->fRules, pos, fSymbolTable, localStatus);
     }
-    uset->applyPatternIgnoreSpace(fRB->fRules, pos, fSymbolTable, localStatus);
     if (U_FAILURE(localStatus)) {
         //  TODO:  Get more accurate position of the error from UnicodeSet's return info.
         //         UnicodeSet appears to not be reporting correctly at this time.
@@ -1165,6 +1166,7 @@ void RBBIRuleScanner::scanSet() {
 
     // Verify that the set contains at least one code point.
     //
+    U_ASSERT(uset!=NULL);
     if (uset->isEmpty()) {
         // This set is empty.
         //  Make it an error, because it almost certainly is not what the user wanted.
