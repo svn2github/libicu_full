@@ -358,7 +358,7 @@ res_getBinary(const ResourceData *pResData, Resource res, int32_t *pLength) {
     uint32_t offset=RES_GET_OFFSET(res);
     int32_t length;
     if(RES_GET_TYPE(res)==URES_BINARY) {
-        const int32_t *p32= offset==0 ? &gEmpty32 : pResData->pRoot+offset;
+        const int32_t *p32= offset==0 ? (const int32_t*)&gEmpty32 : pResData->pRoot+offset;
         length=*p32++;
         p=(const uint8_t *)p32;
     } else {
@@ -378,7 +378,7 @@ res_getIntVector(const ResourceData *pResData, Resource res, int32_t *pLength) {
     uint32_t offset=RES_GET_OFFSET(res);
     int32_t length;
     if(RES_GET_TYPE(res)==URES_INT_VECTOR) {
-        p= offset==0 ? &gEmpty32 : pResData->pRoot+offset;
+        p= offset==0 ? (const int32_t *)&gEmpty32 : pResData->pRoot+offset;
         length=*p++;
     } else {
         p=NULL;

@@ -1680,7 +1680,8 @@ _canonicalize(const char* localeID,
         }
         ++len;
 
-        scriptSize=ulocimp_getScript(tmpLocaleID+1, name+len, nameCapacity-len, &scriptID);
+        scriptSize=ulocimp_getScript(tmpLocaleID+1,
+            (len<nameCapacity ? name+len : NULL), nameCapacity-len, &scriptID);
         if(scriptSize > 0) {
             /* Found optional script */
             tmpLocaleID = scriptID;
@@ -1697,7 +1698,8 @@ _canonicalize(const char* localeID,
 
         if (_isIDSeparator(*tmpLocaleID)) {
             const char *cntryID;
-            int32_t cntrySize = ulocimp_getCountry(tmpLocaleID+1, name+len, nameCapacity-len, &cntryID);
+            int32_t cntrySize = ulocimp_getCountry(tmpLocaleID+1,
+                (len<nameCapacity ? name+len : NULL), nameCapacity-len, &cntryID);
             if (cntrySize > 0) {
                 /* Found optional country */
                 tmpLocaleID = cntryID;
@@ -1713,9 +1715,10 @@ _canonicalize(const char* localeID,
                     ++len;
                 }
 
-                variantSize = _getVariant(tmpLocaleID+1, *tmpLocaleID, name+len, nameCapacity-len);
+                variantSize = _getVariant(tmpLocaleID+1, *tmpLocaleID,
+                    (len<nameCapacity ? name+len : NULL), nameCapacity-len);
                 if (variantSize > 0) {
-                    variant = name+len;
+                    variant = len<nameCapacity ? name+len : NULL;
                     len += variantSize;
                     tmpLocaleID += variantSize + 1; /* skip '_' and variant */
                 }
@@ -1839,8 +1842,8 @@ _canonicalize(const char* localeID,
             }
             ++len;
             ++fieldCount;
-            len += _getKeywords(tmpLocaleID+1, '@', name+len, nameCapacity-len, NULL, 0, NULL, TRUE,
-                                addKeyword, addValue, err);
+            len += _getKeywords(tmpLocaleID+1, '@', (len<nameCapacity ? name+len : NULL), nameCapacity-len,
+                                NULL, 0, NULL, TRUE, addKeyword, addValue, err);
         } else if (addKeyword != NULL) {
             U_ASSERT(addValue != NULL);
             /* inelegant but works -- later make _getKeywords do this? */
