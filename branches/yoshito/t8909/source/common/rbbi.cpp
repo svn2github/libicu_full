@@ -1097,8 +1097,12 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
 
         // State Transition - move machine to its next state
         //
+
+        // Note: fNextState is defined as uint16_t[2], but we are casting
+        // a generated RBBI table to RBBIStateTableRow and some tables
+        // actually have more than 2 categories.
         U_ASSERT(category<fData->fHeader->fCatCount);
-        state = row->fNextState[category];
+        state = row->fNextState[category];  /*Not accessing beyond memory*/
         row = (RBBIStateTableRow *)
             // (statetable->fTableData + (statetable->fRowLen * state));
             (tableData + tableRowLen * state);
@@ -1313,8 +1317,12 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable)
 
         // State Transition - move machine to its next state
         //
+
+        // Note: fNextState is defined as uint16_t[2], but we are casting
+        // a generated RBBI table to RBBIStateTableRow and some tables
+        // actually have more than 2 categories.
         U_ASSERT(category<fData->fHeader->fCatCount);
-        state = row->fNextState[category];
+        state = row->fNextState[category];  /*Not accessing beyond memory*/
         row = (RBBIStateTableRow *)
             (statetable->fTableData + (statetable->fRowLen * state));
 
