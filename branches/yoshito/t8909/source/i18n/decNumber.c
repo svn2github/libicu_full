@@ -4974,6 +4974,10 @@ static decNumber * decMultiplyOp(decNumber *res, const decNumber *lhs,
       /* (rounded up to a multiple of 8 bytes), and the uLong  */
       /* accumulator starts offset the appropriate number of units  */
       /* to the right to avoid overwrite during the unchunking.  */
+
+      /* Make sure no signed int overflow below. This is always true */
+      /* if the given numbers have less digits than DEC_MAX_DIGITS. */
+      U_ASSERT(iacc <= INT32_MAX/sizeof(uLong));
       needbytes=iacc*sizeof(uLong);
       #if DECDPUN==1
       zoff=(iacc+7)/8;        /* items to offset by  */
