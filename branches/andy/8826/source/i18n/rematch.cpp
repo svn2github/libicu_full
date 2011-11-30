@@ -3943,114 +3943,76 @@ GC_Done:
 
         case URX_STRING_I:
             {
-                // Test input against a literal string.
+                // Case-insensitive test input against a literal string.
                 // Strings require two slots in the compiled pattern, one for the
                 //   offset to the string text, and one for the length.
+                //   The compiled string has been case folded.
                 const UCaseProps *csp = ucase_getSingleton();
                 {
-                    int32_t stringStartIdx, stringLen;
-                    stringStartIdx = opValue;
+                    const UChar *patternString = litText + opValue;
+                    int32_t      patternStringIdx  = 0;
 
                     op      = (int32_t)pat[fp->fPatIdx];
                     fp->fPatIdx++;
                     opType  = URX_TYPE(op);
                     opValue = URX_VAL(op);
                     U_ASSERT(opType == URX_STRING_LEN);
-                    stringLen = opValue;
+                    int32_t patternStringLen = opValue;  // Length of the string from the pattern.
                 
-                    const UChar *patternChars = litText+stringStartIdx;
-                    const UChar *patternEnd = patternChars+stringLen;
                     
                     const UChar *foldChars = NULL;
-                    int32_t foldOffset, foldLength;
-                    UChar32 c;
+                    int32_t     foldLength = 0;
+                    UChar32     cp;   // A character from the pattern string.
+                    UChar32     ct;   // A character from the text being matched.
                     
-                    foldOffset = foldLength = 0;
                     UBool success = TRUE;
                     
                     UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
-                    while (patternChars < patternEnd && success) {
-                        if(foldOffset < foldLength) {
-                            U16_NEXT_UNSAFE(foldChars, foldOffset, c);
+                    while (patternStringIdx < patternStringLen) {
+                        ct = UTEXT_NEXT32(fInputText);
+                        if (ct == U_SENTINEL) {
+                            success = FALSE;
+                            fHitEnd = TRUE;
+                            break;
+                        }
+                        foldLength =  ucase_toFullFolding(csp, ct, &foldChars, U_FOLD_CASE_DEFAULT);
+                        if (foldLength >= UCASE_MAX_STRING_LENGTH || foldLength < 0) {
+                            // input code point folds to a single code point, possibly itself.
+                            // See comment in ucase.h for explanation of return values from ucase_toFullFoldings.
+                            if (foldLength < 0) {
+                                foldLength = ~foldLength;
+                            }
+                            ct = (UChar32)foldLength;
+                            U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
+                            if (ct != cp) {
+                                success = FALSE;
+                                break;
+                            }
                         } else {
-                            c = UTEXT_NEXT32(fInputText);
-                            if (c != U_SENTINEL) {
-                                foldLength = ucase_toFullFolding(csp, c, &foldChars, U_FOLD_CASE_DEFAULT);
-                                if(foldLength >= 0) {
-                                    if(foldLength <= UCASE_MAX_STRING_LENGTH) {   // !!!: Does not correctly handle chars that fold to 0-length strings
-                                        foldOffset = 0;
-                                        U16_NEXT_UNSAFE(foldChars, foldOffset, c);
-                                    } else {
-                                        c = foldLength;
-                                        foldLength = foldOffset; // to avoid reading chars from the folding buffer
-                                    }
+                            // Input code point folds to a string.
+                            for (int foldIndex = 0; foldIndex<foldLength;) {
+                                if (patternStringIdx >= patternStringLen) {
+                                    // The string from the pattern has been fully consumed,
+                                    //   but we are in the middle of a string produced
+                                    //   from case-folding a single character from the text being matched.
+                                    //   This is a no-match case.
+                                    success = FALSE;
+                                    goto breakOut;
+                                }
+                                U16_NEXT(foldChars, foldIndex, foldLength, ct);
+                                U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
+                                if (ct != cp) {
+                                    success = FALSE;
+                                    goto breakOut;
                                 }
                             }
-                            
-                            fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                        }
-                        
-                        success = FALSE;
-                        if (c != U_SENTINEL && (fp->fInputIdx <= fActiveLimit)) {
-                            if (U_IS_BMP(c)) {
-                                success = (*patternChars == c);
-                                patternChars += 1;
-                            } else if (patternChars+1 < patternEnd) {
-                                success = (*patternChars == U16_LEAD(c) && *(patternChars+1) == U16_TRAIL(c));
-                                patternChars += 2;
-                            }
-                        } else {
-                            fHitEnd = TRUE;          //   TODO:  See ticket 6074
                         }
                     }
-                    
-                    if (!success) {
-                        #ifdef REGEX_SMART_BACKTRACKING
-                        if (fp->fInputIdx > backSearchIndex && fStack->size()) {
-                            REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                            if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                                // Reset to last start point
-                                UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
-                                patternChars = litText+stringStartIdx;
-                                
-                                // Search backwards for a possible start
-                                do {
-                                    c = UTEXT_PREVIOUS32(fInputText);
-                                    if (c == U_SENTINEL) {
-                                        break;
-                                    } else {
-                                        foldLength = ucase_toFullFolding(csp, c, &foldChars, U_FOLD_CASE_DEFAULT);
-                                        if(foldLength >= 0) {
-                                            if(foldLength <= UCASE_MAX_STRING_LENGTH) {   // !!!: Does not correctly handle chars that fold to 0-length strings
-                                                foldOffset = 0;
-                                                U16_NEXT_UNSAFE(foldChars, foldOffset, c);
-                                            } else {
-                                                c = foldLength;
-                                                foldLength = foldOffset; // to avoid reading chars from the folding buffer
-                                            }
-                                        }
-                                        
-                                        if ((U_IS_BMP(c) && *patternChars == c) ||
-                                               (*patternChars == U16_LEAD(c) && *(patternChars+1) == U16_TRAIL(c))) {
-                                            success = TRUE;
-                                            break;
-                                        }
-                                    }
-                                } while (UTEXT_GETNATIVEINDEX(fInputText) >= backSearchIndex);
-                                
-                                // And try again
-                                if (success) {
-                                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                                    fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                                    if (fp->fInputIdx > backSearchIndex) {
-                                        fp = StateSave(fp, fp->fPatIdx, status);
-                                    }
-                                    fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                                    break;
-                                }
-                            }
-                        }
-                        #endif
+
+                breakOut:
+                    if (success) {
+                        fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
+                    } else {
                         fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                     }
                 }
@@ -5625,110 +5587,73 @@ GC_Done:
                 //   offset to the string text, and one for the length.
                 const UCaseProps *csp = ucase_getSingleton();
                 {
-                    int32_t stringStartIdx, stringLen;
-                    stringStartIdx = opValue;
-                    
+                    const UChar *patternString = litText + opValue;
+                    int32_t      patternStringIdx  = 0;
+
                     op      = (int32_t)pat[fp->fPatIdx];
                     fp->fPatIdx++;
                     opType  = URX_TYPE(op);
                     opValue = URX_VAL(op);
                     U_ASSERT(opType == URX_STRING_LEN);
-                    stringLen = opValue;
-                    
-                    const UChar *patternChars = litText+stringStartIdx;
-                    const UChar *patternEnd = patternChars+stringLen;
+                    int32_t patternStringLen = opValue;  // Length of the string from the pattern.
+                
                     
                     const UChar *foldChars = NULL;
-                    int32_t foldOffset, foldLength;
-                    UChar32 c;
+                    int32_t     foldLength = 0;
+                    UChar32     cp;   // A character from the pattern string.
+                    UChar32     ct;   // A character from the text being matched.
                     
-                    #ifdef REGEX_SMART_BACKTRACKING
-                    int32_t originalInputIdx = fp->fInputIdx;
-                    #endif
                     UBool success = TRUE;
-                    
-                    foldOffset = foldLength = 0;
-
-                    while (patternChars < patternEnd && success) {
-                        if(foldOffset < foldLength) {
-                            U16_NEXT_UNSAFE(foldChars, foldOffset, c);
+                    while (patternStringIdx < patternStringLen) {
+                        if (fp->fInputIdx >= fActiveLimit) {
+                            success = FALSE;
+                            fHitEnd = TRUE;
+                            break;
+                        }
+                        U16_NEXT(inputBuf, fp->fInputIdx, fActiveLimit, ct);
+                        foldLength =  ucase_toFullFolding(csp, ct, &foldChars, U_FOLD_CASE_DEFAULT);
+                        if (foldLength >= UCASE_MAX_STRING_LENGTH || foldLength < 0) {
+                            // input code point folds to a single code point, possibly itself.
+                            // See comment in ucase.h for explanation of return values from ucase_toFullFoldings.
+                            if (foldLength < 0) {
+                                foldLength = ~foldLength;
+                            }
+                            ct = (UChar32)foldLength;
+                            U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
+                            if (ct != cp) {
+                                success = FALSE;
+                                break;
+                            }
                         } else {
-                            U16_NEXT(inputBuf, fp->fInputIdx, fActiveLimit, c);
-                            foldLength = ucase_toFullFolding(csp, c, &foldChars, U_FOLD_CASE_DEFAULT);
-                            if(foldLength >= 0) {
-                                if(foldLength <= UCASE_MAX_STRING_LENGTH) {   // !!!: Does not correctly handle chars that fold to 0-length strings
-                                    foldOffset = 0;
-                                    U16_NEXT_UNSAFE(foldChars, foldOffset, c);
-                                } else {
-                                    c = foldLength;
-                                    foldLength = foldOffset; // to avoid reading chars from the folding buffer
+                            // Input code point folds to a string.
+                            printf("In case fold to string code.\n");
+                            for (int foldIndex = 0; foldIndex<foldLength;) {
+                                if (patternStringIdx >= patternStringLen) {
+                                    // The string from the pattern has been fully consumed,
+                                    //   but we are in the middle of a string produced
+                                    //   from case-folding a single character from the text being matched.
+                                    //   This is a no-match case.
+                                    success = FALSE;
+                                    goto breakOut;
+                                }
+                                U16_NEXT(foldChars, foldIndex, foldLength, ct);
+                                U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
+                                if (ct != cp) {
+                                    success = FALSE;
+                                    goto breakOut;
                                 }
                             }
-                        }
-                        
-                        if (fp->fInputIdx <= fActiveLimit) {
-                            if (U_IS_BMP(c)) {
-                                success = (*patternChars == c);
-                                patternChars += 1;
-                            } else if (patternChars+1 < patternEnd) {
-                                success = (*patternChars == U16_LEAD(c) && *(patternChars+1) == U16_TRAIL(c));
-                                patternChars += 2;
-                            }
-                        } else {
-                            success = FALSE;
-                            fHitEnd = TRUE;          //   TODO:  See ticket 6074
                         }
                     }
-                    
+ 
+                breakOut:
                     if (!success) {
-                        #ifdef REGEX_SMART_BACKTRACKING
-                        if (fp->fInputIdx > backSearchIndex && fStack->size()) {
-                            REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                            if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                                // Reset to last start point
-                                int64_t reverseIndex = originalInputIdx;
-                                patternChars = litText+stringStartIdx;
-                                
-                                // Search backwards for a possible start
-                                do {
-                                    U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
-                                    foldLength = ucase_toFullFolding(csp, c, &foldChars, U_FOLD_CASE_DEFAULT);
-                                    if(foldLength >= 0) {
-                                        if(foldLength <= UCASE_MAX_STRING_LENGTH) {   // !!!: Does not correctly handle chars that fold to 0-length strings
-                                            foldOffset = 0;
-                                            U16_NEXT_UNSAFE(foldChars, foldOffset, c);
-                                        } else {
-                                            c = foldLength;
-                                            foldLength = foldOffset; // to avoid reading chars from the folding buffer
-                                        }
-                                    }
-                                    
-                                    if ((U_IS_BMP(c) && *patternChars == c) ||
-                                           (*patternChars == U16_LEAD(c) && *(patternChars+1) == U16_TRAIL(c))) {
-                                        success = TRUE;
-                                        break;
-                                    }
-                                } while (reverseIndex > backSearchIndex);
-                                
-                                // And try again
-                                if (success) {
-                                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                                    fp->fInputIdx = reverseIndex;
-                                    if (fp->fInputIdx > backSearchIndex) {
-                                        fp = StateSave(fp, fp->fPatIdx, status);
-                                    }
-                                    fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                                    break;
-                                }
-                            }
-                        }
-                        #endif
                         fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                     }
                 }
             }
             break;
-            
+
         case URX_LB_START:
             {
                 // Entering a look-behind block.

@@ -176,6 +176,7 @@
 "(hello)|(goodbye)"            "<0><2>goodbye</2></0>"
 "abc( +(  inner(X?) +)  xyz)"  "leading cruft <0>abc<1>     <2>  inner<3></3>    </2>  xyz</1></0> cruft"
 "\s*([ixsmdt]*)([:letter:]*)"  "<0>   <1>d</1><2></2></0>  "
+"(a|b)c*d"                     "a<0><1>b</1>cd</0>"
 
 # Non-capturing parens (?: stuff).   Groups, but does not capture.
 "(?:abc)*(tail)"               "<0>abcabcabc<1>tail</1></0>"
@@ -1034,8 +1035,10 @@
 #    Bug 8826.  Incorrect results with case insensitive matches.
 #
 "AS(X)"                         i "aßx"
+"aßx"                           i "<0>assx</0>"
+"aßx"                           i "<0>ASSX</0>"
 "aßx"                           i "<0>aßx</0>"
-"ASS(X)"                        i "<0>aßx</0>"
+"ASS(?:.)"                      dti "<0>aß<1>x</1></0>"
 
 
 #  Random debugging, Temporary
