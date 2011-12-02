@@ -1,5 +1,5 @@
 # BidiMirroring-6.1.0.txt
-# Date: 2011-06-22, 08:08:00 GMT [KW, LI]
+# Date: 2011-11-08, 21:21:00 GMT [KW, LI]
 #
 # Bidi_Mirroring_Glyph Property
 # 
@@ -45,6 +45,10 @@
 # and for Unicode 6.1 by Ken Whistler and Laurentiu Iancu.
 # 
 # ############################################################
+#
+# Property:	Bidi_Mirroring_Glyph
+#
+# @missing: 0000..10FFFF; <code point>
 
 0028; 0029 # LEFT PARENTHESIS
 0029; 0028 # RIGHT PARENTHESIS

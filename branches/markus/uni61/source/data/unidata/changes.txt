@@ -21,6 +21,9 @@ Unicode 6.1 update
 - C++ branches/markus/uni61 at r30864 from trunk at r30843
 - Java branches/markus/uni61 at r30865 from trunk at r30863
 
+- ticket 8961 support Unicode "Age" value *names*
+- ticket 8963 support multiple character name aliases & types
+
 *** Unicode version numbers
 - makedata.mak
 - uchar.h
@@ -34,7 +37,7 @@ Unicode 6.1 update
 
 * file preparation
 
-~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni61/20111201/ucd ~/uni61/processed
+~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni61/20111202/ucd ~/uni61/processed
 - This prepares both unidata and testdata files in respective output subfolders.
 - Check test file diffs for previously commented-out, known-failing data lines;
   probably need to keep those commented out.
@@ -110,6 +113,26 @@ Unicode 6.1 update
 - all unassigned and noncharacter code points appear to have changed from
   the default Other value to explicit Control;
   should not matter to ICU?
+
+* NameAliases.txt changes
+- from
+    # Each line has two fields
+    # First field: Code point
+    # Second field: Alias
+- to
+    # Each line has three fields, as described here:
+    #
+    # First field:  Code point
+    # Second field: Alias
+    # Third field:  Type
+- Also, the file previously allowed multiple aliases but only now does it
+  actually provide multiple, even multiple of the same type. For example,
+    FEFF;BYTE ORDER MARK;alternate
+    FEFF;BOM;abbreviation
+    FEFF;ZWNBSP;abbreviation
+- This breaks our gennames parser, unames.icu data structure, and API.
+  Fix gennames to only pick up "correction" aliases.
+  New ticket #8963 for further changes.
 
 * run genpname/preparse.pl (on Linux)
   + cd ~/svn.icu/tools/trunk/src/unicode/c/genpname

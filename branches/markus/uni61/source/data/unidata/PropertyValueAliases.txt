@@ -1,5 +1,5 @@
 # PropertyValueAliases-6.1.0.txt
-# Date: 2011-11-30, 01:26:58 GMT [MD]
+# Date: 2011-12-02, 19:17:20 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2011 Unicode, Inc.
@@ -23,7 +23,6 @@
 # property value name is used.
 #
 # Second Field: The second field is an abbreviated name.
-# If there is no abbreviated name available, the field is marked with "n/a".
 #
 # Third Field: The third field is a long name.
 #
@@ -657,6 +656,48 @@ IDS; Y                                ; Yes                              ; T    
 Ideo; N                               ; No                               ; F                                ; False
 Ideo; Y                               ; Yes                              ; T                                ; True
 
+# Indic_Matra_Category (InMC)
+
+InMC; Bottom                          ; Bottom
+InMC; Bottom_And_Right                ; Bottom_And_Right
+InMC; Invisible                       ; Invisible
+InMC; Left                            ; Left
+InMC; Left_And_Right                  ; Left_And_Right
+InMC; NA                              ; NA
+InMC; Overstruck                      ; Overstruck
+InMC; Right                           ; Right
+InMC; Top                             ; Top
+InMC; Top_And_Bottom                  ; Top_And_Bottom
+InMC; Top_And_Bottom_And_Right        ; Top_And_Bottom_And_Right
+InMC; Top_And_Left                    ; Top_And_Left
+InMC; Top_And_Left_And_Right          ; Top_And_Left_And_Right
+InMC; Top_And_Right                   ; Top_And_Right
+InMC; Visual_Order_Left               ; Visual_Order_Left
+
+# Indic_Syllabic_Category (InSC)
+
+InSC; Avagraha                        ; Avagraha
+InSC; Bindu                           ; Bindu
+InSC; Consonant                       ; Consonant
+InSC; Consonant_Dead                  ; Consonant_Dead
+InSC; Consonant_Final                 ; Consonant_Final
+InSC; Consonant_Head_Letter           ; Consonant_Head_Letter
+InSC; Consonant_Medial                ; Consonant_Medial
+InSC; Consonant_Placeholder           ; Consonant_Placeholder
+InSC; Consonant_Repha                 ; Consonant_Repha
+InSC; Consonant_Subjoined             ; Consonant_Subjoined
+InSC; Modifying_Letter                ; Modifying_Letter
+InSC; Nukta                           ; Nukta
+InSC; Other                           ; Other
+InSC; Register_Shifter                ; Register_Shifter
+InSC; Tone_Letter                     ; Tone_Letter
+InSC; Tone_Mark                       ; Tone_Mark
+InSC; Virama                          ; Virama
+InSC; Visarga                         ; Visarga
+InSC; Vowel                           ; Vowel
+InSC; Vowel_Dependent                 ; Vowel_Dependent
+InSC; Vowel_Independent               ; Vowel_Independent
+
 # Jamo_Short_Name (JSN)
 
 # @missing: 0000..10FFFF; Jamo_Short_Name; <none>
@@ -1070,6 +1111,10 @@ sc ; Yiii                             ; Yi
 sc ; Zinh                             ; Inherited                        ; Qaai
 sc ; Zyyy                             ; Common
 sc ; Zzzz                             ; Unknown
+
+# Script_Extensions (scx)
+
+# @missing: 0000..10FFFF; Script_Extensions; <script>
 
 # Sentence_Break (SB)
 
