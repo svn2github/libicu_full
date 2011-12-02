@@ -1,5 +1,5 @@
 # WordBreakProperty-6.1.0.txt
-# Date: 2011-09-16, 21:06:51 GMT [MD]
+# Date: 2011-11-27, 05:10:51 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2011 Unicode, Inc.
@@ -289,7 +289,8 @@
 2CEF..2CF1    ; Extend
 2D7F          ; Extend
 2DE0..2DFF    ; Extend
-302A..302F    ; Extend
+302A..302D    ; Extend
+302E..302F    ; Extend
 3099..309A    ; Extend
 A66F          ; Extend
 A670..A672    ; Extend

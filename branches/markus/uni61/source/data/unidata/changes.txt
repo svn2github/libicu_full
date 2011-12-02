@@ -34,7 +34,7 @@ Unicode 6.1 update
 
 * file preparation
 
-~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni61/20111025/ucd ~/uni61/processed
+~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni61/20111201/ucd ~/uni61/processed
 - This prepares both unidata and testdata files in respective output subfolders.
 - Check test file diffs for previously commented-out, known-failing data lines;
   probably need to keep those commented out.
@@ -62,7 +62,8 @@ Unicode 6.1 update
 - 1 new Joining_Group (jg) value:
   Rohingya_Yeh
   -> uchar.h & UCharacter.JoiningGroup
-- 1 new Line_Break (lb) value:
+- 2 new Line_Break (lb) values:
+  CJ=Conditional_Japanese_Starter
   HL=Hebrew_Letter
   -> uchar.h & UCharacter.LineBreak
 - 7 new scripts:
@@ -110,14 +111,14 @@ Unicode 6.1 update
   the default Other value to explicit Control;
   should not matter to ICU?
 
-* build ICU (make install)
-* build Unicode tools using CMake+make
-
 * run genpname/preparse.pl (on Linux)
   + cd ~/svn.icu/tools/trunk/src/unicode/c/genpname
   + make sure that data.h is writable
   + perl preparse.pl ~/svn.icu/trunk/src > out.txt
   + preparse.pl shows no errors, out.txt Info and Warning lines look ok
+
+* build ICU (make install)
+* build Unicode tools using CMake+make
 
 * rebuild Unicode tools (at least genpname) using make
 - You might first need to "make install" ICU so that the tools build can pick

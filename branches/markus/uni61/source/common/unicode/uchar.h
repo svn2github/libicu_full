@@ -1707,8 +1707,9 @@ typedef enum ULineBreak {
     U_LB_JT = 34,                /*[JT]*/
     U_LB_JV = 35,                /*[JV]*/
     U_LB_CLOSE_PARENTHESIS = 36, /*[CP]*/ /* new in Unicode 5.2/ICU 4.4 */
-    U_LB_HEBREW_LETTER = 37,     /*[HL]*/ /* new in Unicode 6.1/ICU 49 */
-    U_LB_COUNT = 38
+    U_LB_CONDITIONAL_JAPANESE_STARTER = 37,/*[CJ]*/ /* new in Unicode 6.1/ICU 49 */
+    U_LB_HEBREW_LETTER = 38,     /*[HL]*/ /* new in Unicode 6.1/ICU 49 */
+    U_LB_COUNT = 39
 } ULineBreak;
 
 /**

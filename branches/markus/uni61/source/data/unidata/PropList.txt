@@ -1,5 +1,5 @@
 # PropList-6.1.0.txt
-# Date: 2011-09-16, 21:06:32 GMT [MD]
+# Date: 2011-11-30, 01:49:54 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2011 Unicode, Inc.
@@ -771,7 +771,8 @@ FA70..FAD9    ; Ideographic
 1FFD..1FFE    ; Diacritic
 2CEF..2CF1    ; Diacritic
 2E2F          ; Diacritic
-302A..302F    ; Diacritic
+302A..302D    ; Diacritic
+302E..302F    ; Diacritic
 3099..309A    ; Diacritic
 309B..309C    ; Diacritic
 30FC          ; Diacritic
@@ -828,6 +829,7 @@ FFE3          ; Diacritic
 07FA          ; Extender
 0E46          ; Extender
 0EC6          ; Extender
+180A          ; Extender
 1843          ; Extender
 1AA7          ; Extender
 1C36          ; Extender
@@ -844,7 +846,7 @@ AADD          ; Extender
 AAF3..AAF4    ; Extender
 FF70          ; Extender
 
-# Total code points: 30
+# Total code points: 31
 
 # ================================================
 
@@ -914,11 +916,12 @@ FFFFE..FFFFF  ; Noncharacter_Code_Point
 0DCF          ; Other_Grapheme_Extend
 0DDF          ; Other_Grapheme_Extend
 200C..200D    ; Other_Grapheme_Extend
+302E..302F    ; Other_Grapheme_Extend
 FF9E..FF9F    ; Other_Grapheme_Extend
 1D165         ; Other_Grapheme_Extend
 1D16E..1D172  ; Other_Grapheme_Extend
 
-# Total code points: 23
+# Total code points: 25
 
 # ================================================
 

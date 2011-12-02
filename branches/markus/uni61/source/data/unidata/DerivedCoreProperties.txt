@@ -1,5 +1,5 @@
 # DerivedCoreProperties-6.1.0.txt
-# Date: 2011-09-16, 21:06:15 GMT [MD]
+# Date: 2011-11-27, 05:10:20 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2011 Unicode, Inc.
@@ -2701,7 +2701,7 @@ FF41..FF5A    ; Cased
 2DE0..2DFF    ; Case_Ignorable
 2E2F          ; Case_Ignorable
 3005          ; Case_Ignorable
-302A..302F    ; Case_Ignorable
+302A..302D    ; Case_Ignorable
 3031..3035    ; Case_Ignorable
 303B          ; Case_Ignorable
 3099..309A    ; Case_Ignorable
@@ -2805,7 +2805,7 @@ E0001         ; Case_Ignorable
 E0020..E007F  ; Case_Ignorable
 E0100..E01EF  ; Case_Ignorable
 
-# Total code points: 1801
+# Total code points: 1799
 
 # ================================================
 
@@ -6462,7 +6462,8 @@ FFDA..FFDC    ; ID_Start
 3006          ; ID_Continue
 3007          ; ID_Continue
 3021..3029    ; ID_Continue
-302A..302F    ; ID_Continue
+302A..302D    ; ID_Continue
+302E..302F    ; ID_Continue
 3031..3035    ; ID_Continue
 3038..303A    ; ID_Continue
 303B          ; ID_Continue
@@ -7383,7 +7384,6 @@ FFDA..FFDC    ; XID_Start
 # Derived Property: XID_Continue
 #  Mod_ID_Continue modified for closure under NFKx
 #  Modified as described in UAX #15
-#  NOTE: Cf characters should be filtered out.
 #  NOTE: Does NOT remove the non-NFKx characters.
 #        Merely ensures that if isIdentifer(string) then isIdentifier(NFKx(string))
 #  NOTE: See UAX #31 for more information
@@ -7986,7 +7986,8 @@ FFDA..FFDC    ; XID_Start
 3006          ; XID_Continue
 3007          ; XID_Continue
 3021..3029    ; XID_Continue
-302A..302F    ; XID_Continue
+302A..302D    ; XID_Continue
+302E..302F    ; XID_Continue
 3031..3035    ; XID_Continue
 3038..303A    ; XID_Continue
 303B          ; XID_Continue
@@ -8559,7 +8560,8 @@ E01F0..E0FFF  ; Default_Ignorable_Code_Point
 2CEF..2CF1    ; Grapheme_Extend
 2D7F          ; Grapheme_Extend
 2DE0..2DFF    ; Grapheme_Extend
-302A..302F    ; Grapheme_Extend
+302A..302D    ; Grapheme_Extend
+302E..302F    ; Grapheme_Extend
 3099..309A    ; Grapheme_Extend
 A66F          ; Grapheme_Extend
 A670..A672    ; Grapheme_Extend

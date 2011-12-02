@@ -1,5 +1,5 @@
 # SpecialCasing-6.1.0.txt
-# Date: 2011-08-23, 21:01:19 GMT [MD]
+# Date: 2011-11-27, 05:10:51 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2011 Unicode, Inc.

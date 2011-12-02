@@ -1,5 +1,5 @@
 # NormalizationTest-6.1.0.txt
-# Date: 2011-09-16, 21:06:30 GMT [MD]
+# Date: 2011-11-27, 05:10:33 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2011 Unicode, Inc.
