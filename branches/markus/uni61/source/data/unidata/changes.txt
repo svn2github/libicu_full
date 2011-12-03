@@ -141,17 +141,16 @@ Unicode 6.1 update
   + preparse.pl shows no errors, out.txt Info and Warning lines look ok
 
 * build ICU (make install)
-* build Unicode tools using CMake+make
-
-* rebuild Unicode tools (at least genpname) using make
-- You might first need to "make install" ICU so that the tools build can pick
-  up the new definitions from the installed header files.
+  so that the tools build can pick up the new definitions from the installed header files.
+* build Unicode tools (at least genpname) using CMake+make
 
 * run genpname
   (builds both pnames.icu and propname_data.h)
 - ~/svn.icu/tools/trunk/bld/unicode/c$ genpname/genpname -v -d ~/svn.icu/trunk/src/source/data/in
 - ~/svn.icu/tools/trunk/bld/unicode/c$ genpname/genpname -v -d ~/svn.icu/trunk/src/source/common --csource
-- rebuild ICU & tools
+
+* build ICU (make install)
+* build Unicode tools using CMake+make
 
 * update source/data/unidata/norm2/nfkc_cf.txt
 - follow the instructions in nfkc_cf.txt for updating it from DerivedNormalizationProps.txt
@@ -170,7 +169,8 @@ Unicode 6.1 update
 - nothing new in 6.1, no test file to update
 
 * generate core properties data files
-- change the UCA version in source/data/unidata/FractionalUCA.txt to match the new Unicode version
+- in initial bootstrapping, change the UCA version
+  in source/data/unidata/FractionalUCA.txt to match the new Unicode version
 - ~/svn.icu/tools/trunk/src/unicode$ ./makeprops.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
 - rebuild ICU & tools
   + if genrb fails to build coll/root.res with an U_INVALID_FORMAT_ERROR,
@@ -226,6 +226,11 @@ Unicode 6.1 update
 - update source/data/unidata/FractionalUCA.txt with FractionalUCA_SHORT.txt
 - update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt
   (note removing the underscore before "Rules")
+- update (ICU)/source/test/testdata/CollationTest_*.txt
+  and (ICU4J)/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_*.txt
+  with output from Mark's Unicode tools
+- check test file diffs for previously commented-out, known-failing data lines;
+  probably need to keep those commented out
 - run makeuca.sh:
   ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
 - rebuild ICU4C
@@ -235,11 +240,6 @@ Unicode 6.1 update
     mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/coll
     ~/svn.icu/trunk/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt49b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt49b/coll
     ~/svn.icu/trunk/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt49b
-- update (ICU)/source/test/testdata/CollationTest_*.txt
-  and (ICU4J)/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_*.txt
-  with output from Mark's Unicode tools
-- check test file diffs for previously commented-out, known-failing data lines;
-  probably need to keep those commented out
 - run all tests with the *_SHORT.txt or the full files (the full ones have comments, useful for debugging)
 - note on intltest: if collate/UCAConformanceTest fails, then
   utility/MultithreadTest/TestCollators will fail as well;

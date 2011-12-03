@@ -3244,6 +3244,7 @@ private:
     UnicodeSet  *fSY;
     UnicodeSet  *fAI;
     UnicodeSet  *fAL;
+    UnicodeSet  *fCJ;
     UnicodeSet  *fHL;
     UnicodeSet  *fID;
     UnicodeSet  *fSA;
@@ -3298,6 +3299,7 @@ RBBILineMonkey::RBBILineMonkey()
     fSY    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=SY}]"), status);
     fAI    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=AI}]"), status);
     fAL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=AL}]"), status);
+    fCJ    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=CJ}]"), status);
     fHL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=HL}]"), status);
     fID    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=ID}]"), status);
     fSA    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=SA}]"), status);
@@ -3315,6 +3317,8 @@ RBBILineMonkey::RBBILineMonkey()
     fAL->addAll(*fAI);     // Default behavior for AI is identical to AL
     fAL->addAll(*fSA);     // Default behavior for SA is XX, which defaults to AL
     fAL->addAll(*fSG);     // Default behavior for SG is identical to AL.
+
+    fNS->addAll(*fCJ);     // Default behavior for CJ is identical to NS.
 
     fSets->addElement(fBK, status);
     fSets->addElement(fCR, status);
@@ -3850,6 +3854,8 @@ RBBILineMonkey::~RBBILineMonkey() {
     delete fSY;
     delete fAI;
     delete fAL;
+    delete fCJ;
+    delete fHL;
     delete fID;
     delete fSA;
     delete fSG;

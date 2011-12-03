@@ -56,11 +56,6 @@
 #           See rule LB 19 for an example.
 #
 
-$SmallHira = [\u3041 \u3043 \u3045 \u3047 \u3049 \u3063 \u3083 \u3085 \u3087 \u308E \u3095 \u3096];
-$SmallKata = [\u30A1 \u30A3 \u30A5 \u30A7 \u30A9 \u30C3 \u30E3 \u30E5 \u30E7 \u30EE \u30F5 \u30F6];
-$SmallKataExt = [\u31F0 \u31F1 \u31F2 \u31F3 \u31F4 \u31F5 \u31F6 \u31F7 \u31F8 \u31F9 \u31FA \u31FB \u31FC \u31FD \u31FE \u31FF];
-$SmallKanaAndProlongedMark = [[$SmallHira] [$SmallKata] [$SmallKataExt] [\u30FC]];
-
 $AI = [:LineBreak =  Ambiguous:];
 $AL = [:LineBreak =  Alphabetic:];
 $BA = [:LineBreak =  Break_After:];
@@ -68,6 +63,7 @@ $BB = [:LineBreak =  Break_Before:];
 $BK = [:LineBreak =  Mandatory_Break:];
 $B2 = [:LineBreak =  Break_Both:];
 $CB = [:LineBreak =  Contingent_Break:];
+$CJ = [:LineBreak =  Conditional_Japanese_Starter:];
 $CL = [:LineBreak =  Close_Punctuation:];
 $CM = [:LineBreak =  Combining_Mark:];
 $CP = [:LineBreak =  Close_Parenthesis:];
@@ -77,7 +73,7 @@ $GL = [:LineBreak =  Glue:];
 $HY = [:LineBreak =  Hyphen:];
 $H2 = [:LineBreak =  H2:];
 $H3 = [:LineBreak =  H3:];
-$ID = [[:LineBreak =  Ideographic:] [$SmallKanaAndProlongedMark]];
+$ID = [[:LineBreak =  Ideographic:] $CJ];
 $IN = [:LineBreak =  Inseperable:];
 $IS = [:LineBreak =  Infix_Numeric:];
 $JL = [:LineBreak =  JL:];
@@ -85,7 +81,7 @@ $JV = [:LineBreak =  JV:];
 $JT = [:LineBreak =  JT:];
 $LF = [:LineBreak =  Line_Feed:];
 $NL = [:LineBreak =  Next_Line:];
-$NS = [[:LineBreak =  Nonstarter:] - [$SmallKanaAndProlongedMark]];
+$NS = [:LineBreak =  Nonstarter:];
 $NU = [:LineBreak =  Numeric:];
 $OP = [:LineBreak =  Open_Punctuation:];
 $PO = [:LineBreak =  Postfix_Numeric:];
