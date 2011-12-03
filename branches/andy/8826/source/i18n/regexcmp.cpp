@@ -1305,7 +1305,8 @@ UBool RegexCompile::doParseActions(int32_t action)
             // Because capture groups can be forward-referenced by back-references,
             //  we fill the operand with the capture group number.  At the end
             //  of compilation, it will be changed to the variable's location.
-            U_ASSERT(groupNum > 0);  // TODO:  probably wants to be an error, not a U_ASSERT.
+            U_ASSERT(groupNum > 0);  // Shouldn't happen.  '\0' begins an octal escape sequence,
+                                     //    and shouldn't enter this code path at all.
             fixLiterals(FALSE);
             int32_t  op;
             if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
@@ -1791,37 +1792,10 @@ UBool RegexCompile::doParseActions(int32_t action)
 //                             or an escape sequence that reduces to a character.
 //                         Add it to the string containing all literal chars/strings from
 //                             the pattern.
-//                         If we are in a pattern string already, add the new char to it.
-//                         If we aren't in a pattern string, begin one now.
 //
 //------------------------------------------------------------------------------
 void RegexCompile::literalChar(UChar32 c)  {
     fLiteralChars.append(c);
-}
-
-
-
-//------------------------------------------------------------------------------
-//
-//    emitONE_CHAR         emit a ONE_CHAR op into the generated code.
-//                         Choose cased or uncased version, depending on the
-//                         match mode and whether the character itself is cased.
-//
-//------------------------------------------------------------------------------
-// TODO:  remove this function.
-void RegexCompile::emitONE_CHAR(UChar32  c) {
-    int32_t op;
-    if ((fModeFlags & UREGEX_CASE_INSENSITIVE) &&
-        u_hasBinaryProperty(c, UCHAR_CASE_SENSITIVE)) {
-        // We have a cased character, and are in case insensitive matching mode.
-        //c  = u_foldCase(c, U_FOLD_CASE_DEFAULT);  // !!!: handled in stripNOPs() now
-        op = URX_BUILD(URX_ONECHAR_I, c);
-    } else {
-        // Uncased char, or case sensitive match mode.
-        //  Either way, just generate a literal compare of the char.
-        op = URX_BUILD(URX_ONECHAR, c);
-    }
-    fRXPat->fCompiledPat->addElement(op, *fStatus);
 }
 
 
@@ -1868,7 +1842,7 @@ void    RegexCompile::fixLiterals(UBool split) {
     // If we are doing case-insensitive matching, case fold the string.  This may expand
     //   the string, e.g. the German sharp-s turns into "ss"
     if (fModeFlags & UREGEX_CASE_INSENSITIVE) {
-        fLiteralChars.foldCase();    // TODO:  which folding options?
+        fLiteralChars.foldCase();
         indexOfLastCodePoint = fLiteralChars.moveIndex32(fLiteralChars.length(), -1);
         lastCodePoint = fLiteralChars.char32At(indexOfLastCodePoint);
     }
@@ -1997,12 +1971,17 @@ int32_t   RegexCompile::blockTopLoc(UBool reserveLoc) {
         U_ASSERT(URX_TYPE(((uint32_t)fRXPat->fCompiledPat->elementAti(theLoc))) == URX_NOP);
     }
     else {
-        // Item just compiled is a single thing, a ".", or a single char, or a set reference.
+        // Item just compiled is a single thing, a ".", or a single char, a string or a set reference.
         // No slot for STATE_SAVE was pre-reserved in the compiled code.
         // We need to make space now.
         theLoc = fRXPat->fCompiledPat->size()-1;
+        int32_t opAtTheLoc = fRXPat->fCompiledPat->elementAti(theLoc);
+        if (URX_TYPE(opAtTheLoc) == URX_STRING_LEN) {
+            // Strings take two opcode, we want the position of the first one.
+            // We can have a string at this point if a single character case-folded to two.
+            theLoc--;
+        }
         if (reserveLoc) {
-            /*int32_t opAtTheLoc = fRXPat->fCompiledPat->elementAti(theLoc);*/
             int32_t  nop = URX_BUILD(URX_NOP, 0);
             fRXPat->fCompiledPat->insertElementAt(nop, theLoc, *fStatus);
         }
@@ -2711,7 +2690,6 @@ void   RegexCompile::matchStartType() {
                 if (currentLen == 0) {
                     // Add the starting character of this string to the set of possible starting
                     //   characters for this pattern.
-                    //  TODO:  check that this works for loose case matching
                     int32_t stringStartIdx = URX_VAL(op);
                     UChar32  c = fRXPat->fLiteralText.char32At(stringStartIdx);
                     UnicodeSet s(c, c);
@@ -2719,6 +2697,7 @@ void   RegexCompile::matchStartType() {
                     // TODO:  compute correct set of starting chars for full case folding.
                     //        For the moment, say any char can start.
                     // s.closeOver(USET_CASE_INSENSITIVE);
+                    s.clear();
                     s.complement();
 
                     fRXPat->fInitialChars->addAll(s);
@@ -3040,7 +3019,10 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
                 loc++;
                 // TODO: with full case folding, matching input text may be shorter than
                 //       the string we have here.  More smarts could put some bounds on it.
+                //       Assume a min length of one for now.  A min length of zero causes
+                //        optimization failures for a pattern like "string"+
                 // currentLen += URX_VAL(stringLenOp);
+                currentLen += 1;
             }
             break;
 

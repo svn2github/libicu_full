@@ -103,8 +103,6 @@ private:
     void        fixLiterals(UBool split=FALSE);      // Generate code for pending literal characters.
     void        insertOp(int32_t where);             // Open up a slot for a new op in the
                                                      //   generated code at the specified location.
-    void        emitONE_CHAR(UChar32 c);             // Emit a ONE_CHAR op into the compiled code,
-                                                     //   taking case mode into account.
     int32_t     minMatchLength(int32_t start,
                                int32_t end);
     int32_t     maxMatchLength(int32_t start,

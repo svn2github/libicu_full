@@ -5626,7 +5626,6 @@ GC_Done:
                             }
                         } else {
                             // Input code point folds to a string.
-                            printf("In case fold to string code.\n");
                             for (int foldIndex = 0; foldIndex<foldLength;) {
                                 if (patternStringIdx >= patternStringLen) {
                                     // The string from the pattern has been fully consumed,

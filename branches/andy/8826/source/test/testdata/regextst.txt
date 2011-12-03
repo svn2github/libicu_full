@@ -13,8 +13,8 @@
 #               <tagged string> = text, with the start and end of each
 #                                 capture group tagged with <n>...</n>.  The overall match,
 #                                 if any, is group 0, as in <0>matched text</0>
-#
 #                                  A region can be specified with <r>...</r> tags.
+#                                 Standard ICU unescape will be applied, allowing \u, \U, etc. to appear.
 #
 #               <flags>         = any combination of
 #                                   i      case insensitive match
@@ -1035,10 +1035,28 @@
 #    Bug 8826.  Incorrect results with case insensitive matches.
 #
 "AS(X)"                         i "aßx"
+"AS.*"                          i "aßx"           # Expansion of sharp s can't split between pattern terms.
+"ASßS"                          i "<0>aßß</0>"    # All one literal string, does match.
+"ASß{1}S"                       i "aßß"           # Pattern with terms, no match.
 "aßx"                           i "<0>assx</0>"
 "aßx"                           i "<0>ASSX</0>"
 "aßx"                           i "<0>aßx</0>"
-"ASS(?:.)"                      dti "<0>aß<1>x</1></0>"
+"ASS(.)"                        i "<0>aß<1>x</1></0>"
+
+# Case Insensitive, probe some corner cases.
+"ass+"                          i "aß"            # Second 's' in pattern is qualified, can't combine with first.
+"as+"                           i "aß"
+"aßs"                           i "as"            # Can't match half of a ß
+"aß+"                           i "<0>assssssss</0>s"
+"aß+"                           i "<0>assßSssSSS</0>s"
+"a(ß?)+"                        i "<0>assssssss<1></1></0>s"
+"a(ß?)+"                        i "<0>a<1></1></0>zzzzzzzzs"
+
+"\U00010400"                    i "<0>\U00010428</0>"   # case folded supplemental code point.
+
+"sstuff"                        i "<0>ßtuff</0>"    # exercise optimizations on what chars can start a match.
+"ßtuff"                         i "<0>sstuff</0>"
+"ßtuff"                         i "<0>Sstuff</0>"
 
 
 #  Random debugging, Temporary
