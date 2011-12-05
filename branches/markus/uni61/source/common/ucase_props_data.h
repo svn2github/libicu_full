@@ -4,7 +4,7 @@
  *
  * file name: ucase_props_data.h
  *
- * machine-generated on: 2011-12-02
+ * machine-generated on: 2011-12-05
  */
 
 #ifndef INCLUDED_FROM_UCASE_CPP

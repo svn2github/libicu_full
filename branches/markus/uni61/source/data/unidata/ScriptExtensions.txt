@@ -1,15 +1,22 @@
 # ScriptExtensions-6.1.0.txt
-# Date: 2011-08-22, 21:17:03 GMT [MD]
+# Date: 2011-12-02, 22:11:38 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2011 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 # For documentation, see http://www.unicode.org/reports/tr44/
+# The Script_Extensions property indicates which characters are commonly used
+# with a limited number of scripts, but with more than one.
+# The property is provisional: values are expected to change over time as more information becomes available.
+# For each code point, there is one or more property values.  Each such value is a Script property value.
+# For more information, see:
+#   UAX #24: http://www.unicode.org/reports/tr24/ and
+#   UAX #44: http://www.unicode.org/reports/tr44/
 #
-# The Script Extensions contain data about characters that belong to multiple scripts.
-# This data is provisional, and expected to change over time, as more information becomes available.
-# The script values are space-delimited short values, such as Hang for Hangul.
-# For more information, see UAX #24: http://www.unicode.org/reports/tr24/.
+#  All code points not explicitly listed for Script_Extensions
+#  have as their value the corresponding Script property value
+#
+# @missing: 0000..10FFFF; <script>
 
 # ================================================
 

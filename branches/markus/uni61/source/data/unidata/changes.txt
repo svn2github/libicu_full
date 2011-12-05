@@ -37,7 +37,7 @@ Unicode 6.1 update
 
 * file preparation
 
-~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni61/20111202/ucd ~/uni61/processed
+~/svn.icu/tools/trunk/src/unicode/c/genprops/misc$ ./ucdcopy.py ~/uni61/20111205/ucd ~/uni61/processed
 - This prepares both unidata and testdata files in respective output subfolders.
 - Check test file diffs for previously commented-out, known-failing data lines;
   probably need to keep those commented out.
@@ -108,11 +108,6 @@ Unicode 6.1 update
 #                        U+10980 - U+1099F
 #     Meroitic Cursive:  U+109A0 - U+109FF
   -> should be picked up by the explicit data in the file
-
-* GraphemeBreakProperty.txt changes
-- all unassigned and noncharacter code points appear to have changed from
-  the default Other value to explicit Control;
-  should not matter to ICU?
 
 * NameAliases.txt changes
 - from

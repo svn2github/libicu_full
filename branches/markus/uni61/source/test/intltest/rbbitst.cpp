@@ -2442,13 +2442,15 @@ RBBICharMonkey::RBBICharMonkey() {
     fHangulSet->addAll(*fTSet);
     fHangulSet->addAll(*fLVSet);
     fHangulSet->addAll(*fLVTSet);
-    fAnySet     = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\u0000-\\U0010ffff]"), status);
-    
+    fAnySet     = new UnicodeSet(0, 0x10ffff);
+
     fSets       = new UVector(status);
     fSets->addElement(fCRLFSet,    status);
     fSets->addElement(fControlSet, status);
     fSets->addElement(fExtendSet,  status);
-    fSets->addElement(fPrependSet, status);
+    if (!fPrependSet->isEmpty()) {
+        fSets->addElement(fPrependSet, status);
+    }
     fSets->addElement(fSpacingSet, status);
     fSets->addElement(fHangulSet,  status);
     fSets->addElement(fAnySet,     status);
@@ -4762,6 +4764,17 @@ void RBBITest::TestDebug(void) {
         pos = bi->previous();
     } while (pos != BreakIterator::DONE);
 #endif
+}
+
+void RBBITest::TestProperties() {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    UnicodeSet prependSet(UNICODE_STRING_SIMPLE("[:GCB=Prepend:]"), errorCode);
+    if (!prependSet.isEmpty()) {
+        errln(
+            "[:GCB=Prepend:] is not empty any more. "
+            "Uncomment relevant lines in source/data/brkitr/char.txt and "
+            "change this test to the opposite condition.");
+    }
 }
 
 #endif /* #if !UCONFIG_NO_BREAK_ITERATION */
