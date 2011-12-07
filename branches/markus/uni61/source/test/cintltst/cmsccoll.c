@@ -3111,14 +3111,21 @@ static void TestVariableTopSetting(void) {
 
   log_verbose("Testing setting variable top to contractions\n");
   {
-    /* uint32_t tailoredCE = UCOL_NOT_FOUND; */
-    /*UChar *conts = (UChar *)((uint8_t *)coll->image + coll->image->UCAConsts+sizeof(UCAConstants));*/
     UChar *conts = (UChar *)((uint8_t *)coll->image + coll->image->contractionUCACombos);
+    int32_t maxUCAContractionLength = coll->image->contractionUCACombosWidth;
     while(*conts != 0) {
-      if((*(conts+2) == 0) || (*(conts+1)==0)) { /* contracts or pre-context contractions */
-        varTop1 = ucol_setVariableTop(coll, conts, -1, &status);
+      /*
+       * A continuation is NUL-terminated and NUL-padded
+       * except if it has the maximum length.
+       */
+      int32_t contractionLength = maxUCAContractionLength;
+      while(contractionLength > 0 && conts[contractionLength - 1] == 0) {
+        --contractionLength;
+      }
+      if(*(conts+1)==0) { /* pre-context */
+        varTop1 = ucol_setVariableTop(coll, conts, 1, &status);
       } else {
-        varTop1 = ucol_setVariableTop(coll, conts, 3, &status);
+        varTop1 = ucol_setVariableTop(coll, conts, contractionLength, &status);
       }
       if(U_FAILURE(status)) {
         if(status == U_PRIMARY_TOO_LONG_ERROR) {
@@ -3132,7 +3139,7 @@ static void TestVariableTopSetting(void) {
         }
         status = U_ZERO_ERROR;
       }
-      conts+=3;
+      conts+=maxUCAContractionLength;
     }
 
     status = U_ZERO_ERROR;
