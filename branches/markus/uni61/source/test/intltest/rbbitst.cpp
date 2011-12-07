@@ -1833,9 +1833,11 @@ static const char    thCharText[]     = "\\u0E01\\u0E23\\u0E30\\u0E17\\u0E48\\u0
 static const int32_t thCharTOffsets[] = { 1, 2, 3, 5, 6, 7, 8, 9, 10, 11,
                                           12, 13, 15, 16, 17, 19, 20, 22, 23, 24, 25, 26, 27, 28,
                                           29, 30, 32, 33, 35, 37, 38, 39, 40, 41 };
+/* As of Unicode 6.1 root should have same behavior as th for this
 static const int32_t thCharROffsets[] = { 1,    3, 5, 6, 7, 8, 9,     11,
                                           12, 13, 15,     17, 19, 20, 22,     24,     26, 27, 28,
                                           29,     32, 33, 35, 37, 38,     40, 41 };
+*/
 
 typedef struct {
     UBreakIteratorType  type;
@@ -1853,7 +1855,7 @@ static const TailoredBreakItem tbItems[] = {
     { UBRK_WORD,      "en_US_POSIX", posxWordText, ARRAY_PTR_LEN(posxWordTOffsets), ARRAY_PTR_LEN(posxWordROffsets) },
     { UBRK_WORD,      "ja",          jaWordText,   ARRAY_PTR_LEN(jaWordTOffsets),   ARRAY_PTR_LEN(jaWordROffsets)   },
     { UBRK_SENTENCE,  "el",          elSentText,   ARRAY_PTR_LEN(elSentTOffsets),   ARRAY_PTR_LEN(elSentROffsets)   },
-    { UBRK_CHARACTER, "th",          thCharText,   ARRAY_PTR_LEN(thCharTOffsets),   ARRAY_PTR_LEN(thCharROffsets)   },
+    { UBRK_CHARACTER, "th",          thCharText,   ARRAY_PTR_LEN(thCharTOffsets),   ARRAY_PTR_LEN(thCharTOffsets)   },
     { UBRK_CHARACTER, NULL,          NULL,         NULL,0,                          NULL,0                          } // terminator
 };
 
@@ -1901,9 +1903,6 @@ void RBBITest::TBTest(BreakIterator* brkitr, int type, const char *locale, const
 }
 
 void RBBITest::TestTailoredBreaks() {
-// TODO(andy): Remove this time bomb code.
-UVersionInfo icu49 = { 49, 1, 0, 0 };
-UBool isBeforeICU49 = !isICUVersionAtLeast(icu49);
     const TailoredBreakItem * tbItemPtr;
     Locale rootLocale = Locale("root");
     for (tbItemPtr = tbItems; tbItemPtr->escapedText != NULL; ++tbItemPtr) {
@@ -1913,10 +1912,6 @@ UBool isBeforeICU49 = !isICUVersionAtLeast(icu49);
         UErrorCode status = U_ZERO_ERROR;
         switch (tbItemPtr->type) {
             case UBRK_CHARACTER:
-// TODO(andy): Remove this time bomb code.
-if (isBeforeICU49) {
-    continue;
-}
                 tailoredBrkiter = BreakIterator::createCharacterInstance(testLocale, status);
                 rootBrkiter = BreakIterator::createCharacterInstance(rootLocale, status);
                 break;
@@ -2156,14 +2151,9 @@ void RBBITest::runUnicodeTestData(const char *fileName, RuleBasedBreakIterator *
     // TODO(andy): Match line break behavior to Unicode 6.0 and remove this time bomb.
     UVersionInfo icu49 = { 49, 1, 0, 0 };
     UBool isICUVersionPast48 = isICUVersionAtLeast(icu49);
-    UBool isGraphemeBreak = 0 == strcmp(fileName, "GraphemeBreakTest.txt");
     UBool isLineBreak = 0 == strcmp(fileName, "LineBreakTest.txt");
     UErrorCode  status = U_ZERO_ERROR;
 
-// TODO(andy): Remove this time bomb code.
-if (isLineBreak || isICUVersionPast48) {
-    return;
-}
     //
     //  Open and read the test data file, put it into a UnicodeString.
     //
@@ -2255,8 +2245,8 @@ if (isLineBreak || isICUVersionPast48) {
             //   If the line from the file contained test data, run the test now.
             //
             if (testString.length() > 0) {
-// TODO(andy): Remove this time bomb code.
-if ((!isLineBreak || isICUVersionPast48 || !(4658 <= lineNumber && lineNumber <= 4758)) && (!isGraphemeBreak || isICUVersionPast48 || !(163 <= lineNumber && lineNumber <= 187))) {
+// TODO(andy): Remove this time bomb code. Note: Line range updated for Unicode 6.1 LineBreakTest.txt.
+if (!isLineBreak || isICUVersionPast48 || !(5066 <= lineNumber && lineNumber <= 5170)) {
                 checkUnicodeTestCase(fileName, lineNumber, testString, &breakPositions, bi);
 }
             }
