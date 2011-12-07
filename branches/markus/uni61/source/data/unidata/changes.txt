@@ -226,6 +226,7 @@ Unicode 6.1 update
   with output from Mark's Unicode tools
 - check test file diffs for previously commented-out, known-failing data lines;
   probably need to keep those commented out
+- check FractionalUCA.txt for manual changes of lead bytes from IMPLICIT to Hani
 - run makeuca.sh:
   ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
 - rebuild ICU4C

@@ -1,5 +1,5 @@
 # Fractional UCA Table, generated from standard UCA
-# 2011-11-26, 21:48:30 GMT [MD]
+# 2011-12-06, 23:21:52 GMT [MD]
 # VERSION: UCA=6.1.0, UCD=6.1.0
 # For a description of the format and usage, see CollationAuxiliary.html
 
@@ -24751,10 +24751,8 @@ AA76; [76 3D, 05, 05]
 11130; [76 40 72, 05, 05]
 
 11131; [76 40 7A, 05, 05]
-11131 D804; [76 40 7A, 05, 05][E3 05 C7 AC, 05, 05]
 
 11132; [76 40 82, 05, 05]
-11132 D804; [76 40 82, 05, 05][E3 05 C7 AC, 05, 05]
 
 11133; [76 40 8A, 05, 05]
 
@@ -41294,8 +41292,8 @@ FDD0 00B6;	[, , 3F 03]	# CONSTRUCTED FAKE SECONDARY-IGNORABLE
 [top_byte	72	Thai	COMPRESS ]	#	[64]	Thai=285 Mn=10
 [top_byte	73	Laoo Tavt	COMPRESS ]	#	[115]	Laoo=185 Tavt=300 Mn=18
 [top_byte	74	Tibt Lepc Phag Limb Tglg Hano Buhd Tagb Bugi Batk Rjng Kali	COMPRESS ]	#	[463]	Batk=38 Bugi=23 Buhd=18 Hano=18 Kali=28 Lepc=39 Limb=29 Phag=52 Rjng=23 Tagb=16 Tglg=17 Tibt=50 Mc=37 Mn=123
-[top_byte	75	Mymr Cakm ]	#	[200]	Cakm=36 Mymr=98 Mc=31 Mn=42
-[top_byte	76	Mymr Cakm ]	#	[200]	Cakm=36 Mymr=98 Mc=31 Mn=42
+[top_byte	75	Mymr Cakm ]	#	[200]	Cakm=36 Mymr=98 Mc=31 Mn=40
+[top_byte	76	Mymr Cakm ]	#	[200]	Cakm=36 Mymr=98 Mc=31 Mn=40
 [top_byte	77	Khmr Tale Talu Lana Cham Bali Java Mong Olck Cher Cans Ogam Runr Orkh Vaii Bamu	COMPRESS ]	#	[2436]	Bali=60 Bamu=639 Cans=707 Cham=52 Cher=85 Java=47 Khmr=53 Lana=53 Mong=129 Ogam=26 Olck=30 Orkh=73 Runr=75 Tale=35 Talu=51 Vaii=286 Lm=8 Mc=60 Mn=58 Nl=13 So=2
 [top_byte	78	Hang	COMPRESS ]	#	[357]	Hang=534
 [top_byte	79	Kana	COMPRESS ]	#	[50]	Kana=390 Lo=2
@@ -41401,11 +41399,17 @@ FDD0 00B6;	[, , 3F 03]	# CONSTRUCTED FAKE SECONDARY-IGNORABLE
 [top_byte	DD	Hani ]	#	[0]	Hani=1
 [top_byte	DE	Hani ]	#	[0]	Hani=1
 [top_byte	DF	Hani ]	#	[0]	Hani=1
-[top_byte	E0	IMPLICIT ]	#	[0]	IMPLICIT=5
-[top_byte	E1	IMPLICIT ]	#	[0]	IMPLICIT=5
-[top_byte	E2	IMPLICIT ]	#	[0]	IMPLICIT=5
-[top_byte	E3	IMPLICIT ]	#	[0]	IMPLICIT=5
-[top_byte	E4	IMPLICIT ]	#	[0]	IMPLICIT=5
+# merged into Hani
+# [top_byte	E0	IMPLICIT ]	#	[0]	IMPLICIT=5
+# [top_byte	E1	IMPLICIT ]	#	[0]	IMPLICIT=5
+# [top_byte	E2	IMPLICIT ]	#	[0]	IMPLICIT=5
+# [top_byte	E3	IMPLICIT ]	#	[0]	IMPLICIT=5
+# [top_byte	E4	IMPLICIT ]	#	[0]	IMPLICIT=5
+[top_byte	E0	Hani ]	#	[0]	Hani=5
+[top_byte	E1	Hani ]	#	[0]	Hani=5
+[top_byte	E2	Hani ]	#	[0]	Hani=5
+[top_byte	E3	Hani ]	#	[0]	Hani=5
+[top_byte	E4	Hani ]	#	[0]	Hani=5
 [top_byte	E5	TRAILING ]	#	[0]	TRAILING=11
 [top_byte	E6	TRAILING ]	#	[0]	TRAILING=11
 [top_byte	E7	TRAILING ]	#	[0]	TRAILING=11
@@ -41470,10 +41474,11 @@ FDD0 00B6;	[, , 3F 03]	# CONSTRUCTED FAKE SECONDARY-IGNORABLE
 [reorderingTokens	Gujr	6B=52 ]
 [reorderingTokens	Guru	6A=51 ]
 [reorderingTokens	Hang	78=534 ]
-[reorderingTokens	Hani	7B=1 7C=1 7D=1 7E=1 7F=1 80=1 81=1 82=1 83=1 84=1 85=1 86=1 87=1 88=1 89=1 8A=1 8B=1 8C=1 8D=1 8E=1 8F=1 90=1 91=1 92=1 93=1 94=1 95=1 96=1 97=1 98=1 99=1 9A=1 9B=1 9C=1 9D=1 9E=1 9F=1 A0=1 A1=1 A2=1 A3=1 A4=1 A5=1 A6=1 A7=1 A8=1 A9=1 AA=1 AB=1 AC=1 AD=1 AE=1 AF=1 B0=1 B1=1 B2=1 B3=1 B4=1 B5=1 B6=1 B7=1 B8=1 B9=1 BA=1 BB=1 BC=1 BD=1 BE=1 BF=1 C0=1 C1=1 C2=1 C3=1 C4=1 C5=1 C6=1 C7=1 C8=1 C9=1 CA=1 CB=1 CC=1 CD=1 CE=1 CF=1 D0=1 D1=1 D2=1 D3=1 D4=1 D5=1 D6=1 D7=1 D8=1 D9=1 DA=1 DB=1 DC=1 DD=1 DE=1 DF=1 ]
+[reorderingTokens	Hani	7B=1 7C=1 7D=1 7E=1 7F=1 80=1 81=1 82=1 83=1 84=1 85=1 86=1 87=1 88=1 89=1 8A=1 8B=1 8C=1 8D=1 8E=1 8F=1 90=1 91=1 92=1 93=1 94=1 95=1 96=1 97=1 98=1 99=1 9A=1 9B=1 9C=1 9D=1 9E=1 9F=1 A0=1 A1=1 A2=1 A3=1 A4=1 A5=1 A6=1 A7=1 A8=1 A9=1 AA=1 AB=1 AC=1 AD=1 AE=1 AF=1 B0=1 B1=1 B2=1 B3=1 B4=1 B5=1 B6=1 B7=1 B8=1 B9=1 BA=1 BB=1 BC=1 BD=1 BE=1 BF=1 C0=1 C1=1 C2=1 C3=1 C4=1 C5=1 C6=1 C7=1 C8=1 C9=1 CA=1 CB=1 CC=1 CD=1 CE=1 CF=1 D0=1 D1=1 D2=1 D3=1 D4=1 D5=1 D6=1 D7=1 D8=1 D9=1 DA=1 DB=1 DC=1 DD=1 DE=1 DF=1 E0=5 E1=5 E2=5 E3=5 E4=5 ]
 [reorderingTokens	Hano	74=18 ]
 [reorderingTokens	Hebr	60=78 ]
-[reorderingTokens	IMPLICIT	E0=5 E1=5 E2=5 E3=5 E4=5 ]
+# merged into Hani
+# [reorderingTokens	IMPLICIT	E0=5 E1=5 E2=5 E3=5 E4=5 ]
 [reorderingTokens	Ital	7A=31 ]
 [reorderingTokens	Java	77=47 ]
 [reorderingTokens	Kali	74=28 ]
@@ -41552,7 +41557,7 @@ FDD0 00B6;	[, , 3F 03]	# CONSTRUCTED FAKE SECONDARY-IGNORABLE
 [categories	Lm	0D{SYMBOL}=24 0E{SYMBOL}=25 27{Latn}=12 28{Latn}=12 29{Latn}=12 2A{Latn}=12 2B{Latn}=12 2C{Latn}=12 2D{Latn}=12 2E{Latn}=12 2F{Latn}=12 30{Latn}=12 31{Latn}=12 32{Latn}=12 33{Latn}=12 34{Latn}=12 35{Latn}=12 36{Latn}=12 37{Latn}=12 38{Latn}=12 39{Latn}=12 3A{Latn}=12 3B{Latn}=12 3C{Latn}=12 3D{Latn}=12 3E{Latn}=12 3F{Latn}=12 40{Latn}=12 41{Latn}=12 42{Latn}=12 43{Latn}=12 44{Latn}=12 45{Latn}=12 46{Latn}=12 47{Latn}=12 48{Latn}=12 49{Latn}=12 4A{Latn}=12 4B{Latn}=12 4C{Latn}=12 4D{Latn}=12 4E{Latn}=12 4F{Latn}=12 50{Latn}=12 51{Latn}=12 52{Latn}=12 53{Latn}=12 54{Latn}=12 55{Latn}=12 56{Latn}=12 57{Latn}=12 58{Latn}=12 59{Latn}=12 5A{Latn}=12 5C{Cyrl Glag}=2 5D{Cyrl Glag}=2 5F{Armn}=1 60{Hebr Phnx Samr}=1 61{Arab Syrc Mand}=2 62{Arab Syrc Mand}=2 63{Thaa Nkoo Tfng}=2 77{Khmr Tale Talu Lana Cham Bali Java Mong Olck Cher Cans Ogam Runr Orkh Vaii Bamu}=8 7A{Bopo Yiii Lisu Plrd Lyci Cari Lydi Ital Goth Dsrt Shaw Osma Sora Linb Cprt Sarb Avst Armi Prti Phli Ugar Xpeo Xsux Egyp Merc Mero}=20 ]
 [categories	Lo	68{Deva}=10 79{Kana}=2 ]
 [categories	Mc	68{Deva}=10 69{Beng}=10 6A{Guru}=3 6B{Gujr}=6 6C{Orya}=10 6D{Taml}=14 6E{Telu}=4 6F{Knda}=7 70{Mlym}=13 71{Sinh Mtei Sylo Saur Kthi Shrd Takr Sund Brah Khar}=66 74{Tibt Lepc Phag Limb Tglg Hano Buhd Tagb Bugi Batk Rjng Kali}=37 75{Mymr Cakm}=31 76{Mymr Cakm}=31 77{Khmr Tale Talu Lana Cham Bali Java Mong Olck Cher Cans Ogam Runr Orkh Vaii Bamu}=60 7A{Bopo Yiii Lisu Plrd Lyci Cari Lydi Ital Goth Dsrt Shaw Osma Sora Linb Cprt Sarb Avst Armi Prti Phli Ugar Xpeo Xsux Egyp Merc Mero}=46 ]
-[categories	Mn	27{Latn}=35 28{Latn}=35 29{Latn}=35 2A{Latn}=35 2B{Latn}=35 2C{Latn}=35 2D{Latn}=35 2E{Latn}=35 2F{Latn}=35 30{Latn}=35 31{Latn}=35 32{Latn}=35 33{Latn}=35 34{Latn}=35 35{Latn}=35 36{Latn}=35 37{Latn}=35 38{Latn}=35 39{Latn}=35 3A{Latn}=35 3B{Latn}=35 3C{Latn}=35 3D{Latn}=35 3E{Latn}=35 3F{Latn}=35 40{Latn}=35 41{Latn}=35 42{Latn}=35 43{Latn}=35 44{Latn}=35 45{Latn}=35 46{Latn}=35 47{Latn}=35 48{Latn}=35 49{Latn}=35 4A{Latn}=35 4B{Latn}=35 4C{Latn}=35 4D{Latn}=35 4E{Latn}=35 4F{Latn}=35 50{Latn}=35 51{Latn}=35 52{Latn}=35 53{Latn}=35 54{Latn}=35 55{Latn}=35 56{Latn}=35 57{Latn}=35 58{Latn}=35 59{Latn}=35 5A{Latn}=35 5C{Cyrl Glag}=41 5D{Cyrl Glag}=41 60{Hebr Phnx Samr}=3 63{Thaa Nkoo Tfng}=11 68{Deva}=15 69{Beng}=7 6A{Guru}=9 6B{Gujr}=10 6C{Orya}=9 6D{Taml}=2 6E{Telu}=15 6F{Knda}=17 70{Mlym}=7 71{Sinh Mtei Sylo Saur Kthi Shrd Takr Sund Brah Khar}=66 72{Thai}=10 73{Laoo Tavt}=18 74{Tibt Lepc Phag Limb Tglg Hano Buhd Tagb Bugi Batk Rjng Kali}=123 75{Mymr Cakm}=42 76{Mymr Cakm}=42 77{Khmr Tale Talu Lana Cham Bali Java Mong Olck Cher Cans Ogam Runr Orkh Vaii Bamu}=58 7A{Bopo Yiii Lisu Plrd Lyci Cari Lydi Ital Goth Dsrt Shaw Osma Sora Linb Cprt Sarb Avst Armi Prti Phli Ugar Xpeo Xsux Egyp Merc Mero}=4 ]
+[categories	Mn	27{Latn}=35 28{Latn}=35 29{Latn}=35 2A{Latn}=35 2B{Latn}=35 2C{Latn}=35 2D{Latn}=35 2E{Latn}=35 2F{Latn}=35 30{Latn}=35 31{Latn}=35 32{Latn}=35 33{Latn}=35 34{Latn}=35 35{Latn}=35 36{Latn}=35 37{Latn}=35 38{Latn}=35 39{Latn}=35 3A{Latn}=35 3B{Latn}=35 3C{Latn}=35 3D{Latn}=35 3E{Latn}=35 3F{Latn}=35 40{Latn}=35 41{Latn}=35 42{Latn}=35 43{Latn}=35 44{Latn}=35 45{Latn}=35 46{Latn}=35 47{Latn}=35 48{Latn}=35 49{Latn}=35 4A{Latn}=35 4B{Latn}=35 4C{Latn}=35 4D{Latn}=35 4E{Latn}=35 4F{Latn}=35 50{Latn}=35 51{Latn}=35 52{Latn}=35 53{Latn}=35 54{Latn}=35 55{Latn}=35 56{Latn}=35 57{Latn}=35 58{Latn}=35 59{Latn}=35 5A{Latn}=35 5C{Cyrl Glag}=41 5D{Cyrl Glag}=41 60{Hebr Phnx Samr}=3 63{Thaa Nkoo Tfng}=11 68{Deva}=15 69{Beng}=7 6A{Guru}=9 6B{Gujr}=10 6C{Orya}=9 6D{Taml}=2 6E{Telu}=15 6F{Knda}=17 70{Mlym}=7 71{Sinh Mtei Sylo Saur Kthi Shrd Takr Sund Brah Khar}=66 72{Thai}=10 73{Laoo Tavt}=18 74{Tibt Lepc Phag Limb Tglg Hano Buhd Tagb Bugi Batk Rjng Kali}=123 75{Mymr Cakm}=40 76{Mymr Cakm}=40 77{Khmr Tale Talu Lana Cham Bali Java Mong Olck Cher Cans Ogam Runr Orkh Vaii Bamu}=58 7A{Bopo Yiii Lisu Plrd Lyci Cari Lydi Ital Goth Dsrt Shaw Osma Sora Linb Cprt Sarb Avst Armi Prti Phli Ugar Xpeo Xsux Egyp Merc Mero}=4 ]
 [categories	Nd	12{DIGIT}=53 14{DIGIT}=107 16{DIGIT}=82 18{DIGIT}=69 1A{DIGIT}=65 1C{DIGIT}=57 1E{DIGIT}=54 20{DIGIT}=55 22{DIGIT}=54 24{DIGIT}=54 ]
 [categories	Nl	10{DIGIT}=25 11{DIGIT}=37 12{DIGIT}=1 14{DIGIT}=12 16{DIGIT}=15 18{DIGIT}=15 1A{DIGIT}=16 1C{DIGIT}=17 1E{DIGIT}=9 20{DIGIT}=9 22{DIGIT}=8 24{DIGIT}=10 77{Khmr Tale Talu Lana Cham Bali Java Mong Olck Cher Cans Ogam Runr Orkh Vaii Bamu}=13 7A{Bopo Yiii Lisu Plrd Lyci Cari Lydi Ital Goth Dsrt Shaw Osma Sora Linb Cprt Sarb Avst Armi Prti Phli Ugar Xpeo Xsux Egyp Merc Mero}=2 ]
 [categories	No	10{DIGIT}=99 11{DIGIT}=45 12{DIGIT}=5 14{DIGIT}=35 16{DIGIT}=20 18{DIGIT}=19 1A{DIGIT}=15 1C{DIGIT}=13 1E{DIGIT}=12 20{DIGIT}=12 22{DIGIT}=12 24{DIGIT}=11 ]

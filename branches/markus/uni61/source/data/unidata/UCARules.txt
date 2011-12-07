@@ -1,7 +1,7 @@
 ﻿# File:        UCA_Rules_SHORT.txt
 # UCA Version: 6.1.0
 # UCD Version: 6.1.0
-# Generated:   2011-09-24, 00:30:56 GMT [MD]
+# Generated:   2011-12-06, 23:22:20 GMT [MD]
 # For a description of the format and usage, see CollationAuxiliary.html
 
 & [last tertiary ignorable]
