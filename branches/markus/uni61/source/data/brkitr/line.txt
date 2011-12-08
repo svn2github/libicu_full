@@ -5,7 +5,7 @@
 #
 #         Line Breaking Rules
 #         Implement default line breaking as defined by 
-#         Unicode Standard Annex #14 Revision 24 for Unicode 6.0
+#         Unicode Standard Annex #14 Revision 28 for Unicode 6.1
 #         http://www.unicode.org/reports/tr14/
 #
 #         TODO:  Rule LB 8 remains as it was in Unicode 5.2
@@ -334,7 +334,7 @@ $LB20NonBreaks $CM* ($BAcm | $HYcm | $NScm);
 $BBcm [^$CB];                                  #  $BB  x
 $BBcm $LB20NonBreaks $CM*;
 
-# LB 21a Don't brak after Hebrew + Hyphen
+# LB 21a Don't break after Hebrew + Hyphen
 #   HL (HY | BA) x
 #  
 $HLcm ($HYcm | $BAcm) [^$CB]?;

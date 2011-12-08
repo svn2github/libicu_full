@@ -6,7 +6,7 @@
 #
 #   ICU Sentence Break Rules
 #      See Unicode Standard Annex #29.
-#      These rules are based on UAX 29 Revision 16 for Unicode Version 6.0
+#      These rules are based on UAX #29 Revision 19 for Unicode Version 6.1
 #
 
 
