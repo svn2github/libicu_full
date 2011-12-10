@@ -482,23 +482,8 @@ int main()
 ENDIF()
 
 # Data packaging
-MESSAGE(STATUS "Data packaging mode")
-IF(LOWER_ICU_DATA_PACKAGING STREQUAL files)
-    SET(DATA_PACKAGING_MODE files)
-ELSEIF(LOWER_ICU_DATA_PACKAGING STREQUAL archive)
-    SET(DATA_PACKAGING_MODE common)
-ELSEIF(LOWER_ICU_DATA_PACKAGING STREQUAL library)
-    # Set to dll unless (ENABLE_STATIC AND NOT ENABLE_SHARED)
-    IF(ENABLE_SHARED)
-        SET(DATA_PACKAGING_MODE dll)
-    ELSEIF(ENABLE_STATIC)
-        SET(DATA_PACKAGING_MODE static)
-    ENDIF()
-ELSE()
-    # This has already been validated, but it doesn't hurt to play it safe
-    MESSAGE(FATAL_ERROR "Unknown data packaging option: ${ICU_DATA_PACKAGING}")
-ENDIF()
-MESSAGE(STATUS "Data packaging mode - ${DATA_PACKAGING_MODE}")
+# This has already been validated in top-level CMakeLists.txt
+MESSAGE(STATUS "Data packaging mode - ${LOWER_ICU_DATA_PACKAGING}")
 
 # Library suffix
 IF(LIBRARY_SUFFIX)

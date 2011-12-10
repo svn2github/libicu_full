@@ -85,12 +85,16 @@ SET(LAYOUT_STUB le)
 SET(LAYOUTEX_STUB lx)
 SET(TOOLUTIL_STUB tu)
 SET(CTESTFW_STUB test)
+# The target name of the real data must be different from the stub
+# data target name, even though the build output files will be the
+# same
+SET(REAL_DATA_STUB realdata)
 # This list of all stubs is used in the macros TARGET_NAMES_FROM_STUB and
 # LINK_ICU_LIBRARIES (defined in source/cmake-modules/IcuLibrary.cmake), but we
 # define it here so that we only have to maintain the list of stub
 # names in one place, here.
-SET(ALL_STUBS ${DATA_STUB} ${I18N_STUB} ${COMMON_STUB} ${IO_STUB}
-              ${LAYOUT_STUB} ${LAYOUTEX_STUB} ${TOOLUTIL_STUB} ${CTESTFW_STUB})
+SET(ALL_STUBS ${DATA_STUB} ${I18N_STUB} ${COMMON_STUB} ${IO_STUB} ${LAYOUT_STUB}
+              ${LAYOUTEX_STUB} ${TOOLUTIL_STUB} ${CTESTFW_STUB} ${REAL_DATA_STUB})
 
 # Define the installation directories
 SET(BIN_DIR "bin")
@@ -122,7 +126,7 @@ IF(ENABLE_LAYOUT)
     ADD_SUBDIRECTORY(layoutex)
 ENDIF()
 ADD_SUBDIRECTORY(tools)
-#    ADD_SUBDIRECTORY(data)
+ADD_SUBDIRECTORY(data)
 IF(ENABLE_TESTS)
 #    ADD_SUBDIRECTORY(test)
 ENDIF()
