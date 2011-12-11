@@ -9,6 +9,11 @@ INCLUDE(CheckTypeSize)
 INCLUDE(TestBigEndian)
 INCLUDE(CheckSymbolExists)
 
+# Set the output directory for libraries to the same one for all
+# libraries so that if/when the data library is created it will
+# overwrite the stub data library.
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
 # Rpath handling
 # NOTE: This rpath support does not work on Macintosh with CMake 2.8.5.
 # (Use my Forxx trick for rpath on Macintosh -WRM)
@@ -177,29 +182,6 @@ int main()
 }" U_HAVE_MMAP)
     IF(NOT U_HAVE_MMAP)
         ADD_DEFINITIONS(-DU_HAVE_MMAP=0)
-    ENDIF()
-ENDIF()
-
-# See if genccode can generate assembly
-IF(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    SET(GENCCODE_ASSEMBLY "-a gcc")
-ELSEIF(CMAKE_SYSTEM_NAME STREQUAL SunOS)
-    IF(CMAKE_SYSTEM_PROCESSOR STREQUAL sparc)
-        SET(GENCCODE_ASSEMBLY "-a sun")
-    ELSE()
-        IF(CMAKE_COMPILER_IS_GNUCXX)
-            EXECUTE_PROCESS(COMMAND "${CMAKE_C_COMPILER}" -print-prog-name=as
-                            OUTPUT_VARIABLE ASM_PROGRAM)
-            EXECUTE_PROCESS(COMMAND "${ASM_PROGRAM}" --version
-                            OUTPUT_VARIABLE ASM_PROGRAM_VERSION)
-            IF(ASM_PROGRAM_VERSION MATCHES GNU)
-                SET(GENCCODE_ASSEMBLY "-a gcc")
-            ELSE()
-                SET(GENCCODE_ASSEMBLY "-a sun-x86")
-            ENDIF()
-        ELSE()
-            SET(GENCCODE_ASSEMBLY "-a sun-x86")
-        ENDIF()
     ENDIF()
 ENDIF()
 
@@ -535,4 +517,44 @@ ENDIF()
 IF(ENABLE_STATIC)
     ADD_DEFINITIONS(-DU_STATIC_IMPLEMENTATION)
 ENDIF()
+
+# Figure out what style of assembly language to select for use with genccode when it
+# generates assembly language from the data archive.
+IF(CMAKE_COMPILER_IS_GNUCXX)
+    IF(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+        SET(ASM_STYLE gcc-darwin)
+    ELSEIF(CMAKE_SYSTEM_NAME STREQUAL SunOS)
+        EXECUTE_PROCESS(COMMAND "${CMAKE_C_COMPILER}" -print-prog-name=as
+                        OUTPUT_VARIABLE ASM_PROGRAM)
+        EXECUTE_PROCESS(COMMAND "${ASM_PROGRAM}" --version
+                        OUTPUT_VARIABLE ASM_PROGRAM_VERSION)
+        IF(ASM_PROGRAM_VERSION MATCHES GNU)
+            SET(ASM_STYLE gcc)
+        ELSE()
+            SET(ASM_STYLE sun-x86)
+        ENDIF()
+    ELSE()
+        SET(ASM_STYLE gcc)
+    ENDIF()
+ELSEIF(CMAKE_C_COMPILER_ID STREQUAL SunPro)
+    IF(CMAKE_SYSTEM_PROCESSOR STREQUAL sparc)
+        SET(ASM_STYLE sun)
+    ELSE()
+        SET(ASM_STYLE sun-x86)
+    ENDIF()
+ELSEIF(CMAKE_C_COMPILER_ID STREQUAL XL)
+    SET(ASM_STYLE xlc)
+ELSEIF(CMAKE_C_COMPILER_ID STREQUAL HP)
+    IF(CMAKE_SYSTEM_PROCESSOR STREQUAL ia64)
+        SET(ASM_STYLE aCC-ia64)
+    ELSE()
+        SET(ASM_STYLE aCC-parisc)
+    ENDIF()
+ELSEIF(MSVC)
+    SET(ASM_STYLE masm)
+ELSE()
+    MESSAGE(WARNING "No assembly language style could be determined for compiler ${CMAKE_C_COMPILER_ID}. Defaulting to gcc.")
+    SET(ASM_STYLE gcc)
+ENDIF()
+SET(ASM_STYLE ${ASM_STYLE} CACHE STRING "The style of assembly language to generate")
 

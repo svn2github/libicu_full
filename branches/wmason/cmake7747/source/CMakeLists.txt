@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.4)
 
-PROJECT(ICU C CXX)
+PROJECT(ICU C CXX ASM)
 
 # Options
 OPTION(ENABLE_STRICT "Compile with strict compiler options" ON)
@@ -17,7 +17,7 @@ OPTION(ENABLE_WEAK_THREADS "Weakly reference the threading library" OFF) # Not i
 OPTION(ENABLE_EXTRAS "Enable building of extras" ON)
 OPTION(ENABLE_IO "Enable building of the io library" ON)
 OPTION(ENABLE_LAYOUT "Enable building of the layout library" ON)
-OPTION(ENABLE_TESTS "Enable building of tests" ON) # Not implemented
+OPTION(ENABLE_TESTS "Enable building of tests" ON)
 OPTION(ENABLE_SAMPLES "Enable building of samples" ON) # Not implemented
 
 # User settings
@@ -87,7 +87,8 @@ SET(TOOLUTIL_STUB tu)
 SET(CTESTFW_STUB test)
 # The target name of the real data must be different from the stub
 # data target name, even though the build output files will be the
-# same
+# same. The resulting target name, icurealdata, is also used for all
+# data formats, not just for library ones.
 SET(REAL_DATA_STUB realdata)
 # This list of all stubs is used in the macros TARGET_NAMES_FROM_STUB and
 # LINK_ICU_LIBRARIES (defined in source/cmake-modules/IcuLibrary.cmake), but we
@@ -128,7 +129,7 @@ ENDIF()
 ADD_SUBDIRECTORY(tools)
 ADD_SUBDIRECTORY(data)
 IF(ENABLE_TESTS)
-#    ADD_SUBDIRECTORY(test)
+    ADD_SUBDIRECTORY(test)
 ENDIF()
 IF(ENABLE_SAMPLES)
 #    ADD_SUBDIRECTORY(samples)
