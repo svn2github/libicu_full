@@ -25,7 +25,8 @@ INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/i18n"
                     "${CMAKE_SOURCE_DIR}/tools/ctestfw")
 
 # Test subdirectories add their specific tests to these target
-# as dependencies
+# as dependencies. The only subdirectories that become a part
+# of the check target are intltest, iotest and cintltst.
 ADD_CUSTOM_TARGET(check)
 ADD_CUSTOM_TARGET(check-exhaustive)
 
@@ -34,5 +35,6 @@ ADD_SUBDIRECTORY(intltest)
 IF(ENABLE_IO)
     ADD_SUBDIRECTORY(iotest)
 ENDIF()
-#ADD_SUBDIRECTORY(cintltest)
+ADD_SUBDIRECTORY(cintltst)
+ADD_SUBDIRECTORY(letest)
 
