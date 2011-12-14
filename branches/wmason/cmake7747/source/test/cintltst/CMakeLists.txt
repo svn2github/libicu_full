@@ -25,4 +25,7 @@ ADD_DEPENDENCIES(check check-cintltst)
 ADD_CUSTOM_TARGET(check-exhaustive-cintltst
                   COMMAND cintltst -e)
 ADD_DEPENDENCIES(check-exhaustive check-exhaustive-cintltst)
+ADD_CUSTOM_TARGET(xcheck-cintltst
+                  COMMAND cintltst ${CINTLTST_OPTS} -x "${CMAKE_BINARY_DIR}/test-cintltst.xml")
+ADD_DEPENDENCIES(xcheck xcheck-cintltst)
 

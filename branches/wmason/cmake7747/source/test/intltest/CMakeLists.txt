@@ -47,4 +47,7 @@ ADD_DEPENDENCIES(check check-intltest)
 ADD_CUSTOM_TARGET(check-exhaustive-intltest
                   COMMAND intltest -e)
 ADD_DEPENDENCIES(check-exhaustive check-exhaustive-intltest)
+ADD_CUSTOM_TARGET(xcheck-intltest
+                  COMMAND intltest ${INTLTEST_OPTS} -x "${CMAKE_BINARY_DIR}/test-intltest.xml")
+ADD_DEPENDENCIES(xcheck xcheck-intltest)
 

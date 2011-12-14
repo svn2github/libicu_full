@@ -10,4 +10,7 @@ ADD_DEPENDENCIES(check check-iotest)
 ADD_CUSTOM_TARGET(check-exhaustive-iotest
                   COMMAND iotest -e)
 ADD_DEPENDENCIES(check-exhaustive check-exhaustive-iotest)
+ADD_CUSTOM_TARGET(xcheck-iotest
+                  COMMAND iotest ${IOTEST_OPTS} -x "${CMAKE_BINARY_DIR}/test-iotest.xml")
+ADD_DEPENDENCIES(xcheck xcheck-iotest)
 
