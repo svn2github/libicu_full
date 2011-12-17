@@ -1,0 +1,9 @@
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/i18n"
+                    "${CMAKE_SOURCE_DIR}/io")
+
+ADD_EXECUTABLE(citer EXCLUDE_FROM_ALL
+    citer.cpp)
+LINK_ICU_LIBRARIES(citer ${IO_STUB})
+
+ADD_DEPENDENCIES(samples citer)
+

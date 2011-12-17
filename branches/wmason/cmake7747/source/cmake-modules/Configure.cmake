@@ -9,6 +9,12 @@ INCLUDE(CheckTypeSize)
 INCLUDE(TestBigEndian)
 INCLUDE(CheckSymbolExists)
 
+# Set a reasonable default for the build type
+IF(NOT CMAKE_BUILD_TYPE)
+    SET(CMAKE_BUILD_TYPE Release CACHE STRING "Build type, one of: Release, Debug, RelWithDebInfo, or MinSizeRel" FORCE)
+ENDIF()
+MESSAGE(STATUS "Build type -- ${CMAKE_BUILD_TYPE}")
+
 # Set the output directory for libraries to the same one for all
 # libraries so that if/when the data library is created it will
 # overwrite the stub data library.

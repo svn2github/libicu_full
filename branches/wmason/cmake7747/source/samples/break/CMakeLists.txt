@@ -1,0 +1,7 @@
+ADD_EXECUTABLE(break EXCLUDE_FROM_ALL
+    break.cpp ubreak.c)
+LINK_ICU_LIBRARIES(break ${COMMON_STUB})
+DEPEND_ON_ICU_DATA(break)
+
+ADD_DEPENDENCIES(samples break)
+
