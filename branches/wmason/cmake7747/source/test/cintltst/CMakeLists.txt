@@ -10,7 +10,7 @@ ADD_EXECUTABLE(cintltst EXCLUDE_FROM_ALL
     cmsgtst.h cnmdptst.c cnmdptst.h cnormtst.c cnormtst.h cnumtst.c cnumtst.h colutil.c
     cpluralrulestest.c cposxtst.c crestst.c crestst.h creststn.c creststn.h cstrcase.c
     cstrtest.c cturtst.c cturtst.h cucdapi.c cucdapi.h cucdtst.c currtest.c custrtrn.c
-    custrtst.c cutiltst.c encoll.c encoll.h eurocreg.c files.out hpmufn.c idnatest.c
+    custrtst.c cutiltst.c encoll.c encoll.h eurocreg.c hpmufn.c idnatest.c
     nccbtst.c nccbtst.h ncnvfbts.c ncnvfbts.h ncnvtst.c nfsprep.c nfsprep.h nucnvtst.c
     nucnvtst.h putiltst.c reapits.c sorttest.c spooftest.c spreptst.c sprpdata.c stdnmtst.c
     tracetst.c trie2test.c trietest.c ucnvseltst.c ucnvseltst.h ucsdetst.c udatatst.c

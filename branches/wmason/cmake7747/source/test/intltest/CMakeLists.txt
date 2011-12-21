@@ -9,7 +9,7 @@ ADD_EXECUTABLE(intltest EXCLUDE_FROM_ALL
     decoll.h dicttest.cpp dicttest.h dtfmapts.cpp dtfmapts.h dtfmrgts.cpp dtfmrgts.h
     dtfmtrtts.cpp dtfmtrtts.h dtfmttst.cpp dtfmttst.h dtifmtts.cpp dtifmtts.h
     dtptngts.cpp dtptngts.h encoll.cpp encoll.h escoll.cpp escoll.h ficoll.cpp
-    ficoll.h files fldset.cpp fldset.h frcoll.cpp frcoll.h g7coll.cpp g7coll.h
+    ficoll.h fldset.cpp fldset.h frcoll.cpp frcoll.h g7coll.cpp g7coll.h
     icusvtst.cpp icusvtst.h idnaconf.cpp idnaconf.h idnaref.cpp idnaref.h incaltst.cpp
     incaltst.h intltest.cpp intltest.h intltest.vcxproj intltest.vcxproj.filters
     itercoll.cpp itercoll.h itformat.cpp itformat.h itmajor.cpp itmajor.h itrbbi.cpp
