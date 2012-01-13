@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2002-2011, International Business Machines
+*   Copyright (C) 2002-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  regex.h
@@ -1315,9 +1315,9 @@ public:
 
 
     /**
-      * Return TRUE if the most recent matching operation touched the
-      *  end of the text being processed.  In this case, additional input text could
-      *  change the results of that match.
+      * Return TRUE if the most recent matching operation attempted to access
+      *  additional input beyond the available input text.
+      *  In this case, additional input text could change the results of the match.
       *
       *  hitEnd() is defined for both successful and unsuccessful matches.
       *  In either case hitEnd() will return TRUE if if the end of the text was

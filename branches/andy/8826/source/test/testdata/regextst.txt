@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2001-2011 International Business Machines
+﻿# Copyright (c) 2001-2012 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 #  file:
@@ -115,6 +115,24 @@
 "xyz$"                  Yz     "xyz\nx"
 "xyz$"                  Yz     "xyza"
 "xyz$"                  yz     "<0>xyz</0>"
+
+#
+#  HitEnd 
+#
+"abcd"                  Lz      "a"
+"abcd"                  Lz      "ab"
+"abcd"                  Lz      "abc"
+"abcd"                  LZ      "<0>abcd</0>"
+"abcd"                  LZ      "<0>abcd</0>e"
+"abcd"                  LZ      "abcx"
+"abcd"                  LZ      "abx"
+"abcd"                  Lzi     "a"
+"abcd"                  Lzi     "ab"
+"abcd"                  Lzi     "abc"
+"abcd"                  LZi     "<0>abcd</0>"
+"abcd"                  LZi     "<0>abcd</0>e"
+"abcd"                  LZi     "abcx"
+"abcd"                  LZi     "abx"
 
 #
 #  All Unicode line endings recognized.
@@ -452,6 +470,34 @@
 "ab(?:c|(d?))(\1)"             "<0>ab<1>d</1><2>d</2></0>"
 "ab(?:c|(d?))(\1)"             "<0>ab<1></1><2></2></0>e"
 "ab(?:c|(d?))(\1)"             "<0>ab<1></1><2></2></0>"
+
+# Back References that hit/don't hit end
+"(abcd) \1"                z   "abcd abc"
+"(abcd) \1"                Z   "<0><1>abcd</1> abcd</0>"
+"(abcd) \1"                Z   "<0><1>abcd</1> abcd</0> "
+
+# Case Insensitve back references that hit/don't hit end.
+"(abcd) \1"                zi  "abcd abc"
+"(abcd) \1"                Zi  "<0><1>abcd</1> ABCD</0>"
+"(abcd) \1"                Zi  "<0><1>abcd</1> ABCD</0> "
+
+# Back references that hit/don't hit boundary limits.
+
+"(abcd) \1"                z   "<r>abcd abc</r>d "
+"(abcd) \1"                Z   "<r><0><1>abcd</1> abcd</0></r> "
+"(abcd) \1"                Z   "<r><0><1>abcd</1> abcd</0> </r>"
+
+"(abcd) \1"                zi  "<r>abcd abc</r>d "
+"(abcd) \1"                Zi  "<r><0><1>abcd</1> abcd</0></r> "
+"(abcd) \1"                Zi  "<r><0><1>abcd</1> abcd</0> </r>"
+
+# Back reference that fails match near the end of input without actually hitting the end.
+"(abcd) \1"                ZL  "abcd abd"
+"(abcd) \1"                ZLi "abcd abd"
+
+# Back reference to a zero-length match.  They are always a successful match.
+"ab(x?)cd(\1)ef"               "<0>ab<1></1>cd<2></2>ef</0>"
+"ab(x?)cd(\1)ef"            i  "<0>ab<1></1>cd<2></2>ef</0>"
 
 # Case Insensitive
 "aBc"                    i      "<0>ABC</0>"
@@ -1055,9 +1101,16 @@
 "\U00010400"                    i "<0>\U00010428</0>"   # case folded supplemental code point.
 
 "sstuff"                        i "<0>ßtuff</0>"    # exercise optimizations on what chars can start a match.
-"ßtuff"                         i "<0>sstuff</0>"
-"ßtuff"                         i "<0>Sstuff</0>"
+"sstuff"                        i "s<0>ßtuff</0>"    # exercise optimizations on what chars can start a match.
+"ßtuff"                         i "s<0>sstuff</0>"
+"ßtuff"                         i "s<0>Sstuff</0>"
 
+"a(..)\1"                       i "<0>A<1>bc</1>BC</0>def"
+"(ß)\1"                         i "aa<0><1>ss</1>ß</0>zz"          # Case insensitive back reference
+"..(.)\1"                       i "<0>aa<1>ß</1>ss</0>"
+"ab(..)\1"                      i "xx<0>ab<1>ss</1>ß</0>ss" 
+
+" (ss) ((\1.*)|(.*))"           i "<0> <1>ss</1> <2><4>sß</4></2></0>"       # The back reference 'ss' must not match in 'sß'
 
 #  Random debugging, Temporary
 #

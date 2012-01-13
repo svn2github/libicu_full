@@ -1,6 +1,6 @@
 /*
 **************************************************************************
-*   Copyright (C) 2002-2011 International Business Machines Corporation  *
+*   Copyright (C) 2002-2012 International Business Machines Corporation  *
 *   and others. All rights reserved.                                     *
 **************************************************************************
 */
@@ -2895,76 +2895,38 @@ void RegexMatcher::MatchAt(int64_t startIdx, UBool toEnd, UErrorCode &status) {
                 // Test input against a literal string.
                 // Strings require two slots in the compiled pattern, one for the
                 //   offset to the string text, and one for the length.
-                int32_t   stringStartIdx = opValue;
-                int32_t   stringLen;
 
+                int32_t   stringStartIdx = opValue;
                 op      = (int32_t)pat[fp->fPatIdx];     // Fetch the second operand
                 fp->fPatIdx++;
                 opType    = URX_TYPE(op);
-                stringLen = URX_VAL(op);
+                int32_t stringLen = URX_VAL(op);
                 U_ASSERT(opType == URX_STRING_LEN);
                 U_ASSERT(stringLen >= 2);
                                 
-                const UChar *patternChars = litText+stringStartIdx;
-                const UChar *patternEnd = patternChars+stringLen;
-                
+                const UChar *patternString = litText+stringStartIdx;
+                int32_t patternStringIndex = 0;
                 UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
-                UChar32 c;
+                UChar32 inputChar;
+                UChar32 patternChar;
                 UBool success = TRUE;
-                
-                while (patternChars < patternEnd && success) {
-                    c = UTEXT_NEXT32(fInputText);
-                    
-                    if (c != U_SENTINEL && UTEXT_GETNATIVEINDEX(fInputText) <= fActiveLimit) {
-                        if (U_IS_BMP(c)) {
-                            success = (*patternChars == c);
-                            patternChars += 1;
-                        } else if (patternChars+1 < patternEnd) {
-                            success = (*patternChars == U16_LEAD(c) && *(patternChars+1) == U16_TRAIL(c));
-                            patternChars += 2;
-                        }
-                    } else {
+                while (patternStringIndex < stringLen) {
+                    if (UTEXT_GETNATIVEINDEX(fInputText) >= fActiveLimit) {
                         success = FALSE;
-                        fHitEnd = TRUE;          //   TODO:  See ticket 6074
+                        fHitEnd = TRUE;
+                        break;
+                    }
+                    inputChar = UTEXT_NEXT32(fInputText);
+                    U16_NEXT(patternString, patternStringIndex, stringLen, patternChar);
+                    if (patternChar != inputChar) {
+                        success = FALSE;
+                        break;
                     }
                 }
                 
                 if (success) {
                     fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
                 } else {
-                    #ifdef REGEX_SMART_BACKTRACKING
-                    if (fp->fInputIdx > backSearchIndex && fStack->size()) {
-                        REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                        if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                            // Reset to last start point
-                            UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
-                            patternChars = litText+stringStartIdx;
-                            
-                            // Search backwards for a possible start
-                            do {
-                                c = UTEXT_PREVIOUS32(fInputText);
-                                if (c == U_SENTINEL) {
-                                    break;
-                                } else if ((U_IS_BMP(c) && *patternChars == c) ||
-                                    (*patternChars == U16_LEAD(c) && *(patternChars+1) == U16_TRAIL(c))) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            } while (UTEXT_GETNATIVEINDEX(fInputText) >= backSearchIndex);
-                            
-                            // And try again
-                            if (success) {
-                                fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                                fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                                if (fp->fInputIdx > backSearchIndex) {
-                                    fp = StateSave(fp, fp->fPatIdx, status);
-                                }
-                                fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                                break;
-                            }
-                        }
-                    }
-                    #endif
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                 }
             }
@@ -3794,6 +3756,52 @@ GC_Done:
             break;
 
         case URX_BACKREF:
+            {
+                U_ASSERT(opValue < fFrameSize);
+                int64_t groupStartIdx = fp->fExtra[opValue];
+                int64_t groupEndIdx   = fp->fExtra[opValue+1];
+                U_ASSERT(groupStartIdx <= groupEndIdx);
+                if (groupStartIdx < 0) {
+                    // This capture group has not participated in the match thus far,
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);   // FAIL, no match.
+                    break;
+                }
+                UTEXT_SETNATIVEINDEX(fAltInputText, groupStartIdx);
+                UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
+
+                //   Note: if the capture group match was of an empty string the backref
+                //         match succeeds.  Verified by testing:  Perl matches succeed 
+                //         in this case, so we do too.
+                
+                UBool success = TRUE;
+                for (;;) {
+                    if (utext_getNativeIndex(fAltInputText) >= groupEndIdx) {
+                        success = TRUE;
+                        break;
+                    }
+                    if (utext_getNativeIndex(fInputText) >= fActiveLimit) {
+                        success = FALSE;
+                        fHitEnd = TRUE;
+                        break;
+                    }
+                    UChar32 captureGroupChar = utext_next32(fAltInputText);
+                    UChar32 inputChar = utext_next32(fInputText);
+                    if (inputChar != captureGroupChar) {
+                        success = FALSE;
+                        break;
+                    }
+                }
+
+                if (success) {
+                    fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
+                } else {
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
+                }
+            }
+            break;
+
+
+
         case URX_BACKREF_I:
             {
                 U_ASSERT(opValue < fFrameSize);
@@ -3803,32 +3811,49 @@ GC_Done:
                 if (groupStartIdx < 0) {
                     // This capture group has not participated in the match thus far,
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);   // FAIL, no match.
-                }
-                
-                if (groupEndIdx == groupStartIdx) {
-                    //   The capture group match was of an empty string.
-                    //   Verified by testing:  Perl matches succeed in this case, so
-                    //   we do too.
                     break;
                 }
+                utext_setNativeIndex(fAltInputText, groupStartIdx);
+                utext_setNativeIndex(fInputText, fp->fInputIdx);
+                CaseFoldingUTextIterator captureGroupItr(*fAltInputText);
+                CaseFoldingUTextIterator inputItr(*fInputText);
+
+                //   Note: if the capture group match was of an empty string the backref
+                //         match succeeds.  Verified by testing:  Perl matches succeed 
+                //         in this case, so we do too.
                 
-                UTEXT_SETNATIVEINDEX(fAltInputText, groupStartIdx);
-                UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
-                
-                UBool haveMatch = (opType == URX_BACKREF ?
-                    (0 == utext_compareNativeLimit(fAltInputText, groupEndIdx, fInputText, -1)) :
-                    (0 == utext_caseCompareNativeLimit(fAltInputText, groupEndIdx, fInputText, -1, U_FOLD_CASE_DEFAULT, &status)));
-                fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                
-                if (fp->fInputIdx > fActiveLimit) {
-                    fHitEnd = TRUE;
-                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);   // FAIL, no match.
-                } else if (!haveMatch) {
-                    if (fp->fInputIdx == fActiveLimit) {
-                        fHitEnd = TRUE;
+                UBool success = TRUE;
+                for (;;) {
+                    if (!captureGroupItr.inExpansion() && utext_getNativeIndex(fAltInputText) >= groupEndIdx) {
+                        success = TRUE;
+                        break;
                     }
-                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);   // FAIL, no match.
+                    if (!inputItr.inExpansion() && utext_getNativeIndex(fInputText) >= fActiveLimit) {
+                        success = FALSE;
+                        fHitEnd = TRUE;
+                        break;
+                    }
+                    UChar32 captureGroupChar = captureGroupItr.next();
+                    UChar32 inputChar = inputItr.next();
+                    if (inputChar != captureGroupChar) {
+                        success = FALSE;
+                        break;
+                    }
                 }
+
+                if (success && inputItr.inExpansion()) {
+                    // We otained a match by consuming part of a string obtained from 
+                    // case-folding a single code point of the input text.  
+                    // This does not count as an overall match.
+                    success = FALSE;
+                }
+
+                if (success) {
+                    fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
+                } else {
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
+                }
+ 
             }
             break;
                 
@@ -3897,6 +3922,9 @@ GC_Done:
             break;
 
         case URX_ONECHAR_I:
+            // Case insensitive one char.  The char from the pattern is already case folded.
+            // Input text is not, but case folding the input can not reduce two or more code
+            // points to one.
             if (fp->fInputIdx < fActiveLimit) {
                 UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
 
@@ -3909,35 +3937,6 @@ GC_Done:
                 fHitEnd = TRUE;
             }
             
-            #ifdef REGEX_SMART_BACKTRACKING
-            if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                    UBool success = FALSE;
-                    UChar32 c = UTEXT_PREVIOUS32(fInputText);
-                    while (UTEXT_GETNATIVEINDEX(fInputText) >= backSearchIndex) {
-                        if (u_foldCase(c, U_FOLD_CASE_DEFAULT) == opValue) {
-                            success = TRUE;
-                            break;
-                        } else if (c == U_SENTINEL) {
-                            break;
-                        }
-                        c = UTEXT_PREVIOUS32(fInputText);
-                    }
-                    if (success) {
-                        fHitEnd = FALSE;
-                        fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                        fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                        if (fp->fInputIdx > backSearchIndex) {
-                            fp = StateSave(fp, fp->fPatIdx, status);
-                        }
-                        fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                        break;
-                    }
-                }
-            }
-            #endif
-
             fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             break;
 
@@ -3946,8 +3945,7 @@ GC_Done:
                 // Case-insensitive test input against a literal string.
                 // Strings require two slots in the compiled pattern, one for the
                 //   offset to the string text, and one for the length.
-                //   The compiled string has been case folded.
-                const UCaseProps *csp = ucase_getSingleton();
+                //   The compiled string has already been case folded.
                 {
                     const UChar *patternString = litText + opValue;
                     int32_t      patternStringIdx  = 0;
@@ -3960,56 +3958,29 @@ GC_Done:
                     int32_t patternStringLen = opValue;  // Length of the string from the pattern.
                 
                     
-                    const UChar *foldChars = NULL;
-                    int32_t     foldLength = 0;
-                    UChar32     cp;   // A character from the pattern string.
-                    UChar32     ct;   // A character from the text being matched.
-                    
-                    UBool success = TRUE;
-                    
+                    UChar32   cPattern;
+                    UChar32   cText;
+                    UBool     success = TRUE;
+
                     UTEXT_SETNATIVEINDEX(fInputText, fp->fInputIdx);
+                    CaseFoldingUTextIterator inputIterator(*fInputText);
                     while (patternStringIdx < patternStringLen) {
-                        ct = UTEXT_NEXT32(fInputText);
-                        if (ct == U_SENTINEL) {
+                        if (!inputIterator.inExpansion() && UTEXT_GETNATIVEINDEX(fInputText) >= fActiveLimit) {
                             success = FALSE;
                             fHitEnd = TRUE;
                             break;
                         }
-                        foldLength =  ucase_toFullFolding(csp, ct, &foldChars, U_FOLD_CASE_DEFAULT);
-                        if (foldLength >= UCASE_MAX_STRING_LENGTH || foldLength < 0) {
-                            // input code point folds to a single code point, possibly itself.
-                            // See comment in ucase.h for explanation of return values from ucase_toFullFoldings.
-                            if (foldLength < 0) {
-                                foldLength = ~foldLength;
-                            }
-                            ct = (UChar32)foldLength;
-                            U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
-                            if (ct != cp) {
-                                success = FALSE;
-                                break;
-                            }
-                        } else {
-                            // Input code point folds to a string.
-                            for (int foldIndex = 0; foldIndex<foldLength;) {
-                                if (patternStringIdx >= patternStringLen) {
-                                    // The string from the pattern has been fully consumed,
-                                    //   but we are in the middle of a string produced
-                                    //   from case-folding a single character from the text being matched.
-                                    //   This is a no-match case.
-                                    success = FALSE;
-                                    goto breakOut;
-                                }
-                                U16_NEXT(foldChars, foldIndex, foldLength, ct);
-                                U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
-                                if (ct != cp) {
-                                    success = FALSE;
-                                    goto breakOut;
-                                }
-                            }
+                        U16_NEXT(patternString, patternStringIdx, patternStringLen, cPattern);
+                        cText = inputIterator.next();
+                        if (cText != cPattern) {
+                            success = FALSE;
+                            break;
                         }
                     }
+                    if (inputIterator.inExpansion()) {
+                        success = FALSE;
+                    }
 
-                breakOut:
                     if (success) {
                         fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
                     } else {
@@ -4572,28 +4543,19 @@ void RegexMatcher::MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &statu
                 U_ASSERT(opType == URX_STRING_LEN);
                 U_ASSERT(stringLen >= 2);
                 
-                if (fp->fInputIdx + stringLen > fActiveLimit) {
-                    // No match.  String is longer than the remaining input text.
-                    fHitEnd = TRUE;          //   TODO:  See ticket 6074
-                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                    break;
-                }
-                
                 const UChar * pInp = inputBuf + fp->fInputIdx;
+                const UChar * pInpLimit = inputBuf + fActiveLimit;
                 const UChar * pPat = litText+stringStartIdx;
                 const UChar * pEnd = pInp + stringLen;
-                UBool success = FALSE;
-                for(;;) {
-                    if (*pInp == *pPat) {
-                        pInp++;
-                        pPat++;
-                        if (pInp == pEnd) {
-                            // Successful Match.
-                            success = TRUE;
-                            break;
-                        }
-                    } else {
-                        // Match failed.
+                UBool success = TRUE;
+                while (pInp < pEnd) {
+                    if (pInp >= pInpLimit) {
+                        fHitEnd = TRUE;
+                        success = FALSE;
+                        break;
+                    }
+                    if (*pInp++ != *pPat++) {
+                        success = FALSE;
                         break;
                     }
                 }
@@ -4601,38 +4563,6 @@ void RegexMatcher::MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &statu
                 if (success) {
                     fp->fInputIdx += stringLen;
                 } else {
-                    #ifdef REGEX_SMART_BACKTRACKING
-                    if (fp->fInputIdx > backSearchIndex && fStack->size()) {
-                        REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                        if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                            // Reset to last start point
-                            int64_t reverseIndex = fp->fInputIdx;
-                            UChar32 c;
-                            pPat = litText+stringStartIdx;
-                            
-                            // Search backwards for a possible start
-                            do {
-                                U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
-                                if ((U_IS_BMP(c) && *pPat == c) ||
-                                    (*pPat == U16_LEAD(c) && *(pPat+1) == U16_TRAIL(c))) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            } while (reverseIndex > backSearchIndex);
-                            
-                            // And try again
-                            if (success) {
-                                fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                                fp->fInputIdx = reverseIndex;
-                                if (fp->fInputIdx > backSearchIndex) {
-                                    fp = StateSave(fp, fp->fPatIdx, status);
-                                }
-                                fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                                break;
-                            }
-                        }
-                    }
-                    #endif
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                 }
             }
@@ -5428,50 +5358,89 @@ GC_Done:
             break;
             
         case URX_BACKREF:
+            {
+                U_ASSERT(opValue < fFrameSize);
+                int64_t groupStartIdx = fp->fExtra[opValue];
+                int64_t groupEndIdx   = fp->fExtra[opValue+1];
+                U_ASSERT(groupStartIdx <= groupEndIdx);
+                int64_t inputIndex = fp->fInputIdx;
+                if (groupStartIdx < 0) {
+                    // This capture group has not participated in the match thus far,
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);   // FAIL, no match.
+                    break;
+                }
+                UBool success = TRUE;
+                for (int64_t groupIndex = groupStartIdx; groupIndex < groupEndIdx; ++groupIndex,++inputIndex) {
+                    if (inputIndex >= fActiveLimit) {
+                        success = FALSE;
+                        fHitEnd = TRUE;
+                        break;
+                    }
+                    if (inputBuf[groupIndex] != inputBuf[inputIndex]) {
+                        success = FALSE;
+                        break;
+                    }
+                }
+                if (success) {
+                    fp->fInputIdx = inputIndex;
+                } else {
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
+                }
+            }
+            break;
+            
         case URX_BACKREF_I:
             {
                 U_ASSERT(opValue < fFrameSize);
                 int64_t groupStartIdx = fp->fExtra[opValue];
                 int64_t groupEndIdx   = fp->fExtra[opValue+1];
                 U_ASSERT(groupStartIdx <= groupEndIdx);
-                int64_t len = groupEndIdx-groupStartIdx;
                 if (groupStartIdx < 0) {
                     // This capture group has not participated in the match thus far,
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);   // FAIL, no match.
+                    break;
                 }
+                CaseFoldingUCharIterator captureGroupItr(inputBuf, groupStartIdx, groupEndIdx);
+                CaseFoldingUCharIterator inputItr(inputBuf, fp->fInputIdx, fActiveLimit);
 
-                if (len == 0) {
-                        //   The capture group match was of an empty string.
-                        //   Verified by testing:  Perl matches succeed in this case, so
-                        //   we do too.
+                //   Note: if the capture group match was of an empty string the backref
+                //         match succeeds.  Verified by testing:  Perl matches succeed 
+                //         in this case, so we do too.
+                
+                UBool success = TRUE;
+                for (;;) {
+                    UChar32 captureGroupChar = captureGroupItr.next();
+                    if (captureGroupChar == U_SENTINEL) {
+                        success = TRUE;
                         break;
                     }
-
-                UBool  haveMatch = FALSE;
-                if (fp->fInputIdx + len <= fActiveLimit) {
-                    if (opType == URX_BACKREF) {
-                        if (u_strncmp(inputBuf+groupStartIdx, inputBuf+fp->fInputIdx, (int32_t)len) == 0) {
-                            haveMatch = TRUE;
-                        }
-                    } else {
-                        if (u_strncasecmp(inputBuf+groupStartIdx, inputBuf+fp->fInputIdx,
-                                  (int32_t)len, U_FOLD_CASE_DEFAULT) == 0) {
-                            haveMatch = TRUE;
-                        }
+                    UChar32 inputChar = inputItr.next();
+                    if (inputChar == U_SENTINEL) {
+                        success = FALSE;
+                        fHitEnd = TRUE;
+                        break;
                     }
-                } else {
-                    // TODO: probably need to do a partial string comparison, and only
-                    //       set HitEnd if the available input matched.  Ticket #6074
-                    fHitEnd = TRUE;
+                    if (inputChar != captureGroupChar) {
+                        success = FALSE;
+                        break;
+                    }
                 }
-                if (haveMatch) {
-                    fp->fInputIdx += len;     // Match.  Advance current input position.
+
+                if (success && inputItr.inExpansion()) {
+                    // We otained a match by consuming part of a string obtained from 
+                    // case-folding a single code point of the input text.  
+                    // This does not count as an overall match.
+                    success = FALSE;
+                }
+
+                if (success) {
+                    fp->fInputIdx = inputItr.getIndex();
                 } else {
-                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);   // FAIL, no match.
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                 }
             }
             break;
-            
+
         case URX_STO_INP_LOC:
             {
                 U_ASSERT(opValue >= 0 && opValue < fFrameSize);
@@ -5581,74 +5550,44 @@ GC_Done:
             break;
             
         case URX_STRING_I:
+            // Case-insensitive test input against a literal string.
+            // Strings require two slots in the compiled pattern, one for the
+            //   offset to the string text, and one for the length.
+            //   The compiled string has already been case folded.
             {
-                // Test input against a literal string.
-                // Strings require two slots in the compiled pattern, one for the
-                //   offset to the string text, and one for the length.
-                const UCaseProps *csp = ucase_getSingleton();
-                {
-                    const UChar *patternString = litText + opValue;
-                    int32_t      patternStringIdx  = 0;
+                const UChar *patternString = litText + opValue;
 
-                    op      = (int32_t)pat[fp->fPatIdx];
-                    fp->fPatIdx++;
-                    opType  = URX_TYPE(op);
-                    opValue = URX_VAL(op);
-                    U_ASSERT(opType == URX_STRING_LEN);
-                    int32_t patternStringLen = opValue;  // Length of the string from the pattern.
-                
-                    
-                    const UChar *foldChars = NULL;
-                    int32_t     foldLength = 0;
-                    UChar32     cp;   // A character from the pattern string.
-                    UChar32     ct;   // A character from the text being matched.
-                    
-                    UBool success = TRUE;
-                    while (patternStringIdx < patternStringLen) {
-                        if (fp->fInputIdx >= fActiveLimit) {
-                            success = FALSE;
+                op      = (int32_t)pat[fp->fPatIdx];
+                fp->fPatIdx++;
+                opType  = URX_TYPE(op);
+                opValue = URX_VAL(op);
+                U_ASSERT(opType == URX_STRING_LEN);
+                int32_t patternStringLen = opValue;  // Length of the string from the pattern.
+            
+                UChar32      cText;
+                UChar32      cPattern;
+                UBool        success = TRUE;
+                int32_t      patternStringIdx  = 0;
+                CaseFoldingUCharIterator inputIterator(inputBuf, fp->fInputIdx, fActiveLimit);
+                while (patternStringIdx < patternStringLen) {
+                    U16_NEXT(patternString, patternStringIdx, patternStringLen, cPattern);
+                    cText = inputIterator.next();
+                    if (cText != cPattern) {
+                        success = FALSE;
+                        if (cText == U_SENTINEL) {
                             fHitEnd = TRUE;
-                            break;
                         }
-                        U16_NEXT(inputBuf, fp->fInputIdx, fActiveLimit, ct);
-                        foldLength =  ucase_toFullFolding(csp, ct, &foldChars, U_FOLD_CASE_DEFAULT);
-                        if (foldLength >= UCASE_MAX_STRING_LENGTH || foldLength < 0) {
-                            // input code point folds to a single code point, possibly itself.
-                            // See comment in ucase.h for explanation of return values from ucase_toFullFoldings.
-                            if (foldLength < 0) {
-                                foldLength = ~foldLength;
-                            }
-                            ct = (UChar32)foldLength;
-                            U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
-                            if (ct != cp) {
-                                success = FALSE;
-                                break;
-                            }
-                        } else {
-                            // Input code point folds to a string.
-                            for (int foldIndex = 0; foldIndex<foldLength;) {
-                                if (patternStringIdx >= patternStringLen) {
-                                    // The string from the pattern has been fully consumed,
-                                    //   but we are in the middle of a string produced
-                                    //   from case-folding a single character from the text being matched.
-                                    //   This is a no-match case.
-                                    success = FALSE;
-                                    goto breakOut;
-                                }
-                                U16_NEXT(foldChars, foldIndex, foldLength, ct);
-                                U16_NEXT(patternString, patternStringIdx, patternStringLen, cp);
-                                if (ct != cp) {
-                                    success = FALSE;
-                                    goto breakOut;
-                                }
-                            }
-                        }
+                        break;
                     }
- 
-                breakOut:
-                    if (!success) {
-                        fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                    }
+                }
+                if (inputIterator.inExpansion()) {
+                    success = FALSE;
+                }
+
+                if (success) {
+                    fp->fInputIdx = inputIterator.getIndex();
+                } else {
+                    fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                 }
             }
             break;
