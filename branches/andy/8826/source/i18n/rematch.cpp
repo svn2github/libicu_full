@@ -53,8 +53,6 @@
 // Good idea in theory; unfortunately it only helps out a few specific
 // cases and slows the engine down a little in the rest.
 
-//#define REGEX_SMART_BACKTRACKING 1
-
 U_NAMESPACE_BEGIN
 
 // Default limit for the size of the back track stack, to avoid system
@@ -232,7 +230,7 @@ void RegexMatcher::init(UErrorCode &status) {
     fData              = fSmallData;
     fWordBreakItr      = NULL;
     
-    fStack             = new UVector64(status);
+    fStack             = NULL;
     fInputText         = NULL;
     fAltInputText      = NULL;
     fInput             = NULL;
@@ -260,6 +258,12 @@ void RegexMatcher::init2(UText *input, UErrorCode &status) {
             status = fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
+    }
+
+    fStack = new UVector64(status);
+    if (fStack == NULL) {
+        status = fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
 
     reset(input);
@@ -2856,36 +2860,6 @@ void RegexMatcher::MatchAt(int64_t startIdx, UBool toEnd, UErrorCode &status) {
             } else {
                 fHitEnd = TRUE;
             }
-                
-            #ifdef REGEX_SMART_BACKTRACKING
-            if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                    UBool success = FALSE;
-                    UChar32 c = UTEXT_PREVIOUS32(fInputText);
-                    while (UTEXT_GETNATIVEINDEX(fInputText) >= backSearchIndex) {
-                        if (c == opValue) {
-                            success = TRUE;
-                            break;
-                        } else if (c == U_SENTINEL) {
-                            break;
-                        }
-                        c = UTEXT_PREVIOUS32(fInputText);
-                    }
-                    if (success) {
-                        fHitEnd = FALSE;
-                        fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                        fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                        if (fp->fInputIdx > backSearchIndex) {
-                            fp = StateSave(fp, fp->fPatIdx, status);
-                        }
-                        fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                        break;
-                    }
-                }
-            }
-            #endif
-            
             fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             break;
 
@@ -3315,42 +3289,6 @@ GC_Done:
                     fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
                 } else {
                     // the character wasn't in the set.
-                    #ifdef REGEX_SMART_BACKTRACKING
-                    if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                        REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                        if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                            // Try to find it, backwards
-                            UTEXT_PREVIOUS32(fInputText); // skip the first character we tried
-                            success = ((opValue & URX_NEG_SET) == URX_NEG_SET); // reset
-                            do {
-                                c = UTEXT_PREVIOUS32(fInputText);
-                                if (c == U_SENTINEL) {
-                                    break;
-                                } else if (c < 256) {
-                                    Regex8BitSet *s8 = &fPattern->fStaticSets8[opValue];
-                                    if (s8->contains(c)) {
-                                        success = !success;
-                                    }
-                                } else {
-                                    const UnicodeSet *s = fPattern->fStaticSets[opValue];
-                                    if (s->contains(c)) {
-                                        success = !success;
-                                    }
-                                }
-                            } while (UTEXT_GETNATIVEINDEX(fInputText) >= backSearchIndex && !success);
-                            
-                            if (success && c != U_SENTINEL) {
-                                fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                                fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                                if (fp->fInputIdx > backSearchIndex) {
-                                    fp = StateSave(fp, fp->fPatIdx, status);
-                                }
-                                fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                                break;
-                            }
-                        }
-                    }
-                    #endif
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                 }
             }
@@ -3386,44 +3324,6 @@ GC_Done:
                     }
                 }
                 // the character wasn't in the set.
-                #ifdef REGEX_SMART_BACKTRACKING
-                if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                    REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                    if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                        // Try to find it, backwards
-                        UTEXT_PREVIOUS32(fInputText); // skip the first character we tried
-                        UBool success = FALSE;
-                        do {
-                            c = UTEXT_PREVIOUS32(fInputText);
-                            if (c == U_SENTINEL) {
-                                break;
-                            } else if (c < 256) {
-                                Regex8BitSet *s8 = &fPattern->fStaticSets8[opValue];
-                                if (s8->contains(c) == FALSE) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            } else {
-                                const UnicodeSet *s = fPattern->fStaticSets[opValue];
-                                if (s->contains(c) == FALSE) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            }
-                        } while (UTEXT_GETNATIVEINDEX(fInputText) >= backSearchIndex);
-                        
-                        if (success) {
-                            fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                            fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                            if (fp->fInputIdx > backSearchIndex) {
-                                fp = StateSave(fp, fp->fPatIdx, status);
-                            }
-                            fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                            break;
-                        }
-                    }
-                }
-                #endif
                 fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             }
             break;
@@ -3456,44 +3356,6 @@ GC_Done:
                 }
                 
                 // the character wasn't in the set.
-                #ifdef REGEX_SMART_BACKTRACKING
-                if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                    REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                    if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                        // Try to find it, backwards
-                        UTEXT_PREVIOUS32(fInputText); // skip the first character we tried
-                        UBool success = FALSE;
-                        do {
-                            c = UTEXT_PREVIOUS32(fInputText);
-                            if (c == U_SENTINEL) {
-                                break;
-                            } else if (c < 256) {
-                                Regex8BitSet *s8 = &fPattern->fSets8[opValue];
-                                if (s8->contains(c)) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            } else {
-                                UnicodeSet *s = (UnicodeSet *)sets->elementAt(opValue);
-                                if (s->contains(c)) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            }
-                        } while (UTEXT_GETNATIVEINDEX(fInputText) >= backSearchIndex);
-                        
-                        if (success) {
-                            fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                            fp->fInputIdx = UTEXT_GETNATIVEINDEX(fInputText);
-                            if (fp->fInputIdx > backSearchIndex) {
-                                fp = StateSave(fp, fp->fPatIdx, status);
-                            }
-                            fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                            break;
-                        }
-                    }
-                }
-                #endif
                 fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             }
             break;
@@ -4219,9 +4081,6 @@ GC_Done:
                 int32_t stackLoc = URX_VAL(loopcOp);
                 U_ASSERT(stackLoc >= 0 && stackLoc < fFrameSize);
                 fp->fExtra[stackLoc] = fp->fInputIdx;
-                #ifdef REGEX_SMART_BACKTRACKING
-                backSearchIndex = fp->fInputIdx;
-                #endif
                 fp->fInputIdx = ix;
 
                 // Save State to the URX_LOOP_C op that follows this one,
@@ -4283,9 +4142,6 @@ GC_Done:
                 int32_t stackLoc = URX_VAL(loopcOp);
                 U_ASSERT(stackLoc >= 0 && stackLoc < fFrameSize);
                 fp->fExtra[stackLoc] = fp->fInputIdx;
-                #ifdef REGEX_SMART_BACKTRACKING
-                backSearchIndex = fp->fInputIdx;
-                #endif
                 fp->fInputIdx = ix;
 
                 // Save State to the URX_LOOP_C op that follows this one,
@@ -4497,33 +4353,6 @@ void RegexMatcher::MatchChunkAt(int32_t startIdx, UBool toEnd, UErrorCode &statu
             } else {
                 fHitEnd = TRUE;
             }
-
-            #ifdef REGEX_SMART_BACKTRACKING
-            if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                    int64_t reverseIndex = fp->fInputIdx;
-                    UChar32 c;
-                    do {
-                        U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
-                        if (c == opValue) {
-                            break;
-                        }
-                    } while (reverseIndex > backSearchIndex);
-                    if (c == opValue) {
-                        fHitEnd = FALSE;
-                        fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                        fp->fInputIdx = reverseIndex;
-                        if (fp->fInputIdx > backSearchIndex) {
-                            fp = StateSave(fp, fp->fPatIdx, status);
-                        }
-                        fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                        break;
-                    }
-                }
-            }
-            #endif
-
             fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             break;
             
@@ -4932,41 +4761,6 @@ GC_Done:
                     }
                 }
                 if (!success) {
-                    #ifdef REGEX_SMART_BACKTRACKING
-                    if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                        REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                        if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                            // Try to find it, backwards
-                            int64_t reverseIndex = fp->fInputIdx;
-                            U16_BACK_1(inputBuf, backSearchIndex, reverseIndex); // skip the first character we tried
-                            success = ((opValue & URX_NEG_SET) == URX_NEG_SET); // reset
-                            do {
-                                U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
-                                if (c < 256) {
-                                    Regex8BitSet *s8 = &fPattern->fStaticSets8[opValue];
-                                    if (s8->contains(c)) {
-                                        success = !success;
-                                    }
-                                } else {
-                                    const UnicodeSet *s = fPattern->fStaticSets[opValue];
-                                    if (s->contains(c)) {
-                                        success = !success;
-                                    }
-                                }
-                            } while (reverseIndex > backSearchIndex && !success);
-                            
-                            if (success) {
-                                fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                                fp->fInputIdx = reverseIndex;
-                                if (fp->fInputIdx > backSearchIndex) {
-                                    fp = StateSave(fp, fp->fPatIdx, status);
-                                }
-                                fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                                break;
-                            }
-                        }
-                    }
-                    #endif
                     fp = (REStackFrame *)fStack->popFrame(fFrameSize);
                 }
             }
@@ -4998,44 +4792,6 @@ GC_Done:
                         break;
                     }
                 }
-
-                #ifdef REGEX_SMART_BACKTRACKING
-                if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                    REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                    if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                        // Try to find it, backwards
-                        int64_t reverseIndex = fp->fInputIdx;
-                        U16_BACK_1(inputBuf, backSearchIndex, reverseIndex); // skip the first character we tried
-                        UBool success = FALSE;
-                        do {
-                            U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
-                            if (c < 256) {
-                                Regex8BitSet *s8 = &fPattern->fStaticSets8[opValue];
-                                if (s8->contains(c) == FALSE) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            } else {
-                                const UnicodeSet *s = fPattern->fStaticSets[opValue];
-                                if (s->contains(c) == FALSE) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            }
-                        } while (reverseIndex > backSearchIndex);
-                        
-                        if (success) {
-                            fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                            fp->fInputIdx = reverseIndex;
-                            if (fp->fInputIdx > backSearchIndex) {
-                                fp = StateSave(fp, fp->fPatIdx, status);
-                            }
-                            fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                            break;
-                        }
-                    }
-                }
-                #endif
                 fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             }
             break;
@@ -5069,43 +4825,6 @@ GC_Done:
                 }
                 
                 // the character wasn't in the set.
-                #ifdef REGEX_SMART_BACKTRACKING
-                if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                    REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                    if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                        // Try to find it, backwards
-                        int64_t reverseIndex = fp->fInputIdx;
-                        U16_BACK_1(inputBuf, backSearchIndex, reverseIndex); // skip the first character we tried
-                        UBool success = FALSE;
-                        do {
-                            U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
-                            if (c < 256) {
-                                Regex8BitSet *s8 = &fPattern->fSets8[opValue];
-                                if (s8->contains(c)) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            } else {
-                                UnicodeSet *s = (UnicodeSet *)sets->elementAt(opValue);
-                                if (s->contains(c)) {
-                                    success = TRUE;
-                                    break;
-                                }
-                            }
-                        } while (reverseIndex > backSearchIndex);
-                        
-                        if (success) {
-                            fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                            fp->fInputIdx = reverseIndex;
-                            if (fp->fInputIdx > reverseIndex) {
-                                fp = StateSave(fp, fp->fPatIdx, status);
-                            }
-                            fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                            break;
-                        }
-                    }
-                }
-                #endif
                 fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             }
             break;
@@ -5515,37 +5234,6 @@ GC_Done:
             } else {
                 fHitEnd = TRUE;
             }
-            
-            #ifdef REGEX_SMART_BACKTRACKING
-            if (fp->fInputIdx > backSearchIndex && fStack->size() > fFrameSize) {
-                REStackFrame *prevFrame = (REStackFrame *)fStack->peekFrame(fFrameSize);
-                if (URX_LOOP_C == URX_TYPE(pat[prevFrame->fPatIdx]) && fp->fInputIdx <= prevFrame->fInputIdx) {
-                    UBool success = FALSE;
-                    int64_t reverseIndex = fp->fInputIdx;
-                    UChar32 c;
-                    while (reverseIndex > backSearchIndex) {
-                        U16_PREV(inputBuf, backSearchIndex, reverseIndex, c);
-                        if (u_foldCase(c, U_FOLD_CASE_DEFAULT) == opValue) {
-                            success = TRUE;
-                            break;
-                        } else if (c == U_SENTINEL) {
-                            break;
-                        }
-                    }
-                    if (success) {
-                        fHitEnd = FALSE;
-                        fp = (REStackFrame *)fStack->popFrame(fFrameSize);
-                        fp->fInputIdx = reverseIndex;
-                        if (fp->fInputIdx > backSearchIndex) {
-                            fp = StateSave(fp, fp->fPatIdx, status);
-                        }
-                        fp->fPatIdx++; // Skip the LOOP_C, we just did that
-                        break;
-                    }
-                }
-            }
-            #endif
-
             fp = (REStackFrame *)fStack->popFrame(fFrameSize);
             break;
             
@@ -5818,9 +5506,6 @@ GC_Done:
                 int32_t stackLoc = URX_VAL(loopcOp);
                 U_ASSERT(stackLoc >= 0 && stackLoc < fFrameSize);
                 fp->fExtra[stackLoc] = fp->fInputIdx;
-                #ifdef REGEX_SMART_BACKTRACKING
-                backSearchIndex = fp->fInputIdx;
-                #endif
                 fp->fInputIdx = ix;
                 
                 // Save State to the URX_LOOP_C op that follows this one,
@@ -5883,9 +5568,6 @@ GC_Done:
                 int32_t stackLoc = URX_VAL(loopcOp);
                 U_ASSERT(stackLoc >= 0 && stackLoc < fFrameSize);
                 fp->fExtra[stackLoc] = fp->fInputIdx;
-                #ifdef REGEX_SMART_BACKTRACKING
-                backSearchIndex = fp->fInputIdx;
-                #endif
                 fp->fInputIdx = ix;
                 
                 // Save State to the URX_LOOP_C op that follows this one,

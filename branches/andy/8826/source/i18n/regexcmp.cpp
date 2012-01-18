@@ -1,7 +1,7 @@
 //
 //  file:  regexcmp.cpp
 //
-//  Copyright (C) 2002-2011 International Business Machines Corporation and others.
+//  Copyright (C) 2002-2012 International Business Machines Corporation and others.
 //  All Rights Reserved.
 //
 //  This file contains the ICU regular expression compiler, which is responsible

@@ -53,24 +53,22 @@
 
 #include "unicode/uregex.h"
 
+// Forward Declarations
+
+struct UCaseProps;
+
 U_NAMESPACE_BEGIN
 
-
-// Forward Declarations...
-
-class RegexMatcher;
-class RegexPattern;
-class UVector;
-class UVector32;
-class UVector64;
-class UnicodeSet;
-struct REStackFrame;
 struct Regex8BitSet;
-class  RuleBasedBreakIterator;
 class  RegexCImpl;
-
-
-
+class  RegexMatcher;
+class  RegexPattern;
+struct REStackFrame;
+class  RuleBasedBreakIterator;
+class  UnicodeSet;
+class  UVector;
+class  UVector32;
+class  UVector64;
 
 /**
  *   RBBIPatternDump   Debug function, displays the compiled form of a pattern.
@@ -1859,8 +1857,6 @@ private:
                                            //   reported, or that permanently disables this matcher.
 
     RuleBasedBreakIterator  *fWordBreakItr;
-
-
 };
 
 U_NAMESPACE_END

@@ -499,6 +499,12 @@
 "ab(x?)cd(\1)ef"               "<0>ab<1></1>cd<2></2>ef</0>"
 "ab(x?)cd(\1)ef"            i  "<0>ab<1></1>cd<2></2>ef</0>"
 
+# Back refs to capture groups that didn't participate in the match.
+"ab(?:(c)|(d))\1"              "abde"
+"ab(?:(c)|(d))\1"              "<0>ab<1>c</1>c</0>e"
+"ab(?:(c)|(d))\1"            i "abde"
+"ab(?:(c)|(d))\1"            i "<0>ab<1>c</1>c</0>e"
+
 # Case Insensitive
 "aBc"                    i      "<0>ABC</0>"
 "a[^bc]d"                i      "ABD"
@@ -649,6 +655,7 @@
 "\ud800\udc00*"                   "<0>\U00010000\U00010000\U00010000</0>\U00010001"
 "\ud800\ud800\udc00"              "<0>\ud800\U00010000</0>\U00010000\U00010000\U00010001"
 "(\ud800)(\udc00)"                "\U00010000"
+"\U00010001+"                     "<0>\U00010001\U00010001</0>\udc01"
 
 #
 # hitEnd with find()
