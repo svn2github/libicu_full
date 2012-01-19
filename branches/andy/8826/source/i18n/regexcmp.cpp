@@ -1975,7 +1975,7 @@ int32_t   RegexCompile::blockTopLoc(UBool reserveLoc) {
         // No slot for STATE_SAVE was pre-reserved in the compiled code.
         // We need to make space now.
         theLoc = fRXPat->fCompiledPat->size()-1;
-        int32_t opAtTheLoc = fRXPat->fCompiledPat->elementAti(theLoc);
+        int32_t opAtTheLoc = (int32_t)fRXPat->fCompiledPat->elementAti(theLoc);
         if (URX_TYPE(opAtTheLoc) == URX_STRING_LEN) {
             // Strings take two opcode, we want the position of the first one.
             // We can have a string at this point if a single character case-folded to two.
