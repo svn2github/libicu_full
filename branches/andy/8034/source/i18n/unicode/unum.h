@@ -266,6 +266,41 @@ enum UCurrencySpacing {
     UNUM_CURRENCY_SPACING_COUNT
 };
 typedef enum UCurrencySpacing UCurrencySpacing; /**< @draft ICU 4.8 */
+
+
+/**
+ * FieldPosition and UFieldPosition selectors for format fields
+ * defined by NumberFormat and UNumberFormat.
+ * @draft ICU 49
+ */
+enum UNumberFormatFields {
+    /** @draft ICU 49 */
+    UNUM_INTEGER_FIELD,
+    /** @draft ICU 49 */
+    UNUM_FRACTION_FIELD,
+    /** @draft ICU 49 */
+    UNUM_DECIMAL_SEPARATOR_FIELD,
+    /** @draft ICU 49 */
+    UNUM_EXPONENT_SYMBOL_FIELD,
+    /** @draft ICU 49 */
+    UNUM_EXPONENT_SIGN_FIELD,
+    /** @draft ICU 49 */
+    UNUM_EXPONENT_FIELD,
+    /** @draft ICU 49 */
+    UNUM_GROUPING_SEPARATOR_FIELD,
+    /** @draft ICU 49 */
+    UNUM_CURRENCY_FIELD,
+    /** @draft ICU 49 */
+    UNUM_PERCENT_FIELD,
+    /** @draft ICU 49 */
+    UNUM_PERMILL_FIELD,
+    /** @draft ICU 49 */
+    UNUM_SIGN_FIELD,
+    /** @draft ICU 49 */
+    UNUM_FIELD_COUNT
+};
+
+
 /* #endif  U_HIDE_DRAFT_API */
 
 /**

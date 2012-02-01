@@ -173,29 +173,32 @@ public:
      * support identification of all number format fields, not just those
      * pertaining to alignment.
      *
+     * These constants are provided for backwards compatibility only.
+     * Please use the C style constants defined in the header file unum.h.
+     *
      * @see FieldPosition
      * @stable ICU 2.0
      */
     enum EAlignmentFields {
-        kIntegerField,
-        kFractionField,
-        kDecimalSeparatorField,
-        kExponentSymbolField,
-        kExponentSignField,
-        kExponentField,
-        kGroupingSeparatorField,
-        kCurrencyField,
-        kPercentField,
-        kPermillField,
-        kSignField,
+        kIntegerField = UNUM_INTEGER_FIELD,
+        kFractionField = UNUM_FRACTION_FIELD,
+        kDecimalSeparatorField = UNUM_DECIMAL_SEPARATOR_FIELD,
+        kExponentSymbolField = UNUM_EXPONENT_SYMBOL_FIELD,
+        kExponentSignField = UNUM_EXPONENT_SIGN_FIELD,
+        kExponentField = UNUM_EXPONENT_FIELD,
+        kGroupingSeparatorField = UNUM_GROUPING_SEPARATOR_FIELD,
+        kCurrencyField = UNUM_CURRENCY_FIELD,
+        kPercentField = UNUM_PERCENT_FIELD,
+        kPermillField = UNUM_PERMILL_FIELD,
+        kSignField = UNUM_SIGN_FIELD,
 
     /**
      * These constants are provided for backwards compatibility only.
-     * Please use the C++ style constants defined above.
+     * Please use the constants defined in the header file unum.h.
      * @stable ICU 2.0
      */
-        INTEGER_FIELD        = kIntegerField,
-        FRACTION_FIELD        = kFractionField
+        INTEGER_FIELD        = UNUM_INTEGER_FIELD,
+        FRACTION_FIELD       = UNUM_FRACTION_FIELD
     };
 
     /**
