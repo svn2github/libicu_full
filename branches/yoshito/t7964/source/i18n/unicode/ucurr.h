@@ -352,14 +352,12 @@ ucurr_getKeywordValuesForLocale(const char* key,
  * the currency is unknown, this function returns 0.
  *
  * @param currency null-terminated 3-letter ISO 4217 code
- * @param ec input-output error code
  * @return The ISO 4217 numeric code of the currency
  * @draft ICU 49
  */
 U_DRAFT int32_t U_EXPORT2
-ucurr_getNumericCode(const UChar* currency,
-                     UErrorCode* ec);
-                    
+ucurr_getNumericCode(const UChar* currency);
+
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
 #endif

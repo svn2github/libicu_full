@@ -2417,37 +2417,25 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
 
 
 U_CAPI int32_t U_EXPORT2
-ucurr_getNumericCode(const UChar* currency,
-                     UErrorCode* ec) {
-    if (ec && U_FAILURE(*ec)) {
-        return 0;
-    }
-    if (currency == 0 || *currency == 0) {
-        if (ec && U_SUCCESS(*ec)) {
-            *ec = U_ILLEGAL_ARGUMENT_ERROR;
-        }
-        return 0;
-    }
-
+ucurr_getNumericCode(const UChar* currency) {
     int32_t code = 0;
-    UErrorCode ec2 = U_ZERO_ERROR;
+    if (currency && u_strlen(currency) == ISO_CURRENCY_CODE_LENGTH) {
+        UErrorCode status = U_ZERO_ERROR;
 
-    UResourceBundle *bundle = ures_openDirect(0, "currencyNumericCodes", &ec2);
-    ures_getByKey(bundle, "codeMap", bundle, &ec2);
-    if (U_SUCCESS(ec2)) {
-        char buf[ISO_CURRENCY_CODE_LENGTH+1];
-        ures_getByKey(bundle, myUCharsToChars(buf, currency), bundle, &ec2);
-        code = ures_getInt(bundle, &ec2);
-        if (U_FAILURE(ec2)) {
-            code = 0;
+        UResourceBundle *bundle = ures_openDirect(0, "currencyNumericCodes", &status);
+        ures_getByKey(bundle, "codeMap", bundle, &status);
+        if (U_SUCCESS(status)) {
+            char alphaCode[ISO_CURRENCY_CODE_LENGTH+1];
+            myUCharsToChars(alphaCode, currency);
+            T_CString_toUpperCase(alphaCode);
+            ures_getByKey(bundle, alphaCode, bundle, &status);
+            int tmpCode = ures_getInt(bundle, &status);
+            if (U_SUCCESS(status)) {
+                code = tmpCode;
+            }
         }
-    } else {
-        // The mapping data itself is missing - report the error
-        if (ec) {
-            *ec = ec2;
-        }
+        ures_close(bundle);
     }
-    ures_close(bundle);
     return code;
 }
 #endif /* #if !UCONFIG_NO_FORMATTING */
