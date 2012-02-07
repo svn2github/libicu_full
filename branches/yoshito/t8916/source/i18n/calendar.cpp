@@ -2095,6 +2095,40 @@ Calendar::isLenient() const
 // -------------------------------------
 
 void
+Calendar::setRepeatedWallTimeOption(UCalendarWallTimeOption option)
+{
+    // TODO
+}
+
+// -------------------------------------
+
+UCalendarWallTimeOption
+Calendar::getRepeatedWallTimeOption(void) const
+{
+    // TODO
+    return UCAL_WALLTIME_LAST;
+}
+
+// -------------------------------------
+
+void
+Calendar::setSkippedWallTimeOption(UCalendarWallTimeOption option)
+{
+    // TODO
+}
+
+// -------------------------------------
+
+UCalendarWallTimeOption
+Calendar::getSkippedWallTimeOption(void) const
+{
+    // TODO
+    return UCAL_WALLTIME_LAST;
+}
+
+// -------------------------------------
+
+void
 Calendar::setFirstDayOfWeek(UCalendarDaysOfWeek value)
 {
     if (fFirstDayOfWeek != value &&
