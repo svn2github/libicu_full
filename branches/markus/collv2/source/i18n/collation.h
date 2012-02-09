@@ -1,0 +1,198 @@
+/*
+*******************************************************************************
+* Copyright (C) 2010-2012, International Business Machines
+* Corporation and others.  All Rights Reserved.
+*******************************************************************************
+* collation.h
+*
+* created on: 2010oct27
+* created by: Markus W. Scherer
+*/
+
+#ifndef __COLLATION_H__
+#define __COLLATION_H__
+
+#include "unicode/utypes.h"
+
+#if !UCONFIG_NO_COLLATION
+
+U_NAMESPACE_BEGIN
+
+/**
+ * Collation v2 basic definitions and static helper functions.
+ *
+ * Data structures except for expansion tables store 32-bit CEs which are
+ * either specials (see tags below) or are compact forms of 64-bit CEs.
+ */
+class Collation {
+    // Special sort key bytes for all levels.
+    static const uint8_t TERMINATOR_BYTE=0;
+    static const uint8_t LEVEL_SEPARATOR_BYTE=1;
+    static const uint8_t MERGE_SEPARATOR_BYTE=2;
+
+    /**
+     * Primary compression low terminator.
+     * Reserved value in primary second byte if the lead byte is compressible.
+     * Otherwise usable in all CE weight bytes.
+     */
+    static const uint8_t PRIMARY_COMPRESSION_LOW_BYTE=3;
+    /**
+     * Primary compression high terminator.
+     * Reserved value in primary second byte if the lead byte is compressible.
+     * Otherwise usable in all CE weight bytes.
+     */
+    static const uint8_t PRIMARY_COMPRESSION_HIGH_BYTE=0xff;
+
+    /** Default secondary/tertiary weight lead byte. */
+    static const uint8_t COMMON_BYTE=5;
+    static const uint32_t COMMON_WEIGHT=0x05000000;
+    /** Middle 16 bits of a CE with a common secondary weight. */
+    static const uint32_t COMMON_SECONDARY_CE=0x05000000;
+    /** Lower 16 bits of a CE with a common tertiary weight. */
+    static const uint32_t COMMON_TERTIARY_CE=0x0500;
+    /** Lower 32 bits of a CE with common secondary and tertiary weights. */
+    static const uint32_t COMMON_SEC_AND_TER_CE=0x05000500;
+
+    static const uint8_t UNASSIGNED_IMPLICIT_BYTE=0xfd;  // compressible
+
+    static const uint8_t TRAIL_WEIGHT_BYTE=0xfe;  // compressible
+    static const uint32_t MAX_PRIMARY_WEIGHT=0xfefe0000;
+
+    /** Primary lead byte for special tags, not used as a primary lead byte in resolved CEs. */
+    static const uint8_t SPECIAL_BYTE=0xff;
+
+    /**
+     * The lowest "special" CE32 value.
+     * This value itself is used to indicate a fallback to the base collator,
+     * regardless of the semantics of its tag bit field,
+     * to minimize the fastpath lookup code.
+     */
+    static const uint32_t MIN_SPECIAL_CE32=0xff000000;
+
+    static const uint32_t UNASSIGNED_CE32=0xffffffff;  // Compute an unassigned-implicit CE.
+
+    /** No CE: End of input. Only used in runtime code, not stored in data. */
+    static const uint32_t NO_CE=1;
+
+    /**
+     * Special-CE32 tags, from bits 23..20 of a special 32-bit CE.
+     * Bits 19..0 are used for data.
+     */
+    enum {
+        /**
+         * Tags 0..5 are used for Latin mini expansions
+         * of two simple CEs [pp, 05, tt] [00, ss, 05].
+         * Bits 23..16: Single-byte primary weight pp=00..5F of the first CE.
+         * Bits 15.. 8: Tertiary weight tt of the first CE.
+         * Bits  7.. 0: Secondary weight ss of the second CE.
+         */
+        MAX_LATIN_EXPANSION_TAG=5,
+        /**
+         * Points to 1..16 non-special 32-bit CE32s.
+         * Bits 19..4: Index into uint32_t table.
+         * Bits  3..0: Length-1.
+         */
+        EXPANSION32_TAG=6,
+        /**
+         * Points to 1..16 64-bit CEs.
+         * Bits 19..4: Index into CE table.
+         * Bits  3..0: Length-1.
+         */
+        EXPANSION_TAG=7,
+        /**
+         * Points to prefix trie.
+         * Bits 19..0: Index into prefix/contraction data.
+         */
+        PREFIX_TAG=8,
+        /**
+         * Points to contraction data.
+         * Bits 19..0: Index into prefix/contraction data.
+         */
+        CONTRACTION_TAG=9,
+        /**
+         * Used only in the collation data builder.
+         * Data bits point into a builder-specific data structure with non-final data.
+         */
+        BUILDER_CONTEXT_TAG=10,
+        /**
+         * Unused.
+         */
+        RESERVED_TAG=11,
+        /**
+         * Decimal digit.
+         * Bits 19..4: Index into uint32_t table for non-CODAN CE32.
+         * Bits  3..0: Digit value 0..9.
+         */
+        DIGIT_TAG=12,
+        /**
+         * Tag for a Hangul syllable. TODO: or Jamo?
+         * TODO: data?
+         */
+        HANGUL_TAG=13,
+        /**
+         * Tag for CEs with primary weights in code point order.
+         * Bits 19..4: Lower 16 bits of the base code point.
+         * Bits  3..0: Per-code point primary-weight increment minus 1.
+         */
+        OFFSET_TAG=14,
+        /**
+         * Implicit CE tag. Compute an unassigned-implicit CE.
+         */
+        IMPLICIT_TAG=15
+    };
+
+    static inline UBool isSpecialCE32(uint32_t ce32) {
+        // Java: Emulate unsigned-int less-than comparison.
+        // return (ce32^0x80000000)>=0x7f000000;
+        return ce32>=MIN_SPECIAL_CE32;
+    }
+
+    static inline int32_t getSpecialCE32Tag(uint32_t ce32) {
+        return (int32_t)((ce32>>20)&0xf);
+    }
+
+    /** Returns a 64-bit CE from a non-special CE32. */
+    static inline int64_t ceFromCE32(uint32_t ce32) {
+        uint32_t tertiary=ce32&0xff;
+        if(tertiary>1) {
+            // normal form ppppsstt -> pppp0000ss00tt00
+            return ((int64_t)(ce32&0xffff0000)<<32)|((ce32&0xff00)<<16)|(tertiary<<8);
+        } else if(tertiary==0) {
+            // long-primary form pppppp00 -> pppppp00050000500
+            return ((int64_t)ce32<<32)|COMMON_SEC_AND_TER_CE;
+        } else /* tertiary==1 */ {
+            // long-secondary form sssstt01 -> 00000000sssstt00
+            // Java: Use a mask to work around sign extension.
+            // return (long)ce32&0xfffffffe;
+            return ce32-1;
+        }
+    }
+
+    /**
+     * Returns the unassigned-character implicit primary weight for any valid code point c.
+     */
+    static uint32_t unassignedPrimaryFromCodePoint(UChar32 c) {
+        // Create a gap before U+0000. Use c=-1 for [first unassigned].
+        ++c;
+        // Fourth byte: 18 values, every 14th byte value (gap of 13).
+        uint32_t primary=3+(c%18)*14;
+        c/=18;
+        // Third byte: 253 values.
+        primary|=(3+(c%253))<<8;
+        c/=253;
+        // Second byte: 251 values 04..FE excluding the primary compression bytes.
+        primary|=(4+(c%251))<<16;
+        // One lead byte covers all code points (c<0x11710E=1*251*253*18).
+        return primary|(UNASSIGNED_IMPLICIT_BYTE<<24);
+    }
+    // TODO: Set [first unassigned] to unassignedPrimaryFromCodePoint(-1).
+    // TODO: Set [last unassigned] to unassignedPrimaryFromCodePoint(0x10ffff).
+
+private:
+    Collation();  // No instantiation.
+};
+
+U_NAMESPACE_END
+
+#endif  // !UCONFIG_NO_COLLATION
+#endif  // __COLLATION_H__
