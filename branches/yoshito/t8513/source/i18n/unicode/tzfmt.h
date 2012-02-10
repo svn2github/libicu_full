@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2011, International Business Machines Corporation and         *
+* Copyright (C) 2011-2012, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 */
@@ -10,6 +10,7 @@
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_FORMATTING
+#ifndef U_HIDE_DRAFT_API
 
 #include "unicode/uobject.h"
 #include "unicode/uloc.h"
@@ -19,7 +20,6 @@
 #include "unicode/tznames.h"
 
 U_CDECL_BEGIN
-
 typedef enum UTimeZoneFormatStyle {
     UTZFMT_STYLE_LOCATION,
     UTZFMT_STYLE_GENERIC_LONG,
@@ -60,5 +60,6 @@ public:
 
 U_NAMESPACE_END
 
+#endif  /* U_HIDE_DRAFT_API */
 #endif
 #endif
