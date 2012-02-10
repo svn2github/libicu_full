@@ -9,7 +9,7 @@
 
 /**
  * \file 
- * \brief C API: Time zone names class
+ * \brief C++ API: TimeZoneNames
  */
 #include "unicode/utypes.h"
 
@@ -21,42 +21,42 @@
 
 U_CDECL_BEGIN
 
-/*
+/**
  * Constants for time zone display name types.
  * @draft ICU 49
  */
 typedef enum UTimeZoneNameType {
-    /*
+    /**
      * Unknown display name type.
      * @internal
      */
     UTZNM_UNKNOWN           = 0x00,
-    /*
+    /**
      * Long display name, such as "Eastern Time".
      * @draft ICU 49
      */
     UTZNM_LONG_GENERIC      = 0x01,
-    /*
+    /**
      * Long display name for standard time, such as "Eastern Standard Time".
      * @draft ICU 49
      */
     UTZNM_LONG_STANDARD     = 0x02,
-    /*
+    /**
      * Long display name for daylight saving time, such as "Eastern Daylight Time".
      * @draft ICU 49
      */
     UTZNM_LONG_DAYLIGHT     = 0x04,
-    /*
+    /**
      * Short display name, such as "ET".
      * @draft ICU 49
      */
     UTZNM_SHORT_GENERIC     = 0x08,
-    /*
+    /**
      * Short display name for standard time, such as "EST".
      * @draft ICU 49
      */
     UTZNM_SHORT_STANDARD    = 0x10,
-    /*
+    /**
      * Short display name for daylight saving time, such as "EDT".
      * @draft ICU 49
      */
