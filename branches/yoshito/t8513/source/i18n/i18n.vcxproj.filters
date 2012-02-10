@@ -768,19 +768,19 @@
     <ClInclude Include="uspoof_wsconf.h">
       <Filter>spoof</Filter>
     </ClInclude>
-    <ClInclude Include="tzfmt.h">
-      <Filter>formatting</Filter>
-    </ClInclude>
     <ClInclude Include="tzgnames.h">
-      <Filter>formatting</Filter>
-    </ClInclude>
-    <ClInclude Include="tznames.h">
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="tznames_impl.h">
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="numsys_impl.h">
+      <Filter>formatting</Filter>
+    </ClInclude>
+    <ClInclude Include="unicode\tzfmt.h">
+      <Filter>formatting</Filter>
+    </ClInclude>
+    <ClInclude Include="unicode\tznames.h">
       <Filter>formatting</Filter>
     </ClInclude>
   </ItemGroup>
