@@ -180,24 +180,36 @@ public:
      * @stable ICU 2.0
      */
     enum EAlignmentFields {
+        /** @stable ICU 2.0 */
         kIntegerField = UNUM_INTEGER_FIELD,
+        /** @stable ICU 2.0 */
         kFractionField = UNUM_FRACTION_FIELD,
+        /** @stable ICU 2.0 */
         kDecimalSeparatorField = UNUM_DECIMAL_SEPARATOR_FIELD,
+        /** @stable ICU 2.0 */
         kExponentSymbolField = UNUM_EXPONENT_SYMBOL_FIELD,
+        /** @stable ICU 2.0 */
         kExponentSignField = UNUM_EXPONENT_SIGN_FIELD,
+        /** @stable ICU 2.0 */
         kExponentField = UNUM_EXPONENT_FIELD,
+        /** @stable ICU 2.0 */
         kGroupingSeparatorField = UNUM_GROUPING_SEPARATOR_FIELD,
+        /** @stable ICU 2.0 */
         kCurrencyField = UNUM_CURRENCY_FIELD,
+        /** @stable ICU 2.0 */
         kPercentField = UNUM_PERCENT_FIELD,
+        /** @stable ICU 2.0 */
         kPermillField = UNUM_PERMILL_FIELD,
+        /** @stable ICU 2.0 */
         kSignField = UNUM_SIGN_FIELD,
 
     /**
      * These constants are provided for backwards compatibility only.
      * Please use the constants defined in the header file unum.h.
-     * @stable ICU 2.0
      */
+        /** @stable ICU 2.0 */
         INTEGER_FIELD        = UNUM_INTEGER_FIELD,
+        /** @stable ICU 2.0 */
         FRACTION_FIELD       = UNUM_FRACTION_FIELD
     };
 
