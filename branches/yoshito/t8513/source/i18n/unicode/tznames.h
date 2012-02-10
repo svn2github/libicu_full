@@ -99,11 +99,6 @@ public:
  * to meta zones mapping data are stored by date range.
  * 
  * <p><b>Note:</b>
- * <p>
- * {@link TimeZoneFormat} assumes an instance of <code>TimeZoneNames</code> is immutable. If you want to provide
- * your own <code>TimeZoneNames</code> implementation and use it with {@link TimeZoneFormat}, you must follow
- * the contract.
- * <p>
  * The methods in this class assume that time zone IDs are already canonicalized. For example, you may not get proper
  * result returned by a method with time zone ID "America/Indiana/Indianapolis", because it's not a canonical time zone
  * ID (the canonical time zone ID for the time zone is "America/Indianapolis". See
