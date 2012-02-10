@@ -112,7 +112,7 @@ typedef struct GNameInfo {
 typedef struct GMatchInfo {
     const GNameInfo*    gnameInfo;
     int32_t             matchLength;
-    UTimeZoneTimeType   timeType;
+    UTimeZoneFormatTimeType   timeType;
 } ZMatchInfo;
 
 U_CDECL_END
@@ -852,7 +852,7 @@ TimeZoneGenericNames::loadStrings(const UnicodeString& tzCanonicalID) {
 
 int32_t
 TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, uint32_t types,
-        UnicodeString& tzID, UTimeZoneTimeType& timeType, UErrorCode& status) const {
+        UnicodeString& tzID, UTimeZoneFormatTimeType& timeType, UErrorCode& status) const {
     timeType = UTZFMT_TIME_TYPE_UNKNOWN;
     tzID.setToBogus();
 
@@ -867,7 +867,7 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
     }
 
     int32_t bestMatchLen = 0;
-    UTimeZoneTimeType bestMatchTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+    UTimeZoneFormatTimeType bestMatchTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
     UnicodeString bestMatchTzID;
     // UBool isLongStandard = FALSE;   // workaround - see the comments below
     UBool isStandard = FALSE;       // TODO: Temporary hack (on hack) for short standard name/location name conflict (found in zh_Hant), should be removed after CLDR 21m1 integration

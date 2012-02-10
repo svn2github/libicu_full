@@ -67,7 +67,7 @@ public:
     UnicodeString& getGenericLocationName(const UnicodeString& tzCanonicalID, UnicodeString& name) const;
 
     int32_t findBestMatch(const UnicodeString& text, int32_t start, uint32_t types,
-        UnicodeString& tzID, UTimeZoneTimeType& timeType, UErrorCode& status) const;
+        UnicodeString& tzID, UTimeZoneFormatTimeType& timeType, UErrorCode& status) const;
 
 private:
     Locale fLocale;

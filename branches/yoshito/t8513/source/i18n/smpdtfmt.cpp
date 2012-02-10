@@ -3206,7 +3206,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             // At this point, check for named time zones by looking through
             // the locale data.
             if (patternCharIndex != UDAT_TIMEZONE_RFC_FIELD) {
-                UTimeZoneTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                UTimeZoneFormatTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
                 ParsePosition tmpPos(start);
                 UnicodeString parsedID;
 

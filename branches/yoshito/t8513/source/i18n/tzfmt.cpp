@@ -33,10 +33,10 @@ public:
     const TimeZoneNames* getTimeZoneNames() const;
 
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
-        UnicodeString& name, UTimeZoneTimeType* timeType = NULL) const;
+        UnicodeString& name, UTimeZoneFormatTimeType* timeType = NULL) const;
 
     UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneTimeType* timeType = NULL) const;
+        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType = NULL) const;
 
 private:
     UMTX fLock;
@@ -48,7 +48,7 @@ private:
     UnicodeString& formatGeneric(const TimeZone& tz, UTimeZoneGenericNameType genType, UDate date, UnicodeString& name) const;
 
     UnicodeString& formatSpecific(const TimeZone& tz, UTimeZoneNameType stdType, UTimeZoneNameType dstType,
-        UDate date, UnicodeString& name, UTimeZoneTimeType *timeType) const;
+        UDate date, UnicodeString& name, UTimeZoneFormatTimeType *timeType) const;
 
     const TimeZoneGenericNames* getTimeZoneGenericNames(UErrorCode& status) const;
 };
@@ -120,7 +120,7 @@ TimeZoneFormatImpl::getTimeZoneGenericNames(UErrorCode& status) const {
 
 UnicodeString&
 TimeZoneFormatImpl::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
-        UnicodeString& name, UTimeZoneTimeType* timeType /* = NULL */) const {
+        UnicodeString& name, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
     if (timeType) {
         *timeType = UTZFMT_TIME_TYPE_UNKNOWN;
     }
@@ -146,7 +146,7 @@ TimeZoneFormatImpl::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate
 
 UnicodeString&
 TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneTimeType* timeType /* = NULL */) const {
+        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
     if (timeType) {
         *timeType = UTZFMT_TIME_TYPE_UNKNOWN;
     }
@@ -178,7 +178,7 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
         break;
     }
 
-    UTimeZoneTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+    UTimeZoneFormatTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
     UnicodeString parsedTzID;
     UErrorCode status = U_ZERO_ERROR;
 
@@ -263,7 +263,7 @@ TimeZoneFormatImpl::formatGeneric(const TimeZone& tz, UTimeZoneGenericNameType g
 
 UnicodeString&
 TimeZoneFormatImpl::formatSpecific(const TimeZone& tz, UTimeZoneNameType stdType, UTimeZoneNameType dstType,
-        UDate date, UnicodeString& name, UTimeZoneTimeType *timeType) const {
+        UDate date, UnicodeString& name, UTimeZoneFormatTimeType *timeType) const {
     if (fTimeZoneNames == NULL) {
         name.setToBogus();
         return name;
@@ -374,10 +374,10 @@ public:
     const TimeZoneNames* getTimeZoneNames() const;
 
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
-        UnicodeString& name, UTimeZoneTimeType* timeType = NULL) const;
+        UnicodeString& name, UTimeZoneFormatTimeType* timeType = NULL) const;
 
     UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneTimeType* timeType = NULL) const;
+        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType = NULL) const;
 
 private:
     TimeZoneFormatCacheEntry* fTZfmtCacheEntry;
@@ -483,13 +483,13 @@ TimeZoneFormatDelegate::getTimeZoneNames() const {
 
 UnicodeString&
 TimeZoneFormatDelegate::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
-        UnicodeString& name, UTimeZoneTimeType* timeType /* = NULL */) const {
+        UnicodeString& name, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
     return fTZfmtCacheEntry->tzfmt->format(style, tz, date, name, timeType);
 }
 
 UnicodeString&
 TimeZoneFormatDelegate::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneTimeType* timeType /* = NULL */) const {
+        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
     return fTZfmtCacheEntry->tzfmt->parse(style, text, pos, tzID, timeType);
 }
 
@@ -502,7 +502,7 @@ TimeZoneFormat::~TimeZoneFormat() {
 
 TimeZone*
 TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UTimeZoneTimeType* timeType /*= NULL*/) const {
+        UTimeZoneFormatTimeType* timeType /*= NULL*/) const {
     UnicodeString tzID;
     parse(style, text, pos, tzID, timeType);
     if (pos.getErrorIndex() < 0) {
