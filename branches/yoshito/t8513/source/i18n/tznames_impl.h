@@ -18,7 +18,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "tznames.h"
+#include "unicode/tznames.h"
 #include "unicode/ures.h"
 #include "unicode/locid.h"
 #include "uhash.h"

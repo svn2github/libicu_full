@@ -9,14 +9,13 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "tznames.h"
-#include "tznames_impl.h"
-
 #include "unicode/locid.h"
+#include "unicode/tznames.h"
 #include "unicode/uenum.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "putilimp.h"
+#include "tznames_impl.h"
 #include "uassert.h"
 #include "ucln_in.h"
 #include "uhash.h"

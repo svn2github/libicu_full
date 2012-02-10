@@ -9,7 +9,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "tzfmt.h"
+#include "unicode/tzfmt.h"
 #include "tzgnames.h"
 #include "cmemory.h"
 #include "cstring.h"

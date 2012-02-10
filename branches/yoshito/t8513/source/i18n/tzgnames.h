@@ -19,9 +19,9 @@
 #include "unicode/locid.h"
 #include "unicode/timezone.h"
 #include "unicode/unistr.h"
-#include "tznames.h"
+#include "unicode/tzfmt.h"
+#include "unicode/tznames.h"
 #include "tznames_impl.h"
-#include "tzfmt.h"
 #include "uhash.h"
 #include "umutex.h"
 

@@ -45,6 +45,7 @@
 #include "unicode/basictz.h"
 #include "unicode/simpletz.h"
 #include "unicode/rbtz.h"
+#include "unicode/tzfmt.h"
 #include "unicode/utf16.h"
 #include "unicode/vtzone.h"
 #include "olsontz.h"
@@ -56,7 +57,6 @@
 #include "uassert.h"
 #include "cmemory.h"
 #include "umutex.h"
-#include "tzfmt.h"
 #include <float.h>
 #include "smpdtfst.h"
 

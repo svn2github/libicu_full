@@ -26,6 +26,7 @@
 #include "unicode/dtfmtsym.h"
 #include "unicode/smpdtfmt.h"
 #include "unicode/msgfmt.h"
+#include "unicode/tznames.h"
 #include "cpputils.h"
 #include "ucln_in.h"
 #include "umutex.h"
@@ -36,7 +37,6 @@
 #include "hash.h"
 #include "uresimp.h"
 #include "ureslocs.h"
-#include "tznames.h"
 
 // *****************************************************************************
 // class DateFormatSymbols

@@ -16,7 +16,7 @@
 #include "unicode/unistr.h"
 #include "unicode/format.h"
 #include "unicode/timezone.h"
-#include "tznames.h"
+#include "unicode/tznames.h"
 
 U_CDECL_BEGIN
 
