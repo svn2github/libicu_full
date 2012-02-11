@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2011, International Business Machines Corporation and         *
+* Copyright (C) 2011-2012, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 */
@@ -30,6 +30,9 @@ public:
     TimeZoneFormatImpl(const Locale& locale, UErrorCode& status);
     virtual ~TimeZoneFormatImpl();
 
+    virtual UClassID getDynamicClassID() const;
+    static UClassID U_EXPORT2 getStaticClassID();
+
     const TimeZoneNames* getTimeZoneNames() const;
 
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
@@ -52,6 +55,8 @@ private:
 
     const TimeZoneGenericNames* getTimeZoneGenericNames(UErrorCode& status) const;
 };
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneFormatImpl)
 
 TimeZoneFormatImpl::TimeZoneFormatImpl(const Locale& locale, UErrorCode& status)
 : fLock(NULL),fLocale(locale), fTimeZoneNames(NULL), fTimeZoneGenericNames(NULL) {
@@ -371,6 +376,9 @@ public:
     TimeZoneFormatDelegate(const Locale& locale, UErrorCode& status);
     virtual ~TimeZoneFormatDelegate();
 
+    virtual UClassID getDynamicClassID(void) const;
+    static UClassID U_EXPORT2 getStaticClassID();
+
     const TimeZoneNames* getTimeZoneNames() const;
 
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
@@ -382,6 +390,8 @@ public:
 private:
     TimeZoneFormatCacheEntry* fTZfmtCacheEntry;
 };
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneFormatDelegate)
 
 TimeZoneFormatDelegate::TimeZoneFormatDelegate(const Locale& locale, UErrorCode& status) {
     UBool initialized;
@@ -500,6 +510,32 @@ TimeZoneFormatDelegate::parse(UTimeZoneFormatStyle style, const UnicodeString& t
 TimeZoneFormat::~TimeZoneFormat() {
 }
 
+TimeZoneFormat* U_EXPORT2
+TimeZoneFormat::createInstance(const Locale& locale, UErrorCode& status) {
+    TimeZoneFormat* tzfmt = new TimeZoneFormatDelegate(locale, status);
+    if (U_SUCCESS(status) && tzfmt == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    return tzfmt;
+}
+
+const TimeZoneNames*
+TimeZoneFormat::getTimeZoneNames() const {
+    return (const TimeZoneNames*)ftznames;
+}
+
+void
+TimeZoneFormat::adoptTimeZoneNames(TimeZoneNames *tznames) {
+    delete ftznames;
+    ftznames = tznames;
+}
+
+void
+TimeZoneFormat::setTimeZoneNames(const TimeZoneNames &tznames) {
+    delete ftznames;
+    ftznames = tznames.clone();
+}
+
 TimeZone*
 TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
         UTimeZoneFormatTimeType* timeType /*= NULL*/) const {
@@ -511,15 +547,30 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
     return NULL;
 }
 
-TimeZoneFormat* U_EXPORT2
-TimeZoneFormat::createInstance(const Locale& locale, UErrorCode& status) {
-    TimeZoneFormat* tzfmt = new TimeZoneFormatDelegate(locale, status);
-    if (U_SUCCESS(status) && tzfmt == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-    }
-    return tzfmt;
+UnicodeString&
+TimeZoneFormat::format(const Formattable& obj, UnicodeString& appendTo,
+        FieldPosition& pos, UErrorCode& status) const {
+    // TODO
+    return appendTo;
 }
 
+void
+TimeZoneFormat::parseObject(const UnicodeString& source, Formattable& result,
+        ParsePosition& parse_pos) const {
+    // TODO
+}
+
+UBool
+TimeZoneFormat::operator==(const Format& other) const {
+    // TODO
+    return FALSE;
+}
+
+Format*
+TimeZoneFormat::clone() const {
+    // TODO
+    return NULL;
+}
 
 U_NAMESPACE_END
 

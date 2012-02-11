@@ -104,10 +104,18 @@ static void sweepCache() {
 TimeZoneNameMatchInfo::~TimeZoneNameMatchInfo() {
 }
 
+// ---------------------------------------------------
+// TimeZoneNamesDelegate
+// ---------------------------------------------------
 class TimeZoneNamesDelegate : public TimeZoneNames {
 public:
     TimeZoneNamesDelegate(const Locale& locale, UErrorCode& status);
     virtual ~TimeZoneNamesDelegate();
+
+    virtual TimeZoneNames* clone() const;
+
+    virtual UClassID getDynamicClassID() const;
+    static UClassID U_EXPORT2 getStaticClassID();
 
     StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
     StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const;
@@ -123,6 +131,8 @@ public:
 private:
     TimeZoneNamesCacheEntry*    fTZnamesCacheEntry;
 };
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneNamesDelegate)
 
 TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& status) {
     UBool initialized;
@@ -221,6 +231,12 @@ TimeZoneNamesDelegate::~TimeZoneNamesDelegate() {
     umtx_unlock(&gTimeZoneNamesLock);
 }
 
+TimeZoneNames*
+TimeZoneNamesDelegate::clone() const {
+    // TODO
+    return NULL;
+}
+
 StringEnumeration*
 TimeZoneNamesDelegate::getAvailableMetaZoneIDs(UErrorCode& status) const {
     return fTZnamesCacheEntry->names->getAvailableMetaZoneIDs(status);
@@ -261,8 +277,9 @@ TimeZoneNamesDelegate::find(const UnicodeString& text, int32_t start, uint32_t t
     return fTZnamesCacheEntry->names->find(text, start, types, status);
 }
 
-
-
+// ---------------------------------------------------
+// TimeZoneNames base class
+// ---------------------------------------------------
 TimeZoneNames::~TimeZoneNames() {
 }
 

@@ -919,6 +919,8 @@ deleteZNameInfo(void *obj) {
 
 U_CDECL_END
 
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneNamesImpl)
+
 TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
 : fLocale(locale),
   fLock(NULL),
@@ -1010,6 +1012,12 @@ TimeZoneNamesImpl::cleanup() {
         uhash_close(fTZNamesMap);
         fTZNamesMap = NULL;
     }
+}
+
+TimeZoneNames*
+TimeZoneNamesImpl::clone() const {
+    // TODO
+    return NULL;
 }
 
 StringEnumeration*

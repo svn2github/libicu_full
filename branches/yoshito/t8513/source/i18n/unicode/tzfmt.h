@@ -128,6 +128,7 @@ U_CDECL_END
 U_NAMESPACE_BEGIN
 
 class TimeZoneNames;
+class TimeZoneGenericNames;
 
 /**
  * <code>TimeZoneFormat</code> supports time zone display name formatting and parsing.
@@ -144,7 +145,7 @@ class TimeZoneNames;
  * @see TimeZoneNames
  * @draft ICU 49
  */
-class U_I18N_API TimeZoneFormat : public UMemory {
+class U_I18N_API TimeZoneFormat : public Format {
 public:
     /**
      * @draft ICU 49
@@ -371,6 +372,41 @@ public:
      */
     TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
         UTimeZoneFormatTimeType* timeType = NULL) const;
+
+
+
+    /* ----------------------------------------------
+     * Format APIs
+     * ---------------------------------------------- */
+
+     /**
+     * @draft ICU 49
+     */
+    virtual UnicodeString& format(const Formattable& obj, UnicodeString& appendTo,
+        FieldPosition& pos, UErrorCode& status) const;
+
+    /**
+     * @draft ICU 49
+     */
+    virtual void parseObject(const UnicodeString& source, Formattable& result, ParsePosition& parse_pos) const;
+
+    /**
+     * @draft ICU 49
+     */
+    virtual UBool operator==(const Format& other) const;
+
+    /**
+     * @draft ICU 49
+     */
+    virtual Format* clone() const;
+
+private:
+    TimeZoneNames*      ftznames;
+    UnicodeString       fgmtPattern;
+    UnicodeString       fgmtOffsetPatterns[4];
+    UnicodeString       fgmtOffsetDigits[10];
+    UnicodeString       fgmtZeroFormat;
+    UBool               fparseAllStlyes;
 };
 
 U_NAMESPACE_END

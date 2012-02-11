@@ -121,9 +121,21 @@ public:
  * 
  * @draft ICU 49
  */
-class U_I18N_API TimeZoneNames : public UMemory {
+class U_I18N_API TimeZoneNames : public UObject {
 public:
+    /**
+     * Destructor.
+     * @draft ICU 49
+     */
     virtual ~TimeZoneNames();
+
+    /**
+     * Clone this object polymorphically.  The caller is responsible
+     * for deleting the result when done.
+     * @return A copy of the object
+     * @draft ICU 49
+     */
+    virtual TimeZoneNames* clone() const = 0;
 
     /**
      * Returns an instance of <code>TimeZoneDisplayNames</code> for the specified locale.

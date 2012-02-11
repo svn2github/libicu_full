@@ -168,6 +168,11 @@ public:
 
     virtual ~TimeZoneNamesImpl();
 
+    virtual TimeZoneNames* clone() const;
+
+    virtual UClassID getDynamicClassID() const;
+    static UClassID U_EXPORT2 getStaticClassID();
+
     StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
     StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const;
 
