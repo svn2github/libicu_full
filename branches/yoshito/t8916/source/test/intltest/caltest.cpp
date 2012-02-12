@@ -2274,7 +2274,7 @@ void CalendarTest::TestISO8601() {
 class CalFields {
 public:
     CalFields(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t min, int32_t sec);
-    CalFields(const Calendar& cal);
+    CalFields(const Calendar& cal, UErrorCode& status);
     void setTo(Calendar& cal) const;
     char* toString(char* buf, int32_t len) const;
     UBool operator==(const CalFields& rhs) const;
@@ -2293,8 +2293,7 @@ CalFields::CalFields(int32_t year, int32_t month, int32_t day, int32_t hour, int
     : year(year), month(month), day(day), hour(hour), min(min), sec(sec) {
 }
 
-CalFields::CalFields(const Calendar& cal) {
-    UErrorCode status;
+CalFields::CalFields(const Calendar& cal, UErrorCode& status) {
     year = cal.get(UCAL_YEAR, status);
     month = cal.get(UCAL_MONTH, status) + 1;
     day = cal.get(UCAL_DAY_OF_MONTH, status);
@@ -2385,11 +2384,11 @@ void CalendarTest::TestRepeatedWallTime(void) {
         calLast.setTimeZone(*tz);
         RPDATA[i].in.setTo(calLast);
         calGMT.setTime(calLast.getTime(status), status);
+        CalFields outLastGMT(calGMT, status);
         if (U_FAILURE(status)) {
             errln(UnicodeString("Fail: Failed to get/set time calLast/calGMT (UCAL_WALLTIME_LAST) - ")
                 + RPDATA[i].in.toString(buf, sizeof(buf)) + "[" + RPDATA[i].tzid + "]");
         } else {
-            CalFields outLastGMT(calGMT);
             if (outLastGMT != RPDATA[i].expLastGMT) {
                 errln(UnicodeString("Fail: UCAL_WALLTIME_LAST ") + RPDATA[i].in.toString(buf, sizeof(buf)) + "[" + RPDATA[i].tzid + "] is parsed as "
                     + outLastGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + RPDATA[i].expLastGMT.toString(buf, sizeof(buf)) + "[GMT]");
@@ -2401,11 +2400,11 @@ void CalendarTest::TestRepeatedWallTime(void) {
         calDefault.setTimeZone(*tz);
         RPDATA[i].in.setTo(calDefault);
         calGMT.setTime(calDefault.getTime(status), status);
+        CalFields outDefGMT(calGMT, status);
         if (U_FAILURE(status)) {
             errln(UnicodeString("Fail: Failed to get/set time calLast/calGMT (default) - ")
                 + RPDATA[i].in.toString(buf, sizeof(buf)) + "[" + RPDATA[i].tzid + "]");
         } else {
-            CalFields outDefGMT(calGMT);
             if (outDefGMT != RPDATA[i].expLastGMT) {
                 errln(UnicodeString("Fail: (default) ") + RPDATA[i].in.toString(buf, sizeof(buf)) + "[" + RPDATA[i].tzid + "] is parsed as "
                     + outDefGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + RPDATA[i].expLastGMT.toString(buf, sizeof(buf)) + "[GMT]");
@@ -2417,11 +2416,11 @@ void CalendarTest::TestRepeatedWallTime(void) {
         calFirst.setTimeZone(*tz);
         RPDATA[i].in.setTo(calFirst);
         calGMT.setTime(calFirst.getTime(status), status);
+        CalFields outFirstGMT(calGMT, status);
         if (U_FAILURE(status)) {
             errln(UnicodeString("Fail: Failed to get/set time calLast/calGMT (UCAL_WALLTIME_FIRST) - ")
                 + RPDATA[i].in.toString(buf, sizeof(buf)) + "[" + RPDATA[i].tzid + "]");
         } else {
-            CalFields outFirstGMT(calGMT);
             if (outFirstGMT != RPDATA[i].expFirstGMT) {
                 errln(UnicodeString("Fail: UCAL_WALLTIME_FIRST ") + RPDATA[i].in.toString(buf, sizeof(buf)) + "[" + RPDATA[i].tzid + "] is parsed as "
                     + outFirstGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + RPDATA[i].expFirstGMT.toString(buf, sizeof(buf)) + "[GMT]");
@@ -2493,11 +2492,11 @@ void CalendarTest::TestSkippedWallTime(void) {
             d = calLast.getTime(status);
             if (bLenient || SKDATA[i].isValid) {
                 calGMT.setTime(d, status);
+                CalFields outLastGMT(calGMT, status);
                 if (U_FAILURE(status)) {
                     errln(UnicodeString("Fail: Failed to get/set time calLast/calGMT (UCAL_WALLTIME_LAST) - ")
                         + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "]");
                 } else {
-                    CalFields outLastGMT(calGMT);
                     if (outLastGMT != SKDATA[i].expLastGMT) {
                         errln(UnicodeString("Fail: UCAL_WALLTIME_LAST ") + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "] is parsed as "
                             + outLastGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + SKDATA[i].expLastGMT.toString(buf, sizeof(buf)) + "[GMT]");
@@ -2517,11 +2516,11 @@ void CalendarTest::TestSkippedWallTime(void) {
             d = calDefault.getTime(status);
             if (bLenient || SKDATA[i].isValid) {
                 calGMT.setTime(d, status);
+                CalFields outDefGMT(calGMT, status);
                 if (U_FAILURE(status)) {
                     errln(UnicodeString("Fail: Failed to get/set time calDefault/calGMT (default) - ")
                         + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "]");
                 } else {
-                    CalFields outDefGMT(calGMT);
                     if (outDefGMT != SKDATA[i].expLastGMT) {
                         errln(UnicodeString("Fail: (default) ") + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "] is parsed as "
                             + outDefGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + SKDATA[i].expLastGMT.toString(buf, sizeof(buf)) + "[GMT]");
@@ -2541,11 +2540,11 @@ void CalendarTest::TestSkippedWallTime(void) {
             d = calFirst.getTime(status);
             if (bLenient || SKDATA[i].isValid) {
                 calGMT.setTime(d, status);
+                CalFields outFirstGMT(calGMT, status);
                 if (U_FAILURE(status)) {
                     errln(UnicodeString("Fail: Failed to get/set time calFirst/calGMT (UCAL_WALLTIME_FIRST) - ")
                         + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "]");
                 } else {
-                    CalFields outFirstGMT(calGMT);
                     if (outFirstGMT != SKDATA[i].expFirstGMT) {
                         errln(UnicodeString("Fail: UCAL_WALLTIME_FIRST ") + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "] is parsed as "
                             + outFirstGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + SKDATA[i].expFirstGMT.toString(buf, sizeof(buf)) + "[GMT]");
@@ -2565,11 +2564,11 @@ void CalendarTest::TestSkippedWallTime(void) {
             d = calNextAvail.getTime(status);
             if (bLenient || SKDATA[i].isValid) {
                 calGMT.setTime(d, status);
+                CalFields outNextAvailGMT(calGMT, status);
                 if (U_FAILURE(status)) {
                     errln(UnicodeString("Fail: Failed to get/set time calNextAvail/calGMT (UCAL_WALLTIME_NEXT_AVAILABLE) - ")
                         + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "]");
                 } else {
-                    CalFields outNextAvailGMT(calGMT);
                     if (outNextAvailGMT != SKDATA[i].expNextAvailGMT) {
                         errln(UnicodeString("Fail: UCAL_WALLTIME_NEXT_AVAILABLE ") + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "] is parsed as "
                             + outNextAvailGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + SKDATA[i].expNextAvailGMT.toString(buf, sizeof(buf)) + "[GMT]");
