@@ -2644,7 +2644,7 @@ void Calendar::computeTime(UErrorCode& status) {
         millisInDay = computeMillisInDay();
     }
 
-    UDate t;
+    UDate t = 0;
     if (fStamp[UCAL_ZONE_OFFSET] >= ((int32_t)kMinimumUserStamp) || fStamp[UCAL_DST_OFFSET] >= ((int32_t)kMinimumUserStamp)) {
         t = millis + millisInDay - (internalGet(UCAL_ZONE_OFFSET) + internalGet(UCAL_DST_OFFSET));
     } else {

@@ -2050,6 +2050,12 @@ private:
     UBool      fLenient;
 
     /**
+     * Time zone affects the time calculation done by Calendar. Calendar subclasses use
+     * the time zone data to produce the local time.
+     */
+    TimeZone*   fZone;
+
+    /**
      * Option for rpeated wall time
      * @see #setRepeatedWallTimeOption
      */
@@ -2060,12 +2066,6 @@ private:
      * @see #setSkippedWallTimeOption
      */
     UCalendarWallTimeOption fSkippedWallTime;
-
-    /**
-     * Time zone affects the time calculation done by Calendar. Calendar subclasses use
-     * the time zone data to produce the local time.
-     */
-    TimeZone*   fZone;
 
     /**
      * Both firstDayOfWeek and minimalDaysInFirstWeek are locale-dependent. They are
