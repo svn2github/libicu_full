@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-*   Copyright (C) 1997-2011, International Business Machines
+*   Copyright (C) 1997-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -48,6 +48,7 @@ class ICUServiceFactory;
  */
 typedef int32_t UFieldResolutionTable[12][8];
 
+class BasicTimeZone;
 /**
  * <code>Calendar</code> is an abstract base class for converting between
  * a <code>UDate</code> object and a set of integer fields such as
@@ -2049,6 +2050,18 @@ private:
     UBool      fLenient;
 
     /**
+     * Option for rpeated wall time
+     * @see #setRepeatedWallTimeOption
+     */
+    UCalendarWallTimeOption fRepeatedWallTime;
+
+    /**
+     * Option for skipped wall time
+     * @see #setSkippedWallTimeOption
+     */
+    UCalendarWallTimeOption fSkippedWallTime;
+
+    /**
      * Time zone affects the time calculation done by Calendar. Calendar subclasses use
      * the time zone data to produce the local time.
      */
@@ -2305,6 +2318,13 @@ private:
      */
     const char* getLocaleID(ULocDataLocaleType type, UErrorCode &status) const;
 #endif  /* U_HIDE_INTERNAL_API */
+
+private:
+    /**
+     * Cast TimeZone used by this object to BasicTimeZone, or NULL if the TimeZone
+     * is not an instance of BasicTimeZone.
+     */
+    BasicTimeZone* getBasicTimeZone() const;
 };
 
 // -------------------------------------
