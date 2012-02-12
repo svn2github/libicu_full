@@ -229,6 +229,10 @@ public: // package
      */
     void TestISO8601(void);
 
+    /**
+     * Test cases for [set|get][Repeated|Skipped]WallTimeOption
+     */
+    void TestAmbiguousWallTimeAPIs(void);
     void TestRepeatedWallTime(void);
     void TestSkippedWallTime(void);
 };

@@ -245,13 +245,20 @@ void CalendarTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
           }
           break;
         case 27:
+          name = "TestAmbiguousWallTimeAPIs";
+          if(exec) {
+            logln("TestAmbiguousWallTimeAPIs---"); logln("");
+            TestAmbiguousWallTimeAPIs();
+          }
+          break;
+        case 28:
           name = "TestRepeatedWallTime";
           if(exec) {
             logln("TestRepeatedWallTime---"); logln("");
             TestRepeatedWallTime();
           }
           break;
-        case 28:
+        case 29:
           name = "TestSkippedWallTime";
           if(exec) {
             logln("TestSkippedWallTime---"); logln("");
@@ -2269,6 +2276,63 @@ void CalendarTest::TestISO8601() {
         delete cal;
     }
 
+}
+
+void
+CalendarTest::TestAmbiguousWallTimeAPIs(void) {
+    UErrorCode status = U_ZERO_ERROR;
+    Calendar* cal = Calendar::createInstance(status);
+    if (U_FAILURE(status)) {
+        errln("Fail: Error creating a calendar instance.");
+        return;
+    }
+
+    if (cal->getRepeatedWallTimeOption() != UCAL_WALLTIME_LAST) {
+        errln("Fail: Default repeted time option is not UCAL_WALLTIME_LAST");
+    }
+    if (cal->getSkippedWallTimeOption() != UCAL_WALLTIME_LAST) {
+        errln("Fail: Default skipped time option is not UCAL_WALLTIME_LAST");
+    }
+
+    Calendar* cal2 = cal->clone();
+
+    if (*cal != *cal2) {
+        errln("Fail: Cloned calendar != the original");
+    }
+    if (!cal->equals(*cal2, status)) {
+        errln("Fail: The time of cloned calendar is not equal to the original");
+    } else if (U_FAILURE(status)) {
+        errln("Fail: Error equals");
+    }
+    status = U_ZERO_ERROR;
+
+    cal2->setRepeatedWallTimeOption(UCAL_WALLTIME_FIRST);
+    cal2->setSkippedWallTimeOption(UCAL_WALLTIME_FIRST);
+
+    if (*cal == *cal2) {
+        errln("Fail: Cloned and modified calendar == the original");
+    }
+    if (!cal->equals(*cal2, status)) {
+        errln("Fail: The time of cloned calendar is not equal to the original after changing wall time options");
+    } else if (U_FAILURE(status)) {
+        errln("Fail: Error equals after changing wall time options");
+    }
+    status = U_ZERO_ERROR;
+
+    if (cal2->getRepeatedWallTimeOption() != UCAL_WALLTIME_FIRST) {
+        errln("Fail: Repeted time option is not UCAL_WALLTIME_FIRST");
+    }
+    if (cal2->getSkippedWallTimeOption() != UCAL_WALLTIME_FIRST) {
+        errln("Fail: Skipped time option is not UCAL_WALLTIME_FIRST");
+    }
+
+    cal2->setRepeatedWallTimeOption(UCAL_WALLTIME_NEXT_AVAILABLE);
+    if (cal2->getRepeatedWallTimeOption() != UCAL_WALLTIME_FIRST) {
+        errln("Fail: Repeated wall time option was updated other than UCAL_WALLTIME_FIRST");
+    }
+
+    delete cal;
+    delete cal2;
 }
 
 class CalFields {
