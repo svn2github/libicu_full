@@ -377,7 +377,7 @@ TimeZoneNames::
 
 UBool
 TimeZoneNames::
-    MatchInfoCollection::getMetaZoneID(int32_t idx, UnicodeString& mzID, UErrorCode& status) const {
+    MatchInfoCollection::getMetaZoneIDAt(int32_t idx, UnicodeString& mzID, UErrorCode& status) const {
     //TODO
     return FALSE;
 }

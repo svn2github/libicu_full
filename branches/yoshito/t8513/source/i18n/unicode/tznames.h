@@ -336,7 +336,7 @@ public:
          * @return TRUE if meta zone ID is availabe.
          * @draft ICU 49
          */
-        UBool getMetaZoneID(int32_t idx, UnicodeString& mzID, UErrorCode& status) const;
+        UBool getMetaZoneIDAt(int32_t idx, UnicodeString& mzID, UErrorCode& status) const;
     };
 
     /**
