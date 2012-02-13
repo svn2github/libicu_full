@@ -123,21 +123,21 @@ typedef enum UTimeZoneFormatTimeType {
     UTZFMT_TIME_TYPE_DAYLIGHT
 } UTimeZoneFormatTimeType;
 
-/*
+/**
  * Constants for parse option flags, used for specifying optional parse behavior.
  * @draft ICU 49
  */
 typedef enum UTimeZoneFormatParseOption {
     /**
      * No option.
-     * @drafut ICU 49
+     * @draft ICU 49
      */
     UTZFMT_PARSE_OPTION_NONE        = 0x00,
     /**
      * When a time zone display name is not found within a set of display names
      * used for the specified style, look for the name from display names used
      * by other styles.
-     * @drfault ICU 49
+     * @draft ICU 49
      */
     UTZFMT_PARSE_OPTION_ALL_STYLES  = 0x01
 } UTimeZoneFormatParseOption;
@@ -274,7 +274,7 @@ public:
 
     /**
      * Sets the default parse options.
-     * <p><b>Note</b>: By default, an instance of <code>TimeZoneFormat<code>
+     * <p><b>Note</b>: By default, an instance of <code>TimeZoneFormat</code>
      * created by {@link #createInstance} has no parse options set (UTZFMT_PARSE_OPTION_NONE).
      * To specify multipe options, use bitwise flags of UTimeZoneFormatParseOption.
      * @see #UTimeZoneFormatParseOption

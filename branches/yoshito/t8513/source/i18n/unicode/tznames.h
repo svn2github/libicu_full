@@ -290,7 +290,7 @@ public:
          * @draft ICU 49
          */
         void addMetaZone(UTimeZoneNameType nameType, int32_t matchLength,
-            const UnicodeString& tzID, UErrorCode& status);
+            const UnicodeString& mzID, UErrorCode& status);
 
         /**
          * Returns the number of entries available in this object.
