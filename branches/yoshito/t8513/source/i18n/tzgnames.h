@@ -107,7 +107,8 @@ private:
 
     TimeZoneGenericNameMatchInfo* findLocal(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 
-    TimeZoneNameMatchInfo* findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
+    //TimeZoneNameMatchInfo* findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
+    TimeZoneNames::MatchInfoCollection* findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 };
 
 U_NAMESPACE_END

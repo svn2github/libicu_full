@@ -318,5 +318,70 @@ TimeZoneNames::getDisplayName(const UnicodeString& tzID, UTimeZoneNameType type,
     return name;
 }
 
+
+// ---------------------------------------------------
+// MatchInfoCollection class
+// ---------------------------------------------------
+TimeZoneNames::
+    MatchInfoCollection::MatchInfoCollection() {
+    //TODO
+}
+
+TimeZoneNames::
+    MatchInfoCollection::~MatchInfoCollection() {
+    //TODO
+}
+
+void
+TimeZoneNames::
+    MatchInfoCollection::addZone(UTimeZoneNameType nameType, int32_t matchLength,
+            const UnicodeString& tzID, UErrorCode& status) {
+    //TODO
+}
+
+void
+TimeZoneNames::
+    MatchInfoCollection::addMetaZone(UTimeZoneNameType nameType, int32_t matchLength,
+            const UnicodeString& tzID, UErrorCode& status) {
+    //TODO
+}
+
+int32_t
+TimeZoneNames::
+    MatchInfoCollection::size() const {
+    //TODO
+    return 0;
+}
+
+UTimeZoneNameType
+TimeZoneNames::
+    MatchInfoCollection::getNameTypeAt(int32_t idx, UErrorCode& status) const {
+    //TODO
+    return UTZNM_UNKNOWN;
+}
+
+
+int32_t
+TimeZoneNames::
+    MatchInfoCollection::getMatchLengthAt(int32_t idx, UErrorCode& status) const {
+    //TODO
+    return 0;
+}
+
+UBool
+TimeZoneNames::
+    MatchInfoCollection::getTimeZoneIDAt(int32_t idx, UnicodeString& tzID, UErrorCode& status) const {
+    //TODO
+    return FALSE;
+}
+
+UBool
+TimeZoneNames::
+    MatchInfoCollection::getMetaZoneID(int32_t idx, UnicodeString& mzID, UErrorCode& status) const {
+    //TODO
+    return FALSE;
+}
+
+
 U_NAMESPACE_END
 #endif

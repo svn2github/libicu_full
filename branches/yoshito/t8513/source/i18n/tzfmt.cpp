@@ -38,8 +38,8 @@ public:
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
         UnicodeString& name, UTimeZoneFormatTimeType* timeType = NULL) const;
 
-    UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType = NULL) const;
+    TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        int32_t parseOptions, UTimeZoneFormatTimeType* timeType = NULL) const;
 
 private:
     UMTX fLock;
@@ -149,14 +149,12 @@ TimeZoneFormatImpl::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate
     return name;
 }
 
-UnicodeString&
+TimeZone*
 TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
+        int32_t parseOptions, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
     if (timeType) {
         *timeType = UTZFMT_TIME_TYPE_UNKNOWN;
     }
-    tzID.setToBogus();
-
     int32_t startIdx = pos.getIndex();
 
     UBool isGeneric = FALSE;
@@ -184,25 +182,25 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
     }
 
     UTimeZoneFormatTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
-    UnicodeString parsedTzID;
+    UnicodeString tzID;
     UErrorCode status = U_ZERO_ERROR;
 
     if (isGeneric) {
         int32_t len = 0;
         const TimeZoneGenericNames *gnames = getTimeZoneGenericNames(status);
         if (U_SUCCESS(status)) {
-            len = gnames->findBestMatch(text, startIdx, types, parsedTzID, parsedTimeType, status);
+            len = gnames->findBestMatch(text, startIdx, types, tzID, parsedTimeType, status);
         }
         if (U_FAILURE(status) || len == 0) {
             pos.setErrorIndex(startIdx);
-            return tzID;
+            return NULL;
         }
         pos.setIndex(startIdx + len);
     } else {
         TimeZoneNameMatchInfo *matchInfo = fTimeZoneNames->find(text, startIdx, types, status);
         if (U_FAILURE(status) || matchInfo == NULL) {
             pos.setErrorIndex(startIdx);
-            return tzID;
+            return NULL;
         }
         int32_t bestLen = 0;
         int32_t bestIdx = -1;
@@ -214,12 +212,12 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
             }
         }
         if (bestIdx >= 0) {
-            matchInfo->getTimeZoneID(bestIdx, parsedTzID);
-            if (parsedTzID.isEmpty()) {
+            matchInfo->getTimeZoneID(bestIdx, tzID);
+            if (tzID.isEmpty()) {
                 UnicodeString mzID;
                 matchInfo->getMetaZoneID(bestIdx, mzID);
                 U_ASSERT(mzID.length() > 0);
-                fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, parsedTzID);
+                fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, tzID);
             }
             UTimeZoneNameType nameType = matchInfo->getNameType(bestIdx);
             switch (nameType) {
@@ -242,8 +240,7 @@ TimeZoneFormatImpl::parse(UTimeZoneFormatStyle style, const UnicodeString& text,
     if (timeType) {
         *timeType = parsedTimeType;
     }
-    tzID.setTo(parsedTzID);
-    return tzID;
+    return TimeZone::createTimeZone(tzID);
 }
 
 UnicodeString&
@@ -384,8 +381,8 @@ public:
     UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
         UnicodeString& name, UTimeZoneFormatTimeType* timeType = NULL) const;
 
-    UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType = NULL) const;
+    TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        int32_t parseOptions, UTimeZoneFormatTimeType* timeType = NULL) const;
 
 private:
     TimeZoneFormatCacheEntry* fTZfmtCacheEntry;
@@ -497,10 +494,10 @@ TimeZoneFormatDelegate::format(UTimeZoneFormatStyle style, const TimeZone& tz, U
     return fTZfmtCacheEntry->tzfmt->format(style, tz, date, name, timeType);
 }
 
-UnicodeString&
+TimeZone*
 TimeZoneFormatDelegate::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
-    return fTZfmtCacheEntry->tzfmt->parse(style, text, pos, tzID, timeType);
+        int32_t parseOptions, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
+    return fTZfmtCacheEntry->tzfmt->parse(style, text, pos, parseOptions, timeType);
 }
 
 
@@ -536,15 +533,20 @@ TimeZoneFormat::setTimeZoneNames(const TimeZoneNames &tznames) {
     ftznames = tznames.clone();
 }
 
+void
+TimeZoneFormat::setDefaultParseOptions(int32_t flags) {
+    fDefaultParseOptions = flags;
+}
+
+int32_t
+TimeZoneFormat::getDefaultParseOptions(void) const {
+    return fDefaultParseOptions;
+}
+
 TimeZone*
 TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
         UTimeZoneFormatTimeType* timeType /*= NULL*/) const {
-    UnicodeString tzID;
-    parse(style, text, pos, tzID, timeType);
-    if (pos.getErrorIndex() < 0) {
-        return TimeZone::createTimeZone(tzID);
-    }
-    return NULL;
+    return parse(style, text, pos, getDefaultParseOptions(), timeType);
 }
 
 UnicodeString&

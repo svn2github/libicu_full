@@ -67,7 +67,7 @@ typedef enum UTimeZoneFormatStyle {
      */
     UTZFMT_STYLE_LOCALIZED_GMT,
     /**
-     * ISO8601 format, such as "-08:00", "Z"
+     * ISO 8601 format (extended), such as "-05:00", "Z"(UTC)
      * @draft ICU 49
      */
     UTZFMT_STYLE_ISO8601
@@ -123,6 +123,25 @@ typedef enum UTimeZoneFormatTimeType {
     UTZFMT_TIME_TYPE_DAYLIGHT
 } UTimeZoneFormatTimeType;
 
+/*
+ * Constants for parse option flags, used for specifying optional parse behavior.
+ * @draft ICU 49
+ */
+typedef enum UTimeZoneFormatParseOption {
+    /**
+     * No option.
+     * @drafut ICU 49
+     */
+    UTZFMT_PARSE_OPTION_NONE        = 0x00,
+    /**
+     * When a time zone display name is not found within a set of display names
+     * used for the specified style, look for the name from display names used
+     * by other styles.
+     * @drfault ICU 49
+     */
+    UTZFMT_PARSE_OPTION_ALL_STYLES  = 0x01
+} UTimeZoneFormatParseOption;
+
 U_CDECL_END
 
 U_NAMESPACE_BEGIN
@@ -148,6 +167,7 @@ class TimeZoneGenericNames;
 class U_I18N_API TimeZoneFormat : public Format {
 public:
     /**
+     * Destructor.
      * @draft ICU 49
      */
     virtual ~TimeZoneFormat();
@@ -253,24 +273,23 @@ public:
     void setGMTZeroFormat(const UnicodeString& gmtZeroFormat);
 
     /**
-     * Returns <code>TRUE</code> when this <code>TimeZoneFormat</code> is configured for parsing
-     * display names including names that are only used by other styles by {@link #parse}.
-     * <p><b>Note</b>: An instance created by {@link #createInstance} is configured NOT
-     * parsing all styles (<code>FALSE</code>) by defaut.
-     * 
-     * @return <code>TRUE</code> when this instance is configure for parsing all available names.
-     * @see #setParseAllStyles
+     * Sets the default parse options.
+     * <p><b>Note</b>: By default, an instance of <code>TimeZoneFormat<code>
+     * created by {@link #createInstance} has no parse options set (UTZFMT_PARSE_OPTION_NONE).
+     * To specify multipe options, use bitwise flags of UTimeZoneFormatParseOption.
+     * @see #UTimeZoneFormatParseOption
      * @draft ICU 49
      */
-    UBool isParseAllStyles() const;
+    void setDefaultParseOptions(int32_t flags);
 
     /**
-     * Sets if {@link #parse} to parse display names including names that are only used by other styles.
-     * @param parseAllStyles <code>true</code> to parse all available names.
-     * @see #isParseAllStyles
+     * Returns the bitwise flags of UTimeZoneFormatParseOption representing the default parse
+     * options used by this object.
+     * @return the default parse options.
+     * @see ParseOption
      * @draft ICU 49
      */
-    void setParseAllStyles(UBool parseAllStyles);
+    int32_t getDefaultParseOptions(void) const;
 
     /**
      * Returns the RFC822 style time zone string for the given offset.
@@ -312,6 +331,16 @@ public:
     UnicodeString& formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result) const;
 
     /**
+     * Returns the display name of the time zone at the given date for the style.
+     * @param style The style (e.g. <code>UTZFMT_STYLE_GENERIC_LONG</code>, <code>UTZFMT_STYLE_LOCALIZED_GMT</code>...)
+     * @param tz The time zone.
+     * @param date The date.
+     * @param name Receives the display name.
+     * @param timeType the output argument for receiving the time type (standard/daylight/unknown)
+     * used for the display name, or NULL if the information is not necessary.
+     * @return A reference to the result
+     * @see #UTimeZoneFormatStyle
+     * @see #UTimeZoneFormatTimeType
      * @draft ICU 49
      */
     virtual UnicodeString& format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
@@ -362,40 +391,88 @@ public:
     int32_t parseOffsetLocalizedGMT(const UnicodeString& text, ParsePosition& pos) const;
 
     /**
+     * Returns a <code>TimeZone</code> by parsing the time zone string according to
+     * the given parse position, the specified format style and parse options.
+     * 
+     * @param text The text contains a time zone string at the position.
+     * @param style The format style
+     * @param pos The position.
+     * @param parseOptions The parse options repesented by bitwise flags of UTimeZoneFormatParseOption.
+     * @param timeType The output argument for receiving the time type (standard/daylight/unknown),
+     * or NULL if the information is not necessary.
+     * @return A <code>TimeZone</code>, or null if the input could not be parsed.
+     * @see UTimeZoneFormatStyle
+     * @see UTimeZoneFormatParseOption
+     * @see UTimeZoneFormatTimeType
      * @draft ICU 49
      */
-    virtual UnicodeString& parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
-        UnicodeString& tzID, UTimeZoneFormatTimeType* timeType = NULL) const = 0;
+    virtual TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
+        int32_t parseOptions, UTimeZoneFormatTimeType* timeType = NULL) const = 0;
 
     /**
+     * Returns a <code>TimeZone</code> by parsing the time zone string according to
+     * the given parse position, the specified format style and the default parse options.
+     * 
+     * @param text The text contains a time zone string at the position.
+     * @param style The format style
+     * @param pos The position.
+     * @param timeType The output argument for receiving the time type (standard/daylight/unknown),
+     * or NULL if the information is not necessary.
+     * @return A <code>TimeZone</code>, or null if the input could not be parsed.
+     * @see UTimeZoneFormatStyle
+     * @see UTimeZoneFormatParseOption
+     * @see UTimeZoneFormatTimeType
      * @draft ICU 49
      */
     TimeZone* parse(UTimeZoneFormatStyle style, const UnicodeString& text, ParsePosition& pos,
         UTimeZoneFormatTimeType* timeType = NULL) const;
 
-
-
     /* ----------------------------------------------
      * Format APIs
      * ---------------------------------------------- */
 
-     /**
+    /**
+     * Format an object to produce a time zone display string using localized GMT offset format.
+     * This method handles Formattable objects with a <code>TimeZone</code>. If a the Formattable
+     * object type is not a <code>TimeZone</code>, then it returns a failing UErrorCode.
+     * @param obj The object to format. Must be a <code>TimeZone</code>.
+     * @param appendTo Output parameter to receive result. Result is appended to existing contents.
+     * @param pos On input: an alignment field, if desired. On output: the offsets of the alignment field.
+     * @param status Output param filled with success/failure status.
+     * @return Reference to 'appendTo' parameter.
      * @draft ICU 49
      */
     virtual UnicodeString& format(const Formattable& obj, UnicodeString& appendTo,
         FieldPosition& pos, UErrorCode& status) const;
 
     /**
+     * Parse a string to produce an object. This methods handles parsing of
+     * time zone display strings into Formattable objects with <code>TimeZone</code>.
+     * @param source The string to be parsed into an object.
+     * @param result Formattable to be set to the parse result. If parse fails, return contents are undefined.
+     * @param parse_pos The position to start parsing at. Upon return this param is set to the position after the
+     *                  last character successfully parsed. If the source is not parsed successfully, this param
+     *                  will remain unchanged.
+     * @return A newly created Formattable* object, or NULL on failure.  The caller owns this and should
+     *                 delete it when done.
      * @draft ICU 49
      */
     virtual void parseObject(const UnicodeString& source, Formattable& result, ParsePosition& parse_pos) const;
 
     /**
+     * Return true if the given Format objects are semantically equal.
+     * Objects of different subclasses are considered unequal.
+     * @param other The object to be compared with.
+     * @return Return TRUE if the given Format objects are semantically equal.
+     *                Objects of different subclasses are considered unequal.
      * @draft ICU 49
      */
     virtual UBool operator==(const Format& other) const;
 
     /**
+     * Clone this object polymorphically. The caller is responsible
+     * for deleting the result when done.
+     * @return A copy of the object
      * @draft ICU 49
      */
     virtual Format* clone() const;
@@ -406,7 +483,7 @@ private:
     UnicodeString       fgmtOffsetPatterns[4];
     UnicodeString       fgmtOffsetDigits[10];
     UnicodeString       fgmtZeroFormat;
-    UBool               fparseAllStlyes;
+    int32_t             fDefaultParseOptions;
 };
 
 U_NAMESPACE_END

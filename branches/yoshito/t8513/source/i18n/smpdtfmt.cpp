@@ -3209,47 +3209,44 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                 UTimeZoneFormatTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
                 ParsePosition tmpPos(start);
                 UnicodeString parsedID;
+                TimeZone *parsedTz = NULL;
 
                 switch (patternCharIndex) {
                 case UDAT_TIMEZONE_FIELD:
                     if (count < 4) {
-                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, &parsedTimeType);
                     } else {
-                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
+                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_LONG, text, tmpPos, &parsedTimeType);
                     }
                     break;
                 case UDAT_TIMEZONE_GENERIC_FIELD:
                     if (count < 4) {
-                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_GENERIC_SHORT, text, tmpPos, &parsedTimeType);
                     } else {
-                        tzFormat()->parse(UTZFMT_STYLE_GENERIC_LONG, text, tmpPos, parsedID, &parsedTimeType);
+                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_GENERIC_LONG, text, tmpPos, &parsedTimeType);
                     }
                     break;
                 case UDAT_TIMEZONE_SPECIAL_FIELD:
                     if (count < 4) {
-                        tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, parsedID, &parsedTimeType);
+                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, &parsedTimeType);
                     } else {
-                        tzFormat()->parse(UTZFMT_STYLE_LOCATION, text, tmpPos, parsedID, &parsedTimeType);
+                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_LOCATION, text, tmpPos, &parsedTimeType);
                     }
                     break;
                 default:
                     break;
                 }
-                if (tmpPos.getErrorIndex() < 0) {
+                if (tmpPos.getErrorIndex() < 0 && parsedTz) {
                     if (parsedTimeType == UTZFMT_TIME_TYPE_STANDARD) {
                         ((SimpleDateFormat*)this)->tztype = TZTYPE_STD;
                     } else if (parsedTimeType == UTZFMT_TIME_TYPE_DAYLIGHT) {
                         ((SimpleDateFormat*)this)->tztype = TZTYPE_DST;
                     }
 
-                    UnicodeString current;
-                    cal.getTimeZone().getID(current);
-                    if (parsedID != current) {
-                        TimeZone *tz = TimeZone::createTimeZone(parsedID);
-                        cal.adoptTimeZone(tz);
-                    }
+                    cal.adoptTimeZone(parsedTz);
                     return tmpPos.getIndex();
                 }
+                delete parsedTz;
             }
             // Step 5
             // If we saw standalone GMT zero pattern, then use GMT.

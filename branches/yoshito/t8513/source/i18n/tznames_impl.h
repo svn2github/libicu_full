@@ -184,7 +184,8 @@ public:
 
     UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
 
-    TimeZoneNameMatchInfo* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
+    //TimeZoneNameMatchInfo* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
+    TimeZoneNames::MatchInfoCollection* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 
 private:
 
