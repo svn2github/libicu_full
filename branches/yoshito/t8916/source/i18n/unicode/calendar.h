@@ -832,7 +832,7 @@ public:
      * interpreted as 1:30 AM EST (last occurrence). The default value is
      * <code>UCAL_WALLTIME_LAST</code>.
      * <p>
-     * <b>Note:</b>When <code>UCAL_WALLTIME_NEXT_AVAILABLE</code> is not a valid
+     * <b>Note:</b>When <code>UCAL_WALLTIME_NEXT_VALID</code> is not a valid
      * option for this. When the argument is neither <code>UCAL_WALLTIME_FIRST</code>
      * nor <code>UCAL_WALLTIME_LAST</code>, this method has no effect and will keep
      * the current setting.
@@ -862,8 +862,8 @@ public:
      * <code>UCAL_WALLTIME_FIRST</code> is used, 2:30 AM is interpreted as 30 minutes before 3:00 AM
      * EDT, therefore, it will be resolved as 1:30 AM EST. When <code>UCAL_WALLTIME_LAST</code>
      * is used, 2:30 AM is interpreted as 31 minutes after 1:59 AM EST, therefore, it will be
-     * resolved as 3:30 AM EDT. When <code>UCAL_WALLTIME_NEXT_AVAILABLE</code> is used, 2:30 AM will
-     * be resolved as next available wall time, that is 3:00 AM EDT. The default value is
+     * resolved as 3:30 AM EDT. When <code>UCAL_WALLTIME_NEXT_VALID</code> is used, 2:30 AM will
+     * be resolved as next valid wall time, that is 3:00 AM EDT. The default value is
      * <code>UCAL_WALLTIME_LAST</code>.
      * <p>
      * <b>Note:</b>This option is effective only when this calendar is lenient.
@@ -871,7 +871,7 @@ public:
      * 
      * @param option the behavior for handling skipped wall time at positive time zone
      * offset transitions, one of <code>UCAL_WALLTIME_FIRST</code>, <code>UCAL_WALLTIME_LAST</code> and
-     * <code>UCAL_WALLTIME_NEXT_AVAILABLE</code>.
+     * <code>UCAL_WALLTIME_NEXT_VALID</code>.
      * @see #getSkippedWallTimeOption
      * 
      * @draft ICU 49
@@ -884,7 +884,7 @@ public:
      * 
      * @return the behavior for handling skipped wall time, one of
      * <code>UCAL_WALLTIME_FIRST</code>, <code>UCAL_WALLTIME_LAST</code>
-     * and <code>UCAL_WALLTIME_NEXT_AVAILABLE</code>.
+     * and <code>UCAL_WALLTIME_NEXT_VALID</code>.
      * @see #setSkippedWallTimeOption
      * @draft ICU 49
      */

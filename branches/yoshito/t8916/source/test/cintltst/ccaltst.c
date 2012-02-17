@@ -1857,17 +1857,17 @@ void TestAmbiguousWallTime() {
         log_err("FAIL: 2011-03-13 02:30:00 with UCAL_WALLTIME_LAST - got: %f, expected: %f\n", t, expected);
     }
 
-    /* UCAL_WALLTIME_NEXT_AVAILABLE on US spring transition */
-    ucal_setAttribute(ucal, UCAL_SKIPPED_WALL_TIME, UCAL_WALLTIME_NEXT_AVAILABLE);
+    /* UCAL_WALLTIME_NEXT_VALID on US spring transition */
+    ucal_setAttribute(ucal, UCAL_SKIPPED_WALL_TIME, UCAL_WALLTIME_NEXT_VALID);
     ucal_clear(ucal);
     ucal_setDateTime(ucal, 2011, 3-1, 13, 2, 30, 0, &status);
     t = ucal_getMillis(ucal, &status);
     expected = 1299999600000.0; /* 2011-03-13T07:00:00Z */
     if (U_FAILURE(status)) {
-        log_err("FAIL: Calculating time 2011-03-13 02:30:00 with UCAL_WALLTIME_NEXT_AVAILABLE - %s\n", u_errorName(status));
+        log_err("FAIL: Calculating time 2011-03-13 02:30:00 with UCAL_WALLTIME_NEXT_VALID - %s\n", u_errorName(status));
         status = U_ZERO_ERROR;
     } else if (t != expected) {
-        log_err("FAIL: 2011-03-13 02:30:00 with UCAL_WALLTIME_NEXT_AVAILABLE - got: %f, expected: %f\n", t, expected);
+        log_err("FAIL: 2011-03-13 02:30:00 with UCAL_WALLTIME_NEXT_VALID - got: %f, expected: %f\n", t, expected);
     }
 
     /* non-lenient on US spring transition */

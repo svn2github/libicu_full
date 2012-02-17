@@ -2658,7 +2658,7 @@ void Calendar::computeTime(UErrorCode& status) {
         //    For example, 2:30 am is interpreted as;
         //      - WALLTIME_LAST(default): 3:30 am (DST) (interpreting 2:30 am as 31 minutes after 1:59 am (STD))
         //      - WALLTIME_FIRST: 1:30 am (STD) (interpreting 2:30 am as 30 minutes before 3:00 am (DST))
-        //      - WALLTIME_NEXT_AVAILABLE: 3:00 am (DST) (next valid time after 2:30 am on a wall clock)
+        //      - WALLTIME_NEXT_VALID: 3:00 am (DST) (next valid time after 2:30 am on a wall clock)
         // 2. The negative offset change such as transition out of DST.
         //    Here, a designated time of 1:00 am - 1:59 am can be in standard or DST.  Both are valid
         //    representations (the rep jumps from 1:59:59 DST to 1:00:00 Std).
@@ -2670,19 +2670,19 @@ void Calendar::computeTime(UErrorCode& status) {
         // In addition to above, when calendar is strict (not default), wall time falls into
         // the skipped time range will be processed as an error case.
         //
-        // These special cases are mostly handled in #computeZoneOffset(long), except WALLTIME_NEXT_AVAILABLE
+        // These special cases are mostly handled in #computeZoneOffset(long), except WALLTIME_NEXT_VALID
         // at positive offset change. The protected method computeZoneOffset(long) is exposed to Calendar
-        // subclass implementations and marked as @stable. Strictly speaking, WALLTIME_NEXT_AVAILABLE
+        // subclass implementations and marked as @stable. Strictly speaking, WALLTIME_NEXT_VALID
         // should be also handled in the same place, but we cannot change the code flow without deprecating
         // the protected method.
         //
         // We use the TimeZone object, unless the user has explicitly set the ZONE_OFFSET
         // or DST_OFFSET fields; then we use those fields.
 
-        if (!isLenient() || fSkippedWallTime == UCAL_WALLTIME_NEXT_AVAILABLE) {
+        if (!isLenient() || fSkippedWallTime == UCAL_WALLTIME_NEXT_VALID) {
             // When strict, invalidate a wall time falls into a skipped wall time range.
-            // When lenient and skipped wall time option is WALLTIME_NEXT_AVAILABLE,
-            // the result time will be adjusted to the next available valid time (on wall clock).
+            // When lenient and skipped wall time option is WALLTIME_NEXT_VALID,
+            // the result time will be adjusted to the next valid time (on wall clock).
             int32_t zoneOffset = computeZoneOffset(millis, millisInDay, status);
             UDate tmpTime = millis + millisInDay - zoneOffset;
 
@@ -2696,8 +2696,8 @@ void Calendar::computeTime(UErrorCode& status) {
                     if (!isLenient()) {
                         status = U_ILLEGAL_ARGUMENT_ERROR;
                     } else {
-                        U_ASSERT(fSkippedWallTime == UCAL_WALLTIME_NEXT_AVAILABLE);
-                        // Adjust time to the next available wall clock time.
+                        U_ASSERT(fSkippedWallTime == UCAL_WALLTIME_NEXT_VALID);
+                        // Adjust time to the next valid wall clock time.
                         // At this point, tmpTime is on or after the zone offset transition causing
                         // the skipped time range.
 

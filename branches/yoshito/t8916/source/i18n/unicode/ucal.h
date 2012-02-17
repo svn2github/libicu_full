@@ -908,7 +908,7 @@ enum UCalendarWallTimeOption {
      * wall time. This option is valid for UCAL_SKIPPED_WALL_TIME.
      * @draft ICU 49
      */
-    UCAL_WALLTIME_NEXT_AVAILABLE
+    UCAL_WALLTIME_NEXT_VALID
 };
 /** @draft ICU 49 */
 typedef enum UCalendarWallTimeOption UCalendarWallTimeOption;

@@ -2326,7 +2326,7 @@ CalendarTest::TestAmbiguousWallTimeAPIs(void) {
         errln("Fail: Skipped time option is not UCAL_WALLTIME_FIRST");
     }
 
-    cal2->setRepeatedWallTimeOption(UCAL_WALLTIME_NEXT_AVAILABLE);
+    cal2->setRepeatedWallTimeOption(UCAL_WALLTIME_NEXT_VALID);
     if (cal2->getRepeatedWallTimeOption() != UCAL_WALLTIME_FIRST) {
         errln("Fail: Repeated wall time option was updated other than UCAL_WALLTIME_FIRST");
     }
@@ -2505,7 +2505,7 @@ typedef struct {
 
 static SkippedWallTimeTestData SKDATA[] =
 {
-     // Time zone           Input wall time                 valid?  WALLTIME_LAST in GMT            WALLTIME_FIRST in GMT           WALLTIME_NEXT_AVAILABLE in GMT
+     // Time zone           Input wall time                 valid?  WALLTIME_LAST in GMT            WALLTIME_FIRST in GMT           WALLTIME_NEXT_VALID in GMT
     {"America/New_York",    CalFields(2011,3,13,1,59,59),   TRUE,   CalFields(2011,3,13,6,59,59),   CalFields(2011,3,13,6,59,59),   CalFields(2011,3,13,6,59,59)},
     {"America/New_York",    CalFields(2011,3,13,2,0,0),     FALSE,  CalFields(2011,3,13,7,0,0),     CalFields(2011,3,13,6,0,0),     CalFields(2011,3,13,7,0,0)},
     {"America/New_York",    CalFields(2011,3,13,2,1,0),     FALSE,  CalFields(2011,3,13,7,1,0),     CalFields(2011,3,13,6,1,0),     CalFields(2011,3,13,7,0,0)},
@@ -2538,7 +2538,7 @@ void CalendarTest::TestSkippedWallTime(void) {
 
     calLast.setSkippedWallTimeOption(UCAL_WALLTIME_LAST);
     calFirst.setSkippedWallTimeOption(UCAL_WALLTIME_FIRST);
-    calNextAvail.setSkippedWallTimeOption(UCAL_WALLTIME_NEXT_AVAILABLE);
+    calNextAvail.setSkippedWallTimeOption(UCAL_WALLTIME_NEXT_VALID);
 
     for (int32_t i = 0; SKDATA[i].tzid != NULL; i++) {
         UDate d;
@@ -2620,7 +2620,7 @@ void CalendarTest::TestSkippedWallTime(void) {
                     + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "]");
             }
 
-            // UCAL_WALLTIME_NEXT_AVAILABLE
+            // UCAL_WALLTIME_NEXT_VALID
             status = U_ZERO_ERROR;
             calNextAvail.setLenient(bLenient);
             calNextAvail.setTimeZone(*tz);
@@ -2630,17 +2630,17 @@ void CalendarTest::TestSkippedWallTime(void) {
                 calGMT.setTime(d, status);
                 CalFields outNextAvailGMT(calGMT, status);
                 if (U_FAILURE(status)) {
-                    errln(UnicodeString("Fail: Failed to get/set time calNextAvail/calGMT (UCAL_WALLTIME_NEXT_AVAILABLE) - ")
+                    errln(UnicodeString("Fail: Failed to get/set time calNextAvail/calGMT (UCAL_WALLTIME_NEXT_VALID) - ")
                         + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "]");
                 } else {
                     if (outNextAvailGMT != SKDATA[i].expNextAvailGMT) {
-                        errln(UnicodeString("Fail: UCAL_WALLTIME_NEXT_AVAILABLE ") + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "] is parsed as "
+                        errln(UnicodeString("Fail: UCAL_WALLTIME_NEXT_VALID ") + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "] is parsed as "
                             + outNextAvailGMT.toString(buf, sizeof(buf)) + "[GMT]. Expected: " + SKDATA[i].expNextAvailGMT.toString(buf, sizeof(buf)) + "[GMT]");
                     }
                 }
             } else if (U_SUCCESS(status)) {
                 // strict, invalid wall time - must report an error
-                errln(UnicodeString("Fail: An error expected (UCAL_WALLTIME_NEXT_AVAILABLE)") +
+                errln(UnicodeString("Fail: An error expected (UCAL_WALLTIME_NEXT_VALID)") +
                     + SKDATA[i].in.toString(buf, sizeof(buf)) + "[" + SKDATA[i].tzid + "]");
             }
         }
