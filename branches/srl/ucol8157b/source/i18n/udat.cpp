@@ -104,7 +104,7 @@ U_INTERNAL UDateFormatOpener U_EXPORT2
 udat_unregisterOpener(UDateFormatOpener opener, UErrorCode *status)
 {
   if(U_FAILURE(*status)) return NULL;
-  UDateFormatOpener *oldOpener = NULL;
+  UDateFormatOpener oldOpener = NULL;
   umtx_lock(NULL);
   if(gOpener==NULL || gOpener!=opener) {
     *status = U_ILLEGAL_ARGUMENT_ERROR;
