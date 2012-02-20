@@ -61,6 +61,8 @@ public:
     TimeZoneGenericNames(const Locale& locale, UErrorCode& status);
     virtual ~TimeZoneGenericNames();
 
+    virtual TimeZoneGenericNames* clone() const;
+
     UnicodeString& getDisplayName(const TimeZone& tz, UTimeZoneGenericNameType type,
                         UDate date, UnicodeString& name) const;
 
@@ -107,7 +109,6 @@ private:
 
     TimeZoneGenericNameMatchInfo* findLocal(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 
-    //TimeZoneNameMatchInfo* findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
     TimeZoneNames::MatchInfoCollection* findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 };
 

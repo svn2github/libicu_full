@@ -777,12 +777,6 @@
     <ClInclude Include="numsys_impl.h">
       <Filter>formatting</Filter>
     </ClInclude>
-    <ClInclude Include="unicode\tzfmt.h">
-      <Filter>formatting</Filter>
-    </ClInclude>
-    <ClInclude Include="unicode\tznames.h">
-      <Filter>formatting</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="i18n.rc">
@@ -1000,6 +994,12 @@
     <CustomBuild Include="unicode\currpinf.h" />
     <CustomBuild Include="unicode\alphaindex.h">
       <Filter>collation</Filter>
+    </CustomBuild>
+    <CustomBuild Include="unicode\tzfmt.h">
+      <Filter>formatting</Filter>
+    </CustomBuild>
+    <CustomBuild Include="unicode\tznames.h">
+      <Filter>formatting</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

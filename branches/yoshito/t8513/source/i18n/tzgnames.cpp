@@ -405,6 +405,13 @@ TimeZoneGenericNames::cleanup() {
     uhash_close(fPartialLocationNamesMap);
 }
 
+TimeZoneGenericNames*
+TimeZoneGenericNames::clone() const {
+    //TODO
+    return NULL;
+}
+
+
 UnicodeString&
 TimeZoneGenericNames::getDisplayName(const TimeZone& tz, UTimeZoneGenericNameType type, UDate date, UnicodeString& name) const {
     name.setToBogus();
@@ -861,7 +868,7 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
     }
 
     // Find matches in the TimeZoneNames first
-    TimeZoneNameMatchInfo *tznamesMatches = findTimeZoneNames(text, start, types, status);
+    TimeZoneNames::MatchInfoCollection *tznamesMatches = findTimeZoneNames(text, start, types, status);
     if (U_FAILURE(status)) {
         return 0;
     }
@@ -875,17 +882,19 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
     if (tznamesMatches != NULL) {
         UnicodeString mzID;
         for (int32_t i = 0; i < tznamesMatches->size(); i++) {
-            int32_t len = tznamesMatches->getMatchLength(i);
-            if (len > bestMatchLen) {
+            int32_t len = tznamesMatches->getMatchLengthAt(i, status);
+            if (U_SUCCESS(status) && len > bestMatchLen) {
                 bestMatchLen = len;
-                tznamesMatches->getTimeZoneID(i, bestMatchTzID);
-                if (bestMatchTzID.isEmpty()) {
+                if (tznamesMatches->getTimeZoneIDAt(i, bestMatchTzID, status) && U_SUCCESS(status)) {
                     // name for a meta zone
-                    tznamesMatches->getMetaZoneID(i, mzID);
-                    U_ASSERT(mzID.length() > 0);
-                    fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, bestMatchTzID);
+                    if (tznamesMatches->getMetaZoneIDAt(i, mzID, status) && U_SUCCESS(status)) {
+                        fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, bestMatchTzID);
+                    }
                 }
-                UTimeZoneNameType nameType = tznamesMatches->getNameType(i);
+                UTimeZoneNameType nameType = tznamesMatches->getNameTypeAt(i, status);
+                if (U_FAILURE(status)) {
+                    break;
+                }
                 switch (nameType) {
                 case UTZNM_LONG_STANDARD:
                     // isLongStandard = TRUE;
@@ -903,6 +912,9 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
             }
         }
         delete tznamesMatches;
+        if (U_FAILURE(status)) {
+            return 0;
+        }
 
         if (bestMatchLen == (text.length() - start)) {
             // Full match
@@ -1051,10 +1063,8 @@ TimeZoneGenericNames::findLocal(const UnicodeString& text, int32_t start, uint32
     return gmatchInfo;
 }
 
-TimeZoneNameMatchInfo*
+TimeZoneNames::MatchInfoCollection*
 TimeZoneGenericNames::findTimeZoneNames(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const {
-    TimeZoneNameMatchInfo *matchInfo = NULL;
-
     // Check if the target name typs is really in the TimeZoneNames
     uint32_t nameTypes = 0;
     if (types & UTZGNM_LONG) {
@@ -1066,10 +1076,10 @@ TimeZoneGenericNames::findTimeZoneNames(const UnicodeString& text, int32_t start
 
     if (types) {
         // Find matches in the TimeZoneNames
-        matchInfo = fTimeZoneNames->find(text, start, nameTypes, status);
+        return fTimeZoneNames->find(text, start, nameTypes, status);
     }
 
-    return matchInfo;
+    return NULL;
 }
 
 U_NAMESPACE_END

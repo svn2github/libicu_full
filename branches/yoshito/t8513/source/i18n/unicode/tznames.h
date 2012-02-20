@@ -67,18 +67,8 @@ U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
-/*
-class U_I18N_API TimeZoneNameMatchInfo : public UMemory {
-public:
-    virtual ~TimeZoneNameMatchInfo();
-
-    virtual int32_t size() const = 0;
-    virtual UTimeZoneNameType getNameType(int32_t index) const = 0;
-    virtual int32_t getMatchLength(int32_t index) const = 0;
-    virtual UnicodeString& getTimeZoneID(int32_t index, UnicodeString& tzID) const = 0;
-    virtual UnicodeString& getMetaZoneID(int32_t index, UnicodeString& mzID) const = 0;
-};
-*/
+class UVector;
+struct MatchInfo;
 
 /**
  * <code>TimeZoneNames</code> is an abstract class representing the time zone display name data model defined
@@ -130,6 +120,23 @@ public:
      * @draft ICU 49
      */
     virtual ~TimeZoneNames();
+
+    /**
+     * Return true if the given TimeZoneNames objects are emantically equal.
+     * @param other the object to be compared with.
+     * @return Return TRUE if the given Format objects are semantically equal.
+     * @draft ICU 49
+     */
+    virtual UBool operator==(const TimeZoneNames& other) const = 0;
+
+    /**
+     * Return true if the given TimeZoneNames objects are not semantically
+     * equal.
+     * @param other the object to be compared with.
+     * @return Return TRUE if the given Format objects are not semantically equal.
+     * @draft ICU 49
+     */
+    UBool operator!=(const TimeZoneNames& other) const { return !operator==(other); }
 
     /**
      * Clone this object polymorphically.  The caller is responsible
@@ -337,6 +344,12 @@ public:
          * @draft ICU 49
          */
         UBool getMetaZoneIDAt(int32_t idx, UnicodeString& mzID, UErrorCode& status) const;
+
+    private:
+        UVector* fMatches;  // vector of MatchEntry
+
+        UVector* matches(UErrorCode& status);
+        const MatchInfo* matchAt(int32_t idx, UErrorCode& status) const;
     };
 
     /**
@@ -347,14 +360,12 @@ public:
      * @param types The set of name types represented by bitwise flags of UTimeZoneNameType enums,
      *              or UTZNM_UNKNOWN for all name types.
      * @param status Receives the status.
-     * @return A collection of matches, owned by the caller.
+     * @return A collection of matches (owned by the caller), or NULL if no matches are found.
      * @see UTimeZoneNameType
      * @see MatchInfoCollection
      * @draft ICU 49
      */
     virtual MatchInfoCollection* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const = 0;
-
-    //virtual TimeZoneNameMatchInfo* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const = 0;
 };
 
 U_NAMESPACE_END

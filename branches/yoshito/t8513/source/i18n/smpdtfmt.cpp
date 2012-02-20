@@ -1796,7 +1796,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
                         tzFormat()->format(UTZFMT_STYLE_SPECIFIC_SHORT, tz, date, zoneString);
                     } else if (count == 4) {
                         // "VVVV"
-                        tzFormat()->format(UTZFMT_STYLE_LOCATION, tz, date, zoneString);
+                        tzFormat()->format(UTZFMT_STYLE_GENERIC_LOCATION, tz, date, zoneString);
                     }
                 }
             }
@@ -3230,7 +3230,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                     if (count < 4) {
                         parsedTz = tzFormat()->parse(UTZFMT_STYLE_SPECIFIC_SHORT, text, tmpPos, &parsedTimeType);
                     } else {
-                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_LOCATION, text, tmpPos, &parsedTimeType);
+                        parsedTz = tzFormat()->parse(UTZFMT_STYLE_GENERIC_LOCATION, text, tmpPos, &parsedTimeType);
                     }
                     break;
                 default:
@@ -3498,6 +3498,27 @@ SimpleDateFormat::setDateFormatSymbols(const DateFormatSymbols& newFormatSymbols
     fSymbols = new DateFormatSymbols(newFormatSymbols);
 }
 
+//----------------------------------------------------------------------
+const TimeZoneFormat*
+SimpleDateFormat::getTimeZoneFormat(void) const {
+    return (const TimeZoneFormat*)tzFormat();
+}
+
+//----------------------------------------------------------------------
+void
+SimpleDateFormat::adoptTimeZoneFormat(TimeZoneFormat* timeZoneFormatToAdopt)
+{
+    delete fTimeZoneFormat;
+    fTimeZoneFormat = timeZoneFormatToAdopt;
+}
+
+//----------------------------------------------------------------------
+void
+SimpleDateFormat::setTimeZoneFormat(const TimeZoneFormat& newTimeZoneFormat)
+{
+    delete fTimeZoneFormat;
+    fTimeZoneFormat = new TimeZoneFormat(newTimeZoneFormat);
+}
 
 //----------------------------------------------------------------------
 
@@ -3733,6 +3754,7 @@ SimpleDateFormat::tzFormat() const {
     }
     return fTimeZoneFormat;
 }
+
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

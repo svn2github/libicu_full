@@ -168,6 +168,7 @@ public:
 
     virtual ~TimeZoneNamesImpl();
 
+    virtual UBool operator==(const TimeZoneNames& other) const;
     virtual TimeZoneNames* clone() const;
 
     virtual UClassID getDynamicClassID() const;
