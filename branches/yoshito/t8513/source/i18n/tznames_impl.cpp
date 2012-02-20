@@ -776,7 +776,7 @@ ZNameSearchHandler::handleMatch(int32_t matchLength, const CharacterNode *node, 
                         fResults->addZone(nameinfo->type, matchLength, UnicodeString(nameinfo->tzID, -1), status);
                     } else {
                         U_ASSERT(nameinfo->mzID);
-                        fResults->addZone(nameinfo->type, matchLength, UnicodeString(nameinfo->mzID, -1), status);
+                        fResults->addMetaZone(nameinfo->type, matchLength, UnicodeString(nameinfo->mzID, -1), status);
                     }
                     if (U_SUCCESS(status) && matchLength > fMaxMatchLen) {
                         fMaxMatchLen = matchLength;

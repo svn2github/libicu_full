@@ -795,6 +795,13 @@ private:
      * @param status receives the status.
      */
     void initGMTOffsetPatterns(UErrorCode& status);
+
+    /**
+     */
+    //TODO
+    TimeZone* createTimeZoneForOffset(int32_t offset) const;
+    static UTimeZoneFormatTimeType getTimeType(UTimeZoneNameType nameType);
+    UnicodeString& getTimeZoneID(const TimeZoneNames::MatchInfoCollection* matches, int32_t idx, UnicodeString& tzID) const;
 };
 
 U_NAMESPACE_END

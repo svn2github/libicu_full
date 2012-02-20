@@ -882,16 +882,16 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
     if (tznamesMatches != NULL) {
         UnicodeString mzID;
         for (int32_t i = 0; i < tznamesMatches->size(); i++) {
-            int32_t len = tznamesMatches->getMatchLengthAt(i, status);
-            if (U_SUCCESS(status) && len > bestMatchLen) {
+            int32_t len = tznamesMatches->getMatchLengthAt(i);
+            if (len > bestMatchLen) {
                 bestMatchLen = len;
-                if (tznamesMatches->getTimeZoneIDAt(i, bestMatchTzID, status) && U_SUCCESS(status)) {
+                if (tznamesMatches->getTimeZoneIDAt(i, bestMatchTzID)) {
                     // name for a meta zone
-                    if (tznamesMatches->getMetaZoneIDAt(i, mzID, status) && U_SUCCESS(status)) {
+                    if (tznamesMatches->getMetaZoneIDAt(i, mzID)) {
                         fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, bestMatchTzID);
                     }
                 }
-                UTimeZoneNameType nameType = tznamesMatches->getNameTypeAt(i, status);
+                UTimeZoneNameType nameType = tznamesMatches->getNameTypeAt(i);
                 if (U_FAILURE(status)) {
                     break;
                 }

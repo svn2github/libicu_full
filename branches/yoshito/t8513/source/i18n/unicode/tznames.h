@@ -28,7 +28,7 @@ U_CDECL_BEGIN
 typedef enum UTimeZoneNameType {
     /**
      * Unknown display name type.
-     * @internal
+     * @draft ICU 49
      */
     UTZNM_UNKNOWN           = 0x00,
     /**
@@ -309,47 +309,46 @@ public:
         /**
          * Returns the time zone name type of a match at the specified index.
          * @param idx The index
-         * @param status Receives the status
-         * @return The time zone name type
+         * @return The time zone name type. If the specified idx is out of range,
+         *      it returns UTZNM_UNKNOWN.
          * @see UTimeZoneNameType
          * @draft ICU 49
          */
-        UTimeZoneNameType getNameTypeAt(int32_t idx, UErrorCode& status) const;
+        UTimeZoneNameType getNameTypeAt(int32_t idx) const;
 
         /**
          * Returns the match length of a match at the specified index.
          * @param idx The index
          * @param status Receives the status
-         * @return The match length
+         * @return The match length. If the specified idx is out of range,
+         *      it returns 0.
          * @draft ICU 49
          */
-        int32_t getMatchLengthAt(int32_t idx, UErrorCode& status) const;
+        int32_t getMatchLengthAt(int32_t idx) const;
 
         /**
          * Gets the zone ID of a match at the specified index.
          * @param idx The index
          * @param tzID Receives the zone ID.
-         * @param status Receives the status.
-         * @return TRUE if zone ID is available.
+         * @return TRUE if the zone ID was set to tzID.
          * @draft ICU 49
          */
-        UBool getTimeZoneIDAt(int32_t idx, UnicodeString& tzID, UErrorCode& status) const;
+        UBool getTimeZoneIDAt(int32_t idx, UnicodeString& tzID) const;
 
         /**
          * Gets the metazone ID of a match at the specified index.
          * @param idx The index
          * @param mzID Receives the metazone ID
          * @param status Receives the status.
-         * @return TRUE if meta zone ID is availabe.
+         * @return TRUE if the meta zone ID was set to mzID.
          * @draft ICU 49
          */
-        UBool getMetaZoneIDAt(int32_t idx, UnicodeString& mzID, UErrorCode& status) const;
+        UBool getMetaZoneIDAt(int32_t idx, UnicodeString& mzID) const;
 
     private:
         UVector* fMatches;  // vector of MatchEntry
 
         UVector* matches(UErrorCode& status);
-        const MatchInfo* matchAt(int32_t idx, UErrorCode& status) const;
     };
 
     /**
