@@ -27,7 +27,7 @@ public:
         return UTRIE2_GET32(trie, c);
     }
 
-    UBool isUnsafeBackward(UChar32 c) {
+    UBool isUnsafeBackward(UChar32 c) const {
         if(U_IS_TRAIL(c)) {
             return TRUE;
         }
@@ -40,7 +40,9 @@ public:
      * Returns this data object's main UTrie2.
      * To be used only by the CollationIterator constructor.
      */
-    const UTrie2 *getTrie() { return trie; }
+    const UTrie2 *getTrie() const { return trie; }
+
+    const CollationData *getBase() const { return base; }
 
 protected:
     // Main lookup trie.

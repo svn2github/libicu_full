@@ -22,21 +22,30 @@ U_NAMESPACE_BEGIN
  * Collation element and character iterator.
  * Handles normalized UTF-16 text inline, with length or NUL-terminated.
  * Other text is handled by subclasses.
+ *
+ * This iterator only moves forward through CE space.
+ * For random access, use the TwoWayCollationIterator.
+ *
+ * Forward iteration and random access are separate for
+ * - minimal state & setup for the forward-only iterator
+ * - modularization
+ * - smaller units of code, easier to understand
+ * - easier porting of partial functionality to other languages
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
     CollationIterator(const Normalizer2Impl &nfc,
-                      const CollationData *tailoring, const CollationData *baseData,
+                      const CollationData *d,
                       const UChar *s, const UChar *lim)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
             : start(s), pos(s), limit(lim),
-              savedLimit(NULL),
+              // unused until a limit is saved -- savedLimit(NULL),
               nfcImpl(nfc),
               cesIndex(-1),  // unused while cesIndex<0 -- cesMaxIndex(0), ces(NULL),
               hiragana(0),
-              local(tailoring), base(baseData) {
-        trie=local->getTrie();
+              data(d) {
+        trie = data->getTrie();
     }
 
     /**
@@ -69,7 +78,7 @@ public:
             if(c < 0) {
                 return Collation::NO_CE;
             }
-            ce32 = local->getCE32(c);
+            ce32 = data->getCE32(c);
         }
         // Java: Emulate unsigned-int less-than comparison.
         // int xce32 = ce32 ^ 0x80000000;
@@ -83,23 +92,17 @@ public:
         // The compiler should be able to optimize the previous and the following
         // comparisons of ce32 with the same constant.
         if(ce32 == Collation::MIN_SPECIAL_CE32) {
-            ce32 = base->getCE32(c);
+            d = data->getBase();
+            ce32 = d->getCE32(c);
             if(!Collation::isSpecialCE32(ce32)) {
                 // Normal CE from the base data.
                 return Collation::ceFromCE32(ce32);
-            } else {
-                d = base;
             }
         } else {
-            d = local;
+            d = data;
         }
         return nextCEFromSpecialCE32(d, c, ce32, errorCode);
     }
-    // TODO: Jump by delta code points if direction changed? (See ICU ticket #9104.)
-    // If so, then copy nextCE() to a not-inline slowNextCE()
-    // which keeps track of the text movements together with previousCE()
-    // and is used by the CollationElementIterator.
-    // Keep the normal, inline nextCE() maximally fast and efficient.
 
     /**
      * Returns the Hiragana flag.
@@ -108,55 +111,6 @@ public:
      *         0 not Hiragana; 1 Hiragana
      */
     int8_t getHiragana() const { return hiragana; }
-
-    /**
-     * Returns the next collation element.
-     */
-    int64_t previousCE(UErrorCode &errorCode) {
-        if(cesIndex > 0) {
-            // Return the previous buffered CE.
-            int64_t ce = ces[--cesIndex];
-            if(cesIndex == 0) { cesIndex = -1; }
-            // TODO: Jump by delta code points if the direction changed?
-            return ce;
-        }
-        // TODO: Do we need to handle hiragana going backward?
-        // Note: v1 ucol_IGetPrevCE() does not handle 3099..309C inheriting the Hiragana-ness from the preceding character.
-        UChar32 c;
-        uint32_t ce32;
-        if(pos != start) {
-            UTRIE2_U16_PREV32(trie, start, pos, c, ce32);
-        } else {
-            c = handlePreviousCodePoint(errorCode);
-            if(c < 0) {
-                return Collation::NO_CE;
-            }
-            ce32 = local->getCE32(c);
-        }
-        if(local->isUnsafeBackward(c)) {
-            return previousCEUnsafe(c);
-        }
-        // Simple, safe-backwards iteration:
-        // Get a CE going backwards, handle prefixes but no contractions.
-        int64_t ce;
-        if(ce32 < Collation::MIN_SPECIAL_CE32) {  // Forced-inline of isSpecialCE32(ce32).
-            // Normal CE from the main data.
-            ce = Collation::ceFromCE32(ce32);
-        }
-        const CollationData *d;
-        if(ce32 == Collation::MIN_SPECIAL_CE32) {
-            ce32 = base->getCE32(c);
-            if(!Collation::isSpecialCE32(ce32)) {
-                // Normal CE from the base data.
-                return Collation::ceFromCE32(ce32);
-            } else {
-                d = base;
-            }
-        } else {
-            d = local;
-        }
-        return previousCEFromSpecialCE32(d, c, ce32, errorCode);
-    }
 
     inline UChar32 nextCodePoint(UErrorCode &errorCode) {
         if(pos != limit) {
@@ -299,7 +253,7 @@ protected:
     // more text.
 
 private:
-    int64_t nextCEFromSpecialCE32(const CollationData *data, UChar32 c, uint32_t ce32,
+    int64_t nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                   UErrorCode &errorCode) const {
         for(;;) {  // Loop while ce32 is special.
             // TODO: Share code with previousCEFromSpecialCE32().
@@ -315,7 +269,7 @@ private:
                 cesIndex = (cesMaxIndex > 0) ? 1 : -1;
                 return ces[0];
             case Collation::EXPANSION_TAG:
-                ces = data->getCEs((ce32 >> 4) & 0xffff);
+                ces = d->getCEs((ce32 >> 4) & 0xffff);
                 cesMaxIndex = (int32_t)ce32 & 0xf;
                 cesIndex = (cesMaxIndex > 0) ? 1 : -1;
                 return ces[0];
@@ -327,7 +281,7 @@ private:
                 // TODO
                 return 0;
             case Collation::CONTRACTION_TAG:
-                ce32 = nextCE32FromContraction(data, ce32, errorCode);
+                ce32 = nextCE32FromContraction(d, ce32, errorCode);
                 if(ce32 != 1) {
                     // Normal result from contiguous contraction.
                     break;
@@ -349,13 +303,13 @@ private:
                     return 0;
                 } else {
                     // Fetch the non-CODAN CE32 and continue.
-                    ce32 = *data->getCE32s((ce32 >> 4) & 0xffff);
+                    ce32 = *d->getCE32s((ce32 >> 4) & 0xffff);
                     break;
                 }
             case Collation::HIRAGANA_TAG:
                 hiragana = (0x3099 <= c && c <= 0x309c) ? -1 : 1;
                 // Fetch the normal CE32 and continue.
-                ce32 = *data->getCE32s(ce32 & 0xfffff);
+                ce32 = *d->getCE32s(ce32 & 0xfffff);
                 break;
             case Collation::HANGUL_TAG:
                 // TODO
@@ -379,115 +333,10 @@ private:
         }
     }
 
-    int64_t previousCEFromSpecialCE32(const CollationData *data, UChar32 c, uint32_t ce32,
-                                      UErrorCode &errorCode) const {
-        for(;;) {  // Loop while ce32 is special.
-            int32_t tag = Collation::getSpecialCE32Tag(ce32);
-            if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
-                U_ASSERT(ce32 != MIN_SPECIAL_CE32);
-                setLatinExpansion(ce32);
-                return ces[1];
-            }
-            switch(tag) {
-            case Collation::EXPANSION32_TAG:
-                setCE32s((ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
-                cesIndex = cesMaxIndex;
-                return ces[cesMaxIndex];
-            case Collation::EXPANSION_TAG:
-                ces = data->getCEs((ce32 >> 4) & 0xffff);
-                cesMaxIndex = (int32_t)ce32 & 0xf;
-                cesIndex = cesMaxIndex;
-                return ces[cesMaxIndex];
-            case Collation::PREFIX_TAG:
-                // TODO
-                return 0;
-            case Collation::CONTRACTION_TAG:
-                // TODO: Must not occur. Backward contractions are handled by previousCEUnsafe().
-                return 0;
-            case Collation::BUILDER_CONTEXT_TAG:
-                // TODO: Call virtual method.
-                return 0;
-            case Collation::DIGIT_TAG:
-                if(codan) {
-                    // TODO
-                    // int32_t digit=(int32_t)ce32&0xf;
-                    return 0;
-                } else {
-                    // Fetch the non-CODAN CE32 and continue.
-                    ce32 = *data->getCE32s((ce32 >> 4) & 0xffff);
-                    break;
-                }
-            case Collation::HIRAGANA_TAG:
-                // TODO: Do we need to handle hiragana going backward?
-                // Fetch the normal CE32 and continue.
-                ce32 = *data->getCE32s(ce32 & 0xfffff);
-                break;
-            case Collation::HANGUL_TAG:
-                // TODO
-                return 0;
-            case Collation::OFFSET_TAG:
-                // TODO: Share code with nextCEFromSpecialCE32().
-                return 0;
-            case Collation::IMPLICIT_TAG:
-                int64_t ce = unassignedPrimaryFromCodePoint(c);
-                return (ce << 32) | Collation::COMMON_SEC_AND_TER_CE;  // TODO: Turn both lines together into a method.
-            }
-            if(!Collation::isSpecialCE32(ce32)) {
-                return Collation::ceFromCE32(ce32);
-            }
-        }
-    }
-
-    /**
-     * Returns the previous CE when data->isUnsafeBackward(c).
-     */
-    int64_t previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
-        // We just move through the input counting safe and unsafe code points
-        // without collecting the unsafe-backward substring into a buffer and
-        // switching to it.
-        // This is to keep the logic simple. Otherwise we would have to handle
-        // prefix matching going before the backward buffer, switching
-        // to iteration and back, etc.
-        // In the most important case of iterating over a normal string,
-        // reading from the string itself is already maximally fast.
-        // The only drawback there is that after getting the CEs we always
-        // skip backward to the safe character rather than switching out
-        // of a backwardBuffer.
-        // But this should not be the common case for previousCE(),
-        // and correctness and maintainability are more important than
-        // complex optimizations.
-        saveLimitAndSetAfter(c);
-        // Find the first safe character before c.
-        int32_t numBackward = 1;
-        while(c = previousCodePoint(errorCode) >= 0) {
-            ++numBackward;
-            if(!data->isUnsafeBackward(c)) {
-                break;
-            }
-        }
-        // Ensure that we don't see CEs from a later-in-text expansion.
-        cesIndex = -1;
-        backwardCEs.clear();
-        // Go forward and collect the CEs.
-        int64_t ce;
-        while(ce = nextCE(errorCode) != Collation::NO_CE) {
-            backwardCEs.append(ce, errorCode);
-        }
-        restoreLimit();
-        backwardNumCodePoints(numBackward, errorCode);
-        // Use the collected CEs and return the last one.
-        U_ASSERT(0 != backwardCEs.length());
-        ces = backwardCEs.getBuffer();
-        cesIndex = cesMaxIndex=backwardCEs.length() - 1;
-        return ces[cesIndex];
-        // TODO: Does this method deliver backward-iteration offsets tight enough
-        // for string search? Is this equivalent to how v1 behaves?
-    }
-
-    uint32_t nextCE32FromContraction(const CollationData *data, uint32_t ce32,
+    uint32_t nextCE32FromContraction(const CollationData *d, uint32_t ce32,
                                      UErrorCode &errorCode) const {
         UBool maybeDiscontiguous = (UBool)(ce32 & 1);  // TODO: Builder set this if any suffix ends with cc != 0.
-        const uint16_t *p = data->getContext((int32_t)(ce32 >> 1) & 0x7ffff);
+        const uint16_t *p = d->getContext((int32_t)(ce32 >> 1) & 0x7ffff);
         ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
         UChar32 lowestChar = p[2];
         p += 3;
@@ -522,7 +371,7 @@ private:
             if(match == USTRINGTRIE_NO_MATCH) {
                 if(maybeDiscontiguous) {
                     return nextCE32FromDiscontiguousContraction(
-                        data, p, ce32, lookAhead, sinceMatch, c, errorCode);
+                        d, p, ce32, lookAhead, sinceMatch, c, errorCode);
                 }
                 break;
             }
@@ -544,7 +393,7 @@ private:
     //    Forbid contractions with the problematic characters??
 
     uint32_t nextCE32FromDiscontiguousContraction(
-            const CollationData *data, const uint16_t *p, uint32_t ce32,
+            const CollationData *d, const uint16_t *p, uint32_t ce32,
             int32_t lookAhead, int32_t sinceMatch, UChar32 c,
             UErrorCode &errorCode) const {
         // UCA 3.3.2 Contractions:
@@ -634,7 +483,7 @@ private:
             // Append CEs from the combining marks that we skipped before the match.
             for(int32_t i = 0; i < skipLengthAtMatch; i += U16_LENGTH(c)) {
                 c = skipBuffer.char32At(i);
-                ce32 = data->getCE32(c);  // TODO: fallback?
+                ce32 = d->getCE32(c);  // TODO: fallback?
                 // TODO: ce32 -> ces[]
             }
             ce32 = 1;  // Signal to nextCEFromSpecialCE32() that the result is in ces[].
@@ -657,9 +506,9 @@ private:
     /**
      * Sets buffered CEs from CE32s.
      */
-    void setCE32s(int32_t expIndex, int32_t max) {
+    void setCE32s(const CollationData *d, int32_t expIndex, int32_t max) {
         ces = forwardCEs.getBuffer();
-        const uint32_t *ce32s = data->getCE32s(expIndex);
+        const uint32_t *ce32s = d->getCE32s(expIndex);
         cesMaxIndex = max;
         for(int32_t i = 0; i <= max; ++i) {
             forwardCEs[i] = ceFromCE32(ce32s[i]);
@@ -677,17 +526,11 @@ private:
 
     // TODO: Flag/getter/setter for CODAN.
 
-    // Either data is for the base collator (typically UCA) and base is NULL,
-    // or data is for a tailoring and base is not NULL.
-    const CollationData *local;
-    const CollationData *base;
+    const CollationData *data;
 
     // 64-bit-CE buffer for forward and safe-backward iteration
     // (computed expansions and CODAN CEs).
     MaybeStackArray/*??*/ forwardCEs;
-
-    // 64-bit-CE buffer for unsafe-backward iteration.
-    MaybeStackArray/*??*/ backwardCEs;
 };
 
 /**
@@ -697,10 +540,10 @@ private:
 class U_I18N_API FCDCollationIterator : public CollationIterator {
 public:
     FCDCollationIterator(const Normalizer2Impl &nfc,
-                         const CollationData *tailoring, const CollationData *baseData,
+                         const CollationData *data,
                          const UChar *s, const UChar *lim,
                          UErrorCode &errorCode)
-            : CollationIterator(nfc, tailoring, baseData, s, s),
+            : CollationIterator(nfc, data, s, s),
               rawStart(s), segmentStart(s), segmentLimit(s), rawLimit(lim),
               smallSteps(TRUE),
               buffer(nfc, fcd) {
@@ -866,6 +709,18 @@ protected:
         }
     }
 
+    virtual void saveLimitAndSetAfter(UChar32 c) {
+        // TODO
+        // savedLimit = limit;  // TODO: Need to do something special with limit==NULL?
+        // limit = pos + U16_LENGTH(c);
+    }
+
+    /** Restores the iteration limit from before saveLimitAndSetAfter(). */
+    virtual void restoreLimit() {
+        // TODO
+        // limit = savedLimit;
+    }
+
 private:
     // Text pointers: The input text is [rawStart, rawLimit[
     // where rawLimit can be NULL for NUL-terminated text.
@@ -886,6 +741,190 @@ private:
     UBool smallSteps;
     UnicodeString fcd;
     ReorderingBuffer buffer;
+};
+
+/**
+ * Collation element and character iterator.
+ * This iterator delegates to another CollationIterator
+ * for forward iteration and character iteration,
+ * and adds API for backward iteration.
+ */
+class U_I18N_API TwoWayCollationIterator : public UObject {
+public:
+    TwoWayCollationIterator(CollationIterator &iter) : fwd(iter) {}
+
+    // TODO: So far, this is just the initial code collection moved out of the
+    // base CollationIterator.
+    // Add delegation to "fwd." etc.
+    // Move this implementation into a separate .cpp file.
+
+    int64_t nextCE(UErrorCode &errorCode) {
+        return fwd.nextCE(errorCode);
+    }
+    // TODO: Jump by delta code points if direction changed? (See ICU ticket #9104.)
+    // If so, then copy nextCE() to a not-inline slowNextCE()
+    // which keeps track of the text movements together with previousCE()
+    // and is used by the CollationElementIterator.
+    // Keep the normal, inline nextCE() maximally fast and efficient.
+
+    /**
+     * Returns the previous collation element.
+     */
+    int64_t previousCE(UErrorCode &errorCode) {
+        if(cesIndex > 0) {
+            // Return the previous buffered CE.
+            int64_t ce = ces[--cesIndex];
+            if(cesIndex == 0) { cesIndex = -1; }
+            // TODO: Jump by delta code points if the direction changed?
+            return ce;
+        }
+        // TODO: Do we need to handle hiragana going backward?
+        // Note: v1 ucol_IGetPrevCE() does not handle 3099..309C inheriting the Hiragana-ness from the preceding character.
+        UChar32 c;
+        uint32_t ce32;
+        if(pos != start) {
+            UTRIE2_U16_PREV32(trie, start, pos, c, ce32);
+        } else {
+            c = handlePreviousCodePoint(errorCode);
+            if(c < 0) {
+                return Collation::NO_CE;
+            }
+            ce32 = data->getCE32(c);
+        }
+        if(data->isUnsafeBackward(c)) {
+            return previousCEUnsafe(c);
+        }
+        // Simple, safe-backwards iteration:
+        // Get a CE going backwards, handle prefixes but no contractions.
+        int64_t ce;
+        if(ce32 < Collation::MIN_SPECIAL_CE32) {  // Forced-inline of isSpecialCE32(ce32).
+            // Normal CE from the main data.
+            ce = Collation::ceFromCE32(ce32);
+        }
+        const CollationData *d;
+        if(ce32 == Collation::MIN_SPECIAL_CE32) {
+            d = data->getBase();
+            ce32 = d->getCE32(c);
+            if(!Collation::isSpecialCE32(ce32)) {
+                // Normal CE from the base data.
+                return Collation::ceFromCE32(ce32);
+            }
+        } else {
+            d = data;
+        }
+        return previousCEFromSpecialCE32(d, c, ce32, errorCode);
+    }
+
+private:
+    int64_t previousCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                                      UErrorCode &errorCode) const {
+        for(;;) {  // Loop while ce32 is special.
+            int32_t tag = Collation::getSpecialCE32Tag(ce32);
+            if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
+                U_ASSERT(ce32 != MIN_SPECIAL_CE32);
+                setLatinExpansion(ce32);
+                return ces[1];
+            }
+            switch(tag) {
+            case Collation::EXPANSION32_TAG:
+                setCE32s((ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
+                cesIndex = cesMaxIndex;
+                return ces[cesMaxIndex];
+            case Collation::EXPANSION_TAG:
+                ces = d->getCEs((ce32 >> 4) & 0xffff);
+                cesMaxIndex = (int32_t)ce32 & 0xf;
+                cesIndex = cesMaxIndex;
+                return ces[cesMaxIndex];
+            case Collation::PREFIX_TAG:
+                // TODO
+                return 0;
+            case Collation::CONTRACTION_TAG:
+                // TODO: Must not occur. Backward contractions are handled by previousCEUnsafe().
+                return 0;
+            case Collation::BUILDER_CONTEXT_TAG:
+                // TODO: Call virtual method.
+                return 0;
+            case Collation::DIGIT_TAG:
+                if(codan) {
+                    // TODO
+                    // int32_t digit=(int32_t)ce32&0xf;
+                    return 0;
+                } else {
+                    // Fetch the non-CODAN CE32 and continue.
+                    ce32 = *d->getCE32s((ce32 >> 4) & 0xffff);
+                    break;
+                }
+            case Collation::HIRAGANA_TAG:
+                // TODO: Do we need to handle hiragana going backward?
+                // Fetch the normal CE32 and continue.
+                ce32 = *d->getCE32s(ce32 & 0xfffff);
+                break;
+            case Collation::HANGUL_TAG:
+                // TODO
+                return 0;
+            case Collation::OFFSET_TAG:
+                // TODO: Share code with nextCEFromSpecialCE32().
+                return 0;
+            case Collation::IMPLICIT_TAG:
+                int64_t ce = unassignedPrimaryFromCodePoint(c);
+                return (ce << 32) | Collation::COMMON_SEC_AND_TER_CE;  // TODO: Turn both lines together into a method.
+            }
+            if(!Collation::isSpecialCE32(ce32)) {
+                return Collation::ceFromCE32(ce32);
+            }
+        }
+    }
+
+    /**
+     * Returns the previous CE when data->isUnsafeBackward(c).
+     */
+    int64_t previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
+        // We just move through the input counting safe and unsafe code points
+        // without collecting the unsafe-backward substring into a buffer and
+        // switching to it.
+        // This is to keep the logic simple. Otherwise we would have to handle
+        // prefix matching going before the backward buffer, switching
+        // to iteration and back, etc.
+        // In the most important case of iterating over a normal string,
+        // reading from the string itself is already maximally fast.
+        // The only drawback there is that after getting the CEs we always
+        // skip backward to the safe character rather than switching out
+        // of a backwardBuffer.
+        // But this should not be the common case for previousCE(),
+        // and correctness and maintainability are more important than
+        // complex optimizations.
+        saveLimitAndSetAfter(c);
+        // Find the first safe character before c.
+        int32_t numBackward = 1;
+        while(c = previousCodePoint(errorCode) >= 0) {
+            ++numBackward;
+            if(!data->isUnsafeBackward(c)) {
+                break;
+            }
+        }
+        // Ensure that we don't see CEs from a later-in-text expansion.
+        cesIndex = -1;
+        backwardCEs.clear();
+        // Go forward and collect the CEs.
+        int64_t ce;
+        while(ce = nextCE(errorCode) != Collation::NO_CE) {
+            backwardCEs.append(ce, errorCode);
+        }
+        restoreLimit();
+        backwardNumCodePoints(numBackward, errorCode);
+        // Use the collected CEs and return the last one.
+        U_ASSERT(0 != backwardCEs.length());
+        ces = backwardCEs.getBuffer();
+        cesIndex = cesMaxIndex=backwardCEs.length() - 1;
+        return ces[cesIndex];
+        // TODO: Does this method deliver backward-iteration offsets tight enough
+        // for string search? Is this equivalent to how v1 behaves?
+    }
+
+    CollationIterator &fwd;
+
+    // 64-bit-CE buffer for unsafe-backward iteration.
+    MaybeStackArray/*??*/ backwardCEs;
 };
 
 U_NAMESPACE_END
