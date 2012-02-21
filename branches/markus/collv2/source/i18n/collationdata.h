@@ -21,7 +21,7 @@ U_NAMESPACE_BEGIN
 /**
  * Data container with access functions which walk the data structures.
  */
-class CollationData : public UMemory {
+class U_I18N_API CollationData : public UMemory {
 public:
     uint32_t getCE32(UChar32 c) const {
         return UTRIE2_GET32(trie, c);
@@ -42,9 +42,11 @@ public:
      */
     const UTrie2 *getTrie() { return trie; }
 
-private:
+protected:
     // Main lookup trie.
     const UTrie2 *trie;
+
+private:
     UBool isFinalData;  // TODO: needed?
     const CollationData *base;  // TODO: probably needed?
 };
@@ -54,8 +56,12 @@ private:
  * Takes (character, CE) pairs and builds them into runtime data structures.
  * Supports characters with context prefixes and contraction suffixes.
  */
-class CollationDataBuilder : public UObject {
+class CollationDataBuilder : public CollationData {
 };
+
+// TODO: In CollationWeights allocator,
+// try to treat secondary & tertiary weights as 3/4-byte weights with bytes 1 & 2 == 0.
+// Natural secondary limit of 0x10000.
 
 U_NAMESPACE_END
 
