@@ -23,6 +23,7 @@
 #include "umutex.h"
 #include "uresimp.h"
 #include "ureslocs.h"
+#include "uvector.h"
 #include "zonemeta.h"
 
 U_NAMESPACE_BEGIN
@@ -1011,10 +1012,7 @@ TimeZoneFormat::getTimeZoneGenericNames(UErrorCode& status) const {
         umtx_lock(&nonConstThis->fLock);
         {
             if (fTimeZoneGenericNames == NULL) {
-                nonConstThis->fTimeZoneGenericNames = new TimeZoneGenericNames(fLocale, status);
-                if (U_SUCCESS(status) && fTimeZoneGenericNames == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                }
+                nonConstThis->fTimeZoneGenericNames = TimeZoneGenericNames::createInstance(fLocale, status);
             }
         }
         umtx_unlock(&nonConstThis->fLock);

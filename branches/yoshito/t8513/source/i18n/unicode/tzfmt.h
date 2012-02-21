@@ -797,10 +797,27 @@ private:
     void initGMTOffsetPatterns(UErrorCode& status);
 
     /**
+     * Creates an instance of TimeZone for the given offset
+     * @param offset the offset
+     * @return A TimeZone with the given offset
      */
-    //TODO
     TimeZone* createTimeZoneForOffset(int32_t offset) const;
+
+    /**
+     * Returns the time type for the given name type
+     * @param nameType the name type
+     * @return the time type (unknown/standard/daylight)
+     */
     static UTimeZoneFormatTimeType getTimeType(UTimeZoneNameType nameType);
+
+    /*
+     * Returns the time zone ID of a match at the specified index within
+     * the MatchInfoCollection.
+     * @param matches the collection of matches
+     * @param idx the index withing matches
+     * @param tzID receives the resolved time zone ID
+     * @return a reference to tzID.
+     */
     UnicodeString& getTimeZoneID(const TimeZoneNames::MatchInfoCollection* matches, int32_t idx, UnicodeString& tzID) const;
 };
 
