@@ -1090,22 +1090,6 @@ private:
     int32_t skipUWhiteSpace(const UnicodeString& text, int32_t pos) const;
 
     /**
-     * Private methods for formatting/parsing GMT string
-     */
-    void appendGMT(NumberFormat *currentNumberFormat,UnicodeString &appendTo, Calendar& cal, UErrorCode& status) const;
-    void formatGMTDefault(NumberFormat *currentNumberFormat,UnicodeString &appendTo, int32_t offset) const;
-    int32_t parseGMT(const UnicodeString &text, ParsePosition &pos) const;
-    int32_t parseGMTDefault(const UnicodeString &text, ParsePosition &pos) const;
-    UBool isDefaultGMTFormat() const;
-
-    void formatRFC822TZ(UnicodeString &appendTo, int32_t offset) const;
-
-    /**
-     * Initialize MessageFormat instances used for GMT formatting/parsing
-     */
-    void initGMTFormatters(UErrorCode &status);
-
-    /**
      * Initialize NumberFormat instances used for numbering system overrides.
      */
     void initNumberFormatters(const Locale &locale,UErrorCode &status);
@@ -1191,47 +1175,13 @@ private:
      */
     /*transient*/ int32_t   fDefaultCenturyStartYear;
 
-    enum ParsedTZType {
-        TZTYPE_UNK,
-        TZTYPE_STD,
-        TZTYPE_DST
-    };
-
-    ParsedTZType tztype; // here to avoid api change
+    int32_t tztype; // here to avoid api change
 
     typedef struct NSOverride {
         NumberFormat *nf;
         int32_t hash;
         NSOverride *next;
     } NSOverride;
-
-    /*
-     * MessageFormat instances used for localized GMT format
-     */
-    enum {
-        kGMTNegativeHMS = 0,
-        kGMTNegativeHM,
-        kGMTPositiveHMS,
-        kGMTPositiveHM,
-
-        kNumGMTFormatters
-    };
-    enum {
-        kGMTNegativeHMSMinLenIdx = 0,
-        kGMTPositiveHMSMinLenIdx,
-
-        kNumGMTFormatMinLengths
-    };
-
-    MessageFormat   **fGMTFormatters;
-    // If a GMT hour format has a second field, we need to make sure
-    // the length of input localized GMT string must match the expected
-    // length.  Otherwise, sub DateForamt handling offset format may
-    // unexpectedly success parsing input GMT string without second field.
-    // See #6880 about this issue.
-    // TODO: SimpleDateFormat should provide an option to invalidate
-    //
-    int32_t         fGMTFormatHmsMinLen[kNumGMTFormatMinLengths];
 
     NumberFormat    **fNumberFormatters;
 

@@ -837,8 +837,6 @@ deleteZNameInfo(void *obj) {
 
 U_CDECL_END
 
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneNamesImpl)
-
 TimeZoneNamesImpl::TimeZoneNamesImpl(const Locale& locale, UErrorCode& status)
 : fLocale(locale),
   fLock(NULL),

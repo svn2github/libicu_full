@@ -113,9 +113,6 @@ public:
     virtual UBool operator==(const TimeZoneNames& other) const;
     virtual TimeZoneNames* clone() const;
 
-    virtual UClassID getDynamicClassID() const;
-    static UClassID U_EXPORT2 getStaticClassID();
-
     StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
     StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const;
     UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const;
@@ -130,8 +127,6 @@ public:
 private:
     TimeZoneNamesCacheEntry*    fTZnamesCacheEntry;
 };
-
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneNamesDelegate)
 
 TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& status) {
     UBool initialized;
@@ -284,6 +279,8 @@ TimeZoneNamesDelegate::find(const UnicodeString& text, int32_t start, uint32_t t
 // ---------------------------------------------------
 // TimeZoneNames base class
 // ---------------------------------------------------
+UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(TimeZoneNames)
+
 TimeZoneNames::~TimeZoneNames() {
 }
 

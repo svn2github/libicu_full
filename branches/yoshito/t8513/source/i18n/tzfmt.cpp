@@ -533,7 +533,6 @@ TimeZoneFormat::setGMTZeroFormat(const UnicodeString& gmtZeroFormat, UErrorCode&
 UnicodeString&
 TimeZoneFormat::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate date,
         UnicodeString& name, UTimeZoneFormatTimeType* timeType /* = NULL */) const {
-    name.setToBogus();
     if (timeType) {
         *timeType = UTZFMT_TIME_TYPE_UNKNOWN;
     }
@@ -1027,11 +1026,12 @@ TimeZoneFormat::getTimeZoneGenericNames(UErrorCode& status) const {
 
 UnicodeString&
 TimeZoneFormat::formatOffsetRFC822(int32_t offset, UnicodeString& result, UErrorCode& status) const {
-    result.setToBogus();
     if (U_FAILURE(status)) {
+        result.setToBogus();
         return result;
     }
     if (offset <= -MAX_OFFSET || offset >= MAX_OFFSET) {
+        result.setToBogus();
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
@@ -1043,11 +1043,12 @@ TimeZoneFormat::formatOffsetRFC822(int32_t offset, UnicodeString& result, UError
 
 UnicodeString&
 TimeZoneFormat::formatOffsetISO8601(int32_t offset, UnicodeString& result, UErrorCode& status) const {
-    result.setToBogus();
     if (U_FAILURE(status)) {
+        result.setToBogus();
         return result;
     }
     if (offset <= -MAX_OFFSET || offset >= MAX_OFFSET) {
+        result.setToBogus();
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
@@ -1061,11 +1062,12 @@ TimeZoneFormat::formatOffsetISO8601(int32_t offset, UnicodeString& result, UErro
 
 UnicodeString&
 TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const {
-    result.setToBogus();
     if (U_FAILURE(status)) {
+        result.setToBogus();
         return result;
     }
     if (offset <= -MAX_OFFSET || offset >= MAX_OFFSET) {
+        result.setToBogus();
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
@@ -1103,7 +1105,7 @@ TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, 
     U_ASSERT(offsetPatternItems != NULL);
 
     // Building the GMT format string
-    result.append(fGMTPatternPrefix);
+    result.setTo(fGMTPatternPrefix);
 
     for (int32_t i = 0; i < offsetPatternItems->size(); i++) {
         const GMTOffsetField* item = (GMTOffsetField*)offsetPatternItems->elementAt(i);
@@ -2095,8 +2097,7 @@ TimeZoneFormat::createTimeZoneForOffset(int32_t offset) const {
         // when offset is 0, we should use "Etc/GMT"
         return TimeZone::createTimeZone(UnicodeString(TZID_GMT));
     }
-    //TODO
-    return NULL;
+    return ZoneMeta::createCustomTimeZone(offset);
 }
 
 UTimeZoneFormatTimeType
@@ -2115,7 +2116,6 @@ TimeZoneFormat::getTimeType(UTimeZoneNameType nameType) {
 
 UnicodeString&
 TimeZoneFormat::getTimeZoneID(const TimeZoneNames::MatchInfoCollection* matches, int32_t idx, UnicodeString& tzID) const {
-    tzID.setToBogus();
     if (!matches->getTimeZoneIDAt(idx, tzID)) {
         UnicodeString mzID;
         if (matches->getMetaZoneIDAt(idx, mzID)) {

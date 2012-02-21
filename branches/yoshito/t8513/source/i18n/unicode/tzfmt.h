@@ -514,7 +514,7 @@ protected:
     TimeZoneFormat(const Locale& locale, UErrorCode& status);
 
 private:
-// TODO
+    /* mutex */
     UMTX fLock;
 
     /* Locale of this object */
