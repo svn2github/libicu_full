@@ -458,7 +458,7 @@ TimeZoneGenericNames::getGenericLocationName(const UnicodeString& tzCanonicalID,
     if (locname == NULL) {
         name.setToBogus();
     } else {
-        name.setTo(TRUE, locname, -1);
+        name.setTo(locname, u_strlen(locname));
     }
 
     return name;
@@ -885,7 +885,7 @@ TimeZoneGenericNames::findBestMatch(const UnicodeString& text, int32_t start, ui
             int32_t len = tznamesMatches->getMatchLengthAt(i);
             if (len > bestMatchLen) {
                 bestMatchLen = len;
-                if (tznamesMatches->getTimeZoneIDAt(i, bestMatchTzID)) {
+                if (!tznamesMatches->getTimeZoneIDAt(i, bestMatchTzID)) {
                     // name for a meta zone
                     if (tznamesMatches->getMetaZoneIDAt(i, mzID)) {
                         fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, bestMatchTzID);

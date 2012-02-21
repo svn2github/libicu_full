@@ -302,6 +302,7 @@ TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status)
             fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM].setTo(TRUE, sep + 1, -1);
             expandOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HMS]);
             expandOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HMS]);
+            useDefHourFmt = FALSE;
         }
     }
     if (useDefHourFmt) {
@@ -340,6 +341,7 @@ TimeZoneFormat::~TimeZoneFormat() {
     for (int32_t i = 0; i <= UTZFMT_PAT_NEGATIVE_HMS; i++) {
         delete fGMTOffsetPatternItems[i];
     }
+    umtx_destroy(&fLock);
 }
 
 TimeZoneFormat&
@@ -644,7 +646,7 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
     }
 
     int32_t evaluated = 0;
-    ParsePosition tmpPos;
+    ParsePosition tmpPos(startIdx);
 
     int32_t parsedOffset = UNKNOWN_OFFSET;
     int32_t parsedPos = -1;
@@ -1322,10 +1324,11 @@ TimeZoneFormat::parseOffsetFields(const UnicodeString& text, int32_t start, UBoo
 
     parsedLen = 0;
 
-    for (int32_t gmtPatType = 0; PARSE_GMT_OFFSET_TYPES[gmtPatType] >= 0; gmtPatType++) {
+    for (int32_t patidx = 0; PARSE_GMT_OFFSET_TYPES[patidx] >= 0; patidx++) {
+        int32_t gmtPatType = PARSE_GMT_OFFSET_TYPES[patidx];
         int32_t offsetH = 0, offsetM = 0, offsetS = 0;
         int32_t idx = start;
-        UVector* items = fGMTOffsetPatternItems[PARSE_GMT_OFFSET_TYPES[gmtPatType]];
+        UVector* items = fGMTOffsetPatternItems[gmtPatType];
         U_ASSERT(items != NULL);
  
         UBool failed = FALSE;
@@ -2051,7 +2054,7 @@ TimeZoneFormat::expandOffsetPattern(const UnicodeString& offsetHM, UnicodeString
     UnicodeString sep;
     int32_t idx_H = offsetHM.tempSubString(0, idx_mm).lastIndexOf(0x0048 /* H */);
     if (idx_H >= 0) {
-        sep = offsetHM.tempSubString(idx_H + 1, idx_mm);
+        sep = offsetHM.tempSubString(idx_H + 1, idx_mm - (idx_H + 1));
     }
     result.setTo(offsetHM.tempSubString(0, idx_mm + 2));
     result.append(sep);
