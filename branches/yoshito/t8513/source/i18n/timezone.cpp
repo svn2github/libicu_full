@@ -1257,11 +1257,13 @@ TimeZone::getDisplayName(UBool daylight, EDisplayType style, const Locale& local
         case SHORT_GENERIC:
             tzfmt->format(UTZFMT_STYLE_GENERIC_SHORT, *this, date, result, &timeType);
             break;
+        default:
+            U_ASSERT(FALSE);
         }
         // Generic format many use Localized GMT as the final fallback.
         // When Localized GMT format is used, the result might not be
         // appropriate for the requested daylight value.
-        if (daylight && timeType == UTZFMT_TIME_TYPE_STANDARD || !daylight && timeType == UTZFMT_TIME_TYPE_DAYLIGHT) {
+        if ((daylight && timeType == UTZFMT_TIME_TYPE_STANDARD) || (!daylight && timeType == UTZFMT_TIME_TYPE_DAYLIGHT)) {
             offset = daylight ? getRawOffset() + getDSTSavings() : getRawOffset();
             tzfmt->formatOffsetLocalizedGMT(offset, result, status);
         }
@@ -1275,11 +1277,13 @@ TimeZone::getDisplayName(UBool daylight, EDisplayType style, const Locale& local
         case SHORT_GMT:
             tzfmt->formatOffsetRFC822(offset, result, status);
             break;
+        default:
+            U_ASSERT(FALSE);
         }
 
     } else {
         U_ASSERT(style == LONG || style == SHORT || style == SHORT_COMMONLY_USED);
-        UTimeZoneNameType nameType;
+        UTimeZoneNameType nameType = UTZNM_UNKNOWN;
         switch (style) {
         case LONG:
             nameType = daylight ? UTZNM_LONG_DAYLIGHT : UTZNM_LONG_STANDARD;
@@ -1288,6 +1292,8 @@ TimeZone::getDisplayName(UBool daylight, EDisplayType style, const Locale& local
         case SHORT_COMMONLY_USED:
             nameType = daylight ? UTZNM_SHORT_DAYLIGHT : UTZNM_SHORT_STANDARD;
             break;
+        default:
+            U_ASSERT(FALSE);
         }
         LocalPointer<TimeZoneNames> tznames(TimeZoneNames::createInstance(locale, status));
         UnicodeString canonicalID(ZoneMeta::getCanonicalCLDRID(*this));

@@ -94,6 +94,7 @@ class TimeZoneFormat;
  * zzzz     time zone               (Text)              Pacific Standard Time
  * Z        time zone (RFC 822)     (Number)            -0800
  * ZZZZ     time zone (RFC 822)     (Text & Number)     GMT-08:00
+ * ZZZZZ    time zone (ISO 8601)    (Text & Number)     -08:00 & Z
  * v        time zone (generic)     (Text)              PT
  * vvvv     time zone (generic)     (Text)              Pacific Time
  * V        time zone (abreviation) (Text)              PST
@@ -772,30 +773,30 @@ public:
      */
     virtual void adoptCalendar(Calendar* calendarToAdopt);
 
-#ifndef U_HIDE_DRAFT_API
+#ifndef U_HIDE_INTERNAL_API
     /**
      * Sets the TimeZoneFormat to be used by this date/time formatter.
      * The caller should not delete the TimeZoneFormat object after
      * it is adopted by this call.
      * @param timeZoneFormatToAdopt The TimeZoneFormat object to be adopted.
-     * @draft ICU 49
+     * @internal ICU 49 technology preview
      */
     virtual void adoptTimeZoneFormat(TimeZoneFormat* timeZoneFormatToAdopt);
 
     /**
      * Sets the TimeZoneFormat to be used by this date/time formatter.
      * @param newTimeZoneFormat The TimeZoneFormat object to copy.
-     * @draft ICU 49
+     * @internal ICU 49 technology preview
      */
     virtual void setTimeZoneFormat(const TimeZoneFormat& newTimeZoneFormat);
 
     /**
      * Gets the time zone format object associated with this date/time formatter.
      * @return the time zone format associated with this date/time formatter.
-     * @draft ICU 49
+     * @internal ICU 49 technology preview
      */
     virtual const TimeZoneFormat* getTimeZoneFormat(void) const;
-#endif  /* U_HIDE_DRAFT_API */
+#endif  /* U_HIDE_INTERNAL_API */
 
 #ifndef U_HIDE_INTERNAL_API
     /**

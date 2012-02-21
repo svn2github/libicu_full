@@ -195,6 +195,8 @@ GMTOffsetField::isValid(FieldType type, int32_t width) {
     case MINUTE:
     case SECOND:
         return (width == 2);
+    default:
+        U_ASSERT(FALSE);
     }
     return (width > 0);
 }
@@ -649,12 +651,8 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
     int32_t evaluated = 0;
     ParsePosition tmpPos(startIdx);
 
-    int32_t parsedOffset = UNKNOWN_OFFSET;
-    int32_t parsedPos = -1;
-
-
-    UBool isGeneric = FALSE;    // stores successfully parsed offset for later use
-    uint32_t types = 0;         // stores successfully parsed offset position for later use
+    int32_t parsedOffset = UNKNOWN_OFFSET;  // stores successfully parsed offset for later use
+    int32_t parsedPos = -1;                 // stores successfully parsed offset position for later use
 
     // Try localized GMT format first if necessary
     if (fallbackLocalizedGMT) {
@@ -773,6 +771,9 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
             case UTZFMT_STYLE_GENERIC_SHORT:
                 genericNameTypes = UTZGNM_SHORT | UTZGNM_LOCATION;
                 break;
+
+            default:
+                U_ASSERT(FALSE);
             }
 
             int32_t len = 0;
@@ -2111,6 +2112,9 @@ TimeZoneFormat::getTimeType(UTimeZoneNameType nameType) {
     case UTZNM_LONG_DAYLIGHT:
     case UTZNM_SHORT_DAYLIGHT:
         return UTZFMT_TIME_TYPE_DAYLIGHT;
+
+    default:
+        U_ASSERT(FALSE);
     }
     return UTZFMT_TIME_TYPE_UNKNOWN;
 }

@@ -741,7 +741,7 @@ private:
 };
 
 ZNameSearchHandler::ZNameSearchHandler(uint32_t types) 
-: fTypes(types), fResults(NULL), fMaxMatchLen(0) {
+: fTypes(types), fMaxMatchLen(0), fResults(NULL) {
 }
 
 ZNameSearchHandler::~ZNameSearchHandler() {
