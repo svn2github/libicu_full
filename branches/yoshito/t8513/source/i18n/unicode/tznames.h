@@ -369,7 +369,6 @@ public:
 private:
     // No ICU "poor man's RTTI" for this class nor its subclasses.
     virtual UClassID getDynamicClassID() const;
-
 };
 
 U_NAMESPACE_END

@@ -1333,10 +1333,26 @@ TimeZoneGenericNames::createInstance(const Locale& locale, UErrorCode& status) {
     return instance;
 }
 
+UBool
+TimeZoneGenericNames::operator==(const TimeZoneGenericNames& other) const {
+    // Just compare if the other object also use the same
+    // ref entry
+    return fRef == other.fRef;
+}
+
 TimeZoneGenericNames*
 TimeZoneGenericNames::clone() const {
-    //TODO
-    return NULL;
+    TimeZoneGenericNames* other = new TimeZoneGenericNames();
+    if (other) {
+        umtx_lock(&gTZGNLock);
+        {
+            // Just increments the reference count
+            fRef->refCount++;
+            other->fRef = fRef;
+        }
+        umtx_unlock(&gTZGNLock);
+    }
+    return other;
 }
 
 UnicodeString&

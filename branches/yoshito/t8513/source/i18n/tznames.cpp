@@ -111,6 +111,7 @@ public:
     virtual ~TimeZoneNamesDelegate();
 
     virtual UBool operator==(const TimeZoneNames& other) const;
+    virtual UBool operator!=(const TimeZoneNames& other) const {return !operator==(other);};
     virtual TimeZoneNames* clone() const;
 
     StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
@@ -125,8 +126,13 @@ public:
 
     MatchInfoCollection* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 private:
+    TimeZoneNamesDelegate();
     TimeZoneNamesCacheEntry*    fTZnamesCacheEntry;
 };
+
+TimeZoneNamesDelegate::TimeZoneNamesDelegate()
+: fTZnamesCacheEntry(0) {
+}
 
 TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& status) {
     UBool initialized;
@@ -218,22 +224,42 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& s
 TimeZoneNamesDelegate::~TimeZoneNamesDelegate() {
     umtx_lock(&gTimeZoneNamesLock);
     {
-        U_ASSERT(fTZnamesCacheEntry->refCount > 0);
-        // Just decrement the reference count
-        fTZnamesCacheEntry->refCount--;
+        if (fTZnamesCacheEntry) {
+            U_ASSERT(fTZnamesCacheEntry->refCount > 0);
+            // Just decrement the reference count
+            fTZnamesCacheEntry->refCount--;
+        }
     }
     umtx_unlock(&gTimeZoneNamesLock);
 }
 
 UBool
 TimeZoneNamesDelegate::operator==(const TimeZoneNames& other) const {
-    return *fTZnamesCacheEntry->names == other;
+    if (this == &other) {
+        return TRUE;
+    }
+    // Just compare if the other object also use the same
+    // cache entry
+    const TimeZoneNamesDelegate* rhs = dynamic_cast<const TimeZoneNamesDelegate*>(&other);
+    if (rhs) {
+        return fTZnamesCacheEntry == rhs->fTZnamesCacheEntry;
+    }
+    return FALSE;
 }
 
 TimeZoneNames*
 TimeZoneNamesDelegate::clone() const {
-    // TODO
-    return NULL;
+    TimeZoneNamesDelegate* other = new TimeZoneNamesDelegate();
+    if (other != NULL) {
+        umtx_lock(&gTimeZoneNamesLock);
+        {
+            // Just increment the reference count
+            fTZnamesCacheEntry->refCount++;
+            other->fTZnamesCacheEntry = fTZnamesCacheEntry;
+        }
+        umtx_unlock(&gTimeZoneNamesLock);
+    }
+    return other;
 }
 
 StringEnumeration*

@@ -403,12 +403,11 @@ TimeZoneFormat::operator==(const Format& other) const {
     for (int32_t i = 0; i < 10 && isEqual; i++) {
         isEqual = fGMTOffsetDigits[i] == tzfmt->fGMTOffsetDigits[i];
     }
-
-
     // TODO
-    // fTimeZoneGenericNames
-    // 
-    return FALSE;
+    // Check fTimeZoneGenericNames. For now,
+    // if fTimeZoneNames is same, fTimeZoneGenericNames should
+    // be also equivalent.
+    return isEqual;
 }
 
 Format*
@@ -438,12 +437,16 @@ void
 TimeZoneFormat::adoptTimeZoneNames(TimeZoneNames *tznames) {
     delete fTimeZoneNames;
     fTimeZoneNames = tznames;
+
+    // TODO - We should also update fTimeZoneGenericNames
 }
 
 void
 TimeZoneFormat::setTimeZoneNames(const TimeZoneNames &tznames) {
     delete fTimeZoneNames;
     fTimeZoneNames = tznames.clone();
+
+    // TODO - We should also update fTimeZoneGenericNames
 }
 
 void

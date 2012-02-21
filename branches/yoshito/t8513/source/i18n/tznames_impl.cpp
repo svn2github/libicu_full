@@ -932,14 +932,17 @@ TimeZoneNamesImpl::cleanup() {
 
 UBool
 TimeZoneNamesImpl::operator==(const TimeZoneNames& other) const {
-    // TODO
+    if (this == &other) {
+        return TRUE;
+    }
+    // No implementation for now
     return FALSE;
 }
 
 TimeZoneNames*
 TimeZoneNamesImpl::clone() const {
-    // TODO
-    return NULL;
+    UErrorCode status = U_ZERO_ERROR;
+    return new TimeZoneNamesImpl(fLocale, status);
 }
 
 StringEnumeration*
