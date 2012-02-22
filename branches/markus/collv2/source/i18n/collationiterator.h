@@ -40,7 +40,6 @@ public:
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
             : start(s), pos(s), limit(lim),
-              // unused until a limit is saved -- savedLimit(NULL),
               nfcImpl(nfc),
               cesIndex(-1),  // unused while cesIndex<0 -- cesMaxIndex(0), ces(NULL),
               hiragana(0),
@@ -110,7 +109,7 @@ public:
      * @return -1 inherit Hiragana-ness from previous character;
      *         0 not Hiragana; 1 Hiragana
      */
-    int8_t getHiragana() const { return hiragana; }
+    inline int8_t getHiragana() const { return hiragana; }
 
     inline UChar32 nextCodePoint(UErrorCode &errorCode) {
         if(pos != limit) {
@@ -201,7 +200,8 @@ protected:
      * Returns the next code point, or <0 if none, assuming pos==limit.
      * Post-increment semantics.
      */
-    virtual UChar32 handleNextCodePoint(UErrorCode &errorCode) {
+    virtual UChar32 handleNextCodePoint(UErrorCode & /* errorCode */) {
+        U_ASSERT(pos == limit);
         return U_SENTINEL;
     }
 
@@ -209,7 +209,8 @@ protected:
      * Returns the previous code point, or <0 if none, assuming pos==start.
      * Pre-decrement semantics.
      */
-    virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode) {
+    virtual UChar32 handlePreviousCodePoint(UErrorCode & /* errorCode */) {
+        U_ASSERT(pos == start);
         return U_SENTINEL;
     }
 
@@ -217,13 +218,14 @@ protected:
      * Saves the current iteration limit for later,
      * and sets it to after c which was read by previousCodePoint() or equivalent.
      */
-    virtual void saveLimitAndSetAfter(UChar32 c) {
-        savedLimit = limit;  // TODO: Need to do something special with limit==NULL?
+    virtual const UChar *saveLimitAndSetAfter(UChar32 c) {
+        const UChar *savedLimit = limit;
         limit = pos + U16_LENGTH(c);
+        return savedLimit;
     }
 
     /** Restores the iteration limit from before saveLimitAndSetAfter(). */
-    virtual void restoreLimit() {
+    virtual void restoreLimit(const UChar *savedLimit) {
         limit = savedLimit;
     }
 
@@ -235,9 +237,6 @@ protected:
     // with a surrogate retrieved from the subclass.
     const UChar *start, *pos, *limit;
     // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
-
-    // See saveLimitAndSetAfter();
-    const UChar *savedLimit;
 
     const Normalizer2Impl &nfcImpl;
 
@@ -253,6 +252,8 @@ protected:
     // more text.
 
 private:
+    friend class TwoWayCollationIterator;
+
     int64_t nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                   UErrorCode &errorCode) const {
         for(;;) {  // Loop while ce32 is special.
@@ -545,6 +546,7 @@ public:
                          UErrorCode &errorCode)
             : CollationIterator(nfc, data, s, s),
               rawStart(s), segmentStart(s), segmentLimit(s), rawLimit(lim),
+              lengthBeforeLimit(0),
               smallSteps(TRUE),
               buffer(nfc, fcd) {
         if(U_SUCCESS(errorCode)) {
@@ -557,6 +559,15 @@ public:
 protected:
     virtual UChar32 handleNextCodePoint(UErrorCode &errorCode) {
         if(U_FAILURE(errorCode) || segmentLimit == rawLimit) { return U_SENTINEL; }
+        U_ASSERT(pos == limit);
+        if(lengthBeforeLimit != 0) {
+            int32_t length = (int32_t)(limit - start);
+            if(lengthBeforeLimit <= length) {
+                // We have reached the end of the saveLimitAndSetAfter() range.
+                return U_SENTINEL;
+            }
+            lengthBeforeLimit -= length;
+        }
         if(limit != segmentLimit) {
             // The previous segment had to be normalized
             // and was pointing into the fcd string.
@@ -579,6 +590,7 @@ protected:
                         // We hit the NUL terminator; remember its pointer.
                         segmentLimit = rawLimit == --p;
                         if(limit == rawLimit) { return U_SENTINEL; }
+                        limit = rawLimit;
                         break;
                     }
                 } else if(p != rawLimit && U16_IS_TRAIL(*p)) {
@@ -607,7 +619,7 @@ protected:
                     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
                     // Switch collation processing into the FCD buffer
                     // with the result of normalizing [limit, segmentLimit[.
-                    start = pos = buffer.getStart();
+                    start = buffer.getStart();
                     limit = buffer.getLimit();
                     break;
                 }
@@ -631,7 +643,14 @@ protected:
                 break;
             }
         }
-        //  Return the next code point at pos != limit; no need to check for NUL-termination.
+        U_ASSERT(start < limit);
+        if(lengthBeforeLimit != 0) {
+            if(lengthBeforeLimit < (int32_t)(limit - start)) {
+                limit = start + lengthBeforeLimit;
+            }
+        }
+        pos = start;
+        // Return the next code point at pos != limit; no need to check for NUL-termination.
         UChar32 c = *pos++;
         UChar trail;
         if(U16_IS_LEAD(c) && pos != limit && U16_IS_TRAIL(trail = *pos)) {
@@ -644,6 +663,7 @@ protected:
 
     virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode) {
         if(U_FAILURE(errorCode) || segmentStart == rawStart) { return U_SENTINEL; }
+        U_ASSERT(pos == start);
         if(start != segmentStart) {
             // The previous segment had to be normalized
             // and was pointing into the fcd string.
@@ -682,8 +702,8 @@ protected:
                     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
                     // Switch collation processing into the FCD buffer
                     // with the result of normalizing [segmentStart, start[.
-                    start = pos = buffer.getStart();
-                    limit = buffer.getStart();
+                    start = buffer.getStart();
+                    limit = buffer.getLimit();
                     break;
                 }
                 nextCC = (uint8_t)(fcd16 >> 8);
@@ -697,7 +717,17 @@ protected:
                 start = segmentStart = p;
                 break;
             }
+            if((start - segmentStart) >= 8) {
+                // Go back several characters at a time, for the base class fastpath.
+                start = segmentStart;
+                break;
+            }
         }
+        U_ASSERT(start < limit);
+        if(lengthBeforeLimit != 0) {
+            lengthBeforeLimit += (int32_t)(limit - start);
+        }
+        pos = limit;
         // Return the previous code point before pos != start.
         UChar32 c = *--pos;
         UChar lead;
@@ -709,16 +739,18 @@ protected:
         }
     }
 
-    virtual void saveLimitAndSetAfter(UChar32 c) {
-        // TODO
-        // savedLimit = limit;  // TODO: Need to do something special with limit==NULL?
-        // limit = pos + U16_LENGTH(c);
+    virtual const UChar *saveLimitAndSetAfter(UChar32 c) {
+        limit = pos + U16_LENGTH(c);
+        lengthBeforeLimit = (int32_t)(limit - start);
+        return NULL;
     }
 
-    /** Restores the iteration limit from before saveLimitAndSetAfter(). */
-    virtual void restoreLimit() {
-        // TODO
-        // limit = savedLimit;
+    virtual void restoreLimit(const UChar * /* savedLimit */) {
+        if(start == segmentStart) {
+            limit = segmentLimit;
+        } else {
+            limit = buffer.getLimit();
+        }
     }
 
 private:
@@ -737,6 +769,11 @@ private:
     const UChar *segmentLimit;
     // rawLimit==NULL for a NUL-terminated string.
     const UChar *rawLimit;
+    // Normally zero.
+    // Between calls to saveLimitAndSetAfter() and restoreLimit(),
+    // it tracks the positive number of normalized UChars
+    // between the start pointer and the temporary iteration limit.
+    int32_t lengthBeforeLimit;
     // We make small steps for string comparisons and larger steps for sort key generation.
     UBool smallSteps;
     UnicodeString fcd;
@@ -893,7 +930,9 @@ private:
         // But this should not be the common case for previousCE(),
         // and correctness and maintainability are more important than
         // complex optimizations.
-        saveLimitAndSetAfter(c);
+        // TODO: Verify that the v1 code uses a backward buffer and gets into trouble
+        // with a prefix match that would need to move before the backward buffer.
+        const UChar *savedLimit = saveLimitAndSetAfter(c);
         // Find the first safe character before c.
         int32_t numBackward = 1;
         while(c = previousCodePoint(errorCode) >= 0) {
@@ -910,12 +949,12 @@ private:
         while(ce = nextCE(errorCode) != Collation::NO_CE) {
             backwardCEs.append(ce, errorCode);
         }
-        restoreLimit();
+        restoreLimit(savedLimit);
         backwardNumCodePoints(numBackward, errorCode);
         // Use the collected CEs and return the last one.
         U_ASSERT(0 != backwardCEs.length());
         ces = backwardCEs.getBuffer();
-        cesIndex = cesMaxIndex=backwardCEs.length() - 1;
+        cesIndex = cesMaxIndex = backwardCEs.length() - 1;
         return ces[cesIndex];
         // TODO: Does this method deliver backward-iteration offsets tight enough
         // for string search? Is this equivalent to how v1 behaves?
