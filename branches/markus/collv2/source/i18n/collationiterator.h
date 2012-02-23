@@ -282,7 +282,7 @@ private:
                 // TODO
                 return 0;
             case Collation::CONTRACTION_TAG:
-                ce32 = nextCE32FromContraction(d, ce32, errorCode);
+                ce32 = nextCE32FromContraction(d, c, ce32, errorCode);
                 if(ce32 != 1) {
                     // Normal result from contiguous contraction.
                     break;
@@ -319,7 +319,7 @@ private:
                 UChar32 baseCp = (c & 0x1f0000) | (((UChar32)ce32 >> 4) & 0xffff);
                 int32_t increment = (ce32 & 0xf) + 1;
                 int32_t offset = c - baseCp;
-                ce32=UTRIE2_GET32(trie, baseCp);
+                ce32 = d->getCE32(trie, baseCp);
                 // ce32 must be a long-primary pppppp00.
                 U_ASSERT(!Collation::isSpecialCE32(ce32) && (ce32 & 0xff) == 0);
                 // TODO: Add offset*increment.
@@ -334,8 +334,9 @@ private:
         }
     }
 
-    uint32_t nextCE32FromContraction(const CollationData *d, uint32_t ce32,
+    uint32_t nextCE32FromContraction(const CollationData *d, UChar32 originalCp, uint32_t ce32,
                                      UErrorCode &errorCode) const {
+        // originalCp: Only needed as input to nextCE32FromDiscontiguousContraction().
         UBool maybeDiscontiguous = (UBool)(ce32 & 1);  // TODO: Builder set this if any suffix ends with cc != 0.
         const uint16_t *p = d->getContext((int32_t)(ce32 >> 1) & 0x7ffff);
         ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
@@ -372,7 +373,7 @@ private:
             if(match == USTRINGTRIE_NO_MATCH) {
                 if(maybeDiscontiguous) {
                     return nextCE32FromDiscontiguousContraction(
-                        d, p, ce32, lookAhead, sinceMatch, c, errorCode);
+                        d, originalCp, p, ce32, lookAhead, sinceMatch, c, errorCode);
                 }
                 break;
             }
@@ -394,7 +395,8 @@ private:
     //    Forbid contractions with the problematic characters??
 
     uint32_t nextCE32FromDiscontiguousContraction(
-            const CollationData *d, const uint16_t *p, uint32_t ce32,
+            const CollationData *d, UChar32 originalCp,
+            const uint16_t *p, uint32_t ce32,
             int32_t lookAhead, int32_t sinceMatch, UChar32 c,
             UErrorCode &errorCode) const {
         // UCA 3.3.2 Contractions:
@@ -480,17 +482,52 @@ private:
         }
         if(skipLengthAtMatch > 0) {
             // We did get a match after skipping one or more combining marks.
-            // TODO: Map ce32 to ces[].
-            // Append CEs from the combining marks that we skipped before the match.
-            for(int32_t i = 0; i < skipLengthAtMatch; i += U16_LENGTH(c)) {
+            // Append CEs from the contraction ce32
+            // and then from the combining marks that we skipped before the match.
+            int32_t cesLength = 0;
+            c = originalCp;
+            int32_t i = 0;
+            for(;;) {
+                cesLength = appendCEsFromCE32NoContext(cesLength, d, c, ce32, errorCode);
+                if(i == skipLengthAtMatch) { break; }
                 c = skipBuffer.char32At(i);
-                ce32 = d->getCE32(c);  // TODO: fallback?
-                // TODO: ce32 -> ces[]
+                i += U16_LENGTH(c);
+                // Fetch CE32s for skipped combining marks from the normal data, with fallback,
+                // rather than from where we found the contraction.
+                ce32 = data->getCE32(c);
+                if(ce32 == Collation::MIN_SPECIAL_CE32) {
+                    d = data->getBase();
+                    ce32 = d->getCE32(c);
+                } else {
+                    d = data;
+                }
             }
+            cesIndex = 1;  // Caller returns ces[0].
+            cesMaxIndex = cesLength - 1;
             ce32 = 1;  // Signal to nextCEFromSpecialCE32() that the result is in ces[].
         }
         backwardNumCodePoints(sinceMatch, errorCode);
         return ce32;
+    }
+
+    // Only for discontiguous contractions.
+    int32_t appendCEsFromCE32NoContext(int32_t cesLength,
+                                       const CollationData *d, UChar32 c, uint32_t ce32,
+                                       UErrorCode &errorCode) {
+        // TODO: copy much of nextCEFromSpecialCE32()
+        // handle non-special CE32 first
+        // contraction/digit/Hiragana just get default CE32
+        // U_INTERNAL_PROGRAM_ERROR for prefix
+        // U_INTERNAL_PROGRAM_ERROR for contraction? (depends on whether we forbid contractions from lccc!=0)
+        // most cases fall through to end which calls  return appendCE(...);
+    }
+
+    // Only for discontiguous contractions.
+    int32_t appendCE(int32_t cesLength, int64_t ce, UErrorCode &errorCode) {
+        if(forwardCEs.ensureCapacity(cesLength, errorCode)) {
+            forwardCEs[cesLength++] = ce;
+        }
+        return cesLength;
     }
 
     /**
