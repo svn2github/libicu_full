@@ -193,6 +193,11 @@ class U_I18N_API Collation {
     // TODO: Set [first unassigned] to unassignedPrimaryFromCodePoint(-1).
     // TODO: Set [last unassigned] to unassignedPrimaryFromCodePoint(0x10ffff).
 
+    static int64_t unassignedCEFromCodePoint(UChar32 c) {
+        int64_t ce = unassignedPrimaryFromCodePoint(c);
+        return (ce << 32) | COMMON_SEC_AND_TER_CE;
+    }
+
     static uint32_t reorder(const uint8_t reorderTable[256], uint32_t primary) {
         return ((uint32_t)reorderTable[primary >> 24] << 24) | (primary & 0xffffff);
     }

@@ -266,7 +266,7 @@ private:
             }
             switch(tag) {
             case Collation::EXPANSION32_TAG:
-                setCE32s((ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
+                setCE32s(d, (ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
                 cesIndex = (cesMaxIndex > 0) ? 1 : -1;
                 return ces[0];
             case Collation::EXPANSION_TAG:
@@ -274,13 +274,11 @@ private:
                 cesMaxIndex = (int32_t)ce32 & 0xf;
                 cesIndex = (cesMaxIndex > 0) ? 1 : -1;
                 return ces[0];
-            /**
-            * Points to prefix trie.
-            * Bits 19..0: Index into prefix/contraction data.
-            */
             case Collation::PREFIX_TAG:
-                // TODO
-                return 0;
+                backwardNumCodePoints(1, errorCode);
+                ce32 = getCE32FromPrefix(d, ce32, errorCode);
+                forwardNumCodePoints(1, errorCode);
+                break;
             case Collation::CONTRACTION_TAG:
                 ce32 = nextCE32FromContraction(d, c, ce32, errorCode);
                 if(ce32 != 1) {
@@ -325,13 +323,34 @@ private:
                 // TODO: Add offset*increment.
                 return (int64_t)ce32 << 32;
             case Collation::IMPLICIT_TAG:
-                int64_t ce = unassignedPrimaryFromCodePoint(c);
-                return (ce << 32) | Collation::COMMON_SEC_AND_TER_CE;
+                return Collation::unassignedCEFromCodePoint(c);
             }
             if(!Collation::isSpecialCE32(ce32)) {
                 return Collation::ceFromCE32(ce32);
             }
         }
+    }
+
+    uint32_t getCE32FromPrefix(const CollationData *d, uint32_t ce32,
+                               UErrorCode &errorCode) const {
+        const uint16_t *p = d->getContext((int32_t)ce32 & 0xfffff);
+        ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no prefix match.
+        p += 2;
+        // Number of code points read before the original code point.
+        int32_t lookBehind = 0;
+        UCharsTrie prefixes(p);
+        for(;;) {
+            UChar32 c = previousCodePoint(errorCode);
+            if(c < 0) { break; }
+            ++lookBehind;
+            UStringTrieResult match = prefixes.nextForCodePoint(c);
+            if(USTRINGTRIE_HAS_VALUE(match)) {
+                ce32 = (uint32_t)prefixes.getValue();
+            }
+            if(!USTRINGTRIE_HAS_NEXT(match)) { break; }
+        }
+        forwardNumCodePoints(lookBehind, errorCode);
+        return ce32;
     }
 
     uint32_t nextCE32FromContraction(const CollationData *d, UChar32 originalCp, uint32_t ce32,
@@ -352,9 +371,11 @@ private:
             // or a combining mark that would be skipped in discontiguous contraction.
             // TODO: Builder:
             // lowestChar = lowest code point of the first ones that could start a match.
-            // If this is a combining mark with combining class c1, then set instead to the lowest character
-            // that has combining class in the range 1..c1-1.
             // If the character is supplemental, set to U+FFFF.
+            // If there are combining marks, then find the lowest combining class c1 among them,
+            // then set instead to the lowest character (below what we have so far)
+            // that has combining class in the range 1..c1-1.
+            // Actually test characters with lccc!=0 and look for their tccc=1..c1-1.
             // TODO: This is simpler at runtime than checking for the combining class then,
             // and might be good enough for Latin performance. Keep or redesign?
             backwardNumCodePoints(1, errorCode);
@@ -901,7 +922,7 @@ private:
             }
             switch(tag) {
             case Collation::EXPANSION32_TAG:
-                setCE32s((ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
+                setCE32s(d, (ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
                 cesIndex = cesMaxIndex;
                 return ces[cesMaxIndex];
             case Collation::EXPANSION_TAG:
@@ -910,8 +931,8 @@ private:
                 cesIndex = cesMaxIndex;
                 return ces[cesMaxIndex];
             case Collation::PREFIX_TAG:
-                // TODO
-                return 0;
+                ce32 = getCE32FromPrefix(d, ce32, errorCode);
+                break;
             case Collation::CONTRACTION_TAG:
                 // TODO: Must not occur. Backward contractions are handled by previousCEUnsafe().
                 return 0;
@@ -940,8 +961,7 @@ private:
                 // TODO: Share code with nextCEFromSpecialCE32().
                 return 0;
             case Collation::IMPLICIT_TAG:
-                int64_t ce = unassignedPrimaryFromCodePoint(c);
-                return (ce << 32) | Collation::COMMON_SEC_AND_TER_CE;  // TODO: Turn both lines together into a method.
+                return Collation::unassignedCEFromCodePoint(c);
             }
             if(!Collation::isSpecialCE32(ce32)) {
                 return Collation::ceFromCE32(ce32);
