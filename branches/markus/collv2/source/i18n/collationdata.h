@@ -24,7 +24,16 @@ U_NAMESPACE_BEGIN
 class U_I18N_API CollationData : public UMemory {
 public:
     uint32_t getCE32(UChar32 c) const {
+        // TODO: Make this virtual so that we can use utrie2_get32() in the CollationDataBuilder?
         return UTRIE2_GET32(trie, c);
+    }
+
+    /**
+     * Resolves the ce32 with a BUILDER_CONTEXT_TAG into another CE32.
+     */
+    virtual uint32_t getCE32FromBuilderContext(uint32_t ce32, UErrorCode &errorCode) {
+        if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+        return 0;
     }
 
     UBool isUnsafeBackward(UChar32 c) const {
@@ -59,6 +68,17 @@ private:
  * Supports characters with context prefixes and contraction suffixes.
  */
 class CollationDataBuilder : public CollationData {
+public:
+    virtual uint32_t getCE32FromBuilderContext(uint32_t ce32, UErrorCode &errorCode) {
+        // TODO:
+        // Build & cache runtime-format prefix/contraction data and return
+        // a normal PREFIX_TAG or CONTRACTION_TAG CE32.
+        // Then let normal runtime code handle it.
+        // This avoids having to prebuild all runtime structures all of the time,
+        // and avoids having to provide three versions (get/next/previous)
+        // with modified copies of the runtime matching code.
+        return 0;
+    }
 };
 
 // TODO: In CollationWeights allocator,

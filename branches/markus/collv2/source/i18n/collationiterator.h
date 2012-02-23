@@ -293,8 +293,8 @@ private:
             * Data bits point into a builder-specific data structure with non-final data.
             */
             case Collation::BUILDER_CONTEXT_TAG:
-                // TODO: Call virtual method.
-                return 0;
+                ce32 = getCE32FromBuilderContext(ce32, errorCode);
+                break;
             case Collation::DIGIT_TAG:
                 if(codan) {
                     // TODO
@@ -311,17 +311,21 @@ private:
                 ce32 = *d->getCE32s(ce32 & 0xfffff);
                 break;
             case Collation::HANGUL_TAG:
-                // TODO
+                // TODO: Learn details. Implement.
+                // TODO: If we need to switch to the decomposition,
+                // consider putting that logic into the FCDCollationIterator,
+                // with virtual methods called from here to switch into that.
+                // In that case, use the FCDCollationIterator when we normalize
+                // _or_ when Hangul/Jamo is tailored.
+                // Also in that case, we might want to suppress the FCD check if only Hangul/Jamo is needed.
+                //
+                // Possible alternative: A different subclass HangulCollationIterator
+                // that has-another CollationIterator and delegates back and forth.
+                //
+                // Keep the default code path simple.
                 return 0;
             case Collation::OFFSET_TAG:
-                UChar32 baseCp = (c & 0x1f0000) | (((UChar32)ce32 >> 4) & 0xffff);
-                int32_t increment = (ce32 & 0xf) + 1;
-                int32_t offset = c - baseCp;
-                ce32 = d->getCE32(trie, baseCp);
-                // ce32 must be a long-primary pppppp00.
-                U_ASSERT(!Collation::isSpecialCE32(ce32) && (ce32 & 0xff) == 0);
-                // TODO: Add offset*increment.
-                return (int64_t)ce32 << 32;
+                return getCEFromOffsetCE32(d, c, ce32);
             case Collation::IMPLICIT_TAG:
                 return Collation::unassignedCEFromCodePoint(c);
             }
@@ -329,6 +333,20 @@ private:
                 return Collation::ceFromCE32(ce32);
             }
         }
+    }
+
+    /**
+     * Compute a CE from c's ce32 which has the OFFSET_TAG.
+     */
+    static int64_t getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32) {
+        UChar32 baseCp = (c & 0x1f0000) | (((UChar32)ce32 >> 4) & 0xffff);
+        int32_t increment = (ce32 & 0xf) + 1;
+        int32_t offset = c - baseCp;
+        ce32 = d->getCE32(trie, baseCp);
+        // ce32 must be a long-primary pppppp00.
+        U_ASSERT(!Collation::isSpecialCE32(ce32) && (ce32 & 0xff) == 0);
+        // TODO: Add offset*increment.
+        return (int64_t)ce32 << 32;
     }
 
     uint32_t getCE32FromPrefix(const CollationData *d, uint32_t ce32,
@@ -934,11 +952,12 @@ private:
                 ce32 = getCE32FromPrefix(d, ce32, errorCode);
                 break;
             case Collation::CONTRACTION_TAG:
-                // TODO: Must not occur. Backward contractions are handled by previousCEUnsafe().
+                // Must not occur. Backward contractions are handled by previousCEUnsafe().
+                if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
                 return 0;
             case Collation::BUILDER_CONTEXT_TAG:
-                // TODO: Call virtual method.
-                return 0;
+                ce32 = getCE32FromBuilderContext(ce32, errorCode);
+                break;
             case Collation::DIGIT_TAG:
                 if(codan) {
                     // TODO
@@ -950,7 +969,7 @@ private:
                     break;
                 }
             case Collation::HIRAGANA_TAG:
-                // TODO: Do we need to handle hiragana going backward?
+                // TODO: Do we need to handle hiragana going backward? (I.e., do string search or the CollationElementIterator need it?)
                 // Fetch the normal CE32 and continue.
                 ce32 = *d->getCE32s(ce32 & 0xfffff);
                 break;
@@ -958,8 +977,7 @@ private:
                 // TODO
                 return 0;
             case Collation::OFFSET_TAG:
-                // TODO: Share code with nextCEFromSpecialCE32().
-                return 0;
+                return getCEFromOffsetCE32(d, c, ce32);
             case Collation::IMPLICIT_TAG:
                 return Collation::unassignedCEFromCodePoint(c);
             }
