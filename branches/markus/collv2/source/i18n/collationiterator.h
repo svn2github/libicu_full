@@ -34,6 +34,22 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
+    /**
+     * Flag bit: A subclass needs to perform the FCD check on the input text
+     * and deliver normalized text.
+     */
+    static const int8_t CHECK_FCD = 1;
+    /**
+     * Flag bit: A subclass needs to look for Hangul syllables and decompose them into Jamos.
+     */
+    static const int8_t DECOMP_HANGUL = 2;
+    /**
+     * Flag bit: COllate Digits As Numbers.
+     * Treat digit sequences as numbers with CE sequences in numeric order,
+     * rather than returning a normal CE for each digit.
+     */
+    static const int8_t CODAN = 4;
+
     CollationIterator(const Normalizer2Impl &nfc,
                       const CollationData *d,
                       const UChar *s, const UChar *lim)
@@ -41,11 +57,14 @@ public:
             // until they are set together with other state changes.
             : start(s), pos(s), limit(lim),
               nfcImpl(nfc),
+              flags(0),
               cesIndex(-1),  // unused while cesIndex<0 -- cesMaxIndex(0), ces(NULL),
               hiragana(0),
               data(d) {
         trie = data->getTrie();
     }
+
+    void setFlags(int8_t f) { flags = f; }
 
     /**
      * Returns the next collation element.
@@ -240,6 +259,8 @@ protected:
 
     const Normalizer2Impl &nfcImpl;
 
+    int8_t flags;
+
     // TODO: Do we need to support changing iteration direction? (ICU ticket #9104.)
     // If so, then nextCE() (rather, a "slow" version of it)
     // and previousCE() must count how many code points
@@ -296,7 +317,7 @@ private:
                 ce32 = getCE32FromBuilderContext(ce32, errorCode);
                 break;
             case Collation::DIGIT_TAG:
-                if(codan) {
+                if(flags & CODAN) {
                     // TODO
                     // int32_t digit=(int32_t)ce32&0xf;
                     return 0;
@@ -601,8 +622,6 @@ private:
 
     int8_t hiragana;
 
-    // TODO: Flag/getter/setter for CODAN.
-
     const CollationData *data;
 
     // 64-bit-CE buffer for forward and safe-backward iteration
@@ -624,7 +643,7 @@ public:
               rawStart(s), segmentStart(s), segmentLimit(s), rawLimit(lim),
               lengthBeforeLimit(0),
               smallSteps(TRUE),
-              buffer(nfc, fcd) {
+              buffer(nfc, normalized) {
         if(U_SUCCESS(errorCode)) {
             buffer.init(2, errorCode);
         }
@@ -646,11 +665,12 @@ protected:
         }
         if(limit != segmentLimit) {
             // The previous segment had to be normalized
-            // and was pointing into the fcd string.
+            // and was pointing into the normalized string.
             start = pos = limit = segmentLimit;
         }
         segmentStart = segmentLimit;
         const UChar *p = segmentLimit;
+        // TODO: Consider smaller/simpler code if DECOMP_HANGUL but not CHECK_FCD.
         uint8_t prevCC = 0;
         for(;;) {
             // So far, we have limit<=segmentLimit<=p,
@@ -659,15 +679,27 @@ protected:
             // Advance p by one code point, fetch its fcd16 value,
             // and continue the incremental FCD test.
             const UChar *q = p;
+            // TODO: It might be faster reading one UChar, testing for 0, handling shortcuts, handling surrogate pairs...
+            // rather than calling nextFCD16() and then reading previousChar?
             uint16_t fcd16 = nfcImpl.nextFCD16(p, rawLimit);
             if(fcd16 == 0) {
-                if(*(p - 1) == 0) {
-                    if(rawLimit == NULL) {
-                        // We hit the NUL terminator; remember its pointer.
-                        segmentLimit = rawLimit == --p;
-                        if(limit == rawLimit) { return U_SENTINEL; }
-                        limit = rawLimit;
-                        break;
+                UChar previousChar = *(p - 1);
+                if(previousChar < 0xac00) {
+                    if(previousChar == 0) {
+                        if(rawLimit == NULL) {
+                            // We hit the NUL terminator; remember its pointer.
+                            segmentLimit = rawLimit == --p;
+                            if(limit == rawLimit) { return U_SENTINEL; }
+                            limit = rawLimit;
+                            break;
+                        }
+                    } else if((flags & DECOMP_HANGUL) && previousChar <= 0xd7a3) {
+                        if(limit != segmentLimit) {
+                            // Deliver the non-Hangul text segment so far.
+                            limit = segmentLimit;
+                            break;
+                        }
+                        // TODO: Decompose into the normalized buffer, set start & limit, break.
                     }
                 } else if(p != rawLimit && U16_IS_TRAIL(*p)) {
                     // nextFCD16() probably just skipped a lead surrogate
@@ -676,7 +708,7 @@ protected:
                 }
                 segmentLimit = p;
                 prevCC = 0;
-            } else {
+            } else if(flags & CHECK_FCD) {  // TODO: This test is not necessary if we have separate code for only-Hangul.
                 uint8_t leadCC = (uint8_t)(fcd16 >> 8);
                 if(prevCC > leadCC && leadCC != 0) {
                     // Fails FCD test.
@@ -691,7 +723,7 @@ protected:
                     } while((fcd16 & 0xff) > 1 &&
                             p != rawLimit && (fcd16 = nfcImpl.nextFCD16(p, rawLimit)) > 0xff);
                     buffer.remove();
-                    nfcImpl.makeFCD(limit, segmentLimit, &buffer, errorCode);
+                    nfcImpl.decompose(limit, segmentLimit, &buffer, errorCode);
                     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
                     // Switch collation processing into the FCD buffer
                     // with the result of normalizing [limit, segmentLimit[.
@@ -742,11 +774,12 @@ protected:
         U_ASSERT(pos == start);
         if(start != segmentStart) {
             // The previous segment had to be normalized
-            // and was pointing into the fcd string.
+            // and was pointing into the normalized string.
             start = pos = limit = segmentStart;
         }
         segmentLimit = segmentStart;
         const UChar *p = segmentStart;
+        // TODO: Handle (flags & DECOMP_HANGUL).
         uint8_t nextCC = 0;
         for(;;) {
             // So far, we have p<=segmentStart<=start,
@@ -774,7 +807,7 @@ protected:
                     } while(fcd16 > 0xff &&
                             p != rawStart && ((fcd16 = nfcImpl.previousFCD16(rawStart, p)) & 0xff) > 1);
                     buffer.remove();
-                    nfcImpl.makeFCD(segmentStart, start, &buffer, errorCode);
+                    nfcImpl.decompose(segmentStart, start, &buffer, errorCode);
                     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
                     // Switch collation processing into the FCD buffer
                     // with the result of normalizing [segmentStart, start[.
@@ -838,7 +871,7 @@ private:
     // Either the current text segment already passes the FCD test
     // and segmentStart==start<=pos<=limit==segmentLimit,
     // or the current segment had to be normalized so that
-    // [segmentStart, segmentLimit[ turned into the fcd string,
+    // [segmentStart, segmentLimit[ turned into the normalized string,
     // corresponding to buffer.getStart()==start<=pos<=limit==buffer.getLimit().
     const UChar *rawStart;
     const UChar *segmentStart;
@@ -852,7 +885,7 @@ private:
     int32_t lengthBeforeLimit;
     // We make small steps for string comparisons and larger steps for sort key generation.
     UBool smallSteps;
-    UnicodeString fcd;
+    UnicodeString normalized;
     ReorderingBuffer buffer;
 };
 
@@ -959,7 +992,7 @@ private:
                 ce32 = getCE32FromBuilderContext(ce32, errorCode);
                 break;
             case Collation::DIGIT_TAG:
-                if(codan) {
+                if(flags & CODAN) {
                     // TODO
                     // int32_t digit=(int32_t)ce32&0xf;
                     return 0;
