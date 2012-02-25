@@ -16,6 +16,8 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "normalizer2impl.h"
+
 U_NAMESPACE_BEGIN
 
 /**
@@ -34,22 +36,6 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
-    /**
-     * Flag bit: A subclass needs to perform the FCD check on the input text
-     * and deliver normalized text.
-     */
-    static const int8_t CHECK_FCD = 1;
-    /**
-     * Flag bit: A subclass needs to look for Hangul syllables and decompose them into Jamos.
-     */
-    static const int8_t DECOMP_HANGUL = 2;
-    /**
-     * Flag bit: COllate Digits As Numbers.
-     * Treat digit sequences as numbers with CE sequences in numeric order,
-     * rather than returning a normal CE for each digit.
-     */
-    static const int8_t CODAN = 4;
-
     CollationIterator(const Normalizer2Impl &nfc,
                       const CollationData *d,
                       const UChar *s, const UChar *lim)
@@ -57,12 +43,11 @@ public:
             // until they are set together with other state changes.
             : start(s), pos(s), limit(lim),
               nfcImpl(nfc),
-              flags(0),
-              cesIndex(-1),  // unused while cesIndex<0 -- cesMaxIndex(0), ces(NULL),
+              flags(d->getFlags()),
+              trie(d->getTrie()),
+              cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
               hiragana(0),
-              data(d) {
-        trie = data->getTrie();
-    }
+              data(d) {}
 
     void setFlags(int8_t f) { flags = f; }
 
@@ -302,7 +287,7 @@ private:
                 break;
             case Collation::CONTRACTION_TAG:
                 ce32 = nextCE32FromContraction(d, c, ce32, errorCode);
-                if(ce32 != 1) {
+                if(ce32 != 0x100) {
                     // Normal result from contiguous contraction.
                     break;
                 } else {
@@ -317,7 +302,7 @@ private:
                 ce32 = getCE32FromBuilderContext(ce32, errorCode);
                 break;
             case Collation::DIGIT_TAG:
-                if(flags & CODAN) {
+                if(flags & Collation::CODAN) {
                     // TODO
                     // int32_t digit=(int32_t)ce32&0xf;
                     return 0;
@@ -332,19 +317,8 @@ private:
                 ce32 = *d->getCE32s(ce32 & 0xfffff);
                 break;
             case Collation::HANGUL_TAG:
-                // TODO: Learn details. Implement.
-                // TODO: If we need to switch to the decomposition,
-                // consider putting that logic into the FCDCollationIterator,
-                // with virtual methods called from here to switch into that.
-                // In that case, use the FCDCollationIterator when we normalize
-                // _or_ when Hangul/Jamo is tailored.
-                // Also in that case, we might want to suppress the FCD check if only Hangul/Jamo is needed.
-                //
-                // Possible alternative: A different subclass HangulCollationIterator
-                // that has-another CollationIterator and delegates back and forth.
-                //
-                // Keep the default code path simple.
-                return 0;
+                setHangulExpansion(ce32, errorCode);
+                return ces[0];
             case Collation::OFFSET_TAG:
                 return getCEFromOffsetCE32(d, c, ce32);
             case Collation::IMPLICIT_TAG:
@@ -546,31 +520,33 @@ private:
             // and then from the combining marks that we skipped before the match.
             int32_t cesLength = 0;
             c = originalCp;
-            int32_t i = 0;
-            for(;;) {
-                cesLength = appendCEsFromCE32NoContext(cesLength, d, c, ce32, errorCode);
-                if(i == skipLengthAtMatch) { break; }
+            cesLength = appendCEsFromCE32NoContext(cesLength, d, c, ce32, errorCode);
+            // Fetch CE32s for skipped combining marks from the normal data, with fallback,
+            // rather than from the CollationData where we found the contraction.
+            for(int32_t i = 0; i < skipLengthAtMatch; i += U16_LENGTH(c)) {
                 c = skipBuffer.char32At(i);
-                i += U16_LENGTH(c);
-                // Fetch CE32s for skipped combining marks from the normal data, with fallback,
-                // rather than from where we found the contraction.
-                ce32 = data->getCE32(c);
-                if(ce32 == Collation::MIN_SPECIAL_CE32) {
-                    d = data->getBase();
-                    ce32 = d->getCE32(c);
-                } else {
-                    d = data;
-                }
+                cesLength = appendCEsFromCpNoContext(cesLength, c, errorCode);
             }
             cesIndex = 1;  // Caller returns ces[0].
             cesMaxIndex = cesLength - 1;
-            ce32 = 1;  // Signal to nextCEFromSpecialCE32() that the result is in ces[].
+            ce32 = 0x100;  // Signal to nextCEFromSpecialCE32() that the result is in ces[].
         }
         backwardNumCodePoints(sinceMatch, errorCode);
         return ce32;
     }
 
-    // Only for discontiguous contractions.
+    int32_t appendCEsFromCpNoContext(int32_t cesLength, UChar32 c, UErrorCode &errorCode) {
+        const CollationData *d;
+        ce32 = data->getCE32(c);
+        if(ce32 == Collation::MIN_SPECIAL_CE32) {
+            d = data->getBase();
+            ce32 = d->getCE32(c);
+        } else {
+            d = data;
+        }
+        return appendCEsFromCE32NoContext(cesLength, d, c, ce32, errorCode);
+    }
+
     int32_t appendCEsFromCE32NoContext(int32_t cesLength,
                                        const CollationData *d, UChar32 c, uint32_t ce32,
                                        UErrorCode &errorCode) {
@@ -582,12 +558,36 @@ private:
         // most cases fall through to end which calls  return appendCE(...);
     }
 
-    // Only for discontiguous contractions.
     int32_t appendCE(int32_t cesLength, int64_t ce, UErrorCode &errorCode) {
         if(forwardCEs.ensureCapacity(cesLength, errorCode)) {
             forwardCEs[cesLength++] = ce;
         }
         return cesLength;
+    }
+
+    /**
+     * Sets 2 or more buffered CEs from a Hangul syllable,
+     * assuming that Jamos do not require contextual processing.
+     *
+     * TODO: If we need extra performace, we could restrict this fastpath to
+     * when each Jamo yields exactly 1 non-special CE32,
+     * and set exactly 2 or 3 CEs here without appendCEs..., cesLength, etc.
+     * (E.g., forbid expansions.)
+     *
+     * Sets cesMaxIndex as necessary.
+     * Sets cesIndex=1 assuming forward iteration;
+     * caller needs to set cesIndex=cesMaxIndex for backward iteration.
+     */
+    void setHangulExpansion(UChar32 c, UErrorCode &errorCode) {
+        UChar jamos[3];
+        int32_t length = Hangul::decompose(c, jamos);
+        int32_t cesLength = 0;
+        for(int32_t i = 0; i < length; ++i) {
+            cesLength = appendCEsFromCpNoContext(cesLength, jamos[i], errorCode);
+        }
+        cesMaxIndex = cesLength - 1;
+        ces = forwardCEs.getBuffer();
+        cesIndex = 1;
     }
 
     /**
@@ -693,7 +693,7 @@ protected:
                             limit = rawLimit;
                             break;
                         }
-                    } else if((flags & DECOMP_HANGUL) && previousChar <= 0xd7a3) {
+                    } else if((flags & Collation::DECOMP_HANGUL) && previousChar <= 0xd7a3) {
                         if(limit != segmentLimit) {
                             // Deliver the non-Hangul text segment so far.
                             limit = segmentLimit;
@@ -708,7 +708,7 @@ protected:
                 }
                 segmentLimit = p;
                 prevCC = 0;
-            } else if(flags & CHECK_FCD) {  // TODO: This test is not necessary if we have separate code for only-Hangul.
+            } else if(flags & Collation::CHECK_FCD) {  // TODO: This test is not necessary if we have separate code for only-Hangul.
                 uint8_t leadCC = (uint8_t)(fcd16 >> 8);
                 if(prevCC > leadCC && leadCC != 0) {
                     // Fails FCD test.
@@ -992,7 +992,7 @@ private:
                 ce32 = getCE32FromBuilderContext(ce32, errorCode);
                 break;
             case Collation::DIGIT_TAG:
-                if(flags & CODAN) {
+                if(flags & Collation::CODAN) {
                     // TODO
                     // int32_t digit=(int32_t)ce32&0xf;
                     return 0;
@@ -1007,8 +1007,9 @@ private:
                 ce32 = *d->getCE32s(ce32 & 0xfffff);
                 break;
             case Collation::HANGUL_TAG:
-                // TODO
-                return 0;
+                setHangulExpansion(ce32, errorCode);
+                cesIndex = cesMaxIndex;
+                return ces[cesMaxIndex];
             case Collation::OFFSET_TAG:
                 return getCEFromOffsetCE32(d, c, ce32);
             case Collation::IMPLICIT_TAG:

@@ -53,6 +53,13 @@ public:
 
     const CollationData *getBase() const { return base; }
 
+    /**
+     * Collation::DECOMP_HANGUL etc.
+     */
+    int8_t getFlags() const {
+        return 0;  // TODO
+    }
+
 protected:
     // Main lookup trie.
     const UTrie2 *trie;

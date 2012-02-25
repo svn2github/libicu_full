@@ -146,6 +146,22 @@ class U_I18N_API Collation {
         IMPLICIT_TAG = 15
     };
 
+    /**
+     * Flag bit: A subclass needs to perform the FCD check on the input text
+     * and deliver normalized text.
+     */
+    static const int8_t CHECK_FCD = 1;
+    /**
+     * Flag bit: A subclass needs to look for Hangul syllables and decompose them into Jamos.
+     */
+    static const int8_t DECOMP_HANGUL = 2;
+    /**
+     * Flag bit: COllate Digits As Numbers.
+     * Treat digit sequences as numbers with CE sequences in numeric order,
+     * rather than returning a normal CE for each digit.
+     */
+    static const int8_t CODAN = 4;
+
     static inline UBool isSpecialCE32(uint32_t ce32) {
         // Java: Emulate unsigned-int less-than comparison.
         // return (ce32^0x80000000)>=0x7f000000;
@@ -162,14 +178,15 @@ class U_I18N_API Collation {
         if(tertiary > 1) {
             // normal form ppppsstt -> pppp0000ss00tt00
             return ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (tertiary << 8);
-        } else if(tertiary==0) {
-            // long-primary form pppppp00 -> pppppp00050000500
-            return ((int64_t)ce32 << 32) | COMMON_SEC_AND_TER_CE;
-        } else /* tertiary == 1 */ {
-            // long-secondary form sssstt01 -> 00000000sssstt00
+        } else if(tertiary == 1) {
+            // long-primary form pppppp01 -> pppppp00050000500
+            return ((int64_t)(ce32 - 1) << 32) | COMMON_SEC_AND_TER_CE;
+        } else /* tertiary == 0 */ {
+            // long-secondary form sssstt00 -> 00000000sssstt00,
+            // including the tertiary-ignorable, all-zero CE
             // Java: Use a mask to work around sign extension.
-            // return (long)ce32&0xfffffffe;
-            return ce32 - 1;
+            // return (long)ce32&0xffffffff;
+            return ce32;
         }
     }
 
