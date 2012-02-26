@@ -54,6 +54,18 @@ public:
     const CollationData *getBase() const { return base; }
 
     /**
+     * Returns a simple array of 19+21+27 non-special CE32s, one per canonical Jamo L/V/T.
+     * For fast handling of HANGUL_TAG.
+     */
+    const uint32_t *getJamoCE32s() const {
+        // TODO
+        // Build & return a simple array of CE32s.
+        // Tailoring: Only necessary if Jamos are tailored.
+        // If any Jamos have special CE32s, then set DECOMP_HANGUL instead.
+        return NULL;
+    }
+
+    /**
      * Collation::DECOMP_HANGUL etc.
      */
     int8_t getFlags() const {

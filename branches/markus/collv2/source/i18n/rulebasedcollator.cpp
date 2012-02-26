@@ -15,6 +15,7 @@
 
 #include "unicode/coll.h"
 #include "unicode/ucol.h"
+#include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
 #include "collationiterator.h"
@@ -26,15 +27,15 @@ class STBuffer {
 public:
     STBuffer() : length(0) {}
 
-    void append(uint32_t st, UErrorCode &errorCode) {
-        if(length<buffer.getCapacity()) {
+    inline void append(uint32_t st, UErrorCode &errorCode) {
+        if(length < buffer.getCapacity()) {
             buffer[length++] = st;
         } else {
             doAppend(st, errorCode);
         }
     }
 
-    uint32_t operator[](ptrdiff_t i) const { return buffer[i]; }
+    inline uint32_t operator[](ptrdiff_t i) const { return buffer[i]; }
 
     int32_t length;
 

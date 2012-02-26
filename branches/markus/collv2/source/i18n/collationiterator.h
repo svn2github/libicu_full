@@ -16,9 +16,62 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "cmemory.h"
+#include "collation.h"
+#include "collationdata.h"
+#include "collationiterator.h"
 #include "normalizer2impl.h"
 
 U_NAMESPACE_BEGIN
+
+/**
+ * Buffer for CEs.
+ * Rather than its own position and length fields,
+ * we share the cesIndex and cesMaxIndex of the CollationIterator.
+ */
+class CEBuffer {
+public:
+    CEBuffer() {}
+
+    inline int32_t append(int32_t length, int64_t ce, UErrorCode &errorCode) {
+        if(length < buffer.getCapacity()) {
+            buffer[length++] = ce;
+            return length;
+        } else {
+            return doAppend(length, ce, errorCode);
+        }
+    }
+
+    inline int64_t &operator[](ptrdiff_t i) { return buffer[i]; }
+
+private:
+    CEBuffer(const CEBuffer &);
+    void operator=(const CEBuffer &);
+
+    void doAppend(int32_t length, int64_t ce, UErrorCode &errorCode);
+
+    MaybeStackArray<int64_t, 40> buffer;
+};
+
+int32_t
+CEBuffer::doAppend(int32_t length, int64_t ce, UErrorCode &errorCode) {
+    // length == buffer.getCapacity()
+    if(U_FAILURE(errorCode)) { return; }
+    int32_t capacity = buffer.getCapacity();
+    int32_t newCapacity;
+    if(capacity < 1000) {
+        newCapacity = 4 * capacity;
+    } else {
+        newCapacity = 2 * capacity;
+    }
+    int64_t *p = buffer.resize(newCapacity, length);
+    if(p == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+    } else {
+        p[length++] = ce;
+    }
+    return length;
+}
 
 /**
  * Collation element and character iterator.
@@ -555,37 +608,37 @@ private:
         // contraction/digit/Hiragana just get default CE32
         // U_INTERNAL_PROGRAM_ERROR for prefix
         // U_INTERNAL_PROGRAM_ERROR for contraction? (depends on whether we forbid contractions from lccc!=0)
-        // most cases fall through to end which calls  return appendCE(...);
-    }
-
-    int32_t appendCE(int32_t cesLength, int64_t ce, UErrorCode &errorCode) {
-        if(forwardCEs.ensureCapacity(cesLength, errorCode)) {
-            forwardCEs[cesLength++] = ce;
-        }
-        return cesLength;
+        // most cases fall through to end which calls  cesLength = forwardCEs.append(cesLength, ce, errorCode);
     }
 
     /**
-     * Sets 2 or more buffered CEs from a Hangul syllable,
-     * assuming that Jamos do not require contextual processing.
-     *
-     * TODO: If we need extra performace, we could restrict this fastpath to
-     * when each Jamo yields exactly 1 non-special CE32,
-     * and set exactly 2 or 3 CEs here without appendCEs..., cesLength, etc.
-     * (E.g., forbid expansions.)
+     * Sets 2 or 3 buffered CEs from a Hangul syllable,
+     * assuming that the constituent Jamos all have non-special CE32s.
+     * Otherwise DECOMP_HANGUL would have to be set.
      *
      * Sets cesMaxIndex as necessary.
      * Sets cesIndex=1 assuming forward iteration;
      * caller needs to set cesIndex=cesMaxIndex for backward iteration.
      */
     void setHangulExpansion(UChar32 c, UErrorCode &errorCode) {
-        UChar jamos[3];
-        int32_t length = Hangul::decompose(c, jamos);
-        int32_t cesLength = 0;
-        for(int32_t i = 0; i < length; ++i) {
-            cesLength = appendCEsFromCpNoContext(cesLength, jamos[i], errorCode);
+        const uint32_t *jamoCE32s = data->getJamoCE32s();
+        c -= Hangul::HANGUL_BASE;
+        UChar32 t = c % Hangul::JAMO_T_COUNT;
+        c /= Hangul::JAMO_T_COUNT;
+        if(t == 0) {
+            cesMaxIndex = 1;
+        } else {
+            // offset 39 = 19 + 21 - 1:
+            // 19 = JAMO_L_COUNT
+            // 21 = JAMO_T_COUNT
+            // -1 = omit t==0
+            forwardCEs[2] = Collation::ceFromCE32(jamoCE32s[39 + t]);
+            cesMaxIndex = 2;
         }
-        cesMaxIndex = cesLength - 1;
+        UChar32 v = c % Hangul::JAMO_V_COUNT;
+        c /= Hangul::JAMO_V_COUNT;
+        forwardCEs[0] = Collation::ceFromCE32(jamoCE32s[c]);
+        forwardCEs[1] = Collation::ceFromCE32(jamoCE32s[19 + v]);
         ces = forwardCEs.getBuffer();
         cesIndex = 1;
     }
@@ -626,7 +679,7 @@ private:
 
     // 64-bit-CE buffer for forward and safe-backward iteration
     // (computed expansions and CODAN CEs).
-    MaybeStackArray/*??*/ forwardCEs;
+    CEBuffer forwardCEs;
 };
 
 /**
@@ -670,7 +723,6 @@ protected:
         }
         segmentStart = segmentLimit;
         const UChar *p = segmentLimit;
-        // TODO: Consider smaller/simpler code if DECOMP_HANGUL but not CHECK_FCD.
         uint8_t prevCC = 0;
         for(;;) {
             // So far, we have limit<=segmentLimit<=p,
@@ -679,38 +731,60 @@ protected:
             // Advance p by one code point, fetch its fcd16 value,
             // and continue the incremental FCD test.
             const UChar *q = p;
-            // TODO: It might be faster reading one UChar, testing for 0, handling shortcuts, handling surrogate pairs...
-            // rather than calling nextFCD16() and then reading previousChar?
-            uint16_t fcd16 = nfcImpl.nextFCD16(p, rawLimit);
-            if(fcd16 == 0) {
-                UChar previousChar = *(p - 1);
-                if(previousChar < 0xac00) {
-                    if(previousChar == 0) {
-                        if(rawLimit == NULL) {
-                            // We hit the NUL terminator; remember its pointer.
-                            segmentLimit = rawLimit == --p;
-                            if(limit == rawLimit) { return U_SENTINEL; }
-                            limit = rawLimit;
-                            break;
-                        }
-                    } else if((flags & Collation::DECOMP_HANGUL) && previousChar <= 0xd7a3) {
-                        if(limit != segmentLimit) {
-                            // Deliver the non-Hangul text segment so far.
-                            limit = segmentLimit;
-                            break;
-                        }
-                        // TODO: Decompose into the normalized buffer, set start & limit, break.
+            UChar32 c = *p++;
+            if(c < 0x180) {
+                if(c == 0) {
+                    if(rawLimit == NULL) {
+                        // We hit the NUL terminator; remember its pointer.
+                        segmentLimit = rawLimit == q;
+                        if(limit == rawLimit) { return U_SENTINEL; }
+                        limit = rawLimit;
+                        break;
                     }
-                } else if(p != rawLimit && U16_IS_TRAIL(*p)) {
-                    // nextFCD16() probably just skipped a lead surrogate
-                    // rather than the whole code point.
-                    ++p;
+                    segmentLimit = p;
+                    prevCC = 0;
+                } else {
+                    prevCC = (uint8_t)nfcImpl.getFCD16FromBelow180(c);  // leadCC == 0
+                    if(prevCC <= 1) {
+                        segmentLimit = p;  // FCD boundary after the [q, p[ code point.
+                    } else {
+                        segmentLimit = q;  // FCD boundary before the [q, p[ code point.
+                    }
+                }
+            } else if(!nfcImpl.singleLeadMightHaveNonZeroFCD16(c)) {
+                if(c >= 0xac00) {
+                    if((flags & Collation::DECOMP_HANGUL) && c <= 0xd7a3) {
+                        if(limit != q) {
+                            // Deliver the non-Hangul text segment so far.
+                            // We know there is an FCD boundary before the Hangul syllable.
+                            limit = segmentLimit = q;
+                            break;
+                        }
+                        segmentLimit = p;
+                        // TODO: Create UBool ReorderingBuffer::setToDecomposedHangul(UChar32 c, UErrorCode &errorCode);
+                        buffer.remove();
+                        UChar jamos[3];
+                        int32_t length = Hangul::decompose(c, jamos);
+                        if(!buffer.appendZeroCC(jamos, jamos + length, errorCode)) { return U_SENTINEL; }
+                        start = buffer.getStart();
+                        limit = buffer.getLimit();
+                        break;
+                    } else if(U16_IS_LEAD(c) && p != rawLimit && U16_IS_TRAIL(*p)) {
+                        // c is the lead surrogate of an inert supplementary code point.
+                        ++p;
+                    }
                 }
                 segmentLimit = p;
                 prevCC = 0;
-            } else if(flags & Collation::CHECK_FCD) {  // TODO: This test is not necessary if we have separate code for only-Hangul.
+            } else if(flags & Collation::CHECK_FCD) {
+                UChar c2;
+                if(U16_IS_LEAD(c) && p != rawLimit && U16_IS_TRAIL(c2 = *p)) {
+                    c = U16_GET_SUPPLEMENTARY(c, c2);
+                    ++p;
+                }
+                uint16_t fcd16 = nfcImpl.getFCD16FromNormData(c);
                 uint8_t leadCC = (uint8_t)(fcd16 >> 8);
-                if(prevCC > leadCC && leadCC != 0) {
+                if(leadCC != 0 && prevCC > leadCC) {
                     // Fails FCD test.
                     if(limit != segmentLimit) {
                         // Deliver the already-FCD text segment so far.
@@ -779,7 +853,6 @@ protected:
         }
         segmentLimit = segmentStart;
         const UChar *p = segmentStart;
-        // TODO: Handle (flags & DECOMP_HANGUL).
         uint8_t nextCC = 0;
         for(;;) {
             // So far, we have p<=segmentStart<=start,
@@ -788,13 +861,52 @@ protected:
             // Go back with p by one code point, fetch its fcd16 value,
             // and continue the incremental FCD test.
             const UChar *q = p;
-            uint16_t fcd16 = nfcImpl.previousFCD16(rawStart, p);
+            UChar32 c = *--p;
+            uint16_t fcd16;
+            if(c < 0x180) {
+                fcd16 = nfcImpl.getFCD16FromBelow180(c);
+            } else if(c < 0xac00) {
+                if(!nfcImpl.singleLeadMightHaveNonZeroFCD16(c)) {
+                    fcd16 = 0;
+                } else {
+                    fcd16 = nfcImpl.getFCD16FromNormData(c);
+                }
+            } else {
+                if(c <= 0xd7a3) {
+                    if(flags & Collation::DECOMP_HANGUL) {
+                        if(start != q) {
+                            // Deliver the non-Hangul text segment so far.
+                            // We know there is an FCD boundary after the Hangul syllable.
+                            start = segmentStart = q;
+                            break;
+                        }
+                        segmentStart = p;
+                        // TODO: Create UBool ReorderingBuffer::setToDecomposedHangul(UChar32 c, UErrorCode &errorCode);
+                        buffer.remove();
+                        UChar jamos[3];
+                        int32_t length = Hangul::decompose(c, jamos);
+                        if(!buffer.appendZeroCC(jamos, jamos + length, errorCode)) { return U_SENTINEL; }
+                        start = buffer.getStart();
+                        limit = buffer.getLimit();
+                        break;
+                    } else {
+                        fcd16 = 0;
+                    }
+                } else {
+                    UChar c2;
+                    if(U16_IS_TRAIL(c) && p != rawStart && U16_IS_LEAD(c2 = *(p - 1))) {
+                        c = U16_GET_SUPPLEMENTARY(c2, c);
+                        --p;
+                    }
+                    fcd16 = nfcImpl.getFCD16FromNormData(c);
+                }
+            }
             if(fcd16 == 0) {
                 segmentStart = p;
                 nextCC = 0;
-            } else {
+            } else if(flags & Collation::CHECK_FCD) {
                 uint8_t trailCC = (uint8_t)fcd16;
-                if(trailCC > nextCC && nextCC != 0) {
+                if(nextCC != 0 && trailCC > nextCC) {
                     // Fails FCD test.
                     if(start != segmentStart) {
                         // Deliver the already-FCD text segment so far.
@@ -1052,18 +1164,18 @@ private:
         }
         // Ensure that we don't see CEs from a later-in-text expansion.
         cesIndex = -1;
-        backwardCEs.clear();
         // Go forward and collect the CEs.
+        int32_t cesLength = 0;
         int64_t ce;
-        while(ce = nextCE(errorCode) != Collation::NO_CE) {
-            backwardCEs.append(ce, errorCode);
+        while((ce = nextCE(errorCode)) != Collation::NO_CE) {
+            cesLength = backwardCEs.append(cesLength, ce, errorCode);
         }
         restoreLimit(savedLimit);
         backwardNumCodePoints(numBackward, errorCode);
         // Use the collected CEs and return the last one.
-        U_ASSERT(0 != backwardCEs.length());
+        U_ASSERT(0 != cesLength);
         ces = backwardCEs.getBuffer();
-        cesIndex = cesMaxIndex = backwardCEs.length() - 1;
+        cesIndex = cesMaxIndex = cesLength - 1;
         return ces[cesIndex];
         // TODO: Does this method deliver backward-iteration offsets tight enough
         // for string search? Is this equivalent to how v1 behaves?
@@ -1072,7 +1184,7 @@ private:
     CollationIterator &fwd;
 
     // 64-bit-CE buffer for unsafe-backward iteration.
-    MaybeStackArray/*??*/ backwardCEs;
+    CEBuffer backwardCEs;
 };
 
 U_NAMESPACE_END
