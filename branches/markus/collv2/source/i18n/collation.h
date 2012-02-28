@@ -54,10 +54,10 @@ class U_I18N_API Collation {
     /** Lower 32 bits of a CE with common secondary and tertiary weights. */
     static const uint32_t COMMON_SEC_AND_TER_CE = 0x05000500;
 
-    static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible
+    static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible(?)
 
-    static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // compressible
-    static const uint32_t MAX_PRIMARY = 0xfefe0000;  // U+FFFF
+    static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // compressible(?)
+    static const uint32_t MAX_PRIMARY = 0xfefe0000;  // U+FFFF -- TODO: could be 0xfeff0000 if TRAIL_WEIGHT_BYTE not compressible
 
     /** Primary lead byte for special tags, not used as a primary lead byte in resolved CEs. */
     static const uint8_t SPECIAL_BYTE = 0xff;
@@ -142,6 +142,10 @@ class U_I18N_API Collation {
         OFFSET_TAG = 14,
         /**
          * Implicit CE tag. Compute an unassigned-implicit CE.
+         * Also used for U+0000, for moving the NUL-termination handling
+         * from the regular fastpath into specials-handling code.
+         *
+         * The data bits are 0 for U+0000, otherwise 0xfffff (UNASSIGNED_CE32=0xffffffff).
          */
         IMPLICIT_TAG = 15
     };

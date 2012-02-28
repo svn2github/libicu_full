@@ -104,6 +104,10 @@ public:
 // try to treat secondary & tertiary weights as 3/4-byte weights with bytes 1 & 2 == 0.
 // Natural secondary limit of 0x10000.
 
+// TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
+
+// TODO: For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
+
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION

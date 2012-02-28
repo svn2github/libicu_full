@@ -124,11 +124,6 @@ public:
         uint32_t ce32;
         if(pos != limit) {
             UTRIE2_U16_NEXT32(trie, pos, limit, c, ce32);
-            if(c == 0 && limit == NULL) {
-                // Handle NUL-termination. (Not needed in Java.)
-                limit = --pos;
-                return Collation::NO_CE;
-            }
         } else {
             c = handleNextCodePoint(errorCode);
             if(c < 0) {
@@ -371,11 +366,25 @@ private:
                 break;
             case Collation::HANGUL_TAG:
                 setHangulExpansion(ce32, errorCode);
+                cesIndex = 1;
                 return ces[0];
             case Collation::OFFSET_TAG:
                 return getCEFromOffsetCE32(d, c, ce32);
             case Collation::IMPLICIT_TAG:
-                return Collation::unassignedCEFromCodePoint(c);
+                if((ce32 & 1) == 0) {
+                    U_ASSERT(c == 0);
+                    if(limit == NULL) {
+                        // Handle NUL-termination. (Not needed in Java.)
+                        limit = --pos;
+                        return Collation::NO_CE;
+                    } else {
+                        // Fetch the normal ce32 for U+0000 and continue.
+                        ce32 = *d->getCE32s(0);
+                        break;
+                    }
+                } else {
+                    return Collation::unassignedCEFromCodePoint(c);
+                }
             }
             if(!Collation::isSpecialCE32(ce32)) {
                 return Collation::ceFromCE32(ce32);
@@ -617,8 +626,9 @@ private:
      * Otherwise DECOMP_HANGUL would have to be set.
      *
      * Sets cesMaxIndex as necessary.
-     * Sets cesIndex=1 assuming forward iteration;
-     * caller needs to set cesIndex=cesMaxIndex for backward iteration.
+     * Does not set cesIndex;
+     * caller needs to set cesIndex=1 for forward iteration,
+     * or cesIndex=cesMaxIndex for backward iteration.
      */
     void setHangulExpansion(UChar32 c, UErrorCode &errorCode) {
         const uint32_t *jamoCE32s = data->getJamoCE32s();
@@ -640,7 +650,6 @@ private:
         forwardCEs[0] = Collation::ceFromCE32(jamoCE32s[c]);
         forwardCEs[1] = Collation::ceFromCE32(jamoCE32s[19 + v]);
         ces = forwardCEs.getBuffer();
-        cesIndex = 1;
     }
 
     /**
@@ -794,8 +803,7 @@ protected:
                     // Find the next FCD boundary and normalize.
                     do {
                         segmentLimit = p;
-                    } while((fcd16 & 0xff) > 1 &&
-                            p != rawLimit && (fcd16 = nfcImpl.nextFCD16(p, rawLimit)) > 0xff);
+                    } while(p != rawLimit && (fcd16 = nfcImpl.nextFCD16(p, rawLimit)) > 0xff);
                     buffer.remove();
                     nfcImpl.decompose(limit, segmentLimit, &buffer, errorCode);
                     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
@@ -913,11 +921,9 @@ protected:
                         start = segmentStart;
                         break;
                     }
-                    // Find the next FCD boundary and normalize.
-                    do {
-                        segmentStart = p;
-                    } while(fcd16 > 0xff &&
-                            p != rawStart && ((fcd16 = nfcImpl.previousFCD16(rawStart, p)) & 0xff) > 1);
+                    // Find the previous FCD boundary and normalize.
+                    while(p != rawStart && (fcd16 = nfcImpl.previousFCD16(rawStart, p)) > 0xff) {}
+                    segmentStart = p;
                     buffer.remove();
                     nfcImpl.decompose(segmentStart, start, &buffer, errorCode);
                     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
@@ -930,8 +936,6 @@ protected:
                 nextCC = (uint8_t)(fcd16 >> 8);
                 if(nextCC == 0) {
                     segmentStart = p;  // FCD boundary before the [p, q[ code point.
-                } else if(trailCC <= 1) {
-                    segmentStart = q;  // FCD boundary after the [p, q[ code point.
                 }
             }
             if(p == rawStart) {
@@ -1125,7 +1129,14 @@ private:
             case Collation::OFFSET_TAG:
                 return getCEFromOffsetCE32(d, c, ce32);
             case Collation::IMPLICIT_TAG:
-                return Collation::unassignedCEFromCodePoint(c);
+                if((ce32 & 1) == 0) {
+                    U_ASSERT(c == 0);
+                    // Fetch the normal ce32 for U+0000 and continue.
+                    ce32 = *d->getCE32s(0);
+                    break;
+                } else {
+                    return Collation::unassignedCEFromCodePoint(c);
+                }
             }
             if(!Collation::isSpecialCE32(ce32)) {
                 return Collation::ceFromCE32(ce32);
