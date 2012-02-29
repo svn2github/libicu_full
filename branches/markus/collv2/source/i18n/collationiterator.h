@@ -90,13 +90,13 @@ CEBuffer::doAppend(int32_t length, int64_t ce, UErrorCode &errorCode) {
 class U_I18N_API CollationIterator : public UObject {
 public:
     CollationIterator(const Normalizer2Impl &nfc,
-                      const CollationData *d,
+                      const CollationData *d, int8_t iterFlags,
                       const UChar *s, const UChar *lim)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
             : start(s), pos(s), limit(lim),
               nfcImpl(nfc),
-              flags(d->getFlags()),
+              flags(iterFlags),
               trie(d->getTrie()),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
               hiragana(0),
@@ -698,10 +698,10 @@ private:
 class U_I18N_API FCDCollationIterator : public CollationIterator {
 public:
     FCDCollationIterator(const Normalizer2Impl &nfc,
-                         const CollationData *data,
+                         const CollationData *data, int8_t iterFlags,
                          const UChar *s, const UChar *lim,
                          UErrorCode &errorCode)
-            : CollationIterator(nfc, data, s, s),
+            : CollationIterator(nfc, data, iterFlags, s, s),
               rawStart(s), segmentStart(s), segmentLimit(s), rawLimit(lim),
               lengthBeforeLimit(0),
               smallSteps(TRUE),
@@ -731,6 +731,10 @@ protected:
             start = pos = limit = segmentLimit;
         }
         segmentStart = segmentLimit;
+        if((flags & Collation::CHECK_FCD) == 0) {
+            U_ASSERT((flags & Collation::DECOMP_HANGUL) != 0);
+            return nextCodePointDecompHangul(errorCode);
+        }
         const UChar *p = segmentLimit;
         uint8_t prevCC = 0;
         for(;;) {
@@ -785,7 +789,7 @@ protected:
                 }
                 segmentLimit = p;
                 prevCC = 0;
-            } else if(flags & Collation::CHECK_FCD) {
+            } else {
                 UChar c2;
                 if(U16_IS_LEAD(c) && p != rawLimit && U16_IS_TRAIL(c2 = *p)) {
                     c = U16_GET_SUPPLEMENTARY(c, c2);
@@ -841,6 +845,10 @@ protected:
         }
         pos = start;
         // Return the next code point at pos != limit; no need to check for NUL-termination.
+        return simpleNext();
+    }
+
+    inline UChar32 simpleNext() {
         UChar32 c = *pos++;
         UChar trail;
         if(U16_IS_LEAD(c) && pos != limit && U16_IS_TRAIL(trail = *pos)) {
@@ -849,6 +857,64 @@ protected:
         } else {
             return c;
         }
+    }
+
+    UChar32 nextCodePointDecompHangul(UErrorCode &errorCode) {
+        // Only called from handleNextCodePoint() after checking for rawLimit etc.
+        const UChar *p = segmentLimit;
+        for(;;) {
+            // So far, we have limit==segmentLimit<=p,
+            // and [limit, p[ does not contain Hangul syllables.
+            // Advance p by one code point and check for a Hangul syllable.
+            UChar32 c = *p++;
+            if(c < 0xac00) {
+                if(c == 0 && rawLimit == NULL) {
+                    // We hit the NUL terminator; remember its pointer.
+                    segmentLimit = rawLimit == p - 1;
+                    if(limit == rawLimit) { return U_SENTINEL; }
+                    limit = rawLimit;
+                    break;
+                }
+            } else if(c <= 0xd7a3) {
+                if(limit != (p - 1)) {
+                    // Deliver the non-Hangul text segment so far.
+                    limit = segmentLimit = p - 1;
+                    break;
+                }
+                segmentLimit = p;
+                // TODO: Create UBool ReorderingBuffer::setToDecomposedHangul(UChar32 c, UErrorCode &errorCode);
+                buffer.remove();
+                UChar jamos[3];
+                int32_t length = Hangul::decompose(c, jamos);
+                if(!buffer.appendZeroCC(jamos, jamos + length, errorCode)) { return U_SENTINEL; }
+                start = buffer.getStart();
+                limit = buffer.getLimit();
+                break;
+            } else if(U16_IS_LEAD(c) && p != rawLimit && U16_IS_TRAIL(*p)) {
+                // c is the lead surrogate of a supplementary code point.
+                ++p;
+            }
+            if(p == rawLimit) {
+                limit = segmentLimit = p;
+                break;
+            }
+            if(smallSteps && (p - limit) >= 5) {
+                // Compromise: During string comparison, where differences are often
+                // found after a few characters, we do not want to read ahead too far.
+                // However, we do want to go forward several characters
+                // which will then be handled in the base class fastpath.
+                limit = segmentLimit = p;
+                break;
+            }
+        }
+        U_ASSERT(start < limit);
+        if(lengthBeforeLimit != 0) {
+            if(lengthBeforeLimit < (int32_t)(limit - start)) {
+                limit = start + lengthBeforeLimit;
+            }
+        }
+        pos = start;
+        // Return the next code point at pos != limit; no need to check for NUL-termination.
     }
 
     virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode) {
@@ -860,6 +926,10 @@ protected:
             start = pos = limit = segmentStart;
         }
         segmentLimit = segmentStart;
+        if((flags & Collation::CHECK_FCD) == 0) {
+            U_ASSERT((flags & Collation::DECOMP_HANGUL) != 0);
+            return previousCodePointDecompHangul(errorCode);
+        }
         const UChar *p = segmentStart;
         uint8_t nextCC = 0;
         for(;;) {
@@ -879,40 +949,38 @@ protected:
                 } else {
                     fcd16 = nfcImpl.getFCD16FromNormData(c);
                 }
-            } else {
-                if(c <= 0xd7a3) {
-                    if(flags & Collation::DECOMP_HANGUL) {
-                        if(start != q) {
-                            // Deliver the non-Hangul text segment so far.
-                            // We know there is an FCD boundary after the Hangul syllable.
-                            start = segmentStart = q;
-                            break;
-                        }
-                        segmentStart = p;
-                        // TODO: Create UBool ReorderingBuffer::setToDecomposedHangul(UChar32 c, UErrorCode &errorCode);
-                        buffer.remove();
-                        UChar jamos[3];
-                        int32_t length = Hangul::decompose(c, jamos);
-                        if(!buffer.appendZeroCC(jamos, jamos + length, errorCode)) { return U_SENTINEL; }
-                        start = buffer.getStart();
-                        limit = buffer.getLimit();
+            } else if(c <= 0xd7a3) {
+                if(flags & Collation::DECOMP_HANGUL) {
+                    if(start != q) {
+                        // Deliver the non-Hangul text segment so far.
+                        // We know there is an FCD boundary after the Hangul syllable.
+                        start = segmentStart = q;
                         break;
-                    } else {
-                        fcd16 = 0;
                     }
+                    segmentStart = p;
+                    // TODO: Create UBool ReorderingBuffer::setToDecomposedHangul(UChar32 c, UErrorCode &errorCode);
+                    buffer.remove();
+                    UChar jamos[3];
+                    int32_t length = Hangul::decompose(c, jamos);
+                    if(!buffer.appendZeroCC(jamos, jamos + length, errorCode)) { return U_SENTINEL; }
+                    start = buffer.getStart();
+                    limit = buffer.getLimit();
+                    break;
                 } else {
-                    UChar c2;
-                    if(U16_IS_TRAIL(c) && p != rawStart && U16_IS_LEAD(c2 = *(p - 1))) {
-                        c = U16_GET_SUPPLEMENTARY(c2, c);
-                        --p;
-                    }
-                    fcd16 = nfcImpl.getFCD16FromNormData(c);
+                    fcd16 = 0;
                 }
+            } else {
+                UChar c2;
+                if(U16_IS_TRAIL(c) && p != rawStart && U16_IS_LEAD(c2 = *(p - 1))) {
+                    c = U16_GET_SUPPLEMENTARY(c2, c);
+                    --p;
+                }
+                fcd16 = nfcImpl.getFCD16FromNormData(c);
             }
             if(fcd16 == 0) {
                 segmentStart = p;
                 nextCC = 0;
-            } else if(flags & Collation::CHECK_FCD) {
+            } else {
                 uint8_t trailCC = (uint8_t)fcd16;
                 if(nextCC != 0 && trailCC > nextCC) {
                     // Fails FCD test.
@@ -954,6 +1022,10 @@ protected:
         }
         pos = limit;
         // Return the previous code point before pos != start.
+        return simplePrevious();
+    }
+
+    inline UChar32 simplePrevious() {
         UChar32 c = *--pos;
         UChar lead;
         if(U16_IS_TRAIL(c) && pos != start && U16_IS_LEAD(lead = *(pos - 1))) {
@@ -962,6 +1034,55 @@ protected:
         } else {
             return c;
         }
+    }
+
+    UChar32 previousCodePointDecompHangul(UErrorCode &errorCode) {
+        // Only called from handleNextCodePoint() after checking for rawStart etc.
+        const UChar *p = segmentStart;
+        for(;;) {
+            // So far, we have p<=segmentStart==start,
+            // and [p, start[ does not contain Hangul syllables.
+            // Go back with p by one code point and check for a Hangul syllable.
+            UChar32 c = *--p;
+            if(c < 0xac00) {
+                // Nothing to be done.
+            } else if(c <= 0xd7a3) {
+                if(start != (p + 1)) {
+                    // Deliver the non-Hangul text segment so far.
+                    start = segmentStart = p + 1;
+                    break;
+                }
+                segmentStart = p;
+                // TODO: Create UBool ReorderingBuffer::setToDecomposedHangul(UChar32 c, UErrorCode &errorCode);
+                buffer.remove();
+                UChar jamos[3];
+                int32_t length = Hangul::decompose(c, jamos);
+                if(!buffer.appendZeroCC(jamos, jamos + length, errorCode)) { return U_SENTINEL; }
+                start = buffer.getStart();
+                limit = buffer.getLimit();
+                break;
+            } else {
+                if(U16_IS_TRAIL(c) && p != rawStart && U16_IS_LEAD(*(p - 1))) {
+                    --p;
+                }
+            }
+            if(p == rawStart) {
+                start = segmentStart = p;
+                break;
+            }
+            if((start - p) >= 8) {
+                // Go back several characters at a time, for the base class fastpath.
+                start = segmentStart = p;
+                break;
+            }
+        }
+        U_ASSERT(start < limit);
+        if(lengthBeforeLimit != 0) {
+            lengthBeforeLimit += (int32_t)(limit - start);
+        }
+        pos = limit;
+        // Return the previous code point before pos != start.
+        return simplePrevious();
     }
 
     virtual const UChar *saveLimitAndSetAfter(UChar32 c) {
