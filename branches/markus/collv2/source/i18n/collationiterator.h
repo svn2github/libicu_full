@@ -621,6 +621,104 @@ private:
     }
 
     /**
+     * Turns a string of digits (bytes 0..9)
+     * into a sequence of CEs that will sort in numeric order.
+     * CODAN = COllate Digits As Numbers.
+     *
+     * Sets ces and cesMaxIndex.
+     *
+     * The digits string must not be empty and must not have leading zeros.
+     */
+    void setCodanCEs(const char *digits, int32_t length, UErrorCode &errorCode) {
+        cesMaxIndex = 0;
+        if(U_FAILURE(errorCode)) {
+            forwardCEs[0] = 0;
+            return;
+        }
+        U_ASSERT(length > 0);
+        U_ASSERT(length == 1 || digits[0] != 0);
+        uint32_t zeroPrimary = data->getZeroPrimary();
+        if(length <= 5) {
+            // Very dense encoding for small numbers.
+            int32_t value = digits[0];
+            for(int32_t i = 1; i < length; ++i) {
+                value = value * 10 + digits[i];
+            }
+            if(value <= 31) {
+                // Two-byte primary for 0..31, good for days & months.
+                // TODO: Starting at 3 assumes that digits are not compressible.
+                uint32_t primary = zeroPrimary | ((3 + value) << 16);
+                forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
+                return;
+            }
+            value -= 32;
+            if(value < 40 * 253) {
+                // Three-byte primary for 32..10151, good for years.
+                // 10151 = 32+40*253-1
+                uint32_t primary = zeroPrimary |
+                    ((3 + 32 + value / 253) << 16) | ((3 + value % 253) << 8);
+                forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
+                return;
+            }
+        }
+        // value > 10151, length >= 5
+
+        // The second primary byte 75..255 indicates the number of digit pairs (3..183),
+        // then we generate primary bytes with those pairs.
+        // Omit trailing 00 pairs.
+        // Decrement the value for the last pair.
+        if(length > 2 * 183) {
+            // Overflow
+            uint32_t primary = zeroPrimary | 0xffff00;
+            forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
+            return;
+        }
+        // Set the exponent. 3 pairs->75, 4 pairs->76, ..., 183 pairs->255.
+        int32_t numPairs = (length + 1) / 2;
+        uint32_t primary = zeroPrimary | ((75 - 3 + numPairs) << 16);
+        // Find the length without trailing 00 pairs.
+        while(digits[length - 1] == 0 && digits[length - 2] == 0) {
+            length -= 2;
+        }
+        // Read the first pair.
+        uint32_t pair;
+        int32_t pos;
+        if(length & 1) {
+            // Only "half a pair" if we have an odd number of digits.
+            pair = digits[0];
+            pos = 1;
+        } else {
+            pair = digits[0] * 10 + digits[1];
+            pos = 2;
+        }
+        pair = 11 + 2 * pair;
+        // Add the pairs of digits between pos and length.
+        int32_t shift = 8;
+        int32_t cesLength = 0;
+        while(pos < length) {
+            if(shift == 0) {
+                // Every three pairs/bytes we need to store a 4-byte-primary CE
+                // and start with a new CE with the '0' primary lead byte.
+                primary |= pair;
+                cesLength = forwardCEs.append(cesLength,
+                    ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE, errorCode);
+                primary = zeroPrimary;
+                shift = 16;
+            } else {
+                primary |= pair << shift;
+                shift -= 8;
+            }
+            pair = 11 + 2 * (digits[pos] * 10 + digits[pos + 1]);
+            pos += 2;
+        }
+        primary |= (pair - 1) << shift;
+        cesLength = forwardCEs.append(cesLength,
+            ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE, errorCode);
+        ces = forwardCEs.getBuffer();
+        cesMaxIndex = cesLength;
+    }
+
+    /**
      * Sets 2 or 3 buffered CEs from a Hangul syllable,
      * assuming that the constituent Jamos all have non-special CE32s.
      * Otherwise DECOMP_HANGUL would have to be set.

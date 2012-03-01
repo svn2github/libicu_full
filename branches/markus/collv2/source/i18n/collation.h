@@ -54,10 +54,10 @@ class U_I18N_API Collation {
     /** Lower 32 bits of a CE with common secondary and tertiary weights. */
     static const uint32_t COMMON_SEC_AND_TER_CE = 0x05000500;
 
-    static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible(?)
+    static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible
 
-    static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // compressible(?)
-    static const uint32_t MAX_PRIMARY = 0xfefe0000;  // U+FFFF -- TODO: could be 0xfeff0000 if TRAIL_WEIGHT_BYTE not compressible
+    static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // not compressible
+    static const uint32_t MAX_PRIMARY = 0xfeff0000;  // U+FFFF
 
     /** Primary lead byte for special tags, not used as a primary lead byte in resolved CEs. */
     static const uint8_t SPECIAL_BYTE = 0xff;
@@ -125,13 +125,12 @@ class U_I18N_API Collation {
         /**
          * Hiragana character, except U+3099..309C inherit their Hiragana-ness
          * from the preceding character.
-         * TODO: Consider adding 3099..309C to the unsafe-backward set. (?)
+         * TODO: Consider adding 3099..309C to the unsafe-backward set. (Do we need Hiragana quaternaries in backward iteration?)
          * Bits 19..0: Index into uint32_t table for normal CE32.
          */
         HIRAGANA_TAG = 12,
         /**
-         * Tag for a Hangul syllable. TODO: or Jamo?
-         * TODO: data?
+         * Tag for a Hangul syllable.
          */
         HANGUL_TAG = 13,
         /**

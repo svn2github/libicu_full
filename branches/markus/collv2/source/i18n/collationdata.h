@@ -66,6 +66,13 @@ public:
     }
 
     /**
+     * Returns the single-byte primary weight (xx000000) for '0' (U+0030).
+     */
+    uint32_t getZeroPrimary() const {
+        // TODO
+    }
+
+    /**
      * Collation::DECOMP_HANGUL etc.
      */
     int8_t getFlags() const {
