@@ -419,17 +419,16 @@ private:
     }
 
     /**
-     * Compute a CE from c's ce32 which has the OFFSET_TAG.
+     * Computes a CE from c's ce32 which has the OFFSET_TAG.
      */
     static int64_t getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32) {
         UChar32 baseCp = (c & 0x1f0000) | (((UChar32)ce32 >> 4) & 0xffff);
-        int32_t increment = (ce32 & 0xf) + 1;
-        int32_t offset = c - baseCp;
+        int32_t offset = (c - baseCp) * ((ce32 & 0xf) + 1);  // delta * increment
         ce32 = d->getCE32(trie, baseCp);
-        // ce32 must be a long-primary pppppp00.
-        U_ASSERT(!Collation::isSpecialCE32(ce32) && (ce32 & 0xff) == 0);
-        // TODO: Add offset*increment.
-        return (int64_t)ce32 << 32;
+        // ce32 must be a long-primary pppppp01.
+        U_ASSERT(!Collation::isSpecialCE32(ce32) && (ce32 & 0xff) == 1);
+        --ce32;  // Turn the long-primary CE32 into a primary weight pppppp00.
+        return Collation::getCEFromThreeByteOffset(ce32, d->isCompressiblePrimary(ce32), offset);
     }
 
     uint32_t getCE32FromPrefix(const CollationData *d, uint32_t ce32,
@@ -1387,9 +1386,9 @@ private:
                     char *p = digits.data();
                     char *q = p + length - 1;
                     while(p < q) {
-                        char c = *p;
+                        char digit = *p;
                         *p++ = *q;
-                        *q-- = c;
+                        *q-- = digit;
                     }
                     setCodanCEs(digits.data(), length, errorCode);
                     cesIndex = cesMaxIndex;

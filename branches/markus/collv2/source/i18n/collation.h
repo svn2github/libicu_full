@@ -194,6 +194,33 @@ class U_I18N_API Collation {
     }
 
     /**
+     * Computes a CE from a 3-byte base primary and a code point offset.
+     * See OFFSET_TAG.
+     */
+    static int64_t getCEFromThreeByteOffset(uint32_t basePrimary, UBool isCompressible,
+                                            int32_t offset) {
+        // Extract the third byte, minus the minimum byte value,
+        // plus the offset, modulo the number of usable byte values, plus the minimum.
+        offset += ((int32_t)(basePrimary >> 8) & 0xff) - 3;
+        uint32_t primary = (uint32_t)((offset % 253) + 3) << 8;
+        offset /= 253;
+        // Same with the second byte,
+        // but reserve the PRIMARY_COMPRESSION_LOW_BYTE and high byte if necessary.
+        if(isCompressible) {
+            offset += ((int32_t)(basePrimary >> 16) & 0xff) - 4;
+            primary |= (uint32_t)((offset % 251) + 4) << 16;
+            offset /= 251;
+        } else {
+            offset += ((int32_t)(basePrimary >> 16) & 0xff) - 3;
+            primary |= (uint32_t)((offset % 253) + 3) << 16;
+            offset /= 253;
+        }
+        // First byte, assume no further overflow.
+        primary |= (basePrimary & 0xff000000) + (uint32_t)(offset << 24);
+        return ((int64_t)primary << 32) | COMMON_SEC_AND_TER_CE;
+    }
+
+    /**
      * Returns the unassigned-character implicit primary weight for any valid code point c.
      */
     static uint32_t unassignedPrimaryFromCodePoint(UChar32 c) {
@@ -213,12 +240,12 @@ class U_I18N_API Collation {
     // TODO: Set [first unassigned] to unassignedPrimaryFromCodePoint(-1).
     // TODO: Set [last unassigned] to unassignedPrimaryFromCodePoint(0x10ffff).
 
-    static int64_t unassignedCEFromCodePoint(UChar32 c) {
+    static inline int64_t unassignedCEFromCodePoint(UChar32 c) {
         int64_t ce = unassignedPrimaryFromCodePoint(c);
         return (ce << 32) | COMMON_SEC_AND_TER_CE;
     }
 
-    static uint32_t reorder(const uint8_t reorderTable[256], uint32_t primary) {
+    static inline uint32_t reorder(const uint8_t reorderTable[256], uint32_t primary) {
         return ((uint32_t)reorderTable[primary >> 24] << 24) | (primary & 0xffffff);
     }
 

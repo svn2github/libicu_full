@@ -72,6 +72,14 @@ public:
         // TODO
     }
 
+    UBool isCompressibleLeadByte(uint32_t b) const {
+        // TODO
+    }
+
+    inline UBool isCompressiblePrimary(uint32_t p) const {
+        return isCompressibleLeadByte(p >> 24);
+    }
+
     /**
      * Collation::DECOMP_HANGUL etc.
      */
