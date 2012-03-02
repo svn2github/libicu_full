@@ -351,9 +351,35 @@ private:
                 break;
             case Collation::DIGIT_TAG:
                 if(flags & Collation::CODAN) {
-                    // TODO
-                    // int32_t digit=(int32_t)ce32&0xf;
-                    return 0;
+                    // Collect digits, omit leading zeros.
+                    CharString digits;
+                    for(;;) {
+                        char digit = (char)(ce32 & 0xf);
+                        if(digit != 0 || !digits.isEmpty()) {
+                            digits.append(digit, errorCode);
+                        }
+                        c = nextCodePoint(errorCode);
+                        if(c < 0) { break; }
+                        ce32 = data->getCE32(c);
+                        if(ce32 == Collation::MIN_SPECIAL_CE32) {
+                            ce32 = data->getBase()->getCE32(c);
+                        }
+                        if(!Collation::isSpecialCE32(ce32) ||
+                            Collation::DIGIT_TAG != Collation::getSpecialCE32Tag(ce32)
+                        ) {
+                            backwardNumCodePoints(1, errorCode);
+                            break;
+                        }
+                    }
+                    int32_t length = digits.length();
+                    if(length == 0) {
+                        // A string of only "leading" zeros.
+                        // Just use the NUL terminator in the digits buffer.
+                        length = 1;
+                    }
+                    setCodanCEs(digits.data(), length, errorCode);
+                    cesIndex = (cesMaxIndex > 0) ? 1 : -1;
+                    return ces[0];
                 } else {
                     // Fetch the non-CODAN CE32 and continue.
                     ce32 = *d->getCE32s((ce32 >> 4) & 0xffff);
@@ -638,6 +664,7 @@ private:
         U_ASSERT(length > 0);
         U_ASSERT(length == 1 || digits[0] != 0);
         uint32_t zeroPrimary = data->getZeroPrimary();
+        // Note: We use primary byte values 3..255: digits are not compressible.
         if(length <= 5) {
             // Very dense encoding for small numbers.
             int32_t value = digits[0];
@@ -646,7 +673,6 @@ private:
             }
             if(value <= 31) {
                 // Two-byte primary for 0..31, good for days & months.
-                // TODO: Starting at 3 assumes that digits are not compressible.
                 uint32_t primary = zeroPrimary | ((3 + value) << 16);
                 forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
                 return;
@@ -1328,9 +1354,46 @@ private:
                 break;
             case Collation::DIGIT_TAG:
                 if(flags & Collation::CODAN) {
-                    // TODO
-                    // int32_t digit=(int32_t)ce32&0xf;
-                    return 0;
+                    // Collect digits, omit leading zeros.
+                    CharString digits;
+                    int32_t numLeadingZeros = 0;
+                    for(;;) {
+                        char digit = (char)(ce32 & 0xf);
+                        if(digit == 0) {
+                            ++numLeadingZeros;
+                        } else {
+                            numLeadingZeros = 0;
+                        }
+                        digits.append(digit, errorCode);
+                        c = previousCodePoint(errorCode);
+                        if(c < 0) { break; }
+                        ce32 = data->getCE32(c);
+                        if(ce32 == Collation::MIN_SPECIAL_CE32) {
+                            ce32 = data->getBase()->getCE32(c);
+                        }
+                        if(!Collation::isSpecialCE32(ce32) ||
+                            Collation::DIGIT_TAG != Collation::getSpecialCE32Tag(ce32)
+                        ) {
+                            forwardNumCodePoints(1, errorCode);
+                            break;
+                        }
+                    }
+                    int32_t length = digits.length() - numLeadingZeros;
+                    if(length == 0) {
+                        // A string of only "leading" zeros.
+                        length = 1;
+                    }
+                    // Reverse the digit string.
+                    char *p = digits.data();
+                    char *q = p + length - 1;
+                    while(p < q) {
+                        char c = *p;
+                        *p++ = *q;
+                        *q-- = c;
+                    }
+                    setCodanCEs(digits.data(), length, errorCode);
+                    cesIndex = cesMaxIndex;
+                    return ces[cesMaxIndex];
                 } else {
                     // Fetch the non-CODAN CE32 and continue.
                     ce32 = *d->getCE32s((ce32 >> 4) & 0xffff);

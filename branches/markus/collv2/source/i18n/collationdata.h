@@ -115,6 +115,12 @@ public:
 
 // TODO: For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
 
+// TODO: Not compressible:
+// - digits
+// - Latin
+// - Hani
+// - trail weights
+
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION
