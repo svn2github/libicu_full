@@ -311,7 +311,6 @@ private:
     int64_t nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                   UErrorCode &errorCode) const {
         for(;;) {  // Loop while ce32 is special.
-            // TODO: Share code with previousCEFromSpecialCE32().
             int32_t tag = Collation::getSpecialCE32Tag(ce32);
             if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
                 U_ASSERT(ce32 != MIN_SPECIAL_CE32);
@@ -605,9 +604,7 @@ private:
             // We did get a match after skipping one or more combining marks.
             // Append CEs from the contraction ce32
             // and then from the combining marks that we skipped before the match.
-            int32_t cesLength = 0;
-            c = originalCp;
-            cesLength = appendCEsFromCE32NoContext(cesLength, d, c, ce32, errorCode);
+            int32_t cesLength = appendCEsFromCE32NoContext(0, d, originalCp, ce32, errorCode);
             // Fetch CE32s for skipped combining marks from the normal data, with fallback,
             // rather than from the CollationData where we found the contraction.
             for(int32_t i = 0; i < skipLengthAtMatch; i += U16_LENGTH(c)) {
@@ -622,6 +619,9 @@ private:
         return ce32;
     }
 
+    /**
+     * Appends CEs for a combining mark that was skipped in discontiguous contraction.
+     */
     int32_t appendCEsFromCpNoContext(int32_t cesLength, UChar32 c, UErrorCode &errorCode) {
         const CollationData *d;
         ce32 = data->getCE32(c);
@@ -634,15 +634,59 @@ private:
         return appendCEsFromCE32NoContext(cesLength, d, c, ce32, errorCode);
     }
 
+    /**
+     * Appends CEs for a contraction result CE32,
+     * or for the CE32 of a combining mark that was skipped in discontiguous contraction.
+     */
     int32_t appendCEsFromCE32NoContext(int32_t cesLength,
                                        const CollationData *d, UChar32 c, uint32_t ce32,
                                        UErrorCode &errorCode) {
-        // TODO: copy much of nextCEFromSpecialCE32()
-        // handle non-special CE32 first
-        // contraction/digit/Hiragana just get default CE32
-        // U_INTERNAL_PROGRAM_ERROR for prefix
-        // U_INTERNAL_PROGRAM_ERROR for contraction? (depends on whether we forbid contractions from lccc!=0)
-        // most cases fall through to end which calls  cesLength = forwardCEs.append(cesLength, ce, errorCode);
+        int64_t ce;
+        if(!Collation::isSpecialCE32(ce32)) {
+            ce = Collation::ceFromCE32(ce32);
+        } else {
+            int32_t tag = Collation::getSpecialCE32Tag(ce32);
+            if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
+                U_ASSERT(ce32 != MIN_SPECIAL_CE32);
+                cesLength = forwardCEs.append(cesLength,
+                    ((int64_t)(ce32 & 0xff0000) << 40) | COMMON_SECONDARY_CE | (ce32 & 0xff00), errorCode);
+                ce = ((ce32 & 0xff) << 24) | COMMON_TERTIARY_CE;
+            } else switch(tag) {
+            case Collation::EXPANSION32_TAG: {
+                const uint32_t *ce32s = d->getCE32s((int32_t)(ce32 >> 4) & 0xffff);
+                int32_t max = (int32_t)ce32 & 0xf;
+                for(int32_t i = 0; i <= max; ++i) {
+                    cesLength = forwardCEs.append(cesLength, ceFromCE32(ce32s[i]), errorCode);
+                }
+                return cesLength;
+            }
+            case Collation::EXPANSION_TAG: {
+                const int64_t *expCEs = d->getCEs((int32_t)(ce32 >> 4) & 0xffff);
+                int32_t max = (int32_t)ce32 & 0xf;
+                for(int32_t i = 0; i <= max; ++i) {
+                    cesLength = forwardCEs.append(cesLength, expCEs[i], errorCode);
+                }
+                return cesLength;
+            }
+            case Collation::PREFIX_TAG:
+            case Collation::CONTRACTION_TAG:
+            case Collation::BUILDER_CONTEXT_TAG:
+            case Collation::DIGIT_TAG:
+            case Collation::HIRAGANA_TAG:
+            case Collation::HANGUL_TAG:
+                if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+                ce = 0;
+                break;
+            case Collation::OFFSET_TAG:
+                ce = getCEFromOffsetCE32(d, c, ce32);
+                break;
+            case Collation::IMPLICIT_TAG:
+                U_ASSERT((ce32 & 1) != 0);
+                ce = Collation::unassignedCEFromCodePoint(c);
+                break;
+            }
+        }
+        return forwardCEs.append(cesLength, ce, errorCode);
     }
 
     /**
