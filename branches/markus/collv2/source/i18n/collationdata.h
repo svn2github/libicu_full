@@ -16,7 +16,12 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "collation.h"
+#include "utrie2.h"
+
 U_NAMESPACE_BEGIN
+
+class CollationIterator;
 
 /**
  * Data container with access functions which walk the data structures.
@@ -31,7 +36,8 @@ public:
     /**
      * Resolves the ce32 with a BUILDER_CONTEXT_TAG into another CE32.
      */
-    virtual uint32_t getCE32FromBuilderContext(uint32_t ce32, UErrorCode &errorCode) {
+    virtual uint32_t getCE32FromBuilderContext(CollationIterator &iter, uint32_t ce32,
+                                               UErrorCode &errorCode) const {
         if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
         return 0;
     }
@@ -40,9 +46,24 @@ public:
         if(U_IS_TRAIL(c)) {
             return TRUE;
         }
-        return FALSE;  // TODO
+        return TRUE;  // TODO
         // TODO: Are all cc!=0 marked as unsafe for prevCE() (because of discontiguous contractions)?
         // TODO: Use a frozen UnicodeSet rather than an imprecise bit set, at least initially.
+    }
+
+    const int64_t *getCEs(int32_t index) const {
+        return NULL;  // TODO
+    }
+
+    const uint32_t *getCE32s(int32_t index) const {
+        return NULL;  // TODO
+    }
+
+    /**
+     * Returns a pointer to prefix or contraction-suffix matching data.
+     */
+    const uint16_t *getContext(int32_t index) const {
+        return NULL;  // TODO
     }
 
     /**
@@ -69,11 +90,11 @@ public:
      * Returns the single-byte primary weight (xx000000) for '0' (U+0030).
      */
     uint32_t getZeroPrimary() const {
-        // TODO
+        return 0x12000000;  // TODO
     }
 
     UBool isCompressibleLeadByte(uint32_t b) const {
-        // TODO
+        return FALSE;  // TODO
     }
 
     inline UBool isCompressiblePrimary(uint32_t p) const {

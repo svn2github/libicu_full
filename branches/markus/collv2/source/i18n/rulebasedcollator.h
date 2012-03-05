@@ -31,14 +31,24 @@ class CollationIterator;
 class U_I18N_API RuleBasedCollator : public Collator {
 public:
 private:
-    EComparisonResult compareUpToTertiary(CollationIterator &left, CollationIterator &right,
-                                          UErrorCode &errorCode);
+    UCollationResult compareUpToTertiary(CollationIterator &left, CollationIterator &right,
+                                         UErrorCode &errorCode);
 
-    EComparisonResult comparePrimaryAndCase(CollationIterator &left, CollationIterator &right,
-                                            UErrorCode &errorCode);
+    UCollationResult comparePrimaryAndCase(CollationIterator &left, CollationIterator &right,
+                                           UErrorCode &errorCode);
 
-    EComparisonResult compareQuaternary(CollationIterator &left, CollationIterator &right,
-                                        UErrorCode &errorCode);
+    UCollationResult compareQuaternary(CollationIterator &left, CollationIterator &right,
+                                       UErrorCode &errorCode);
+
+    // TODO
+    UColAttributeValue strength;
+    UColAttributeValue caseLevel;
+    UBool isFrenchSec;
+    UBool withHiraganaQuaternary;
+    uint32_t variableTop;
+    uint32_t caseSwitch;
+    uint32_t tertiaryMask;
+    uint8_t *reorderTable;
 };
 
 U_NAMESPACE_END

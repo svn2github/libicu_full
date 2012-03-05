@@ -19,6 +19,7 @@
 #include "collation.h"
 #include "collationdata.h"
 #include "collationiterator.h"
+#include "rulebasedcollator.h"
 
 U_NAMESPACE_BEGIN
 
@@ -67,10 +68,10 @@ STBuffer::doAppend(uint32_t st, UErrorCode &errorCode) {
     p[length++] = st;
 }
 
-EComparisonResult
+UCollationResult
 RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterator &right,
                                        UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return EQUAL; }
+    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
     // Buffers for secondary & tertiary weights.
     STBuffer leftSTBuffer;
@@ -78,7 +79,7 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
 
     // Fetch CEs, compare primaries, store secondary & tertiary weights.
     U_ALIGN_CODE(16);
-    do {
+    for(;;) {
         // We fetch CEs until we get a non-ignorable, non-variable primary or reach the end.
         uint32_t leftPrimary;
         do {
@@ -117,17 +118,18 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
                 leftPrimary = Collation::reorder(reorderTable, leftPrimary);
                 rightPrimary = Collation::reorder(reorderTable, rightPrimary);
             }
-            return (leftPrimary < rightPrimary) ?  LESS: GREATER;
+            return (leftPrimary < rightPrimary) ? UCOL_LESS : UCOL_GREATER;
         }
-    } while(leftPrimary != Collation::NO_CE_WEIGHT);
-    if(strength == UCOL_PRIMARY || U_FAILURE(errorCode)) { return EQUAL; }
+        if(leftPrimary == Collation::NO_CE_WEIGHT) { break; }
+    }
+    if(strength == UCOL_PRIMARY || U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
     // Compare the buffered secondary & tertiary weights.
 
     if(!isFrenchSec) {
         int32_t leftSTIndex = 0;
         int32_t rightSTIndex = 0;
-        do {
+        for(;;) {
             uint32_t leftSecondary;
             do {
                 leftSecondary = leftSTBuffer[leftSTIndex++] >> 16;
@@ -139,15 +141,16 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
             } while(rightSecondary == 0);
 
             if(leftSecondary != rightSecondary) {
-                return (leftSecondary < rightSecondary) ?  LESS : GREATER;
+                return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
             }
-        } while(leftSecondary != Collation::NO_CE_WEIGHT);
+            if(leftSecondary == Collation::NO_CE_WEIGHT) { break; }
+        }
     } else {
         // French secondary level compares backwards.
         // Ignore the last item, the NO_CE terminator.
         int32_t leftSTIndex = leftSTBuffer.length - 1;
         int32_t rightSTIndex = rightSTBuffer.length - 1;
-        do {
+        for(;;) {
             uint32_t leftSecondary = 0;
             while(leftSecondary == 0 && leftSTIndex > 0) {
                 leftSecondary = leftSTBuffer[--leftSTIndex] >> 16;
@@ -159,9 +162,10 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
             }
 
             if(leftSecondary != rightSecondary) {
-                return (leftSecondary < rightSecondary) ?  LESS : GREATER;
+                return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
             }
-        } while(leftSecondary != 0);
+            if(leftSecondary == 0) { break; }
+        }
     }
 
     if(caseLevel == UCOL_ON) {
@@ -170,7 +174,7 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
         for(;;) {
             uint32_t leftTertiary;
             do {
-                uint32_t leftTertiary = leftSTBuffer[leftSTIndex++] & 0xffff;
+                leftTertiary = leftSTBuffer[leftSTIndex++] & 0xffff;
             } while((leftTertiary & 0x3fff) == 0);
             // TODO: Should we construct CEs such that case bits are set only if
             // the CE is not tertiary-ignorable?
@@ -181,52 +185,53 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
 
             uint32_t rightTertiary;
             do {
-                uint32_t rightTertiary = rightSTBuffer[rightSTIndex++] & 0xffff;
+                rightTertiary = rightSTBuffer[rightSTIndex++] & 0xffff;
             } while((rightTertiary & 0x3fff) == 0);
 
             uint32_t leftCase = (leftTertiary ^ caseSwitch) & 0xc000;
             uint32_t rightCase = (rightTertiary ^ caseSwitch) & 0xc000;
             if(leftCase != rightCase) {
-                return (leftCase < rightCase) ?  LESS : GREATER;
+                return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
             }
 
             if(leftTertiary == Collation::NO_CE_WEIGHT) {
                 if(rightTertiary == Collation::NO_CE_WEIGHT) { break; }
-                return LESS;
+                return UCOL_LESS;
             } else if(rightTertiary == Collation::NO_CE_WEIGHT) {
-                return GREATER;
+                return UCOL_GREATER;
             }
         }
     }
     // TODO: Bug in old ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status):
     // In case level comparison, it compares equal when reaching the end of either input
     // even when one is shorter than the other.
-    if(strength == UCOL_SECONDARY) { return EQUAL; }
+    if(strength == UCOL_SECONDARY) { return UCOL_EQUAL; }
 
     int32_t leftSTIndex = 0;
     int32_t rightSTIndex = 0;
-    do {
+    for(;;) {
         uint32_t leftTertiary;
         do {
-            uint32_t leftTertiary = leftSTBuffer[leftSTIndex++] & tertiaryMask;
+            leftTertiary = leftSTBuffer[leftSTIndex++] & tertiaryMask;
         } while((leftTertiary & 0x3fff) == 0);
 
         uint32_t rightTertiary;
         do {
-            uint32_t rightTertiary = rightSTBuffer[rightSTIndex++] & tertiaryMask;
+            rightTertiary = rightSTBuffer[rightSTIndex++] & tertiaryMask;
         } while((rightTertiary & 0x3fff) == 0);
 
         uint32_t leftT = leftTertiary ^ caseSwitch;
         uint32_t rightT = rightTertiary ^ caseSwitch;
         if(leftT != rightT) {
-            return (leftT < rightT) ?  LESS : GREATER;
+            return (leftT < rightT) ? UCOL_LESS : UCOL_GREATER;
         }
-    } while(leftTertiary != Collation::NO_CE_WEIGHT);
+        if(leftTertiary == Collation::NO_CE_WEIGHT) { break; }
+    }
 
-    return EQUAL;
+    return UCOL_EQUAL;
 }
 
-EComparisonResult
+UCollationResult
 RuleBasedCollator::comparePrimaryAndCase(CollationIterator &left, CollationIterator &right,
                                          UErrorCode &errorCode) {
     // TODO: Why?? <quote from v1 implementation>
@@ -237,12 +242,15 @@ RuleBasedCollator::comparePrimaryAndCase(CollationIterator &left, CollationItera
     // We do consider secondary weights for primary ignorables,
     // and case bits for primary and secondary ignorables when strength>PRIMARY,
     // why not case bits for primary ignorables when strengh==PRIMARY?
+    return UCOL_EQUAL;
 }
 
 class QuaternaryIterator {
 public:
     QuaternaryIterator() : shifted(FALSE), hiragana(0) {}
-    uint32_t next(UErrorCode &errorCode);
+    uint32_t next(CollationIterator &source,
+                  uint32_t variableTop, UBool withHiraganaQuaternary,
+                  UErrorCode &errorCode);
 private:
     UBool shifted;
     int8_t hiragana;
@@ -281,15 +289,15 @@ QuaternaryIterator::next(CollationIterator &source,
     }
 }
 
-EComparisonResult
+UCollationResult
 RuleBasedCollator::compareQuaternary(CollationIterator &left, CollationIterator &right,
                                      UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return EQUAL; }
+    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
     QuaternaryIterator leftQI;
     QuaternaryIterator rightQI;
 
-    do {
+    for(;;) {
         uint32_t leftQuaternary = leftQI.next(left, variableTop, withHiraganaQuaternary, errorCode);
         uint32_t rightQuaternary = rightQI.next(right, variableTop, withHiraganaQuaternary, errorCode);
 
@@ -300,10 +308,11 @@ RuleBasedCollator::compareQuaternary(CollationIterator &left, CollationIterator 
                 leftQuaternary = Collation::reorder(reorderTable, leftQuaternary);
                 rightQuaternary = Collation::reorder(reorderTable, rightQuaternary);
             }
-            return (leftQuaternary < rightQuaternary) ?  LESS: GREATER;
+            return (leftQuaternary < rightQuaternary) ? UCOL_LESS : UCOL_GREATER;
         }
-    } while(leftQuaternary != Collation::NO_CE_WEIGHT);
-    return EQUAL;
+        if(leftQuaternary == Collation::NO_CE_WEIGHT) { break; }
+    }
+    return UCOL_EQUAL;
 }
 
 // TODO: The quaternary sort key level needs at least
