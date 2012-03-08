@@ -157,7 +157,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
         case Collation::BUILDER_CONTEXT_TAG:
             // Used only in the collation data builder.
             // Data bits point into a builder-specific data structure with non-final data.
-            ce32 = d->getCE32FromBuilderContext(*this, ce32, errorCode);
+            ce32 = d->nextCE32FromBuilderContext(*this, ce32, errorCode);
             break;
         case Collation::DIGIT_TAG:
             if(flags & Collation::CODAN) {
@@ -348,7 +348,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
     // S2.1.3 If there is a match, replace S by S + C, and remove C.
 
     // First: Is a discontiguous contraction even possible?
-    uint16_t fcd16 = nfcImpl.getFCD16(c);
+    uint16_t fcd16 = d->getFCD16(c);
     UChar32 nextCp;
     if(fcd16 <= 0xff || (nextCp = nextCodePoint(errorCode)) < 0) {
         // The non-matching c is a starter (which blocks all further non-starters),
@@ -359,7 +359,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
     ++lookAhead;
     ++sinceMatch;
     uint8_t prevCC = (uint8_t)fcd16;
-    fcd16 = nfcImpl.getFCD16(nextCp);
+    fcd16 = d->getFCD16(nextCp);
     if(prevCC >= (fcd16 >> 8)) {
         // The next code point after c is a starter (S2.1.1 "process each non-starter"),
         // or blocked by c (S2.1.2).
@@ -405,7 +405,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
         }
         if((c = nextCodePoint(errorCode)) < 0) { break; }
         ++sinceMatch;
-        fcd16 = nfcImpl.getFCD16(c);
+        fcd16 = d->getFCD16(c);
         if(prevCC >= (fcd16 >> 8)) {
             // The next code point after c is a starter (S2.1.1 "process each non-starter"),
             // or blocked by c (S2.1.2).
@@ -590,7 +590,7 @@ CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &e
 
 void
 CollationIterator::setHangulExpansion(UChar32 c) {
-    const uint32_t *jamoCE32s = data->getJamoCE32s();
+    const int64_t *jamoCEs = data->getJamoCEs();
     c -= Hangul::HANGUL_BASE;
     UChar32 t = c % Hangul::JAMO_T_COUNT;
     c /= Hangul::JAMO_T_COUNT;
@@ -601,13 +601,13 @@ CollationIterator::setHangulExpansion(UChar32 c) {
         // 19 = JAMO_L_COUNT
         // 21 = JAMO_T_COUNT
         // -1 = omit t==0
-        forwardCEs[2] = Collation::ceFromCE32(jamoCE32s[39 + t]);
+        forwardCEs[2] = jamoCEs[39 + t];
         cesMaxIndex = 2;
     }
     UChar32 v = c % Hangul::JAMO_V_COUNT;
     c /= Hangul::JAMO_V_COUNT;
-    forwardCEs[0] = Collation::ceFromCE32(jamoCE32s[c]);
-    forwardCEs[1] = Collation::ceFromCE32(jamoCE32s[19 + v]);
+    forwardCEs[0] = jamoCEs[c];
+    forwardCEs[1] = jamoCEs[19 + v];
     ces = forwardCEs.getBuffer();
 }
 
@@ -631,15 +631,15 @@ CollationIterator::setCE32s(const CollationData *d, int32_t expIndex, int32_t ma
 }
 
 FCDCollationIterator::FCDCollationIterator(
-        const Normalizer2Impl &nfc,
         const CollationData *data, int8_t iterFlags,
         const UChar *s, const UChar *lim,
         UErrorCode &errorCode)
-        : CollationIterator(nfc, data, iterFlags, s, s),
+        : CollationIterator(data, iterFlags, s, s),
           rawStart(s), segmentStart(s), segmentLimit(s), rawLimit(lim),
           lengthBeforeLimit(0),
           smallSteps(TRUE),
-          buffer(nfc, normalized) {
+          nfcImpl(data->getNFCImpl()),
+          buffer(nfcImpl, normalized) {
     if(U_SUCCESS(errorCode)) {
         buffer.init(2, errorCode);
     }

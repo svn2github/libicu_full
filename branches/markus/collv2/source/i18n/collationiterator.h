@@ -70,13 +70,11 @@ private:
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
-    CollationIterator(const Normalizer2Impl &nfc,
-                      const CollationData *d, int8_t iterFlags,
+    CollationIterator(const CollationData *d, int8_t iterFlags,
                       const UChar *s, const UChar *lim)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
             : start(s), pos(s), limit(lim),
-              nfcImpl(nfc),
               flags(iterFlags),
               trie(d->getTrie()),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
@@ -214,8 +212,6 @@ protected:
     const UChar *start, *pos, *limit;
     // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
 
-    const Normalizer2Impl &nfcImpl;
-
     int8_t flags;
 
     // TODO: Do we need to support changing iteration direction? (ICU ticket #9104.)
@@ -321,8 +317,7 @@ private:
  */
 class U_I18N_API FCDCollationIterator : public CollationIterator {
 public:
-    FCDCollationIterator(const Normalizer2Impl &nfc,
-                         const CollationData *data, int8_t iterFlags,
+    FCDCollationIterator(const CollationData *data, int8_t iterFlags,
                          const UChar *s, const UChar *lim,
                          UErrorCode &errorCode);
 
@@ -386,6 +381,8 @@ private:
     int32_t lengthBeforeLimit;
     // We make small steps for string comparisons and larger steps for sort key generation.
     UBool smallSteps;
+
+    const Normalizer2Impl &nfcImpl;
     UnicodeString normalized;
     ReorderingBuffer buffer;
 };

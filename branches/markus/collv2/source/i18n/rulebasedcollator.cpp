@@ -69,7 +69,7 @@ STBuffer::doAppend(uint32_t st, UErrorCode &errorCode) {
 }
 
 UCollationResult
-RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterator &right,
+RuleBasedCollator2::compareUpToTertiary(CollationIterator &left, CollationIterator &right,
                                        UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
@@ -123,6 +123,9 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
         if(leftPrimary == Collation::NO_CE_WEIGHT) { break; }
     }
     if(strength == UCOL_PRIMARY || U_FAILURE(errorCode)) { return UCOL_EQUAL; }
+    // TODO: If we decide against comparePrimaryAndCase(),
+    // then we need to continue if strength == UCOL_PRIMARY && caseLevel == UCOL_ON.
+    // In that case, check for if(strength >= UCOL_SECONDARY) for the secondary level, etc.
 
     // Compare the buffered secondary & tertiary weights.
 
@@ -232,7 +235,7 @@ RuleBasedCollator::compareUpToTertiary(CollationIterator &left, CollationIterato
 }
 
 UCollationResult
-RuleBasedCollator::comparePrimaryAndCase(CollationIterator &left, CollationIterator &right,
+RuleBasedCollator2::comparePrimaryAndCase(CollationIterator &left, CollationIterator &right,
                                          UErrorCode &errorCode) {
     // TODO: Why?? <quote from v1 implementation>
     // if(((secS & UCOL_PRIMARYMASK) != 0) || strength > UCOL_PRIMARY)
@@ -290,7 +293,7 @@ QuaternaryIterator::next(CollationIterator &source,
 }
 
 UCollationResult
-RuleBasedCollator::compareQuaternary(CollationIterator &left, CollationIterator &right,
+RuleBasedCollator2::compareQuaternary(CollationIterator &left, CollationIterator &right,
                                      UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 

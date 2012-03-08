@@ -28,7 +28,7 @@ class CollationIterator;
 // Pro: They would be small and focused.
 // Con: Their methods would have to take a lot of parameters.
 
-class U_I18N_API RuleBasedCollator : public Collator {
+class U_I18N_API RuleBasedCollator2 : public Collator {
 public:
 private:
     UCollationResult compareUpToTertiary(CollationIterator &left, CollationIterator &right,

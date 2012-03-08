@@ -17,6 +17,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "collation.h"
+#include "normalizer2impl.h"
 #include "utrie2.h"
 
 U_NAMESPACE_BEGIN
@@ -36,8 +37,8 @@ public:
     /**
      * Resolves the ce32 with a BUILDER_CONTEXT_TAG into another CE32.
      */
-    virtual uint32_t getCE32FromBuilderContext(CollationIterator &iter, uint32_t ce32,
-                                               UErrorCode &errorCode) const {
+    virtual uint32_t nextCE32FromBuilderContext(CollationIterator &iter, uint32_t ce32,
+                                                UErrorCode &errorCode) const {
         if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
         return 0;
     }
@@ -75,10 +76,13 @@ public:
     const CollationData *getBase() const { return base; }
 
     /**
-     * Returns a simple array of 19+21+27 non-special CE32s, one per canonical Jamo L/V/T.
+     * Returns a simple array of 19+21+27 CEs, one per canonical Jamo L/V/T.
      * For fast handling of HANGUL_TAG.
+     *
+     * Returns NULL if Jamos require more complicated handling.
+     * In this case, the DECOMP_HANGUL flag is set.
      */
-    const uint32_t *getJamoCE32s() const {
+    const int64_t *getJamoCEs() const {
         // TODO
         // Build & return a simple array of CE32s.
         // Tailoring: Only necessary if Jamos are tailored.
@@ -101,6 +105,14 @@ public:
         return isCompressibleLeadByte(p >> 24);
     }
 
+    uint16_t getFCD16(UChar32 c) const {
+        return nfcImpl.getFCD16(c);
+    }
+
+    const Normalizer2Impl &getNFCImpl() const {
+        return nfcImpl;
+    }
+
     /**
      * Collation::DECOMP_HANGUL etc.
      */
@@ -111,6 +123,8 @@ public:
 protected:
     // Main lookup trie.
     const UTrie2 *trie;
+
+    const Normalizer2Impl &nfcImpl;
 
 private:
     UBool isFinalData;  // TODO: needed?
@@ -124,7 +138,8 @@ private:
  */
 class CollationDataBuilder : public CollationData {
 public:
-    virtual uint32_t getCE32FromBuilderContext(uint32_t ce32, UErrorCode &errorCode) {
+    virtual uint32_t nextCE32FromBuilderContext(CollationIterator &iter, uint32_t ce32,
+                                                UErrorCode &errorCode) {
         // TODO:
         // Build & cache runtime-format prefix/contraction data and return
         // a normal PREFIX_TAG or CONTRACTION_TAG CE32.
