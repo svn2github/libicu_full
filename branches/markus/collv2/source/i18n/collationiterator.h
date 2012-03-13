@@ -23,6 +23,8 @@
 
 U_NAMESPACE_BEGIN
 
+class SkippedState;
+
 /**
  * Buffer for CEs.
  * Rather than its own position and length fields,
@@ -79,7 +81,8 @@ public:
               trie(d->getTrie()),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
               hiragana(0),
-              data(d) {}
+              data(d),
+              skipped(NULL) {}
 
     inline void setFlags(int8_t f) { flags = f; }
 
@@ -305,6 +308,7 @@ private:
     int8_t hiragana;
 
     const CollationData *data;
+    SkippedState *skipped;
 
     // 64-bit-CE buffer for forward and safe-backward iteration
     // (computed expansions and CODAN CEs).

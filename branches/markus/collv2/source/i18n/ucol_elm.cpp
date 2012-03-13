@@ -27,6 +27,9 @@
 
 #if !UCONFIG_NO_COLLATION
 
+// TODO: remove debug code
+#include <stdio.h>
+// TODO: end of debug code
 #include "unicode/uchar.h"
 #include "unicode/unistr.h"
 #include "unicode/ucoleitr.h"
@@ -437,6 +440,11 @@ static int uprv_uca_setMaxExpansion(uint32_t           endexpansion,
                                     MaxExpansionTable *maxexpansion,
                                     UErrorCode        *status)
 {
+    // TODO: remove debug code
+    if(expansionsize > 4) {
+        printf("coll-expansion-size %d\n", expansionsize);
+    }
+    // TODO: end of debug code
     if (maxexpansion->size == 0) {
         /* we'll always make the first element 0, for easier manipulation */
         maxexpansion->endExpansionCE = 
@@ -822,6 +830,27 @@ static void uprv_uca_unsafeCPAddCCNZ(tempUCATable *t, UErrorCode *status) {
     }
 }
 
+// TODO: remove debug code
+static void printString(const UChar *s, uint32_t length) {
+    for(uint32_t i = 0; i < length;) {
+        uint32_t j = i;
+        UChar32 c;
+        U16_NEXT(s, i, length, c);
+        printf("%s%04lX", j == 0 ? "<" : " ", (long)c);
+    }
+    printf(">");
+}
+static void printCCC(const Normalizer2Impl *nfcImpl, const UChar *s, uint32_t length) {
+    for(uint32_t i = 0; i < length;) {
+        uint32_t j = i;
+        UChar32 c;
+        U16_NEXT(s, i, length, c);
+        uint8_t cc = nfcImpl->getCC(nfcImpl->getNorm16(c));
+        printf("%s%d", j == 0 ? "ccc=[" : " ", cc);
+    }
+    printf("]");
+}
+// TODO: end of debug code
 static uint32_t uprv_uca_addPrefix(tempUCATable *t, uint32_t CE,
                                    UCAElements *element, UErrorCode *status)
 {
@@ -850,6 +879,26 @@ static uint32_t uprv_uca_addPrefix(tempUCATable *t, uint32_t CE,
     }
     fprintf(stdout, "%08X ", element->mapCE);
 #endif
+    // TODO: remove debug code
+    const Normalizer2Impl *nfcImpl = Normalizer2Factory::getNFCImpl(*status);
+    UChar32 firstPrefix;
+    uint32_t i = 0;
+    U16_NEXT(element->prefix, i, element->prefixSize, firstPrefix);
+    UChar32 firstInput;
+    i = 0;
+    U16_NEXT(element->cPoints, i, element->cSize, firstInput);
+    if(nfcImpl->getFCD16(firstPrefix) > 0xff || nfcImpl->getFCD16(firstInput) > 0xff) {
+        printf("coll-prefix-with-ccc: ");
+        printString(element->prefix, element->prefixSize);
+        printf(" | ");
+        printString(element->cPoints, element->cSize);
+        printf(" ");
+        printCCC(nfcImpl, element->prefix, element->prefixSize);
+        printf(" | ");
+        printCCC(nfcImpl, element->cPoints, element->cSize);
+        printf("\n");
+    }
+    // TODO: end of debug code
 
     for (j = 1; j<element->prefixSize; j++) {   /* First add NFD prefix chars to unsafe CP hash table */
         // Unless it is a trail surrogate, which is handled algoritmically and
@@ -955,6 +1004,19 @@ static uint32_t uprv_uca_addContraction(tempUCATable *t, uint32_t CE,
     U16_NEXT(element->cPoints, cpsize, element->cSize, cp);
 
     if(cpsize<element->cSize) { // This is a real contraction, if there are other characters after the first
+        // TODO: remove debug code
+        const Normalizer2Impl *nfcImpl = Normalizer2Factory::getNFCImpl(*status);
+        UChar32 last;
+        uint32_t i = element->cSize;
+        U16_PREV(element->cPoints, 0, i, last);
+        if(nfcImpl->getFCD16(cp) > 0xff || nfcImpl->getFCD16(last) > 0xff) {
+            printf("coll-contraction-with-ccc: ");
+            printString(element->cPoints, element->cSize);
+            printf(" ");
+            printCCC(nfcImpl, element->cPoints, element->cSize);
+            printf("\n");
+        }
+        // TODO: end of debug code
         uint32_t j = 0;
         for (j=1; j<element->cSize; j++) {   /* First add contraction chars to unsafe CP hash table */
             // Unless it is a trail surrogate, which is handled algoritmically and 
@@ -1442,6 +1504,9 @@ uprv_uca_assembleTable(tempUCATable *t, UErrorCode *status) {
         return NULL;
     }
 
+    // TODO: remove debug code
+    printf("coll-expansions-length %6ld\n", (long)expansions->position);
+    // TODO: end of debug code
     uint32_t beforeContractions = (uint32_t)((headersize+paddedsize(expansions->position*sizeof(uint32_t)))/sizeof(UChar));
 
     int32_t contractionsSize = 0;
