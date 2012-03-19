@@ -50,49 +50,89 @@ CEBuffer::doAppend(int32_t length, int64_t ce, UErrorCode &errorCode) {
 class SkippedState {
 public:
     // Born active but empty.
-    SkippedState() : pos(0), active(TRUE) {}
-    void activate() { active = TRUE; }
-    void deactivate() {
-        marks.remove();
+    SkippedState() : pos(0), skipLengthAtMatch(0) {}
+    void clear() {
+        oldBuffer.remove();
         pos = 0;
-        active = FALSE;
-    }
-    UBool isActive() const { return active; }
-
-    UBool isEmpty() const { return marks.isEmpty(); }
-
-    void append(UChar32 c) {
-        marks.append(c);
+        // The newBuffer is reset by setFirstSkipped().
     }
 
-    // Removes and returns the first skipped combining mark.
-    // Requires !isEmpty().
-    // Resets the position to the next remaining combining mark.
-    UChar32 popFirst() {
-        UChar32 c = marks.char32At(0);
-        marks.remove(0, U16_LENGTH(c));
-        pos = 0;
-    }
+    UBool isEmpty() const { return oldBuffer.isEmpty(); }
 
-    UBool hasNext() const { return pos < marks.length(); }
+    UBool hasNext() const { return pos < oldBuffer.length(); }
+
     // Requires hasNext().
     UChar32 next() {
-        UChar32 c = marks.char32At(pos);
+        UChar32 c = oldBuffer.char32At(pos);
         pos += U16_LENGTH(c);
         return c;
     }
 
-    void backwardNumCodePoints(int32_t n) { pos = marks.moveIndex32(pos, -n); }
+    // Accounts for one more input code point read beyond the end of the marks buffer.
+    void incBeyond() {
+        U_ASSERT(!hasNext());
+        ++pos;
+    }
+
+    // Goes backward through the skipped-marks buffer.
+    // Returns the number of code points read beyond the skipped marks
+    // that need to be backtracked through normal input.
+    int32_t backwardNumCodePoints(int32_t n) {
+        int32_t length = oldBuffer.length();
+        int32_t beyond = pos - length;
+        if(beyond > 0) {
+            if(beyond >= n) {
+                // Not back far enough to re-enter the oldBuffer.
+                pos -= n;
+                return n;
+            } else {
+                // Back out all beyond-oldBuffer code points and re-enter the buffer.
+                pos = oldBuffer.moveIndex32(length, beyond - n);
+                return beyond;
+            }
+        } else {
+            // Go backwards from inside the oldBuffer.
+            pos = oldBuffer.moveIndex32(pos, -n);
+            return 0;
+        }
+    }
+
+    void setFirstSkipped(UChar32 c) {
+        skipLengthAtMatch = 0;
+        newBuffer.setTo(c);
+    }
+
+    void skip(UChar32 c) {
+        newBuffer.append(c);
+    }
+
+    void recordMatch() { skipLengthAtMatch = newBuffer.length(); }
+
+    // Replaces the characters we consumed with the newly skipped ones.
+    void replaceMatch() {
+        // Note: UnicodeString.replace() pins pos to at most length().
+        oldBuffer.replace(0, pos, newBuffer, 0, skipLengthAtMatch);
+        pos = 0;
+    }
 
     void saveTrieState(const UCharsTrie &trie) { trie.saveState(state); }
     void resetToTrieState(UCharsTrie &trie) const { trie.resetToState(state); }
 
 private:
-    // Skipped combining marks.
-    UnicodeString marks;
+    // Combining marks skipped in previous discontiguous-contraction matching.
+    // After that discontiguous contraction was completed, we start reading them from here.
+    UnicodeString oldBuffer;
+    // Combining marks newly skipped in current discontiguous-contraction matching.
+    // These might have been read from the normal text or from the oldBuffer.
+    UnicodeString newBuffer;
+    // Reading index in oldBuffer,
+    // or counter for how many code points have been read beyond oldBuffer (pos-oldBuffer.length()).
     int32_t pos;
-    UBool active;
-    UBool hasState;
+    // newBuffer.length() at the time of the last matching character.
+    // When a partial match fails, we back out skipped and partial-matching input characters.
+    int32_t skipLengthAtMatch;
+    // We save the trie state before we attempt to match a character,
+    // so that we can skip it and try the next one.
     UCharsTrie::State state;
 };
 
@@ -324,14 +364,29 @@ CollationIterator::getCE32FromPrefix(const CollationData *d, uint32_t ce32,
 UChar32
 CollationIterator::nextSkippedCodePoint(UErrorCode &errorCode) {
     if(skipped != NULL && skipped->hasNext()) { return skipped->next(); }
-    return nextCodePoint(errorCode);
+    UChar32 c = nextCodePoint(errorCode);
+    if(skipped != NULL && !skipped->isEmpty() && c >= 0) { skipped->incBeyond(); }
+    return c;
+}
+
+void
+CollationIterator::backwardNumSkipped(int32_t n, UErrorCode &errorCode) {
+    if(skipped != NULL && !skipped->isEmpty()) {
+        n = skipped->backwardNumCodePoints(n);
+    }
+    backwardNumCodePoints(n, errorCode);
 }
 
 uint32_t
 CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 originalCp, uint32_t ce32,
                                            UErrorCode &errorCode) {
     // originalCp: Only needed as input to nextCE32FromDiscontiguousContraction().
-    UBool maybeDiscontiguous = (UBool)(ce32 & 1);  // TODO: Builder set this if any suffix ends with cc != 0.
+    UBool maybeDiscontiguous = (UBool)(ce32 & 1);
+    // TODO: Builder set this if any suffix ends with cc != 0.
+    // TODO: Slightly better would be if we knew the max trailing cc of any suffix.
+    // Then we could check if the non-matching character's cc<maxCC.
+    // The cost would be an additional 16-bit unit before the trie.
+    // The benefit might be limited if the maxCC is normally high.
     const uint16_t *p = d->getContext((int32_t)(ce32 >> 1) & 0x7ffff);
     ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
     UChar32 lowestChar = p[2];
@@ -353,40 +408,35 @@ CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 origi
         // Actually test characters with lccc!=0 and look for their tccc=1..c1-1.
         // TODO: This is simpler at runtime than checking for the combining class then,
         // and might be good enough for Latin performance. Keep or redesign?
-        backwardNumCodePoints(1, errorCode);
+        backwardNumSkipped(1, errorCode);
         return ce32;
     }
     // Number of code points read beyond the original code point.
     // Only needed as input to nextCE32FromDiscontiguousContraction().
     int32_t lookAhead = 1;
-    // Number of code points read since the last match value.
-    int32_t sinceMatch = 1;
     // Normally we only need a contiguous match,
     // and therefore need not remember the suffixes state from before a mismatch for retrying.
     // If we are already processing skipped combining marks, then we do track the state.
     UCharsTrie suffixes(p);
-    if(skipped != NULL && skipped->isActive()) { skipped->saveTrieState(suffixes); }
+    if(skipped != NULL && !skipped->isEmpty()) { skipped->saveTrieState(suffixes); }
     UStringTrieResult match = suffixes.firstForCodePoint(c);
     for(;;) {
         if(match == USTRINGTRIE_NO_MATCH) {
             if(maybeDiscontiguous) {
                 return nextCE32FromDiscontiguousContraction(
-                    d, originalCp, suffixes, ce32, lookAhead, sinceMatch, c, errorCode);
+                    d, originalCp, suffixes, ce32, lookAhead, c, errorCode);
             }
+            backwardNumSkipped(1, errorCode);
             break;
         }
-        if(USTRINGTRIE_HAS_VALUE(match)) {
-            ce32 = (uint32_t)suffixes.getValue();
-            sinceMatch = 0;
-        }
+        U_ASSERT(match != USTRINGTRIE_NO_VALUE);  // same as USTRINGTRIE_HAS_VALUE(match)
+        ce32 = (uint32_t)suffixes.getValue();
         if(!USTRINGTRIE_HAS_NEXT(match)) { break; }
         if((c = nextSkippedCodePoint(errorCode)) < 0) { break; }
         ++lookAhead;
-        ++sinceMatch;
-        if(skipped != NULL && skipped->isActive()) { skipped->saveTrieState(suffixes); }
+        if(skipped != NULL && !skipped->isEmpty()) { skipped->saveTrieState(suffixes); }
         match = suffixes.nextForCodePoint(c);
     }
-    backwardNumCodePoints(sinceMatch, errorCode);
     return ce32;
 }
 // TODO: How can we match the second code point of a precomposed Tibetan vowel mark??
@@ -397,7 +447,7 @@ uint32_t
 CollationIterator::nextCE32FromDiscontiguousContraction(
         const CollationData *d, UChar32 originalCp,
         UCharsTrie &suffixes, uint32_t ce32,
-        int32_t lookAhead, int32_t sinceMatch, UChar32 c,
+        int32_t lookAhead, UChar32 c,
         UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
 
@@ -423,35 +473,30 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
     if(fcd16 <= 0xff || (nextCp = nextSkippedCodePoint(errorCode)) < 0) {
         // The non-matching c is a starter (which blocks all further non-starters),
         // or there is no further text.
-        backwardNumCodePoints(sinceMatch, errorCode);
+        backwardNumSkipped(1, errorCode);
         return ce32;
     }
     ++lookAhead;
-    ++sinceMatch;
     uint8_t prevCC = (uint8_t)fcd16;
     fcd16 = d->getFCD16(nextCp);
     if(prevCC >= (fcd16 >> 8)) {
         // The next code point after c is a starter (S2.1.1 "process each non-starter"),
         // or blocked by c (S2.1.2).
-        backwardNumCodePoints(sinceMatch, errorCode);
+        backwardNumSkipped(2, errorCode);
         return ce32;
     }
 
     // We have read and matched (lookAhead-2) code points,
     // read non-matching c and peeked ahead at nextCp.
     // Return to the state before the mismatch and continue matching with nextCp.
-    UBool isTopDiscontiguous;
-    if(skipped == NULL || !skipped->isActive()) {
+    if(skipped == NULL || skipped->isEmpty()) {
         if(skipped == NULL) {
             skipped = new SkippedState();
-            if(skipped = NULL) {
+            if(skipped == NULL) {
                 errorCode = U_MEMORY_ALLOCATION_ERROR;
                 return 0;
             }
-        } else {
-            skipped->activate();
         }
-        isTopDiscontiguous = TRUE;
         suffixes.reset();
         if(lookAhead > 2) {
             // Replay the partial match so far.
@@ -463,27 +508,27 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
             // Skip c (which did not match) and nextCp (which we will try now).
             forwardNumCodePoints(2, errorCode);
         }
+        skipped->saveTrieState(suffixes);
     } else {
-        isTopDiscontiguous = FALSE;
+        // Reset to the trie state before the failed match of c.
         skipped->resetToTrieState(suffixes);
     }
 
-    skipped->append(c);
-    int32_t skipLengthAtMatch = 0;
-    skipped->saveTrieState(suffixes);
+    skipped->setFirstSkipped(c);
+    // Number of code points read since the last match (at this point: c and nextCp).
+    int32_t sinceMatch = 2;
     c = nextCp;
     for(;;) {
         prevCC = (uint8_t)fcd16;
         UStringTrieResult match = suffixes.nextForCodePoint(c);
         if(match == USTRINGTRIE_NO_MATCH) {
-            skipped->append(c);
+            skipped->skip(c);
             skipped->resetToTrieState(suffixes);
         } else {
-            if(USTRINGTRIE_HAS_VALUE(match)) {
-                ce32 = (uint32_t)suffixes.getValue();
-                sinceMatch = 0;
-                skipLengthAtMatch = skipBuffer.length();
-            }
+            U_ASSERT(match != USTRINGTRIE_NO_VALUE);  // same as USTRINGTRIE_HAS_VALUE(match)
+            ce32 = (uint32_t)suffixes.getValue();
+            sinceMatch = 0;
+            skipped->recordMatch();
             if(!USTRINGTRIE_HAS_NEXT(match)) { break; }
             skipped->saveTrieState(suffixes);
         }
@@ -496,31 +541,33 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
             break;
         }
     }
-    if(isTopDiscontiguous && skipLengthAtMatch > 0) {
-        // We did get a match after skipping one or more combining marks.
+    backwardNumSkipped(sinceMatch, errorCode);
+    UBool isTopDiscontiguous = skipped->isEmpty();
+    skipped->replaceMatch();
+    if(isTopDiscontiguous && !skipped->isEmpty()) {
+        // We did get a match after skipping one or more combining marks,
+        // and we are not in a recursive discontiguous contraction.
         // Append CEs from the contraction ce32
         // and then from the combining marks that we skipped before the match.
-        int32_t cesLength = appendCEsFromCE32(0, d, originalCp, ce32, errorCode);
+        cesMaxIndex = -1;
+        appendCEsFromCE32(d, originalCp, ce32, errorCode);
         // Fetch CE32s for skipped combining marks from the normal data, with fallback,
         // rather than from the CollationData where we found the contraction.
-        while(!skipped->isEmpty()) {
-            c = skipped->popFirst();
-            // TODO: Add handling of contraction from skipped combining marks.
-            cesLength = appendCEsFromCp(cesLength, c, errorCode);
+        while(skipped->hasNext()) {
+            appendCEsFromCp(skipped->next(), errorCode);
+            // Note: A nested discontiguous-contraction match
+            // replaces consumed combining marks with newly skipped ones
+            // and resets the reading position to the beginning.
         }
-        skipped->deactivate();
-        // TODO: Handle cesLength across contractions.
+        skipped->clear();
         cesIndex = 1;  // Caller returns ces[0].
-        cesMaxIndex = cesLength - 1;
         ce32 = 0x100;  // Signal to nextCEFromSpecialCE32() that the result is in ces[].
     }
-    // TODO: Go backward through both normal text and skipped marks.
-    backwardNumCodePoints(sinceMatch, errorCode);
     return ce32;
 }
 
-int32_t
-CollationIterator::appendCEsFromCp(int32_t cesLength, UChar32 c, UErrorCode &errorCode) {
+void
+CollationIterator::appendCEsFromCp(UChar32 c, UErrorCode &errorCode) {
     const CollationData *d;
     uint32_t ce32 = data->getCE32(c);
     if(ce32 == Collation::MIN_SPECIAL_CE32) {
@@ -529,17 +576,19 @@ CollationIterator::appendCEsFromCp(int32_t cesLength, UChar32 c, UErrorCode &err
     } else {
         d = data;
     }
-    return appendCEsFromCE32(cesLength, d, c, ce32, errorCode);
+    appendCEsFromCE32(d, c, ce32, errorCode);
 }
 
-int32_t
-CollationIterator::appendCEsFromCE32(int32_t cesLength,
-                                     const CollationData *d, UChar32 c, uint32_t ce32,
+void
+CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                      UErrorCode &errorCode) {
+    int32_t cesLength = cesMaxIndex + 1;
     int64_t ce;
-    if(!Collation::isSpecialCE32(ce32)) {
-        ce = Collation::ceFromCE32(ce32);
-    } else {
+    for(;;) {  // Loop while ce32 is special.
+        if(!Collation::isSpecialCE32(ce32)) {
+            ce = Collation::ceFromCE32(ce32);
+            break;
+        }
         int32_t tag = Collation::getSpecialCE32Tag(ce32);
         if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
             U_ASSERT(ce32 != Collation::MIN_SPECIAL_CE32);
@@ -548,42 +597,46 @@ CollationIterator::appendCEsFromCE32(int32_t cesLength,
                 Collation::COMMON_SECONDARY_CE |
                 (ce32 & 0xff00), errorCode);
             ce = ((ce32 & 0xff) << 24) | Collation::COMMON_TERTIARY_CE;
-        } else switch(tag) {
-        case Collation::EXPANSION32_TAG: {
+            break;
+        // if-else-if rather than switch so that "break;" leaves the loop.
+        } else if(tag == Collation::EXPANSION32_TAG) {
             const uint32_t *ce32s = d->getCE32s((int32_t)(ce32 >> 4) & 0xffff);
             int32_t max = (int32_t)ce32 & 0xf;
             for(int32_t i = 0; i <= max; ++i) {
                 cesLength = forwardCEs.append(cesLength, Collation::ceFromCE32(ce32s[i]), errorCode);
             }
-            return cesLength;
-        }
-        case Collation::EXPANSION_TAG: {
+            cesMaxIndex = cesLength - 1;
+            return;
+        } else if(tag == Collation::EXPANSION_TAG) {
             const int64_t *expCEs = d->getCEs((int32_t)(ce32 >> 4) & 0xffff);
             int32_t max = (int32_t)ce32 & 0xf;
             for(int32_t i = 0; i <= max; ++i) {
                 cesLength = forwardCEs.append(cesLength, expCEs[i], errorCode);
             }
-            return cesLength;
-        }
-        case Collation::PREFIX_TAG:
-        case Collation::CONTRACTION_TAG:
-        case Collation::BUILDER_CONTEXT_TAG:
-        case Collation::DIGIT_TAG:
-        case Collation::HIRAGANA_TAG:
-        case Collation::HANGUL_TAG:
-            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
-            ce = 0;
-            break;
-        case Collation::OFFSET_TAG:
+            cesMaxIndex = cesLength - 1;
+            return;
+        } else if(tag == Collation::CONTRACTION_TAG) {
+            ce32 = nextCE32FromContraction(d, c, ce32, errorCode);
+            U_ASSERT(ce32 != 0x100);
+            // continue
+        } else if(tag == Collation::OFFSET_TAG) {
             ce = getCEFromOffsetCE32(d, c, ce32);
             break;
-        case Collation::IMPLICIT_TAG:
+        } else if(tag == Collation::IMPLICIT_TAG) {
             U_ASSERT((ce32 & 1) != 0);
             ce = Collation::unassignedCEFromCodePoint(c);
             break;
+        } else {
+        // case Collation::PREFIX_TAG:
+        // case Collation::BUILDER_CONTEXT_TAG:
+        // case Collation::DIGIT_TAG:
+        // case Collation::HIRAGANA_TAG:
+        // case Collation::HANGUL_TAG:
+            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+            return;
         }
     }
-    return forwardCEs.append(cesLength, ce, errorCode);
+    cesMaxIndex = forwardCEs.append(cesLength, ce, errorCode) - 1;
 }
 
 void
@@ -927,6 +980,9 @@ FCDCollationIterator::nextCodePointDecompHangul(UErrorCode &errorCode) {
     // Return the next code point at pos != limit; no need to check for NUL-termination.
     return simpleNext();
 }
+// TODO: Force decomposition if 0!=lccc!=tccc (->0F73, 0F75, 0F81)
+// to avoid problems with discontiguous-contraction matching that
+// skips the decompositions' lead characters.
 
 UChar32
 FCDCollationIterator::handlePreviousCodePoint(UErrorCode &errorCode) {

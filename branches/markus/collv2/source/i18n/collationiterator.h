@@ -24,6 +24,7 @@
 U_NAMESPACE_BEGIN
 
 class SkippedState;
+class UCharsTrie;
 
 /**
  * Buffer for CEs.
@@ -242,27 +243,30 @@ private:
     uint32_t getCE32FromPrefix(const CollationData *d, uint32_t ce32,
                                UErrorCode &errorCode);
 
+    UChar32 nextSkippedCodePoint(UErrorCode &errorCode);
+
+    void backwardNumSkipped(int32_t n, UErrorCode &errorCode);
+
     uint32_t nextCE32FromContraction(const CollationData *d, UChar32 originalCp, uint32_t ce32,
                                      UErrorCode &errorCode);
 
     uint32_t nextCE32FromDiscontiguousContraction(
             const CollationData *d, UChar32 originalCp,
-            const uint16_t *p, uint32_t ce32,
-            int32_t lookAhead, int32_t sinceMatch, UChar32 c,
+            UCharsTrie &suffixes, uint32_t ce32,
+            int32_t lookAhead, UChar32 c,
             UErrorCode &errorCode);
 
     /**
      * Appends CEs for a combining mark that was skipped in discontiguous contraction.
      */
-    int32_t appendCEsFromCpNoContext(int32_t cesLength, UChar32 c, UErrorCode &errorCode);
+    void appendCEsFromCp(UChar32 c, UErrorCode &errorCode);
 
     /**
      * Appends CEs for a contraction result CE32,
      * or for the CE32 of a combining mark that was skipped in discontiguous contraction.
      */
-    int32_t appendCEsFromCE32NoContext(int32_t cesLength,
-                                       const CollationData *d, UChar32 c, uint32_t ce32,
-                                       UErrorCode &errorCode);
+    void appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                           UErrorCode &errorCode);
 
     /**
      * Turns a string of digits (bytes 0..9)
