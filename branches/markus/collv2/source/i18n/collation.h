@@ -91,15 +91,15 @@ public:
          */
         MAX_LATIN_EXPANSION_TAG = 5,
         /**
-         * Points to 1..16 non-special 32-bit CE32s.
-         * Bits 19..4: Index into uint32_t table.
-         * Bits  3..0: Length-1.
+         * Points to one or more non-special 32-bit CE32s.
+         * Bits 19..3: Index into uint32_t table.
+         * Bits  2..0: Length. If length==0 then the actual length is in the first unit.
          */
         EXPANSION32_TAG = 6,
         /**
-         * Points to 1..16 64-bit CEs.
-         * Bits 19..4: Index into CE table.
-         * Bits  3..0: Length-1.
+         * Points to one or more 64-bit CEs.
+         * Bits 19..3: Index into CE table.
+         * Bits  2..0: Length. If length==0 then the actual length is in the first unit.
          */
         EXPANSION_TAG = 7,
         /**

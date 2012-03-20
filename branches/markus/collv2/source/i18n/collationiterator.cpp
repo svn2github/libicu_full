@@ -223,22 +223,17 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
         }
         switch(tag) {
         case Collation::EXPANSION32_TAG:
-            setCE32s(d, (ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
+            setCE32s(d, (ce32 >> 3) & 0x1ffff, (int32_t)ce32 & 7);
             cesIndex = (cesMaxIndex > 0) ? 1 : -1;
             return ces[0];
-        case Collation::EXPANSION_TAG:
-            // TODO: U+FDFA has an expansion of 18 CEs!
-            // Revise structure & code.
-            // ARABIC LIGATURE SALLALLAHOU ALAYHE WASALLAM
-            // http://unicode.org/faq/normalization.html#12
-            // Also, ICU 49 Korean has 34136 total expansion words.
-            // Idea: Use 2-bit length 0..2 for 1..3 with 18-bit index,
-            // 3=escape, take next 4 bits 0..15 for length 4..19 with 14-bit index,
-            // store longer expansions first.
-            ces = d->getCEs((ce32 >> 4) & 0xffff);
-            cesMaxIndex = (int32_t)ce32 & 0xf;
+        case Collation::EXPANSION_TAG: {
+            ces = d->getCEs((ce32 >> 3) & 0x1ffff);
+            int32_t length = (int32_t)ce32 & 7;
+            if(length == 0) { length = (int32_t)*ces++; }
+            cesMaxIndex = length - 1;
             cesIndex = (cesMaxIndex > 0) ? 1 : -1;
             return ces[0];
+        }
         case Collation::PREFIX_TAG:
             backwardNumCodePoints(1, errorCode);
             ce32 = getCE32FromPrefix(d, ce32, errorCode);
@@ -600,17 +595,19 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             break;
         // if-else-if rather than switch so that "break;" leaves the loop.
         } else if(tag == Collation::EXPANSION32_TAG) {
-            const uint32_t *ce32s = d->getCE32s((int32_t)(ce32 >> 4) & 0xffff);
-            int32_t max = (int32_t)ce32 & 0xf;
-            for(int32_t i = 0; i <= max; ++i) {
+            const uint32_t *ce32s = d->getCE32s((int32_t)(ce32 >> 3) & 0x1ffff);
+            int32_t length = (int32_t)ce32 & 7;
+            if(length == 0) { length = (int32_t)*ce32s++; }
+            for(int32_t i = 0; i < length; ++i) {
                 cesLength = forwardCEs.append(cesLength, Collation::ceFromCE32(ce32s[i]), errorCode);
             }
             cesMaxIndex = cesLength - 1;
             return;
         } else if(tag == Collation::EXPANSION_TAG) {
-            const int64_t *expCEs = d->getCEs((int32_t)(ce32 >> 4) & 0xffff);
-            int32_t max = (int32_t)ce32 & 0xf;
-            for(int32_t i = 0; i <= max; ++i) {
+            const int64_t *expCEs = d->getCEs((int32_t)(ce32 >> 3) & 0x1ffff);
+            int32_t length = (int32_t)ce32 & 7;
+            if(length == 0) { length = (int32_t)*expCEs++; }
+            for(int32_t i = 0; i < length; ++i) {
                 cesLength = forwardCEs.append(cesLength, expCEs[i], errorCode);
             }
             cesMaxIndex = cesLength - 1;
@@ -762,11 +759,12 @@ CollationIterator::setLatinExpansion(uint32_t ce32) {
 }
 
 void
-CollationIterator::setCE32s(const CollationData *d, int32_t expIndex, int32_t max) {
+CollationIterator::setCE32s(const CollationData *d, int32_t expIndex, int32_t length) {
     ces = forwardCEs.getBuffer();
     const uint32_t *ce32s = d->getCE32s(expIndex);
-    cesMaxIndex = max;
-    for(int32_t i = 0; i <= max; ++i) {
+    if(length == 0) { length = (int32_t)*ce32s++; }
+    cesMaxIndex = length - 1;
+    for(int32_t i = 0; i < length; ++i) {
         forwardCEs[i] = Collation::ceFromCE32(ce32s[i]);
     }
 }
@@ -1223,14 +1221,17 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
         }
         switch(tag) {
         case Collation::EXPANSION32_TAG:
-            fwd.setCE32s(d, (ce32 >> 4) & 0xffff, (int32_t)ce32 & 0xf);
+            fwd.setCE32s(d, (ce32 >> 3) & 0x1ffff, (int32_t)ce32 & 7);
             fwd.cesIndex = fwd.cesMaxIndex;
             return fwd.ces[fwd.cesMaxIndex];
-        case Collation::EXPANSION_TAG:
-            fwd.ces = d->getCEs((ce32 >> 4) & 0xffff);
-            fwd.cesMaxIndex = (int32_t)ce32 & 0xf;
+        case Collation::EXPANSION_TAG: {
+            fwd.ces = d->getCEs((ce32 >> 3) & 0x1ffff);
+            int32_t length = (int32_t)ce32 & 7;
+            if(length == 0) { length = (int32_t)*fwd.ces++; }
+            fwd.cesMaxIndex = length - 1;
             fwd.cesIndex = fwd.cesMaxIndex;
             return fwd.ces[fwd.cesMaxIndex];
+        }
         case Collation::PREFIX_TAG:
             ce32 = fwd.getCE32FromPrefix(d, ce32, errorCode);
             break;

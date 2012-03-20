@@ -55,6 +55,8 @@ private:
     int32_t doAppend(int32_t length, int64_t ce, UErrorCode &errorCode);
 
     MaybeStackArray<int64_t, 40> buffer;
+    // TODO: In the builder, limit the maximum expansion length to no more than
+    // the initial length of this buffer. For example, length<=31.
 };
 
 /**
@@ -300,7 +302,7 @@ private:
     /**
      * Sets buffered CEs from CE32s.
      */
-    void setCE32s(const CollationData *d, int32_t expIndex, int32_t max);
+    void setCE32s(const CollationData *d, int32_t expIndex, int32_t length);
 
     // Main lookup trie of the data object.
     const UTrie2 *trie;
