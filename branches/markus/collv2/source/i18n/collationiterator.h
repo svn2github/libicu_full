@@ -60,9 +60,7 @@ private:
 };
 
 /**
- * Collation element and character iterator.
- * Handles normalized UTF-16 text inline, with length or NUL-terminated.
- * Other text is handled by subclasses.
+ * Collation element iterator and abstract character iterator.
  *
  * This iterator only moves forward through CE space.
  * For random access, use the TwoWayCollationIterator.
@@ -75,23 +73,22 @@ private:
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
-    CollationIterator(const CollationData *d, int8_t iterFlags,
-                      const UChar *s, const UChar *lim)
+    CollationIterator(const CollationData *d, int8_t iterFlags)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
-            : start(s), pos(s), limit(lim),
+            : trie(d->getTrie()),
+              data(d),
               flags(iterFlags),
-              trie(d->getTrie()),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
               hiragana(0),
-              data(d),
               skipped(NULL) {}
+
+    virtual ~CollationIterator();
 
     inline void setFlags(int8_t f) { flags = f; }
 
     /**
      * Returns the next collation element.
-     * Optimized inline fastpath for the most common types of text and data.
      */
     inline int64_t nextCE(UErrorCode &errorCode) {
         if(cesIndex >= 0) {
@@ -106,16 +103,7 @@ public:
         }
         hiragana = 0;
         UChar32 c;
-        uint32_t ce32;
-        if(pos != limit) {
-            UTRIE2_U16_NEXT32(trie, pos, limit, c, ce32);
-        } else {
-            c = handleNextCodePoint(errorCode);
-            if(c < 0) {
-                return Collation::NO_CE;
-            }
-            ce32 = data->getCE32(c);
-        }
+        uint32_t ce32 = handleNextCE32(c, errorCode);
         // Java: Emulate unsigned-int less-than comparison.
         // int xce32 = ce32 ^ 0x80000000;
         // if(xce32 < 0x7f000000) { special }
@@ -128,6 +116,9 @@ public:
         // The compiler should be able to optimize the previous and the following
         // comparisons of ce32 with the same constant.
         if(ce32 == Collation::MIN_SPECIAL_CE32) {
+            if(c < 0) {
+                return Collation::NO_CE;
+            }
             d = data->getBase();
             ce32 = d->getCE32(c);
             if(!Collation::isSpecialCE32(ce32)) {
@@ -148,75 +139,40 @@ public:
      */
     inline int8_t getHiragana() const { return hiragana; }
 
-    inline UChar32 nextCodePoint(UErrorCode &errorCode) {
-        if(pos != limit) {
-            UChar32 c = *pos;
-            if(c == 0 && limit == NULL) {
-                limit = pos;
-                return U_SENTINEL;
-            }
-            ++pos;
-            UChar trail;
-            if(U16_IS_LEAD(c) && pos != limit && U16_IS_TRAIL(trail = *pos)) {
-                ++pos;
-                return U16_GET_SUPPLEMENTARY(c, trail);
-            } else {
-                return c;
-            }
-        }
-        return handleNextCodePoint(errorCode);
-    }
-
-    inline UChar32 previousCodePoint(UErrorCode &errorCode) {
-        if(pos != start) {
-            UChar32 c = *--pos;
-            UChar lead;
-            if(U16_IS_TRAIL(c) && pos != start && U16_IS_LEAD(lead = *(pos - 1))) {
-                --pos;
-                return U16_GET_SUPPLEMENTARY(lead, c);
-            } else {
-                return c;
-            }
-        }
-        return handlePreviousCodePoint(errorCode);
-    }
-
-    void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
-
-    void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
-
-    // TODO: setText(start, pos, limit)  ?
-
 protected:
     /**
-     * Returns the next code point, or <0 if none, assuming pos==limit.
-     * Post-increment semantics.
+     * Returns the next code point and its local CE32 value.
+     * Returns Collation::MIN_SPECIAL_CE32 at the end of the text (c<0)
+     * or when c's CE32 value is to be looked up in the base data (fallback).
      */
-    virtual UChar32 handleNextCodePoint(UErrorCode &errorCode);
+    virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
     /**
-     * Returns the previous code point, or <0 if none, assuming pos==start.
-     * Pre-decrement semantics.
+     * Called when handleNextCE32() returns with c==0, to see whether it is a NUL terminator.
+     * (Not needed in Java.)
      */
-    virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode);
+    virtual UBool foundNULTerminator();
+
+    virtual UChar32 nextCodePoint(UErrorCode &errorCode) = 0;
+
+    virtual UChar32 previousCodePoint(UErrorCode &errorCode) = 0;
+
+    virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode) = 0;
+
+    virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode) = 0;
 
     /**
      * Saves the current iteration limit for later,
      * and sets it to after c which was read by previousCodePoint() or equivalent.
      */
-    virtual const UChar *saveLimitAndSetAfter(UChar32 c);
+    virtual const void *saveLimitAndSetAfter(UChar32 c) = 0;
 
     /** Restores the iteration limit from before saveLimitAndSetAfter(). */
-    virtual void restoreLimit(const UChar *savedLimit);
+    virtual void restoreLimit(const void *savedLimit) = 0;
 
-    // UTF-16 string pointers.
-    // limit can be NULL for NUL-terminated strings.
-    // This class assumes that whole code points are stored within [start..limit[.
-    // That is, a trail surrogate at start or a lead surrogate at limit-1
-    // will be assumed to be surrogate code points rather than attempting to pair it
-    // with a surrogate retrieved from the subclass.
-    const UChar *start, *pos, *limit;
-    // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
+    // Main lookup trie of the data object.
+    const UTrie2 *trie;
+    const CollationData *data;
 
     int8_t flags;
 
@@ -304,97 +260,17 @@ private:
      */
     void setCE32s(const CollationData *d, int32_t expIndex, int32_t length);
 
-    // Main lookup trie of the data object.
-    const UTrie2 *trie;
-
     // List of CEs.
     int32_t cesIndex, cesMaxIndex;
     const int64_t *ces;
 
     int8_t hiragana;
 
-    const CollationData *data;
     SkippedState *skipped;
 
     // 64-bit-CE buffer for forward and safe-backward iteration
     // (computed expansions and CODAN CEs).
     CEBuffer forwardCEs;
-};
-
-/**
- * Checks the input text for FCD, passes already-FCD segments into the base iterator,
- * and normalizes other segments on the fly.
- */
-class U_I18N_API FCDCollationIterator : public CollationIterator {
-public:
-    FCDCollationIterator(const CollationData *data, int8_t iterFlags,
-                         const UChar *s, const UChar *lim,
-                         UErrorCode &errorCode);
-
-    inline void setSmallSteps(UBool small) { smallSteps = small; }
-
-protected:
-    virtual UChar32 handleNextCodePoint(UErrorCode &errorCode);
-
-    inline UChar32 simpleNext() {
-        UChar32 c = *pos++;
-        UChar trail;
-        if(U16_IS_LEAD(c) && pos != limit && U16_IS_TRAIL(trail = *pos)) {
-            ++pos;
-            return U16_GET_SUPPLEMENTARY(c, trail);
-        } else {
-            return c;
-        }
-    }
-
-    UChar32 nextCodePointDecompHangul(UErrorCode &errorCode);
-
-    virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode);
-
-    inline UChar32 simplePrevious() {
-        UChar32 c = *--pos;
-        UChar lead;
-        if(U16_IS_TRAIL(c) && pos != start && U16_IS_LEAD(lead = *(pos - 1))) {
-            --pos;
-            return U16_GET_SUPPLEMENTARY(lead, c);
-        } else {
-            return c;
-        }
-    }
-
-    UChar32 previousCodePointDecompHangul(UErrorCode &errorCode);
-
-    virtual const UChar *saveLimitAndSetAfter(UChar32 c);
-
-    virtual void restoreLimit(const UChar * /* savedLimit */);
-
-private:
-    // Text pointers: The input text is [rawStart, rawLimit[
-    // where rawLimit can be NULL for NUL-terminated text.
-    // segmentStart and segmentLimit point into the text and indicate
-    // the start and exclusive end of the text segment currently being processed.
-    // They are at FCD boundaries.
-    // Either the current text segment already passes the FCD test
-    // and segmentStart==start<=pos<=limit==segmentLimit,
-    // or the current segment had to be normalized so that
-    // [segmentStart, segmentLimit[ turned into the normalized string,
-    // corresponding to buffer.getStart()==start<=pos<=limit==buffer.getLimit().
-    const UChar *rawStart;
-    const UChar *segmentStart;
-    const UChar *segmentLimit;
-    // rawLimit==NULL for a NUL-terminated string.
-    const UChar *rawLimit;
-    // Normally zero.
-    // Between calls to saveLimitAndSetAfter() and restoreLimit(),
-    // it tracks the positive number of normalized UChars
-    // between the start pointer and the temporary iteration limit.
-    int32_t lengthBeforeLimit;
-    // We make small steps for string comparisons and larger steps for sort key generation.
-    UBool smallSteps;
-
-    const Normalizer2Impl &nfcImpl;
-    UnicodeString normalized;
-    ReorderingBuffer buffer;
 };
 
 /**
