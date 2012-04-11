@@ -6,7 +6,7 @@ ADD_EXECUTABLE(intltest EXCLUDE_FROM_ALL
     cntabcol.cpp cntabcol.h convtest.cpp convtest.h cpdtrtst.cpp cpdtrtst.h csdetest.cpp
     csdetest.h currcoll.cpp currcoll.h dadrcal.cpp dadrcal.h dadrcoll.cpp dadrcoll.h
     dadrfmt.cpp dadrfmt.h dcfmapts.cpp dcfmapts.h dcfmtest.cpp dcfmtest.h decoll.cpp
-    decoll.h dicttest.cpp dicttest.h dtfmapts.cpp dtfmapts.h dtfmrgts.cpp dtfmrgts.h
+    decoll.h dtfmapts.cpp dtfmapts.h dtfmrgts.cpp dtfmrgts.h
     dtfmtrtts.cpp dtfmtrtts.h dtfmttst.cpp dtfmttst.h dtifmtts.cpp dtifmtts.h
     dtptngts.cpp dtptngts.h encoll.cpp encoll.h escoll.cpp escoll.h ficoll.cpp
     ficoll.h fldset.cpp fldset.h frcoll.cpp frcoll.h g7coll.cpp g7coll.h

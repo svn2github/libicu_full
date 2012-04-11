@@ -19,13 +19,13 @@ ICU_LIBRARY(${I18N_STUB}
     numfmt.cpp numsys.cpp numsys_impl.h olsontz.cpp olsontz.h persncal.cpp persncal.h plurfmt.cpp
     plurrule.cpp plurrule_impl.h quant.cpp quant.h rbnf.cpp rbt.cpp rbt.h rbt_data.cpp rbt_data.h
     rbt_pars.cpp rbt_pars.h rbt_rule.cpp rbt_rule.h rbt_set.cpp rbt_set.h rbtz.cpp regexcmp.cpp
-    regexcmp.h regexcst.h regeximp.h regexst.cpp regexst.h regextxt.cpp regextxt.h reldtfmt.cpp
+    regexcmp.h regexcst.h regeximp.h regeximp.cpp regexst.cpp regexst.h regextxt.cpp regextxt.h reldtfmt.cpp
     reldtfmt.h rematch.cpp remtrans.cpp remtrans.h repattrn.cpp search.cpp selfmt.cpp
     selfmtimpl.h simpletz.cpp smpdtfmt.cpp smpdtfst.cpp smpdtfst.h sortkey.cpp strmatch.cpp
     strmatch.h strrepl.cpp strrepl.h stsearch.cpp taiwncal.cpp taiwncal.h tblcoll.cpp
     timezone.cpp titletrn.cpp titletrn.h tmunit.cpp tmutamt.cpp tmutfmt.cpp tolowtrn.cpp
     tolowtrn.h toupptrn.cpp toupptrn.h translit.cpp transreg.cpp transreg.h tridpars.cpp
-    tridpars.h tzfmt.cpp tzfmt.h tzgnames.cpp tzgnames.h tznames.cpp tznames.h tznames_impl.cpp
+    tridpars.h tzfmt.cpp tzgnames.cpp tzgnames.h tznames.cpp tznames_impl.cpp
     tznames_impl.h tzrule.cpp tztrans.cpp ucal.cpp ucln_in.c ucln_in.h ucol.cpp ucol_bld.cpp
     ucol_bld.h ucol_cnt.cpp ucol_cnt.h ucol_elm.cpp ucol_elm.h ucol_imp.h ucol_res.cpp
     ucol_sit.cpp ucol_tok.cpp ucol_tok.h ucol_wgt.cpp ucol_wgt.h ucoleitr.cpp ucsdet.cpp
@@ -46,8 +46,8 @@ ICU_LIBRARY(${I18N_STUB}
     unicode/plurrule.h unicode/rbnf.h unicode/rbtz.h unicode/regex.h unicode/search.h
     unicode/selfmt.h unicode/simpletz.h unicode/smpdtfmt.h unicode/sortkey.h unicode/stsearch.h
     unicode/tblcoll.h unicode/timezone.h unicode/tmunit.h unicode/tmutamt.h unicode/tmutfmt.h
-    unicode/translit.h unicode/tzrule.h unicode/tztrans.h unicode/ucal.h unicode/ucol.h
-    unicode/ucoleitr.h unicode/ucsdet.h unicode/ucurr.h unicode/udat.h
+    unicode/translit.h unicode/tzfmt.h unicode/tznames.h unicode/tzrule.h unicode/tztrans.h
+    unicode/ucal.h unicode/ucol.h unicode/ucoleitr.h unicode/ucsdet.h unicode/ucurr.h unicode/udat.h
     unicode/udateintervalformat.h unicode/udatpg.h unicode/uldnames.h unicode/ulocdata.h
     unicode/umsg.h unicode/unirepl.h unicode/unum.h unicode/upluralrules.h unicode/uregex.h
     unicode/usearch.h unicode/uspoof.h unicode/utmscale.h unicode/utrans.h unicode/vtzone.h
