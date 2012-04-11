@@ -1,0 +1,8 @@
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/i18n")
+ADD_EXECUTABLE(icuinfo
+    icuinfo.cpp testplug.c)
+LINK_ICU_LIBRARIES(icuinfo ${TOOLUTIL_STUB})
+
+INSTALL(TARGETS icuinfo
+        RUNTIME DESTINATION ${BIN_DIR})
+

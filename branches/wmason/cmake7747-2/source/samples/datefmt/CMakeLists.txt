@@ -1,0 +1,9 @@
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/i18n")
+
+ADD_EXECUTABLE(datefmt EXCLUDE_FROM_ALL
+    main.cpp util.cpp)
+LINK_ICU_LIBRARIES(datefmt ${I18N_STUB})
+DEPEND_ON_ICU_DATA(datefmt)
+
+ADD_DEPENDENCIES(samples datefmt)
+

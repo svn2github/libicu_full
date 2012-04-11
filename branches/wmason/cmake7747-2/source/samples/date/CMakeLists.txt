@@ -1,0 +1,9 @@
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/i18n")
+
+ADD_EXECUTABLE(icudate EXCLUDE_FROM_ALL
+    date.c uprint.c)
+LINK_ICU_LIBRARIES(icudate ${I18N_STUB})
+DEPEND_ON_ICU_DATA(icudate)
+
+ADD_DEPENDENCIES(samples icudate)
+
