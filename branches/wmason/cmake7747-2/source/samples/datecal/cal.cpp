@@ -11,7 +11,7 @@
 #include "unicode/gregocal.h"
 #include <stdio.h>
 
-extern "C" {  extern void c_main(); }
+extern "C" void c_main();
 
 void cpp_main()
 {

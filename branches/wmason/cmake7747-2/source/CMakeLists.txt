@@ -18,7 +18,7 @@ OPTION(ENABLE_EXTRAS "Enable building of extras" ON)
 OPTION(ENABLE_IO "Enable building of the io library" ON)
 OPTION(ENABLE_LAYOUT "Enable building of the layout library" ON)
 OPTION(ENABLE_TESTS "Enable building of tests" ON)
-OPTION(ENABLE_SAMPLES "Enable building of samples" ON) # Not implemented
+OPTION(ENABLE_SAMPLES "Enable building of samples" ON)
 
 # User settings
 SET(CROSS_BUILD_DIR "" CACHE STRING "The path to the build directory of an ICU built for the current platform") # Not implemented
