@@ -22,7 +22,7 @@ OPTION(ENABLE_SAMPLES "Enable building of samples" ON)
 
 # User settings
 SET(CROSS_BUILD_DIR "" CACHE STRING "The path to the build directory of an ICU built for the current platform") # Not implemented
-SET(LIBRARY_BITS nochange CACHE STRING "How many bits to use for building: 32, 64, 64else32 or nochange") # Not implemented. See aclocal.m4:AC_DEFUN(AC_CHECK_64BIT_LIBS)
+SET(LIBRARY_BITS nochange CACHE STRING "How many bits to use for building: 32, 64, 64else32 or nochange")
 SET(ICU_DATA_PACKAGING library CACHE STRING "The type of data package: files, archive or library")
 SET(LIBRARY_SUFFIX "" CACHE STRING "Add a suffix to library names")
 
