@@ -34,6 +34,10 @@ public:
         return UTRIE2_GET32(trie, c);
     }
 
+#if 0
+    // TODO: Try v1 approach of building a runtime CollationData instance for canonical closure,
+    // rather than using the builder and its dynamic data structures for lookups.
+    // If this is acceptable, then we can revert the BUILDER_CONTEXT_TAG to a RESERVED_TAG.
     /**
      * Resolves the ce32 with a BUILDER_CONTEXT_TAG into another CE32.
      */
@@ -42,6 +46,7 @@ public:
         if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
         return 0;
     }
+#endif
 
     UBool isUnsafeBackward(UChar32 c) const {
         if(U_IS_TRAIL(c)) {
@@ -58,6 +63,8 @@ public:
 
     const uint32_t *getCE32s(int32_t index) const {
         return NULL;  // TODO
+        // TODO: At index 0 there must be CE32(U+0000)
+        // which has a special-tag for NUL-termination handling.
     }
 
     /**
@@ -105,9 +112,18 @@ public:
         return isCompressibleLeadByte(p >> 24);
     }
 
+    /**
+     * Returns the FCD16 value for code point c. c must be >= 0.
+     */
     uint16_t getFCD16(UChar32 c) const {
-        return nfcImpl.getFCD16(c);
+        if(c < 0xf00) { return fcd16_F00[c]; }
+        if(c < 0xd800 && !nfcImpl.singleLeadMightHaveNonZeroFCD16(c)) { return 0; }
+        return nfcImpl.getFCD16FromNormData(c);
     }
+
+    /** Returns the FCD data for U+0000<=c<U+0F00. */
+    uint16_t getFCD16FromBelowF00(UChar32 c) const { return fcd16_F00[c]; }
+    // TODO: Change the FCDUTF16CollationIterator to use this.
 
     const Normalizer2Impl &getNFCImpl() const {
         return nfcImpl;
@@ -120,7 +136,7 @@ public:
         return 0;  // TODO
     }
 
-protected:
+protected:  // TODO: private?
     // Main lookup trie.
     const UTrie2 *trie;
 
@@ -129,41 +145,9 @@ protected:
 private:
     UBool isFinalData;  // TODO: needed?
     const CollationData *base;  // TODO: probably needed?
+    // Linear FCD16 data table for U+0000..U+0EFF.
+    const uint16_t *fcd16_F00;  // TODO: Copy from the base.
 };
-
-/**
- * Low-level CollationData builder.
- * Takes (character, CE) pairs and builds them into runtime data structures.
- * Supports characters with context prefixes and contraction suffixes.
- */
-class CollationDataBuilder : public CollationData {
-public:
-    virtual uint32_t nextCE32FromBuilderContext(CollationIterator &iter, uint32_t ce32,
-                                                UErrorCode &errorCode) {
-        // TODO:
-        // Build & cache runtime-format prefix/contraction data and return
-        // a normal PREFIX_TAG or CONTRACTION_TAG CE32.
-        // Then let normal runtime code handle it.
-        // This avoids having to prebuild all runtime structures all of the time,
-        // and avoids having to provide three versions (get/next/previous)
-        // with modified copies of the runtime matching code.
-        return 0;
-    }
-};
-
-// TODO: In CollationWeights allocator,
-// try to treat secondary & tertiary weights as 3/4-byte weights with bytes 1 & 2 == 0.
-// Natural secondary limit of 0x10000.
-
-// TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
-
-// TODO: For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
-
-// TODO: Not compressible:
-// - digits
-// - Latin
-// - Hani
-// - trail weights
 
 U_NAMESPACE_END
 

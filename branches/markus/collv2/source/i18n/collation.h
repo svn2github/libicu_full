@@ -195,6 +195,12 @@ public:
     }
 
     /**
+     * Increments a 3-byte primary by a code point offset.
+     */
+    static uint32_t incThreeBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressible,
+                                                int32_t offset);
+
+    /**
      * Computes a CE from a 3-byte base primary and a code point offset.
      * See OFFSET_TAG.
      */

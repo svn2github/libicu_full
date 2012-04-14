@@ -191,7 +191,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
         case Collation::BUILDER_CONTEXT_TAG:
             // Used only in the collation data builder.
             // Data bits point into a builder-specific data structure with non-final data.
-            ce32 = d->nextCE32FromBuilderContext(*this, ce32, errorCode);
+            ce32 = 0;  // TODO: ?? d->nextCE32FromBuilderContext(*this, ce32, errorCode);
             break;
         case Collation::DIGIT_TAG:
             if(flags & Collation::CODAN) {
