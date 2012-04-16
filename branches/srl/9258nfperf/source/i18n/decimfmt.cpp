@@ -247,7 +247,7 @@ inline int32_t _max(int32_t a, int32_t b) { return (a<b) ? b : a; }
 // Constructs a DecimalFormat instance in the default locale.
 
 DecimalFormat::DecimalFormat(UErrorCode& status) {
-    init();
+    init(status);
     UParseError parseError;
     construct(status, parseError);
 }
@@ -258,7 +258,7 @@ DecimalFormat::DecimalFormat(UErrorCode& status) {
 
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              UErrorCode& status) {
-    init();
+    init(status);
     UParseError parseError;
     construct(status, parseError, &pattern);
 }
@@ -271,7 +271,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
                              UErrorCode& status) {
-    init();
+    init(status);
     UParseError parseError;
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -282,7 +282,7 @@ DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
                     DecimalFormatSymbols* symbolsToAdopt,
                     UParseError& parseErr,
                     UErrorCode& status) {
-    init();
+    init(status);
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
     construct(status,parseErr, &pattern, symbolsToAdopt);
@@ -296,7 +296,7 @@ DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              const DecimalFormatSymbols& symbols,
                              UErrorCode& status) {
-    init();
+    init(status);
     UParseError parseError;
     construct(status, parseError, &pattern, new DecimalFormatSymbols(symbols));
 }
@@ -310,7 +310,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
                              UNumberFormatStyle style,
                              UErrorCode& status) {
-    init();
+    init(status);
     fStyle = style;
     UParseError parseError;
     construct(status, parseError, &pattern, symbolsToAdopt);
@@ -321,7 +321,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 //    Put all fields of an uninitialized object into a known state.
 //    Common code, shared by all constructors.
 void
-DecimalFormat::init() {
+DecimalFormat::init(UErrorCode &status) {
     fPosPrefixPattern = 0;
     fPosSuffixPattern = 0;
     fNegPrefixPattern = 0;
@@ -349,6 +349,9 @@ DecimalFormat::init() {
     fAffixesForCurrency = NULL;
     fPluralAffixesForCurrency = NULL;
     fCurrencyPluralInfo = NULL;
+
+    // only do this once per obj.
+    DecimalFormatStaticSets::initSets(&status);
 }
 
 //------------------------------------------------------------------------------
@@ -654,7 +657,8 @@ DecimalFormat::~DecimalFormat()
 
 DecimalFormat::DecimalFormat(const DecimalFormat &source) :
     NumberFormat(source) {
-    init();
+    UErrorCode status = U_ZERO_ERROR;
+    init(status); // if this fails, 'source' isn't initialized properly either.
     *this = source;
 }
 
@@ -1837,6 +1841,25 @@ DecimalFormat::parseForCurrency(const UnicodeString& text,
     return found;
 }
 
+static const UnicodeSet *_loadDecimalSet(UChar32 decimalChar, UBool &couldUseDecimalSet, const UnicodeSet*&set, UBool strictParse) {
+  if(couldUseDecimalSet && set==NULL) {
+    couldUseDecimalSet=FALSE; // don't try again
+    set = DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse);
+  }
+  return set;
+}
+
+static const UnicodeSet *_loadGroupingSet(UBool &couldUseSet, const UnicodeSet*&set, UBool strictParse) {
+  if(couldUseSet && set==NULL) {
+    couldUseSet=FALSE; // don't try again
+    if (strictParse) {
+      set = DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators;
+    } else {
+      set = DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators;
+    }
+  }
+  return set;
+}
 
 /**
  * Parse the given text into a number.  The text is parsed beginning at
@@ -1879,7 +1902,45 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     int32_t position = parsePosition.getIndex();
     int32_t oldStart = position;
     UBool strictParse = !isLenient();
+    UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
 
+    goto retry;
+    // faster path
+    {
+      int j=0;
+      int l=text.length();
+
+      UChar32 ch = text.char32At(j);
+
+      if(ch=='-') {
+        parsedNum.append('-',err); 
+        j+=U16_LENGTH(ch);
+        if(j<l) ch = text.char32At(j);
+      } else {
+        parsedNum.append('+',err);
+      }
+      while(j<l) {
+        int32_t digit = ch - zero;
+        if (digit < 0 || digit > 9) {
+            digit = u_charDigitValue(ch);
+            if(digit < 0 || digit > 9) {
+              parsedNum.clear(); // BAIL!
+              goto retry;
+            }
+        }
+        parsedNum.append((char)(digit + '0'), err);
+        j+=U16_LENGTH(ch);
+        if(j<l) ch = text.char32At(j);        
+      }
+      if(j>=l) {
+        parsePosition.setIndex(j);
+        goto fini; // good!
+      }
+      parsedNum.clear(); // fell through
+    }
+
+ retry:
+ {
     // Match padding before prefix
     if (fFormatWidth > 0 && fPadPosition == kPadBeforePrefix) {
         position = skipPadding(text, position);
@@ -1935,7 +1996,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         // put only significant digits into the DigitList, and adjust the
         // exponent as needed.
 
-        UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
 
         UBool strictFail = FALSE; // did we exit with a strict parse failure?
         int32_t lastGroup = -1; // where did we last see a grouping separator?
@@ -1969,17 +2029,11 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         const UnicodeSet *decimalSet = NULL;
         const UnicodeSet *groupingSet = NULL;
 
-        if (decimalCharLength == decimalStringLength) {
-            decimalSet = DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse);
-        }
+        UBool couldUseDecimalSet = (decimalCharLength == decimalStringLength);
+        _loadDecimalSet(decimalChar,couldUseDecimalSet,decimalSet,strictParse);
 
-        if (groupingCharLength == groupingStringLength) {
-            if (strictParse) {
-                groupingSet = DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators;
-            } else {
-                groupingSet = DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators;
-            }
-        }
+        UBool couldUseGroupingSet = (groupingCharLength == groupingStringLength);
+        _loadGroupingSet(couldUseGroupingSet, groupingSet, strictParse);
 
         // We need to test groupingChar and decimalChar separately from groupingSet and decimalSet, if the sets are even initialized.
         // If sawDecimal is TRUE, only consider sawDecimalChar and NOT decimalSet
@@ -2239,7 +2293,8 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     parsePosition.setIndex(position);
 
     parsedNum.data()[0] = (posSuffixMatch >= 0 || (!strictParse && negMatch < 0 && negSuffixMatch < 0)) ? '+' : '-';
-
+   }
+ fini:
     if(parsePosition.getIndex() == oldStart)
     {
         parsePosition.setErrorIndex(position);
@@ -2344,8 +2399,6 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     int32_t inputLength = input.length();
     int32_t affixCharLength = U16_LENGTH(affixChar);
     UnicodeSet *affixSet;
-
-    DecimalFormatStaticSets::initSets(&status);
 
     if (!lenient) {
         affixSet = DecimalFormatStaticSets::gStaticSets->fStrictDashEquivalents;
