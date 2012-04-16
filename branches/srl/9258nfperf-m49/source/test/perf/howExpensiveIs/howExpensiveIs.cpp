@@ -44,7 +44,9 @@ int main(int argc, const char* argv[]){
   
 
   if(out!=NULL) {
+#ifndef SKIP_INFO
     udbg_writeIcuInfo(out);
+#endif
     fprintf(out, "</tests>\n");
     fclose(out);
   }
@@ -163,8 +165,10 @@ QuickTest(NumParseTest,{    static UChar pattern[] = { 0x23 };    NumParseTest_f
 QuickTest(NullTest,{},{int j=U_LOTS_OF_TIMES;while(--j);return U_LOTS_OF_TIMES;},{})
 OpenCloseTest(pattern,unum,open,{},(UNUM_PATTERN_DECIMAL,pattern,1,"en_US",0,&setupStatus),{})
 OpenCloseTest(default,unum,open,{},(UNUM_DEFAULT,NULL,-1,"en_US",0,&setupStatus),{})
+#if !UCONFIG_NO_CONVERSION
 #include "unicode/ucnv.h"
 OpenCloseTest(gb18030,ucnv,open,{},("gb18030",&setupStatus),{})
+#endif
 #include "unicode/ures.h"
 OpenCloseTest(root,ures,open,{},(NULL,"root",&setupStatus),{})
 
@@ -177,18 +181,31 @@ void runTests() {
     NullTest t;
     runTestOn(t);
   }
+#ifdef PROFONLY
+  fflush(stdout);
+  fprintf(stdout, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+  fflush(stdout);
+#endif
   {
     NumParseTest t;
     runTestOn(t);
   }
+#ifdef PROFONLY
+  fflush(stdout);
+  fprintf(stdout, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+  fflush(stdout);
+#endif
+#ifndef PROFONLY
   {
     Test_unum_opendefault t;
     runTestOn(t);
   }
+#if !UCONFIG_NO_CONVERSION
   {
     Test_ucnv_opengb18030 t;
     runTestOn(t);
   }
+#endif
   {
     Test_unum_openpattern t;
     runTestOn(t);
@@ -197,4 +214,5 @@ void runTests() {
     Test_ures_openroot t;
     runTestOn(t);
   }
+#endif
 }

@@ -1864,7 +1864,7 @@ private:
      *   Initialize all fields of a new DecimalFormatter.
      *      Common code for use by constructors.
      */
-    void init();
+    void init(UErrorCode& status);
 
     /**
      * Do real work of constructing a new DecimalFormat.
