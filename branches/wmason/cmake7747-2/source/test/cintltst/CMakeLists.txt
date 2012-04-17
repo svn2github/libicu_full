@@ -17,6 +17,7 @@ ADD_EXECUTABLE(cintltst EXCLUDE_FROM_ALL
     udatpg_test.c uenumtst.c usettest.c usrchtst.c utexttst.c utf16tst.c utf8tst.c
     utmstest.c utransts.c)
 LINK_ICU_LIBRARIES(cintltst ${CTESTFW_STUB})
+TARGET_LINK_LIBRARIES(cintltst ${ICU_LIBM})
 DEPEND_ON_ICU_DATA(cintltst)
 
 ADD_CUSTOM_TARGET(check-cintltst

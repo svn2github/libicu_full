@@ -609,3 +609,15 @@ IF(BITS_TO_CHECK)
     ENDIF()
 ENDIF()
 
+# See if we need the math library
+CHECK_SYMBOL_EXISTS(log math.h LOG_WITHOUT_LIBM)
+IF(NOT LOG_WITHOUT_LIBM)
+    SET(CMAKE_REQUIRED_LIBRARIES m)
+    CHECK_SYMBOL_EXISTS(log math.h LOG_WITH_LIBM)
+    IF(LOG_WITH_LIBM)
+        SET(ICU_LIBM m)
+    ELSE()
+        MESSAGE(FATAL_ERROR "Can't figure out how to use the log() function")
+    ENDIF()
+ENDIF()
+
