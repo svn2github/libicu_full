@@ -508,6 +508,7 @@ IntlTest::IntlTest()
     errorCount = 0;
     dataErrorCount = 0;
     verbose = FALSE;
+    no_time = FALSE;
     no_err_msg = FALSE;
     warn_on_missing_data = FALSE;
     quick = FALSE;
@@ -555,6 +556,13 @@ UBool IntlTest::setVerbose( UBool verboseVal )
 {
     UBool rval = this->verbose;
     this->verbose = verboseVal;
+    return rval;
+}
+
+UBool IntlTest::setNotime( UBool no_time )
+{
+    UBool rval = this->no_time;
+    this->no_time = no_time;
     return rval;
 }
 
@@ -707,7 +715,7 @@ UBool IntlTest::runTestLoop( char* testname, char* par, char *baseName )
 
             this->runIndexedTest( index, TRUE, name, par );
 
-            UDate timeStop = uprv_getRawUTCtime();
+            UDate timeStop = no_time?timeStart:uprv_getRawUTCtime();
             rval = TRUE; // at least one test has been called
             char secs[256];
             sprintf(secs, "%f", (timeStop-timeStart)/1000.0);
@@ -1073,6 +1081,7 @@ main(int argc, char* argv[])
     UBool all = FALSE;
     UBool verbose = FALSE;
     UBool no_err_msg = FALSE;
+    UBool no_time = FALSE;
     UBool quick = TRUE;
     UBool name = FALSE;
     UBool leaks = FALSE;
@@ -1109,6 +1118,9 @@ main(int argc, char* argv[])
             else if (strcmp("leaks", str) == 0 ||
                      strcmp("l", str) == 0)
                 leaks = TRUE;
+            else if (strcmp("notime", str) == 0 ||
+                     strcmp("T", str) == 0)
+                no_time = TRUE;
             else if (strcmp("x", str)==0) {
               if(++i>=argc) {
                 printf("* Error: '-x' option requires an argument. usage: '-x outfile.xml'.\n");
@@ -1151,6 +1163,7 @@ main(int argc, char* argv[])
                 "### \n"
                 "### Options are: verbose (v), all (a), noerrormsg (n), \n"
                 "### exhaustive (e), leaks (l), -x xmlfile.xml, prop:<propery>=<value>, \n"
+                "### notime (T), \n"
                 "### threads:<threadCount> (Mulithreading must first be \n"
                 "###     enabled otherwise this will be ignored. \n"
                 "###     The default thread count is 1.),\n"
@@ -1181,6 +1194,7 @@ main(int argc, char* argv[])
     major.setLeaks( leaks );
     major.setThreadCount( threadCount );
     major.setWarnOnMissingData( warnOnMissingData );
+    major.setNotime (no_time);
     for (int32_t i = 0; i < nProps; i++) {
         major.setProperty(props[i]);
     }
@@ -1212,6 +1226,7 @@ main(int argc, char* argv[])
     fprintf(stdout, "   No error messages (n)    : %s\n", (no_err_msg?        "On" : "Off"));
     fprintf(stdout, "   Exhaustive (e)           : %s\n", (!quick?            "On" : "Off"));
     fprintf(stdout, "   Leaks (l)                : %s\n", (leaks?             "On" : "Off"));
+    fprintf(stdout, "   notime (T)               : %s\n", (no_time?             "On" : "Off"));
     fprintf(stdout, "   Warn on missing data (w) : %s\n", (warnOnMissingData? "On" : "Off"));
 #if (ICU_USE_THREADS==0)
     fprintf(stdout, "   Threads                  : Disabled\n");
@@ -1394,7 +1409,7 @@ main(int argc, char* argv[])
     if (execCount <= 0) {
         fprintf(stdout, "***** Not all called tests actually exist! *****\n");
     }
-    endTime = uprv_getRawUTCtime();
+    endTime = no_time?startTime:uprv_getRawUTCtime();
     diffTime = (int32_t)(endTime - startTime);
     printf("Elapsed Time: %02d:%02d:%02d.%03d\n",
         (int)((diffTime%U_MILLIS_PER_DAY)/U_MILLIS_PER_HOUR),
