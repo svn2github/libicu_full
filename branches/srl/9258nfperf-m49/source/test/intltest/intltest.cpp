@@ -715,10 +715,14 @@ UBool IntlTest::runTestLoop( char* testname, char* par, char *baseName )
 
             this->runIndexedTest( index, TRUE, name, par );
 
-            UDate timeStop = no_time?timeStart:uprv_getRawUTCtime();
+            UDate timeStop = uprv_getRawUTCtime();
             rval = TRUE; // at least one test has been called
             char secs[256];
-            sprintf(secs, "%f", (timeStop-timeStart)/1000.0);
+            if(!no_time) {
+              sprintf(secs, "%f", (timeStop-timeStart)/1000.0);
+            } else {
+              secs[0]=0;
+            }
             
 
             strcpy(saveBaseLoc,name);
@@ -731,11 +735,11 @@ UBool IntlTest::runTestLoop( char* testname, char* par, char *baseName )
             
             if (lastErrorCount == errorCount) {
                 sprintf( msg, "   } OK:   %s ", name );
-                str_timeDelta(msg+strlen(msg),timeStop-timeStart);
+                if(!no_time) str_timeDelta(msg+strlen(msg),timeStop-timeStart);
                 lastTestFailed = FALSE;
             }else{
                 sprintf(msg,  "   } ERRORS (%li) in %s", (long)(errorCount-lastErrorCount), name);
-                str_timeDelta(msg+strlen(msg),timeStop-timeStart);
+                if(!no_time) str_timeDelta(msg+strlen(msg),timeStop-timeStart);
 
                 for(int i=0;i<LL_indentlevel;i++) {
                     errorList += " ";
@@ -1409,13 +1413,15 @@ main(int argc, char* argv[])
     if (execCount <= 0) {
         fprintf(stdout, "***** Not all called tests actually exist! *****\n");
     }
-    endTime = no_time?startTime:uprv_getRawUTCtime();
-    diffTime = (int32_t)(endTime - startTime);
-    printf("Elapsed Time: %02d:%02d:%02d.%03d\n",
-        (int)((diffTime%U_MILLIS_PER_DAY)/U_MILLIS_PER_HOUR),
-        (int)((diffTime%U_MILLIS_PER_HOUR)/U_MILLIS_PER_MINUTE),
-        (int)((diffTime%U_MILLIS_PER_MINUTE)/U_MILLIS_PER_SECOND),
-        (int)(diffTime%U_MILLIS_PER_SECOND));
+    if(!no_time) {
+      endTime = uprv_getRawUTCtime();
+      diffTime = (int32_t)(endTime - startTime);
+      printf("Elapsed Time: %02d:%02d:%02d.%03d\n",
+             (int)((diffTime%U_MILLIS_PER_DAY)/U_MILLIS_PER_HOUR),
+             (int)((diffTime%U_MILLIS_PER_HOUR)/U_MILLIS_PER_MINUTE),
+             (int)((diffTime%U_MILLIS_PER_MINUTE)/U_MILLIS_PER_SECOND),
+             (int)(diffTime%U_MILLIS_PER_SECOND));
+    }
 
     if(ctest_xml_fini())
       return 1;
