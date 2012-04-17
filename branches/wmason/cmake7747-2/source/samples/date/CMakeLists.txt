@@ -4,6 +4,8 @@ ADD_EXECUTABLE(icudate EXCLUDE_FROM_ALL
     date.c uprint.c)
 LINK_ICU_LIBRARIES(icudate ${I18N_STUB})
 DEPEND_ON_ICU_DATA(icudate)
+SET_TARGET_PROPERTIES(icudate PROPERTIES
+                      LINKER_LANGUAGE CXX)
 
 ADD_DEPENDENCIES(samples icudate)
 

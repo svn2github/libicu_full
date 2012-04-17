@@ -4,6 +4,8 @@ ADD_EXECUTABLE(icucal EXCLUDE_FROM_ALL
     cal.c uprint.c)
 LINK_ICU_LIBRARIES(icucal ${I18N_STUB})
 DEPEND_ON_ICU_DATA(icucal)
+SET_TARGET_PROPERTIES(icucal PROPERTIES
+                      LINKER_LANGUAGE CXX)
 
 ADD_DEPENDENCIES(samples icucal)
 
