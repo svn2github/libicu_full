@@ -1904,19 +1904,23 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     int32_t oldStart = position;
     UBool strictParse = !isLenient();
     UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
-
-    // TODO: remove ugly gotos. 
 #ifdef FMT_DEBUG
     UnicodeString s;
-    s.append((UnicodeString)"PARSE \"").append(text.tempSubString(position)).append((UnicodeString)"\" ");
+    s.append((UnicodeString)"PARSE \"").append(text.tempSubString(position)).append((UnicodeString)"\" " );
+#define DBGAPPD(x) if(x) { s.append(UnicodeString(#x "="));  if(x->isEmpty()) { s.append(UnicodeString("<empty>")); } else { s.append(*x); } s.append(UnicodeString(" ")); }
+    DBGAPPD(negPrefix);
+    DBGAPPD(negSuffix);
+    DBGAPPD(posPrefix);
+    DBGAPPD(posSuffix);
     debugout(s);
 #endif
-    if(fFormatWidth>0) {  // skip if..
-      goto retry;  
-    }
- optimistic: 
-    // faster path
-    {
+
+    UBool fastParseOk = false; /* TRUE iff fast parse is OK */
+
+    if(fFormatWidth==0 &&
+       //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
+       text.length()>0 &&
+       text.length()<20 ) {  // optimized path
       int j=position;
       int l=text.length();
       int digitCount=0;
@@ -1931,41 +1935,47 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       }
       while(j<l) {
         int32_t digit = ch - zero;
+#if 0 /* unicode digit */
         if (digit < 0 || digit > 9) {
             digit = u_charDigitValue(ch);
+#endif
             if(digit < 0 || digit > 9) {
-              parsedNum.clear(); // BAIL!
-              goto retry;
+              digitCount=-1; // fail
+              break; //  ------------- BREAK
             }
+#if 0
         }
+#endif
         parsedNum.append((char)(digit + '0'), err);
         if((digitCount>0) || digit!=0) {
           digitCount++;
         }
         j+=U16_LENGTH(ch);
-        if(j<l) ch = text.char32At(j);        
+        if(j<l) ch = text.char32At(j); // for next  
       }
       if(j>=l && (digitCount>0)) {
-        parsePosition.setIndex(j);
 #ifdef FMT_DEBUG
         printf("PP -> %d, good = [%s]  digitcount=%d, fGroupingSize=%d fGroupingSize2=%d!\n", j, parsedNum.data(), digitCount, fGroupingSize, fGroupingSize2);
 #endif
+        fastParseOk=true; // Fast parse OK!
 #ifdef SKIP_OPT
         debug("SKIP_OPT");
-        goto retry;
-#endif
-        position=j;
+        /* for testing, try it the slow way. also */
+        fastParseOk=false;
+        parsedNum.clear();
+#else
+        parsePosition.setIndex(position=j);
         status[fgStatusInfinite]=false;
-        goto fini; // good!
+#endif
       } else {
+        // was not OK. reset, retry
         debug("Fall through");
         parsedNum.clear();
       }
     }
 
- retry:
-    parsedNum.clear();
- {
+  if(!fastParseOk) 
+  {
     // Match padding before prefix
     if (fFormatWidth > 0 && fPadPosition == kPadBeforePrefix) {
         position = skipPadding(text, position);
@@ -2324,8 +2334,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     parsePosition.setIndex(position);
 
     parsedNum.data()[0] = (posSuffixMatch >= 0 || (!strictParse && negMatch < 0 && negSuffixMatch < 0)) ? '+' : '-';
-   }
- fini:
+  } /* end SLOW parse */
 #ifdef FMT_DEBUG
 printf("PP -> %d, SLOW? = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.data(), parsePosition.getIndex(),oldStart,u_errorName(err));
 #endif
