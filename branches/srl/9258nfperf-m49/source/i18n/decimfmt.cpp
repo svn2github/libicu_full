@@ -1927,9 +1927,14 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       UChar32 ch = text.char32At(j);
 
       if(ch=='-') {
-        parsedNum.append('-',err); 
-        j+=U16_LENGTH(ch);
-        if(j<l) ch = text.char32At(j);
+        /* for now- no negs. */
+        j = l+1; 
+        
+        /*
+          parsedNum.append('-',err); 
+          j+=U16_LENGTH(ch);
+          if(j<l) ch = text.char32At(j);
+        */
       } else {
         parsedNum.append('+',err);
       }
@@ -2334,10 +2339,10 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     parsePosition.setIndex(position);
 
     parsedNum.data()[0] = (posSuffixMatch >= 0 || (!strictParse && negMatch < 0 && negSuffixMatch < 0)) ? '+' : '-';
-  } /* end SLOW parse */
 #ifdef FMT_DEBUG
-printf("PP -> %d, SLOW? = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.data(), parsePosition.getIndex(),oldStart,u_errorName(err));
+printf("PP -> %d, SLOW = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.data(), parsePosition.getIndex(),oldStart,u_errorName(err));
 #endif
+  } /* end SLOW parse */
     if(parsePosition.getIndex() == oldStart)
     {
 #ifdef FMT_DEBUG
