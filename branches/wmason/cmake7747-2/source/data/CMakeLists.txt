@@ -32,19 +32,30 @@ ENDIF()
 IF(LOWER_ICU_DATA_PACKAGING STREQUAL library)
 
     SET(DATA_ENTRY_POINT "${ICU_PREFIX}dt${ICU_LIB_MAJOR_VERSION}")
-    # The genccode output must be assembly language. If C is selected, then the
-    # data can't be loaded because of "invalid format". Note that the ASM_STYLE
-    # variable is set in cmake-modules/Configure.cmake.
-    STRING(REGEX REPLACE "^(.*)\\.dat$" "\\1.s" DATA_ARCHIVE_ASM "${DATA_ARCHIVE}")
-    GET_FILENAME_COMPONENT(DATA_ARCHIVE_GENCCODE_NAME "${DATA_ARCHIVE}" NAME_WE)
-    ADD_CUSTOM_COMMAND(OUTPUT "${DATA_ARCHIVE_ASM}"
-                       COMMAND genccode -a ${ASM_STYLE} -d "${CMAKE_CURRENT_BINARY_DIR}" -f "${DATA_ARCHIVE_GENCCODE_NAME}" -e ${DATA_ENTRY_POINT} "${DATA_ARCHIVE}"
+    IF(WIN32)
+        # On Windows we generate an .obj file
+        STRING(REGEX REPLACE "^(.*)[lb]\\.dat$" "\\1.obj" DATA_ARCHIVE_GEN "${DATA_ARCHIVE}")
+        SET(GENCCODE_OPTS "-o")
+        # We have to link in a dummy obj on Windows in order for linkage of the genccode-
+        # generated obj to work.
+        SET(REAL_DATA_ADDL_SOURCES dummy.c)
+    ELSE()
+        # The genccode output must be assembly language, if we are not generating a native
+        # object file. If C is selected, then the data can't be loaded because of
+        # "invalid format" (ticket #9270). Note that the ASM_STYLE variable is set in
+        # cmake-modules/Configure.cmake.
+        STRING(REGEX REPLACE "^(.*)[lb]\\.dat$" "\\1.s" DATA_ARCHIVE_GEN "${DATA_ARCHIVE}")
+        SET(GENCCODE_OPTS "-a ${ASM_STYLE}")
+    ENDIF()
+    GET_FILENAME_COMPONENT(DATA_ARCHIVE_GENCCODE_NAME "${DATA_ARCHIVE_GEN}" NAME_WE)
+    ADD_CUSTOM_COMMAND(OUTPUT "${DATA_ARCHIVE_GEN}"
+                       COMMAND genccode ${GENCCODE_OPTS} -d "${CMAKE_CURRENT_BINARY_DIR}" -f "${DATA_ARCHIVE_GENCCODE_NAME}" -e ${DATA_ENTRY_POINT} "${DATA_ARCHIVE}"
                        DEPENDS "${DATA_ARCHIVE}")
 
     # The real data has the same output names as the stub data, but we have 
     # to give the CMake target a different name. So, after we go through the
     # normal ICU_LIBRARY processing we circle back and rename the output files.
-    ICU_LIBRARY(${REAL_DATA_STUB} "${DATA_ARCHIVE_ASM}")
+    ICU_LIBRARY(${REAL_DATA_STUB} "${DATA_ARCHIVE_GEN}" ${REAL_DATA_ADDL_SOURCES})
     TARGET_NAMES_FROM_STUB(${REAL_DATA_STUB} REAL_DATA_SHARED REAL_DATA_STATIC)
     TARGET_NAMES_FROM_STUB(${DATA_STUB} DATA_SHARED DATA_STATIC)
     IF(ENABLE_SHARED)

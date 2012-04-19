@@ -16,6 +16,20 @@ IF(NOT CMAKE_BUILD_TYPE)
 ENDIF()
 MESSAGE(STATUS "Build type -- ${CMAKE_BUILD_TYPE}")
 
+# On Windows we want to set the runtime output directory, so that
+# executables can find all their DLLs at run time.
+IF(WIN32)
+    FOREACH(TYPE "" None Debug Release RelWithDebInfo MinSizeRel)
+        IF(TYPE)
+            STRING(TOUPPER ${TYPE} FORXX_UPPER_TYPE)
+            SET(FORXX_RT_OUT_VAR CMAKE_RUNTIME_OUTPUT_DIRECTORY_${FORXX_UPPER_TYPE})
+        ELSE()
+            SET(FORXX_RT_OUT_VAR CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+        ENDIF()
+        SET(${FORXX_RT_OUT_VAR} "${CMAKE_BINARY_DIR}/bin")
+    ENDFOREACH(TYPE)
+ENDIF()
+
 # Set the output directory for libraries to the same one for all
 # libraries so that if/when the data library is created it will
 # overwrite the stub data library.
@@ -575,17 +589,16 @@ SET(ASM_STYLE ${ASM_STYLE} CACHE STRING "The style of assembly language to gener
 
 # Set the bitness of the compilation (LOWER_LIBRARY_BITS was set and
 # validated in top-level CMakeLists.txt)
-CHECK_TYPE_SIZE("void*" VOIDP_SIZE)
-IF(VOIDP_SIZE EQUAL 8)
+IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
     IF(LOWER_LIBRARY_BITS STREQUAL 32)
         SET(BITS_TO_CHECK 32)
     ENDIF()
-ELSEIF(VOIDP_SIZE EQUAL 4)
+ELSEIF(CMAKE_SIZEOF_VOID_P EQUAL 4)
     IF(LOWER_LIBRARY_BITS MATCHES "64|64else32")
         SET(BITS_TO_CHECK 64)
     ENDIF()
 ELSE()
-    MESSAGE(FATAL_ERROR "Unrecognized value for sizeof(void*): ${VOIDP_SIZE}")
+    MESSAGE(FATAL_ERROR "Unrecognized value for sizeof(void*): ${CMAKE_SIZEOF_VOID_P}")
 ENDIF()
 IF(BITS_TO_CHECK)
     IF(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_C_COMPILER_ID STREQUAL SunPro)

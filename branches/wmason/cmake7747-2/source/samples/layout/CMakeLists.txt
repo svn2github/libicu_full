@@ -7,7 +7,7 @@ SET(LAYOUT_BUILDABLE TRUE)
 UNSET(PLATFORM_LIBS)
 
 # The pkg-config search fore the required libraries fails
-# when non-default bitness is being build. If the variable
+# when non-default bitness is being built. If the variable
 # BITS_TO_CHECK is set, then we know we have non-default
 # bitness.
 IF(UNIX AND NOT BITS_TO_CHECK)
@@ -37,7 +37,12 @@ IF(UNIX AND NOT BITS_TO_CHECK)
     SET(PLATFORM_C_SOURCES
         cgnomelayout.c)
 ELSEIF(WIN32)
-    MESSAGE(FATAL_ERROR "The Windows build is not yet done")
+    SET(PLATFORM_SOURCES
+        GDIFontInstance.cpp GDIFontInstance.h GDIFontMap.cpp GDIFontMap.h
+        GDIGUISupport.cpp GDIGUISupport.h layout.cpp LayoutSample.rc)
+    # These apparently contradictory defines were taken directly from the
+    # legacy Visual Studio project.
+    ADD_DEFINITIONS(-DUNICODE -D_MBCS -DLE_USE_CMEMORY -D_CRT_SECURE_NO_DEPRECATE)
 ENDIF()
 
 IF(LAYOUT_BUILDABLE)
@@ -47,16 +52,21 @@ IF(LAYOUT_BUILDABLE)
         ScriptCompositeFontInstance.h UnicodeReader.cpp UnicodeReader.h
         ${PLATFORM_SOURCES})
 
-    ADD_EXECUTABLE(layout EXCLUDE_FROM_ALL
+    ADD_EXECUTABLE(layout WIN32 EXCLUDE_FROM_ALL
                    ${COMMON_SOURCES} ${PLATFORM_CXX_SOURCES})
     LINK_ICU_LIBRARIES(layout ${LAYOUTEX_STUB} ${I18N_STUB})
     TARGET_LINK_LIBRARIES(layout ${PLATFORM_LIBS})
 
-    ADD_EXECUTABLE(clayout EXCLUDE_FROM_ALL
-        gnomeglue.cpp gnomeglue.h pflow.c pflow.h rsurface.cpp rsurface.h
-        ucreader.cpp ucreader.h ${COMMON_SOURCES} ${PLATFORM_C_SOURCES})
-    LINK_ICU_LIBRARIES(clayout ${LAYOUTEX_STUB} ${I18N_STUB})
-    TARGET_LINK_LIBRARIES(clayout ${PLATFORM_LIBS})    
+    ADD_DEPENDENCIES(samples layout)
 
-    ADD_DEPENDENCIES(samples layout clayout)
+    IF(NOT WIN32)
+        ADD_EXECUTABLE(clayout EXCLUDE_FROM_ALL
+            gnomeglue.cpp gnomeglue.h pflow.c pflow.h rsurface.cpp rsurface.h
+            ucreader.cpp ucreader.h ${COMMON_SOURCES} ${PLATFORM_C_SOURCES})
+        LINK_ICU_LIBRARIES(clayout ${LAYOUTEX_STUB} ${I18N_STUB})
+        TARGET_LINK_LIBRARIES(clayout ${PLATFORM_LIBS})    
+
+        ADD_DEPENDENCIES(samples clayout)
+
+    ENDIF()
 ENDIF()

@@ -12,12 +12,15 @@
 
 void c_main()
 {
+  UErrorCode status;
+  int32_t i;
+  UCalendar* cal;
+
   puts("----");
   puts("C Sample");
 
-UErrorCode status = U_ZERO_ERROR;
-int32_t i;
-UCalendar *cal = ucal_open(NULL, -1, NULL, UCAL_GREGORIAN, &status);
+status = U_ZERO_ERROR;
+cal = ucal_open(NULL, -1, NULL, UCAL_GREGORIAN, &status);
 if (U_FAILURE(status)) {
       puts("Couldn't create GregorianCalendar");
       return;
