@@ -1917,7 +1917,8 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
     UBool fastParseOk = false; /* TRUE iff fast parse is OK */
 
-    if(fFormatWidth==0 &&
+    if(!currencyParsing &&
+       fFormatWidth==0 &&
        //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
        text.length()>0 &&
        text.length()<20 ) {  // optimized path
