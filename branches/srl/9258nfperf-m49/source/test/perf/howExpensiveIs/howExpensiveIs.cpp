@@ -195,6 +195,7 @@ void runTests() {
   fprintf(stdout, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
   fflush(stdout);
 #endif
+#if 0 /* TODO */
 #ifndef PROFONLY
   {
     Test_unum_opendefault t;
@@ -214,5 +215,6 @@ void runTests() {
     Test_ures_openroot t;
     runTestOn(t);
   }
+#endif
 #endif
 }

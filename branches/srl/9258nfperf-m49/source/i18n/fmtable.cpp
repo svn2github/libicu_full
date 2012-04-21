@@ -36,6 +36,14 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(Formattable)
 
+struct FmtStackData {
+  DigitList stackDecimalNum;   // 128
+  //CharString stackDecimalStr;  // 64
+  //                         -----
+  //                         192 total
+};
+
+
 //-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
 
 // NOTE: As of 3.0, there are limitations to the UObject API.  It does
@@ -253,7 +261,7 @@ Formattable::operator=(const Formattable& source)
 
         UErrorCode status = U_ZERO_ERROR;
         if (source.fDecimalNum != NULL) {
-            fDecimalNum = new DigitList(*source.fDecimalNum);
+          fDecimalNum = new DigitList(*source.fDecimalNum); // TODO: use internal digit list
         }
         if (source.fDecimalStr != NULL) {
             fDecimalStr = new CharString(*source.fDecimalStr, status);
@@ -348,9 +356,16 @@ void Formattable::dispose()
 
     fType = kLong;
     fValue.fInt64 = 0;
+
     delete fDecimalStr;
     fDecimalStr = NULL;
-    delete fDecimalNum;
+    
+    FmtStackData *stackData = (FmtStackData*)fStackData;
+    if(fDecimalNum != &(stackData->stackDecimalNum)) {
+      delete fDecimalNum;
+    } else {
+      //delete ((void*)fDecimalNum) fDecimalNum; /* don't care? */
+    }
     fDecimalNum = NULL;
 }
 
@@ -695,7 +710,7 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
         // from parsing, or from the user setting a decimal number, fDecimalNum
         // would already be set.
         //
-        fDecimalNum = new DigitList;
+      fDecimalNum = new DigitList; // TODO: use internal digit list
         if (fDecimalNum == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
             return "";
@@ -729,13 +744,31 @@ StringPiece Formattable::getDecimalNumber(UErrorCode &status) {
 }
 
 
+DigitList *
+Formattable::getInternalDigitList() {
+  FmtStackData *stackData = (FmtStackData*)fStackData;
+  if(fDecimalNum != &(stackData->stackDecimalNum)) {
+    delete fDecimalNum;
+    fDecimalNum = new (&(stackData->stackDecimalNum)) DigitList();
+  } else {
+    fDecimalNum->clear();
+  }
+  return fDecimalNum;
+}
 
 // ---------------------------------------
 void
 Formattable::adoptDigitList(DigitList *dl) {
-    dispose();
+  if(fDecimalNum==dl) {
+    fDecimalNum = NULL; // don't delete
+  }
+  dispose();
 
-    fDecimalNum = dl;
+  fDecimalNum = dl;
+
+  if(dl==NULL) { // allow adoptDigitList(NULL) to clear
+    return;
+  }
 
     // Set the value into the Union of simple type values.
     // Cannot use the set() functions because they would delete the fDecimalNum value,
@@ -765,7 +798,7 @@ Formattable::setDecimalNumber(const StringPiece &numberString, UErrorCode &statu
     //    The decNumber library requires nul-terminated input.  StringPiece input
     //    is not guaranteed nul-terminated.  Too bad.
     //    CharString automatically adds the nul.
-    DigitList *dnum = new DigitList();
+    DigitList *dnum = new DigitList(); // TODO: use getInternalDigitList
     if (dnum == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;

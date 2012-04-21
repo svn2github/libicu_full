@@ -903,6 +903,21 @@ DigitList::isZero() const
 }
 
 
+
+void * U_EXPORT2 DigitList::operator new(size_t size, void *stack) U_NO_THROW {
+  return stack;
+}
+
+void U_EXPORT2 DigitList::operator delete(void *p, void *stack) U_NO_THROW {
+  // nothing to do
+#if U_DEBUG
+  /* zero it out */
+  if(p!=NULL) {
+    uprv_memset(p,0,sizeof(DigitList));
+  }
+#endif
+}
+
 U_NAMESPACE_END
 #endif // #if !UCONFIG_NO_FORMATTING
 

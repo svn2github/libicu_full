@@ -36,8 +36,18 @@ static UMemFreeFn     *pFree;
  *   Used to prevent changing out the heap functions after allocations have been made */
 static UBool   gHeapInUse;
 
+#if U_DEBUG && defined(UPRV_MALLOC_COUNT)
+#include <stdio.h>
+static int n=0;
+static long b=0; 
+#endif
+
+
 U_CAPI void * U_EXPORT2
 uprv_malloc(size_t s) {
+#if U_DEBUG && defined(UPRV_MALLOC_COUNT)
+  fprintf(stderr,"MALLOC\t#%d\t%ul bytes\t%ul total\n", ++n,s,(b+=s)); fflush(stderr);
+#endif
     if (s > 0) {
         gHeapInUse = TRUE;
         if (pAlloc) {

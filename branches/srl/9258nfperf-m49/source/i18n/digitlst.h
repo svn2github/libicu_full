@@ -389,6 +389,23 @@ private:
 
 
     UBool shouldRoundUp(int32_t maximumDigits) const;
+
+ public:
+
+    using UMemory::operator new;
+    using UMemory::operator delete;
+
+    /**
+     * Placement new/delete for stack usage
+     * @internal
+     */
+    static void * U_EXPORT2 operator new(size_t size, void *onStack) U_NO_THROW;
+    
+    /**
+     * Placement new/delete for stack usage
+     * @internal
+     */
+    static void U_EXPORT2 operator delete(void *p, void *onStack) U_NO_THROW;
 };
 
 

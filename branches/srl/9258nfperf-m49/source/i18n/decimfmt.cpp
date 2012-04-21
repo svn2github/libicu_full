@@ -180,7 +180,7 @@ U_CDECL_END
 
 #ifdef FMT_DEBUG
 #include <stdio.h>
-static void debugout(UnicodeString s) {
+static void debugout(const UnicodeString& s) {
     char buf[2000];
     s.extract((int32_t) 0, s.length(), buf);
     printf("%s:%d: %s\n", __FILE__, __LINE__, buf);
@@ -1676,7 +1676,7 @@ void DecimalFormat::parse(const UnicodeString& text,
 
     // status is used to record whether a number is infinite.
     UBool status[fgStatusLength];
-    DigitList *digits = new DigitList;
+    DigitList *digits = result.getInternalDigitList(); // get one from the stack buffer
     if (digits == NULL) {
         return;    // no way to report error from here.
     }
@@ -1905,7 +1905,8 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     UBool strictParse = !isLenient();
     UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
 #ifdef FMT_DEBUG
-    UnicodeString s;
+    UChar dbgbuf[300];
+    UnicodeString s(dbgbuf,0,300);;
     s.append((UnicodeString)"PARSE \"").append(text.tempSubString(position)).append((UnicodeString)"\" " );
 #define DBGAPPD(x) if(x) { s.append(UnicodeString(#x "="));  if(x->isEmpty()) { s.append(UnicodeString("<empty>")); } else { s.append(*x); } s.append(UnicodeString(" ")); }
     DBGAPPD(negPrefix);
