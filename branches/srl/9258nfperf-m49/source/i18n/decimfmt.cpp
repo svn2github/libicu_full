@@ -1684,7 +1684,7 @@ void DecimalFormat::parse(const UnicodeString& text,
     if (fCurrencySignCount > fgCurrencySignCountZero) {
         if (!parseForCurrency(text, parsePosition, *digits,
                               status, currency)) {
-            delete digits;
+          //delete digits;  /* no need to delete - stored in Formattable */
             return;
         }
     } else {
@@ -1695,7 +1695,7 @@ void DecimalFormat::parse(const UnicodeString& text,
                       parsePosition, *digits, status, currency)) {
             debug("!subparse(...) - rewind");
             parsePosition.setIndex(startIdx);
-            delete digits;
+          //delete digits;  /* no need to delete - stored in Formattable */
             return;
         }
     }
@@ -1704,7 +1704,7 @@ void DecimalFormat::parse(const UnicodeString& text,
     if (status[fgStatusInfinite]) {
         double inf = uprv_getInfinity();
         result.setDouble(digits->isPositive() ? inf : -inf);
-        delete digits;    // TODO:  set the dl to infinity, and let it fall into the code below.
+        //delete digits;  /* no need to delete, owned by Formattable*/   // TODO:  set the dl to infinity, and let it fall into the code below.
     }
 
     else {
