@@ -364,7 +364,7 @@ void Formattable::dispose()
     if(fDecimalNum != &(stackData->stackDecimalNum)) {
       delete fDecimalNum;
     } else {
-      //delete ((void*)fDecimalNum) fDecimalNum; /* don't care? */
+      fDecimalNum->~DigitList(); // destruct, don't deallocate
     }
     fDecimalNum = NULL;
 }
@@ -749,7 +749,7 @@ Formattable::getInternalDigitList() {
   FmtStackData *stackData = (FmtStackData*)fStackData;
   if(fDecimalNum != &(stackData->stackDecimalNum)) {
     delete fDecimalNum;
-    fDecimalNum = new (&(stackData->stackDecimalNum)) DigitList();
+    fDecimalNum = new (&(stackData->stackDecimalNum), kOnStack) DigitList();
   } else {
     fDecimalNum->clear();
   }

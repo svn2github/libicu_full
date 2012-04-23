@@ -66,6 +66,8 @@ template class U_I18N_API MaybeStackHeaderAndArray<decNumber, char, DEFAULT_DIGI
 #endif
 
 
+enum EStackMode { kOnStack };
+
 /**
  * Digit List is actually a Decimal Floating Point number.
  * The original implementation has been replaced by a thin wrapper onto a 
@@ -393,19 +395,12 @@ private:
  public:
 
     using UMemory::operator new;
-    using UMemory::operator delete;
 
     /**
-     * Placement new/delete for stack usage
+     * Placement new for stack usage
      * @internal
      */
-    static void * U_EXPORT2 operator new(size_t size, void *onStack) U_NO_THROW;
-    
-    /**
-     * Placement new/delete for stack usage
-     * @internal
-     */
-    static void U_EXPORT2 operator delete(void *p, void *onStack) U_NO_THROW;
+    static void * U_EXPORT2 operator new(size_t size, void *onStack, EStackMode mode) U_NO_THROW;
 };
 
 
