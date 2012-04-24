@@ -1914,6 +1914,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     DBGAPPD(posPrefix);
     DBGAPPD(posSuffix);
     debugout(s);
+    printf("currencyParsing=%d, fFormatWidth=%d, text.length=%d\n", currencyParsing, fFormatWidth, text.length());
 #endif
 
     UBool fastParseOk = false; /* TRUE iff fast parse is OK */
@@ -1927,10 +1928,20 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       int l=text.length();
       int digitCount=0;
       UChar32 ch = text.char32At(j);
+      const UnicodeString *decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
+      UChar32 decimalChar = 0;
+      int32_t decimalCount = decimalString->countChar32(0,3);
+      if(decimalCount==1) {
+        decimalChar = decimalString->char32At(0);
+      } else if(decimalCount==0) {
+        decimalChar=0;
+      } else {
+        j=l+1;//=break
+      }
 
       if(ch=='-') {
         /* for now- no negs. */
-        j = l+1; 
+        j=l+1;//=break
         
         /*
           parsedNum.append('-',err); 
@@ -1942,25 +1953,21 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       }
       while(j<l) {
         int32_t digit = ch - zero;
-#if 0 /* unicode digit */
-        if (digit < 0 || digit > 9) {
-            digit = u_charDigitValue(ch);
-#endif
-            if(digit < 0 || digit > 9) {
-              digitCount=-1; // fail
-              break; //  ------------- BREAK
-            }
-#if 0
-        }
-#endif
-        parsedNum.append((char)(digit + '0'), err);
-        if((digitCount>0) || digit!=0) {
-          digitCount++;
+        if(digit >=0 && digit <= 9) {
+          parsedNum.append((char)(digit + '0'), err);
+          if((digitCount>0) || digit!=0 || j==l) {
+            digitCount++;
+          }
+        } else if(ch == decimalChar) {
+          parsedNum.append((char)('.'), err);
+        } else {
+          digitCount=-1; // fail
+          break;
         }
         j+=U16_LENGTH(ch);
-        if(j<l) ch = text.char32At(j); // for next  
+        ch = text.char32At(j); // for next  
       }
-      if(j>=l && (digitCount>0)) {
+      if(j==l && (digitCount>0)) {
 #ifdef FMT_DEBUG
         printf("PP -> %d, good = [%s]  digitcount=%d, fGroupingSize=%d fGroupingSize2=%d!\n", j, parsedNum.data(), digitCount, fGroupingSize, fGroupingSize2);
 #endif
@@ -2050,10 +2057,15 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         } else {
             decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
         }
-        UChar32 decimalChar = decimalString->char32At(0);
-
         const UnicodeString *groupingString = &getConstSymbol(DecimalFormatSymbols::kGroupingSeparatorSymbol);
+        UChar32 decimalChar = decimalString->char32At(0);
         UChar32 groupingChar = groupingString->char32At(0);
+        int32_t textLength = text.length(); // One less pointer to follow
+        int32_t decimalStringLength = decimalString->length();
+        int32_t decimalCharLength   = U16_LENGTH(decimalChar);
+        int32_t groupingStringLength = groupingString->length();
+        int32_t groupingCharLength   = U16_LENGTH(groupingChar);
+
         UBool sawDecimal = FALSE;
         UChar32 sawDecimalChar = 0xFFFF;
         UBool sawGrouping = FALSE;
@@ -2061,11 +2073,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         UBool sawDigit = FALSE;
         int32_t backup = -1;
         int32_t digit;
-        int32_t textLength = text.length(); // One less pointer to follow
-        int32_t decimalStringLength = decimalString->length();
-        int32_t decimalCharLength   = U16_LENGTH(decimalChar);
-        int32_t groupingStringLength = groupingString->length();
-        int32_t groupingCharLength   = U16_LENGTH(groupingChar);
 
         // equivalent grouping and decimal support
         const UnicodeSet *decimalSet = NULL;

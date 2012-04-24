@@ -103,6 +103,7 @@ public:
 };
 
 void runTestOn(HowExpensiveTest &t) {
+  if(U_FAILURE(setupStatus)) return; // silently
   fprintf(stderr, "%s:%d: Running: %s\n", t.fFile, t.fLine, t.fName);
   double sieveTime = uprv_getSieveTime(NULL);
   double st;
@@ -111,6 +112,10 @@ void runTestOn(HowExpensiveTest &t) {
   fflush(stdout);
   fflush(stderr);
   int32_t iter = t.runTests(&st,&me);
+  if(U_FAILURE(setupStatus)) {
+    fprintf(stderr, "Error in tests: %s\n", u_errorName(setupStatus));
+    return;
+  }
   fflush(stdout);
   fflush(stderr);
   
@@ -153,13 +158,75 @@ public:
 #define OpenCloseTest(n, svc,suffix,c,a,d) class OCName(svc,_,Test_,suffix,n) : public HowExpensiveTest { public: OCName(svc,_,Test_,suffix,n)():HowExpensiveTest(OCStr(svc,_,suffix,n),__FILE__,__LINE__) c int32_t run() { int32_t i; for(i=0;i<U_LOTS_OF_TIMES;i++){ OCRun(svc,_,close) (  OCRun(svc,_,suffix) a );  } return i; }   void warmup() { OCRun(svc,_,close) ( OCRun(svc,_,suffix) a); } virtual ~ OCName(svc,_,Test_,suffix,n) () d };
 #define QuickTest(n,c,r,d)  class n : public HowExpensiveTest { public: n():HowExpensiveTest(#n,__FILE__,__LINE__) c int32_t run() r virtual ~n () d };
 
+class NumTest : public HowExpensiveTest {
+private:
+  double fExpect;
+  char name[100];
+  UNumberFormat *fFmt;
+  UnicodeString fPat;
+  UnicodeString fString;
+  const UChar *fStr;
+  int32_t fLen;
+  const char *fFile;
+  int fLine;
+  const char *setName(const char *pat, const char *str) {
+    sprintf(name,"NumTest:p=|%s|,str=|%s|",pat,str);
+    return name;
+  }
+public:
+  NumTest(const char *pat, const char *num, double expect, const char *FILE, int LINE) 
+    : HowExpensiveTest(setName(pat,num),FILE, LINE),
+      fExpect(expect),
+      fFmt(0),
+      fPat(pat, -1, US_INV),
+      fString(num,-1,US_INV),
+      fStr(fString.getTerminatedBuffer()),
+      fLen(u_strlen(fStr)),
+      fFile(FILE),
+      fLine(LINE)
+  {
+    fFmt = unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), 1, "en_US", 0, &setupStatus);
+  }
+  void warmup() {
+    if(U_SUCCESS(setupStatus)) {
+      double trial = unum_parse(fFmt,fStr,fLen, NULL, &setupStatus);
+      if(U_SUCCESS(setupStatus) && trial!=fExpect) {
+        setupStatus = U_INTERNAL_PROGRAM_ERROR;
+        printf("%s:%d: warmup() %s got %.8f expected %.8f\n", 
+               fFile,fLine,name,trial,fExpect);
+      }
+    }
+  }
+  int32_t run() {
+    double trial=0.0;
+    int i;
+    for(i=0;i<U_LOTS_OF_TIMES;i++){
+      trial = unum_parse(fFmt,fStr,fLen, NULL, &setupStatus);
+    }
+    return i;
+  }
+  virtual ~NumTest(){}
+};
+
+#define DO_NumTest(p,n,x) { NumTest t(p,n,x,__FILE__,__LINE__); runTestOn(t); }
+
 // TODO: move, scope.
 static UChar pattern[] = { 0x23 }; // '#'
+static UChar strdot[] = { '2', '.', '0', 0 };
+static UChar strspc[] = { '2', ' ', 0 };
+static UChar strgrp[] = {'2',',','2','2','2', 0 };
+static UChar strneg[] = {'2',',','2','2','2', 0 };
+static UChar strbeng[] = {0x09E8,0x09E8,0x09E8,0x09E8, 0 };
 
 UNumberFormat *NumParseTest_fmt;
 
 // TODO: de-uglify.
 QuickTest(NumParseTest,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;    static UChar str[] = { 0x31 };double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,str,1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
+
+QuickTest(NumParseTestdot,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;  double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strdot,1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
+QuickTest(NumParseTestspc,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;    double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strspc,1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
+QuickTest(NumParseTestgrp,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;    double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strgrp,-1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
+QuickTest(NumParseTestbeng,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;    double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strbeng,-1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
 
 
 QuickTest(NullTest,{},{int j=U_LOTS_OF_TIMES;while(--j);return U_LOTS_OF_TIMES;},{})
@@ -186,10 +253,16 @@ void runTests() {
   fprintf(stdout, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
   fflush(stdout);
 #endif
-  {
-    NumParseTest t;
-    runTestOn(t);
-  }
+
+  DO_NumTest("#","0",0.0);
+  DO_NumTest("#","2.0",2.0);
+  DO_NumTest("#","2 ",2);
+  DO_NumTest("#","-2 ",-2);
+  DO_NumTest("+#","+2",2);
+  DO_NumTest("#,###.0","2222.0",2222.0);
+  DO_NumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0);
+  {    NumParseTestgrp t;    runTestOn(t);  }
+  {    NumParseTestbeng t;    runTestOn(t);  }
 #ifdef PROFONLY
   fflush(stdout);
   fprintf(stdout, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
