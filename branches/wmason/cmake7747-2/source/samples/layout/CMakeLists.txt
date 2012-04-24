@@ -6,11 +6,9 @@ INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}"
 SET(LAYOUT_BUILDABLE TRUE)
 UNSET(PLATFORM_LIBS)
 
-# The pkg-config search fore the required libraries fails
-# when non-default bitness is being built. If the variable
-# BITS_TO_CHECK is set, then we know we have non-default
-# bitness.
-IF(UNIX AND NOT BITS_TO_CHECK)
+# The pkg-config check does not work if the bitness is
+# non-default.
+IF(UNIX AND DEFAULT_BITNESS)
     FIND_PACKAGE(PkgConfig)
     IF(NOT PKG_CONFIG_FOUND)
         MESSAGE(WARNING "pkg-config was not found, so the layout sample cannot be built")

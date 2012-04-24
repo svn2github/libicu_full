@@ -30,10 +30,6 @@
 #include <time.h>
 #endif
 
-#if U_PLATFORM_IS_LINUX_BASED
-#   define U_ELF
-#endif
-
 #ifdef U_ELF
 #   include <elf.h>
 #   if defined(ELFCLASS64)

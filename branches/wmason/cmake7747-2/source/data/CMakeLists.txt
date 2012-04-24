@@ -1,8 +1,10 @@
 IF(IS_BIG_ENDIAN)
     SET(BYTE_ORDER_INDICATOR b)
+    # This is a lower-case el ('L'), not a one ('1')
     SET(BYTE_ORDER_OPPOSITE_INDICATOR l)
     SET(BYTE_ORDER_NAME big)
 ELSE()
+    # This is a lower-case el ('L'), not a one ('1')
     SET(BYTE_ORDER_INDICATOR l)
     SET(BYTE_ORDER_OPPOSITE_INDICATOR b)
     SET(BYTE_ORDER_NAME little)
@@ -32,20 +34,22 @@ ENDIF()
 IF(LOWER_ICU_DATA_PACKAGING STREQUAL library)
 
     SET(DATA_ENTRY_POINT "${ICU_PREFIX}dt${ICU_LIB_MAJOR_VERSION}")
-    IF(WIN32)
+    IF(GENCCODE_OBJECT_GENERATION)
         # On Windows we generate an .obj file
-        STRING(REGEX REPLACE "^(.*)[lb]\\.dat$" "\\1.obj" DATA_ARCHIVE_GEN "${DATA_ARCHIVE}")
-        SET(GENCCODE_OPTS "-o")
+        STRING(REGEX REPLACE "^(.*)[lb]\\.dat$" "\\1${CMAKE_C_OUTPUT_EXTENSION}" DATA_ARCHIVE_GEN "${DATA_ARCHIVE}")
+        SET(GENCCODE_OPTS -o)
         # We have to link in a dummy obj on Windows in order for linkage of the genccode-
-        # generated obj to work.
-        SET(REAL_DATA_ADDL_SOURCES dummy.c)
+        # generated object to work.
+        IF(WIN32)
+            SET(REAL_DATA_ADDL_SOURCES dummy.c)
+        ENDIF()
     ELSE()
         # The genccode output must be assembly language, if we are not generating a native
         # object file. If C is selected, then the data can't be loaded because of
         # "invalid format" (ticket #9270). Note that the ASM_STYLE variable is set in
         # cmake-modules/Configure.cmake.
         STRING(REGEX REPLACE "^(.*)[lb]\\.dat$" "\\1.s" DATA_ARCHIVE_GEN "${DATA_ARCHIVE}")
-        SET(GENCCODE_OPTS "-a ${ASM_STYLE}")
+        SET(GENCCODE_OPTS -a ${ASM_STYLE})
     ENDIF()
     GET_FILENAME_COMPONENT(DATA_ARCHIVE_GENCCODE_NAME "${DATA_ARCHIVE_GEN}" NAME_WE)
     ADD_CUSTOM_COMMAND(OUTPUT "${DATA_ARCHIVE_GEN}"
