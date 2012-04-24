@@ -980,7 +980,7 @@ void SSearchTest::offsetTest()
     col->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
 
     for(int32_t i = 0; i < testCount; i += 1) {
-        if (!isICUVersionAtLeast(50, 0) && i>=4 && i<=6) {
+        if (!isICUVersionAtLeast(50, 1) && i>=4 && i<=6) {
             continue; // timebomb until ticket #8080 is resolved
         }
         UnicodeString ts = CharsToUnicodeString(test[i]);
@@ -2446,7 +2446,7 @@ void SSearchTest::bmMonkeyTest(char *params)
             generateTestCase(coll, monkeys, monkeyCount, prefix,  altPrefix);
             generateTestCase(coll, monkeys, monkeyCount, suffix,  altSuffix);
             
-            if (!isICUVersionAtLeast(50, 0) && skipSet->containsSome(pattern)) {
+            if (!isICUVersionAtLeast(50, 1) && skipSet->containsSome(pattern)) {
                 continue; // timebomb until ticket #8080 is resolved
             }
 
