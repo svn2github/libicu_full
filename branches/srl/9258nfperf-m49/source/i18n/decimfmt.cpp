@@ -1914,7 +1914,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     DBGAPPD(posPrefix);
     DBGAPPD(posSuffix);
     debugout(s);
-    printf("currencyParsing=%d, fFormatWidth=%d, text.length=%d\n", currencyParsing, fFormatWidth, text.length());
+    printf("currencyParsing=%d, fFormatWidth=%d, text.length=%d negPrefLen=%d\n", currencyParsing, fFormatWidth, text.length(),  negPrefix!=NULL?negPrefix->length():-1);
 #endif
 
     UBool fastParseOk = false; /* TRUE iff fast parse is OK */
@@ -1931,7 +1931,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       const UnicodeString *decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
       UChar32 decimalChar = 0;
       int32_t decimalCount = decimalString->countChar32(0,3);
-      if(decimalCount==1) {
+      if(isParseIntegerOnly()) {
+        decimalChar = 0; // not allowed
+      } else if(decimalCount==1) {
         decimalChar = decimalString->char32At(0);
       } else if(decimalCount==0) {
         decimalChar=0;
@@ -1960,6 +1962,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
           }
         } else if(ch == decimalChar) {
           parsedNum.append((char)('.'), err);
+          decimalChar=0; // no more decimals.
         } else {
           digitCount=-1; // fail
           break;
