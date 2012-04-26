@@ -180,11 +180,12 @@ U_CDECL_END
 
 #ifdef FMT_DEBUG
 #include <stdio.h>
-static void debugout(const UnicodeString& s) {
+static void _debugout(const char *f, int l, const UnicodeString& s) {
     char buf[2000];
     s.extract((int32_t) 0, s.length(), buf);
-    printf("%s:%d: %s\n", __FILE__, __LINE__, buf);
+    printf("%s:%d: %s\n", f,l, buf);
 }
+#define debugout(x) _debugout(__FILE__,__LINE__,x)
 #define debug(x) printf("%s:%d: %s\n", __FILE__,__LINE__, x);
 #else
 #define debugout(x)
@@ -1957,7 +1958,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         int32_t digit = ch - zero;
         if(digit >=0 && digit <= 9) {
           parsedNum.append((char)(digit + '0'), err);
-          if((digitCount>0) || digit!=0 || j==l) {
+          if((digitCount>0) || digit!=0 || j==(l-1)) {
             digitCount++;
           }
         } else if(ch == decimalChar) {
@@ -1986,7 +1987,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 #endif
       } else {
         // was not OK. reset, retry
-        debug("Fall through");
+#ifdef FMT_DEBUG
+        printf("Fall through: j=%d, l=%d, digitCount=%d\n", j, l, digitCount);
+#endif
         parsedNum.clear();
       }
     }

@@ -1,6 +1,6 @@
 /*
  **********************************************************************
- * Copyright (c) 2011,International Business Machines
+ * Copyright (c) 2011-2012,International Business Machines
  * Corporation and others.  All Rights Reserved.
  **********************************************************************
  */
@@ -10,6 +10,11 @@
 #include "udbgutil.h"
 
 void runTests(void);
+
+#ifndef ITERATIONS
+#define ITERATIONS 5
+#endif
+
 
 FILE *out = NULL;
 UErrorCode setupStatus = U_ZERO_ERROR;
@@ -82,7 +87,6 @@ public:
 
   virtual int32_t runTests(double *subTime, double *marginOfError) {
     warmup(); /* warmup */
-    #define ITERATIONS 5
     double times[ITERATIONS];
     int subIterations = 0;
     for(int i=0;i<ITERATIONS;i++) {
@@ -261,7 +265,7 @@ void runTests() {
   DO_NumTest("+#","+2",2);
   DO_NumTest("#,###.0","2222.0",2222.0);
   DO_NumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0);
-  {    NumParseTestgrp t;    runTestOn(t);  }
+  //  {    NumParseTestgrp t;    runTestOn(t);  }
   {    NumParseTestbeng t;    runTestOn(t);  }
 #ifdef PROFONLY
   fflush(stdout);
