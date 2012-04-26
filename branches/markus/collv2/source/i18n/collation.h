@@ -31,6 +31,7 @@ public:
     static const uint8_t LEVEL_SEPARATOR_BYTE = 1;
     static const uint8_t MERGE_SEPARATOR_BYTE = 2;
     static const uint32_t MERGE_SEPARATOR_PRIMARY = 0x02000000;  // U+FFFE
+    static const uint32_t MERGE_SEPARATOR_CE32 = 0x02000202;  // U+FFFE
 
     /**
      * Primary compression low terminator.
@@ -59,6 +60,7 @@ public:
 
     static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // not compressible
     static const uint32_t MAX_PRIMARY = 0xfeff0000;  // U+FFFF
+    static const uint32_t MAX_REGULAR_CE32 = 0xfeff0505;  // U+FFFF
 
     /** Primary lead byte for special tags, not used as a primary lead byte in resolved CEs. */
     static const uint8_t SPECIAL_BYTE = 0xff;
@@ -192,6 +194,16 @@ public:
             // return (long)ce32&0xffffffff;
             return ce32;
         }
+    }
+
+    /** Is ce32 a long-primary pppppp01? */
+    static inline UBool isLongPrimaryCE32(uint32_t ce32) {
+        return !isSpecialCE32(ce32) && (ce32 & 0xff) == 1;
+    }
+
+    /** Turns the long-primary CE32 into a primary weight pppppp00. */
+    static inline uint32_t primaryFromLongPrimaryCE32(uint32_t ce32) {
+        return ce32 - 1;
     }
 
     /**

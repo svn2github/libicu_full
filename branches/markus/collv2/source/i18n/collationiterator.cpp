@@ -267,9 +267,9 @@ CollationIterator::getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32
     int32_t offset = (c - baseCp) * ((ce32 & 0xf) + 1);  // delta * increment
     ce32 = d->getCE32(baseCp);
     // ce32 must be a long-primary pppppp01.
-    U_ASSERT(!Collation::isSpecialCE32(ce32) && (ce32 & 0xff) == 1);
-    --ce32;  // Turn the long-primary CE32 into a primary weight pppppp00.
-    return Collation::getCEFromThreeByteOffset(ce32, d->isCompressiblePrimary(ce32), offset);
+    U_ASSERT(Collation::isLongPrimaryCE32(ce32));
+    uint32_t p = Collation::primaryFromLongPrimaryCE32(ce32);
+    return Collation::getCEFromThreeByteOffset(p, d->isCompressiblePrimary(p), offset);
 }
 
 uint32_t

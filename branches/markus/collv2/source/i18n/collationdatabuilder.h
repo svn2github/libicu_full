@@ -50,27 +50,45 @@ public:
 
 private:
     void initHanRanges(UErrorCode &errorCode);
+    void initHanCompat(UErrorCode &errorCode);
 
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order.
      * @param start first code point
      * @param end last code point (inclusive)
      * @param primary primary weight for 'start'
-     * @param isCompressible TRUE if the primaries in this range are compressible
      * @param step per-code point primary-weight increment
      * @param errorCode ICU in/out error code
      * @return the next primary after 'end': start primary incremented by ((end-start)+1)*step
      */
     uint32_t setThreeByteOffsetRange(UChar32 start, UChar32 end,
-                                     uint32_t primary, UBool isCompressible,
-                                     int32_t step,
+                                     uint32_t primary, int32_t step,
                                      UErrorCode &errorCode);
+
+    static uint32_t makeLongPrimaryCE32(uint32_t p) { return p + 1; }
+
+    static uint32_t makeSpecialCE32(uint32_t tag, uint32_t value) {
+        return Collation::MIN_SPECIAL_CE32 | (tag << 20) | value;
+    }
+
+    uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
+
+    UBool isCompressibleLeadByte(uint32_t b) const {
+        return base != NULL ? base->isCompressibleLeadByte(b) : compressibleBytes[b];
+    }
+
+    inline UBool isCompressiblePrimary(uint32_t p) const {
+        return isCompressibleLeadByte(p >> 24);
+    }
 
     const Normalizer2Impl &nfcImpl;
     const CollationData *base;
     UTrie2 *trie;
     UVector32 ce32s;
     UVector64 ce64s;
+    // Flags for which primary-weight lead bytes are compressible.
+    // NULL in a tailoring builder, consult the base instead.
+    UBool *compressibleBytes;
 };
 
 #if 0

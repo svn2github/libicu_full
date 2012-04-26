@@ -36,7 +36,7 @@ Collation::incThreeBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressibl
         offset /= 253;
     }
     // First byte, assume no further overflow.
-    return primary | (basePrimary & 0xff000000) + (uint32_t)(offset << 24);
+    return primary | ((basePrimary & 0xff000000) + (uint32_t)(offset << 24));
 }
 
 int64_t
