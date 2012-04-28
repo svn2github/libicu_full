@@ -29,6 +29,10 @@ class CollationIterator;
  */
 class U_I18N_API CollationData : public UMemory {
 public:
+    CollationData(const Normalizer2Impl &nfc)
+            : trie(NULL), nfcImpl(nfc),
+              base(NULL), fcd16_F00(NULL), compressibleBytes(NULL) {}
+
     uint32_t getCE32(UChar32 c) const {
         // TODO: Make this virtual so that we can use utrie2_get32() in the CollationDataBuilder?
         return UTRIE2_GET32(trie, c);
@@ -49,19 +53,17 @@ public:
 #endif
 
     UBool isUnsafeBackward(UChar32 c) const {
-        if(U_IS_TRAIL(c)) {
-            return TRUE;
-        }
+        if(U_IS_TRAIL(c)) { return TRUE; }
         return TRUE;  // TODO
         // TODO: Are all cc!=0 marked as unsafe for prevCE() (because of discontiguous contractions)?
         // TODO: Use a frozen UnicodeSet rather than an imprecise bit set, at least initially.
     }
 
-    const int64_t *getCEs(int32_t index) const {
+    const int64_t *getCEs(int32_t /*index*/) const {
         return NULL;  // TODO
     }
 
-    const uint32_t *getCE32s(int32_t index) const {
+    const uint32_t *getCE32s(int32_t /*index*/) const {
         return NULL;  // TODO
         // TODO: At index 0 there must be CE32(U+0000)
         // which has a special-tag for NUL-termination handling.
@@ -70,7 +72,7 @@ public:
     /**
      * Returns a pointer to prefix or contraction-suffix matching data.
      */
-    const uint16_t *getContext(int32_t index) const {
+    const uint16_t *getContext(int32_t /*index*/) const {
         return NULL;  // TODO
     }
 
@@ -105,7 +107,7 @@ public:
     }
 
     UBool isCompressibleLeadByte(uint32_t b) const {
-        return FALSE;  // TODO
+        return compressibleBytes[b];
     }
 
     inline UBool isCompressiblePrimary(uint32_t p) const {
@@ -143,10 +145,13 @@ protected:  // TODO: private?
     const Normalizer2Impl &nfcImpl;
 
 private:
-    UBool isFinalData;  // TODO: needed?
-    const CollationData *base;  // TODO: probably needed?
+    friend class CollationDataBuilder;
+
+    const CollationData *base;
     // Linear FCD16 data table for U+0000..U+0EFF.
-    const uint16_t *fcd16_F00;  // TODO: Copy from the base.
+    const uint16_t *fcd16_F00;
+    // Flags for which primary-weight lead bytes are compressible.
+    const UBool *compressibleBytes;
 };
 
 U_NAMESPACE_END

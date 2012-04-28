@@ -25,8 +25,10 @@
 
 U_NAMESPACE_BEGIN
 
+CEArray::~CEArray() {}
+
 int32_t
-CEBuffer::doAppend(int32_t length, int64_t ce, UErrorCode &errorCode) {
+CEArray::doAppend(int32_t length, int64_t ce, UErrorCode &errorCode) {
     // length == buffer.getCapacity()
     if(U_FAILURE(errorCode)) { return length; }
     int32_t capacity = buffer.getCapacity();
@@ -138,6 +140,13 @@ private:
 
 CollationIterator::~CollationIterator() {
     delete skipped;
+}
+
+void
+CollationIterator::reset() {
+    cesIndex = -1;
+    hiragana = 0;
+    if(skipped != NULL) { skipped->clear(); }
 }
 
 uint32_t
@@ -707,6 +716,8 @@ CollationIterator::setCE32s(const CollationData *d, int32_t expIndex, int32_t le
         forwardCEs[i] = Collation::ceFromCE32(ce32s[i]);
     }
 }
+
+UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(CollationIterator)
 
 // TODO: TwoWayCollationIterator:
 // So far, this is just the initial code collection moved out of the base CollationIterator.

@@ -235,8 +235,8 @@ RuleBasedCollator2::compareUpToTertiary(CollationIterator &left, CollationIterat
 }
 
 UCollationResult
-RuleBasedCollator2::comparePrimaryAndCase(CollationIterator &left, CollationIterator &right,
-                                         UErrorCode &errorCode) {
+RuleBasedCollator2::comparePrimaryAndCase(CollationIterator &/*left*/, CollationIterator &/*right*/,
+                                         UErrorCode &/*errorCode*/) {
     // TODO: Why?? <quote from v1 implementation>
     // if(((secS & UCOL_PRIMARYMASK) != 0) || strength > UCOL_PRIMARY)
     //   primary ignorables should not be considered on the case level when the strength is primary

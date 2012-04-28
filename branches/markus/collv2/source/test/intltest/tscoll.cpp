@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2011, International Business Machines Corporation and
+ * Copyright (c) 1997-2012, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -66,6 +66,8 @@
         }                             \
         break
 
+extern IntlTest *createCollationTest();
+
 void IntlTestCollator::runIndexedTest( int32_t index, UBool exec, const char* &name, char* par )
 {
     if (exec) {
@@ -101,6 +103,15 @@ void IntlTestCollator::runIndexedTest( int32_t index, UBool exec, const char* &n
 #if !UCONFIG_NO_COLLATION && !UCONFIG_NO_NORMALIZATION
       TESTCLASS(22, AlphabeticIndexTest);
 #endif
+      case 23:
+          name = "CollationTest";
+          if (exec) {
+              logln("CollationTest ---");
+              logln();
+              LocalPointer<IntlTest> test(createCollationTest());
+              callTest(*test, par);
+          }
+          break;
 
       default: name = ""; break;
     }

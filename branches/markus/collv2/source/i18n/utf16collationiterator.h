@@ -39,6 +39,12 @@ public:
 
     virtual ~UTF16CollationIterator();
 
+    void setText(const UChar *s, const UChar *lim) {
+        reset();
+        start = pos = s;
+        limit = lim;
+    }
+
     // TODO: setText(start, pos, limit)  ?
 
 protected:

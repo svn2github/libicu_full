@@ -13,6 +13,7 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/localpointer.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
@@ -25,20 +26,25 @@
 #include "uvectr32.h"
 #include "uvectr64.h"
 
+// TODO: Move to utrie2.h.
+// TODO: Used here?
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUTrie2Pointer, UTrie2, utrie2_close);
+
 U_NAMESPACE_BEGIN
 
 CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
         : nfcImpl(*Normalizer2Factory::getNFCImpl(errorCode)),
           base(NULL), trie(NULL),
           ce32s(errorCode), ce64s(errorCode),
-          compressibleBytes(NULL) {
+          fcd16_F00(NULL), compressibleBytes(NULL) {
     // Reserve the first CE32 for U+0000.
     ce32s.addElement(0, errorCode);
 }
 
 CollationDataBuilder::~CollationDataBuilder() {
     utrie2_close(trie);
-    delete compressibleBytes;
+    uprv_free(fcd16_F00);
+    uprv_free(compressibleBytes);
 }
 
 void
@@ -48,6 +54,16 @@ CollationDataBuilder::initBase(UErrorCode &errorCode) {
         errorCode = U_INVALID_STATE_ERROR;
         return;
     }
+
+    fcd16_F00 = (uint16_t *)uprv_malloc(0xf00 * 2);
+    if(fcd16_F00 == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    for(UChar32 c = 0; c < 0xf00; ++c) {
+        fcd16_F00[c] = nfcImpl.getFCD16(c);
+    }
+
     compressibleBytes = (UBool *)uprv_malloc(256);
     if(compressibleBytes == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
@@ -88,9 +104,6 @@ CollationDataBuilder::initTailoring(const CollationData *b, UErrorCode &errorCod
 
     // For a tailoring, the default is to fall back to the base.
     trie = utrie2_open(Collation::MIN_SPECIAL_CE32, 0, &errorCode);
-
-    utrie2_set32(trie, 0xfffe, Collation::MERGE_SEPARATOR_CE32, &errorCode);
-    utrie2_set32(trie, 0xffff, Collation::MAX_REGULAR_CE32, &errorCode);
 
     if(U_FAILURE(errorCode)) { return; }
     // TODO
@@ -230,10 +243,24 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
 
 CollationData *
 CollationDataBuilder::build(UErrorCode &errorCode) {
-    return NULL;  // TODO
     // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
 
     // TODO: For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
+
+    utrie2_freeze(trie, UTRIE2_32_VALUE_BITS, &errorCode);
+    if(U_FAILURE(errorCode)) { return NULL; }
+
+    // Create a CollationData container of aliases to this builder's finalized data.
+    LocalPointer<CollationData> cd(new CollationData(nfcImpl));
+    if(cd.isNull()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    cd->trie = trie;
+    cd->base = base;
+    cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
+    cd->compressibleBytes = compressibleBytes;
+    return cd.orphan();
 }
 
 // TODO: In CollationWeights allocator,

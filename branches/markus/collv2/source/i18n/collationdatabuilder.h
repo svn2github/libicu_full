@@ -74,7 +74,7 @@ private:
     uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
 
     UBool isCompressibleLeadByte(uint32_t b) const {
-        return base != NULL ? base->isCompressibleLeadByte(b) : compressibleBytes[b];
+        return compressibleBytes != NULL ? compressibleBytes[b] : base->isCompressibleLeadByte(b);
     }
 
     inline UBool isCompressiblePrimary(uint32_t p) const {
@@ -86,6 +86,8 @@ private:
     UTrie2 *trie;
     UVector32 ce32s;
     UVector64 ce64s;
+    // Linear FCD16 data table for U+0000..U+0EFF.
+    uint16_t *fcd16_F00;
     // Flags for which primary-weight lead bytes are compressible.
     // NULL in a tailoring builder, consult the base instead.
     UBool *compressibleBytes;

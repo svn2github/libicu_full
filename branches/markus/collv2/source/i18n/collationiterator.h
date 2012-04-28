@@ -31,9 +31,10 @@ class UCharsTrie;
  * Rather than its own position and length fields,
  * we share the cesIndex and cesMaxIndex of the CollationIterator.
  */
-class CEBuffer {
+class CEArray {
 public:
-    CEBuffer() {}
+    CEArray() {}
+    ~CEArray();
 
     inline int32_t append(int32_t length, int64_t ce, UErrorCode &errorCode) {
         if(length < buffer.getCapacity()) {
@@ -49,8 +50,8 @@ public:
     inline const int64_t *getBuffer() const { return buffer.getAlias(); }
 
 private:
-    CEBuffer(const CEBuffer &);
-    void operator=(const CEBuffer &);
+    CEArray(const CEArray &);
+    void operator=(const CEArray &);
 
     int32_t doAppend(int32_t length, int64_t ce, UErrorCode &errorCode);
 
@@ -140,6 +141,8 @@ public:
     inline int8_t getHiragana() const { return hiragana; }
 
 protected:
+    void reset();
+
     /**
      * Returns the next code point and its local CE32 value.
      * Returns Collation::MIN_SPECIAL_CE32 at the end of the text (c<0)
@@ -260,6 +263,9 @@ private:
      */
     void setCE32s(const CollationData *d, int32_t expIndex, int32_t length);
 
+    // No ICU "poor man's RTTI" for this class nor its subclasses.
+    virtual UClassID getDynamicClassID() const;
+
     // List of CEs.
     int32_t cesIndex, cesMaxIndex;
     const int64_t *ces;
@@ -270,7 +276,7 @@ private:
 
     // 64-bit-CE buffer for forward and safe-backward iteration
     // (computed expansions and CODAN CEs).
-    CEBuffer forwardCEs;
+    CEArray forwardCEs;
 };
 
 /**
@@ -309,7 +315,7 @@ private:
     CollationIterator &fwd;
 
     // 64-bit-CE buffer for unsafe-backward iteration.
-    CEBuffer backwardCEs;
+    CEArray backwardCEs;
 };
 
 U_NAMESPACE_END
