@@ -248,7 +248,161 @@ void
 CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
                           const int64_t ces[], int32_t cesLength,
                           UErrorCode &errorCode) {
-    // TODO
+    if(U_FAILURE(errorCode)) { return; }
+    if(s.isEmpty() || cesLength <= 0) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    if(!prefix.isEmpty() || s.hasMoreChar32Than(0, 0x7fffffff, 1)) {
+        errorCode = U_UNSUPPORTED_ERROR;  // TODO
+        return;
+    }
+    uint32_t ce32 = encodeCEs(ces, cesLength, errorCode);
+    utrie2_set32(trie, s.char32At(0), ce32, &errorCode);
+}
+
+uint32_t
+CollationDataBuilder::encodeOneCE(int64_t ce) {
+    uint32_t p = (uint32_t)(ce >> 32);
+    uint32_t t = (uint32_t)(ce & 0xffff);
+    if((ce & 0xffff00ff00ff) == 0 && t > 0x100) {
+        // normal form ppppsstt
+        return p | ((uint32_t)(ce >> 16) & 0xff00u) | (t >> 8);
+    } else if((ce & 0xffffffffff) == Collation::COMMON_SEC_AND_TER_CE) {
+        // long-primary form pppppp01
+        return p | 1u;
+    } else if(p == 0 && (t & 0xff) == 0) {
+        // long-secondary form sssstt00
+        return (uint32_t)ce;
+    }
+    return Collation::UNASSIGNED_CE32;
+}
+
+uint32_t
+CollationDataBuilder::encodeCEsAsCE32s(const int64_t ces[], int32_t cesLength,
+                                       UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    UVector32 localCE32s(errorCode);
+    if(cesLength > 7) {
+        localCE32s.addElement(cesLength, errorCode);
+    }
+    for(int32_t i = 0; i < cesLength; ++i) {
+        uint32_t ce32 = encodeOneCE(ces[i]);
+        if(ce32 == Collation::UNASSIGNED_CE32) { return ce32; }
+        localCE32s.addElement((int32_t)ce32, errorCode);
+    }
+    if(U_FAILURE(errorCode)) { return 0; }
+    // See if this sequence of CE32s has already been stored.
+    int32_t length7 = cesLength;
+    int32_t length = cesLength;
+    if(cesLength > 7) {
+        length7 = 0;
+        ++length;
+    }
+    int32_t ce32sMax = ce32s.size() - length;
+    int32_t first = localCE32s.elementAti(0);
+    for(int32_t i = 0; i <= ce32sMax; ++i) {
+        if(first == ce32s.elementAti(i)) {
+            if(i > 0x1ffff) {
+                errorCode = U_BUFFER_OVERFLOW_ERROR;
+                return 0;
+            }
+            for(int32_t j = 1;; ++j) {
+                if(j == length) {
+                    return makeSpecialCE32(Collation::EXPANSION32_TAG, (i << 3) | length7);
+                }
+                if(ce32s.elementAti(i + j) != localCE32s.elementAti(j)) { break; }
+            }
+        }
+    }
+    // Store the new sequence.
+    int32_t i = ce32s.size();
+    if(i > 0x1ffff) {
+        errorCode = U_BUFFER_OVERFLOW_ERROR;
+        return 0;
+    }
+    for(int32_t j = 0; j < length; ++j) {
+        ce32s.addElement(localCE32s.elementAti(j), errorCode);
+    }
+    return makeSpecialCE32(Collation::EXPANSION32_TAG, (i << 3) | length7);
+}
+
+uint32_t
+CollationDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength,
+                                UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    // TODO: Check CEs for validity.
+    if(cesLength == 1) {
+        // Try to encode one CE as one CE32.
+        int64_t ce = ces[0];
+        uint32_t ce32 = encodeOneCE(ce);
+        if(ce32 != Collation::UNASSIGNED_CE32) { return ce32; }
+        // See if this CE has already been stored.
+        int32_t length = ce64s.size();
+        int32_t i;
+        for(i = 0; i < length && ce != ce64s.elementAti(i); ++i) {}
+        if(i > 0x1ffff) {
+            errorCode = U_BUFFER_OVERFLOW_ERROR;
+            return 0;
+        }
+        if(i == length) { ce64s.addElement(ce, errorCode); }
+        return makeSpecialCE32(Collation::EXPANSION_TAG, (i << 3) | 1);
+    } else if(cesLength == 2) {
+        // Try to encode two CEs as one CE32.
+        int64_t ce0 = ces[0];
+        int64_t ce1 = ces[1];
+        uint32_t p0 = (uint32_t)(ce0 >> 32);
+        if((ce0 & 0xffffffffff00ff) == Collation::COMMON_SECONDARY_CE &&
+                (ce1 & 0xffffffff00ffffff) == Collation::COMMON_TERTIARY_CE &&
+                0 < p0 && p0 <= (Collation::MAX_LATIN_EXPANSION_TAG << 28)) {
+            // Latin mini expansion
+            return
+                Collation::MIN_SPECIAL_CE32 | (p0 >> 8) |
+                ((uint32_t)ce0 & 0xff00u) |
+                (uint32_t)(ce1 >> 24);
+        }
+    }
+    // Try to encode two or more CEs as CE32s.
+    uint32_t ce32 = encodeCEsAsCE32s(ces, cesLength, errorCode);
+    if(U_FAILURE(errorCode) || ce32 != Collation::UNASSIGNED_CE32) { return ce32; }
+    // See if this sequence of two or more CEs has already been stored.
+    int32_t length7 = cesLength;
+    int32_t length = cesLength;
+    int64_t first;
+    if(cesLength <= 7) {
+        first = ces[0];
+    } else {
+        first = cesLength;
+        length7 = 0;
+        ++length;
+    }
+    int32_t ce64sMax = ce64s.size() - length;
+    for(int32_t i = 0; i <= ce64sMax; ++i) {
+        if(first == ce64s.elementAti(i)) {
+            if(i > 0x1ffff) {
+                errorCode = U_BUFFER_OVERFLOW_ERROR;
+                return 0;
+            }
+            int32_t j = (cesLength <= 7) ? 1 : 0;  // j indexes into ces[]
+            for(int32_t k = i + 1;; ++j, ++k) {  // k indexes into ce64s
+                if(j == length) {
+                    return makeSpecialCE32(Collation::EXPANSION_TAG, (i << 3) | length7);
+                }
+                if(ce64s.elementAti(k) != ces[j]) { break; }
+            }
+        }
+    }
+    // Store the new sequence.
+    int32_t i = ce64s.size();
+    if(i > 0x1ffff) {
+        errorCode = U_BUFFER_OVERFLOW_ERROR;
+        return 0;
+    }
+    ce64s.addElement(first, errorCode);
+    for(int32_t j = (cesLength <= 7) ? 1 : 0; j < length; ++j) {
+        ce64s.addElement(ces[j], errorCode);
+    }
+    return makeSpecialCE32(Collation::EXPANSION_TAG, (i << 3) | length7);
 }
 
 void
@@ -261,6 +415,10 @@ CollationDataBuilder::setHiragana(UErrorCode &errorCode) {
         uint32_t ce32 = utrie2_get32(trie, c);
         if(ce32 == Collation::MIN_SPECIAL_CE32) { continue; }  // Only override a real CE32.
         int32_t index = addCE32(ce32, errorCode);
+        if(index > 0xfffff) {
+            errorCode = U_BUFFER_OVERFLOW_ERROR;
+            return;
+        }
         uint32_t hiraCE32 = makeSpecialCE32(Collation::HIRAGANA_TAG, index);
         utrie2_set32(trie, c, hiraCE32, &errorCode);
     }
@@ -287,6 +445,7 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     }
     cd->trie = trie;
     cd->ce32s = reinterpret_cast<const uint32_t *>(ce32s.getBuffer());
+    cd->ces = ce64s.getBuffer();
     cd->base = base;
     cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
     cd->compressibleBytes = compressibleBytes;

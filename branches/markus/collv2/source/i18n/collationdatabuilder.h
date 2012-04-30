@@ -79,6 +79,9 @@ private:
     uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
 
     int32_t addCE32(uint32_t ce32, UErrorCode &errorCode);
+    static uint32_t encodeOneCE(int64_t ce);
+    uint32_t encodeCEsAsCE32s(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
+    uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
 
     UBool isCompressibleLeadByte(uint32_t b) const {
         return compressibleBytes != NULL ? compressibleBytes[b] : base->isCompressibleLeadByte(b);

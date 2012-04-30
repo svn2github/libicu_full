@@ -31,7 +31,7 @@ class U_I18N_API CollationData : public UMemory {
 public:
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL), nfcImpl(nfc),
-              ce32s(NULL), base(NULL),
+              ce32s(NULL), ces(NULL), base(NULL),
               fcd16_F00(NULL), compressibleBytes(NULL) {}
 
     uint32_t getCE32(UChar32 c) const {
@@ -60,8 +60,8 @@ public:
         // TODO: Use a frozen UnicodeSet rather than an imprecise bit set, at least initially.
     }
 
-    const int64_t *getCEs(int32_t /*index*/) const {
-        return NULL;  // TODO
+    const int64_t *getCEs(int32_t index) const {
+        return ces + index;
     }
 
     const uint32_t *getCE32s(int32_t index) const {
@@ -150,6 +150,7 @@ private:
     // At index 0 there must be CE32(U+0000)
     // which has a special-tag for NUL-termination handling.
     const uint32_t *ce32s;
+    const int64_t *ces;
     const CollationData *base;
     // Linear FCD16 data table for U+0000..U+0EFF.
     const uint16_t *fcd16_F00;

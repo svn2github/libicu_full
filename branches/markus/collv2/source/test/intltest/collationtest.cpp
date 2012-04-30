@@ -34,6 +34,7 @@ public:
     void TestImplicits();
     void TestNulTerminated();
     void TestHiragana();
+    void TestExpansions();
 };
 
 extern IntlTest *createCollationTest() {
@@ -49,6 +50,7 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestImplicits);
     TESTCASE_AUTO(TestNulTerminated);
     TESTCASE_AUTO(TestHiragana);
+    TESTCASE_AUTO(TestExpansions);
     TESTCASE_AUTO_END;
 }
 
@@ -195,7 +197,7 @@ void CollationTest::TestHiragana() {
     UTF16CollationIterator ci(cd.getAlias(), 0, s, s + LENGTHOF(s));
     UBool expectAnyHiragana = FALSE;
     for(int32_t i = 0; i < LENGTHOF(s); ++i) {
-        int64_t ce = ci.nextCE(errorCode);
+        ci.nextCE(errorCode);
         if(ci.getHiragana() != hira[i]) {
             errln("CollationIterator.nextCE(U+%04lx).getHiragana()=%d != %d",
                   (long)s[i], ci.getHiragana(), hira[i]);
@@ -205,5 +207,61 @@ void CollationTest::TestHiragana() {
             errln("CollationIterator.nextCE(U+%04lx).getAnyHiragana()=%d != %d",
                   (long)s[i], ci.getAnyHiragana(), expectAnyHiragana);
         }
+    }
+}
+
+void CollationTest::TestExpansions() {
+    IcuTestErrorCode errorCode(*this, "TestExpansions");
+
+    CollationDataBuilder builder(errorCode);
+    builder.initBase(errorCode);
+
+    UnicodeString empty;
+    int64_t ces[32];
+    ces[0] = 0x2700000005000500;
+    ces[1] = 0x9d000500;
+    builder.add(empty, 0xe4, ces, 2, errorCode);  // a-umlaut = mini expansion 27.05.05 .9d.05
+    builder.add(empty, 0x61, ces, 1, errorCode);  // a = 27.05.05
+    ces[0] = 0x8d880500;
+    builder.add(empty, 0x301, ces, 1, errorCode);  // long-secondary .8d88.05
+    ces[0] = 0x2233;
+    builder.add(empty, 0x300, ces, 1, errorCode);  // long-tertiary ..2233
+    ces[0] = 0x7a700c0005000500;
+    builder.add(empty, 0xa001, ces, 1, errorCode);  // Yi Syllable IX = long-primary 7a700C.05.05
+    ces[1] = 0x7a70140005000500;
+    builder.add(empty, 0xa002, ces, 2, errorCode);  // two long-primary CEs
+    ces[2] = 0x7a701c0305000500;
+    builder.add(empty, 0xa003, ces, 3, errorCode);  // three CEs, require 64 bits
+    // TODO: Test long and/or duplicate expansions.
+    // TODO: Test Hiragana spanning expansions.
+    if(errorCode.logIfFailureAndReset("CollationDataBuilder.add()")) {
+        return;
+    }
+
+    LocalPointer<CollationData> cd(builder.build(errorCode));
+    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
+        return;
+    }
+
+    static const UChar s[] = {
+        0x61, 0xe4, 0x301, 0x300, 0xa001, 0xa002, 0xa003
+    };
+    static const int64_t expectedCEs[] = {
+        0x2700000005000500, 0x2700000005000500, 0x9d000500,
+        0x8d880500, 0x2233,
+        0x7a700c0005000500,
+        0x7a700c0005000500, 0x7a70140005000500,
+        0x7a700c0005000500, 0x7a70140005000500, 0x7a701c0305000500,
+        Collation::NO_CE
+    };
+
+    UTF16CollationIterator ci(cd.getAlias(), 0, s, s + LENGTHOF(s));
+    for(int32_t i = 0;; ++i) {
+        int64_t ce = ci.nextCE(errorCode);
+        if(ce != expectedCEs[i]) {
+            errln("CollationIterator.nextCE()=%lx != %lx", (long)ce, (long)expectedCEs[i]);
+            break;
+        }
+        if(ce == Collation::NO_CE) { break; }
     }
 }
