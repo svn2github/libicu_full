@@ -32,7 +32,8 @@ public:
 
     void TestMinMax();
     void TestImplicits();
-    // TODO: void TestHiragana();
+    void TestNulTerminated();
+    void TestHiragana();
 };
 
 extern IntlTest *createCollationTest() {
@@ -46,6 +47,8 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(TestMinMax);
     TESTCASE_AUTO(TestImplicits);
+    TESTCASE_AUTO(TestNulTerminated);
+    TESTCASE_AUTO(TestHiragana);
     TESTCASE_AUTO_END;
 }
 
@@ -60,7 +63,7 @@ void CollationTest::TestMinMax() {
         return;
     }
 
-    UChar s[2] = { 0xfffe, 0xffff };
+    static const UChar s[2] = { 0xfffe, 0xffff };
     UTF16CollationIterator ci(cd.getAlias(), 0, s, s + 2);
     int64_t ce = ci.nextCE(errorCode);
     int64_t expected =
@@ -144,6 +147,63 @@ void CollationTest::TestImplicits() {
             }
             prev = c;
             prevPrimary = primary;
+        }
+    }
+}
+
+void CollationTest::TestNulTerminated() {
+    IcuTestErrorCode errorCode(*this, "TestNulTerminated");
+
+    CollationDataBuilder builder(errorCode);
+    builder.initBase(errorCode);
+    LocalPointer<CollationData> cd(builder.build(errorCode));
+    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
+        return;
+    }
+
+    static const UChar s[] = { 0x61, 0x62, 0x61, 0x62, 0 };
+
+    UTF16CollationIterator ci1(cd.getAlias(), 0, s, s + 2);
+    UTF16CollationIterator ci2(cd.getAlias(), 0, s + 2, NULL);
+    for(int32_t i = 0;; ++i) {
+        int64_t ce1 = ci1.nextCE(errorCode);
+        int64_t ce2 = ci2.nextCE(errorCode);
+        if(errorCode.logIfFailureAndReset("CollationIterator.nextCE()")) {
+            return;
+        }
+        if(ce1 != ce2) {
+            errln("CollationIterator.nextCE(with length) != nextCE(NUL-terminated) at CE %d", (int)i);
+            break;
+        }
+        if(ce1 == Collation::NO_CE) { break; }
+    }
+}
+
+void CollationTest::TestHiragana() {
+    IcuTestErrorCode errorCode(*this, "TestHiragana");
+
+    CollationDataBuilder builder(errorCode);
+    builder.initBase(errorCode);
+    LocalPointer<CollationData> cd(builder.build(errorCode));
+    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
+        return;
+    }
+
+    static const UChar s[] = { 0x61, 0x309a, 0x304b, 0x3099, 0x7a };
+    static const int8_t hira[] = { 0, -1, 1, -1, 0 };
+
+    UTF16CollationIterator ci(cd.getAlias(), 0, s, s + LENGTHOF(s));
+    UBool expectAnyHiragana = FALSE;
+    for(int32_t i = 0; i < LENGTHOF(s); ++i) {
+        int64_t ce = ci.nextCE(errorCode);
+        if(ci.getHiragana() != hira[i]) {
+            errln("CollationIterator.nextCE(U+%04lx).getHiragana()=%d != %d",
+                  (long)s[i], ci.getHiragana(), hira[i]);
+        }
+        if(ci.getHiragana() > 0) { expectAnyHiragana = TRUE; }
+        if(ci.getAnyHiragana() != expectAnyHiragana) {
+            errln("CollationIterator.nextCE(U+%04lx).getAnyHiragana()=%d != %d",
+                  (long)s[i], ci.getAnyHiragana(), expectAnyHiragana);
         }
     }
 }

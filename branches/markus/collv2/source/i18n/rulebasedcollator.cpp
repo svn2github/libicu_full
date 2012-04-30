@@ -292,6 +292,8 @@ QuaternaryIterator::next(CollationIterator &source,
     }
 }
 
+// TODO: Add shortcut for non-ignorable (variableTop == 0)
+// and both iterators had !getAnyHiragana() after tertiary comparison.
 UCollationResult
 RuleBasedCollator2::compareQuaternary(CollationIterator &left, CollationIterator &right,
                                      UErrorCode &errorCode) {

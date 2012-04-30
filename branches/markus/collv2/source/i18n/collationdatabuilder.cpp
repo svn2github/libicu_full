@@ -234,6 +234,16 @@ CollationDataBuilder::getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const {
         Collation::incThreeBytePrimaryByOffset(p, isCompressiblePrimary(p), offset));
 }
 
+int32_t
+CollationDataBuilder::addCE32(uint32_t ce32, UErrorCode &errorCode) {
+    int32_t length = ce32s.size();
+    for(int32_t i = 0; i < length; ++i) {
+        if(ce32 == (uint32_t)ce32s.elementAti(i)) { return i; }
+    }
+    ce32s.addElement((int32_t)ce32, errorCode);
+    return length;
+}
+
 void
 CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
                           const int64_t ces[], int32_t cesLength,
@@ -241,11 +251,30 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
     // TODO
 }
 
+void
+CollationDataBuilder::setHiragana(UErrorCode &errorCode) {
+    UnicodeSet hira(UNICODE_STRING_SIMPLE("[[:Hira:][\\u3099-\\u309C]]"), errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+    UnicodeSetIterator iter(hira);
+    while(iter.next()) {
+        UChar32 c = iter.getCodepoint();
+        uint32_t ce32 = utrie2_get32(trie, c);
+        if(ce32 == Collation::MIN_SPECIAL_CE32) { continue; }  // Only override a real CE32.
+        int32_t index = addCE32(ce32, errorCode);
+        uint32_t hiraCE32 = makeSpecialCE32(Collation::HIRAGANA_TAG, index);
+        utrie2_set32(trie, c, hiraCE32, &errorCode);
+    }
+}
+
 CollationData *
 CollationDataBuilder::build(UErrorCode &errorCode) {
+    setHiragana(errorCode);
+
     // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
 
-    // TODO: For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
+    // For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
+    ce32s.setElementAt((int32_t)utrie2_get32(trie, 0), 0);
+    utrie2_set32(trie, 0, makeSpecialCE32(Collation::IMPLICIT_TAG, 0u), &errorCode);
 
     utrie2_freeze(trie, UTRIE2_32_VALUE_BITS, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
@@ -257,6 +286,7 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
         return NULL;
     }
     cd->trie = trie;
+    cd->ce32s = reinterpret_cast<const uint32_t *>(ce32s.getBuffer());
     cd->base = base;
     cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
     cd->compressibleBytes = compressibleBytes;

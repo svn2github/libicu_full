@@ -52,6 +52,8 @@ private:
     void initHanRanges(UErrorCode &errorCode);
     void initHanCompat(UErrorCode &errorCode);
 
+    void setHiragana(UErrorCode &errorCode);
+
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order.
      * @param start first code point
@@ -67,11 +69,16 @@ private:
 
     static uint32_t makeLongPrimaryCE32(uint32_t p) { return p + 1; }
 
+    static uint32_t makeSpecialCE32(uint32_t tag, int32_t value) {
+        return makeSpecialCE32(tag, (uint32_t)value);
+    }
     static uint32_t makeSpecialCE32(uint32_t tag, uint32_t value) {
         return Collation::MIN_SPECIAL_CE32 | (tag << 20) | value;
     }
 
     uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
+
+    int32_t addCE32(uint32_t ce32, UErrorCode &errorCode);
 
     UBool isCompressibleLeadByte(uint32_t b) const {
         return compressibleBytes != NULL ? compressibleBytes[b] : base->isCompressibleLeadByte(b);

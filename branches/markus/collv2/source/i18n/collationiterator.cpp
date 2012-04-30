@@ -146,6 +146,7 @@ void
 CollationIterator::reset() {
     cesIndex = -1;
     hiragana = 0;
+    anyHiragana = FALSE;
     if(skipped != NULL) { skipped->clear(); }
 }
 
@@ -239,7 +240,12 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 break;
             }
         case Collation::HIRAGANA_TAG:
-            hiragana = (0x3099 <= c && c <= 0x309c) ? -1 : 1;
+            if(0x3099 <= c && c <= 0x309c) {
+                hiragana = -1;
+            } else {
+                hiragana = 1;
+                anyHiragana = TRUE;
+            }
             // Fetch the normal CE32 and continue.
             ce32 = *d->getCE32s(ce32 & 0xfffff);
             break;

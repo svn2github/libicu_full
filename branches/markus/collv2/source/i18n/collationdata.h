@@ -31,7 +31,8 @@ class U_I18N_API CollationData : public UMemory {
 public:
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL), nfcImpl(nfc),
-              base(NULL), fcd16_F00(NULL), compressibleBytes(NULL) {}
+              ce32s(NULL), base(NULL),
+              fcd16_F00(NULL), compressibleBytes(NULL) {}
 
     uint32_t getCE32(UChar32 c) const {
         // TODO: Make this virtual so that we can use utrie2_get32() in the CollationDataBuilder?
@@ -63,10 +64,8 @@ public:
         return NULL;  // TODO
     }
 
-    const uint32_t *getCE32s(int32_t /*index*/) const {
-        return NULL;  // TODO
-        // TODO: At index 0 there must be CE32(U+0000)
-        // which has a special-tag for NUL-termination handling.
+    const uint32_t *getCE32s(int32_t index) const {
+        return ce32s + index;
     }
 
     /**
@@ -147,6 +146,10 @@ protected:  // TODO: private?
 private:
     friend class CollationDataBuilder;
 
+    // Array of CE32 values.
+    // At index 0 there must be CE32(U+0000)
+    // which has a special-tag for NUL-termination handling.
+    const uint32_t *ce32s;
     const CollationData *base;
     // Linear FCD16 data table for U+0000..U+0EFF.
     const uint16_t *fcd16_F00;

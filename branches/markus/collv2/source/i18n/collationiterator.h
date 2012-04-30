@@ -81,7 +81,7 @@ public:
               data(d),
               flags(iterFlags),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
-              hiragana(0),
+              hiragana(0), anyHiragana(FALSE),
               skipped(NULL) {}
 
     virtual ~CollationIterator();
@@ -139,6 +139,11 @@ public:
      *         0 not Hiragana; 1 Hiragana
      */
     inline int8_t getHiragana() const { return hiragana; }
+
+    /**
+     * @return TRUE if this iterator has seen any Hiragana character
+     */
+    inline UBool getAnyHiragana() const { return anyHiragana; }
 
 protected:
     void reset();
@@ -271,6 +276,7 @@ private:
     const int64_t *ces;
 
     int8_t hiragana;
+    UBool anyHiragana;
 
     SkippedState *skipped;
 
