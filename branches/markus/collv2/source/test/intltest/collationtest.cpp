@@ -15,18 +15,31 @@
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
+#include "unicode/ustring.h"
+#include "charstr.h"
 #include "collation.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
 #include "collationiterator.h"
 #include "intltest.h"
+#include "ucbuf.h"
 #include "utf16collationiterator.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
+// TODO: Move to ucbuf.h
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
+
 class CollationTest : public IntlTest {
 public:
-    CollationTest() {}
+    CollationTest()
+            : fileLineNumber(0),
+              baseBuilder(NULL), baseData(NULL) {}
+
+    ~CollationTest() {
+        delete baseBuilder;
+        delete baseData;
+    }
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=NULL);
 
@@ -34,7 +47,36 @@ public:
     void TestImplicits();
     void TestNulTerminated();
     void TestHiragana();
-    void TestExpansions();
+    void TestDataDriven();
+
+private:
+    // Helpers & fields for data-driven test.
+    static UBool isCROrLF(UChar c) { return c == 0xa || c == 0xd; }
+    static UBool isSpace(UChar c) { return c == 9 || c == 0x20 || c == 0x3000; }
+    static UBool isSectionStarter(UChar c) { return c == 0x25 || c == 0x2a || c == 0x40; }  // %*@
+    static UBool isHexDigit(UChar c) {
+        return (0x30 <= c && c <= 0x39) || (0x61 <= c && c <= 0x66) || (0x41 <= c && c <= 0x46);
+    }
+    int32_t skipSpaces(int32_t i) {
+        while(isSpace(fileLine[i])) { ++i; }
+        return i;
+    }
+
+    UBool readLine(UCHARBUF *f, IcuTestErrorCode &errorCode);
+    uint32_t parseHex(int32_t &start, int32_t maxBytes, UErrorCode &errorCode);
+    int64_t parseCE(int32_t &start, UErrorCode &errorCode);
+    void parseString(int32_t &start, UnicodeString &prefix, UnicodeString &s, UErrorCode &errorCode);
+    int32_t parseStringAndCEs(UnicodeString &prefix, UnicodeString &s,
+                              int64_t ces[], int8_t hira[], int32_t capacity,
+                              IcuTestErrorCode &errorCode);
+    void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
+    void checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode);
+
+    UnicodeString fileLine;
+    int32_t fileLineNumber;
+    UnicodeString fileTestName;
+    CollationDataBuilder *baseBuilder;
+    CollationData *baseData;
 };
 
 extern IntlTest *createCollationTest() {
@@ -50,10 +92,9 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestImplicits);
     TESTCASE_AUTO(TestNulTerminated);
     TESTCASE_AUTO(TestHiragana);
-    TESTCASE_AUTO(TestExpansions);
+    TESTCASE_AUTO(TestDataDriven);
     TESTCASE_AUTO_END;
 }
-
 
 void CollationTest::TestMinMax() {
     IcuTestErrorCode errorCode(*this, "TestMinMax");
@@ -210,58 +251,289 @@ void CollationTest::TestHiragana() {
     }
 }
 
-void CollationTest::TestExpansions() {
-    IcuTestErrorCode errorCode(*this, "TestExpansions");
-
-    CollationDataBuilder builder(errorCode);
-    builder.initBase(errorCode);
-
-    UnicodeString empty;
-    int64_t ces[32];
-    ces[0] = 0x2700000005000500;
-    ces[1] = 0x9d000500;
-    builder.add(empty, 0xe4, ces, 2, errorCode);  // a-umlaut = mini expansion 27.05.05 .9d.05
-    builder.add(empty, 0x61, ces, 1, errorCode);  // a = 27.05.05
-    ces[0] = 0x8d880500;
-    builder.add(empty, 0x301, ces, 1, errorCode);  // long-secondary .8d88.05
-    ces[0] = 0x2233;
-    builder.add(empty, 0x300, ces, 1, errorCode);  // long-tertiary ..2233
-    ces[0] = 0x7a700c0005000500;
-    builder.add(empty, 0xa001, ces, 1, errorCode);  // Yi Syllable IX = long-primary 7a700C.05.05
-    ces[1] = 0x7a70140005000500;
-    builder.add(empty, 0xa002, ces, 2, errorCode);  // two long-primary CEs
-    ces[2] = 0x7a701c0305000500;
-    builder.add(empty, 0xa003, ces, 3, errorCode);  // three CEs, require 64 bits
-    // TODO: Test long and/or duplicate expansions.
-    // TODO: Test Hiragana spanning expansions.
-    if(errorCode.logIfFailureAndReset("CollationDataBuilder.add()")) {
-        return;
+UBool CollationTest::readLine(UCHARBUF *f, IcuTestErrorCode &errorCode) {
+    int32_t lineLength;
+    const UChar *line = ucbuf_readline(f, &lineLength, errorCode);
+    if(line == NULL || errorCode.isFailure()) { return FALSE; }
+    ++fileLineNumber;
+    // Strip trailing CR/LF, comments, and spaces.
+    const UChar *comment = u_memchr(line, 0x23, lineLength);  // '#'
+    if(comment != NULL) {
+        lineLength = (int32_t)(comment - line);
+    } else {
+        while(lineLength > 0 && isCROrLF(line[lineLength - 1])) { --lineLength; }
     }
+    while(lineLength > 0 && isSpace(line[lineLength - 1])) { --lineLength; }
+    fileLine.setTo(FALSE, line, lineLength);
+    return TRUE;
+}
 
-    LocalPointer<CollationData> cd(builder.build(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
-        return;
-    }
-
-    static const UChar s[] = {
-        0x61, 0xe4, 0x301, 0x300, 0xa001, 0xa002, 0xa003
-    };
-    static const int64_t expectedCEs[] = {
-        0x2700000005000500, 0x2700000005000500, 0x9d000500,
-        0x8d880500, 0x2233,
-        0x7a700c0005000500,
-        0x7a700c0005000500, 0x7a70140005000500,
-        0x7a700c0005000500, 0x7a70140005000500, 0x7a701c0305000500,
-        Collation::NO_CE
-    };
-
-    UTF16CollationIterator ci(cd.getAlias(), 0, s, s + LENGTHOF(s));
-    for(int32_t i = 0;; ++i) {
-        int64_t ce = ci.nextCE(errorCode);
-        if(ce != expectedCEs[i]) {
-            errln("CollationIterator.nextCE()=%lx != %lx", (long)ce, (long)expectedCEs[i]);
+uint32_t CollationTest::parseHex(int32_t &start, int32_t maxBytes, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    int32_t limit = start + 2 * maxBytes;
+    uint32_t value = 0;
+    int32_t i;
+    for(i = start; i < limit; ++i) {
+        UChar c = fileLine[i];
+        uint32_t digit;
+        if(0x30 <= c && c <= 0x39) {
+            digit = c - 0x30;
+        } else if(0x61 <= c && c <= 0x66) {
+            digit = c - (0x61 - 10);
+        } else if(0x41 <= c && c <= 0x46) {
+            digit = c - (0x41 - 10);
+        } else {
             break;
         }
-        if(ce == Collation::NO_CE) { break; }
+        value = (value << 4) | digit;
+    }
+    int32_t length = i - start;
+    if(length < 2 || (length & 1) != 0) {
+        errln("error parsing hex value at line %d index %d", (int)fileLineNumber, (int)start);
+        errln(fileLine);
+        errorCode = U_PARSE_ERROR;
+        return 0;
+    }
+    start = i;
+    return value;
+}
+
+int64_t CollationTest::parseCE(int32_t &start, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    int64_t ce = 0;
+    if(isHexDigit(fileLine[start])) {
+        int32_t oldStart = start;
+        uint32_t p = parseHex(start, 4, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        ce = (int64_t)p << (64 - (start - oldStart) * 4);
+    }
+    if(fileLine[start] != 0x2e) {
+        errln("primary weight missing dot at line %d index %d", (int)fileLineNumber, (int)start);
+        errln(fileLine);
+        errorCode = U_PARSE_ERROR;
+        return 0;
+    }
+    ++start;
+
+    if(isHexDigit(fileLine[start])) {
+        int32_t oldStart = start;
+        uint32_t s = parseHex(start, 2, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        ce |= s << (32 - (start - oldStart) * 4);
+    } else if(ce != 0) {
+        ce |= Collation::COMMON_SECONDARY_CE;
+    }
+    if(fileLine[start] != 0x2e) {
+        errln("secondary weight missing dot at line %d index %d", (int)fileLineNumber, (int)start);
+        errln(fileLine);
+        errorCode = U_PARSE_ERROR;
+        return 0;
+    }
+    ++start;
+
+    if(isHexDigit(fileLine[start])) {
+        int32_t oldStart = start;
+        uint32_t t = parseHex(start, 2, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        ce |= t << (16 - (start - oldStart) * 4);
+    } else if(ce != 0) {
+        ce |= Collation::COMMON_TERTIARY_CE;
+    }
+    return ce;
+}
+
+void CollationTest::parseString(int32_t &start, UnicodeString &prefix, UnicodeString &s,
+                                UErrorCode &errorCode) {
+    int32_t length = fileLine.length();
+    int32_t i;
+    for(i = start; i < length && !isSpace(fileLine[i]); ++i) {}
+    int32_t pipeIndex = fileLine.indexOf((UChar)0x7c, start, i - start);  // '|'
+    if(pipeIndex >= 0) {
+        prefix = fileLine.tempSubStringBetween(start, pipeIndex).unescape();
+        if(prefix.isEmpty()) {
+            errln("empty prefix on line %d", (int)fileLineNumber);
+            errln(fileLine);
+            errorCode = U_PARSE_ERROR;
+            return;
+        }
+        start = pipeIndex + 1;
+    } else {
+        prefix.remove();
+    }
+    s = fileLine.tempSubStringBetween(start, i).unescape();
+    if(s.isEmpty()) {
+        errln("empty string on line %d", (int)fileLineNumber);
+        errln(fileLine);
+        errorCode = U_PARSE_ERROR;
+        return;
+    }
+    start = i;
+}
+
+int32_t CollationTest::parseStringAndCEs(UnicodeString &prefix, UnicodeString &s,
+                                         int64_t ces[], int8_t hira[], int32_t capacity,
+                                         IcuTestErrorCode &errorCode) {
+    int32_t start = 0;
+    parseString(start, prefix, s, errorCode);
+    if(errorCode.isFailure()) { return 0; }
+    int32_t cesLength = 0;
+    for(;;) {
+        if(start == fileLine.length()) {
+            if(cesLength == 0) {
+                errln("no CEs on line %d", (int)fileLineNumber);
+                errln(fileLine);
+                errorCode.set(U_PARSE_ERROR);
+                return 0;
+            }
+            break;
+        }
+        if(!isSpace(fileLine[start])) {
+            errln("no spaces separating CEs at line %d index %d", (int)fileLineNumber, (int)start);
+            errln(fileLine);
+            errorCode.set(U_PARSE_ERROR);
+            return 0;
+        }
+        if(cesLength == capacity) {
+            errln("too many CEs on line %d", (int)fileLineNumber);
+            errln(fileLine);
+            errorCode.set(U_BUFFER_OVERFLOW_ERROR);
+            return 0;
+        }
+        start = skipSpaces(start);
+        ces[cesLength] = parseCE(start, errorCode);
+        if(errorCode.isFailure()) { return 0; }
+        if(hira != NULL) {
+            if(fileLine[start] == 0x48) {  // 'H' for Hiragana
+                hira[cesLength] = 1;
+                ++start;
+            } else if(fileLine[start] == 0x68) {  // 'h' for inherited Hiragana
+                hira[cesLength] = -1;
+                ++start;
+            } else {
+                hira[cesLength] = 0;
+            }
+        }
+        ++cesLength;
+    }
+    return cesLength;
+}
+
+void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
+    delete baseBuilder;
+    baseBuilder = new CollationDataBuilder(errorCode);
+    if(errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("new CollationDataBuilder() failed");
+        return;
+    }
+    baseBuilder->initBase(errorCode);
+    if(errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("CollationDataBuilder.initBase() failed");
+        return;
+    }
+
+    UnicodeString prefix, s;
+    int64_t ces[32];
+    while(readLine(f, errorCode)) {
+        if(fileLine.isEmpty()) { continue; }
+        if(isSectionStarter(fileLine[0])) { break; }
+        int32_t cesLength = parseStringAndCEs(prefix, s, ces, NULL, LENGTHOF(ces), errorCode);
+        if(errorCode.isFailure()) { return; }
+        baseBuilder->add(prefix, s, ces, cesLength, errorCode);
+        if(errorCode.isFailure()) {
+            errln(fileTestName);
+            errln("CollationDataBuilder.add() failed");
+            errln(fileLine);
+            return;
+        }
+    }
+    if(errorCode.isFailure()) { return; }
+    delete baseData;
+    baseData = baseBuilder->build(errorCode);
+    if(errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("CollationDataBuilder.build() failed");
+    }
+}
+
+void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
+    if(errorCode.isFailure()) { return; }
+    // TODO: tailoring vs. baseData
+    // TODO: optional FCD
+
+    UnicodeString prefix, s;
+    int64_t ces[32];
+    int8_t hira[32];
+    while(readLine(f, errorCode)) {
+        if(fileLine.isEmpty()) { continue; }
+        if(isSectionStarter(fileLine[0])) { break; }
+        int32_t cesLength = parseStringAndCEs(prefix, s, ces, hira, LENGTHOF(ces), errorCode);
+        if(errorCode.isFailure()) { return; }
+        int32_t prefixLength = prefix.length();
+        if(prefixLength != 0) { s.insert(0, prefix); }
+        const UChar *buffer = s.getBuffer();
+        // TODO: set flags
+        // TODO: test NUL-termination if s does not contain a NUL
+        UTF16CollationIterator ci(baseData, 0, buffer + prefixLength, buffer + s.length());
+        for(int32_t i = 0;; ++i) {
+            int64_t ce = ci.nextCE(errorCode);
+            int64_t expected = (i < cesLength) ? ces[i] : Collation::NO_CE;
+            if(ce != expected) {
+                errln(fileTestName);
+                errln("line %d CE index %d: CollationIterator.nextCE()=%lx != %lx",
+                      (int)fileLineNumber, (int)i, (long)ce, (long)expected);
+                errln(fileLine);
+                break;
+            }
+            int8_t h = ci.getHiragana();
+            int8_t expectedHira = (i < cesLength) ? hira[i] : 0;
+            if(h != expectedHira) {
+                errln(fileTestName);
+                errln("line %d CE index %d: CollationIterator.getHiragana()=%d != %d",
+                      (int)fileLineNumber, (int)i, h, expectedHira);
+                errln(fileLine);
+                break;
+            }
+            if(ce == Collation::NO_CE) { break; }
+        }
+    }
+}
+
+void CollationTest::TestDataDriven() {
+    IcuTestErrorCode errorCode(*this, "TestDataDriven");
+
+    CharString path(getSourceTestData(errorCode), errorCode);
+    path.append("collationtest.txt", errorCode);
+    const char *codePage = "UTF-8";
+    LocalUCHARBUFPointer f(ucbuf_open(path.data(), &codePage, TRUE, FALSE, errorCode));
+    if(errorCode.logIfFailureAndReset("ucbuf_open(collationtest.txt)")) {
+        return;
+    }
+    while(errorCode.isSuccess()) {
+        // Read a new line if necessary.
+        // Sub-parsers leave the first line set that they do not handle.
+        if(fileLine.isEmpty()) {
+            if(!readLine(f.getAlias(), errorCode)) { break; }
+            continue;
+        }
+        if(!isSectionStarter(fileLine[0])) {
+            errln("syntax error on line %d", (int)fileLineNumber);
+            errln(fileLine);
+            return;
+        }
+        if(fileLine.startsWith(UNICODE_STRING("** test: ", 9))) {
+            fileTestName = fileLine;
+            logln(fileLine);
+            fileLine.remove();
+        } else if(fileLine == UNICODE_STRING("@ rawbase", 9)) {
+            buildBase(f.getAlias(), errorCode);
+        } else if(fileLine == UNICODE_STRING("* CEs", 5)) {
+            checkCEs(f.getAlias(), errorCode);
+        } else {
+            errln("syntax error on line %d", (int)fileLineNumber);
+            errln(fileLine);
+            return;
+        }
     }
 }

@@ -1,0 +1,87 @@
+﻿# Copyright (c) 2012 International Business Machines
+# Corporation and others. All Rights Reserved.
+#
+# This file should be in UTF-8 with a signature byte sequence ("BOM").
+#
+# collationtest.txt: Collation test data.
+#
+# created on: 2012apr13
+# created by: Markus W. Scherer
+
+** test: simple CEs & expansions
+@ rawbase
+ä       27.. .9d.       # a-umlaut = mini expansion 27.05.05 .9d.05
+a       27..            # a = 27.05.05
+b       29..
+\u0301  .8d88.          # long-secondary .8d88.05
+\u0300  ..2233          # long-tertiary ..2233
+か       7916..9b        # Hiragana Ka (U+304B)
+が       7916..9b .da95. # Hiragana Ga (U+304C)
+\u3099  .da95.          # voiced sound mark
+\u309a  .daa5.          # semi-voiced sound mark
+\ua001  7a700c..        # Yi Syllable IX = long-primary 7a700C.05.05
+\ua002  7a700c.. 7a7014..  # two long-primary CEs
+\ua003  7a700c.. 7a7014.. 7a701c03..  # three CEs, require 64 bits
+# TODO: Test long and/or duplicate expansions.
+
+* CEs
+äa\u0301\u0300          27.. .9d. 27.. .8d88. ..2233
+# 3099..309c inherit the Hiragana flag
+a\u3099か\u3099b         27.. .da95.h 7916..9bH .da95.h 29..
+# Hiragana flag on a complete expansion
+aがb                     27.. 7916..9bH .da95.H 29..
+\ua001\ua002\ua003      7a700c..  7a700c.. 7a7014..  7a700c.. 7a7014.. 7a701c03..
+
+# TODO: Test Hiragana flags
+
+** test: this is a description
+@ rawbase
+# string then list of CEs; empty leading weight=0, other empty=common
+a 20..
+b 2233.44.5566
+c 11223344.5566.77
+# ch 30..20
+# l|\xb7 ..   # prefix
+\u3041 74..
+
+# rawbase could be combined with rules
+# each test has rawbase? rules? (attributes (compare | CEs | sortkey))*
+
+#% attribute=value
+#% strength=3
+# use DB2 or BCP 47 attribute keywords?
+# allow changing attributes between "* compare" etc. but not inside any section
+# (an attribute ends a section, just like starting a section ends the previous one)
+
+#* compare
+# first string compares against ""
+#= \u0000
+#< a
+#< b
+#< ch
+
+# * CEs  # not sensitive to many attributes, e.g., strength
+#abch 20.. 22.. 30..20
+#\u3041 74H  # with Hiragana flag
+
+#* sortkey
+#abch 202230.(syntax for compressed common?).(?)20
+
+** test: from rules
+#@ rules
+#&z < a <<< A
+# allow comments
+#< b <<< B
+
+** test: from DUCET
+# no rawbase, no rules
+
+#* compare
+#...
+
+** test: German phonebook rules
+
+#@ locale de-u-co-phonebk
+
+# * compare
+#...
