@@ -32,7 +32,8 @@ a\u3099か\u3099b         27.. .da95.h 7916..9bH .da95.h 29..
 aがb                     27.. 7916..9bH .da95.H 29..
 \ua001\ua002\ua003      7a700c..  7a700c.. 7a7014..  7a700c.. 7a7014.. 7a701c03..
 
-# TODO: Test Hiragana flags
+# TODO: Test U+0000
+# TODO: Interesting FCD tests
 
 ** test: this is a description
 @ rawbase
