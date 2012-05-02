@@ -37,7 +37,8 @@ public:
     CollationTest()
             : fcd(NULL),
               fileLineNumber(0),
-              baseBuilder(NULL), baseData(NULL) {}
+              baseBuilder(NULL), baseData(NULL),
+              collData(NULL) {}
 
     ~CollationTest() {
         delete baseBuilder;
@@ -90,6 +91,7 @@ private:
     UnicodeString fileTestName;
     CollationDataBuilder *baseBuilder;
     CollationData *baseData;
+    const CollationData *collData;
 };
 
 extern IntlTest *createCollationTest() {
@@ -469,6 +471,7 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         errln(fileTestName);
         errln("CollationDataBuilder.build() failed");
     }
+    collData = baseData;
 }
 
 void  CollationTest::checkCEs(CollationIterator &ci, const char *mode,
@@ -510,33 +513,39 @@ void CollationTest::checkCEsNormal(const UnicodeString &s,
                                    int64_t ces[], int8_t hira[], int32_t cesLength,
                                    IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
-    // TODO: set various flags
-    UTF16CollationIterator ci(baseData, 0, buffer, buffer + s.length());
-    checkCEs(ci, "UTF-16", ces, hira, cesLength, errorCode);
-    // Test NUL-termination if s does not contain a NUL.
-    if(s.indexOf((UChar)0) >= 0) { return; }
-    UTF16CollationIterator ci0(baseData, 0, buffer, NULL);
-    checkCEs(ci0, "UTF-16-NUL", ces, hira, cesLength, errorCode);
+    int8_t flags = collData->getFlags();
+    if((flags & Collation::DECOMP_HANGUL) == 0) {
+        UTF16CollationIterator ci(collData, flags, buffer, buffer + s.length());
+        checkCEs(ci, "UTF-16", ces, hira, cesLength, errorCode);
+        // Test NUL-termination if s does not contain a NUL.
+        if(s.indexOf((UChar)0) >= 0) { return; }
+        UTF16CollationIterator ci0(collData, flags, buffer, NULL);
+        checkCEs(ci0, "UTF-16-NUL", ces, hira, cesLength, errorCode);
+    } else {
+        FCDUTF16CollationIterator ci(collData, flags, buffer, buffer + s.length(), errorCode);
+        checkCEs(ci, "UTF-16-Hangul", ces, hira, cesLength, errorCode);
+        // Test NUL-termination if s does not contain a NUL.
+        if(s.indexOf((UChar)0) >= 0) { return; }
+        FCDUTF16CollationIterator ci0(collData, flags, buffer, NULL, errorCode);
+        checkCEs(ci0, "UTF-16-Hangul-NUL", ces, hira, cesLength, errorCode);
+    }
 }
 
 void CollationTest::checkCEsFCD(const UnicodeString &s,
                                 int64_t ces[], int8_t hira[], int32_t cesLength,
                                 IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
-    // TODO: set various flags
-    int8_t flags = Collation::CHECK_FCD;  // TODO: Collation::DECOMP_HANGUL;
-    FCDUTF16CollationIterator ci(baseData, flags, buffer, buffer + s.length(), errorCode);
+    int8_t flags = collData->getFlags() | Collation::CHECK_FCD;
+    FCDUTF16CollationIterator ci(collData, flags, buffer, buffer + s.length(), errorCode);
     checkCEs(ci, "FCD-UTF-16", ces, hira, cesLength, errorCode);
     // Test NUL-termination if s does not contain a NUL.
     if(s.indexOf((UChar)0) >= 0) { return; }
-    FCDUTF16CollationIterator ci0(baseData, flags, buffer, NULL, errorCode);
+    FCDUTF16CollationIterator ci0(collData, flags, buffer, NULL, errorCode);
     checkCEs(ci0, "FCD-UTF-16-NUL", ces, hira, cesLength, errorCode);
 }
 
 void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     if(errorCode.isFailure()) { return; }
-    // TODO: tailoring vs. baseData
-
     UnicodeString prefix, s;
     int64_t ces[32];
     int8_t hira[32];
