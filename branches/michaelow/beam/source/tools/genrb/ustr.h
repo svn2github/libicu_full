@@ -35,6 +35,19 @@
     }                                                           \
 }
 
+#define U_APPEND_CHAR32_ONLY(c,target) {                             \
+    if (c <= 0xffff)                                            \
+    {                                                           \
+        *(target)++ = (UChar) c;                                \
+    }                                                           \
+    else                                                        \
+    {                                                           \
+        target[0] = U16_LEAD(c);                                \
+        target[1] = U16_TRAIL(c);                               \
+        target +=2;                                             \
+    }                                                           \
+}
+
 /* A C representation of a string "object" (to avoid realloc all the time) */
 struct UString {
   UChar *fChars;
