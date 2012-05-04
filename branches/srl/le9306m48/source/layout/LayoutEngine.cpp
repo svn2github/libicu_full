@@ -30,7 +30,15 @@
 
 #include "KernTable.h"
 
+#if !defined(LE_DEBUG) || LE_DEBUG
+#include "LEDebug.h"
+#endif
+
 U_NAMESPACE_BEGIN
+
+#if LE_DEBUG
+extern void LEGlyphStorage_dump(const LEGlyphStorage*);
+#endif
 
 /* Leave this copyright notice here! It needs to go somewhere in this library. */
 static const char copyright[] = U_COPYRIGHT_STRING;
@@ -311,6 +319,9 @@ le_int32 LayoutEngine::computeGlyphs(const LEUnicode chars[], le_int32 offset, l
     LEUnicode *outChars = NULL;
     le_int32 outCharCount = characterProcessing(chars, offset, count, max, rightToLeft, outChars, glyphStorage, success);
 
+#if LE_DEBUG
+    LETRACE("computeGlyphs:  charProcessing returns %d and outChars %p\n", outCharCount,outChars);
+#endif
     if (outChars != NULL) {
         mapCharsToGlyphs(outChars, 0, outCharCount, rightToLeft, rightToLeft, glyphStorage, success);
         LE_DELETE_ARRAY(outChars); // FIXME: a subclass may have allocated this, in which case this delete might not work...
@@ -438,15 +449,24 @@ void LayoutEngine::adjustMarkGlyphs(const LEUnicode chars[], le_int32 charCount,
 
     glyphStorage.getGlyphPosition(0, prev, ignore, success);
 
-    for (p = 0; p < charCount; p += 1, c += direction) {
+    for (p = 0; p < glyphCount; p += 1, c += direction) {
         float next, xAdvance;
         
+#if LE_DEBUG
+        LETRACE("adjustMarKGlyphs:  p=%d, <%d, getGlyphPosition(%d)\n", p, glyphCount, p+1);
+#endif
+
         glyphStorage.getGlyphPosition(p + 1, next, ignore, success);
+#if LE_DEBUG
+        LETRACE("success=%s\n", u_errorName((UErrorCode)success));
+#endif
 
         xAdvance = next - prev;
         glyphStorage.adjustPosition(p, xAdjust, 0, success);
 
-        if (markFilter->accept(chars[c])) {
+        le_int32 charPos = glyphStorage.getCharIndex(c, success);
+
+        if (markFilter->accept(chars[charPos])) {
             xAdjust -= xAdvance;
         }
 
@@ -496,9 +516,22 @@ le_int32 LayoutEngine::layoutChars(const LEUnicode chars[], le_int32 offset, le_
         fGlyphStorage->reset();
     }
     
+#if LE_DEBUG
+    LETRACE("layoutChars: offset=%d,count=%d,max=%d, fGlyphStorage.count=%d\n", offset,count,max, fGlyphStorage->getGlyphCount());
+#endif
     glyphCount = computeGlyphs(chars, offset, count, max, rightToLeft, *fGlyphStorage, success);
+#if LE_DEBUG
+    LEGlyphStorage_dump(fGlyphStorage);
+    LETRACE("layoutChars: computed glyphCount=%d, success=%s, fGlyphStorageCount=%d\n", glyphCount, u_errorName((UErrorCode)success), fGlyphStorage->getGlyphCount());
+#endif
     positionGlyphs(*fGlyphStorage, x, y, success);
+#if LE_DEBUG
+    LETRACE("layoutChars: positioned, success=%s, fGlyphStorageCount=%d\n",  u_errorName((UErrorCode)success), fGlyphStorage->getGlyphCount());
+#endif
     adjustGlyphPositions(chars, offset, count, rightToLeft, *fGlyphStorage, success);
+#if LE_DEBUG
+    LETRACE("layoutChars: adjusted, success=%s, fGlyphStorageCount=%d\n",  u_errorName((UErrorCode)success),fGlyphStorage->getGlyphCount());
+#endif
 
     return glyphCount;
 }

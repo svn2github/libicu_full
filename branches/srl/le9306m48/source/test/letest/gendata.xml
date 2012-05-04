@@ -6,6 +6,16 @@
 -->
 
 <layout-tests>
+  <test-case id="Malayalam Test 1" script="mlym">
+    <test-font name="ThooliUc.TTF"/>
+    <test-text>&#x0d68;&#x003a;&#x0d68;&#x0d66;&#x003a;&#x0d68;&#x0d6a;&#x0020;&#x0d35;&#x0d48;&#x0d15;&#x0d41;&#x0d28;&#x0d4d;&#x0d28;&#x0d47;&#x0d30;&#x0d02;&#x0020;&#x0d15;&#x0d3f;&#x0d34;&#x0d15;&#x0d4d;&#x0d15;&#x0d28;&#x0d4d;&#x200d;&#x0020;&#x0d38;&#x0d4d;&#x0d31;&#x0d4d;&#x0d31;&#x0d3e;&#x0d28;&#x0d4d;&#x200d;&#x0d21;&#x0d47;&#x0d30;&#x0d4d;&#x200d;&#x0d21;&#x0d4d;&#x0020;&#x0d38;&#x0d2e;&#x0d2f;&#x0d02;</test-text>
+  </test-case>
+
+  <test-case id="Malayalam Test 2" script="mlym">
+    <test-font name="Andalewt.ttf"/>
+    <test-text>&#x0d68;&#x003a;&#x0d68;&#x0d66;&#x003a;&#x0d68;&#x0d6a;&#x0020;&#x0d35;&#x0d48;&#x0d15;&#x0d41;&#x0d28;&#x0d4d;&#x0d28;&#x0d47;&#x0d30;&#x0d02;&#x0020;&#x0d15;&#x0d3f;&#x0d34;&#x0d15;&#x0d4d;&#x0d15;&#x0d28;&#x0d4d;&#x200d;&#x0020;&#x0d38;&#x0d4d;&#x0d31;&#x0d4d;&#x0d31;&#x0d3e;&#x0d28;&#x0d4d;&#x200d;&#x0d21;&#x0d47;&#x0d30;&#x0d4d;&#x200d;&#x0d21;&#x0d4d;&#x0020;&#x0d38;&#x0d2e;&#x0d2f;&#x0d02;</test-text>
+  </test-case>
+
    <test-case id="Ghita" script="deva">
         <test-font name="raghu.ttf"/>
         <test-text>श्रीमद् भगवद्गीता अध्याय अर्जुन विषाद योग धृतराष्ट्र उवाचृ धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः मामकाः पाण्डवाश्चैव किमकुर्वत संजव</test-text>

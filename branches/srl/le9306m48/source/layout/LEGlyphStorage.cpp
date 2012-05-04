@@ -8,10 +8,36 @@
 #include "LETypes.h"
 #include "LEInsertionList.h"
 #include "LEGlyphStorage.h"
+#include "LEDebug.h"
 
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(LEGlyphStorage)
+
+#if LE_DEBUG
+extern void LEGlyphStorage_dump(const LEGlyphStorage* g) {
+  le_int32 count = g->getGlyphCount();
+  LEErrorCode success = LE_NO_ERROR;
+  fprintf(stderr,"LEGlyphStorage len=%d ", count);
+  for(le_int32 i = 0;i<count;i++) {
+    if(i%16==0) {
+      fprintf(stderr,"\n%04d:\t", i);
+    }
+    fprintf(stderr,"G0x%04X ",(*g)[i]);
+  }
+  fprintf(stderr,"\n");
+  for(le_int32 i = 0;i<count;i++) {
+    if(i%16==0) {
+      fprintf(stderr,"\n%04d:\t", i);
+    }
+    fprintf(stderr,"i%d ",g->getCharIndex(i,success));
+  }
+  if(LE_FAILURE(success)) {
+    fprintf(stderr, "ERR: %s\n", u_errorName((UErrorCode)success));
+  }
+  fprintf(stderr,"\n");
+}
+#endif
 
 LEInsertionCallback::~LEInsertionCallback()
 {

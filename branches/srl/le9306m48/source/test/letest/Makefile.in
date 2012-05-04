@@ -48,6 +48,10 @@ OBJECTS = $(COMMONOBJECTS) $(TESTOBJECTS) $(GENOBJECTS)
 
 DEPS = $(OBJECTS:.o=.d)
 
+GENDATA_OPTS=-d $(top_srcdir)/test/testdata letest-new.xml
+
+-include Makefile.local
+
 ## List of phony targets
 .PHONY : all all-local install install-local clean clean-local	\
 distclean distclean-local dist dist-local check check-local
@@ -77,7 +81,7 @@ distclean-local: clean-local
 	$(RMV) Makefile
 
 check-local: all-local
-	$(INVOKE) ./$(TESTTARGET)
+	$(INVOKE) ./$(TESTTARGET) $(LETEST_OPTS)
 
 Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) \
@@ -90,6 +94,9 @@ $(TESTTARGET) : $(COMMONOBJECTS) $(TESTOBJECTS) $(CTESTOBJECTS)
 $(GENTARGET) : $(COMMONOBJECTS) $(GENOBJECTS)
 	$(LINK.cc) -o $@ $^ $(LIBS)
 	$(POST_BUILD_STEP)
+
+run-gendata: $(GENTARGET)
+	ICU_DATA=$${ICU_DATA:-$(top_builddir)/data/} TZ=PST8PDT $(INVOKE) ./$(GENTARGET) $(GENDATA_OPTS)
 
 invoke:
 	ICU_DATA=$${ICU_DATA:-$(top_builddir)/data/} TZ=PST8PDT $(INVOKE) $(INVOCATION)

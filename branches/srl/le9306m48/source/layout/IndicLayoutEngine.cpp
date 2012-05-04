@@ -20,6 +20,8 @@
 
 #include "IndicReordering.h"
 
+#include "LEDebug.h"
+
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(IndicOpenTypeLayoutEngine)
@@ -98,6 +100,10 @@ le_int32 IndicOpenTypeLayoutEngine::characterProcessing(const LEUnicode chars[],
 
     le_int32 worstCase = count * IndicReordering::getWorstCaseExpansion(fScriptCode);
 
+#if LE_DEBUG
+    LETRACE("Indic::charProcess, count=%d, worst=%d\n", count, worstCase);
+#endif
+
     outChars = LE_NEW_ARRAY(LEUnicode, worstCase);
 
     if (outChars == NULL) {
@@ -122,6 +128,9 @@ le_int32 IndicOpenTypeLayoutEngine::characterProcessing(const LEUnicode chars[],
     } else {
         outCharCount = IndicReordering::reorder(&chars[offset], count, fScriptCode, outChars, glyphStorage, &fMPreFixups, success);
     }
+#if LE_DEBUG
+    LETRACE("Indic::charProcess, outCharCount=%d, fVersioN2=%d\n", outCharCount,fVersion2);
+#endif
 
     if (LE_FAILURE(success)) {
         LE_DELETE_ARRAY(outChars);

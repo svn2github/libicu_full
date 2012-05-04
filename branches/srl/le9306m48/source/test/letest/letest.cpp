@@ -211,6 +211,51 @@ bail:
     delete engine;
     delete font;
 }
+
+
+static void U_CALLCONV MlymTest(void)
+{
+    LEErrorCode status = LE_NO_ERROR;
+    SimpleFontInstance *font = new SimpleFontInstance(12, status);
+    LayoutEngine *engine = LayoutEngine::layoutEngineFactory(font, mlymScriptCode, -1, status);
+    LEGlyphID *glyphs    = NULL;
+    le_int32  *indices   = NULL;
+    float     *positions = NULL;
+
+    LEUnicode strData3[] = {
+      //Malayalam, long date/time string
+#if 0
+      0x0d68, 0x003a, 0x0d68, 0x0d66, 0x003a, 0x0d68, 0x0d6a, 0x0020, 0x0d35, 0x0d48,
+      0x0d15, 0x0d41, 0x0d28, 0x0d4d, 0x0d28, 0x0d47,
+      0x0d30, 0x0d02, 0x0020, 0x0d15, 0x0d3f, 0x0d34, 0x0d15, 0x0d4d, 0x0d15, 0x0d28, 0x0d4d, 0x200d, 0x0020,
+#endif
+#if 1
+      // SA    (v)     RA      (v)     ->  RA (v) SA 0xd30,0xd4d,0xd38,
+      0x0d38, 0x0d4d, 0x0d31, 0x0d4d, 
+      0x0d31, 
+      0x0d3e, 0x0d28, 0x0d4d,
+#endif
+#if 0
+      0x200d, 0x0d21, 0x0d47, 0x0d30, 0x0d4d, 0x200d, 0x0d21, 0x0d4d, 0x0020, 0x0d38, 0x0d2e,
+      0x0d2f, 0x0d02, 
+#endif
+      0
+    };
+    le_int32   stringSize = u_strlen((const UChar*)strData3);
+    int32_t glyphCount = stringSize;
+    log_verbose("count=%d\n", glyphCount);
+    status = LE_NO_ERROR;
+    glyphCount = engine->layoutChars(strData3, 0, glyphCount,glyphCount, FALSE, 0.0, 0.0, status);
+    if (LE_FAILURE(status) || glyphCount != stringSize) {
+      log_err("Calling layoutChars(mlymChars, %d) gave %s and returned %d.\n", stringSize, u_errorName((UErrorCode)status), glyphCount);
+    } else {
+      log_verbose("Calling layoutChars(mlymChars, %d) gave %s and returned %d.\n", stringSize, u_errorName((UErrorCode)status), glyphCount);
+    }
+
+bail:
+    delete engine;
+    delete font;
+}
 U_CDECL_END
 
 U_CDECL_BEGIN
@@ -325,30 +370,50 @@ bail:
 }
 U_CDECL_END
 
-le_bool compareResults(const char *testID, TestResult *expected, TestResult *actual)
+le_bool compareResults(const char *fontName, const char *testID, TestResult *expected, TestResult *actual)
 {
+  int QUICK = getTestOption( QUICK_OPTION );
+  le_bool OKAY = TRUE;
     /* NOTE: we'll stop on the first failure 'cause once there's one error, it may cascade... */
     if (actual->glyphCount != expected->glyphCount) {
-        log_err("Test %s: incorrect glyph count: exptected %d, got %d\n",
-            testID, expected->glyphCount, actual->glyphCount);
-        return FALSE;
+        log_err("Test %s %s: incorrect glyph count: exptected %d, got %d\n",
+                fontName, testID, expected->glyphCount, actual->glyphCount);
+        if(QUICK) {
+          return FALSE;
+        } else {
+          OKAY = FALSE;
+          // continue, with minimal glyph count.
+          if(actual->glyphCount>expected->glyphCount) {
+            actual->glyphCount = expected->glyphCount;
+          } else {
+            expected->glyphCount = actual->glyphCount;
+          }
+        }
     }
 
     le_int32 i;
 
     for (i = 0; i < actual->glyphCount; i += 1) {
         if (actual->glyphs[i] != expected->glyphs[i]) {
-            log_err("Test %s: incorrect id for glyph %d: expected %4X, got %4X\n",
-                testID, i, expected->glyphs[i], actual->glyphs[i]);
-            return FALSE;
+            log_err("Test %s %s: incorrect id for glyph %d: expected %4X, got %4X\n",
+                    fontName, testID, i, expected->glyphs[i], actual->glyphs[i]);
+            if(QUICK) {
+              return FALSE;
+            } else {
+              OKAY = FALSE;
+            }
         }
     }
 
     for (i = 0; i < actual->glyphCount; i += 1) {
         if (actual->indices[i] != expected->indices[i]) {
-            log_err("Test %s: incorrect index for glyph %d: expected %8X, got %8X\n",
-                testID, i, expected->indices[i], actual->indices[i]);
-            return FALSE;
+            log_err("Test %s %s: incorrect index for glyph %d: expected %8X, got %8X\n",
+                    fontName, testID, i, expected->indices[i], actual->indices[i]);
+            if(QUICK) {
+              return FALSE;
+            } else {
+              OKAY = FALSE;
+            }
         }
     }
 
@@ -356,9 +421,13 @@ le_bool compareResults(const char *testID, TestResult *expected, TestResult *act
         double xError = uprv_fabs(actual->positions[i * 2] - expected->positions[i * 2]);
 
         if (xError > 0.0001) {
-            log_err("Test %s: incorrect x position for glyph %d: expected %f, got %f\n",
-                testID, i, expected->positions[i * 2], actual->positions[i * 2]);
-            return FALSE;
+            log_err("Test %s %s: incorrect x position for glyph %d: expected %f, got %f\n",
+                    fontName, testID, i, expected->positions[i * 2], actual->positions[i * 2]);
+            if(QUICK) {
+              return FALSE;
+            } else {
+              OKAY = FALSE;
+            }
         }
 
         double yError = uprv_fabs(actual->positions[i * 2 + 1] - expected->positions[i * 2 + 1]);
@@ -368,17 +437,25 @@ le_bool compareResults(const char *testID, TestResult *expected, TestResult *act
         }
 
         if (yError > 0.0001) {
-            log_err("Test %s: incorrect y position for glyph %d: expected %f, got %f\n",
-                testID, i, expected->positions[i * 2 + 1], actual->positions[i * 2 + 1]);
-            return FALSE;
+            log_err("Test %s %s: incorrect y position for glyph %d: expected %f, got %f\n",
+                    fontName, testID, i, expected->positions[i * 2 + 1], actual->positions[i * 2 + 1]);
+            if(QUICK) {
+              return FALSE;
+            } else {
+              OKAY = FALSE;
+            }
         }
     }
 
-    return TRUE;
+    if(OKAY) {
+      log_verbose("Test %s %s: OK! %d glyphs\n", fontName, testID, actual->glyphCount);
+    }
+
+    return OKAY;
 }
 
 static void checkFontVersion(PortableFontInstance *fontInstance, const char *testVersionString,
-                             le_uint32 testChecksum, const char *testID)
+                             le_uint32 testChecksum, const char *testID, const char *fontName)
 {
     le_uint32 fontChecksum = fontInstance->getFontChecksum();
 
@@ -394,7 +471,7 @@ static void checkFontVersion(PortableFontInstance *fontInstance, const char *tes
                     PLATFORM_MICROSOFT, MICROSOFT_UNICODE_BMP, MICROSOFT_ENGLISH);
             }
 
-        log_info("Test %s: this may not be the same font used to generate the test data.\n", testID);
+            log_info("Test %s %s: this may not be the same font used to generate the test data.\n", fontName, testID);
 
         if (uFontVersionString != NULL) {
             log_info("Your font's version string is \"%S\"\n", uFontVersionString);
@@ -404,8 +481,7 @@ static void checkFontVersion(PortableFontInstance *fontInstance, const char *tes
             fontInstance->deleteNameString(fontVersionString);
         }
 
-        log_info("The expected version string is \"%s\"\n", testVersionString);
-        log_info("If you see errors, they may be due to the version of the font you're using.\n");
+        log_info("The expected version string is \"%s\" - If you see errors, they may be due to the version of the font you're using.\n", testVersionString);
     }
 }
 
@@ -545,7 +621,7 @@ LEFontInstance *openFont(const char *fontName, const char *checksum, const char 
     font = new PortableFontInstance(getPath(path, fontName), 12, fontStatus);
 
     if (LE_FAILURE(fontStatus)) {
-        log_info("Test %s: can't open font %s - test skipped.\n", testID, fontName);
+      log_info("Test %s %s: can't open font - test skipped.\n", fontName, testID);
         delete font;
         return NULL;
     } else {
@@ -553,7 +629,7 @@ LEFontInstance *openFont(const char *fontName, const char *checksum, const char 
 
         sscanf(checksum, "%x", &cksum);
 
-        checkFontVersion(font, version, cksum, testID);
+        checkFontVersion(font, version, cksum, testID, fontName);
     }
 
     return font;
@@ -614,6 +690,7 @@ static void U_CALLCONV DataDrivenTest(void)
             TestResult actual   = {0, NULL, NULL, NULL};
             LEErrorCode success = LE_NO_ERROR;
             LayoutEngine *engine = NULL;
+            char *fontName = NULL;
 
             uscript_getCode(script, &scriptCode, 1, &status);
             if (LE_FAILURE(status)) {
@@ -630,19 +707,19 @@ static void U_CALLCONV DataDrivenTest(void)
                 }
             }
 
+
             while((element = testCase->nextChildElement(ec)) != NULL) {
                 UnicodeString tag = element->getTagName();
 
                 // TODO: make sure that each element is only used once.
                 if (tag.compare(test_font) == 0) {
-                    char *fontName  = getCString(element->getAttribute(name_attr));
+                    fontName  = getCString(element->getAttribute(name_attr));
                     char *fontVer   = getCString(element->getAttribute(ver_attr));
                     char *fontCksum = getCString(element->getAttribute(cksum_attr));
 
                     font = openFont(fontName, fontCksum, fontVer, id);
                     freeCString(fontCksum);
                     freeCString(fontVer);
-                    freeCString(fontName);
 
                     if (font == NULL) {
                         // warning message already displayed...
@@ -681,16 +758,21 @@ static void U_CALLCONV DataDrivenTest(void)
 
             expected.glyphCount = glyphCount;
 
-            if (glyphCount < charCount || indexCount != glyphCount || positionCount < glyphCount * 2 + 2) {
-                log_err("Test %s: inconsistent input data: charCount = %d, glyphCount = %d, indexCount = %d, positionCount = %d\n",
-                    id, charCount, glyphCount, indexCount, positionCount);
+            if (indexCount != glyphCount || positionCount < glyphCount * 2 + 2) {
+                log_err("Test %s %s: inconsistent input data: charCount = %d, glyphCount = %d, indexCount = %d, positionCount = %d\n",
+                        fontName, id, charCount, glyphCount, indexCount, positionCount);
                 goto free_expected;
             };
+
+            if(glyphCount < charCount) {
+                log_info("Test %s %s: inconsistent input data: glyphCount=%d < charCount=%d\n",
+                         fontName, id, glyphCount, charCount);
+            }
 
             engine = LayoutEngine::layoutEngineFactory(font, scriptCode, languageCode, typoFlags, success);
 
             if (LE_FAILURE(success)) {
-                log_err("Test %s: could not create a LayoutEngine.\n", id);
+              log_err("Test %s %s: could not create a LayoutEngine.\n", fontName, id);
                 goto free_expected;
             }
 
@@ -704,7 +786,7 @@ static void U_CALLCONV DataDrivenTest(void)
             engine->getCharIndices(actual.indices, success);
             engine->getGlyphPositions(actual.positions, success);
 
-            compareResults(id, &expected, &actual);
+            compareResults(fontName, id, &expected, &actual);
 
             DELETE_ARRAY(actual.positions);
             DELETE_ARRAY(actual.indices);
@@ -720,6 +802,7 @@ free_expected:
             delete font;
 
 free_c_strings:
+            freeCString(fontName);
             freeCString(lang);
             freeCString(script);
             freeCString(id);
@@ -964,6 +1047,7 @@ static void addAllTests(TestNode **root)
 {
     addTest(root, &ScriptTest,      "api/ScriptTest");
     addTest(root, &ParamTest,       "api/ParameterTest");
+    addTest(root, &MlymTest,       "api/MlymTest");
     addTest(root, &FactoryTest,     "api/FactoryTest");
     addTest(root, &AccessTest,      "layout/AccessTest");
     addTest(root, &DataDrivenTest,  "layout/DataDrivenTest");

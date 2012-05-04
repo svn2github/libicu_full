@@ -11,6 +11,8 @@
 #include "LEGlyphStorage.h"
 #include "MPreFixups.h"
 
+#include "LEDebug.h"
+
 U_NAMESPACE_BEGIN
 
 #define loclFeatureTag LE_LOCL_FEATURE_TAG
@@ -206,7 +208,9 @@ public:
     void writeChar(LEUnicode ch, le_uint32 charIndex, FeatureMask charFeatures)
     {
         LEErrorCode success = LE_NO_ERROR;
-
+#if LE_DEBUG
+        LETRACE("Indic Write: [%d]=U+%04X features=%d\n", fOutIndex, ch, charFeatures);
+#endif
         fOutChars[fOutIndex] = ch;
 
         fGlyphStorage.setCharIndex(fOutIndex, charIndex, success);

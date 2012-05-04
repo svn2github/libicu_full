@@ -1,7 +1,7 @@
 /*
  *******************************************************************************
  *
- *   Copyright (C) 1999-2008, International Business Machines
+ *   Copyright (C) 1999-2012, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *
  *******************************************************************************
@@ -357,8 +357,7 @@ static void checkFontVersion(le_font *font, const char *testVersionString,
             le_deleteNameString(font, fontVersionString);
         }
 
-        log_info("The expected version string is \"%s\"\n", testVersionString);
-        log_info("If you see errors, they may be due to the version of the font you're using.\n");
+        log_info("The expected version string is \"%s\" - If you see errors, they may be due to the version of the font you're using.\n", testVersionString);
     }
 }
 
