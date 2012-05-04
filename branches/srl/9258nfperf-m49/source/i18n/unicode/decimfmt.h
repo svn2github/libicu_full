@@ -747,6 +747,13 @@ public:
                     DecimalFormatSymbols* symbolsToAdopt,
                     UNumberFormatStyle style,
                     UErrorCode& status);
+
+
+    /**
+     * @internal 
+     */
+    void setParseAllInput(UNumberFormatAttributeValue value);
+
 #endif  /* U_HIDE_INTERNAL_API */
 
     /**
@@ -2260,6 +2267,8 @@ private:
 
     // Information needed for DecimalFormat to format/parse currency plural.
     CurrencyPluralInfo* fCurrencyPluralInfo;
+
+    UNumberFormatAttributeValue fParseAllInput;
 
 protected:
 

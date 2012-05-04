@@ -350,6 +350,7 @@ DecimalFormat::init(UErrorCode &status) {
     fAffixesForCurrency = NULL;
     fPluralAffixesForCurrency = NULL;
     fCurrencyPluralInfo = NULL;
+    fParseAllInput = UNUM_MAYBE;
 
     // only do this once per obj.
     DecimalFormatStaticSets::initSets(&status);
@@ -1903,6 +1904,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
     int32_t position = parsePosition.getIndex();
     int32_t oldStart = position;
+    int32_t textLength = text.length(); // One less pointer to follow
     UBool strictParse = !isLenient();
     UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
 #ifdef FMT_DEBUG
@@ -1921,10 +1923,15 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     UBool fastParseOk = false; /* TRUE iff fast parse is OK */
 
     if(!currencyParsing &&
-       fFormatWidth==0 &&
-       //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
-       text.length()>0 &&
-       text.length()<20 ) {  // optimized path
+
+
+       (  ( fParseAllInput == UNUM_YES ) ||
+          ( fParseAllInput == UNUM_MAYBE &&
+            fFormatWidth==0 &&
+            //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
+            text.length()>0 &&
+            text.length()<20 )
+          )) {  // optimized path
       int j=position;
       int l=text.length();
       int digitCount=0;
@@ -1994,7 +2001,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       }
     }
 
-  if(!fastParseOk) 
+  if(!fastParseOk && fParseAllInput!=UNUM_YES) 
   {
     // Match padding before prefix
     if (fFormatWidth > 0 && fPadPosition == kPadBeforePrefix) {
@@ -2066,7 +2073,6 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         const UnicodeString *groupingString = &getConstSymbol(DecimalFormatSymbols::kGroupingSeparatorSymbol);
         UChar32 decimalChar = decimalString->char32At(0);
         UChar32 groupingChar = groupingString->char32At(0);
-        int32_t textLength = text.length(); // One less pointer to follow
         int32_t decimalStringLength = decimalString->length();
         int32_t decimalCharLength   = U16_LENGTH(decimalChar);
         int32_t groupingStringLength = groupingString->length();
@@ -2358,7 +2364,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 printf("PP -> %d, SLOW = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.data(), parsePosition.getIndex(),oldStart,u_errorName(err));
 #endif
   } /* end SLOW parse */
-    if(parsePosition.getIndex() == oldStart)
+  if(parsePosition.getIndex() == oldStart)
     {
 #ifdef FMT_DEBUG
       printf(" PP didnt move, err\n");
@@ -2366,6 +2372,15 @@ printf("PP -> %d, SLOW = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.d
         parsePosition.setErrorIndex(position);
         return FALSE;
     }
+  else if (fParseAllInput==UNUM_YES&&parsePosition.getIndex()!=textLength)
+    {
+#ifdef FMT_DEBUG
+      printf(" PP didnt consume all (UNUM_YES), err\n");
+#endif
+        parsePosition.setErrorIndex(position);
+        return FALSE;
+    }
+
     digits.set(parsedNum.toStringPiece(), err);
 
     if (U_FAILURE(err)) {
@@ -4975,7 +4990,9 @@ DecimalFormat::copyHashForAffixPattern(const Hashtable* source,
     }
 }
 
-
+void DecimalFormat::setParseAllInput(UNumberFormatAttributeValue value) {
+  fParseAllInput = value;
+}
 
 void
 DecimalFormat::copyHashForAffix(const Hashtable* source,
