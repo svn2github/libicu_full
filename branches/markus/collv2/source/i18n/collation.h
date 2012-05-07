@@ -140,8 +140,12 @@ public:
         HANGUL_TAG = 13,
         /**
          * Tag for CEs with primary weights in code point order.
-         * Bits 19..4: Lower 16 bits of the base code point.
-         * Bits  3..0: Per-code point primary-weight increment minus 1.
+         * Bits 19..0: Index into CE table, for one data "CE".
+         *
+         * This data "CE" has the following bit fields:
+         * Bits 63..32: Three-byte primary pppppp00.
+         *      31.. 8: Start/base code point of the in-order range.
+         *       7.. 0: Per-code point primary-weight increment.
          */
         OFFSET_TAG = 14,
         /**

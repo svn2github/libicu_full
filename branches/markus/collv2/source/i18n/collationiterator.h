@@ -80,7 +80,7 @@ public:
     CollationIterator(const CollationData *d, int8_t iterFlags)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
-            : trie(d->getTrie()),
+            : trie(d->trie),
               data(d),
               flags(iterFlags),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
@@ -123,7 +123,7 @@ public:
             if(c < 0) {
                 return Collation::NO_CE;
             }
-            d = data->getBase();
+            d = data->base;
             ce32 = d->getCE32(c);
             if(!Collation::isSpecialCE32(ce32)) {
                 // Normal CE from the base data.

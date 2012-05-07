@@ -168,7 +168,7 @@ FCDUTF16CollationIterator::FCDUTF16CollationIterator(
           rawStart(s), segmentStart(s), segmentLimit(s), rawLimit(lim),
           lengthBeforeLimit(0),
           smallSteps(TRUE),
-          nfcImpl(data->getNFCImpl()),
+          nfcImpl(data->nfcImpl),
           buffer(nfcImpl, normalized) {
     if(U_SUCCESS(errorCode)) {
         buffer.init(2, errorCode);

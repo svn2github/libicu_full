@@ -86,6 +86,7 @@ private:
 
     uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
 
+    int32_t addCE(int64_t ce, UErrorCode &errorCode);
     int32_t addCE32(uint32_t ce32, UErrorCode &errorCode);
     int32_t addConditionalCE32(const UnicodeString &context, uint32_t ce32, UErrorCode &errorCode);
 

@@ -177,7 +177,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             cesIndex = (cesMaxIndex > 0) ? 1 : -1;
             return ces[0];
         case Collation::EXPANSION_TAG: {
-            ces = d->getCEs((ce32 >> 3) & 0x1ffff);
+            ces = d->ces + ((ce32 >> 3) & 0x1ffff);
             int32_t length = (int32_t)ce32 & 7;
             if(length == 0) { length = (int32_t)*ces++; }
             cesMaxIndex = length - 1;
@@ -216,7 +216,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                     if(c < 0) { break; }
                     ce32 = data->getCE32(c);
                     if(ce32 == Collation::MIN_SPECIAL_CE32) {
-                        ce32 = data->getBase()->getCE32(c);
+                        ce32 = data->base->getCE32(c);
                     }
                     if(!Collation::isSpecialCE32(ce32) ||
                         Collation::DIGIT_TAG != Collation::getSpecialCE32Tag(ce32)
@@ -236,7 +236,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 return ces[0];
             } else {
                 // Fetch the non-CODAN CE32 and continue.
-                ce32 = *d->getCE32s((ce32 >> 4) & 0xffff);
+                ce32 = d->ce32s[(ce32 >> 4) & 0xffff];
                 break;
             }
         case Collation::HIRAGANA_TAG:
@@ -247,7 +247,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 anyHiragana = TRUE;
             }
             // Fetch the normal CE32 and continue.
-            ce32 = *d->getCE32s(ce32 & 0xfffff);
+            ce32 = d->ce32s[ce32 & 0xfffff];
             break;
         case Collation::HANGUL_TAG:
             setHangulExpansion(ce32);
@@ -263,7 +263,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                     return Collation::NO_CE;
                 } else {
                     // Fetch the normal ce32 for U+0000 and continue.
-                    ce32 = *d->getCE32s(0);
+                    ce32 = d->ce32s[0];
                     break;
                 }
             } else {
@@ -278,19 +278,17 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
 
 int64_t
 CollationIterator::getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32) {
-    UChar32 baseCp = (c & 0x1f0000) | (((UChar32)ce32 >> 4) & 0xffff);
-    int32_t offset = (c - baseCp) * ((ce32 & 0xf) + 1);  // delta * increment
-    ce32 = d->getCE32(baseCp);
-    // ce32 must be a long-primary pppppp01.
-    U_ASSERT(Collation::isLongPrimaryCE32(ce32));
-    uint32_t p = Collation::primaryFromLongPrimaryCE32(ce32);
+    int64_t dataCE = d->ces[(int32_t)ce32 & 0xfffff];
+    uint32_t p = (uint32_t)(dataCE >> 32);  // three-byte primary pppppp00
+    int32_t lower32 = (int32_t)dataCE;  // base code point b & step s: bbbbbbss
+    int32_t offset = (c - (lower32 >> 8)) * (lower32 & 0xff);  // delta * increment
     return Collation::getCEFromThreeByteOffset(p, d->isCompressiblePrimary(p), offset);
 }
 
 uint32_t
 CollationIterator::getCE32FromPrefix(const CollationData *d, uint32_t ce32,
                                      UErrorCode &errorCode) {
-    const uint16_t *p = d->getContext((int32_t)ce32 & 0xfffff);
+    const UChar *p = d->contexts + ((int32_t)ce32 & 0xfffff);
     ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no prefix match.
     p += 2;
     // Number of code points read before the original code point.
@@ -330,7 +328,7 @@ uint32_t
 CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 originalCp,
                                            uint32_t contractionCE32, UErrorCode &errorCode) {
     // originalCp: Only needed as input to nextCE32FromDiscontiguousContraction().
-    const UChar *p = d->getContext((int32_t)(contractionCE32 >> 2) & 0x3ffff);
+    const UChar *p = d->contexts + ((int32_t)(contractionCE32 >> 2) & 0x3ffff);
     uint32_t ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
     p += 2;
     UChar32 c = nextSkippedCodePoint(errorCode);
@@ -506,7 +504,7 @@ CollationIterator::appendCEsFromCp(UChar32 c, UErrorCode &errorCode) {
     const CollationData *d;
     uint32_t ce32 = data->getCE32(c);
     if(ce32 == Collation::MIN_SPECIAL_CE32) {
-        d = data->getBase();
+        d = data->base;
         ce32 = d->getCE32(c);
     } else {
         d = data;
@@ -535,7 +533,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             break;
         // if-else-if rather than switch so that "break;" leaves the loop.
         } else if(tag == Collation::EXPANSION32_TAG) {
-            const uint32_t *ce32s = d->getCE32s((int32_t)(ce32 >> 3) & 0x1ffff);
+            const uint32_t *ce32s = d->ce32s + ((int32_t)(ce32 >> 3) & 0x1ffff);
             int32_t length = (int32_t)ce32 & 7;
             if(length == 0) { length = (int32_t)*ce32s++; }
             for(int32_t i = 0; i < length; ++i) {
@@ -544,7 +542,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             cesMaxIndex = cesLength - 1;
             return;
         } else if(tag == Collation::EXPANSION_TAG) {
-            const int64_t *expCEs = d->getCEs((int32_t)(ce32 >> 3) & 0x1ffff);
+            const int64_t *expCEs = d->ces + ((int32_t)(ce32 >> 3) & 0x1ffff);
             int32_t length = (int32_t)ce32 & 7;
             if(length == 0) { length = (int32_t)*expCEs++; }
             for(int32_t i = 0; i < length; ++i) {
@@ -585,7 +583,7 @@ CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &e
     }
     U_ASSERT(length > 0);
     U_ASSERT(length == 1 || digits[0] != 0);
-    uint32_t zeroPrimary = data->getZeroPrimary();
+    uint32_t zeroPrimary = data->zeroPrimary;
     // Note: We use primary byte values 3..255: digits are not compressible.
     if(length <= 5) {
         // Very dense encoding for small numbers.
@@ -668,7 +666,7 @@ CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &e
 
 void
 CollationIterator::setHangulExpansion(UChar32 c) {
-    const int64_t *jamoCEs = data->getJamoCEs();
+    const int64_t *jamoCEs = data->jamoCEs;
     c -= Hangul::HANGUL_BASE;
     UChar32 t = c % Hangul::JAMO_T_COUNT;
     c /= Hangul::JAMO_T_COUNT;
@@ -701,7 +699,7 @@ CollationIterator::setLatinExpansion(uint32_t ce32) {
 void
 CollationIterator::setCE32s(const CollationData *d, int32_t expIndex, int32_t length) {
     ces = forwardCEs.getBuffer();
-    const uint32_t *ce32s = d->getCE32s(expIndex);
+    const uint32_t *ce32s = d->ce32s + expIndex;
     if(length == 0) { length = (int32_t)*ce32s++; }
     cesMaxIndex = length - 1;
     for(int32_t i = 0; i < length; ++i) {
@@ -741,7 +739,7 @@ TwoWayCollationIterator::previousCE(UErrorCode &errorCode) {
     }
     const CollationData *d;
     if(ce32 == Collation::MIN_SPECIAL_CE32) {
-        d = fwd.data->getBase();
+        d = fwd.data->base;
         ce32 = d->getCE32(c);
         if(!Collation::isSpecialCE32(ce32)) {
             // Normal CE from the base data.
@@ -770,7 +768,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             fwd.cesIndex = fwd.cesMaxIndex;
             return fwd.ces[fwd.cesMaxIndex];
         case Collation::EXPANSION_TAG: {
-            fwd.ces = d->getCEs((ce32 >> 3) & 0x1ffff);
+            fwd.ces = d->ces + ((ce32 >> 3) & 0x1ffff);
             int32_t length = (int32_t)ce32 & 7;
             if(length == 0) { length = (int32_t)*fwd.ces++; }
             fwd.cesMaxIndex = length - 1;
@@ -805,7 +803,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
                     if(c < 0) { break; }
                     ce32 = fwd.data->getCE32(c);
                     if(ce32 == Collation::MIN_SPECIAL_CE32) {
-                        ce32 = fwd.data->getBase()->getCE32(c);
+                        ce32 = fwd.data->base->getCE32(c);
                     }
                     if(!Collation::isSpecialCE32(ce32) ||
                         Collation::DIGIT_TAG != Collation::getSpecialCE32Tag(ce32)
@@ -832,13 +830,13 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
                 return fwd.ces[fwd.cesMaxIndex];
             } else {
                 // Fetch the non-CODAN CE32 and continue.
-                ce32 = *d->getCE32s((ce32 >> 4) & 0xffff);
+                ce32 = d->ce32s[(ce32 >> 4) & 0xffff];
                 break;
             }
         case Collation::HIRAGANA_TAG:
             // TODO: Do we need to handle hiragana going backward? (I.e., do string search or the CollationElementIterator need it?)
             // Fetch the normal CE32 and continue.
-            ce32 = *d->getCE32s(ce32 & 0xfffff);
+            ce32 = d->ce32s[ce32 & 0xfffff];
             break;
         case Collation::HANGUL_TAG:
             fwd.setHangulExpansion(ce32);
@@ -850,7 +848,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             if((ce32 & 1) == 0) {
                 U_ASSERT(c == 0);
                 // Fetch the normal ce32 for U+0000 and continue.
-                ce32 = *d->getCE32s(0);
+                ce32 = d->ce32s[0];
                 break;
             } else {
                 return Collation::unassignedCEFromCodePoint(c);

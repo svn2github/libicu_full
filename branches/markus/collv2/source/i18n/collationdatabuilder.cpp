@@ -234,13 +234,10 @@ uint32_t
 CollationDataBuilder::setThreeByteOffsetRange(UChar32 start, UChar32 end,
                                               uint32_t primary, int32_t step,
                                               UErrorCode &errorCode) {
-    U_ASSERT(start <= end);
-    U_ASSERT((start >> 16) == (end >> 16));  // Range does not span a Unicode plane boundary.
-    U_ASSERT(1 <= step && step <= 16);
-    // TODO: Do we need to check what values are currently set for start..end?
-    // We always set a normal CE32 for the start code point.
-    utrie2_set32(trie, start, makeLongPrimaryCE32(primary), &errorCode);
     if(U_FAILURE(errorCode)) { return 0; }
+    U_ASSERT(start <= end);
+    U_ASSERT(1 <= step && step <= 255);
+    // TODO: Do we need to check what values are currently set for start..end?
     // An offset range is worth it only if we can achieve an overlap between
     // adjacent UTrie2 blocks of 32 code points each.
     // An offset CE is also a little more expensive to look up and compute
@@ -250,33 +247,46 @@ CollationDataBuilder::setThreeByteOffsetRange(UChar32 start, UChar32 end,
     UChar32 limit = end + 1;
     UBool isCompressible = isCompressiblePrimary(primary);
     if((limit - start) >= 40) {  // >= 40 code points in the range
-        uint32_t offsetCE32 = makeSpecialCE32(
-            Collation::OFFSET_TAG,
-            ((uint32_t)(start & 0xffff) << 4) | (uint32_t)(step - 1));
-        utrie2_setRange32(trie, start + 1, end, offsetCE32, TRUE, &errorCode);
+        int64_t dataCE = ((int64_t)primary << 32) | (start << 8) | step;
+        int32_t index = addCE(dataCE, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        if(index > 0xfffff) {
+            errorCode = U_BUFFER_OVERFLOW_ERROR;
+            return 0;
+        }
+        uint32_t offsetCE32 = makeSpecialCE32(Collation::OFFSET_TAG, index);
+        utrie2_setRange32(trie, start, end, offsetCE32, TRUE, &errorCode);
         return Collation::incThreeBytePrimaryByOffset(primary, isCompressible,
                                                       (limit - start) * step);
     } else {
         // Short range: Set individual CE32s.
         for(;;) {
+            utrie2_set32(trie, start, makeLongPrimaryCE32(primary), &errorCode);
             ++start;
             primary = Collation::incThreeBytePrimaryByOffset(primary, isCompressible, step);
             if(start > end) { return primary; }
-            utrie2_set32(trie, start, makeLongPrimaryCE32(primary), &errorCode);
         }
     }
 }
 
 uint32_t
 CollationDataBuilder::getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const {
-    UChar32 baseCp = (c & 0x1f0000) | (((UChar32)ce32 >> 4) & 0xffff);
-    int32_t offset = (c - baseCp) * ((ce32 & 0xf) + 1);  // delta * increment
-    ce32 = utrie2_get32(trie, baseCp);
-    // ce32 must be a long-primary pppppp01.
-    U_ASSERT(Collation::isLongPrimaryCE32(ce32));
-    uint32_t p = Collation::primaryFromLongPrimaryCE32(ce32);
+    int64_t dataCE = ce64s.elementAti((int32_t)ce32 & 0xfffff);
+    uint32_t p = (uint32_t)(dataCE >> 32);  // three-byte primary pppppp00
+    int32_t lower32 = (int32_t)dataCE;  // base code point b & step s: bbbbbbss
+    int32_t offset = (c - (lower32 >> 8)) * (lower32 & 0xff);  // delta * increment
     return makeLongPrimaryCE32(
         Collation::incThreeBytePrimaryByOffset(p, isCompressiblePrimary(p), offset));
+}
+
+int32_t
+CollationDataBuilder::addCE(int64_t ce, UErrorCode &errorCode) {
+    int32_t length = ce64s.size();
+    for(int32_t i = 0; i < length; ++i) {
+        if(ce == ce64s.elementAti(i)) { return i; }
+    }
+    ce64s.addElement(ce, errorCode);
+    return length;
 }
 
 int32_t
@@ -460,16 +470,13 @@ CollationDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength,
         int64_t ce = ces[0];
         uint32_t ce32 = encodeOneCE(ce);
         if(ce32 != Collation::UNASSIGNED_CE32) { return ce32; }
-        // See if this CE has already been stored.
-        int32_t length = ce64s.size();
-        int32_t i;
-        for(i = 0; i < length && ce != ce64s.elementAti(i); ++i) {}
-        if(i > 0x1ffff) {
+        int32_t index = addCE(ce, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        if(index > 0x1ffff) {
             errorCode = U_BUFFER_OVERFLOW_ERROR;
             return 0;
         }
-        if(i == length) { ce64s.addElement(ce, errorCode); }
-        return makeSpecialCE32(Collation::EXPANSION_TAG, (i << 3) | 1);
+        return makeSpecialCE32(Collation::EXPANSION_TAG, (index << 3) | 1);
     } else if(cesLength == 2) {
         // Try to encode two CEs as one CE32.
         int64_t ce0 = ces[0];
@@ -572,8 +579,8 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     cd->ces = ce64s.getBuffer();
     cd->contexts = contexts.getBuffer();
     cd->base = base;
-    cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
     cd->compressibleBytes = compressibleBytes;
+    cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
     return cd.orphan();
 }
 

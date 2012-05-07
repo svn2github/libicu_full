@@ -25,17 +25,17 @@ U_NAMESPACE_BEGIN
 class CollationIterator;
 
 /**
- * Data container with access functions which walk the data structures.
+ * Collation data container.
  */
-class U_I18N_API CollationData : public UMemory {
-public:
+struct U_I18N_API CollationData : public UMemory {
     CollationData(const Normalizer2Impl &nfc)
-            : trie(NULL), nfcImpl(nfc),
+            : trie(NULL),
               ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
-              fcd16_F00(NULL), compressibleBytes(NULL) {}
+              jamoCEs(NULL), compressibleBytes(NULL),
+              fcd16_F00(NULL), nfcImpl(nfc),
+              zeroPrimary(0x12000000), flags(0) {}
 
     uint32_t getCE32(UChar32 c) const {
-        // TODO: Make this virtual so that we can use utrie2_get32() in the CollationDataBuilder?
         return UTRIE2_GET32(trie, c);
     }
 
@@ -60,51 +60,6 @@ public:
         // TODO: Use a frozen UnicodeSet rather than an imprecise bit set, at least initially.
     }
 
-    const int64_t *getCEs(int32_t index) const {
-        return ces + index;
-    }
-
-    const uint32_t *getCE32s(int32_t index) const {
-        return ce32s + index;
-    }
-
-    /**
-     * Returns a pointer to prefix or contraction-suffix matching data.
-     */
-    const UChar *getContext(int32_t /*index*/) const {
-        return NULL;  // TODO
-    }
-
-    /**
-     * Returns this data object's main UTrie2.
-     * To be used only by the CollationIterator constructor.
-     */
-    const UTrie2 *getTrie() const { return trie; }
-
-    const CollationData *getBase() const { return base; }
-
-    /**
-     * Returns a simple array of 19+21+27 CEs, one per canonical Jamo L/V/T.
-     * For fast handling of HANGUL_TAG.
-     *
-     * Returns NULL if Jamos require more complicated handling.
-     * In this case, the DECOMP_HANGUL flag is set.
-     */
-    const int64_t *getJamoCEs() const {
-        // TODO
-        // Build & return a simple array of CE32s.
-        // Tailoring: Only necessary if Jamos are tailored.
-        // If any Jamos have special CE32s, then set DECOMP_HANGUL instead.
-        return NULL;
-    }
-
-    /**
-     * Returns the single-byte primary weight (xx000000) for '0' (U+0030).
-     */
-    uint32_t getZeroPrimary() const {
-        return 0x12000000;  // TODO
-    }
-
     UBool isCompressibleLeadByte(uint32_t b) const {
         return compressibleBytes[b];
     }
@@ -122,41 +77,40 @@ public:
         return nfcImpl.getFCD16FromNormData(c);
     }
 
-    /** Returns the FCD data for U+0000<=c<U+0F00. */
-    uint16_t getFCD16FromBelowF00(UChar32 c) const { return fcd16_F00[c]; }
-    // TODO: Change the FCDUTF16CollationIterator to use this.
-
-    const Normalizer2Impl &getNFCImpl() const {
-        return nfcImpl;
-    }
-
-    /**
-     * Collation::DECOMP_HANGUL etc.
-     */
-    int8_t getFlags() const {
-        return 0;  // TODO
-    }
-
-protected:  // TODO: private?
-    // Main lookup trie.
+    /** Main lookup trie. */
     const UTrie2 *trie;
-
-    const Normalizer2Impl &nfcImpl;
-
-private:
-    friend class CollationDataBuilder;
-
-    // Array of CE32 values.
-    // At index 0 there must be CE32(U+0000)
-    // which has a special-tag for NUL-termination handling.
+    /**
+     * Array of CE32 values.
+     * At index 0 there must be CE32(U+0000)
+     * which has a special-tag for NUL-termination handling.
+     */
     const uint32_t *ce32s;
+    /** Array of CE values for expansions and OFFSET_TAG. */
     const int64_t *ces;
+    /** Array of prefix and contraction-suffix matching data. */
     const UChar *contexts;
     const CollationData *base;
-    // Linear FCD16 data table for U+0000..U+0EFF.
-    const uint16_t *fcd16_F00;
-    // Flags for which primary-weight lead bytes are compressible.
+    /**
+     * Simple array of 19+21+27 CEs, one per canonical Jamo L/V/T.
+     * For fast handling of HANGUL_TAG.
+     *
+     * NULL if Jamos require more complicated handling.
+     * In this case, the DECOMP_HANGUL flag is set.
+     */
+    const int64_t *jamoCEs;
+        // TODO
+        // Build & return a simple array of CE32s.
+        // Tailoring: Only necessary if Jamos are tailored.
+        // If any Jamos have special CE32s, then set DECOMP_HANGUL instead.
+    /** 256 flags for which primary-weight lead bytes are compressible. */
     const UBool *compressibleBytes;
+    /** Linear FCD16 data table for U+0000..U+0EFF. */
+    const uint16_t *fcd16_F00;
+    const Normalizer2Impl &nfcImpl;
+    /** The single-byte primary weight (xx000000) for '0' (U+0030). */
+    uint32_t zeroPrimary;
+    /** Collation::DECOMP_HANGUL etc. */
+    int8_t flags;
 };
 
 U_NAMESPACE_END

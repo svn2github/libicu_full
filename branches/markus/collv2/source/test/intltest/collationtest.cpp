@@ -513,7 +513,7 @@ void CollationTest::checkCEsNormal(const UnicodeString &s,
                                    int64_t ces[], int8_t hira[], int32_t cesLength,
                                    IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
-    int8_t flags = collData->getFlags();
+    int8_t flags = collData->flags;
     if((flags & Collation::DECOMP_HANGUL) == 0) {
         UTF16CollationIterator ci(collData, flags, buffer, buffer + s.length());
         checkCEs(ci, "UTF-16", ces, hira, cesLength, errorCode);
@@ -535,7 +535,7 @@ void CollationTest::checkCEsFCD(const UnicodeString &s,
                                 int64_t ces[], int8_t hira[], int32_t cesLength,
                                 IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
-    int8_t flags = collData->getFlags() | Collation::CHECK_FCD;
+    int8_t flags = collData->flags | Collation::CHECK_FCD;
     FCDUTF16CollationIterator ci(collData, flags, buffer, buffer + s.length(), errorCode);
     checkCEs(ci, "FCD-UTF-16", ces, hira, cesLength, errorCode);
     // Test NUL-termination if s does not contain a NUL.
