@@ -327,36 +327,20 @@ CollationIterator::backwardNumSkipped(int32_t n, UErrorCode &errorCode) {
 }
 
 uint32_t
-CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 originalCp, uint32_t ce32,
-                                           UErrorCode &errorCode) {
+CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 originalCp,
+                                           uint32_t contractionCE32, UErrorCode &errorCode) {
     // originalCp: Only needed as input to nextCE32FromDiscontiguousContraction().
-    UBool maybeDiscontiguous = (UBool)(ce32 & 1);
-    // TODO: Builder set this if any suffix ends with cc != 0.
-    // TODO: Slightly better would be if we knew the max trailing cc of any suffix.
-    // Then we could check if the non-matching character's cc<maxCC.
-    // The cost would be an additional 16-bit unit before the trie.
-    // The benefit might be limited if the maxCC is normally high.
-    const uint16_t *p = d->getContext((int32_t)(ce32 >> 1) & 0x7ffff);
-    ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
-    UChar32 lowestChar = p[2];
-    p += 3;
+    const UChar *p = d->getContext((int32_t)(contractionCE32 >> 2) & 0x3ffff);
+    uint32_t ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+    p += 2;
     UChar32 c = nextSkippedCodePoint(errorCode);
     if(c < 0) {
         // No more text.
         return ce32;
     }
-    if(c < lowestChar) {
-        // The next code point is too low for either a match
-        // or a combining mark that would be skipped in discontiguous contraction.
-        // TODO: Builder:
-        // lowestChar = lowest code point of the first ones that could start a match.
-        // If the character is supplemental, set to U+FFFF.
-        // If there are combining marks, then find the lowest combining class c1 among them,
-        // then set instead to the lowest character (below what we have so far)
-        // that has combining class in the range 1..c1-1.
-        // Actually test characters with lccc!=0 and look for their tccc=1..c1-1.
-        // TODO: This is simpler at runtime than checking for the combining class then,
-        // and might be good enough for Latin performance. Keep or redesign?
+    if(c < 0x300 && (contractionCE32 & 2) != 0) {
+        // The next code point is below U+0300
+        // but all contraction suffixes start with characters >=U+0300.
         backwardNumSkipped(1, errorCode);
         return ce32;
     }
@@ -371,7 +355,9 @@ CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 origi
     UStringTrieResult match = suffixes.firstForCodePoint(c);
     for(;;) {
         if(match == USTRINGTRIE_NO_MATCH) {
-            if(maybeDiscontiguous) {
+            if((contractionCE32 & 1) != 0) {
+                // The last character of at least one suffix has lccc!=0,
+                // allowing for discontiguous contractions.
                 return nextCE32FromDiscontiguousContraction(
                     d, originalCp, suffixes, ce32, lookAhead, c, errorCode);
             }

@@ -329,6 +329,11 @@ RuleBasedCollator2::compareQuaternary(CollationIterator &left, CollationIterator
 // Public fields p, s, t, q for the result weights. UBool next().
 // Should help share code between normal & partial sortkey generation.
 
+// TODO: If we generate a Latin-1 sort key table like in v1,
+// then make sure to exclude contractions that contain non-Latin-1 characters.
+// (For example, decomposed versions of Latin-1 composites.)
+// (Unless there is special, clever contraction-matching code that can consume them.)
+
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION

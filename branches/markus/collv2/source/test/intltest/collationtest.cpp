@@ -579,7 +579,7 @@ void CollationTest::TestDataDriven() {
     }
 
     CharString path(getSourceTestData(errorCode), errorCode);
-    path.append("collationtest.txt", errorCode);
+    path.appendPathPart("collationtest.txt", errorCode);
     const char *codePage = "UTF-8";
     LocalUCHARBUFPointer f(ucbuf_open(path.data(), &codePage, TRUE, FALSE, errorCode));
     if(errorCode.logIfFailureAndReset("ucbuf_open(collationtest.txt)")) {

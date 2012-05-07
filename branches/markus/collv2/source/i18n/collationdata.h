@@ -31,7 +31,7 @@ class U_I18N_API CollationData : public UMemory {
 public:
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL), nfcImpl(nfc),
-              ce32s(NULL), ces(NULL), base(NULL),
+              ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
               fcd16_F00(NULL), compressibleBytes(NULL) {}
 
     uint32_t getCE32(UChar32 c) const {
@@ -71,7 +71,7 @@ public:
     /**
      * Returns a pointer to prefix or contraction-suffix matching data.
      */
-    const uint16_t *getContext(int32_t /*index*/) const {
+    const UChar *getContext(int32_t /*index*/) const {
         return NULL;  // TODO
     }
 
@@ -151,6 +151,7 @@ private:
     // which has a special-tag for NUL-termination handling.
     const uint32_t *ce32s;
     const int64_t *ces;
+    const UChar *contexts;
     const CollationData *base;
     // Linear FCD16 data table for U+0000..U+0EFF.
     const uint16_t *fcd16_F00;

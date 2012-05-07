@@ -24,8 +24,11 @@
 #include "utrie2.h"
 #include "uvectr32.h"
 #include "uvectr64.h"
+#include "uvector.h"
 
 U_NAMESPACE_BEGIN
+
+class UCharsTrieBuilder;
 
 /**
  * Low-level CollationData builder.
@@ -76,12 +79,24 @@ private:
         return Collation::MIN_SPECIAL_CE32 | (tag << 20) | value;
     }
 
+    static inline UBool isContractionCE32(uint32_t ce32) {
+        return Collation::isSpecialCE32(ce32) &&
+            Collation::getSpecialCE32Tag(ce32) == Collation::CONTRACTION_TAG;
+    }
+
     uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
 
     int32_t addCE32(uint32_t ce32, UErrorCode &errorCode);
+    int32_t addConditionalCE32(const UnicodeString &context, uint32_t ce32, UErrorCode &errorCode);
+
     static uint32_t encodeOneCE(int64_t ce);
     uint32_t encodeCEsAsCE32s(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
     uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
+
+    void buildContexts(UErrorCode &errorCode);
+    void buildContext(UChar32 c, UErrorCode &errorCode);
+    int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
+                           UErrorCode &errorCode);
 
     UBool isCompressibleLeadByte(uint32_t b) const {
         return compressibleBytes != NULL ? compressibleBytes[b] : base->isCompressibleLeadByte(b);
@@ -96,11 +111,16 @@ private:
     UTrie2 *trie;
     UVector32 ce32s;
     UVector64 ce64s;
+    UVector conditionalCE32s;  // vector of ConditionalCE32
     // Linear FCD16 data table for U+0000..U+0EFF.
     uint16_t *fcd16_F00;
     // Flags for which primary-weight lead bytes are compressible.
     // NULL in a tailoring builder, consult the base instead.
     UBool *compressibleBytes;
+    // Characters that have context (prefixes or contraction suffixes).
+    UnicodeSet contextChars;
+    // Serialized UCharsTrie structures for finalized contexts.
+    UnicodeString contexts;
 };
 
 #if 0

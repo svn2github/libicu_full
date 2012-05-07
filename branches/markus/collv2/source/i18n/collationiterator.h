@@ -71,6 +71,9 @@ private:
  * - modularization
  * - smaller units of code, easier to understand
  * - easier porting of partial functionality to other languages
+ *
+ * When a method returns a code point value, it must be in 0..10FFFF,
+ * except it can be negative as a sentinel value.
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
@@ -213,8 +216,8 @@ private:
 
     void backwardNumSkipped(int32_t n, UErrorCode &errorCode);
 
-    uint32_t nextCE32FromContraction(const CollationData *d, UChar32 originalCp, uint32_t ce32,
-                                     UErrorCode &errorCode);
+    uint32_t nextCE32FromContraction(const CollationData *d, UChar32 originalCp,
+                                     uint32_t contractionCE32, UErrorCode &errorCode);
 
     uint32_t nextCE32FromDiscontiguousContraction(
             const CollationData *d, UChar32 originalCp,
