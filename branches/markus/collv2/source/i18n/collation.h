@@ -116,28 +116,39 @@ public:
          * Bit      0: Set if any contraction suffix ends with cc != 0.
          */
         CONTRACTION_TAG = 9,
+#if 0  // TODO
         /**
          * Used only in the collation data builder.
          * Data bits point into a builder-specific data structure with non-final data.
          */
         BUILDER_CONTEXT_TAG = 10,
+#endif
         /**
          * Decimal digit.
          * Bits 19..4: Index into uint32_t table for non-CODAN CE32.
          * Bits  3..0: Digit value 0..9.
          */
-        DIGIT_TAG = 11,
+        DIGIT_TAG = 10,
         /**
          * Hiragana character, except U+3099..309C inherit their Hiragana-ness
          * from the preceding character.
          * TODO: Consider adding 3099..309C to the unsafe-backward set. (Do we need Hiragana quaternaries in backward iteration?)
          * Bits 19..0: Index into uint32_t table for normal CE32.
          */
-        HIRAGANA_TAG = 12,
+        HIRAGANA_TAG = 11,
         /**
          * Tag for a Hangul syllable.
          */
-        HANGUL_TAG = 13,
+        HANGUL_TAG = 12,
+        /**
+         * Tag for a lead surrogate code unit.
+         * Optional optimization for UTF-16 string processing.
+         * Bits 19..2: Unused, 0.
+         *       1..0: =0: All associated supplementary code points are unassigned-implict.
+         *             =1: All associated supplementary code points fall back to the base data.
+         *           else: (Normally 2) Look up the data for the supplementary code point.
+         */
+        LEAD_SURROGATE_TAG = 13,
         /**
          * Tag for CEs with primary weights in code point order.
          * Bits 19..0: Index into CE table, for one data "CE".

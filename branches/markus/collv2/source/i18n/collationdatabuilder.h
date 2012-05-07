@@ -56,6 +56,7 @@ private:
     void initHanCompat(UErrorCode &errorCode);
 
     void setHiragana(UErrorCode &errorCode);
+    void setLeadSurrogates(UErrorCode &errorCode);
 
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order.

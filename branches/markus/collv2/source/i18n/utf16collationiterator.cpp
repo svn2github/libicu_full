@@ -31,13 +31,20 @@ UTF16CollationIterator::~UTF16CollationIterator() {}
 uint32_t
 UTF16CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
     if(pos != limit) {
-        uint32_t ce32;
-        UTRIE2_U16_NEXT32(trie, pos, limit, c, ce32);
-        return ce32;
+        c = *pos++;
+        return UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, c);
     } else {
         c = handleNextCodePoint(errorCode);
         return (c < 0) ? Collation::MIN_SPECIAL_CE32 : data->getCE32(c);
     }
+}
+
+UChar
+UTF16CollationIterator::handleGetTrailSurrogate() {
+    if(pos == limit) { return 0; }
+    UChar trail;
+    if(U16_IS_TRAIL(trail = *pos)) { ++pos; }
+    return trail;
 }
 
 UBool

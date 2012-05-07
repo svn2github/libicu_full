@@ -39,6 +39,10 @@ struct U_I18N_API CollationData : public UMemory {
         return UTRIE2_GET32(trie, c);
     }
 
+    uint32_t getCE32FromSupplementary(UChar32 c) const {
+        return UTRIE2_GET32_FROM_SUPP(trie, c);
+    }
+
 #if 0
     // TODO: Try v1 approach of building a runtime CollationData instance for canonical closure,
     // rather than using the builder and its dynamic data structures for lookups.

@@ -50,6 +50,8 @@ public:
 protected:
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
+    virtual UChar handleGetTrailSurrogate();
+
     virtual UBool foundNULTerminator();
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);

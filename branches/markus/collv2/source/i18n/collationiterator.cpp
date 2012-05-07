@@ -156,6 +156,11 @@ CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
     return (c < 0) ? Collation::MIN_SPECIAL_CE32 : data->getCE32(c);
 }
 
+UChar
+CollationIterator::handleGetTrailSurrogate() {
+    return 0;  // Must not be called.
+}
+
 UBool
 CollationIterator::foundNULTerminator() {
     return FALSE;
@@ -198,11 +203,13 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 // CEs from a discontiguous contraction plus the skipped combining marks.
                 return ces[0];
             }
+#if 0  // TODO
         case Collation::BUILDER_CONTEXT_TAG:
             // Used only in the collation data builder.
             // Data bits point into a builder-specific data structure with non-final data.
             ce32 = 0;  // TODO: ?? d->nextCE32FromBuilderContext(*this, ce32, errorCode);
             break;
+#endif
         case Collation::DIGIT_TAG:
             if(flags & Collation::CODAN) {
                 // Collect digits, omit leading zeros.
@@ -253,6 +260,25 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             setHangulExpansion(ce32);
             cesIndex = 1;
             return ces[0];
+        case Collation::LEAD_SURROGATE_TAG:
+            U_ASSERT(U16_IS_LEAD(c));
+            UChar trail;
+            if(U16_IS_TRAIL(trail = handleGetTrailSurrogate())) {
+                c = U16_GET_SUPPLEMENTARY(c, trail);
+                ce32 &= 3;
+                if(ce32 == 0) {
+                    ce32 = Collation::UNASSIGNED_CE32;  // unassigned-implicit
+                } else if(ce32 == 1 ||
+                        (ce32 = d->getCE32FromSupplementary(c)) == Collation::MIN_SPECIAL_CE32) {
+                    // fall back to the base data
+                    d = d->base;
+                    ce32 = d->getCE32FromSupplementary(c);
+                }
+            } else {
+                // c is an unpaired surrogate.
+                ce32 = Collation::UNASSIGNED_CE32;
+            }
+            break;
         case Collation::OFFSET_TAG:
             return getCEFromOffsetCE32(d, c, ce32);
         case Collation::IMPLICIT_TAG:
@@ -563,10 +589,11 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             break;
         } else {
         // case Collation::PREFIX_TAG:
-        // case Collation::BUILDER_CONTEXT_TAG:
+        // TODO: case Collation::BUILDER_CONTEXT_TAG:
         // case Collation::DIGIT_TAG:
         // case Collation::HIRAGANA_TAG:
         // case Collation::HANGUL_TAG:
+        // case Collation::LEAD_SURROGATE_TAG:
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
             return;
         }
@@ -782,10 +809,12 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             // Must not occur. Backward contractions are handled by previousCEUnsafe().
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
             return 0;
+#if 0  // TODO
         case Collation::BUILDER_CONTEXT_TAG:
             // Backward iteration does not support builder data.
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
             return 0;
+#endif
         case Collation::DIGIT_TAG:
             if(fwd.flags & Collation::CODAN) {
                 // Collect digits, omit leading zeros.
@@ -842,6 +871,10 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             fwd.setHangulExpansion(ce32);
             fwd.cesIndex = fwd.cesMaxIndex;
             return fwd.ces[fwd.cesMaxIndex];
+        case Collation::LEAD_SURROGATE_TAG:
+            // Must not occur. Backward iteration should never see lead surrogate code _unit_ data.
+            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+            return 0;
         case Collation::OFFSET_TAG:
             return CollationIterator::getCEFromOffsetCE32(d, c, ce32);
         case Collation::IMPLICIT_TAG:

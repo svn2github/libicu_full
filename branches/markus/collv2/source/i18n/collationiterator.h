@@ -159,6 +159,14 @@ protected:
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
     /**
+     * Called when handleNextCE32() returns a LEAD_SURROGATE_TAG for a lead surrogate code unit.
+     * Returns the trail surrogate in that case and advances past it,
+     * if a trail surrogate follows the lead surrogate.
+     * Otherwise returns any other code unit and does not advance.
+     */
+    virtual UChar handleGetTrailSurrogate();
+
+    /**
      * Called when handleNextCE32() returns with c==0, to see whether it is a NUL terminator.
      * (Not needed in Java.)
      */

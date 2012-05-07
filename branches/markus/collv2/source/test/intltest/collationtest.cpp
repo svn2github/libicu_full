@@ -170,7 +170,7 @@ void CollationTest::TestImplicits() {
                             "[\\p{Block=CJK_Unified_Ideographs}"
                             "\\p{Block=CJK_Compatibility_Ideographs}]]",
                         errorCode);
-    UnicodeSet unassigned("[:^assigned:]", errorCode);
+    UnicodeSet unassigned("[[:Cn:][:Cs:][:Co:]]", errorCode);
     unassigned.remove(0xfffe, 0xffff);
     if(errorCode.logIfFailureAndReset("UnicodeSet")) {
         return;

@@ -322,7 +322,9 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
                           const int64_t ces[], int32_t cesLength,
                           UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    if(s.isEmpty() || cesLength <= 0) {
+    // cesLength must be limited (e.g., to 31) so that the CollationIterator
+    // can work with a fixed initial CEArray capacity for most cases.
+    if(s.isEmpty() || cesLength <= 0 || cesLength > 31) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
@@ -333,6 +335,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
     UChar32 c = s.char32At(0);
     int32_t cLength = U16_LENGTH(c);
     // TODO: Validate prefix/c/suffix.
+    // Valid UTF-16: No unpaired surrogates in either prefix or s.
     // No FFFE
     // No FFFF
     // If prefix: cc(prefix[0])==cc(c)==0
@@ -554,12 +557,47 @@ CollationDataBuilder::setHiragana(UErrorCode &errorCode) {
     }
 }
 
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV
+enumRangeLeadValue(const void *context, UChar32 /*start*/, UChar32 /*end*/, uint32_t value) {
+    int32_t *pValue = (int32_t *)context;
+    if(value == Collation::UNASSIGNED_CE32) {
+        value = 0;
+    } else if(value == Collation::MIN_SPECIAL_CE32) {
+        value = 1;
+    } else {
+        *pValue = 2;
+        return FALSE;
+    }
+    if(*pValue < 0) {
+        *pValue = (int32_t)value;
+    } else if(*pValue != (int32_t)value) {
+        *pValue = 2;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+U_CDECL_END
+
+void
+CollationDataBuilder::setLeadSurrogates(UErrorCode &errorCode) {
+    for(UChar lead = 0xd800; lead < 0xdc00; ++lead) {
+        int32_t value = -1;
+        utrie2_enumForLeadSurrogate(trie, lead, NULL, enumRangeLeadValue, &value);
+        utrie2_set32ForLeadSurrogateCodeUnit(
+            trie, lead, makeSpecialCE32(Collation::LEAD_SURROGATE_TAG, value), &errorCode);
+    }
+}
+
 CollationData *
 CollationDataBuilder::build(UErrorCode &errorCode) {
+    // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
+
     buildContexts(errorCode);
     setHiragana(errorCode);
-
-    // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
+    setLeadSurrogates(errorCode);
 
     // For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
     ce32s.setElementAt((int32_t)utrie2_get32(trie, 0), 0);
