@@ -336,6 +336,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
     int32_t cLength = U16_LENGTH(c);
     // TODO: Validate prefix/c/suffix.
     // Valid UTF-16: No unpaired surrogates in either prefix or s.
+    // Prefix must be FCD. s must be FCD. (Or make them.)
     // No FFFE
     // No FFFF
     // If prefix: cc(prefix[0])==cc(c)==0
@@ -362,6 +363,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
             if(U_FAILURE(errorCode)) { return; }
             utrie2_set32(trie, c, makeSpecialCE32(Collation::CONTRACTION_TAG, index), &errorCode);
             contextChars.add(c);
+            cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[index]);
         } else {
             cond = reinterpret_cast<ConditionalCE32 *>(
                 conditionalCE32s[(int32_t)oldCE32 & 0xfffff]);

@@ -9,6 +9,7 @@
 * created by: Markus W. Scherer
 */
 
+#include <stdio.h>  // TODO: remove
 #include "unicode/utypes.h"
 #include "unicode/errorcode.h"
 #include "unicode/localpointer.h"
@@ -74,15 +75,15 @@ private:
                               int64_t ces[], int8_t hira[], int32_t capacity,
                               IcuTestErrorCode &errorCode);
     void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
-    void checkCEs(CollationIterator &ci, const char *mode,
-                  int64_t ces[], int8_t hira[], int32_t cesLength,
-                  IcuTestErrorCode &errorCode);
-    void checkCEsNormal(const UnicodeString &s,
-                        int64_t ces[], int8_t hira[], int32_t cesLength,
-                        IcuTestErrorCode &errorCode);
-    void checkCEsFCD(const UnicodeString &s,
-                     int64_t ces[], int8_t hira[], int32_t cesLength,
-                     IcuTestErrorCode &errorCode);
+    UBool checkCEs(CollationIterator &ci, const char *mode,
+                   int64_t ces[], int8_t hira[], int32_t cesLength,
+                   IcuTestErrorCode &errorCode);
+    UBool checkCEsNormal(const UnicodeString &s,
+                         int64_t ces[], int8_t hira[], int32_t cesLength,
+                         IcuTestErrorCode &errorCode);
+    UBool checkCEsFCD(const UnicodeString &s,
+                      int64_t ces[], int8_t hira[], int32_t cesLength,
+                      IcuTestErrorCode &errorCode);
     void checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode);
 
     const Normalizer2 *fcd;
@@ -454,6 +455,7 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     while(readLine(f, errorCode)) {
         if(fileLine.isEmpty()) { continue; }
         if(isSectionStarter(fileLine[0])) { break; }
+printf("-- buildBase line %d\n", (int)fileLineNumber);  // TODO: remove
         int32_t cesLength = parseStringAndCEs(prefix, s, ces, NULL, LENGTHOF(ces), errorCode);
         if(errorCode.isFailure()) { return; }
         baseBuilder->add(prefix, s, ces, cesLength, errorCode);
@@ -474,10 +476,10 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     collData = baseData;
 }
 
-void  CollationTest::checkCEs(CollationIterator &ci, const char *mode,
+UBool CollationTest::checkCEs(CollationIterator &ci, const char *mode,
                               int64_t ces[], int8_t hira[], int32_t cesLength,
                               IcuTestErrorCode &errorCode) {
-    if(errorCode.isFailure()) { return; }
+    if(errorCode.isFailure()) { return FALSE; }
     for(int32_t i = 0;; ++i) {
         int64_t ce = ci.nextCE(errorCode);
         if(errorCode.isFailure()) {
@@ -486,7 +488,7 @@ void  CollationTest::checkCEs(CollationIterator &ci, const char *mode,
                   (int)fileLineNumber, (int)i, mode, errorCode.errorName());
             errln(fileLine);
             errorCode.reset();
-            break;
+            return FALSE;
         }
         int64_t expected = (i < cesLength) ? ces[i] : Collation::NO_CE;
         if(ce != expected) {
@@ -494,7 +496,7 @@ void  CollationTest::checkCEs(CollationIterator &ci, const char *mode,
             errln("line %d CE index %d: %s CollationIterator.nextCE()=%lx != %lx",
                   (int)fileLineNumber, (int)i, mode, (long)ce, (long)expected);
             errln(fileLine);
-            break;
+            return FALSE;
         }
         int8_t h = ci.getHiragana();
         int8_t expectedHira = (i < cesLength) ? hira[i] : 0;
@@ -503,45 +505,45 @@ void  CollationTest::checkCEs(CollationIterator &ci, const char *mode,
             errln("line %d CE index %d: %s CollationIterator.getHiragana()=%d != %d",
                   (int)fileLineNumber, (int)i, mode, h, expectedHira);
             errln(fileLine);
-            break;
+            return FALSE;
         }
-        if(ce == Collation::NO_CE) { break; }
+        if(ce == Collation::NO_CE) { return TRUE; }
     }
 }
 
-void CollationTest::checkCEsNormal(const UnicodeString &s,
-                                   int64_t ces[], int8_t hira[], int32_t cesLength,
-                                   IcuTestErrorCode &errorCode) {
+UBool CollationTest::checkCEsNormal(const UnicodeString &s,
+                                    int64_t ces[], int8_t hira[], int32_t cesLength,
+                                    IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
     int8_t flags = collData->flags;
     if((flags & Collation::DECOMP_HANGUL) == 0) {
         UTF16CollationIterator ci(collData, flags, buffer, buffer + s.length());
-        checkCEs(ci, "UTF-16", ces, hira, cesLength, errorCode);
+        if(!checkCEs(ci, "UTF-16", ces, hira, cesLength, errorCode)) { return FALSE; }
         // Test NUL-termination if s does not contain a NUL.
-        if(s.indexOf((UChar)0) >= 0) { return; }
+        if(s.indexOf((UChar)0) >= 0) { return TRUE; }
         UTF16CollationIterator ci0(collData, flags, buffer, NULL);
-        checkCEs(ci0, "UTF-16-NUL", ces, hira, cesLength, errorCode);
+        return checkCEs(ci0, "UTF-16-NUL", ces, hira, cesLength, errorCode);
     } else {
         FCDUTF16CollationIterator ci(collData, flags, buffer, buffer + s.length(), errorCode);
-        checkCEs(ci, "UTF-16-Hangul", ces, hira, cesLength, errorCode);
+        if(!checkCEs(ci, "UTF-16-Hangul", ces, hira, cesLength, errorCode)) { return FALSE; }
         // Test NUL-termination if s does not contain a NUL.
-        if(s.indexOf((UChar)0) >= 0) { return; }
+        if(s.indexOf((UChar)0) >= 0) { return TRUE; }
         FCDUTF16CollationIterator ci0(collData, flags, buffer, NULL, errorCode);
-        checkCEs(ci0, "UTF-16-Hangul-NUL", ces, hira, cesLength, errorCode);
+        return checkCEs(ci0, "UTF-16-Hangul-NUL", ces, hira, cesLength, errorCode);
     }
 }
 
-void CollationTest::checkCEsFCD(const UnicodeString &s,
-                                int64_t ces[], int8_t hira[], int32_t cesLength,
-                                IcuTestErrorCode &errorCode) {
+UBool CollationTest::checkCEsFCD(const UnicodeString &s,
+                                 int64_t ces[], int8_t hira[], int32_t cesLength,
+                                 IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
     int8_t flags = collData->flags | Collation::CHECK_FCD;
     FCDUTF16CollationIterator ci(collData, flags, buffer, buffer + s.length(), errorCode);
-    checkCEs(ci, "FCD-UTF-16", ces, hira, cesLength, errorCode);
+    if(!checkCEs(ci, "FCD-UTF-16", ces, hira, cesLength, errorCode)) { return FALSE; }
     // Test NUL-termination if s does not contain a NUL.
-    if(s.indexOf((UChar)0) >= 0) { return; }
+    if(s.indexOf((UChar)0) >= 0) { return TRUE; }
     FCDUTF16CollationIterator ci0(collData, flags, buffer, NULL, errorCode);
-    checkCEs(ci0, "FCD-UTF-16-NUL", ces, hira, cesLength, errorCode);
+    return checkCEs(ci0, "FCD-UTF-16-NUL", ces, hira, cesLength, errorCode);
 }
 
 void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
@@ -552,6 +554,7 @@ void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     while(readLine(f, errorCode)) {
         if(fileLine.isEmpty()) { continue; }
         if(isSectionStarter(fileLine[0])) { break; }
+printf("-- checkCEs line %d\n", (int)fileLineNumber);  // TODO: remove
         int32_t cesLength = parseStringAndCEs(prefix, s, ces, hira, LENGTHOF(ces), errorCode);
         if(errorCode.isFailure()) {
             errorCode.reset();
@@ -564,7 +567,7 @@ void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         }
         s.getTerminatedBuffer();  // Ensure NUL-termination.
         if(fcd->isNormalized(s, errorCode)) {
-            checkCEsNormal(s, ces, hira, cesLength, errorCode);
+            if(!checkCEsNormal(s, ces, hira, cesLength, errorCode)) { continue; }
         }
         checkCEsFCD(s, ces, hira, cesLength, errorCode);
     }
