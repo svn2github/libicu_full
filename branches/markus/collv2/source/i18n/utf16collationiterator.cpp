@@ -209,7 +209,7 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
         // and continue the incremental FCD test.
         const UChar *q = p;
         UChar32 c = *p++;
-        if(c < 0x180) {
+        if(c < 0x300) {
             if(c == 0) {
                 if(rawLimit == NULL) {
                     // We hit the NUL terminator; remember its pointer.
@@ -222,7 +222,7 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
                 segmentLimit = p;
                 prevCC = 0;
             } else {
-                prevCC = (uint8_t)nfcImpl.getFCD16FromBelow180(c);  // leadCC == 0
+                prevCC = (uint8_t)data->fcd16_F00[c];  // leadCC == 0
                 if(prevCC <= 1) {
                     segmentLimit = p;  // FCD boundary after the [q, p[ code point.
                 } else {
@@ -256,12 +256,17 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
             segmentLimit = p;
             prevCC = 0;
         } else {
-            UChar c2;
-            if(U16_IS_LEAD(c) && p != rawLimit && U16_IS_TRAIL(c2 = *p)) {
-                c = U16_GET_SUPPLEMENTARY(c, c2);
-                ++p;
+            uint16_t fcd16;
+            if(c < 0xf00) {
+                fcd16 = data->fcd16_F00[c];
+            } else {
+                UChar c2;
+                if(U16_IS_LEAD(c) && p != rawLimit && U16_IS_TRAIL(c2 = *p)) {
+                    c = U16_GET_SUPPLEMENTARY(c, c2);
+                    ++p;
+                }
+                fcd16 = nfcImpl.getFCD16FromNormData(c);
             }
-            uint16_t fcd16 = nfcImpl.getFCD16FromNormData(c);
             uint8_t leadCC = (uint8_t)(fcd16 >> 8);
             if(leadCC != 0 && prevCC > leadCC) {
                 // Fails FCD test.
@@ -404,8 +409,8 @@ FCDUTF16CollationIterator::handlePreviousCodePoint(UErrorCode &errorCode) {
         const UChar *q = p;
         UChar32 c = *--p;
         uint16_t fcd16;
-        if(c < 0x180) {
-            fcd16 = nfcImpl.getFCD16FromBelow180(c);
+        if(c < 0xf00) {
+            fcd16 = data->fcd16_F00[c];
         } else if(c < 0xac00) {
             if(!nfcImpl.singleLeadMightHaveNonZeroFCD16(c)) {
                 fcd16 = 0;
