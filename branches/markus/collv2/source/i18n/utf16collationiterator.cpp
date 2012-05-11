@@ -194,11 +194,6 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
         }
         lengthBeforeLimit -= length;
     }
-    if(limit != segmentLimit) {
-        // The previous segment had to be normalized
-        // and was pointing into the normalized string.
-        start = pos = limit = segmentLimit;
-    }
     segmentStart = segmentLimit;
     if((flags & Collation::CHECK_FCD) == 0) {
         U_ASSERT((flags & Collation::DECOMP_HANGUL) != 0);
@@ -207,8 +202,8 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
     const UChar *p = segmentLimit;
     uint8_t prevCC = 0;
     for(;;) {
-        // So far, we have limit<=segmentLimit<=p,
-        // [limit, p[ passes the FCD test,
+        // So far, we have segmentStart<=segmentLimit<=p,
+        // [segmentStart, p[ passes the FCD test,
         // and segmentLimit is at the last FCD boundary before or on p.
         // Advance p by one code point, fetch its fcd16 value,
         // and continue the incremental FCD test.
@@ -219,7 +214,8 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
                 if(rawLimit == NULL) {
                     // We hit the NUL terminator; remember its pointer.
                     segmentLimit = rawLimit = q;
-                    if(limit == rawLimit) { return U_SENTINEL; }
+                    if(segmentStart == rawLimit) { return U_SENTINEL; }
+                    start = segmentStart;
                     limit = rawLimit;
                     break;
                 }
@@ -236,9 +232,10 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
         } else if(!nfcImpl.singleLeadMightHaveNonZeroFCD16(c)) {
             if(c >= 0xac00) {
                 if((flags & Collation::DECOMP_HANGUL) && c <= 0xd7a3) {
-                    if(limit != q) {
+                    if(segmentStart != q) {
                         // Deliver the non-Hangul text segment so far.
                         // We know there is an FCD boundary before the Hangul syllable.
+                        start = segmentStart;
                         limit = segmentLimit = q;
                         break;
                     }
@@ -268,8 +265,9 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
             uint8_t leadCC = (uint8_t)(fcd16 >> 8);
             if(leadCC != 0 && prevCC > leadCC) {
                 // Fails FCD test.
-                if(limit != segmentLimit) {
+                if(segmentStart != segmentLimit) {
                     // Deliver the already-FCD text segment so far.
+                    start = segmentStart;
                     limit = segmentLimit;
                     break;
                 }
@@ -278,10 +276,10 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
                     segmentLimit = p;
                 } while(p != rawLimit && (fcd16 = nfcImpl.nextFCD16(p, rawLimit)) > 0xff);
                 buffer.remove();
-                nfcImpl.decompose(limit, segmentLimit, &buffer, errorCode);
+                nfcImpl.decompose(segmentStart, segmentLimit, &buffer, errorCode);
                 if(U_FAILURE(errorCode)) { return U_SENTINEL; }
                 // Switch collation processing into the FCD buffer
-                // with the result of normalizing [limit, segmentLimit[.
+                // with the result of normalizing [segmentStart, segmentLimit[.
                 start = buffer.getStart();
                 limit = buffer.getLimit();
                 break;
@@ -294,14 +292,16 @@ FCDUTF16CollationIterator::handleNextCodePoint(UErrorCode &errorCode) {
             }
         }
         if(p == rawLimit) {
+            start = segmentStart;
             limit = segmentLimit = p;
             break;
         }
-        if(smallSteps && (segmentLimit - limit) >= 5) {
+        if(smallSteps && (segmentLimit - segmentStart) >= 5) {
             // Compromise: During string comparison, where differences are often
             // found after a few characters, we do not want to read ahead too far.
             // However, we do want to go forward several characters
             // which will then be handled in the base class fastpath.
+            start = segmentStart;
             limit = segmentLimit;
             break;
         }
@@ -322,21 +322,23 @@ FCDUTF16CollationIterator::nextCodePointDecompHangul(UErrorCode &errorCode) {
     // Only called from handleNextCodePoint() after checking for rawLimit etc.
     const UChar *p = segmentLimit;
     for(;;) {
-        // So far, we have limit==segmentLimit<=p,
-        // and [limit, p[ does not contain Hangul syllables.
+        // So far, we have segmentStart==segmentLimit<=p,
+        // and [segmentStart, p[ does not contain Hangul syllables.
         // Advance p by one code point and check for a Hangul syllable.
         UChar32 c = *p++;
         if(c < 0xac00) {
             if(c == 0 && rawLimit == NULL) {
                 // We hit the NUL terminator; remember its pointer.
                 segmentLimit = rawLimit = p - 1;
-                if(limit == rawLimit) { return U_SENTINEL; }
+                if(segmentStart == rawLimit) { return U_SENTINEL; }
+                start = segmentStart;
                 limit = rawLimit;
                 break;
             }
         } else if(c <= 0xd7a3) {
-            if(limit != (p - 1)) {
+            if(segmentStart != (p - 1)) {
                 // Deliver the non-Hangul text segment so far.
+                start = segmentStart;
                 limit = segmentLimit = p - 1;
                 break;
             }
@@ -354,14 +356,16 @@ FCDUTF16CollationIterator::nextCodePointDecompHangul(UErrorCode &errorCode) {
             ++p;
         }
         if(p == rawLimit) {
+            start = segmentStart;
             limit = segmentLimit = p;
             break;
         }
-        if(smallSteps && (p - limit) >= 5) {
+        if(smallSteps && (p - segmentStart) >= 5) {
             // Compromise: During string comparison, where differences are often
             // found after a few characters, we do not want to read ahead too far.
             // However, we do want to go forward several characters
             // which will then be handled in the base class fastpath.
+            start = segmentStart;
             limit = segmentLimit = p;
             break;
         }
@@ -384,11 +388,6 @@ UChar32
 FCDUTF16CollationIterator::handlePreviousCodePoint(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode) || segmentStart == rawStart) { return U_SENTINEL; }
     U_ASSERT(pos == start);
-    if(start != segmentStart) {
-        // The previous segment had to be normalized
-        // and was pointing into the normalized string.
-        start = pos = limit = segmentStart;
-    }
     segmentLimit = segmentStart;
     if((flags & Collation::CHECK_FCD) == 0) {
         U_ASSERT((flags & Collation::DECOMP_HANGUL) != 0);
@@ -397,8 +396,8 @@ FCDUTF16CollationIterator::handlePreviousCodePoint(UErrorCode &errorCode) {
     const UChar *p = segmentStart;
     uint8_t nextCC = 0;
     for(;;) {
-        // So far, we have p<=segmentStart<=start,
-        // [p, start[ passes the FCD test,
+        // So far, we have p<=segmentStart<=segmentLimit,
+        // [p, segmentLimit[ passes the FCD test,
         // and segmentStart is at the first FCD boundary on or after p.
         // Go back with p by one code point, fetch its fcd16 value,
         // and continue the incremental FCD test.
@@ -415,10 +414,11 @@ FCDUTF16CollationIterator::handlePreviousCodePoint(UErrorCode &errorCode) {
             }
         } else if(c <= 0xd7a3) {
             if(flags & Collation::DECOMP_HANGUL) {
-                if(start != q) {
+                if(segmentLimit != q) {
                     // Deliver the non-Hangul text segment so far.
                     // We know there is an FCD boundary after the Hangul syllable.
                     start = segmentStart = q;
+                    limit = segmentLimit;
                     break;
                 }
                 segmentStart = p;
@@ -448,19 +448,20 @@ FCDUTF16CollationIterator::handlePreviousCodePoint(UErrorCode &errorCode) {
             uint8_t trailCC = (uint8_t)fcd16;
             if(nextCC != 0 && trailCC > nextCC) {
                 // Fails FCD test.
-                if(start != segmentStart) {
+                if(segmentLimit != segmentStart) {
                     // Deliver the already-FCD text segment so far.
                     start = segmentStart;
+                    limit = segmentLimit;
                     break;
                 }
                 // Find the previous FCD boundary and normalize.
                 while(p != rawStart && (fcd16 = nfcImpl.previousFCD16(rawStart, p)) > 0xff) {}
                 segmentStart = p;
                 buffer.remove();
-                nfcImpl.decompose(segmentStart, start, &buffer, errorCode);
+                nfcImpl.decompose(segmentStart, segmentLimit, &buffer, errorCode);
                 if(U_FAILURE(errorCode)) { return U_SENTINEL; }
                 // Switch collation processing into the FCD buffer
-                // with the result of normalizing [segmentStart, start[.
+                // with the result of normalizing [segmentStart, segmentLimit[.
                 start = buffer.getStart();
                 limit = buffer.getLimit();
                 break;
@@ -472,11 +473,13 @@ FCDUTF16CollationIterator::handlePreviousCodePoint(UErrorCode &errorCode) {
         }
         if(p == rawStart) {
             start = segmentStart = p;
+            limit = segmentLimit;
             break;
         }
-        if((start - segmentStart) >= 8) {
+        if((segmentLimit - segmentStart) >= 8) {
             // Go back several characters at a time, for the base class fastpath.
             start = segmentStart;
+            limit = segmentLimit;
             break;
         }
     }
@@ -494,16 +497,17 @@ FCDUTF16CollationIterator::previousCodePointDecompHangul(UErrorCode &errorCode) 
     // Only called from handleNextCodePoint() after checking for rawStart etc.
     const UChar *p = segmentStart;
     for(;;) {
-        // So far, we have p<=segmentStart==start,
-        // and [p, start[ does not contain Hangul syllables.
+        // So far, we have p<=segmentStart==segmentLimit,
+        // and [p, segmentLimit[ does not contain Hangul syllables.
         // Go back with p by one code point and check for a Hangul syllable.
         UChar32 c = *--p;
         if(c < 0xac00) {
             // Nothing to be done.
         } else if(c <= 0xd7a3) {
-            if(start != (p + 1)) {
+            if(segmentLimit != (p + 1)) {
                 // Deliver the non-Hangul text segment so far.
                 start = segmentStart = p + 1;
+                limit = segmentLimit;
                 break;
             }
             segmentStart = p;
@@ -522,11 +526,13 @@ FCDUTF16CollationIterator::previousCodePointDecompHangul(UErrorCode &errorCode) 
         }
         if(p == rawStart) {
             start = segmentStart = p;
+            limit = segmentLimit;
             break;
         }
-        if((start - p) >= 8) {
+        if((segmentLimit - p) >= 8) {
             // Go back several characters at a time, for the base class fastpath.
             start = segmentStart = p;
+            limit = segmentLimit;
             break;
         }
     }

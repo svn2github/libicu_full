@@ -10,6 +10,8 @@
 
 ** test: simple CEs & expansions
 @ rawbase
+\x00    11..           # NUL not ignorable
+\x01    ..             # ^A ignorable
 ä       27.. .9d.       # a-umlaut = mini expansion 27.05.05 .9d.05
 a       27..            # a = 27.05.05
 b       29..
@@ -25,6 +27,7 @@ b       29..
 # TODO: Test long and/or duplicate expansions.
 
 * CEs
+\x01\x00b               .. 11.. 29..
 äa\u0301\u0300          27.. .9d. 27.. .8d88. ..2233
 # 3099..309c inherit the Hiragana flag
 a\u3099か\u3099b         27.. .da95.h 7916..9bH .da95.h 29..
@@ -59,13 +62,18 @@ a\u0323\u0358       5a16..      # a+dot below+dot above right
 a\u0327\u0323\u030a 5a17..      # a+cedilla+dot below+ring
 a\u0327\u0323bz     5a18..      # a+cedilla+dot below+b+z
 
+\U0001D158          0dc9fc..    # musical notehead black
+\U0001D158\U0001D165 0dc9fd..   # musical quarter note
+
 # deliberately missing prefix contractions:
 # az
 # a\u0327
 # a\u0327\u0323
 # a\u0327\u0323b
 
+\U0001D165          ..1f        # musical stem (ccc=216)
 \U0001D16D          ..20        # musical augmentation dot (ccc=226)
+\U0001D165\U0001D16D ..21       # stem+dot (ccc=216 226)
 \u0301              .8d.        # acute (ccc=230)
 \u030a              .99.        # ring (ccc=230)
 \u0308              .9d.        # diaeresis (ccc=230)
@@ -97,6 +105,7 @@ a\u0308\u030a           27.. .9d. .99.  # ring blocked by diaeresis
 a\u0327                 27.. .a7.
 \u0308                  .9d.
 \u0308\u030a\u0301      .9d. .99. .8d.  # acute blocked by ring
+\U0001D158              0dc9fc..
 
 # no discontiguous contraction because of missing prefix contraction d+z,
 # and a starter ('z') after the 'd'
@@ -114,6 +123,9 @@ a\u0327\u0323\u030a     5a17..  # match despite missing prefix
 a\u0327\u0323bz         5a18..
 \u0308\u0308\u0301      .9d. .9e.  # acute blocked from first diaeresis, contracts with second
 
+\U0001D158\U0001D165    0dc9fd..
+\U0001D165\U0001D16D    ..21
+
 ** test: discontiguous contractions
 * CEs
 a\u0327\u030a           5a14.. .a7.                 # a+ring skips cedilla
@@ -130,6 +142,9 @@ a\u0327\u0327\u0323\u030a   5a15.. .a7. .a7. .99.   # a+dot below skips 2 cedill
 a\u0327\u0323\u0323\u030a   5a15.. .a7. .c5. .99.   # a+dot below skips cedilla
 a\u0327\u0323\U0001D16D\u030a 5a15.. .a7. ..20 .99. # a+dot below skips cedilla
 a\u0327\u0331\u0323\u030a   5a14.. .a7. .d01d. .c5. # a+ring skips cedilla macron below, dot below (dot blocked by macron)
+
+\U0001D158\u0327\U0001D165  0dc9fd.. .a7.           # quarter note skips cedilla
+a\U0001D165\u0323           5a15.. ..1f             # a+dot below skips stem
 
 # partial contiguous match, backs up, matches discontiguous contraction
 a\u0327\u0323b              5a15.. .a7. 29..
@@ -156,6 +171,9 @@ a\u0331\u030a\u0358                             5a14.. .d01e.
 a\u0331\u0331\u030a\u0358\u0358                 5a14.. .d01e. .d01e.
 # also skips acute
 a\u0331\u0331\u0331\u030a\u0301\u0358\u0358\u0358  5a14.. .d01e. .d01e. .d01e. .8d.
+
+# a+dot below & stem+augmentation dot, followed by contiguous d+z+acute
+a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 
 ** test: this is a description
 @ rawbase
