@@ -15,27 +15,30 @@ STRING(REGEX REPLACE "(^.+)@byte order@" "${CMAKE_CURRENT_BINARY_DIR}/\\1${BYTE_
 # Data name is used by cintltst
 GET_FILENAME_COMPONENT(DATA_NAME "${DATA_ARCHIVE}" NAME_WE)
 SET(DATA_NAME ${DATA_NAME} PARENT_SCOPE)
+# Use the existing source archive if possible
 IF(EXISTS "${SOURCE_ARCHIVE}")
     ADD_CUSTOM_COMMAND(OUTPUT "${DATA_ARCHIVE}"
                        COMMAND "${CMAKE_COMMAND}" -E echo "Copying source archive \"${SOURCE_ARCHIVE}\""
                        COMMAND "${CMAKE_COMMAND}" -E copy "${SOURCE_ARCHIVE}" "${DATA_ARCHIVE}"
                        DEPENDS "${SOURCE_ARCHIVE}")
 ELSE()
-    STRING(REGEX REPLACE "(^.+)@byte order@" "${CMAKE_CURRENT_SOURCE_DIR}/in/\\1${BYTE_ORDER_OPPOSITE_INDICATOR}" SOURCE_ARCHIVE "${DATA_ARCHIVE_BASE}")
-    IF(NOT EXISTS "${SOURCE_ARCHIVE}")
-        MESSAGE(FATAL_ERROR "The data file ${ICU_PREFIX}dt${ICU_LIB_MAJOR_VERSION}[bl].dat must exist in ${CMAKE_CURRENT_SOURCE_DIR}/in. It does not matter whether it is the big- or little-endian version of the file.")
+    STRING(REGEX REPLACE "(^.+)@byte order@" "${CMAKE_CURRENT_SOURCE_DIR}/in/\\1${BYTE_ORDER_OPPOSITE_INDICATOR}" FLIPPED_SOURCE_ARCHIVE "${DATA_ARCHIVE_BASE}")
+    # Checked for an opposite-byte-order source archive and use it if possible
+    IF(EXISTS "${FLIPPED_SOURCE_ARCHIVE}")
+        ADD_CUSTOM_COMMAND(OUTPUT "${DATA_ARCHIVE}"
+                           COMMAND "${CMAKE_COMMAND}" -E echo "Converting source archive \"${SOURCE_ARCHIVE}\" to ${BYTE_ORDER_NAME} endian"
+                           COMMAND icupkg -t${BYTE_ORDER_INDICATOR} "${SOURCE_ARCHIVE}" "${DATA_ARCHIVE}"
+                           DEPENDS "${SOURCE_ARCHIVE}")
+    ELSE()
+        # If there is no source archive, that means we'll have to build the data archive from scratch
+        INCLUDE(BuildIcuData.cmake)
     ENDIF()
-    ADD_CUSTOM_COMMAND(OUTPUT "${DATA_ARCHIVE}"
-                       COMMAND "${CMAKE_COMMAND}" -E echo "Converting source archive \"${SOURCE_ARCHIVE}\" to ${BYTE_ORDER_NAME} endian"
-                       COMMAND icupkg -t${BYTE_ORDER_INDICATOR} "${SOURCE_ARCHIVE}" "${DATA_ARCHIVE}"
-                       DEPENDS "${SOURCE_ARCHIVE}")
 ENDIF()
 
 IF(LOWER_ICU_DATA_PACKAGING STREQUAL library)
 
     SET(DATA_ENTRY_POINT "${ICU_PREFIX}dt${ICU_LIB_MAJOR_VERSION}")
     IF(GENCCODE_OBJECT_GENERATION)
-        # On Windows we generate an .obj file
         STRING(REGEX REPLACE "^(.*)[lb]\\.dat$" "\\1${CMAKE_C_OUTPUT_EXTENSION}" DATA_ARCHIVE_GEN "${DATA_ARCHIVE}")
         SET(GENCCODE_OPTS -o)
         # We have to link in a dummy obj on Windows in order for linkage of the genccode-
