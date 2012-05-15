@@ -42,12 +42,15 @@ LINK_ICU_LIBRARIES(intltest ${CTESTFW_STUB})
 DEPEND_ON_ICU_DATA(intltest)
 
 ADD_CUSTOM_TARGET(check-intltest
-                  COMMAND intltest ${INTLTEST_OPTS})
+                  COMMAND intltest ${INTLTEST_OPTS}
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(check check-intltest)
 ADD_CUSTOM_TARGET(check-exhaustive-intltest
-                  COMMAND intltest -e)
+                  COMMAND intltest -e
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(check-exhaustive check-exhaustive-intltest)
 ADD_CUSTOM_TARGET(xcheck-intltest
-                  COMMAND intltest ${INTLTEST_OPTS} -x "${CMAKE_BINARY_DIR}/test-intltest.xml")
+                  COMMAND intltest ${INTLTEST_OPTS} -x "${CMAKE_BINARY_DIR}/test-intltest.xml"
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(xcheck xcheck-intltest)
 

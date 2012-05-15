@@ -5,12 +5,15 @@ LINK_ICU_LIBRARIES(iotest ${CTESTFW_STUB} ${IO_STUB})
 DEPEND_ON_ICU_DATA(iotest)
 
 ADD_CUSTOM_TARGET(check-iotest
-                  COMMAND iotest ${IOTEST_OPTS})
+                  COMMAND iotest ${IOTEST_OPTS}
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(check check-iotest)
 ADD_CUSTOM_TARGET(check-exhaustive-iotest
-                  COMMAND iotest -e)
+                  COMMAND iotest -e
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(check-exhaustive check-exhaustive-iotest)
 ADD_CUSTOM_TARGET(xcheck-iotest
-                  COMMAND iotest ${IOTEST_OPTS} -x "${CMAKE_BINARY_DIR}/test-iotest.xml")
+                  COMMAND iotest ${IOTEST_OPTS} -x "${CMAKE_BINARY_DIR}/test-iotest.xml"
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(xcheck xcheck-iotest)
 

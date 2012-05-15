@@ -20,12 +20,15 @@ LINK_ICU_LIBRARIES(cintltst ${CTESTFW_STUB})
 DEPEND_ON_ICU_DATA(cintltst)
 
 ADD_CUSTOM_TARGET(check-cintltst
-                  COMMAND cintltst ${CINTLTST_OPTS})
+                  COMMAND cintltst ${CINTLTST_OPTS}
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(check check-cintltst)
 ADD_CUSTOM_TARGET(check-exhaustive-cintltst
-                  COMMAND cintltst -e)
+                  COMMAND cintltst -e
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(check-exhaustive check-exhaustive-cintltst)
 ADD_CUSTOM_TARGET(xcheck-cintltst
-                  COMMAND cintltst ${CINTLTST_OPTS} -x "${CMAKE_BINARY_DIR}/test-cintltst.xml")
+                  COMMAND cintltst ${CINTLTST_OPTS} -x "${CMAKE_BINARY_DIR}/test-cintltst.xml"
+                  DEPENDS testdata)
 ADD_DEPENDENCIES(xcheck xcheck-cintltst)
 
