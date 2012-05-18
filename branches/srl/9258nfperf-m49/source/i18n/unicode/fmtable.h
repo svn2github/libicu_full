@@ -605,10 +605,12 @@ public:
      */
     DigitList *getDigitList() const { return fDecimalNum;}
 
+#if UCONFIG_INTERNAL_DIGITLIST
     /**
      *  @internal
      */
     DigitList *getInternalDigitList();
+#endif
 
 
     /**
@@ -650,7 +652,9 @@ private:
 
     DigitList            *fDecimalNum;
 
+#if UCONFIG_INTERNAL_DIGITLIST
     char                fStackData[128]; // must be big enough for DigitList
+#endif
 
     Type                fType;
     UnicodeString       fBogus; // Bogus string when it's needed.

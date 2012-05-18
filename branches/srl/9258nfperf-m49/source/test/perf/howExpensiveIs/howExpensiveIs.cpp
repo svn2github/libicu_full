@@ -293,6 +293,7 @@ OpenCloseTest(gb18030,ucnv,open,{},("gb18030",&setupStatus),{})
 OpenCloseTest(root,ures,open,{},(NULL,"root",&setupStatus),{})
 
 void runTests() {
+#ifndef PROFONLY
   {
     SieveTest t;
     runTestOn(t);
@@ -301,18 +302,15 @@ void runTests() {
     NullTest t;
     runTestOn(t);
   }
-#ifdef PROFONLY
-  fflush(stdout);
-  fprintf(stdout, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
-  fflush(stdout);
-#endif
 
   DO_NumTest("#","0",0.0);
   DO_NumTest("#","2.0",2.0);
   DO_NumTest("#","2 ",2);
   DO_NumTest("#","-2 ",-2);
   DO_NumTest("+#","+2",2);
+#endif
   DO_NumTest("#,###.0","2222.0",2222.0);
+#ifndef PROFONLY
   DO_NumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0);
 
   // attr
@@ -332,11 +330,6 @@ void runTests() {
 
   //  {    NumParseTestgrp t;    runTestOn(t);  }
   {    NumParseTestbeng t;    runTestOn(t);  }
-#ifdef PROFONLY
-  fflush(stdout);
-  fprintf(stdout, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-  fflush(stdout);
-#endif
 #if 0 /* TODO */
 #ifndef PROFONLY
   {
@@ -359,4 +352,5 @@ void runTests() {
   }
 #endif
 #endif
+#endif /* PROFONLY */
 }

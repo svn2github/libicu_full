@@ -1678,7 +1678,12 @@ void DecimalFormat::parse(const UnicodeString& text,
 
     // status is used to record whether a number is infinite.
     UBool status[fgStatusLength];
+
+#if UCONFIG_INTERNAL_DIGITLIST
     DigitList *digits = result.getInternalDigitList(); // get one from the stack buffer
+#else
+    DigitList *digits = new DigitList;
+#endif
     if (digits == NULL) {
         return;    // no way to report error from here.
     }
@@ -1686,8 +1691,10 @@ void DecimalFormat::parse(const UnicodeString& text,
     if (fCurrencySignCount > fgCurrencySignCountZero) {
         if (!parseForCurrency(text, parsePosition, *digits,
                               status, currency)) {
-          //delete digits;  /* no need to delete - stored in Formattable */
-            return;
+#if !UCONFIG_INTERNAL_DIGITLIST
+          delete digits;
+#endif
+          return;
         }
     } else {
         if (!subparse(text,
@@ -1697,7 +1704,9 @@ void DecimalFormat::parse(const UnicodeString& text,
                       parsePosition, *digits, status, currency)) {
             debug("!subparse(...) - rewind");
             parsePosition.setIndex(startIdx);
-          //delete digits;  /* no need to delete - stored in Formattable */
+#if !UCONFIG_INTERNAL_DIGITLIST
+            delete digits;
+#endif
             return;
         }
     }
@@ -1706,7 +1715,10 @@ void DecimalFormat::parse(const UnicodeString& text,
     if (status[fgStatusInfinite]) {
         double inf = uprv_getInfinity();
         result.setDouble(digits->isPositive() ? inf : -inf);
-        //delete digits;  /* no need to delete, owned by Formattable*/   // TODO:  set the dl to infinity, and let it fall into the code below.
+#if !UCONFIG_INTERNAL_DIGITLIST
+        delete digits;
+#endif
+        // TODO:  set the dl to infinity, and let it fall into the code below.
     }
 
     else {
@@ -1844,25 +1856,6 @@ DecimalFormat::parseForCurrency(const UnicodeString& text,
     return found;
 }
 
-static const UnicodeSet *_loadDecimalSet(UChar32 decimalChar, UBool &couldUseDecimalSet, const UnicodeSet*&set, UBool strictParse) {
-  if(couldUseDecimalSet && set==NULL) {
-    couldUseDecimalSet=FALSE; // don't try again
-    set = DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse);
-  }
-  return set;
-}
-
-static const UnicodeSet *_loadGroupingSet(UBool &couldUseSet, const UnicodeSet*&set, UBool strictParse) {
-  if(couldUseSet && set==NULL) {
-    couldUseSet=FALSE; // don't try again
-    if (strictParse) {
-      set = DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators;
-    } else {
-      set = DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators;
-    }
-  }
-  return set;
-}
 
 /**
  * Parse the given text into a number.  The text is parsed beginning at
@@ -1921,6 +1914,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 #endif
 
     UBool fastParseOk = false; /* TRUE iff fast parse is OK */
+    UBool fastParseHadDecimal = FALSE; /* true if fast parse saw a decimal point. */
 
     if(!currencyParsing &&
 
@@ -1930,7 +1924,13 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             fFormatWidth==0 &&
             //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
             text.length()>0 &&
-            text.length()<20 )
+            text.length()<20 &&
+            (posPrefix==NULL||posPrefix->isEmpty()) &&
+            (posSuffix==NULL||posSuffix->isEmpty()) &&
+            //            (negPrefix==NULL||negPrefix->isEmpty()) &&
+            //            (negSuffix==NULL||(negSuffix->isEmpty()) ) &&
+            TRUE
+            )
           )) {  // optimized path
       int j=position;
       int l=text.length();
@@ -1971,6 +1971,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         } else if(ch == decimalChar) {
           parsedNum.append((char)('.'), err);
           decimalChar=0; // no more decimals.
+          fastParseHadDecimal=TRUE;
         } else {
           digitCount=-1; // fail
           break;
@@ -1983,6 +1984,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         printf("PP -> %d, good = [%s]  digitcount=%d, fGroupingSize=%d fGroupingSize2=%d!\n", j, parsedNum.data(), digitCount, fGroupingSize, fGroupingSize2);
 #endif
         fastParseOk=true; // Fast parse OK!
+
 #ifdef SKIP_OPT
         debug("SKIP_OPT");
         /* for testing, try it the slow way. also */
@@ -2090,11 +2092,17 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         const UnicodeSet *decimalSet = NULL;
         const UnicodeSet *groupingSet = NULL;
 
-        UBool couldUseDecimalSet = (decimalCharLength == decimalStringLength);
-        _loadDecimalSet(decimalChar,couldUseDecimalSet,decimalSet,strictParse);
+        if (decimalCharLength == decimalStringLength) {
+            decimalSet = DecimalFormatStaticSets::getSimilarDecimals(decimalChar, strictParse);
+        }
 
-        UBool couldUseGroupingSet = (groupingCharLength == groupingStringLength);
-        _loadGroupingSet(couldUseGroupingSet, groupingSet, strictParse);
+        if (groupingCharLength == groupingStringLength) {
+            if (strictParse) {
+                groupingSet = DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators;
+            } else {
+                groupingSet = DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators;
+            }
+        }
 
         // We need to test groupingChar and decimalChar separately from groupingSet and decimalSet, if the sets are even initialized.
         // If sawDecimal is TRUE, only consider sawDecimalChar and NOT decimalSet
@@ -2380,7 +2388,6 @@ printf("PP -> %d, SLOW = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.d
         parsePosition.setErrorIndex(position);
         return FALSE;
     }
-
     digits.set(parsedNum.toStringPiece(), err);
 
     if (U_FAILURE(err)) {

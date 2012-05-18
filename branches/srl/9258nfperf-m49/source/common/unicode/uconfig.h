@@ -404,4 +404,14 @@
 #   define UCONFIG_NO_SERVICE 0
 #endif
 
+/**
+ * \def UCONFIG_INTERNAL_DIGITLIST
+ * This switch turns on the fast but binary-incompatible Formattable class with an internal DigitList
+ *
+ * @internal
+ */
+#ifndef UCONFIG_INTERNAL_DIGITLIST
+#   define UCONFIG_INTERNAL_DIGITLIST 0
+#endif
+
 #endif
