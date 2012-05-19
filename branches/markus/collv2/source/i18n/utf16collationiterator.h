@@ -103,39 +103,28 @@ public:
 protected:
     virtual UChar32 handleNextCodePoint(UErrorCode &errorCode);
 
-    inline UChar32 simpleNext() {
-        UChar32 c = *pos++;
-        UChar trail;
-        if(U16_IS_LEAD(c) && pos != limit && U16_IS_TRAIL(trail = *pos)) {
-            ++pos;
-            return U16_GET_SUPPLEMENTARY(c, trail);
-        } else {
-            return c;
-        }
-    }
-
-    UChar32 nextCodePointDecompHangul(UErrorCode &errorCode);
-
     virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode);
-
-    inline UChar32 simplePrevious() {
-        UChar32 c = *--pos;
-        UChar lead;
-        if(U16_IS_TRAIL(c) && pos != start && U16_IS_LEAD(lead = *(pos - 1))) {
-            --pos;
-            return U16_GET_SUPPLEMENTARY(lead, c);
-        } else {
-            return c;
-        }
-    }
-
-    UChar32 previousCodePointDecompHangul(UErrorCode &errorCode);
 
     virtual const void *saveLimitAndSetAfter(UChar32 c);
 
     virtual void restoreLimit(const void *savedLimit);
 
 private:
+    /**
+     * Tibetan composite vowel signs (U+0F73, U+0F75, U+0F81)
+     * must be decomposed before reaching the core collation code,
+     * or else some sequences including them, even ones passing the FCD check,
+     * do not yield canonically equivalent results.
+     *
+     * They have distinct lccc/tccc combinations: 129/130 or 129/132.
+     *
+     * @param fcd16 the FCD value (lccc/tccc combination) of a code point
+     * @return TRUE if fcd16 is from U+0F73, U+0F75 or U+0F81
+     */
+    static inline UBool isFCD16OfTibetanCompositeVowel(uint16_t fcd16) {
+        return fcd16 == 0x8182 || fcd16 == 0x8184;
+    }
+
     // Text pointers: The input text is [rawStart, rawLimit[
     // where rawLimit can be NULL for NUL-terminated text.
     // segmentStart and segmentLimit point into the text and indicate

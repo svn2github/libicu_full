@@ -175,15 +175,11 @@ public:
      */
     static const int8_t CHECK_FCD = 1;
     /**
-     * Flag bit: A subclass needs to look for Hangul syllables and decompose them into Jamos.
-     */
-    static const int8_t DECOMP_HANGUL = 2;
-    /**
      * Flag bit: COllate Digits As Numbers.
      * Treat digit sequences as numbers with CE sequences in numeric order,
      * rather than returning a normal CE for each digit.
      */
-    static const int8_t CODAN = 4;
+    static const int8_t CODAN = 2;
 
     static inline UBool isSpecialCE32(uint32_t ce32) {
         // Java: Emulate unsigned-int less-than comparison.

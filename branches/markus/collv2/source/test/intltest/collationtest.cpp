@@ -75,6 +75,9 @@ private:
                               int64_t ces[], int8_t hira[], int32_t capacity,
                               IcuTestErrorCode &errorCode);
     void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
+
+    UBool needsNormalization(const UnicodeString &s, UErrorCode &errorCode) const;
+
     UBool checkCEs(CollationIterator &ci, const char *mode,
                    int64_t ces[], int8_t hira[], int32_t cesLength,
                    IcuTestErrorCode &errorCode);
@@ -476,6 +479,22 @@ printf("-- buildBase line %d\n", (int)fileLineNumber);  // TODO: remove
     collData = baseData;
 }
 
+UBool CollationTest::needsNormalization(const UnicodeString &s, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode) || !fcd->isNormalized(s, errorCode)) { return TRUE; }
+    // In some sequences with Tibetan composite vowel signs,
+    // even if the string passes the FCD check,
+    // those composites must be decomposed.
+    // Check if s contains 0F71 immediately followed by 0F73 or 0F75 or 0F81.
+    int32_t index = 0;
+    while((index = s.indexOf((UChar)0xf71, index)) >= 0) {
+        if(++index < s.length()) {
+            UChar c = s[index];
+            if(c == 0xf73 || c == 0xf75 || c == 0xf81) { return TRUE; }
+        }
+    }
+    return FALSE;
+}
+
 UBool CollationTest::checkCEs(CollationIterator &ci, const char *mode,
                               int64_t ces[], int8_t hira[], int32_t cesLength,
                               IcuTestErrorCode &errorCode) {
@@ -516,21 +535,12 @@ UBool CollationTest::checkCEsNormal(const UnicodeString &s,
                                     IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
     int8_t flags = collData->flags;
-    if((flags & Collation::DECOMP_HANGUL) == 0) {
-        UTF16CollationIterator ci(collData, flags, buffer, buffer + s.length());
-        if(!checkCEs(ci, "UTF-16", ces, hira, cesLength, errorCode)) { return FALSE; }
-        // Test NUL-termination if s does not contain a NUL.
-        if(s.indexOf((UChar)0) >= 0) { return TRUE; }
-        UTF16CollationIterator ci0(collData, flags, buffer, NULL);
-        return checkCEs(ci0, "UTF-16-NUL", ces, hira, cesLength, errorCode);
-    } else {
-        FCDUTF16CollationIterator ci(collData, flags, buffer, buffer + s.length(), errorCode);
-        if(!checkCEs(ci, "UTF-16-Hangul", ces, hira, cesLength, errorCode)) { return FALSE; }
-        // Test NUL-termination if s does not contain a NUL.
-        if(s.indexOf((UChar)0) >= 0) { return TRUE; }
-        FCDUTF16CollationIterator ci0(collData, flags, buffer, NULL, errorCode);
-        return checkCEs(ci0, "UTF-16-Hangul-NUL", ces, hira, cesLength, errorCode);
-    }
+    UTF16CollationIterator ci(collData, flags, buffer, buffer + s.length());
+    if(!checkCEs(ci, "UTF-16", ces, hira, cesLength, errorCode)) { return FALSE; }
+    // Test NUL-termination if s does not contain a NUL.
+    if(s.indexOf((UChar)0) >= 0) { return TRUE; }
+    UTF16CollationIterator ci0(collData, flags, buffer, NULL);
+    return checkCEs(ci0, "UTF-16-NUL", ces, hira, cesLength, errorCode);
 }
 
 UBool CollationTest::checkCEsFCD(const UnicodeString &s,
@@ -566,7 +576,7 @@ printf("-- checkCEs line %d\n", (int)fileLineNumber);  // TODO: remove
             continue;
         }
         s.getTerminatedBuffer();  // Ensure NUL-termination.
-        if(fcd->isNormalized(s, errorCode)) {
+        if(!needsNormalization(s, errorCode)) {
             if(!checkCEsNormal(s, ces, hira, cesLength, errorCode)) { continue; }
         }
         checkCEsFCD(s, ces, hira, cesLength, errorCode);
@@ -615,3 +625,6 @@ void CollationTest::TestDataDriven() {
         }
     }
 }
+
+// TODO: Test FCD text iteration.
+// - a-umlaut 0f81 -> a 0308 0f71 0f72

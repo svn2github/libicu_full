@@ -429,9 +429,6 @@ CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 origi
     backwardNumSkipped(sinceMatch, errorCode);
     return ce32;
 }
-// TODO: How can we match the second code point of a precomposed Tibetan vowel mark??
-//    Add contractions with the skipped mark as an expansion??
-//    Forbid contractions with the problematic characters??
 
 uint32_t
 CollationIterator::nextCE32FromDiscontiguousContraction(
@@ -695,6 +692,14 @@ CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &e
     // then we generate primary bytes with those pairs.
     // Omit trailing 00 pairs.
     // Decrement the value for the last pair.
+    // TODO: The documentation for UCOL_NUMERIC_COLLATION says
+    // "Note that the longest digit substring that can be treated as a single collation element
+    // is 254 digits (not counting leading zeros). If a digit substring is longer than that,
+    // the digits beyond the limit will be treated as a separate digit substring
+    // associated with a separate collation element."
+    // -> 1. Review whether we should keep the limit (modify this code)
+    //       or extend it (to what this code supports).
+    //    2. Review whether we handle an overflow as documented or by returning an overflow value.
     if(length > 2 * 183) {
         // Overflow
         uint32_t primary = zeroPrimary | 0xffff00;

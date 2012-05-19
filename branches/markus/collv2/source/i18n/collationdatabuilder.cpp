@@ -341,6 +341,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
     // No FFFF
     // If prefix: cc(prefix[0])==cc(c)==0
     // Max lengths?
+    // Forbid syllable-forming Jamos with/in expansions/contractions/prefixes, see design doc.
     uint32_t ce32 = encodeCEs(ces, cesLength, errorCode);
     if(U_FAILURE(errorCode)) { return; }
     uint32_t oldCE32 = utrie2_get32(trie, c);
