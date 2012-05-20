@@ -350,7 +350,9 @@ DecimalFormat::init(UErrorCode &status) {
     fAffixesForCurrency = NULL;
     fPluralAffixesForCurrency = NULL;
     fCurrencyPluralInfo = NULL;
+#if UCONFIG_HAVE_PARSEALLINPUT
     fParseAllInput = UNUM_MAYBE;
+#endif
 
     // only do this once per obj.
     DecimalFormatStaticSets::initSets(&status);
@@ -979,8 +981,72 @@ DecimalFormat::format(int64_t number,
                       UnicodeString& appendTo,
                       FieldPosition& fieldPosition) const
 {
-    FieldPositionOnlyHandler handler(fieldPosition);
+#if 1
+
+  const UnicodeString *posPrefix = fPosPrefixPattern;
+  const UnicodeString *posSuffix = fPosSuffixPattern;
+  // TODO: keep a fCanUseFastpathParse around.  Change it if any of these things change.
+  
+  //printf("fastpath? [%d]\n", number);
+  if( // fastpath
+     (posPrefix==NULL||posPrefix->isEmpty()) &&
+     (posSuffix==NULL||posSuffix->isEmpty()) &&
+     fGroupingSize==0 &&
+     fGroupingSize2==0 &&
+     !fUseExponentialNotation &&
+     fFormatWidth==0 &&
+     fMinSignificantDigits==0 &&
+     (0x0030 == getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0)) && // Augh.
+
+     FALSE ) {
+
+#define kZero '0'
+    const int32_t MAX_IDX = MAX_DIGITS+2;
+    char outputStr[MAX_IDX];
+    int32_t destIdx = MAX_IDX;
+    outputStr[--destIdx] = 0;  // term
+
+    int64_t  n = number;
+    if (number < 0) {   // Negative numbers are slightly larger than a postive
+      //outputStr[--destIdx] = (char)(-(n % 10) + kZero);
+        n *= -1;
+    }
+    do { 
+        outputStr[--destIdx] = (char)(n % 10 + kZero);
+        n /= 10;
+    } while (n > 0);
+    
+    if (number < 0) {
+        outputStr[--destIdx] = '-';
+    }
+
+    // Slide the number to the start of the output str
+    U_ASSERT(destIdx >= 0);
+    int32_t length = MAX_IDX - destIdx -1;
+    //uprv_memmove(outputStr, outputStr+MAX_IDX-length, length);
+    appendTo.append(UnicodeString(outputStr+destIdx, length, ""));
+    fieldPosition.setEndIndex(appendTo.length());
+
+    //outputStr[length]=0;
+    
+    //    printf("Writing [%s] length [%d] max %d for [%d]\n", outputStr+destIdx, length, MAX_IDX, number);
+
+    return appendTo;
+  } // end fastpath
+
+  FieldPositionOnlyHandler handler(fieldPosition);
+  // this is what unum_formatInt64 calls.
+  // copied from _format.
+    UErrorCode status = U_ZERO_ERROR;
+    DigitList digits;
+    digits.set(number);
+    _format(digits, appendTo, handler, status);
+    // No way to return status from here.
+    return appendTo;
+#else
+  FieldPositionOnlyHandler handler(fieldPosition);
     return _format(number, appendTo, handler);
+#endif
 }
 
 UnicodeString&
@@ -1919,8 +1985,11 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     if(!currencyParsing &&
 
 
-       (  ( fParseAllInput == UNUM_YES ) ||
+       ( (
+#if UCONFIG_HAVE_PARSEALLINPUT
+         fParseAllInput == UNUM_YES ) ||
           ( fParseAllInput == UNUM_MAYBE &&
+#endif
             fFormatWidth==0 &&
             //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
             text.length()>0 &&
@@ -2003,7 +2072,11 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       }
     }
 
-  if(!fastParseOk && fParseAllInput!=UNUM_YES) 
+  if(!fastParseOk 
+#if UCONFIG_HAVE_PARSEALLINPUT
+     && fParseAllInput!=UNUM_YES
+#endif
+     ) 
   {
     // Match padding before prefix
     if (fFormatWidth > 0 && fPadPosition == kPadBeforePrefix) {
@@ -2380,6 +2453,7 @@ printf("PP -> %d, SLOW = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.d
         parsePosition.setErrorIndex(position);
         return FALSE;
     }
+#if UCONFIG_HAVE_PARSEALLINPUT
   else if (fParseAllInput==UNUM_YES&&parsePosition.getIndex()!=textLength)
     {
 #ifdef FMT_DEBUG
@@ -2388,6 +2462,7 @@ printf("PP -> %d, SLOW = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.d
         parsePosition.setErrorIndex(position);
         return FALSE;
     }
+#endif
     digits.set(parsedNum.toStringPiece(), err);
 
     if (U_FAILURE(err)) {
@@ -4997,9 +5072,11 @@ DecimalFormat::copyHashForAffixPattern(const Hashtable* source,
     }
 }
 
+#if UCONFIG_HAVE_PARSEALLINPUT
 void DecimalFormat::setParseAllInput(UNumberFormatAttributeValue value) {
   fParseAllInput = value;
 }
+#endif
 
 void
 DecimalFormat::copyHashForAffix(const Hashtable* source,

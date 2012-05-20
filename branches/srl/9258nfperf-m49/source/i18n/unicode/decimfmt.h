@@ -749,10 +749,12 @@ public:
                     UErrorCode& status);
 
 
+#if UCONFIG_HAVE_PARSEALLINPUT
     /**
      * @internal 
      */
     void setParseAllInput(UNumberFormatAttributeValue value);
+#endif
 
 #endif  /* U_HIDE_INTERNAL_API */
 
@@ -2268,7 +2270,9 @@ private:
     // Information needed for DecimalFormat to format/parse currency plural.
     CurrencyPluralInfo* fCurrencyPluralInfo;
 
+#if UCONFIG_HAVE_PARSEALLINPUT
     UNumberFormatAttributeValue fParseAllInput;
+#endif
 
 protected:
 

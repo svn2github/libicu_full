@@ -626,9 +626,11 @@ unum_setAttribute(    UNumberFormat*          fmt,
         df->setSecondaryGroupingSize(newValue);
         break;
 
+#if UCONFIG_HAVE_PARSEALLINPUT
     case UNUM_PARSE_ALL_INPUT:
         df->setParseAllInput((UNumberFormatAttributeValue)newValue);
         break;
+#endif
 
     default:
         /* Shouldn't get here anyway */

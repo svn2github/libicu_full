@@ -8,6 +8,7 @@
 #include "sieve.h"
 #include "unicode/utimer.h"
 #include "udbgutil.h"
+#include "unicode/ustring.h"
 
 void runTests(void);
 
@@ -210,7 +211,7 @@ public:
   void warmup() {
     fFmt = initFmt();
     if(U_SUCCESS(setupStatus)) {
-      double trial = unum_parse(fFmt,fStr,fLen, NULL, &setupStatus);
+      double trial = unum_parseDouble(fFmt,fStr,fLen, NULL, &setupStatus);
       if(U_SUCCESS(setupStatus) && trial!=fExpect) {
         setupStatus = U_INTERNAL_PROGRAM_ERROR;
         printf("%s:%d: warmup() %s got %.8f expected %.8f\n", 
@@ -230,6 +231,7 @@ public:
 };
 
 #define DO_NumTest(p,n,x) { NumTest t(p,n,x,__FILE__,__LINE__); runTestOn(t); }
+
 
 class AttrNumTest : public NumTest 
 {
@@ -262,6 +264,159 @@ public:
                                 DO_AttrNumTest(p,n,x,UNUM_PARSE_ALL_INPUT,UNUM_NO) \
                                 DO_AttrNumTest(p,n,x,UNUM_PARSE_ALL_INPUT,UNUM_MAYBE)
 
+
+class NumFmtTest : public HowExpensiveTest {
+private:
+  double fExpect;
+  UNumberFormat *fFmt;
+  UnicodeString fPat;
+  UnicodeString fString;
+  const UChar *fStr;
+  int32_t fLen;
+  const char *fFile;
+  int fLine;
+  const char *fCPat;
+  const char *fCStr;
+  char name[100];
+public:
+  virtual const char *getName() {
+    if(name[0]==0) {
+      sprintf(name,"%s:p=|%s|,str=|%s|",getClassName(),fCPat,fCStr);
+    }
+    return name;
+  }
+protected:
+  virtual UNumberFormat* initFmt() {
+    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), 1, "en_US", 0, &setupStatus);
+  }
+  virtual const char *getClassName() {
+    return "NumFmtTest";
+  }
+public:
+  NumFmtTest(const char *pat, const char *num, double expect, const char *FILE, int LINE) 
+    : HowExpensiveTest("(n/a)",FILE, LINE),
+      fExpect(expect),
+      fFmt(0),
+      fPat(pat, -1, US_INV),
+      fString(num,-1,US_INV),
+      fStr(fString.getTerminatedBuffer()),
+      fLen(u_strlen(fStr)),
+      fFile(FILE),
+      fLine(LINE),
+      fCPat(pat),
+      fCStr(num)
+  {
+    name[0]=0;
+  }
+  void warmup() {
+    fFmt = initFmt();
+    UChar buf[100];
+    if(U_SUCCESS(setupStatus)) {
+      int32_t trial = unum_formatDouble(fFmt,fExpect, buf, 100, NULL, &setupStatus);
+      if(!U_SUCCESS(setupStatus) 
+         || trial!=fLen
+         ||trial<=0
+         || u_strncmp(fStr,buf,trial)  ) {
+        char strBuf[200];
+        u_strToUTF8(strBuf,200,NULL,buf,trial+1,&setupStatus);
+        printf("%s:%d: warmup() %s got %s expected %s, err %s\n", 
+               fFile,fLine,getName(),strBuf,fCStr, u_errorName(setupStatus));
+        setupStatus = U_INTERNAL_PROGRAM_ERROR;
+      }
+    }
+  }
+  int32_t run() {
+    int32_t trial;
+    int i;
+    UChar buf[100];
+    if(U_SUCCESS(setupStatus)) {
+      for(i=0;i<U_LOTS_OF_TIMES;i++){
+        trial = unum_formatDouble(fFmt,fExpect, buf, 100, NULL, &setupStatus);
+      }
+    }
+    return i;
+  }
+  virtual ~NumFmtTest(){}
+};
+
+#define DO_NumFmtTest(p,n,x) { NumFmtTest t(p,n,x,__FILE__,__LINE__); runTestOn(t); }
+
+
+class NumFmtInt64Test : public HowExpensiveTest {
+private:
+  int64_t fExpect;
+  UNumberFormat *fFmt;
+  UnicodeString fPat;
+  UnicodeString fString;
+  const UChar *fStr;
+  int32_t fLen;
+  const char *fFile;
+  int fLine;
+  const char *fCPat;
+  const char *fCStr;
+  char name[100];
+public:
+  virtual const char *getName() {
+    if(name[0]==0) {
+      sprintf(name,"%s:p=|%s|,str=|%s|",getClassName(),fCPat,fCStr);
+    }
+    return name;
+  }
+protected:
+  virtual UNumberFormat* initFmt() {
+    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), 1, "en_US", 0, &setupStatus);
+  }
+  virtual const char *getClassName() {
+    return "NumFmtInt64Test";
+  }
+public:
+  NumFmtInt64Test(const char *pat, const char *num, int64_t expect, const char *FILE, int LINE) 
+    : HowExpensiveTest("(n/a)",FILE, LINE),
+      fExpect(expect),
+      fFmt(0),
+      fPat(pat, -1, US_INV),
+      fString(num,-1,US_INV),
+      fStr(fString.getTerminatedBuffer()),
+      fLen(u_strlen(fStr)),
+      fFile(FILE),
+      fLine(LINE),
+      fCPat(pat),
+      fCStr(num)
+  {
+    name[0]=0;
+  }
+  void warmup() {
+    fFmt = initFmt();
+    UChar buf[100];
+    if(U_SUCCESS(setupStatus)) {
+      int32_t trial = unum_formatInt64(fFmt,fExpect, buf, 100, NULL, &setupStatus);
+      if(!U_SUCCESS(setupStatus) 
+         || trial!=fLen
+         ||trial<=0
+         || u_strncmp(fStr,buf,trial)  ) {
+        char strBuf[200];
+        u_strToUTF8(strBuf,200,NULL,buf,trial+1,&setupStatus);
+        printf("%s:%d: warmup() %s got %s (len %d) expected %s (len %d), err %s\n", 
+               fFile,fLine,getName(),strBuf,trial,fCStr,fLen, u_errorName(setupStatus));
+        setupStatus = U_INTERNAL_PROGRAM_ERROR;
+      }
+    }
+  }
+  int32_t run() {
+    int32_t trial;
+    int i;
+    UChar buf[100];
+    if(U_SUCCESS(setupStatus)) {
+      for(i=0;i<U_LOTS_OF_TIMES;i++){
+        trial = unum_formatInt64(fFmt,fExpect, buf, 100, NULL, &setupStatus);
+      }
+    }
+    return i;
+  }
+  virtual ~NumFmtInt64Test(){}
+};
+
+#define DO_NumFmtInt64Test(p,n,x) { NumFmtInt64Test t(p,n,x,__FILE__,__LINE__); runTestOn(t); }
 
 // TODO: move, scope.
 static UChar pattern[] = { 0x23 }; // '#'
@@ -302,34 +457,84 @@ void runTests() {
     NullTest t;
     runTestOn(t);
   }
-
-  DO_NumTest("#","0",0.0);
-  DO_NumTest("#","2.0",2.0);
-  DO_NumTest("#","2 ",2);
-  DO_NumTest("#","-2 ",-2);
-  DO_NumTest("+#","+2",2);
 #endif
-  DO_NumTest("#,###.0","2222.0",2222.0);
-#ifndef PROFONLY
-  DO_NumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0);
 
-  // attr
+#if 1
+  {
+    // parse tests
+
+    DO_NumTest("#","0",0.0);
+    DO_NumTest("#","2.0",2.0);
+    DO_NumTest("#","2 ",2);
+    DO_NumTest("#","-2 ",-2);
+    DO_NumTest("+#","+2",2);
+    DO_NumTest("#,###.0","2222.0",2222.0);
+
+    DO_NumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0);
+
+    // attr
 #ifdef HAVE_UNUM_MAYBE
-  DO_AttrNumTest("#","0",0.0,UNUM_PARSE_ALL_INPUT,UNUM_YES);
-  DO_AttrNumTest("#","0",0.0,UNUM_PARSE_ALL_INPUT,UNUM_NO);
-  DO_AttrNumTest("#","0",0.0,UNUM_PARSE_ALL_INPUT,UNUM_MAYBE);
-  //  DO_NumTest("#","0",0.0);
-  DO_TripleNumTest("#","2.0",2.0);
-  //  DO_TripleNumTest("#","2 ",2);
-  //  DO_TripleNumTest("#","-2 ",-2);
-  //DO_TripleNumTest("+#","+2",2);
-  //DO_TripleNumTest("#,###.0","2222.0",2222.0);
-  DO_AttrNumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0,UNUM_PARSE_ALL_INPUT,UNUM_NO);
+    DO_AttrNumTest("#","0",0.0,UNUM_PARSE_ALL_INPUT,UNUM_YES);
+    DO_AttrNumTest("#","0",0.0,UNUM_PARSE_ALL_INPUT,UNUM_NO);
+    DO_AttrNumTest("#","0",0.0,UNUM_PARSE_ALL_INPUT,UNUM_MAYBE);
+    //  DO_NumTest("#","0",0.0);
+    DO_TripleNumTest("#","2.0",2.0);
+    //  DO_TripleNumTest("#","2 ",2);
+    //  DO_TripleNumTest("#","-2 ",-2);
+    //DO_TripleNumTest("+#","+2",2);
+    //DO_TripleNumTest("#,###.0","2222.0",2222.0);
+    DO_AttrNumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0,UNUM_PARSE_ALL_INPUT,UNUM_NO);
 #endif
 
 
-  //  {    NumParseTestgrp t;    runTestOn(t);  }
-  {    NumParseTestbeng t;    runTestOn(t);  }
+    //  {    NumParseTestgrp t;    runTestOn(t);  }
+    {    NumParseTestbeng t;    runTestOn(t);  }
+
+  }
+#endif
+
+
+#if 1
+  // format tests
+  { 
+    
+    
+#if 1
+    DO_NumFmtTest("#","0",0.0);
+    //DO_NumFmtTest("#.0","2.0",2.0);
+    DO_NumFmtTest("#","12345",12345);
+    DO_NumFmtTest("#","-2",-2);
+    DO_NumFmtTest("+#","+2",2);
+#endif
+
+    #if 0
+    DO_NumFmtTest("#0.","0.",0);
+    DO_NumFmtTest("#.0",".0",0);
+    DO_NumFmtTest("#.","0.",0);
+    DO_NumFmtTest(".#",".0",0);
+                       /*
+!!    FAIL: Pattern #. should format zero as 0.; 0 Seen instead
+!!    FAIL: Pattern .# should format zero as .0; 0 Seen instead
+                       */
+    DO_NumFmtInt64Test("#.","0.",0);
+    DO_NumFmtInt64Test(".#",".0",0);
+#endif
+
+    DO_NumFmtInt64Test("#","-682",-682);
+    DO_NumFmtInt64Test("#","0",0);
+    //DO_NumFmtInt64Test("#.0","2.0",2);
+    DO_NumFmtInt64Test("#","12345",12345);
+    DO_NumFmtInt64Test("#","1234",1234);
+    DO_NumFmtInt64Test("#","123",123);
+    // DO_NumFmtInt64Test("#,###","12,345",12345);
+    // DO_NumFmtInt64Test("#,###","1,234",1234);
+    // DO_NumFmtInt64Test("#,###","123",123);
+    DO_NumFmtInt64Test("#","-2",-2);
+    DO_NumFmtInt64Test("+#","+2",2);
+    
+  }
+#endif
+
 #if 0 /* TODO */
 #ifndef PROFONLY
   {
@@ -352,5 +557,4 @@ void runTests() {
   }
 #endif
 #endif
-#endif /* PROFONLY */
 }

@@ -715,6 +715,7 @@ unum_getAvailable(int32_t localeIndex);
 U_STABLE int32_t U_EXPORT2 
 unum_countAvailable(void);
 
+#if UCONFIG_HAVE_PARSEALLINPUT
 /**
  * @internal
  */
@@ -726,10 +727,7 @@ typedef enum UNumberFormatAttributeValue {
   /** @internal */
   UNUM_MAYBE = 2
 } UNumberFormatAttributeValue;
-/**
- * @internal
- */
-#define HAVE_UNUM_MAYBE 1
+#endif
 
 /** The possible UNumberFormat numeric attributes @stable ICU 2.0 */
 typedef enum UNumberFormatAttribute {
@@ -777,12 +775,14 @@ typedef enum UNumberFormatAttribute {
   /** Lenient parse mode used by rule-based formats.
    * @stable ICU 3.0
    */
-  UNUM_LENIENT_PARSE,
+  UNUM_LENIENT_PARSE
 
+#if UCONFIG_HAVE_PARSEALLINPUT
   /** Consume all input. (may use fastpath). Set to UNUM_YES (require fastpath), UNUM_NO (skip fastpath), or UNUM_MAYBE (heuristic).
    * @internal
    */
-  UNUM_PARSE_ALL_INPUT
+  ,UNUM_PARSE_ALL_INPUT
+#endif
   
 } UNumberFormatAttribute;
 

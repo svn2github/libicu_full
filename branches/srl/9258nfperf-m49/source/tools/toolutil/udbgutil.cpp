@@ -511,6 +511,7 @@ static USystemParams systemParams[] = {
   { "build.cygwinmsvc", paramInteger, "b", 1},
 #endif
   { "uconfig.internal_digitlist", paramInteger, "b", UCONFIG_INTERNAL_DIGITLIST},
+  { "uconfig.have_parseallinput", paramInteger, "b", UCONFIG_HAVE_PARSEALLINPUT},
 
 
 
