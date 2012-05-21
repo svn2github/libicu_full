@@ -985,20 +985,24 @@ DecimalFormat::format(int64_t number,
 
   const UnicodeString *posPrefix = fPosPrefixPattern;
   const UnicodeString *posSuffix = fPosSuffixPattern;
+  const UnicodeString *negSuffix = fNegSuffixPattern;
   // TODO: keep a fCanUseFastpathParse around.  Change it if any of these things change.
-  
-  //printf("fastpath? [%d]\n", number);
+  #ifdef FMT_DEBUG
+  printf("fastpath? [%d]\n", number);
+#endif
   if( // fastpath
-     (posPrefix==NULL||posPrefix->isEmpty()) &&
-     (posSuffix==NULL||posSuffix->isEmpty()) &&
+     // (posPrefix==NULL||posPrefix->isEmpty()) &&
+     // (posSuffix==NULL||posSuffix->isEmpty()) &&
+     // (negSuffix==NULL||negSuffix->isEmpty()) &&
      fGroupingSize==0 &&
      fGroupingSize2==0 &&
      !fUseExponentialNotation &&
      fFormatWidth==0 &&
-     fMinSignificantDigits==0 &&
+     fMinSignificantDigits==1 &&
+     fMultiplier==NULL &&
      (0x0030 == getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0)) && // Augh.
 
-     FALSE ) {
+     TRUE ) {
 
 #define kZero '0'
     const int32_t MAX_IDX = MAX_DIGITS+2;
@@ -1016,20 +1020,23 @@ DecimalFormat::format(int64_t number,
         n /= 10;
     } while (n > 0);
     
-    if (number < 0) {
-        outputStr[--destIdx] = '-';
-    }
+
+    FieldPositionOnlyHandler handler(fieldPosition);
 
     // Slide the number to the start of the output str
     U_ASSERT(destIdx >= 0);
     int32_t length = MAX_IDX - destIdx -1;
     //uprv_memmove(outputStr, outputStr+MAX_IDX-length, length);
+    int32_t prefixLen = appendAffix(appendTo, number, handler, number<0, TRUE);
     appendTo.append(UnicodeString(outputStr+destIdx, length, ""));
     fieldPosition.setEndIndex(appendTo.length());
+    int32_t suffixLen = appendAffix(appendTo, number, handler, number<0, FALSE);
 
     //outputStr[length]=0;
     
-    //    printf("Writing [%s] length [%d] max %d for [%d]\n", outputStr+destIdx, length, MAX_IDX, number);
+#ifdef FMT_DEBUG
+        printf("Writing [%s] length [%d] max %d for [%d]\n", outputStr+destIdx, length, MAX_IDX, number);
+#endif
 
     return appendTo;
   } // end fastpath
