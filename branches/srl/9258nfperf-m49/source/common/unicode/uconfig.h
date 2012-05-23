@@ -427,4 +427,15 @@
 #   define UCONFIG_HAVE_PARSEALLINPUT 0
 #endif
 
+
+/**
+ * \def UCONFIG_HAVE_PARSEALLINPUT
+ * This switch turns on the "parse all input" attribute. Binary incompatible.
+ *
+ * @internal
+ */
+#ifndef UCONFIG_FORMAT_FASTPATHS_49
+#   define UCONFIG_FORMAT_FASTPATHS_49 0
+#endif
+
 #endif
