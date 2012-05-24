@@ -430,7 +430,7 @@
 
 /**
  * \def UCONFIG_HAVE_PARSEALLINPUT
- * This switch turns on the "parse all input" attribute. Binary incompatible.
+ * This switch turns on other formatting fastpaths. Binary incompatible in object DecimalFormat and DecimalFormatSymbols
  *
  * @internal
  */

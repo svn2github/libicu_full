@@ -39,6 +39,14 @@
 #include "unicode/stringpiece.h"
 #include "unicode/curramt.h"
 
+/**
+ * \def UNUM_DECIMFORMAT_INTERNAL_SIZE
+ * @internal
+ */
+#if UCONFIG_FORMAT_FASTPATHS_49
+#define UNUM_DECIMALFORMAT_INTERNAL_SIZE 16
+#endif
+
 U_NAMESPACE_BEGIN
 
 class DigitList;
@@ -2274,6 +2282,7 @@ private:
     UNumberFormatAttributeValue fParseAllInput;
 #endif
 
+
 protected:
 
     /**
@@ -2306,6 +2315,21 @@ protected:
      * @stable ICU 2.8
      */
     static const int32_t  kMaxScientificIntegerDigits;
+
+#if UCONFIG_FORMAT_FASTPATHS_49
+ private:
+    /**
+     * Internal state. 
+     * @internal
+     */
+    uint8_t fReserved[UNUM_DECIMALFORMAT_INTERNAL_SIZE];
+
+
+    /**
+     * Called whenever any state changes. Recomputes whether fastpath is OK to use.
+     */
+    void handleChanged();
+#endif
 };
 
 inline UnicodeString&
