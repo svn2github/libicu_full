@@ -66,6 +66,8 @@ template class U_I18N_API MaybeStackHeaderAndArray<decNumber, char, DEFAULT_DIGI
 #endif
 
 
+enum EStackMode { kOnStack };
+
 /**
  * Digit List is actually a Decimal Floating Point number.
  * The original implementation has been replaced by a thin wrapper onto a 
@@ -247,6 +249,15 @@ public:
      */
     void set(int64_t source);
 
+    /**
+     * Utility routine to set the value of the digit list from an int64.
+     * Does not set the decnumber unless requested later
+     * If a non-zero maximumDigits is specified, no more than that number of
+     * significant digits will be produced.
+     * @param source The value to be set
+     */
+    void setInteger(int64_t source);
+
    /**
      * Utility routine to set the value of the digit list from a decimal number
      * string.
@@ -383,12 +394,42 @@ private:
      * This is an optimization for the formatting implementation, which may
      * ask for the double value multiple times.
      */
-    double        fDouble;
-    UBool         fHaveDouble;
+    union DoubleOrInt64 {
+      double        fDouble;
+      int64_t       fInt64;
+    } fUnion;
+    enum EHave {
+      kNone=0,
+      kDouble,
+      kInt64
+    } fHave;
 
 
 
     UBool shouldRoundUp(int32_t maximumDigits) const;
+
+ public:
+
+    using UMemory::operator new;
+
+    /**
+     * Placement new for stack usage
+     * @internal
+     */
+    static void * U_EXPORT2 operator new(size_t size, void *onStack, EStackMode mode) U_NO_THROW;
+
+ private:
+    inline void internalSetDouble(double d) {
+      fHave = kDouble;
+      fUnion.fDouble=d;
+    }
+    inline void internalSetInt64(int64_t d) {
+      fHave = kInt64;
+      fUnion.fInt64=d;
+    }
+    inline void internalClear() {
+      fHave = kNone;
+    }
 };
 
 
