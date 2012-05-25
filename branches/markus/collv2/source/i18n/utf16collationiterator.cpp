@@ -168,10 +168,10 @@ UTF16CollationIterator::restoreLimit(const void *savedLimit) {
 }
 
 FCDUTF16CollationIterator::FCDUTF16CollationIterator(
-        const CollationData *data, int8_t iterFlags,
+        const CollationData *data,
         const UChar *s, const UChar *lim,
         UErrorCode &errorCode)
-        : UTF16CollationIterator(data, iterFlags, s, s),
+        : UTF16CollationIterator(data, s, s),
           rawStart(s), segmentStart(s), segmentLimit(s), rawLimit(lim),
           lengthBeforeLimit(0),
           smallSteps(TRUE),

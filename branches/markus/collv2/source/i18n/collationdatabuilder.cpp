@@ -620,8 +620,8 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     cd->ces = ce64s.getBuffer();
     cd->contexts = contexts.getBuffer();
     cd->base = base;
-    cd->compressibleBytes = compressibleBytes;
     cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
+    cd->compressibleBytes = compressibleBytes;
     return cd.orphan();
 }
 

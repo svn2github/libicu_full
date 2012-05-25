@@ -77,19 +77,18 @@ private:
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
-    CollationIterator(const CollationData *d, int8_t iterFlags)
+    CollationIterator(const CollationData *d)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
             : trie(d->trie),
               data(d),
-              flags(iterFlags),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
               hiragana(0), anyHiragana(FALSE),
               skipped(NULL) {}
 
     virtual ~CollationIterator();
 
-    inline void setFlags(int8_t f) { flags = f; }
+    const CollationData *getData() const { return data; }
 
     /**
      * Returns the next collation element.
@@ -192,8 +191,6 @@ protected:
     // Main lookup trie of the data object.
     const UTrie2 *trie;
     const CollationData *data;
-
-    int8_t flags;
 
     // TODO: Do we need to support changing iteration direction? (ICU ticket #9104.)
     // If so, then nextCE() (rather, a "slow" version of it)

@@ -30,11 +30,11 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API UTF16CollationIterator : public CollationIterator {
 public:
-    UTF16CollationIterator(const CollationData *d, int8_t iterFlags,
+    UTF16CollationIterator(const CollationData *d,
                            const UChar *s, const UChar *lim)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
-            : CollationIterator(d, iterFlags),
+            : CollationIterator(d),
               start(s), pos(s), limit(lim) {}
 
     virtual ~UTF16CollationIterator();
@@ -94,7 +94,7 @@ protected:
  */
 class U_I18N_API FCDUTF16CollationIterator : public UTF16CollationIterator {
 public:
-    FCDUTF16CollationIterator(const CollationData *data, int8_t iterFlags,
+    FCDUTF16CollationIterator(const CollationData *data,
                               const UChar *s, const UChar *lim,
                               UErrorCode &errorCode);
 

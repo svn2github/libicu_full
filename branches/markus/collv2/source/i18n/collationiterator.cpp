@@ -227,7 +227,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             break;
 #endif
         case Collation::DIGIT_TAG:
-            if(flags & Collation::CODAN) {
+            if(data->options & Collation::CODAN) {
                 // Collect digits, omit leading zeros.
                 CharString digits;
                 for(;;) {
@@ -876,7 +876,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             return 0;
 #endif
         case Collation::DIGIT_TAG:
-            if(fwd.flags & Collation::CODAN) {
+            if(fwd.data->options & Collation::CODAN) {
                 // Collect digits, omit leading zeros.
                 CharString digits;
                 int32_t numLeadingZeros = 0;

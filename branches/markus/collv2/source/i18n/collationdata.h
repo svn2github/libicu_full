@@ -16,6 +16,7 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/ucol.h"
 #include "collation.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
@@ -31,9 +32,11 @@ struct U_I18N_API CollationData : public UMemory {
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL),
               ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
-              jamoCEs(NULL), compressibleBytes(NULL),
+              jamoCEs(NULL),
               fcd16_F00(NULL), nfcImpl(nfc),
-              zeroPrimary(0x12000000), flags(0) {}
+              options(UCOL_DEFAULT_STRENGTH << Collation::STRENGTH_SHIFT),
+              variableTop(0), zeroPrimary(0x12000000),
+              compressibleBytes(NULL), reorderTable(NULL) {}
 
     uint32_t getCE32(UChar32 c) const {
         return UTRIE2_GET32(trie, c);
@@ -93,6 +96,7 @@ struct U_I18N_API CollationData : public UMemory {
     const int64_t *ces;
     /** Array of prefix and contraction-suffix matching data. */
     const UChar *contexts;
+    /** Base collation data, or NULL if this data itself is a base. */
     const CollationData *base;
     /**
      * Simple array of 19+21+27 CEs, one per canonical Jamo L/V/T.
@@ -106,15 +110,19 @@ struct U_I18N_API CollationData : public UMemory {
         // Build & return a simple array of CE32s.
         // Tailoring: Only necessary if Jamos are tailored.
         // If any Jamos have special CE32s, then set DECOMP_HANGUL instead.
-    /** 256 flags for which primary-weight lead bytes are compressible. */
-    const UBool *compressibleBytes;
     /** Linear FCD16 data table for U+0000..U+0EFF. */
     const uint16_t *fcd16_F00;
     const Normalizer2Impl &nfcImpl;
+    /** Collation::CHECK_FCD etc. */
+    int32_t options;
+    /** Variable-top primary weight. 0 if "shifted" mode is off. */
+    uint32_t variableTop;
     /** The single-byte primary weight (xx000000) for '0' (U+0030). */
     uint32_t zeroPrimary;
-    /** Collation::DECOMP_HANGUL etc. */
-    int8_t flags;
+    /** 256 flags for which primary-weight lead bytes are compressible. */
+    const UBool *compressibleBytes;
+    /** 256-byte table for reordering permutation of primary lead bytes; NULL if no reordering. */
+    uint8_t *reorderTable;
 };
 
 U_NAMESPACE_END
