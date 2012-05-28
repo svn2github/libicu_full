@@ -28,6 +28,12 @@ U_NAMESPACE_BEGIN
 
 UTF16CollationIterator::~UTF16CollationIterator() {}
 
+void
+UTF16CollationIterator::resetToStart() {
+    pos = start;
+    CollationIterator::resetToStart();
+}
+
 uint32_t
 UTF16CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
     if(pos != limit) {
@@ -180,6 +186,15 @@ FCDUTF16CollationIterator::FCDUTF16CollationIterator(
     if(U_SUCCESS(errorCode)) {
         buffer.init(2, errorCode);
     }
+}
+
+void
+FCDUTF16CollationIterator::resetToStart() {
+    if(segmentStart != rawStart) {
+        segmentStart = segmentLimit = start = limit = rawStart;
+    }
+    lengthBeforeLimit = 0;
+    UTF16CollationIterator::resetToStart();
 }
 
 UChar32

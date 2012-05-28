@@ -39,6 +39,8 @@ public:
 
     virtual ~UTF16CollationIterator();
 
+    virtual void resetToStart();
+
     void setText(const UChar *s, const UChar *lim) {
         reset();
         start = pos = s;
@@ -47,16 +49,16 @@ public:
 
     // TODO: setText(start, pos, limit)  ?
 
+    virtual UChar32 nextCodePoint(UErrorCode &errorCode);
+
+    virtual UChar32 previousCodePoint(UErrorCode &errorCode);
+
 protected:
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
     virtual UChar handleGetTrailSurrogate();
 
     virtual UBool foundNULTerminator();
-
-    virtual UChar32 nextCodePoint(UErrorCode &errorCode);
-
-    virtual UChar32 previousCodePoint(UErrorCode &errorCode);
 
     /**
      * Returns the next code point, or <0 if none, assuming pos==limit.
@@ -97,6 +99,8 @@ public:
     FCDUTF16CollationIterator(const CollationData *data,
                               const UChar *s, const UChar *lim,
                               UErrorCode &errorCode);
+
+    virtual void resetToStart();
 
     inline void setSmallSteps(UBool small) { smallSteps = small; }
 

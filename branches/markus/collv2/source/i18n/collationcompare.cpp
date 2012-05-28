@@ -68,6 +68,24 @@ STBuffer::doAppend(uint32_t st, UErrorCode &errorCode) {
 }
 
 UCollationResult
+CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
+                                        UErrorCode &errorCode) {
+    UCollationResult result = compareUpToTertiary(left, right, errorCode);
+    if(result != UCOL_EQUAL || left.getData()->getStrength() <= UCOL_TERTIARY || U_FAILURE(errorCode)) {
+        return result;
+    }
+
+    if(left.getData()->variableTop == 0 && !left.getAnyHiragana() && !right.getAnyHiragana()) {
+        // If "shifted" mode is off and neither string contains Hiragana characters,
+        // then there are no quaternary differences.
+        return UCOL_EQUAL;
+    }
+    left.resetToStart();
+    right.resetToStart();
+    return compareQuaternary(left, right, errorCode);
+}
+
+UCollationResult
 CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator &right,
                                       UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
@@ -125,15 +143,15 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
         }
         if(leftPrimary == Collation::NO_CE_WEIGHT) { break; }
     }
-    int32_t strength = data->options >> Collation::STRENGTH_SHIFT;
-    if(strength == UCOL_PRIMARY || U_FAILURE(errorCode)) { return UCOL_EQUAL; }
+    int32_t options = data->options;
+    if(CollationData::getStrength(options) == UCOL_PRIMARY || U_FAILURE(errorCode)) { return UCOL_EQUAL; }
     // TODO: If we decide against comparePrimaryAndCase(),
     // then we need to continue if strength == UCOL_PRIMARY && caseLevel == UCOL_ON.
     // In that case, check for if(strength >= UCOL_SECONDARY) for the secondary level, etc.
 
     // Compare the buffered secondary & tertiary weights.
 
-    if((data->options & Collation::BACKWARD_SECONDARY) == 0) {
+    if((options & CollationData::BACKWARD_SECONDARY) == 0) {
         int32_t leftSTIndex = 0;
         int32_t rightSTIndex = 0;
         for(;;) {
@@ -175,7 +193,7 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
         }
     }
 
-    if((data->options & Collation::CASE_LEVEL) != 0) {
+    if((options & CollationData::CASE_LEVEL) != 0) {
         int32_t leftSTIndex = 0;
         int32_t rightSTIndex = 0;
         for(;;) {
@@ -199,7 +217,7 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
             uint32_t rightCase = rightTertiary & 0xc000;
             if(leftCase != rightCase) {
                 return
-                    ((leftCase < rightCase) ^ ((data->options & Collation::UPPER_FIRST) != 0)) ?
+                    ((leftCase < rightCase) ^ ((options & CollationData::UPPER_FIRST) != 0)) ?
                     UCOL_GREATER : UCOL_LESS;
             }
 
@@ -214,15 +232,15 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
     // TODO: Bug in old ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status):
     // In case level comparison, it compares equal when reaching the end of either input
     // even when one is shorter than the other.
-    if(strength == UCOL_SECONDARY) { return UCOL_EQUAL; }
+    if(CollationData::getStrength(options) == UCOL_SECONDARY) { return UCOL_EQUAL; }
 
     uint32_t tertiaryMask;
     uint32_t caseSwitch = 0;
-    if((data->options & Collation::CASE_FIRST) == 0) {
+    if((options & CollationData::CASE_FIRST) == 0) {
         tertiaryMask = 0x3fff;
     } else {
         tertiaryMask = 0xffff;
-        if((data->options & Collation::UPPER_FIRST) != 0) { caseSwitch = 0xc000; }
+        if((options & CollationData::UPPER_FIRST) != 0) { caseSwitch = 0xc000; }
     }
 
     int32_t leftSTIndex = 0;
@@ -269,7 +287,7 @@ public:
     QuaternaryIterator(CollationIterator &iter)
             : source(iter),
               variableTop(iter.getData()->variableTop),
-              withHiraganaQuaternary((iter.getData()->options & Collation::HIRAGANA_QUATERNARY) != 0),
+              withHiraganaQuaternary((iter.getData()->options & CollationData::HIRAGANA_QUATERNARY) != 0),
               shifted(FALSE), hiragana(0) {}
     uint32_t next(UErrorCode &errorCode);
 private:
@@ -311,8 +329,6 @@ QuaternaryIterator::next(UErrorCode &errorCode) {
     }
 }
 
-// TODO: Add shortcut for non-ignorable (variableTop == 0)
-// and both iterators had !getAnyHiragana() after tertiary comparison.
 UCollationResult
 CollationCompare::compareQuaternary(CollationIterator &left, CollationIterator &right,
                                     UErrorCode &errorCode) {

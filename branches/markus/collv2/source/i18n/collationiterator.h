@@ -91,6 +91,12 @@ public:
     const CollationData *getData() const { return data; }
 
     /**
+     * Resets the iterator state and position to the beginning of the text.
+     * Subclasses must override, and must call the parent class method.
+     */
+    virtual void resetToStart();
+
+    /**
      * Returns the next collation element.
      */
     inline int64_t nextCE(UErrorCode &errorCode) {
@@ -147,6 +153,18 @@ public:
      */
     inline UBool getAnyHiragana() const { return anyHiragana; }
 
+    /**
+     * Returns the next code point (with post-increment).
+     * Public for identical-level comparison and for testing.
+     */
+    virtual UChar32 nextCodePoint(UErrorCode &errorCode) = 0;
+
+    /**
+     * Returns the previous code point (with pre-decrement).
+     * Public for identical-level comparison and for testing.
+     */
+    virtual UChar32 previousCodePoint(UErrorCode &errorCode) = 0;
+
 protected:
     void reset();
 
@@ -170,10 +188,6 @@ protected:
      * (Not needed in Java.)
      */
     virtual UBool foundNULTerminator();
-
-    virtual UChar32 nextCodePoint(UErrorCode &errorCode) = 0;
-
-    virtual UChar32 previousCodePoint(UErrorCode &errorCode) = 0;
 
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode) = 0;
 

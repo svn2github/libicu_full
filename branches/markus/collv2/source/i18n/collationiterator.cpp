@@ -25,6 +25,39 @@
 
 U_NAMESPACE_BEGIN
 
+void
+CollationData::setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    int32_t noStrength = options & ~STRENGTH_MASK;
+    if(value == UCOL_DEFAULT) {
+        options = noStrength | (defaultOptions & STRENGTH_MASK);
+    } else if(value <= UCOL_IDENTICAL) {
+        options = noStrength | (value << STRENGTH_SHIFT);
+    } else {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+    }
+}
+
+void
+CollationData::setAttribute(int32_t bit, UColAttributeValue value,
+                            int32_t defaultOptions, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    switch(value) {
+    case UCOL_ON:
+        options |= bit;
+        break;
+    case UCOL_OFF:
+        options &= ~bit;
+        break;
+    case UCOL_DEFAULT:
+        options = (options & ~bit) | (defaultOptions & bit);
+        break;
+    default:
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        break;
+    }
+}
+
 CEArray::~CEArray() {}
 
 int32_t
@@ -143,7 +176,12 @@ CollationIterator::~CollationIterator() {
 }
 
 void
-CollationIterator::reset() {
+CollationIterator::resetToStart() {
+    reset();
+}
+
+void
+CollationIterator::reset() {  // Needed as a separate function?
     cesIndex = -1;
     hiragana = 0;
     anyHiragana = FALSE;
@@ -227,7 +265,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             break;
 #endif
         case Collation::DIGIT_TAG:
-            if(data->options & Collation::CODAN) {
+            if(data->options & CollationData::CODAN) {
                 // Collect digits, omit leading zeros.
                 CharString digits;
                 for(;;) {
@@ -876,7 +914,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             return 0;
 #endif
         case Collation::DIGIT_TAG:
-            if(fwd.data->options & Collation::CODAN) {
+            if(fwd.data->options & CollationData::CODAN) {
                 // Collect digits, omit leading zeros.
                 CharString digits;
                 int32_t numLeadingZeros = 0;

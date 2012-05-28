@@ -24,7 +24,9 @@ class CollationIterator;
 
 class U_I18N_API CollationCompare /* not : public UObject because all methods are static */ {
 public:
-private:
+    static UCollationResult compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
+                                                  UErrorCode &errorCode);
+
     static UCollationResult compareUpToTertiary(CollationIterator &left, CollationIterator &right,
                                                 UErrorCode &errorCode);
 

@@ -29,14 +29,72 @@ class CollationIterator;
  * Collation data container.
  */
 struct U_I18N_API CollationData : public UMemory {
+    /**
+     * Options bit 0: Perform the FCD check on the input text and deliver normalized text.
+     */
+    static const int32_t CHECK_FCD = 1;
+    /**
+     * Options bit 1: COllate Digits As Numbers.
+     * Treat digit sequences as numbers with CE sequences in numeric order,
+     * rather than returning a normal CE for each digit.
+     */
+    static const int32_t CODAN = 2;
+    /**
+     * Options bit 3: On quaternary level, sort Hiragana lower than other characters.
+     * ("Shifted" primaries sort even lower.)
+     */
+    static const int32_t HIRAGANA_QUATERNARY = 8;
+    /**
+     * Options bit 4: Sort uppercase first if caseLevel or caseFirst is on.
+     */
+    static const int32_t UPPER_FIRST = 0x10;
+    /**
+     * Options bit 5: Keep the case bits in the tertiary weight. (They trump other tertiary values.)
+     * By default, they are removed/ignored.
+     */
+    static const int32_t CASE_FIRST = 0x20;
+    /**
+     * Options bit 6: Insert the case level between the secondary and tertiary levels.
+     */
+    static const int32_t CASE_LEVEL = 0x40;
+    /**
+     * Options bit 7: Compare secondary weights backwards. ("French secondary")
+     */
+    static const int32_t BACKWARD_SECONDARY = 0x80;
+    /**
+     * Options bits 11..8: The 4-bit strength value bit field is shifted by this value.
+     * It is the top used bit field in the options. (No need to mask after shifting.)
+     */
+    static const int32_t STRENGTH_SHIFT = 8;
+    /** Strength options bit mask before shifting. */
+    static const int32_t STRENGTH_MASK = 0xf00;
+
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL),
               ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
               jamoCEs(NULL),
               fcd16_F00(NULL), nfcImpl(nfc),
-              options(UCOL_DEFAULT_STRENGTH << Collation::STRENGTH_SHIFT),
+              options(UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT),
               variableTop(0), zeroPrimary(0x12000000),
               compressibleBytes(NULL), reorderTable(NULL) {}
+
+    void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
+
+    static int32_t getStrength(int32_t options) {
+        return options >> STRENGTH_SHIFT;
+    }
+
+    int32_t getStrength() const {
+        return getStrength(options);
+    }
+
+    /** Sets the options bit for an on/off attribute. */
+    void setAttribute(int32_t bit, UColAttributeValue value,
+                      int32_t defaultOptions, UErrorCode &errorCode);
+
+    UColAttributeValue getAttribute(int32_t bit) const {
+        return ((options & bit) != 0) ? UCOL_ON : UCOL_OFF;
+    }
 
     uint32_t getCE32(UChar32 c) const {
         return UTRIE2_GET32(trie, c);
