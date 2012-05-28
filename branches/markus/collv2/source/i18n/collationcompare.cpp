@@ -218,7 +218,7 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
             if(leftCase != rightCase) {
                 return
                     ((leftCase < rightCase) ^ ((options & CollationData::UPPER_FIRST) != 0)) ?
-                    UCOL_GREATER : UCOL_LESS;
+                    UCOL_LESS : UCOL_GREATER;
             }
 
             if(leftTertiary == Collation::NO_CE_WEIGHT) {
@@ -234,14 +234,7 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
     // even when one is shorter than the other.
     if(CollationData::getStrength(options) == UCOL_SECONDARY) { return UCOL_EQUAL; }
 
-    uint32_t tertiaryMask;
-    uint32_t caseSwitch = 0;
-    if((options & CollationData::CASE_FIRST) == 0) {
-        tertiaryMask = 0x3fff;
-    } else {
-        tertiaryMask = 0xffff;
-        if((options & CollationData::UPPER_FIRST) != 0) { caseSwitch = 0xc000; }
-    }
+    uint32_t tertiaryMask = ((options & CollationData::CASE_FIRST) == 0) ? 0x3fff : 0xffff;
 
     int32_t leftSTIndex = 0;
     int32_t rightSTIndex = 0;
@@ -257,10 +250,12 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
             rightTertiary = rightSTBuffer[rightSTIndex++] & tertiaryMask;
         } while((rightTertiary & 0x3fff) == 0);
 
-        uint32_t leftT = leftTertiary ^ caseSwitch;
-        uint32_t rightT = rightTertiary ^ caseSwitch;
-        if(leftT != rightT) {
-            return (leftT < rightT) ? UCOL_LESS : UCOL_GREATER;
+        if(leftTertiary != rightTertiary) {
+            if(data->sortsTertiaryUpperCaseFirst()) {
+                leftTertiary ^= 0xc000;
+                rightTertiary ^= 0xc000;
+            }
+            return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
         }
         if(leftTertiary == Collation::NO_CE_WEIGHT) { break; }
     }

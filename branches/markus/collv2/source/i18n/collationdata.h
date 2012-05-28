@@ -96,6 +96,10 @@ struct U_I18N_API CollationData : public UMemory {
         return ((options & bit) != 0) ? UCOL_ON : UCOL_OFF;
     }
 
+    UBool sortsTertiaryUpperCaseFirst() const {
+        return (options & (CASE_FIRST | UPPER_FIRST)) == (CASE_FIRST | UPPER_FIRST);
+    }
+
     uint32_t getCE32(UChar32 c) const {
         return UTRIE2_GET32(trie, c);
     }
