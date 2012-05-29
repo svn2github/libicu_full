@@ -1063,9 +1063,9 @@ DecimalFormat::format(int64_t number,
     
     if( data.fFastpathStatus==kFastpathYES ) {
 
-#define kZero '0'
+#define kZero 0x0030
     const int32_t MAX_IDX = MAX_DIGITS+2;
-    char outputStr[MAX_IDX];
+    UChar outputStr[MAX_IDX];
     int32_t destIdx = MAX_IDX;
     outputStr[--destIdx] = 0;  // term
 
@@ -1075,8 +1075,8 @@ DecimalFormat::format(int64_t number,
         n *= -1;
     }
     do { 
-        outputStr[--destIdx] = (char)(n % 10 + kZero);
-        n /= 10;
+      outputStr[--destIdx] = (n % 10) + kZero;
+      n /= 10;
     } while (n > 0);
     
 
@@ -1087,7 +1087,18 @@ DecimalFormat::format(int64_t number,
     int32_t length = MAX_IDX - destIdx -1;
     //uprv_memmove(outputStr, outputStr+MAX_IDX-length, length);
     int32_t prefixLen = appendAffix(appendTo, number, handler, number<0, TRUE);
-    appendTo.append(UnicodeString(outputStr+destIdx, length, ""));
+
+    int32_t maxIntDig = getMaximumIntegerDigits();
+    int32_t prependZero = getMinimumIntegerDigits() - length;
+
+#ifdef FMT_DEBUG
+    printf("prependZero=%d, length=%d, minintdig=%d\n", prependZero, length, getMinimumIntegerDigits());
+#endif    
+    while((prependZero--)>0) {
+      appendTo.append(0x0030); // '0'
+    }
+
+    appendTo.append(outputStr+destIdx, length);
     fieldPosition.setEndIndex(appendTo.length());
     int32_t suffixLen = appendAffix(appendTo, number, handler, number<0, FALSE);
 
@@ -1096,6 +1107,8 @@ DecimalFormat::format(int64_t number,
 #ifdef FMT_DEBUG
         printf("Writing [%s] length [%d] max %d for [%d]\n", outputStr+destIdx, length, MAX_IDX, number);
 #endif
+
+#undef kZero
 
     return appendTo;
   } // end fastpath

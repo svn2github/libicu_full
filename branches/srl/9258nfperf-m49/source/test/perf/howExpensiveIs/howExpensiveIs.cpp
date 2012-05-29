@@ -187,7 +187,7 @@ public:
   }
 protected:
   virtual UNumberFormat* initFmt() {
-    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), 1, "en_US", 0, &setupStatus);
+    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), -1, "en_US", 0, &setupStatus);
   }
   virtual const char *getClassName() {
     return "NumTest";
@@ -287,7 +287,7 @@ public:
   }
 protected:
   virtual UNumberFormat* initFmt() {
-    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), 1, "en_US", 0, &setupStatus);
+    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), -1, "en_US", 0, &setupStatus);
   }
   virtual const char *getClassName() {
     return "NumFmtTest";
@@ -364,7 +364,7 @@ public:
   }
 protected:
   virtual UNumberFormat* initFmt() {
-    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), 1, "en_US", 0, &setupStatus);
+    return unum_open(UNUM_PATTERN_DECIMAL, fPat.getTerminatedBuffer(), -1, "en_US", 0, &setupStatus);
   }
   virtual const char *getClassName() {
     return "NumFmtInt64Test";
@@ -498,6 +498,8 @@ void runTests() {
   // format tests
   { 
     
+    DO_NumFmtInt64Test("0000","0001",1);
+    DO_NumFmtInt64Test("0000","0000",0);
     
 #if 1
     DO_NumFmtTest("#","0",0.0);
