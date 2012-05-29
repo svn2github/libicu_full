@@ -1044,76 +1044,8 @@ DecimalFormat::format(int64_t number,
                       UnicodeString& appendTo,
                       FieldPosition& fieldPosition) const
 {
-#if 1
-
-  const UnicodeString *posPrefix = fPosPrefixPattern;
-  const UnicodeString *posSuffix = fPosSuffixPattern;
-  const UnicodeString *negSuffix = fNegSuffixPattern;
-  // TODO: keep a fCanUseFastpathParse around.  Change it if any of these things change.
-
-
-#if UCONFIG_FORMAT_FASTPATHS_49
-    const DecimalFormatInternal &data = internalData(fReserved);
-
-    
-#ifdef FMT_DEBUG
-    data.dump();
-  printf("fastpath? [%d]\n", number);
-#endif
-    
-    if( data.fFastpathStatus==kFastpathYES ) {
-
-#define kZero '0'
-    const int32_t MAX_IDX = MAX_DIGITS+2;
-    char outputStr[MAX_IDX];
-    int32_t destIdx = MAX_IDX;
-    outputStr[--destIdx] = 0;  // term
-
-    int64_t  n = number;
-    if (number < 0) {   // Negative numbers are slightly larger than a postive
-      //outputStr[--destIdx] = (char)(-(n % 10) + kZero);
-        n *= -1;
-    }
-    do { 
-        outputStr[--destIdx] = (char)(n % 10 + kZero);
-        n /= 10;
-    } while (n > 0);
-    
-
-    FieldPositionOnlyHandler handler(fieldPosition);
-
-    // Slide the number to the start of the output str
-    U_ASSERT(destIdx >= 0);
-    int32_t length = MAX_IDX - destIdx -1;
-    //uprv_memmove(outputStr, outputStr+MAX_IDX-length, length);
-    int32_t prefixLen = appendAffix(appendTo, number, handler, number<0, TRUE);
-    appendTo.append(UnicodeString(outputStr+destIdx, length, ""));
-    fieldPosition.setEndIndex(appendTo.length());
-    int32_t suffixLen = appendAffix(appendTo, number, handler, number<0, FALSE);
-
-    //outputStr[length]=0;
-    
-#ifdef FMT_DEBUG
-        printf("Writing [%s] length [%d] max %d for [%d]\n", outputStr+destIdx, length, MAX_IDX, number);
-#endif
-
-    return appendTo;
-  } // end fastpath
-#endif
-
   FieldPositionOnlyHandler handler(fieldPosition);
-  // this is what unum_formatInt64 calls.
-  // copied from _format.
-    UErrorCode status = U_ZERO_ERROR;
-    DigitList digits;
-    digits.set(number);
-    _format(digits, appendTo, handler, status);
-    // No way to return status from here.
-    return appendTo;
-#else
-  FieldPositionOnlyHandler handler(fieldPosition);
-    return _format(number, appendTo, handler);
-#endif
+  return _format(number, appendTo, handler);
 }
 
 UnicodeString&
@@ -1131,7 +1063,76 @@ DecimalFormat::_format(int64_t number,
                        UnicodeString& appendTo,
                        FieldPositionHandler& handler) const
 {
+    // Bottleneck function for formatting int64_t
     UErrorCode status = U_ZERO_ERROR;
+
+#if UCONFIG_FORMAT_FASTPATHS_49
+  // const UnicodeString *posPrefix = fPosPrefixPattern;
+  // const UnicodeString *posSuffix = fPosSuffixPattern;
+  // const UnicodeString *negSuffix = fNegSuffixPattern;
+
+  const DecimalFormatInternal &data = internalData(fReserved);
+
+#ifdef FMT_DEBUG
+  data.dump();
+  printf("fastpath? [%d]\n", number);
+#endif
+    
+  if( data.fFastpathStatus==kFastpathYES ) {
+
+#define kZero 0x0030
+    const int32_t MAX_IDX = MAX_DIGITS+2;
+    UChar outputStr[MAX_IDX];
+    int32_t destIdx = MAX_IDX;
+    outputStr[--destIdx] = 0;  // term
+
+    int64_t  n = number;
+    if (number < 0) {   // Negative numbers are slightly larger than a postive
+      //outputStr[--destIdx] = (char)(-(n % 10) + kZero);
+        n *= -1;
+    }
+    do { 
+      outputStr[--destIdx] = (n % 10) + kZero;
+      n /= 10;
+    } while (n > 0);
+    
+
+        // Slide the number to the start of the output str
+    U_ASSERT(destIdx >= 0);
+    int32_t length = MAX_IDX - destIdx -1;
+    //uprv_memmove(outputStr, outputStr+MAX_IDX-length, length);
+    int32_t prefixLen = appendAffix(appendTo, number, handler, number<0, TRUE);
+
+    int32_t maxIntDig = getMaximumIntegerDigits();
+    int32_t prependZero = getMinimumIntegerDigits() - length;
+
+#ifdef FMT_DEBUG
+    printf("prependZero=%d, length=%d, minintdig=%d\n", prependZero, length, getMinimumIntegerDigits());
+#endif    
+    int32_t intBegin = appendTo.length();
+
+    while((prependZero--)>0) {
+      appendTo.append(0x0030); // '0'
+    }
+
+    appendTo.append(outputStr+destIdx, length);
+    handler.addAttribute(kIntegerField, intBegin, appendTo.length());
+
+    int32_t suffixLen = appendAffix(appendTo, number, handler, number<0, FALSE);
+
+    //outputStr[length]=0;
+    
+#ifdef FMT_DEBUG
+        printf("Writing [%s] length [%d] max %d for [%d]\n", outputStr+destIdx, length, MAX_IDX, number);
+#endif
+
+#undef kZero
+
+    return appendTo;
+  } // end fastpath
+#endif
+
+  // Else the slow way - via DigitList
     DigitList digits;
     digits.set(number);
     return _format(digits, appendTo, handler, status);
@@ -1194,6 +1195,47 @@ DecimalFormat::format(const StringPiece &number,
                       FieldPositionIterator *posIter,
                       UErrorCode &status) const
 {
+#if UCONFIG_FORMAT_FASTPATHS_49
+  // don't bother if the int64 path is not optimized
+  int32_t len    = number.length();
+
+  if(len>0&&len<10) { /* 10 or more digits may not be an int64 */
+    const char *data = number.data();
+    int64_t num = 0;
+    UBool neg = FALSE;
+    UBool ok = TRUE;
+    
+    int32_t start  = 0;
+
+    if(data[start]=='+') {
+      start++;
+    } else if(data[start]=='-') {
+      neg=TRUE;
+      start++;
+    }
+
+    int32_t place = 1; /* 1, 10, ... */
+    for(int32_t i=len-1;i>=start;i--) {
+      if(data[i]>='0'&&data[i]<='9') {
+        num+=place*(int64_t)(data[i]-'0');
+      } else {
+        ok=FALSE;
+        break;
+      }
+      place *= 10;
+    }
+
+    if(ok) {
+      if(neg) {
+        num = -num;// add minus bit
+      }
+      // format as int64_t
+      return format(num, toAppendTo, posIter, status);
+    }
+    // else fall through
+  }
+#endif
+
     DigitList   dnum;
     dnum.set(number, status);
     if (U_FAILURE(status)) {
