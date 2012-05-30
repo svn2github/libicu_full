@@ -19,6 +19,7 @@
 #include "collationcompare.h"
 #include "collationdata.h"
 #include "collationiterator.h"
+#include "uassert.h"
 
 U_NAMESPACE_BEGIN
 
@@ -75,8 +76,11 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         return result;
     }
 
-    if(left.getData()->variableTop == 0 && !left.getAnyHiragana() && !right.getAnyHiragana()) {
-        // If "shifted" mode is off and neither string contains Hiragana characters,
+    if(left.getData()->variableTop == 0 &&
+            ((left.getData()->options & CollationData::HIRAGANA_QUATERNARY) == 0 ||
+                (!left.getAnyHiragana() && !right.getAnyHiragana()))) {
+        // If "shifted" mode is off and hiraganaQuaternary is off
+        // or neither string contains Hiragana characters,
         // then there are no quaternary differences.
         return UCOL_EQUAL;
     }
@@ -143,53 +147,53 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
         }
         if(leftPrimary == Collation::NO_CE_WEIGHT) { break; }
     }
-    int32_t options = data->options;
-    if(CollationData::getStrength(options) == UCOL_PRIMARY || U_FAILURE(errorCode)) { return UCOL_EQUAL; }
-    // TODO: If we decide against comparePrimaryAndCase(),
-    // then we need to continue if strength == UCOL_PRIMARY && caseLevel == UCOL_ON.
-    // In that case, check for if(strength >= UCOL_SECONDARY) for the secondary level, etc.
+    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
     // Compare the buffered secondary & tertiary weights.
+    // We might skip the secondary level but continue with the case level
+    // which is turned on separately.
+    int32_t options = data->options;
+    if(CollationData::getStrength(options) >= UCOL_SECONDARY) {
+        if((options & CollationData::BACKWARD_SECONDARY) == 0) {
+            int32_t leftSTIndex = 0;
+            int32_t rightSTIndex = 0;
+            for(;;) {
+                uint32_t leftSecondary;
+                do {
+                    leftSecondary = leftSTBuffer[leftSTIndex++] >> 16;
+                } while(leftSecondary == 0);
 
-    if((options & CollationData::BACKWARD_SECONDARY) == 0) {
-        int32_t leftSTIndex = 0;
-        int32_t rightSTIndex = 0;
-        for(;;) {
-            uint32_t leftSecondary;
-            do {
-                leftSecondary = leftSTBuffer[leftSTIndex++] >> 16;
-            } while(leftSecondary == 0);
+                uint32_t rightSecondary;
+                do {
+                    rightSecondary = rightSTBuffer[rightSTIndex++] >> 16;
+                } while(rightSecondary == 0);
 
-            uint32_t rightSecondary;
-            do {
-                rightSecondary = rightSTBuffer[rightSTIndex++] >> 16;
-            } while(rightSecondary == 0);
-
-            if(leftSecondary != rightSecondary) {
-                return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
+                if(leftSecondary != rightSecondary) {
+                    return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
+                }
+                if(leftSecondary == Collation::NO_CE_WEIGHT) { break; }
             }
-            if(leftSecondary == Collation::NO_CE_WEIGHT) { break; }
-        }
-    } else {
-        // French secondary level compares backwards.
-        // Ignore the last item, the NO_CE terminator.
-        int32_t leftSTIndex = leftSTBuffer.length - 1;
-        int32_t rightSTIndex = rightSTBuffer.length - 1;
-        for(;;) {
-            uint32_t leftSecondary = 0;
-            while(leftSecondary == 0 && leftSTIndex > 0) {
-                leftSecondary = leftSTBuffer[--leftSTIndex] >> 16;
-            }
+        } else {
+            // French secondary level compares backwards.
+            // Ignore the last item, the NO_CE terminator.
+            int32_t leftSTIndex = leftSTBuffer.length - 1;
+            int32_t rightSTIndex = rightSTBuffer.length - 1;
+            for(;;) {
+                uint32_t leftSecondary = 0;
+                while(leftSecondary == 0 && leftSTIndex > 0) {
+                    leftSecondary = leftSTBuffer[--leftSTIndex] >> 16;
+                }
 
-            uint32_t rightSecondary = 0;
-            while(rightSecondary == 0 && rightSTIndex > 0) {
-                rightSecondary = rightSTBuffer[--rightSTIndex] >> 16;
-            }
+                uint32_t rightSecondary = 0;
+                while(rightSecondary == 0 && rightSTIndex > 0) {
+                    rightSecondary = rightSTBuffer[--rightSTIndex] >> 16;
+                }
 
-            if(leftSecondary != rightSecondary) {
-                return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
+                if(leftSecondary != rightSecondary) {
+                    return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
+                }
+                if(leftSecondary == 0) { break; }
             }
-            if(leftSecondary == 0) { break; }
         }
     }
 
@@ -197,28 +201,34 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
         int32_t leftSTIndex = 0;
         int32_t rightSTIndex = 0;
         for(;;) {
+            // Case bits cannot distinguish between 0=ignorable and 0=uncased/lowercase.
+            // Therefore, ignore the case "weight" when the non-case tertiary weight is 0.
+            // The data has non-zero case bits only when the non-case tertiary bits are non-zero,
+            // so the "while" condition need not mask with 0x3fff for the "ignorable" test.
             uint32_t leftTertiary;
             do {
                 leftTertiary = leftSTBuffer[leftSTIndex++] & 0xffff;
-            } while((leftTertiary & 0x3fff) == 0);
-            // TODO: Should we construct CEs such that case bits are set only if
-            // the CE is not tertiary-ignorable?
-            // Then we should not need the & 0x3fff in the loop condition.
-            // It seems like otherwise the CE would be malformed
-            // because the higher case level would be non-zero
-            // while the lower tertiary level would be 0.
+                U_ASSERT((leftTertiary & 0x3fff) != 0 || (leftTertiary & 0xc000) == 0);
+            } while(leftTertiary == 0);
 
             uint32_t rightTertiary;
             do {
                 rightTertiary = rightSTBuffer[rightSTIndex++] & 0xffff;
-            } while((rightTertiary & 0x3fff) == 0);
+                U_ASSERT((rightTertiary & 0x3fff) != 0 || (rightTertiary & 0xc000) == 0);
+            } while(rightTertiary == 0);
 
             uint32_t leftCase = leftTertiary & 0xc000;
             uint32_t rightCase = rightTertiary & 0xc000;
             if(leftCase != rightCase) {
-                return
-                    ((leftCase < rightCase) ^ ((options & CollationData::UPPER_FIRST) != 0)) ?
-                    UCOL_LESS : UCOL_GREATER;
+                if((options & CollationData::UPPER_FIRST) == 0) {
+                    return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
+                } else {
+                    // Check for end-of-string before inverting the case bits or result.
+                    // Otherwise NO_CE_WEIGHT would sort greater than mixed/upper case.
+                    if(leftTertiary == Collation::NO_CE_WEIGHT) { return UCOL_LESS; }
+                    if(rightTertiary == Collation::NO_CE_WEIGHT) { return UCOL_GREATER; }
+                    return (leftCase < rightCase) ? UCOL_GREATER : UCOL_LESS;
+                }
             }
 
             if(leftTertiary == Collation::NO_CE_WEIGHT) {
@@ -229,12 +239,9 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
             }
         }
     }
-    // TODO: Bug in old ucol_strcollRegular(collIterate *sColl, collIterate *tColl, UErrorCode *status):
-    // In case level comparison, it compares equal when reaching the end of either input
-    // even when one is shorter than the other.
-    if(CollationData::getStrength(options) == UCOL_SECONDARY) { return UCOL_EQUAL; }
+    if(CollationData::getStrength(options) <= UCOL_SECONDARY) { return UCOL_EQUAL; }
 
-    uint32_t tertiaryMask = ((options & CollationData::CASE_FIRST) == 0) ? 0x3fff : 0xffff;
+    uint32_t tertiaryMask = CollationData::getTertiaryMask(options);
 
     int32_t leftSTIndex = 0;
     int32_t rightSTIndex = 0;
@@ -242,38 +249,29 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
         uint32_t leftTertiary;
         do {
             leftTertiary = leftSTBuffer[leftSTIndex++] & tertiaryMask;
-        } while((leftTertiary & 0x3fff) == 0);
-        // TODO: See TODO about 0x3fff in case level processing.
+            U_ASSERT((leftTertiary & 0x3fff) != 0 || (leftTertiary & 0xc000) == 0);
+        } while(leftTertiary == 0);
 
         uint32_t rightTertiary;
         do {
             rightTertiary = rightSTBuffer[rightSTIndex++] & tertiaryMask;
-        } while((rightTertiary & 0x3fff) == 0);
+            U_ASSERT((rightTertiary & 0x3fff) != 0 || (rightTertiary & 0xc000) == 0);
+        } while(rightTertiary == 0);
 
         if(leftTertiary != rightTertiary) {
-            if(data->sortsTertiaryUpperCaseFirst()) {
-                leftTertiary ^= 0xc000;
-                rightTertiary ^= 0xc000;
+            if(CollationData::sortsTertiaryUpperCaseFirst(options)) {
+                // Check for end-of-string before inverting the case bits or result.
+                // Otherwise NO_CE_WEIGHT would sort greater than mixed/upper case.
+                if(leftTertiary == Collation::NO_CE_WEIGHT) { return UCOL_LESS; }
+                if(rightTertiary == Collation::NO_CE_WEIGHT) { return UCOL_GREATER; }
+                return (leftTertiary < rightTertiary) ? UCOL_GREATER : UCOL_LESS;
+            } else {
+                return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
             }
-            return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
         }
         if(leftTertiary == Collation::NO_CE_WEIGHT) { break; }
     }
 
-    return UCOL_EQUAL;
-}
-
-UCollationResult
-CollationCompare::comparePrimaryAndCase(CollationIterator &/*left*/, CollationIterator &/*right*/,
-                                        UErrorCode &/*errorCode*/) {
-    // TODO: Why?? <quote from v1 implementation>
-    // if(((secS & UCOL_PRIMARYMASK) != 0) || strength > UCOL_PRIMARY)
-    //   primary ignorables should not be considered on the case level when the strength is primary
-    //   otherwise, the CEs stop being well-formed
-    // </quote>
-    // We do consider secondary weights for primary ignorables,
-    // and case bits for primary and secondary ignorables when strength>PRIMARY,
-    // why not case bits for primary ignorables when strengh==PRIMARY?
     return UCOL_EQUAL;
 }
 

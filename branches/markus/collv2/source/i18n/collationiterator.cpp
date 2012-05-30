@@ -29,18 +29,26 @@ void
 CollationData::setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     int32_t noStrength = options & ~STRENGTH_MASK;
-    if(value == UCOL_DEFAULT) {
-        options = noStrength | (defaultOptions & STRENGTH_MASK);
-    } else if(value <= UCOL_IDENTICAL) {
+    switch(value) {
+    case UCOL_PRIMARY:
+    case UCOL_SECONDARY:
+    case UCOL_TERTIARY:
+    case UCOL_QUATERNARY:
+    case UCOL_IDENTICAL:
         options = noStrength | (value << STRENGTH_SHIFT);
-    } else {
+        break;
+    case UCOL_DEFAULT:
+        options = noStrength | (defaultOptions & STRENGTH_MASK);
+        break;
+    default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        break;
     }
 }
 
 void
-CollationData::setAttribute(int32_t bit, UColAttributeValue value,
-                            int32_t defaultOptions, UErrorCode &errorCode) {
+CollationData::setFlag(int32_t bit, UColAttributeValue value,
+                       int32_t defaultOptions, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     switch(value) {
     case UCOL_ON:
@@ -51,6 +59,29 @@ CollationData::setAttribute(int32_t bit, UColAttributeValue value,
         break;
     case UCOL_DEFAULT:
         options = (options & ~bit) | (defaultOptions & bit);
+        break;
+    default:
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        break;
+    }
+}
+
+void
+CollationData::setCaseFirst(UColAttributeValue value, int32_t defaultOptions, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    int32_t noCaseFirst = options & ~CASE_FIRST_AND_UPPER_MASK;
+    switch(value) {
+    case UCOL_OFF:
+        options = noCaseFirst;
+        break;
+    case UCOL_LOWER_FIRST:
+        options = noCaseFirst | CASE_FIRST;
+        break;
+    case UCOL_UPPER_FIRST:
+        options = noCaseFirst | CASE_FIRST_AND_UPPER_MASK;
+        break;
+    case UCOL_DEFAULT:
+        options = noCaseFirst | (defaultOptions & CASE_FIRST_AND_UPPER_MASK);
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;

@@ -49,10 +49,19 @@ struct U_I18N_API CollationData : public UMemory {
      */
     static const int32_t UPPER_FIRST = 0x10;
     /**
-     * Options bit 5: Keep the case bits in the tertiary weight. (They trump other tertiary values.)
-     * By default, they are removed/ignored.
+     * Options bit 5: Keep the case bits in the tertiary weight (they trump other tertiary values)
+     * unless case level is on (when they are *moved* into the separate case level).
+     * By default, the case bits are removed from the tertiary weight (ignored).
+     *
+     * When CASE_FIRST is off, UPPER_FIRST must be off too, corresponding to
+     * the tri-value UCOL_CASE_FIRST attribute: UCOL_OFF vs. UCOL_LOWER_FIRST vs. UCOL_UPPER_FIRST.
      */
     static const int32_t CASE_FIRST = 0x20;
+    /**
+     * Options bit mask for caseFirst and upperFirst, before shifting.
+     * Same value as caseFirst==upperFirst.
+     */
+    static const int32_t CASE_FIRST_AND_UPPER_MASK = CASE_FIRST | UPPER_FIRST;
     /**
      * Options bit 6: Insert the case level between the secondary and tertiary levels.
      */
@@ -89,15 +98,24 @@ struct U_I18N_API CollationData : public UMemory {
     }
 
     /** Sets the options bit for an on/off attribute. */
-    void setAttribute(int32_t bit, UColAttributeValue value,
-                      int32_t defaultOptions, UErrorCode &errorCode);
+    void setFlag(int32_t bit, UColAttributeValue value,
+                 int32_t defaultOptions, UErrorCode &errorCode);
 
-    UColAttributeValue getAttribute(int32_t bit) const {
+    UColAttributeValue getFlag(int32_t bit) const {
         return ((options & bit) != 0) ? UCOL_ON : UCOL_OFF;
     }
 
-    UBool sortsTertiaryUpperCaseFirst() const {
-        return (options & (CASE_FIRST | UPPER_FIRST)) == (CASE_FIRST | UPPER_FIRST);
+    void setCaseFirst(UColAttributeValue value, int32_t defaultOptions, UErrorCode &errorCode);
+
+    static uint32_t getTertiaryMask(int32_t options) {
+        // Remove the case bits from the tertiary weight when caseLevel is on or caseFirst is off.
+        return ((options & (CASE_LEVEL | CASE_FIRST)) == CASE_FIRST) ? 0xffff : 0x3fff;
+    }
+
+    static UBool sortsTertiaryUpperCaseFirst(int32_t options) {
+        // On tertiary level, consider case bits and sort uppercase first
+        // if caseLevel is off and caseFirst==upperFirst.
+        return (options & (CASE_LEVEL | CASE_FIRST_AND_UPPER_MASK)) == CASE_FIRST_AND_UPPER_MASK;
     }
 
     uint32_t getCE32(UChar32 c) const {

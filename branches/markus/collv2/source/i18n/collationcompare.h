@@ -30,9 +30,6 @@ public:
     static UCollationResult compareUpToTertiary(CollationIterator &left, CollationIterator &right,
                                                 UErrorCode &errorCode);
 
-    static UCollationResult comparePrimaryAndCase(CollationIterator &left, CollationIterator &right,
-                                                  UErrorCode &errorCode);
-
     static UCollationResult compareQuaternary(CollationIterator &left, CollationIterator &right,
                                               UErrorCode &errorCode);
 };
