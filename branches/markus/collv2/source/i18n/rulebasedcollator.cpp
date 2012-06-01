@@ -184,6 +184,24 @@ RuleBasedCollator2::compare(const UChar *left, int32_t leftLength,
     return compare(left, leftLength, right, rightLength, TRUE, errorCode);
 }
 
+static int32_t
+findEndOrFFFE(const UChar *s, int32_t i, int32_t &length) {
+    if(length >= 0) {
+        while(i < length && s[i] != 0xfffe) { ++i; }
+    } else {
+        // s is NUL-terminated.
+        UChar c;
+        while((c = s[i]) != 0xfffe) {
+            if(c == 0) {
+                length = i;
+                break;
+            }
+            ++i;
+        }
+    }
+    return i;
+}
+
 UCollationResult
 RuleBasedCollator2::compare(const UChar *left, int32_t leftLength,
                             const UChar *right, int32_t rightLength,
@@ -232,8 +250,31 @@ RuleBasedCollator2::compare(const UChar *left, int32_t leftLength,
     if((data->options & CollationData::CHECK_FCD) == 0) {
         options |= UNORM_INPUT_IS_FCD;
     }
-    int32_t intResult = unorm_compare(left, leftLength, right, rightLength, options, &errorCode);
-    return (intResult == 0) ? UCOL_EQUAL : (intResult < 0) ? UCOL_LESS : UCOL_GREATER;
+    // Treat U+FFFE as a merge separator.
+    // TODO: Test this comparing ab*cde vs. abc*d where *=U+FFFE, all others are ignorable, and c<U+FFFE.
+    // TODO: When generating sort keys, write MERGE_SEPARATOR_BYTE for U+FFFE.
+    int32_t leftStart = 0;
+    int32_t rightStart = 0;
+    for(;;) {
+        int32_t leftEnd = findEndOrFFFE(left, leftStart, leftLength);
+        int32_t rightEnd = findEndOrFFFE(right, rightStart, rightLength);
+        // Compare substrings between U+FFFEs.
+        int32_t intResult = unorm_compare(left + leftStart, leftEnd - leftStart,
+                                          right + rightStart, rightEnd - rightStart,
+                                          options, &errorCode);
+        if(intResult != 0) {
+            return (intResult < 0) ? UCOL_LESS : UCOL_GREATER;
+        }
+        // Did we reach the end of either string?
+        if(leftEnd == leftLength) {
+            return (rightEnd == rightLength) ? UCOL_EQUAL : UCOL_LESS;
+        } else if(rightEnd == rightLength) {
+            return UCOL_GREATER;
+        }
+        // Skip both U+FFFEs and continue.
+        leftStart = leftEnd + 1;
+        rightStart = rightEnd + 1;
+    }
 }
 
 CollationKey &

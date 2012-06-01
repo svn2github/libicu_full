@@ -104,12 +104,11 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
     // Fetch CEs, compare primaries, store secondary & tertiary weights.
     U_ALIGN_CODE(16);
     for(;;) {
-        // We fetch CEs until we get a non-ignorable, non-variable primary or reach the end.
+        // We fetch CEs until we get a non-ignorable primary or reach the end.
         uint32_t leftPrimary;
         do {
             int64_t ce = left.nextCE(errorCode);
             leftPrimary = (uint32_t)(ce >> 32);
-            // TODO: Should [02, 02, 02] be variable?! It is variable in v1 but that seems wrong.
             if(leftPrimary <= variableTop && leftPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
                 // Ignore this CE, all following primary ignorables, and further variable CEs.
                 do {
@@ -125,13 +124,13 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
         do {
             int64_t ce = right.nextCE(errorCode);
             rightPrimary = (uint32_t)(ce >> 32);
-            // TODO: This version keeps [02, 02, 02] variable.
-            if(rightPrimary <= variableTop && rightPrimary > Collation::NO_CE_WEIGHT) {
+            if(rightPrimary <= variableTop && rightPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
                 // Ignore this CE, all following primary ignorables, and further variable CEs.
                 do {
                     ce = right.nextCE(errorCode);
                     rightPrimary = (uint32_t)(ce >> 32);
-                } while(rightPrimary <= variableTop && rightPrimary != Collation::NO_CE_WEIGHT);
+                } while(rightPrimary <= variableTop &&
+                        (rightPrimary > Collation::MERGE_SEPARATOR_PRIMARY || rightPrimary == 0));
             }
             rightSTBuffer.append((uint32_t)ce, errorCode);
         } while(rightPrimary == 0);
@@ -295,17 +294,17 @@ uint32_t
 QuaternaryIterator::next(UErrorCode &errorCode) {
     for(;;) {
         int64_t ce = source.nextCE(errorCode);
-        int8_t hira = source.getHiragana();
-        if(hira >= 0) { hiragana = hira; }
-        if(ce == 0) { continue; }
+        if(withHiraganaQuaternary) {
+            int8_t hira = source.getHiragana();
+            if(hira >= 0) { hiragana = hira; }
+        }
         // Extract the primary weight and use it as a quaternary unless we override it.
         uint32_t q = (uint32_t)(ce >> 32);
         if(q == 0) {
-            // Skip primary ignorables after a shifted primary.
-            if(shifted) { continue; }
-            // Primary ignorable but not tertiary ignorable.
-            q = 0xffffffff;
-            if(withHiraganaQuaternary) { q -= hiragana; }
+            // Skip completely-ignorables, and primary ignorables after a shifted primary.
+            if(ce == 0 || shifted) { continue; }
+            // Primary ignorable but not completely ignorable.
+            q = 0xffffffff - hiragana;
         } else if(q <= Collation::MERGE_SEPARATOR_PRIMARY) {
             // Leave NO_CE_WEIGHT or MERGE_SEPARATOR_PRIMARY as is.
             shifted = FALSE;
@@ -315,8 +314,7 @@ QuaternaryIterator::next(UErrorCode &errorCode) {
         } else {
             // Regular CE.
             shifted = FALSE;
-            q = 0xffffffff;
-            if(withHiraganaQuaternary) { q -= hiragana; }
+            q = 0xffffffff - hiragana;
         }
         return q;
     }
