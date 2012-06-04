@@ -26,6 +26,9 @@
             <icu:dictionaries>
                 <icu:dictionary type="Thai" icu:dependency="thaidict.ctd"/>
                 <icu:dictionary type="Khmr" icu:dependency="khmerdict.ctd"/>
+                <icu:dictionary type="Hani" icu:dependency="cjdict.ctd"/>
+                <icu:dictionary type="Hira" icu:dependency="cjdict.ctd"/>
+                <icu:dictionary type="Kata" icu:dependency="cjdict.ctd"/>
             </icu:dictionaries>
         </icu:breakIteratorData>
     </special>

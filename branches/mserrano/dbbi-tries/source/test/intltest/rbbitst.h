@@ -69,6 +69,7 @@ public:
     void TestUnicodeFiles();
     void TestBug5775();
     void TestTailoredBreaks();
+    void TestTrieDictWithValue();
     void TestDictRules();
     void TestBug5532();
 

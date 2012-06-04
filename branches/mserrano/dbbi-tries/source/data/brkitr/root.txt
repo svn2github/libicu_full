@@ -18,5 +18,8 @@ root{
     dictionaries{
         Khmr:process(dependency){"khmerdict.ctd"}
         Thai:process(dependency){"thaidict.ctd"}
+        Hani:process(dependency){"cjdict.ctd"}
+        Hira:process(dependency){"cjdict.ctd"}
+        Kata:process(dependency){"cjdict.ctd"}
     }
 }
