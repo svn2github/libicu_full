@@ -268,6 +268,22 @@ protected:
      #define ASSERT_SUCCESS(...) assertSuccessImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
      #define ASSERT_EQUALS(...) assertEqualsImpl(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
 
+     #define ASSERT_EQUALS2(args) assertImpl2(__FILE__, __LINE__, #args, \
+                                  assertEqualsHelper args);
+
+    // assertEqualsHelper()
+    //    Parameters are exactly as passed by the test program.
+    //    Return is null if the test passes.
+    //       Return is malloced char * string with the formatted message if the test fails.
+    //
+    const char *assertEqualsHelper(int64_t expected, int64_t actual, ...);
+                               
+    // assertImpl2()
+    //    If the msg string is NULL then the test passed, return quietly.
+    //    otherwise print the message prefixed by the file & line info.
+    //    (specialized for two argument asserts), prefix by the source statement)
+    void assertImpl2(const char *fileName, int lineNum, const char *argString, const char *msg);
+
 
     UBool       assertTrueImpl(const char *fileName, int32_t lineNumber, 
                                const char *macroArgs, 

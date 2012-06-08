@@ -473,7 +473,7 @@ AC_DEFUN(AC_CHECK_STRICT_COMPILE,
         fi
         if test "$GXX" = yes
         then
-            CXXFLAGS="$CXXFLAGS -W -Wall -ansi -pedantic -Wpointer-arith -Wwrite-strings -Wno-long-long"
+            CXXFLAGS="$CXXFLAGS -W -Wall -ansi -pedantic -Wpointer-arith -Wwrite-strings -Wno-long-long -Wno-variadic-macros"
             case "${host}" in
             *-*-solaris*)
                 CXXFLAGS="$CXXFLAGS -D__STDC__=0";;
