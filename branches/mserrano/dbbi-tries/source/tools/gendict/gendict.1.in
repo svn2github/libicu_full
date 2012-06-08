@@ -97,8 +97,12 @@ The file to write the output dictionary to.
 .SH CAVEATS
 The 
 .IR input-file
-is by default assumed to be encoded in UTF-8.
-
+is assumed to be encoded in UTF-8.
+The integers in the 
+.IR input-file 
+that are used as values must be made up of ASCII digits. They 
+may be specified either in hex, by using a 0x prefix, or in 
+decimal.
 Either
 .BI --bytes
 or 
