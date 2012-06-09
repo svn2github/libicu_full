@@ -60,6 +60,22 @@ UnicodeString operator+(const UnicodeString& left, float num);
 UnicodeString toString(const Formattable& f); // liu
 UnicodeString toString(int32_t n);
 #endif
+
+// CString - A convenience class for converting UnicodeStrings to (char *) strings
+//           intended for use in composing error messages.
+//           Depending on the default charset, the conversion may be lossy.
+//    Typical Usage:
+//       errln("the string was: %s", CString(some_unicode_string).data());
+
+class CString {
+  public:
+    CString(const UnicodeString &us);
+    ~CString();
+    const char *c_str() {return data_;};
+  private:
+    char *data_;
+};
+
 //-----------------------------------------------------------------------------
 
 // Use the TESTCASE macro in subclasses of IntlTest.  Define the
@@ -171,6 +187,10 @@ public:
     void dataerrln(const char *fmt, ...);
     void errcheckln(UErrorCode status, const char *fmt, ...);
 
+  private:
+    void dataerr(const char *message, UBool newLine);
+  public:
+
     // Print ALL named errors encountered so far
     void printErrors(); 
         
@@ -257,6 +277,106 @@ protected:
     virtual UBool callTest( IntlTest& testToBeCalled, char* par );
 
 
+
+    /*
+     * Macro-based assertions
+     *
+     *  ASSERT_TRUE((UBool condition [, const char *message [, message parameters ..]]))
+     *  ASSERT_FALSE((UBool condition [, const char *message [, message parameters ..]]))
+     *  ASSERT_SUCCESS((UErrorCode ec [, const char *message [, message parameters ..]]))
+     *  ASSERT_EQUALS((int expected, int actual [, const char *message [, message parameters ..]]))
+     *  ASSERT_EQUALS((String expected, String actual [, const char *message [, message parameters ..]]))
+     *
+     * Notes:
+     *  The macros may only be invoked from within a member function of a class derived from IntlTest.
+     *  
+     *  On failure they will display a default error message with the file and line number of the error,
+     *  the condition being tested, and the expected and actual values.  Any additional caller-supplied
+     *  message is optional, and is typically only useful for providing additional context for tests
+     *  that are looping over data.
+     *
+     *  ASSERT_EQUALS(String, String) will work with UnicodeString, (const char *)strings or "quoted" strings,
+     *  in any combination.  For portability, quoted and char * strings as expected results
+     *  should be restricted to invariant characters.
+     *
+     */
+
+    #define ASSERT_TRUE(args) assertImpl1(__FILE__, __LINE__, #args, assertTrueHelper args);
+    #define ASSERT_FALSE(args) assertImpl1(__FILE__, __LINE__, #args, assertFalseHelper args);
+    #define ASSERT_EQUALS(args) assertImpl2(__FILE__, __LINE__, #args, assertEqualsHelper args);
+    #define ASSERT_SUCCESS(args) assertImpl1(__FILE__, __LINE__, #args, assertSuccessHelper args);
+
+    // assertEqualsHelper()
+    //    Parameters are exactly as passed by the test program.
+    //    Return is null if the test passes.
+    //       Return is malloced char * string with the formatted message if the test fails.
+    //
+    const char *assertTrueHelper(UBool actual, ...);
+    const char *assertFalseHelper(UBool actual, ...);
+    const char *assertEqualsHelper(int64_t expected, int64_t actual, ...);
+    const char *assertSuccessHelper(UErrorCode actual, ...);
+
+                               
+    // assertImpl2()
+    //    If the msg string is NULL then the test passed, return quietly.
+    //    otherwise print the message prefixed by the file & line info.
+    //    (specialized for two argument asserts), prefix by the source statement)
+    UBool assertImpl2(const char *fileName, int lineNum, const char *argString, const char *msg);
+    UBool assertImpl1(const char *fileName, int lineNum, const char *argString, const char *msg);
+
+#if 0
+    UBool       assertFalseImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UBool condition, 
+                               const char *message, ...);
+    UBool       assertFalseImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UBool condition);
+
+    UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UErrorCode ec, 
+                               const char *message, ...);
+    UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UErrorCode ec);
+    
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               int64_t expected, int64_t actual,
+                               const char *message, ...);
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               int64_t expected, int64_t actual);
+
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UnicodeString expected, UnicodeString actual);
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               UnicodeString expected, UnicodeString actual,
+                               const char *message, ...);
+
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               StringPiece expected, StringPiece actual);
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               StringPiece expected, StringPiece actual,
+                               const char *message, ...);
+     
+    template <typename T>
+    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
+                               const char *macroArgs, 
+                               const T& expected, const T& actual,
+                               const char *message, ...);
+
+
+#endif
+
+    void        displayAssert(const char *formattedMessage, UBool passing, int32_t options);
+
+
     UBool       verbose;
     UBool       no_err_msg;
     UBool       quick;
@@ -284,7 +404,12 @@ private:
 
 protected:
 
+    /**
+      * Write out the message string, with all line(s) indented by the current indent amount,
+      *  and an optional added newline at the end.
+      */
     virtual void LL_message( UnicodeString message, UBool newline );
+    virtual void LL_message(const char *message, UBool newline);
 
     // used for collation result reporting, defined here for convenience
 
