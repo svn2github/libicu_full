@@ -22,12 +22,6 @@ UBool DictionaryData::assertTrieType(int32_t type, UErrorCode &errorCode) const 
     return FALSE;
 }
 
-
-/**
- * Returns the transformation offset.
- * Sets an error code if the data does not specify an offset transformation.
- * @return the transformation offset
- */
 UChar32 DictionaryData::getTransformOffset(UErrorCode &errorCode) const { 
     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
     if((transform & TRANSFORM_TYPE_MASK) != TRANSFORM_TYPE_OFFSET) {
@@ -105,23 +99,24 @@ udict_swap(const UDataSwapper *ds, const void *inData, int32_t length,
 
         if (trieType == DictionaryData::TRIE_TYPE_BYTES) {
            // we're done!
-           offset = nextOffset;
+           ;
         }
         else if (trieType == DictionaryData::TRIE_TYPE_UCHARS) {
             ds->swapArray16(ds, inBytes + offset, nextOffset - offset, outBytes + offset, pErrorCode);
-            offset = nextOffset;
         } else {
             udata_printError(ds, "udict_swap(): unknown trie type!\n");
             *pErrorCode = U_UNSUPPORTED_ERROR;
             return 0;
         }
+
+        // these next two sections are empty in the current format,
+        // but may be used later.
+        offset = nextOffset;
         nextOffset = indexes[DictionaryData::IX_RESERVED2_OFFSET];
-        // nothing to do, as this section is empty in the current format
         offset = nextOffset;
         nextOffset = indexes[DictionaryData::IX_TOTAL_SIZE];
         offset = nextOffset;
     }
     return headerSize + size;
 }
-
 
