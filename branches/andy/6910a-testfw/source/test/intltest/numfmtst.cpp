@@ -724,7 +724,7 @@ NumberFormatTest::TestCurrency(void)
     delete currencyFmt;
     s.truncate(0);
     char loc[256]={0};
-    int len = uloc_canonicalize("de_DE_PREEURO", loc, 256, &status);
+    uloc_canonicalize("de_DE_PREEURO", loc, 256, &status);
     currencyFmt = NumberFormat::createCurrencyInstance(Locale(loc),status);
     currencyFmt->format(1.50, s);
     logln((UnicodeString)"Un pauvre en Allemagne a.." + s);
@@ -732,7 +732,7 @@ NumberFormatTest::TestCurrency(void)
         errln((UnicodeString)"FAIL: Expected 1,50<nbsp>DEM");
     delete currencyFmt;
     s.truncate(0);
-    len = uloc_canonicalize("fr_FR_PREEURO", loc, 256, &status);
+    uloc_canonicalize("fr_FR_PREEURO", loc, 256, &status);
     currencyFmt = NumberFormat::createCurrencyInstance(Locale(loc), status);
     currencyFmt->format(1.50, s);
     logln((UnicodeString)"Un pauvre en France a....." + s);
@@ -6278,7 +6278,7 @@ void NumberFormatTest::TestDecimal() {
         ASSERT_EQUALS((45678000, n));
 
         status = U_ZERO_ERROR;
-        f.setDecimalNumber(("-123", status));
+        f.setDecimalNumber("-123", status);
         ASSERT_SUCCESS((status));
         ASSERT_EQUALS((Formattable::kLong, f.getType()));
         ASSERT_EQUALS((-123, f.getLong()));
@@ -6288,7 +6288,7 @@ void NumberFormatTest::TestDecimal() {
         ASSERT_SUCCESS((status));
 
         status = U_ZERO_ERROR;
-        f.setDecimalNumber(("1234567890123", status));  // Number too big for 32 bits
+        f.setDecimalNumber("1234567890123", status);  // Number too big for 32 bits
         ASSERT_SUCCESS((status));
         ASSERT_EQUALS((Formattable::kInt64, f.getType()));
         ASSERT_EQUALS((1234567890123LL, f.getInt64()));
@@ -6489,7 +6489,7 @@ void NumberFormatTest::TestExplicitParents() {
 void NumberFormatTest::TestAvailableNumberingSystems() {
     UErrorCode status = U_ZERO_ERROR;
     StringEnumeration *availableNumberingSystems = NumberingSystem::getAvailableNames(status);
-    CHECK_DATA(status, "NumberingSystem::getAvailableNames()")
+    ASSERT_SUCCESS((status, "NumberingSystem::getAvailableNames()"));
 
     int32_t nsCount = availableNumberingSystems->count(status);
     if ( nsCount < 36 ) {

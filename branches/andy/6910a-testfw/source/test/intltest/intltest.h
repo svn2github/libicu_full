@@ -301,20 +301,41 @@ protected:
      *
      */
 
-    #define ASSERT_TRUE(args) assertImpl1(__FILE__, __LINE__, #args, assertTrueHelper args);
-    #define ASSERT_FALSE(args) assertImpl1(__FILE__, __LINE__, #args, assertFalseHelper args);
-    #define ASSERT_EQUALS(args) assertImpl2(__FILE__, __LINE__, #args, assertEqualsHelper args);
-    #define ASSERT_SUCCESS(args) assertImpl1(__FILE__, __LINE__, #args, assertSuccessHelper args);
+    #define ASSERT_TRUE(args) assertImpl1(__FILE__, __LINE__, #args, assertTrueHelper args)
+    #define ASSERT_FALSE(args) assertImpl1(__FILE__, __LINE__, #args, assertFalseHelper args)
+    #define ASSERT_EQUALS(args) assertImpl2(__FILE__, __LINE__, #args, assertEqualsHelper args)
+    #define ASSERT_SUCCESS(args) assertImpl1(__FILE__, __LINE__, #args, assertSuccessHelper args)
 
-    // assertEqualsHelper()
+    // assert Helper functions
     //    Parameters are exactly as passed by the test program.
+    //    Normal function overloading resolution selects the appropriate function
+    //       at each ASSERT macro usage.
     //    Return is null if the test passes.
     //       Return is malloced char * string with the formatted message if the test fails.
     //
-    const char *assertTrueHelper(UBool actual, ...);
-    const char *assertFalseHelper(UBool actual, ...);
-    const char *assertEqualsHelper(int64_t expected, int64_t actual, ...);
-    const char *assertSuccessHelper(UErrorCode actual, ...);
+    const char *assertTrueHelper(UBool actual);
+    const char *assertTrueHelper(UBool actual, const char *msg, ...);
+    const char *assertFalseHelper(UBool actual);
+    const char *assertFalseHelper(UBool actual, const char *msg, ...);
+
+    const char *assertEqualsHelper(int64_t expected, int64_t actual);
+    const char *assertEqualsHelper(int64_t expected, int64_t actual, 
+                                   const char *msg, ...);
+    const char *assertEqualsHelper(const char *expected, const char *actual);
+    const char *assertEqualsHelper(const char *expected, const char *actual,
+                                   const char *msg, ...);
+    const char *assertEqualsHelper(const char *expected, const StringPiece &actual);
+    const char *assertEqualsHelper(const char *expected, const StringPiece &actual,
+                                   const char *msg, ...);
+    const char *assertEqualsHelper(const char *expected, const UnicodeString &actual);
+    const char *assertEqualsHelper(const char *expected, const UnicodeString &actual,
+                                   const char *msg, ...);
+    const char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual);
+    const char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual,
+                                   const char *msg, ...);
+
+    const char *assertSuccessHelper(UErrorCode actual);
+    const char *assertSuccessHelper(UErrorCode actual, const char *msg, ...);
 
                                
     // assertImpl2()

@@ -1818,6 +1818,29 @@ UBool IntlTest::assertEqualsImpl(const char *fileName, int32_t lineNumber,
 }
 #endif
 
+const char *assertTrueHelper(UBool actual) {
+    if (actual) {
+        return NULL;
+    }
+    char *retString = new char[100];
+    strcpy(retString, "Expected TRUE, got FALSE.");
+    return retString;
+}
+
+const char *assertTrueHelper(UBool actual, const char *msg, ...) {
+    if (actual) {
+        return NULL;
+    }
+    char retString[4000];
+    strcpy(retString, "Expected TRUE, got FALSE. ");
+    va_list ap;
+    va_start(ap, msg);
+    // TODO: use vsnprintf
+    vsprintf(retString + strlen(retString), msg, ap);
+    va_end(ap);
+    return retString;
+}
+ 
 CString::CString(const UnicodeString &us) : data_(NULL) {
 #if U_CHARSET_IS_UTF8 || !UCONFIG_NO_CONVERSION
     int32_t outLength = 0;
