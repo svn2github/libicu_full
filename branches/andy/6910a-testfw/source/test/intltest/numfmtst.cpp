@@ -2404,15 +2404,11 @@ void NumberFormatTest::expect(NumberFormat& fmt, const UnicodeString& str, const
     UErrorCode status = U_ZERO_ERROR;
     Formattable num;
     fmt.parse(str, num, status);
-    if (!ASSERT_SUCCESS((status, "Parsing, str = \"%s\"", CString(str).c_str()))) {
-        return;
-    }
-#if 0
+    ASSERT_SUCCESS((status, "Parsing, str = \"%s\"", CString(str).c_str()));
     if (U_FAILURE(status)) {
-        dataerrln(UnicodeString("FAIL: Parse failed for \"") + str + "\" - " + u_errorName(status));
         return;
     }
-#endif
+
     UnicodeString pat;
     ((DecimalFormat*) &fmt)->toPattern(pat);
     ASSERT_TRUE((equalValue(num, n), "[DATA] \"%s\" x %s = %s, expected %s",

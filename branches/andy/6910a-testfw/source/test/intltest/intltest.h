@@ -11,6 +11,8 @@
 #ifndef _INTLTEST
 #define _INTLTEST
 
+#include <stdarg.h>
+
 // The following includes utypes.h, uobject.h and unistr.h
 #include "unicode/fmtable.h"
 #include "unicode/testlog.h"
@@ -281,11 +283,15 @@ protected:
     /*
      * Macro-based assertions
      *
-     *  ASSERT_TRUE((UBool condition [, const char *message [, message parameters ..]]))
-     *  ASSERT_FALSE((UBool condition [, const char *message [, message parameters ..]]))
-     *  ASSERT_SUCCESS((UErrorCode ec [, const char *message [, message parameters ..]]))
-     *  ASSERT_EQUALS((int expected, int actual [, const char *message [, message parameters ..]]))
-     *  ASSERT_EQUALS((String expected, String actual [, const char *message [, message parameters ..]]))
+     * The EXPECT family of functions will log a failure and continue with the test.
+     * The ASSERT family will log a failure and abort the current test. The test framework
+     *            will continue with the next test function.
+     *
+     *  EXPECT_TRUE((UBool condition [, const char *message [, message parameters ..]]))
+     *  EXPECT_FALSE((UBool condition [, const char *message [, message parameters ..]]))
+     *  EXPECT_SUCCESS((UErrorCode ec [, const char *message [, message parameters ..]]))
+     *  EXPECT_EQUALS((int expected, int actual [, const char *message [, message parameters ..]]))
+     *  EXPECT_EQUALS((String expected, String actual [, const char *message [, message parameters ..]]))
      *
      * Notes:
      *  The macros may only be invoked from within a member function of a class derived from IntlTest.
@@ -295,55 +301,62 @@ protected:
      *  message is optional, and is typically only useful for providing additional context for tests
      *  that are looping over data.
      *
-     *  ASSERT_EQUALS(String, String) will work with UnicodeString, (const char *)strings or "quoted" strings,
-     *  in any combination.  For portability, quoted and char * strings as expected results
-     *  should be restricted to invariant characters.
+     *  EXPECT_EQUALS(String, String) will work with UnicodeString, (const char *)strings or "quoted" strings,
+     *  in any combination.
+     *
+     *  Quoted literal strings should be limited to Invariant characters.
      *
      */
 
-    #define ASSERT_TRUE(args) assertImpl1(__FILE__, __LINE__, #args, assertTrueHelper args)
-    #define ASSERT_FALSE(args) assertImpl1(__FILE__, __LINE__, #args, assertFalseHelper args)
-    #define ASSERT_EQUALS(args) assertImpl2(__FILE__, __LINE__, #args, assertEqualsHelper args)
-    #define ASSERT_SUCCESS(args) assertImpl1(__FILE__, __LINE__, #args, assertSuccessHelper args)
+    #define ADD_FAILURE_AT(args) expectImpl(__FILE__, __LINE__, "FAIL" #args, failHelper args)
+    #define EXPECT_TRUE(args) expectImpl(__FILE__, __LINE__, "EXPECT_TRUE" #args, assertTrueHelper args)
+    #define EXPECT_FALSE(args) expectImpl(__FILE__, __LINE__, "EXPECT_FALSE" #args, assertFalseHelper args)
+    #define EXPECT_EQUALS(args) expectImpl(__FILE__, __LINE__, "EXPECT_EQUALS" #args, assertEqualsHelper args)
+    #define EXPECT_SUCCESS(args) expectImpl(__FILE__, __LINE__, "EXPECT_SUCCESS" #args, assertSuccessHelper args)
 
-    // assert Helper functions
-    //    Parameters are exactly as passed by the test program.
-    //    Normal function overloading resolution selects the appropriate function
-    //       at each ASSERT macro usage.
-    //    Return is null if the test passes.
-    //       Return is malloced char * string with the formatted message if the test fails.
-    //
-    const char *assertTrueHelper(UBool actual);
-    const char *assertTrueHelper(UBool actual, const char *msg, ...);
-    const char *assertFalseHelper(UBool actual);
-    const char *assertFalseHelper(UBool actual, const char *msg, ...);
+    #define FAIL(args) assertImpl(__FILE__, __LINE__, "FAIL" #args, failHelper args)
+    #define ASSERT_TRUE(args) assertImpl(__FILE__, __LINE__, "ASSERT_TRUE" #args, assertTrueHelper args)
+    #define ASSERT_FALSE(args) assertImpl(__FILE__, __LINE__, "ASSERT_FALSE" #args, assertFalseHelper args)
+    #define ASSERT_EQUALS(args) assertImpl(__FILE__, __LINE__, "ASSERT_EQUALS" #args, assertEqualsHelper args)
+    #define ASSERT_SUCCESS(args) assertImpl(__FILE__, __LINE__, "ASSERT_SUCCESS" #args, assertSuccessHelper args)
 
-    const char *assertEqualsHelper(int64_t expected, int64_t actual);
-    const char *assertEqualsHelper(int64_t expected, int64_t actual, 
+
+    // assert & expect Helper functions
+
+    char *failHelper();
+    char *failHelper(const char *msg, ...);
+    char *assertTrueHelper(UBool actual);
+    char *assertTrueHelper(UBool actual, const char *msg, ...);
+    char *assertFalseHelper(UBool actual);
+    char *assertFalseHelper(UBool actual, const char *msg, ...);
+
+    char *assertEqualsHelper(int64_t expected, int64_t actual);
+    char *assertEqualsHelper(int64_t expected, int64_t actual, 
                                    const char *msg, ...);
-    const char *assertEqualsHelper(const char *expected, const char *actual);
-    const char *assertEqualsHelper(const char *expected, const char *actual,
+    char *assertEqualsHelper(const char *expected, const char *actual);
+    char *assertEqualsHelper(const char *expected, const char *actual,
                                    const char *msg, ...);
-    const char *assertEqualsHelper(const char *expected, const StringPiece &actual);
-    const char *assertEqualsHelper(const char *expected, const StringPiece &actual,
+    char *assertEqualsHelper(const char *expected, const StringPiece &actual);
+    char *assertEqualsHelper(const char *expected, const StringPiece &actual,
                                    const char *msg, ...);
-    const char *assertEqualsHelper(const char *expected, const UnicodeString &actual);
-    const char *assertEqualsHelper(const char *expected, const UnicodeString &actual,
+    char *assertEqualsHelper(const char *expected, const UnicodeString &actual);
+    char *assertEqualsHelper(const char *expected, const UnicodeString &actual,
                                    const char *msg, ...);
-    const char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual);
-    const char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual,
+    char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual);
+    char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual,
+                                   const char *msg, ...);
+    char *assertEqualsHelper(const void *expected, const void *actual);
+    char *assertEqualsHelper(const void *expected, const void *actual,
                                    const char *msg, ...);
 
-    const char *assertSuccessHelper(UErrorCode actual);
-    const char *assertSuccessHelper(UErrorCode actual, const char *msg, ...);
+    char *assertSuccessHelper(UErrorCode actual);
+    char *assertSuccessHelper(UErrorCode actual, const char *msg, ...);
 
+    void appendMessage(char *msgBuffer, const char *message, va_list &ap);
                                
-    // assertImpl2()
-    //    If the msg string is NULL then the test passed, return quietly.
-    //    otherwise print the message prefixed by the file & line info.
-    //    (specialized for two argument asserts), prefix by the source statement)
-    UBool assertImpl2(const char *fileName, int lineNum, const char *argString, const char *msg);
-    UBool assertImpl1(const char *fileName, int lineNum, const char *argString, const char *msg);
+    void assertImpl(const char *fileName, int lineNum, const char *argString, const char *msg);
+    void expectImpl(const char *fileName, int lineNum, const char *argString, const char *msg);
+
 
 #if 0
     UBool       assertFalseImpl(const char *fileName, int32_t lineNumber, 
