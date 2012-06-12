@@ -67,7 +67,7 @@ UnicodeString toString(int32_t n);
 //           intended for use in composing error messages.
 //           Depending on the default charset, the conversion may be lossy.
 //    Typical Usage:
-//       errln("the string was: %s", CString(some_unicode_string).data());
+//       errln("the string was: %s", CString(some_unicode_string).c_str());
 
 class CString {
   public:
@@ -284,19 +284,25 @@ protected:
      * Macro-based assertions
      *
      * The EXPECT family of functions will log a failure and continue with the test.
+     *            They return a boolean result, TRUE if the test passes, and FALSE if it fails.
      * The ASSERT family will log a failure and abort the current test. The test framework
      *            will continue with the next test function.
      *
-     *  EXPECT_TRUE((UBool condition [, const char *message [, message parameters ..]]))
-     *  EXPECT_FALSE((UBool condition [, const char *message [, message parameters ..]]))
-     *  EXPECT_SUCCESS((UErrorCode ec [, const char *message [, message parameters ..]]))
-     *  EXPECT_EQUALS((int expected, int actual [, const char *message [, message parameters ..]]))
-     *  EXPECT_EQUALS((String expected, String actual [, const char *message [, message parameters ..]]))
+     *  EXPECT_TRUE((UBool condition [, const char *message [, message parameters ...]]))
+     *  EXPECT_FALSE((UBool condition [, const char *message [, message parameters ...]]))
+     *  EXPECT_SUCCESS((UErrorCode ec [, const char *message [, message parameters ...]]))
+     *  EXPECT_EQUALS((int64_t expected, int64_t actual [, const char *message [, message parameters ...]]))
+     *  EXPECT_EQUALS((String expected, String actual [, const char *message [, message parameters ...]]))
+     *  ADD_FAILURE_AT([const char *message [, message parameters ...]])
      *
-     * Notes:
-     *  The macros may only be invoked from within a member function of a class derived from IntlTest.
-     *  
-     *  On failure they will display a default error message with the file and line number of the error,
+     *  ASSERT_TRUE((UBool condition [, const char *message [, message parameters ...]]))
+     *  ASSERT_FALSE((UBool condition [, const char *message [, message parameters ...]]))
+     *  ASSERT_SUCCESS((UErrorCode ec [, const char *message [, message parameters ...]]))
+     *  ASSERT_EQUALS((int64_t expected, int64_t actual [, const char *message [, message parameters ...]]))
+     *  ASSERT_EQUALS((String expected, String actual [, const char *message [, message parameters ...]]))
+     *  FAIL([const char *message [, message parameters ...]])
+     *
+     *  On failure the macros will output a default error message with the file and line number of the error,
      *  the condition being tested, and the expected and actual values.  Any additional caller-supplied
      *  message is optional, and is typically only useful for providing additional context for tests
      *  that are looping over data.
@@ -320,8 +326,6 @@ protected:
     #define ASSERT_EQUALS(args) assertImpl(__FILE__, __LINE__, "ASSERT_EQUALS" #args, assertEqualsHelper args)
     #define ASSERT_SUCCESS(args) assertImpl(__FILE__, __LINE__, "ASSERT_SUCCESS" #args, assertSuccessHelper args)
 
-
-    // assert & expect Helper functions
 
     char *failHelper();
     char *failHelper(const char *msg, ...);
@@ -355,7 +359,7 @@ protected:
     void appendMessage(char *msgBuffer, const char *message, va_list &ap);
                                
     void assertImpl(const char *fileName, int lineNum, const char *argString, const char *msg);
-    void expectImpl(const char *fileName, int lineNum, const char *argString, const char *msg);
+    UBool expectImpl(const char *fileName, int lineNum, const char *argString, const char *msg);
 
 
 #if 0

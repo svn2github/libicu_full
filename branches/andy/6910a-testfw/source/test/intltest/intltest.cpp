@@ -1834,14 +1834,13 @@ void IntlTest::assertImpl(const char *fileName,
     }
 }
 
-void IntlTest::expectImpl(const char *fileName, 
+UBool IntlTest::expectImpl(const char *fileName, 
                   int lineNumber,
                   const char *assertSource,
                   const char *formattedMessage) 
 {
-    if (formattedMessage == NULL) {
-        // This assertion did not fail.
-        // If we are in verbose mode display an OK message.
+    UBool testPasses = (formattedMessage == NULL);
+    if (testPasses) {
         if (verbose) {
             logln("Pass: %s line %d: %s", fileName, lineNumber, assertSource);
         }
@@ -1849,6 +1848,7 @@ void IntlTest::expectImpl(const char *fileName,
         errln("Fail: %s line %d: %s\n      %s", fileName, lineNumber, assertSource, formattedMessage);
         delete formattedMessage;
     }
+    return testPasses;
 }
 
 

@@ -82,7 +82,6 @@ void UVector32Test::UVector32_API() {
     b = new UVector32(status);
     b->assign(*a, status);
     EXPECT_EQUALS((3, b->size()));
-    ASSERT_EQUALS((4, b->size(), "and some %s stuff", "xxx"));
     EXPECT_EQUALS((20, b->elementAti(1)));
     EXPECT_SUCCESS((status));
     delete a;
