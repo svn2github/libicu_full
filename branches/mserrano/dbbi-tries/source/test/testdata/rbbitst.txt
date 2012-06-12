@@ -171,7 +171,7 @@
 
 # Hiragana & Katakana stay together, but separates from each other and Latin.
 # *** what to do about theoretical combos of chars? i.e. hiragana + accent
-#<data>•abc<200>\N{HIRAGANA LETTER SMALL A}<300>\N{HIRAGANA LETTER VU}\N{COMBINING ACUTE ACCENT}<300>\N{HIRAGANA ITERATION MARK}<300>\N{KATAKANA LETTER SMALL A}\N{KATAKANA ITERATION MARK}\N{HALFWIDTH KATAKANA LETTER WO}\N{HALFWIDTH KATAKANA LETTER N}<300>def<200>#•</data>
+#<data>•abc<200>\N{HIRAGANA LETTER SMALL A}<400>\N{HIRAGANA LETTER VU}\N{COMBINING ACUTE ACCENT}<400>\N{HIRAGANA ITERATION MARK}<400>\N{KATAKANA LETTER SMALL A}\N{KATAKANA ITERATION MARK}\N{HALFWIDTH KATAKANA LETTER WO}\N{HALFWIDTH KATAKANA LETTER N}<400>def<200>#•</data>
 
 # test normalization/dictionary handling of halfwidth katakana: same dictionary phrase in fullwidth and halfwidth
 <data>•芽キャベツ<400>芽キャﾍﾞツ<400></data>
@@ -195,7 +195,8 @@
 <data>•aa\N{COMBINING GRAVE ACCENT}a<200> •</data>
 
 # fullwidth numeric, midletter characters etc should be treated like their halfwidth counterparts
-<data>•ＩＳＮ'Ｔ<200> •１９<100>日<400></data>
+# <data>•ＩＳＮ'Ｔ<200> •１９<100>日<400></data>
+# why was this added with the dbbi stuff?
 
 #      to test for bug #4098467
 #      What follows is a string of Korean characters (I found it in the Yellow Pages
@@ -736,7 +737,7 @@ Bangkok)•</data>
 
 <locale ja>
 <line>
-<data>•\u3041•\u3043•\u3045•\u31f1•</data>
+<data>•\u3041\u3043\u3045\u31f1•</data>
 <locale en>
 <line>
 <data>•\u3041\u3043\u3045\u31f1•</data>
@@ -744,7 +745,7 @@ Bangkok)•</data>
 # The following data was originally in RBBITest::TestJapaneseWordBreak()
 <locale ja>
 <word>
-<data>•\u4ECA\u65E5<400>\u306F\u3044\u3044<300>\u5929\u6C17<400>\u3067\u3059\u306D<300>\u3002•\u000D\u000A•</data>
+<data>•\u4ECA\u65E5<400>\u306F\u3044\u3044<400>\u5929\u6C17<400>\u3067\u3059\u306D<400>\u3002•\u000D\u000A•</data>
 
 # UBreakIteratorType UBRK_WORD, Locale "ja"
 # Don't break in runs of hiragana or runs of ideograph, where the latter includes \u3005 \u3007 \u303B (cldrbug #2009).
@@ -752,11 +753,11 @@ Bangkok)•</data>
 
 <locale ja>
 <word>
-<data>•私達<400>に<300>一〇〇〇<400>の<300>コンピュータ<300>がある<300>。<0>奈々<400>は<300>ワード<300>である<300>。•</data>
+<data>•私達<400>に<400>一〇〇〇<400>の<400>コンピュータ<400>がある<400>。<0>奈々<400>は<400>ワード<400>である<400>。•</data>
 
 <locale root>
 <word>
-<data>•私<400>達<400>に<300>一<400>〇<400>〇<400>〇<400>の<300>コンピュータ<300>が<300>あ<300>る<300>。<0>奈<400>々<200>は<300>ワード<300>で<300>あ<300>る<300>。•</data>
+<data>•私<400>達<400>に<400>一<400>〇<400>〇<400>〇<400>の<400>コンピュータ<400>が<400>あ<400>る<400>。<0>奈<400>々<200>は<400>ワード<400>で<400>あ<400>る<400>。•</data>
 
 # UBreakIteratorType UBRK_SENTENCE, Locale "el"
 # Add break after Greek question mark (cldrbug #2069).
