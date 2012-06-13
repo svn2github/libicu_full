@@ -1798,6 +1798,24 @@ char *IntlTest::assertEqualsHelper(const char *expected, const StringPiece &actu
     return retString;
 }
 
+char *IntlTest::assertEqualsHelper(const char *expected, const char *actual) {
+    char *retString = NULL;
+    if (strcmp(expected, actual) != 0) {
+        retString = new char[4000];
+        sprintf(retString, "Expected \"%s\", got \"%s\".", expected, actual);
+    }
+    return retString;
+}
+
+char *IntlTest::assertEqualsHelper(const char *expected, const char *actual, const char *msg, ...) {
+    char *retString = assertEqualsHelper(expected, actual);
+    va_list ap;
+    va_start(ap, msg);
+    appendMessage(retString, msg, ap);
+    va_end(ap);
+    return retString;
+}
+
 char *IntlTest::assertEqualsHelper(const void *expected, const void *actual) {
     char *retString = NULL;
     if (expected != actual) {
