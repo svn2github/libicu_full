@@ -190,7 +190,13 @@ public:
     void errcheckln(UErrorCode status, const char *fmt, ...);
 
   private:
-    void dataerr(const char *message, UBool newLine);
+
+    // All data errors funnel through this function.
+    void dataerr_c(CharString *message, UBool newLine);
+
+    // All non-data errors funnel through this function.
+    void error_c(const CharString &message, UBool newline);
+
   public:
 
     // Print ALL named errors encountered so far
@@ -327,93 +333,44 @@ protected:
     #define ASSERT_SUCCESS(args) assertImpl(__FILE__, __LINE__, "ASSERT_SUCCESS" #args, assertSuccessHelper args)
 
 
-    char *failHelper();
-    char *failHelper(const char *msg, ...);
-    char *assertTrueHelper(UBool actual);
-    char *assertTrueHelper(UBool actual, const char *msg, ...);
-    char *assertFalseHelper(UBool actual);
-    char *assertFalseHelper(UBool actual, const char *msg, ...);
+    CharString *failHelper();
+    CharString *failHelper(const char *msg, ...);
+    CharString *assertTrueHelper(UBool actual);
+    CharString *assertTrueHelper(UBool actual, const char *msg, ...);
+    CharString *assertFalseHelper(UBool actual);
+    CharString *assertFalseHelper(UBool actual, const char *msg, ...);
 
-    char *assertEqualsHelper(int64_t expected, int64_t actual);
-    char *assertEqualsHelper(int64_t expected, int64_t actual, 
+    CharString *assertEqualsHelper(int64_t expected, int64_t actual);
+    CharString *assertEqualsHelper(int64_t expected, int64_t actual, 
                                    const char *msg, ...);
-    char *assertEqualsHelper(const char *expected, const char *actual);
-    char *assertEqualsHelper(const char *expected, const char *actual,
+    CharString *assertEqualsHelper(const char *expected, const char *actual);
+    CharString *assertEqualsHelper(const char *expected, const char *actual,
                                    const char *msg, ...);
-    char *assertEqualsHelper(const char *expected, const StringPiece &actual);
-    char *assertEqualsHelper(const char *expected, const StringPiece &actual,
+    CharString *assertEqualsHelper(const char *expected, const StringPiece &actual);
+    CharString *assertEqualsHelper(const char *expected, const StringPiece &actual,
                                    const char *msg, ...);
-    char *assertEqualsHelper(const char *expected, const UnicodeString &actual);
-    char *assertEqualsHelper(const char *expected, const UnicodeString &actual,
+    CharString *assertEqualsHelper(const char *expected, const UnicodeString &actual);
+    CharString *assertEqualsHelper(const char *expected, const UnicodeString &actual,
                                    const char *msg, ...);
-    char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual);
-    char *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual,
+    CharString *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual);
+    CharString *assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual,
                                    const char *msg, ...);
-    char *assertEqualsHelper(const void *expected, const void *actual);
-    char *assertEqualsHelper(const void *expected, const void *actual,
+    CharString *assertEqualsHelper(const void *expected, const void *actual);
+    CharString *assertEqualsHelper(const void *expected, const void *actual,
                                    const char *msg, ...);
 
-    char *assertSuccessHelper(UErrorCode actual);
-    char *assertSuccessHelper(UErrorCode actual, const char *msg, ...);
+    CharString *assertSuccessHelper(UErrorCode actual);
+    CharString *assertSuccessHelper(UErrorCode actual, const char *msg, ...);
 
-    void appendMessage(char *msgBuffer, const char *message, va_list &ap);
-                               
-    void assertImpl(const char *fileName, int lineNum, const char *argString, const char *msg);
-    UBool expectImpl(const char *fileName, int lineNum, const char *argString, const char *msg);
+    void assertImpl(const char *fileName, int lineNum, const char *argString, CharString *msg);
+    UBool expectImpl(const char *fileName, int lineNum, const char *argString, CharString *msg);
 
+private:
+    void        vsprintf_it(CharString *dest, const char *fmt, va_list &ap);
+    void        sprintf_it(CharString *dest, const char *fmt, ...);
 
-#if 0
-    UBool       assertFalseImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               UBool condition, 
-                               const char *message, ...);
-    UBool       assertFalseImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               UBool condition);
-
-    UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               UErrorCode ec, 
-                               const char *message, ...);
-    UBool       assertSuccessImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               UErrorCode ec);
-    
-    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               int64_t expected, int64_t actual,
-                               const char *message, ...);
-    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               int64_t expected, int64_t actual);
-
-    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               UnicodeString expected, UnicodeString actual);
-    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               UnicodeString expected, UnicodeString actual,
-                               const char *message, ...);
-
-    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               StringPiece expected, StringPiece actual);
-    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               StringPiece expected, StringPiece actual,
-                               const char *message, ...);
-     
-    template <typename T>
-    UBool       assertEqualsImpl(const char *fileName, int32_t lineNumber, 
-                               const char *macroArgs, 
-                               const T& expected, const T& actual,
-                               const char *message, ...);
-
-
-#endif
-
+protected:
     void        displayAssert(const char *formattedMessage, UBool passing, int32_t options);
-
 
     UBool       verbose;
     UBool       no_err_msg;
@@ -446,7 +403,8 @@ protected:
       * Write out the message string, with all line(s) indented by the current indent amount,
       *  and an optional added newline at the end.
       */
-    virtual void LL_message( UnicodeString message, UBool newline );
+    virtual void LL_message(UnicodeString message, UBool newline );
+    virtual void LL_message(const CharString &message, UBool newline);
     virtual void LL_message(const char *message, UBool newline);
 
     // used for collation result reporting, defined here for convenience

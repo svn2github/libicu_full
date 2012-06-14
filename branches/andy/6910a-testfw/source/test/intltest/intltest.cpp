@@ -847,14 +847,18 @@ void IntlTest::err()
 
 void IntlTest::err( const UnicodeString &message )
 {
-    IncErrorCount();
-    if (!no_err_msg) LL_message( message, FALSE );
+    CharString cMessage;
+    UErrorCode status = U_ZERO_ERROR;
+    cMessage.append(CString(message).c_str(), status);
+    error_c(cMessage, FALSE);
 }
 
 void IntlTest::errln( const UnicodeString &message )
 {
-    IncErrorCount();
-    if (!no_err_msg) LL_message( message, TRUE );
+    CharString cMessage;
+    UErrorCode status = U_ZERO_ERROR;
+    cMessage.append(CString(message).c_str(), status);
+    error_c(cMessage, TRUE);
 }
 
 void IntlTest::dataerr( const UnicodeString &message )
@@ -864,38 +868,50 @@ void IntlTest::dataerr( const UnicodeString &message )
 
 void IntlTest::dataerrln( const UnicodeString &message )
 {
-    dataerrln(CString(message).c_str(), TRUE);
+    CharString cMessage;
+    UErrorCode status = U_ZERO_ERROR;
+    cMessage.append(CString(message).c_str(), status);
+    dataerr_c(&cMessage, TRUE);
 }
 
 void IntlTest::dataerrln(const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString msg;
     va_list ap;
     va_start(ap, fmt);
-    vsprintf(buffer, fmt, ap);
+    vsprintf_it(&msg, fmt, ap);
     va_end(ap);
-    dataerr(buffer, TRUE);
+    dataerr_c(&msg, TRUE);
 }
 
 
-void IntlTest::dataerr(const char *message, UBool newLine) {
-    // Helper function, handle the common formatting tasks for
+void IntlTest::dataerr_c(CharString *message, UBool newLine) {
+    // Internal helper function, handle the common formatting tasks for
     //   all variants of dataerr() and dataerrln().
     IncDataErrorCount();
     UErrorCode status = U_ZERO_ERROR;
-    CharString  augmentedMessage;
-    if (warn_on_missing_data) {
-        augmentedMessage.append("[DATA] ", status);
-    } else {
+    if (!warn_on_missing_data) {
         IncErrorCount();
     }
-    augmentedMessage.append(message, status);
+
     if (!no_err_msg) {
+        CharString  augmentedMessage;
+        if (warn_on_missing_data) {
+            augmentedMessage.append("[DATA] ", status);
+        }
+        augmentedMessage.append(*message, status);
         augmentedMessage.append(" - (Are you missing data?)", status);
         LL_message(augmentedMessage.data(), newLine);
     }
 }
 
+
+void IntlTest::error_c(const CharString &message, UBool newLine) {
+    IncErrorCount();
+    if (!no_err_msg) {
+        LL_message( message, newLine);
+    }
+}
 
 void IntlTest::errcheckln(UErrorCode status, const UnicodeString &message ) {
     if (status == U_FILE_ACCESS_ERROR || status == U_MISSING_RESOURCE_ERROR) {
@@ -908,96 +924,94 @@ void IntlTest::errcheckln(UErrorCode status, const UnicodeString &message ) {
 /* convenience functions that include sprintf formatting */
 void IntlTest::log(const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString message;
     va_list ap;
 
-    va_start(ap, fmt);
     /* sprintf it just to make sure that the information is valid */
-    vsprintf(buffer, fmt, ap);
+    va_start(ap, fmt);
+    vsprintf_it(&message, fmt, ap);
     va_end(ap);
     if( verbose ) {
-        LL_message( buffer, FALSE );
+        LL_message( message, FALSE );
     }
 }
 
 void IntlTest::logln(const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString message;
     va_list ap;
 
     va_start(ap, fmt);
     /* sprintf it just to make sure that the information is valid */
-    vsprintf(buffer, fmt, ap);
+    vsprintf_it(&message, fmt, ap);
     va_end(ap);
     if( verbose ) {
-        LL_message(buffer, TRUE);
+        LL_message(message, TRUE);
     }
 }
 
 /* convenience functions that include sprintf formatting */
 void IntlTest::info(const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString message;
     va_list ap;
 
     va_start(ap, fmt);
     /* sprintf it just to make sure that the information is valid */
-    vsprintf(buffer, fmt, ap);
+    vsprintf_it(&message, fmt, ap);
     va_end(ap);
-    LL_message( buffer, FALSE );
+    LL_message(message, FALSE );
 }
 
 void IntlTest::infoln(const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString message;
     va_list ap;
 
     va_start(ap, fmt);
     /* sprintf it just to make sure that the information is valid */
-    vsprintf(buffer, fmt, ap);
+    vsprintf_it(&message, fmt, ap);
     va_end(ap);
-    LL_message( buffer, TRUE );
+    LL_message(message, TRUE );
 }
 
 void IntlTest::err(const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString message;
     va_list ap;
 
     va_start(ap, fmt);
-    vsprintf(buffer, fmt, ap);
+    vsprintf_it(&message, fmt, ap);
     va_end(ap);
-    IncErrorCount();
-    if (!no_err_msg) LL_message( buffer, FALSE );
+    error_c(message, FALSE);
 }
 
 void IntlTest::errln(const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString message;
     va_list ap;
 
     va_start(ap, fmt);
-    vsprintf(buffer, fmt, ap);
+    vsprintf_it(&message, fmt, ap);
     va_end(ap);
-    IncErrorCount();
-    if (!no_err_msg) LL_message( buffer, TRUE );
+    error_c(message, TRUE);
 }
 
 
 
 void IntlTest::errcheckln(UErrorCode status, const char *fmt, ...)
 {
-    char buffer[4000];
+    CharString message;
     va_list ap;
 
     va_start(ap, fmt);
-    vsprintf(buffer, fmt, ap);
+    vsprintf_it(&message, fmt, ap);
     va_end(ap);
     
     if (status == U_FILE_ACCESS_ERROR || status == U_MISSING_RESOURCE_ERROR) {
-        dataerrln(buffer);
+        dataerr_c(&message, TRUE);
     } else {
-        errln(buffer);
+        error_c(message, TRUE);
     }
 }
 
@@ -1010,11 +1024,15 @@ void IntlTest::LL_message( UnicodeString message, UBool newline ) {
     LL_message(CString(message).c_str(), newline);
 }
 
+void IntlTest::LL_message(const CharString &message, UBool newline ) {
+    LL_message(message.data(), newline);
+}
+
 /**
   *  Write the message out with each line preceded by indentlevel spaces.
   *   and an optional added newline at the end.
   */
-void IntlTest::LL_message( const char *message, UBool newline )
+void IntlTest::LL_message(const char *message, UBool newline )
 {
     const char *lineLimit = NULL;
     for(const char *lineStart = message; ; lineStart=lineLimit) {
@@ -1645,191 +1663,220 @@ static UnicodeString& escape(const UnicodeString& s, UnicodeString& result) {
 }
 
 
-
-void IntlTest::appendMessage(char *msgBuffer, const char *message, va_list &ap) {
-    if (msgBuffer != NULL) {
-        strcat(msgBuffer, " Message: ");
-        vsprintf(msgBuffer + strlen(msgBuffer), message, ap);
+// vsprintf into an ICU CharString, appending to its existing contents.
+//
+//   All varargs vsprintf operations within intltest funnel through this function.
+//   Platform vagaries on buffer overflow handling are isolated, and handled here.
+//
+//   Errors from CharString are ignored. We are probably already trying to display
+//   an error, and the worst that will happen is that that error message will be
+//   truncated.
+//
+void IntlTest::vsprintf_it(CharString *dest, const char *fmt, va_list &ap) {
+    if (dest == NULL) {
+        return;
+    }
+    char buffer[200];
+    UErrorCode status = U_ZERO_ERROR;
+    int count = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+    if (count < (int)sizeof(buffer)) {
+        dest->append(buffer, count, status);
+    } else {
+        int32_t capacity;
+        char *destBuf = dest->getAppendBuffer(count+1, count+1, capacity, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+        vsnprintf(destBuf, count+1, fmt, ap);
+        dest->append(destBuf, count, status);
     }
 }
 
+void IntlTest::sprintf_it(CharString *dest, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vsprintf_it(dest, fmt, ap);
+    va_end(ap);
+}
 
-char *IntlTest::failHelper() {
-    char *retString = new char[4000];
-    strcpy(retString, "");
+
+CharString *IntlTest::failHelper() {
+    CharString *retString = new CharString;
     return retString;
 }
 
-char *IntlTest::failHelper(const char *msg, ...) {
-    char *retString = failHelper();
+CharString *IntlTest::failHelper(const char *msg, ...) {
+    CharString *retString = failHelper();
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertTrueHelper(UBool actual) {
-    char *retString = NULL;
+CharString *IntlTest::assertTrueHelper(UBool actual) {
+    CharString *retString = NULL;
+    UErrorCode status = U_ZERO_ERROR;
     if (!actual) {
-        retString = new char[4000];
-        strcpy(retString, "Expected TRUE, got FALSE.");
+        retString = new CharString;
+        retString->append("Expected TRUE, got FALSE.", status);
     }
     return retString;
 }
 
-char *IntlTest::assertTrueHelper(UBool actual, const char *msg, ...) {
-    char *retString = assertTrueHelper(actual);
+CharString *IntlTest::assertTrueHelper(UBool actual, const char *msg, ...) {
+    CharString *retString = assertTrueHelper(actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertFalseHelper(UBool actual) {
-    char *retString = NULL;
+CharString *IntlTest::assertFalseHelper(UBool actual) {
+    CharString *retString = NULL;
+    UErrorCode status = U_ZERO_ERROR;
     if (actual) {
-        retString = new char[4000];
-        strcpy(retString, "Expected FALSE, got TRUE.");
+        retString = new CharString();
+        retString->append("Expected FALSE, got TRUE.", status);
     }
     return retString;
 }
 
-char *IntlTest::assertFalseHelper(UBool actual, const char *msg, ...) {
-    char *retString = assertFalseHelper(actual);
+CharString *IntlTest::assertFalseHelper(UBool actual, const char *msg, ...) {
+    CharString *retString = assertFalseHelper(actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
 
-char *IntlTest::assertSuccessHelper(UErrorCode errorCode) {
-    char *retString = NULL;
+CharString *IntlTest::assertSuccessHelper(UErrorCode errorCode) {
+    CharString *retString = NULL;
     if (U_FAILURE(errorCode)) {
-        retString = new char[4000];
-        sprintf(retString, "expected success, got %s", u_errorName(errorCode));
+        retString = new CharString;
+        sprintf_it(retString, "expected success, got %s", u_errorName(errorCode));
     }
     return retString;
 }
 
-char *IntlTest::assertSuccessHelper(UErrorCode errorCode, const char *msg, ...) {
-    char *retString = assertSuccessHelper(errorCode);
+CharString *IntlTest::assertSuccessHelper(UErrorCode errorCode, const char *msg, ...) {
+    CharString *retString = assertSuccessHelper(errorCode);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(int64_t expected, int64_t actual) {
-    char *retString = NULL;
+CharString *IntlTest::assertEqualsHelper(int64_t expected, int64_t actual) {
+    CharString *retString = NULL;
     if (expected != actual) {
-        retString = new char[4000];
+        retString = new CharString;
 #if defined(_MSC_VER)
-        sprintf(retString, "Expected %I64d, got %I64d.", expected, actual);
+        sprintf_it(retString, "Expected %I64d, got %I64d.", expected, actual);
 #else
-        sprintf(retString, "Expected %lld, got %lld.", (long long)expected, (long long)actual);
+        sprintf_it(retString, "Expected %lld, got %lld.", (long long)expected, (long long)actual);
 #endif
     }
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(int64_t expected, int64_t actual, const char *msg, ...) {
-    char *retString = assertEqualsHelper(expected, actual);
+CharString *IntlTest::assertEqualsHelper(int64_t expected, int64_t actual, const char *msg, ...) {
+    CharString *retString = assertEqualsHelper(expected, actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const char * expected, const UnicodeString &actual) {
+CharString *IntlTest::assertEqualsHelper(const char * expected, const UnicodeString &actual) {
     UnicodeString expectedStr(expected, -1, US_INV);
     return assertEqualsHelper(expectedStr, actual);
 }
 
 
-char *IntlTest::assertEqualsHelper(const char * expected, const UnicodeString &actual, const char *msg, ...) {
-    char *retString = assertEqualsHelper(expected, actual);
+CharString *IntlTest::assertEqualsHelper(const char * expected, const UnicodeString &actual, const char *msg, ...) {
+    CharString *retString = assertEqualsHelper(expected, actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual) {
-    char *retString = NULL;
+CharString *IntlTest::assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual) {
+    CharString *retString = NULL;
     if (expected != actual) {
-        retString = new char[4000];
-        sprintf(retString, "Expected \"%s\", got \"%s\".", 
+        retString = new CharString;
+        sprintf_it(retString, "Expected \"%s\", got \"%s\".", 
                 CString(expected).c_str(), CString(actual).c_str());
     }
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual, const char *msg, ...) {
-    char *retString = assertEqualsHelper(expected, actual);
+CharString *IntlTest::assertEqualsHelper(const UnicodeString &expected, const UnicodeString &actual, const char *msg, ...) {
+    CharString *retString = assertEqualsHelper(expected, actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const char *expected, const StringPiece &actual) {
-    char *retString = NULL;
+CharString *IntlTest::assertEqualsHelper(const char *expected, const StringPiece &actual) {
+    CharString *retString = NULL;
     if (strcmp(expected, actual.data()) != 0) {
-        retString = new char[4000];
-        sprintf(retString, "Expected \"%s\", got \"%s\".", expected, actual.data());
+        retString = new CharString;
+        sprintf_it(retString, "Expected \"%s\", got \"%s\".", expected, actual.data());
     }
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const char *expected, const StringPiece &actual, const char *msg, ...) {
-    char *retString = assertEqualsHelper(expected, actual);
+CharString *IntlTest::assertEqualsHelper(const char *expected, const StringPiece &actual, const char *msg, ...) {
+    CharString *retString = assertEqualsHelper(expected, actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const char *expected, const char *actual) {
-    char *retString = NULL;
+CharString *IntlTest::assertEqualsHelper(const char *expected, const char *actual) {
+    CharString *retString = NULL;
     if (strcmp(expected, actual) != 0) {
-        retString = new char[4000];
-        sprintf(retString, "Expected \"%s\", got \"%s\".", expected, actual);
+        retString = new CharString;
+        sprintf_it(retString, "Expected \"%s\", got \"%s\".", expected, actual);
     }
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const char *expected, const char *actual, const char *msg, ...) {
-    char *retString = assertEqualsHelper(expected, actual);
+CharString *IntlTest::assertEqualsHelper(const char *expected, const char *actual, const char *msg, ...) {
+    CharString *retString = assertEqualsHelper(expected, actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const void *expected, const void *actual) {
-    char *retString = NULL;
+CharString *IntlTest::assertEqualsHelper(const void *expected, const void *actual) {
+    CharString *retString = NULL;
     if (expected != actual) {
-        retString = new char[4000];
-        sprintf(retString, "Expected \"%p\", got \"%p\".", expected, actual);
+        retString = new CharString;
+        sprintf_it(retString, "Expected \"%p\", got \"%p\".", expected, actual);
     }
     return retString;
 }
 
-char *IntlTest::assertEqualsHelper(const void *expected, const void *actual, const char *msg, ...) {
-    char *retString = assertEqualsHelper(expected, actual);
+CharString *IntlTest::assertEqualsHelper(const void *expected, const void *actual, const char *msg, ...) {
+    CharString *retString = assertEqualsHelper(expected, actual);
     va_list ap;
     va_start(ap, msg);
-    appendMessage(retString, msg, ap);
+    vsprintf_it(retString, msg, ap);
     va_end(ap);
     return retString;
 }
@@ -1837,7 +1884,7 @@ char *IntlTest::assertEqualsHelper(const void *expected, const void *actual, con
 void IntlTest::assertImpl(const char *fileName, 
                   int lineNumber,
                   const char *assertSource,
-                  const char *formattedMessage) 
+                  CharString *formattedMessage) 
 {
     if (formattedMessage == NULL) {
         // This assertion did not fail.
@@ -1846,7 +1893,7 @@ void IntlTest::assertImpl(const char *fileName,
             logln("Pass: %s line %d: %s", fileName, lineNumber, assertSource);
         }
     } else {
-        errln("Fail: %s line %d: %s\n      %s", fileName, lineNumber, assertSource, formattedMessage);
+        errln("Fail: %s line %d: %s\n      %s", fileName, lineNumber, assertSource, formattedMessage->data());
         delete formattedMessage;
         throw (const char *)"Intltest Assert Exception";
     }
@@ -1855,7 +1902,7 @@ void IntlTest::assertImpl(const char *fileName,
 UBool IntlTest::expectImpl(const char *fileName, 
                   int lineNumber,
                   const char *assertSource,
-                  const char *formattedMessage) 
+                  CharString *formattedMessage) 
 {
     UBool testPasses = (formattedMessage == NULL);
     if (testPasses) {
@@ -1863,7 +1910,7 @@ UBool IntlTest::expectImpl(const char *fileName,
             logln("Pass: %s line %d: %s", fileName, lineNumber, assertSource);
         }
     } else {
-        errln("Fail: %s line %d: %s\n      %s", fileName, lineNumber, assertSource, formattedMessage);
+        errln("Fail: %s line %d: %s\n      %s", fileName, lineNumber, assertSource, formattedMessage->data());
         delete formattedMessage;
     }
     return testPasses;
