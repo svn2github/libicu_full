@@ -342,7 +342,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             ce32 = d->ce32s[ce32 & 0xfffff];
             break;
         case Collation::HANGUL_TAG:
-            setHangulExpansion(ce32);
+            setHangulExpansion(c);
             cesIndex = 1;
             return ces[0];
         case Collation::LEAD_SURROGATE_TAG:
@@ -997,7 +997,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             ce32 = d->ce32s[ce32 & 0xfffff];
             break;
         case Collation::HANGUL_TAG:
-            fwd.setHangulExpansion(ce32);
+            fwd.setHangulExpansion(c);
             fwd.cesIndex = fwd.cesMaxIndex;
             return fwd.ces[fwd.cesMaxIndex];
         case Collation::LEAD_SURROGATE_TAG:

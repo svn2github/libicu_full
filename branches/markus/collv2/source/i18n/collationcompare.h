@@ -27,9 +27,7 @@ public:
     static UCollationResult compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
                                                   UErrorCode &errorCode);
 
-    static UCollationResult compareUpToTertiary(CollationIterator &left, CollationIterator &right,
-                                                UErrorCode &errorCode);
-
+private:
     static UCollationResult compareQuaternary(CollationIterator &left, CollationIterator &right,
                                               UErrorCode &errorCode);
 };

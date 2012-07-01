@@ -181,15 +181,11 @@ struct U_I18N_API CollationData : public UMemory {
     /**
      * Simple array of 19+21+27 CEs, one per canonical Jamo L/V/T.
      * For fast handling of HANGUL_TAG.
-     *
-     * NULL if Jamos require more complicated handling.
-     * In this case, the DECOMP_HANGUL flag is set.
      */
     const int64_t *jamoCEs;
         // TODO
-        // Build & return a simple array of CE32s.
+        // Build & return a simple array of CEs.
         // Tailoring: Only necessary if Jamos are tailored.
-        // If any Jamos have special CE32s, then set DECOMP_HANGUL instead.
     /** Linear FCD16 data table for U+0000..U+0EFF. */
     const uint16_t *fcd16_F00;
     const Normalizer2Impl &nfcImpl;

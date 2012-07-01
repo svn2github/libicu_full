@@ -1,6 +1,6 @@
 /********************************************************************
- * COPYRIGHT: 
- * Copyright (c) 2002-2003, International Business Machines Corporation and
+ * COPYRIGHT:
+ * Copyright (c) 2002-2012, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -33,15 +33,16 @@ public:
   void TestTableShifted(/* par */);     
   void TestRulesNonIgnorable(/* par */);
   void TestRulesShifted(/* par */);     
+  void TestTable2NonIgnorable();
 private:
   void initRbUCA();
-  void setCollNonIgnorable(UCollator *coll);
-  void setCollShifted(UCollator *coll);
-  void testConformance(UCollator *coll);
+  void setCollNonIgnorable(Collator *coll);
+  void setCollShifted(Collator *coll);
+  void testConformance(Collator *coll);
   void openTestFile(const char *type);
 
-  UCollator *UCA;
-  UCollator *rbUCA;
+  RuleBasedCollator *UCA;  // rule-based so rules are available
+  Collator *rbUCA;
   FILE *testFile;
   UErrorCode status;
   char testDataPath[1024];

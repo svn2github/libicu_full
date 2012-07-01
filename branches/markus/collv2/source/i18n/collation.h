@@ -112,7 +112,7 @@ public:
         /**
          * Points to contraction data.
          * Bits 19..2: Index into prefix/contraction data.
-         * Bit      1: Set if the first character of any contraction suffix is >=U+0300.
+         * Bit      1: Set if the first character of every contraction suffix is >=U+0300.
          * Bit      0: Set if any contraction suffix ends with cc != 0.
          */
         CONTRACTION_TAG = 9,

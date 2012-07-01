@@ -131,6 +131,9 @@ CollationDataBuilder::initBase(UErrorCode &errorCode) {
 
     initHanRanges(errorCode);
     initHanCompat(errorCode);
+
+    uint32_t hangulCE32 = makeSpecialCE32(Collation::HANGUL_TAG, 0u);
+    utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
     // TODO
 }
 
@@ -277,6 +280,75 @@ CollationDataBuilder::getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const {
     int32_t offset = (c - (lower32 >> 8)) * (lower32 & 0xff);  // delta * increment
     return makeLongPrimaryCE32(
         Collation::incThreeBytePrimaryByOffset(p, isCompressiblePrimary(p), offset));
+}
+
+UBool
+CollationDataBuilder::isAssigned(UChar32 c) const {
+    uint32_t ce32 = utrie2_get32(trie, c);
+    return ce32 != Collation::MIN_SPECIAL_CE32 && ce32 != Collation::UNASSIGNED_CE32;
+}
+
+int64_t
+CollationDataBuilder::getSingleCE(UChar32 c, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return 0; }
+    uint32_t ce32 = utrie2_get32(trie, c);
+    if(ce32 == Collation::MIN_SPECIAL_CE32) {
+        ce32 = base->getCE32(c);
+    }
+    for(;;) {  // Loop while ce32 is special.
+        if(!Collation::isSpecialCE32(ce32)) {
+            return Collation::ceFromCE32(ce32);
+        }
+        int32_t tag = Collation::getSpecialCE32Tag(ce32);
+        if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
+            errorCode = U_UNSUPPORTED_ERROR;
+            return 0;
+        }
+        switch(tag) {
+        case Collation::EXPANSION32_TAG:
+            if((ce32 & 7) == 1) {
+                ce32 = ce32s.elementAti((ce32 >> 3) & 0x1ffff);
+                break;
+            } else {
+                errorCode = U_UNSUPPORTED_ERROR;
+                return 0;
+            }
+        case Collation::EXPANSION_TAG: {
+            if((ce32 & 7) == 1) {
+                return ce64s.elementAti((ce32 >> 3) & 0x1ffff);
+            } else {
+                errorCode = U_UNSUPPORTED_ERROR;
+                return 0;
+            }
+        }
+        case Collation::PREFIX_TAG:
+        case Collation::CONTRACTION_TAG:
+        case Collation::HANGUL_TAG:
+        case Collation::LEAD_SURROGATE_TAG:
+            errorCode = U_UNSUPPORTED_ERROR;
+            return 0;
+        case Collation::DIGIT_TAG:
+            // Fetch the non-CODAN CE32 and continue.
+            ce32 = ce32s.elementAti((ce32 >> 4) & 0xffff);
+            break;
+        case Collation::HIRAGANA_TAG:
+            // Fetch the normal CE32 and continue.
+            ce32 = ce32s.elementAti(ce32 & 0xfffff);
+            break;
+        case Collation::OFFSET_TAG:
+            ce32 = getCE32FromOffsetCE32(c, ce32);
+            break;
+        case Collation::IMPLICIT_TAG:
+            if((ce32 & 1) == 0) {
+                U_ASSERT(c == 0);
+                // Fetch the normal ce32 for U+0000 and continue.
+                ce32 = ce32s.elementAti(0);
+                break;
+            } else {
+                return Collation::unassignedCEFromCodePoint(c);
+            }
+        }
+    }
 }
 
 int32_t
@@ -541,6 +613,30 @@ CollationDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength,
     return makeSpecialCE32(Collation::EXPANSION_TAG, (i << 3) | length7);
 }
 
+UBool
+CollationDataBuilder::setJamoCEs(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return FALSE; }
+    UBool anyJamoAssigned = FALSE;
+    int32_t i;  // Count within Jamo types.
+    int32_t j = 0;  // Count across Jamo types.
+    UChar32 jamo = Hangul::JAMO_L_BASE;
+    for(i = 0; i < Hangul::JAMO_L_COUNT; ++i, ++j, ++jamo) {
+        anyJamoAssigned |= isAssigned(jamo);
+        jamoCEs[j] = getSingleCE(jamo, errorCode);
+    }
+    jamo = Hangul::JAMO_V_BASE;
+    for(i = 0; i < Hangul::JAMO_V_COUNT; ++i, ++j, ++jamo) {
+        anyJamoAssigned |= isAssigned(jamo);
+        jamoCEs[j] = getSingleCE(jamo, errorCode);
+    }
+    jamo = Hangul::JAMO_T_BASE + 1;  // Omit U+11A7 which is not a "T" Jamo.
+    for(i = 1; i < Hangul::JAMO_T_COUNT; ++i, ++j, ++jamo) {
+        anyJamoAssigned |= isAssigned(jamo);
+        jamoCEs[j] = getSingleCE(jamo, errorCode);
+    }
+    return anyJamoAssigned;
+}
+
 void
 CollationDataBuilder::setHiragana(UErrorCode &errorCode) {
     UnicodeSet hira(UNICODE_STRING_SIMPLE("[[:Hira:][\\u3099-\\u309C]]"), errorCode);
@@ -596,9 +692,12 @@ CollationDataBuilder::setLeadSurrogates(UErrorCode &errorCode) {
 
 CollationData *
 CollationDataBuilder::build(UErrorCode &errorCode) {
+    // TODO: Prevent build() after build().
     // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
 
     buildContexts(errorCode);
+
+    UBool anyJamoAssigned = setJamoCEs(errorCode);
     setHiragana(errorCode);
     setLeadSurrogates(errorCode);
 
@@ -620,6 +719,11 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     cd->ces = ce64s.getBuffer();
     cd->contexts = contexts.getBuffer();
     cd->base = base;
+    if(anyJamoAssigned || base == NULL) {
+        cd->jamoCEs = jamoCEs;
+    } else {
+        cd->jamoCEs = base->jamoCEs;
+    }
     cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
     cd->compressibleBytes = compressibleBytes;
     return cd.orphan();
@@ -657,17 +761,17 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
     UCharsTrieBuilder prefixBuilder(errorCode);
     UCharsTrieBuilder contractionBuilder(errorCode);
     do {
-        // Collect all contraction suffixes for one prefix.
-        ConditionalCE32 *firstCond =
-            reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
-        ConditionalCE32 *lastCond = firstCond;
+        cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
         // The prefix or suffix can be empty, but not both.
-        U_ASSERT(firstCond->context.length() > 1);
-        int32_t prefixLength = firstCond->context[0];
-        UnicodeString prefix(firstCond->context, 0, prefixLength + 1);
-        while(lastCond->next >= 0 &&
-                (cond = reinterpret_cast<ConditionalCE32 *>(
-                    conditionalCE32s[lastCond->next]))->context.startsWith(prefix)) {
+        U_ASSERT(cond->context.length() > 1);
+        int32_t prefixLength = cond->context[0];
+        UnicodeString prefix(cond->context, 0, prefixLength + 1);
+        // Collect all contraction suffixes for one prefix.
+        ConditionalCE32 *firstCond = cond;
+        ConditionalCE32 *lastCond = cond;
+        while(cond->next >= 0 &&
+                (cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]))
+                    ->context.startsWith(prefix)) {
             lastCond = cond;
         }
         uint32_t ce32;
@@ -676,6 +780,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             // One prefix without contraction suffix.
             U_ASSERT(firstCond == lastCond);
             ce32 = lastCond->ce32;
+            cond = lastCond;
         } else {
             // Build the contractions trie.
             contractionBuilder.clear();
@@ -689,7 +794,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
                 emptySuffixCE32 = defaultCE32;
             }
             // Latin optimization: Flags bit 1 indicates whether
-            // the first character of any contraction suffix is >=U+0300.
+            // the first character of every contraction suffix is >=U+0300.
             // Short-circuits contraction matching when a normal Latin letter follows.
             int32_t flags = 0;
             if(cond->context[suffixStart] >= 0x300) { flags |= 2; }
@@ -713,6 +818,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             }
             ce32 = makeSpecialCE32(Collation::CONTRACTION_TAG, (index << 2) | flags);
         }
+        U_ASSERT(cond == lastCond);
         if(prefixLength == 0) {
             if(cond->next < 0) {
                 // No non-empty prefixes, only contractions.

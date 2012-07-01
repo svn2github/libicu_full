@@ -71,27 +71,6 @@ STBuffer::doAppend(uint32_t st, UErrorCode &errorCode) {
 UCollationResult
 CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
                                         UErrorCode &errorCode) {
-    UCollationResult result = compareUpToTertiary(left, right, errorCode);
-    if(result != UCOL_EQUAL || left.getData()->getStrength() <= UCOL_TERTIARY || U_FAILURE(errorCode)) {
-        return result;
-    }
-
-    if(left.getData()->variableTop == 0 &&
-            ((left.getData()->options & CollationData::HIRAGANA_QUATERNARY) == 0 ||
-                (!left.getAnyHiragana() && !right.getAnyHiragana()))) {
-        // If "shifted" mode is off and hiraganaQuaternary is off
-        // or neither string contains Hiragana characters,
-        // then there are no quaternary differences.
-        return UCOL_EQUAL;
-    }
-    left.resetToStart();
-    right.resetToStart();
-    return compareQuaternary(left, right, errorCode);
-}
-
-UCollationResult
-CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator &right,
-                                      UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
     // Buffers for secondary & tertiary weights.
@@ -270,8 +249,19 @@ CollationCompare::compareUpToTertiary(CollationIterator &left, CollationIterator
         }
         if(leftTertiary == Collation::NO_CE_WEIGHT) { break; }
     }
+    if(CollationData::getStrength(options) <= UCOL_TERTIARY) { return UCOL_EQUAL; }
 
-    return UCOL_EQUAL;
+    if(variableTop == 0 &&
+            ((options & CollationData::HIRAGANA_QUATERNARY) == 0 ||
+                (!left.getAnyHiragana() && !right.getAnyHiragana()))) {
+        // If "shifted" mode is off and hiraganaQuaternary is off
+        // or neither string contains Hiragana characters,
+        // then there are no quaternary differences.
+        return UCOL_EQUAL;
+    }
+    left.resetToStart();
+    right.resetToStart();
+    return compareQuaternary(left, right, errorCode);
 }
 
 class QuaternaryIterator {

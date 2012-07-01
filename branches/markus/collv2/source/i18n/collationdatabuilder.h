@@ -45,6 +45,17 @@ public:
 
     void initTailoring(const CollationData *b, UErrorCode &errorCode);
 
+    /**
+     * @return TRUE if c has CEs in this builder
+     */
+    UBool isAssigned(UChar32 c) const;
+
+    /**
+     * Returns the single CE for c.
+     * Sets an error code if c does not have a single CE.
+     */
+    int64_t getSingleCE(UChar32 c, UErrorCode &errorCode) const;
+
     void add(const UnicodeString &prefix, const UnicodeString &s,
              const int64_t ces[], int32_t cesLength,
              UErrorCode &errorCode);
@@ -55,6 +66,7 @@ private:
     void initHanRanges(UErrorCode &errorCode);
     void initHanCompat(UErrorCode &errorCode);
 
+    UBool setJamoCEs(UErrorCode &errorCode);
     void setHiragana(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);
 
@@ -114,6 +126,7 @@ private:
     UVector32 ce32s;
     UVector64 ce64s;
     UVector conditionalCE32s;  // vector of ConditionalCE32
+    int64_t jamoCEs[19+21+27];
     // Linear FCD16 data table for U+0000..U+0EFF.
     uint16_t *fcd16_F00;
     // Flags for which primary-weight lead bytes are compressible.

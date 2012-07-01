@@ -547,10 +547,13 @@ public:
                                 UErrorCode& status);
 #endif  /* U_HIDE_DRAFT_API */
 
-private:
+public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationData *d)
             : data(d), defaultData(d), ownedData(NULL) {}
+    RuleBasedCollator2(const CollationData *d, CollationData *od)
+            : data(d), defaultData(d), ownedData(od) {}
 
+private:
     UCollationResult compare(const UChar *left, int32_t leftLength,
                              const UChar *right, int32_t rightLength,
                              UBool maybeNUL,

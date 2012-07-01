@@ -442,7 +442,7 @@ static int uprv_uca_setMaxExpansion(uint32_t           endexpansion,
 {
     // TODO: remove debug code
     if(expansionsize > 4) {
-        printf("coll-expansion-size %d\n", expansionsize);
+        // printf("coll-expansion-size %d\n", expansionsize);
     }
     // TODO: end of debug code
     if (maxexpansion->size == 0) {
@@ -1005,6 +1005,7 @@ static uint32_t uprv_uca_addContraction(tempUCATable *t, uint32_t CE,
 
     if(cpsize<element->cSize) { // This is a real contraction, if there are other characters after the first
         // TODO: remove debug code
+#if 0
         const Normalizer2Impl *nfcImpl = Normalizer2Factory::getNFCImpl(*status);
         UChar32 last;
         uint32_t i = element->cSize;
@@ -1016,6 +1017,7 @@ static uint32_t uprv_uca_addContraction(tempUCATable *t, uint32_t CE,
             printCCC(nfcImpl, element->cPoints, element->cSize);
             printf("\n");
         }
+#endif
         // TODO: end of debug code
         uint32_t j = 0;
         for (j=1; j<element->cSize; j++) {   /* First add contraction chars to unsafe CP hash table */

@@ -98,7 +98,27 @@ RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) {
 void
 RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
                                  UErrorCode &errorCode) {
-    // TODO
+    if(U_FAILURE(errorCode)) { return; }
+    if(ownedData == NULL) {
+        if(value == UCOL_DEFAULT) { return; }
+        if(value == getAttribute(attr, errorCode) || U_FAILURE(errorCode)) { return; }
+        ownedData = new CollationData(*defaultData);
+        if(ownedData == NULL) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        // TODO: clone the reorderTable and maybe more
+        data = ownedData;
+    }
+
+    switch(attr) {
+    case UCOL_NORMALIZATION_MODE:
+        ownedData->setFlag(CollationData::CHECK_FCD, value, defaultData->options, errorCode);
+        break;
+    default:
+        // TODO
+        break;
+    }
 }
 
 Collator::ECollationStrength
@@ -294,12 +314,14 @@ RuleBasedCollator2::getCollationKey(const UChar *source, int32_t sourceLength,
 int32_t
 RuleBasedCollator2::getSortKey(const UnicodeString &source, uint8_t *result,
                                int32_t resultLength) const {
+    if(resultLength > 0) { *result = 0; }
     return 0;  // TODO
 }
 
 int32_t
 RuleBasedCollator2::getSortKey(const UChar *source, int32_t sourceLength,
                                uint8_t *result, int32_t resultLength) const {
+    if(resultLength > 0) { *result = 0; }
     return 0;  // TODO
 }
 
