@@ -1438,30 +1438,6 @@ write_uca_table(const char *filename,
         return;
     }
 
-    // * set to zero
-    struct {
-        UChar32 start;
-        UChar32 end;
-        int32_t value;
-    } ranges[] =
-    {
-        {0xAC00, 0xD7B0, UCOL_SPECIAL_FLAG | (HANGUL_SYLLABLE_TAG << 24) },  //0 HANGUL_SYLLABLE_TAG,/* AC00-D7AF*/
-        //{0xD800, 0xDC00, UCOL_SPECIAL_FLAG | (LEAD_SURROGATE_TAG << 24)  },  //1 LEAD_SURROGATE_TAG, already set in utrie_open() /* D800-DBFF*/
-        {0xDC00, 0xE000, UCOL_SPECIAL_FLAG | (TRAIL_SURROGATE_TAG << 24) },  //2 TRAIL_SURROGATE DC00-DFFF
-        // Now directly handled in the collation code by the swapCJK function.
-        //{0x3400, 0x4DB6, UCOL_SPECIAL_FLAG | (CJK_IMPLICIT_TAG << 24)    },  //3 CJK_IMPLICIT_TAG,   /* 0x3400-0x4DB5*/
-        //{0x4E00, 0x9FA6, UCOL_SPECIAL_FLAG | (CJK_IMPLICIT_TAG << 24)    },  //4 CJK_IMPLICIT_TAG,   /* 0x4E00-0x9FA5*/
-        //{0xF900, 0xFA2E, UCOL_SPECIAL_FLAG | (CJK_IMPLICIT_TAG << 24)    },  //5 CJK_IMPLICIT_TAG,   /* 0xF900-0xFA2D*/
-        //{0x20000, 0x2A6D7, UCOL_SPECIAL_FLAG | (CJK_IMPLICIT_TAG << 24)  },  //6 CJK_IMPLICIT_TAG,   /* 0x20000-0x2A6D6*/
-        //{0x2F800, 0x2FA1E, UCOL_SPECIAL_FLAG | (CJK_IMPLICIT_TAG << 24)  },  //7 CJK_IMPLICIT_TAG,   /* 0x2F800-0x2FA1D*/
-    };
-    uint32_t i = 0;
-
-    for(i = 0; i<sizeof(ranges)/sizeof(ranges[0]); i++) {
-      utrie_setRange32(t->mapping, ranges[i].start, ranges[i].end, ranges[i].value, TRUE);
-    }
-
-
     int32_t surrogateCount = 0;
     while(!feof(data)) {
         if(U_FAILURE(*status)) {
@@ -1697,6 +1673,7 @@ getDUCETData(UErrorCode &errorCode) {
     }
     LocalPointer<CollationDataBuilder> builder(new CollationDataBuilder(errorCode));
     LocalPointer<CollationData> ducet(makeDUCETFromFractionalUCA(*builder, errorCode));
+    ducet->variableTop = 0x0cfe0000;  // TODO: Parse from [variable top = 0C FE].
     if(U_SUCCESS(errorCode)) {
         Mutex lock;
         if(gDucet == NULL) {

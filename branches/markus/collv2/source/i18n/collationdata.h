@@ -40,6 +40,14 @@ struct U_I18N_API CollationData : public UMemory {
      */
     static const int32_t CODAN = 2;
     /**
+     * "Shifted" alternate handling.
+     */
+    static const int32_t SHIFTED = 4;
+    /**
+     * Alternate-handling mask. 0 for non-ignorable.
+     */
+    static const int32_t ALTERNATE_MASK = 4;  // TODO: 0xc;
+    /**
      * Options bit 3: On quaternary level, sort Hiragana lower than other characters.
      * ("Shifted" primaries sort even lower.)
      */
@@ -106,6 +114,9 @@ struct U_I18N_API CollationData : public UMemory {
     }
 
     void setCaseFirst(UColAttributeValue value, int32_t defaultOptions, UErrorCode &errorCode);
+
+    void setAlternateHandling(UColAttributeValue value,
+                              int32_t defaultOptions, UErrorCode &errorCode);
 
     static uint32_t getTertiaryMask(int32_t options) {
         // Remove the case bits from the tertiary weight when caseLevel is on or caseFirst is off.

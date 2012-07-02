@@ -89,6 +89,27 @@ CollationData::setCaseFirst(UColAttributeValue value, int32_t defaultOptions, UE
     }
 }
 
+void
+CollationData::setAlternateHandling(UColAttributeValue value,
+                                    int32_t defaultOptions, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    int32_t noAlternate = options & ~ALTERNATE_MASK;
+    switch(value) {
+    case UCOL_NON_IGNORABLE:
+        options = noAlternate;
+        break;
+    case UCOL_SHIFTED:
+        options = noAlternate | SHIFTED;
+        break;
+    case UCOL_DEFAULT:
+        options = noAlternate | (defaultOptions & ALTERNATE_MASK);
+        break;
+    default:
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        break;
+    }
+}
+
 CEArray::~CEArray() {}
 
 int32_t

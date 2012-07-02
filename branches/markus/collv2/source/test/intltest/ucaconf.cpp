@@ -66,6 +66,7 @@ void UCAConformanceTest::runIndexedTest( int32_t index, UBool exec, const char* 
     TESTCASE_AUTO(TestRulesNonIgnorable);
     TESTCASE_AUTO(TestRulesShifted);
     TESTCASE_AUTO(TestTable2NonIgnorable);
+    TESTCASE_AUTO(TestTable2Shifted);
     TESTCASE_AUTO_END;
 }
 
@@ -298,6 +299,13 @@ void UCAConformanceTest::TestTable2NonIgnorable() {
     RuleBasedCollator2 coll(getDUCETData(status));
     setCollNonIgnorable(&coll);
     openTestFile("NON_IGNORABLE");
+    testConformance(&coll);
+}
+
+void UCAConformanceTest::TestTable2Shifted() {
+    RuleBasedCollator2 coll(getDUCETData(status));
+    setCollShifted(&coll);
+    openTestFile("SHIFTED");
     testConformance(&coll);
 }
 

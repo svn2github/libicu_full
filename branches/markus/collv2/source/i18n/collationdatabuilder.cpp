@@ -725,6 +725,7 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
         cd->jamoCEs = base->jamoCEs;
     }
     cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
+    if(base != NULL) { cd->variableTop = base->variableTop; }
     cd->compressibleBytes = compressibleBytes;
     return cd.orphan();
 }

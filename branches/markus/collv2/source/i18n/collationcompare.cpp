@@ -78,7 +78,13 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     STBuffer rightSTBuffer;
 
     const CollationData *data = left.getData();
-    uint32_t variableTop = data->variableTop;
+    int32_t options = data->options;
+    uint32_t variableTop;
+    if((options & CollationData::ALTERNATE_MASK) == 0) {
+        variableTop = 0;
+    } else {
+        variableTop = data->variableTop;
+    }
 
     // Fetch CEs, compare primaries, store secondary & tertiary weights.
     U_ALIGN_CODE(16);
@@ -130,7 +136,6 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     // Compare the buffered secondary & tertiary weights.
     // We might skip the secondary level but continue with the case level
     // which is turned on separately.
-    int32_t options = data->options;
     if(CollationData::getStrength(options) >= UCOL_SECONDARY) {
         if((options & CollationData::BACKWARD_SECONDARY) == 0) {
             int32_t leftSTIndex = 0;
@@ -268,9 +273,14 @@ class QuaternaryIterator {
 public:
     QuaternaryIterator(CollationIterator &iter)
             : source(iter),
-              variableTop(iter.getData()->variableTop),
+              variableTop(0),
               withHiraganaQuaternary((iter.getData()->options & CollationData::HIRAGANA_QUATERNARY) != 0),
-              shifted(FALSE), hiragana(0) {}
+              shifted(FALSE), hiragana(0) {
+        const CollationData *data = iter.getData();
+        if((data->options & CollationData::ALTERNATE_MASK) != 0) {
+            variableTop = data->variableTop;
+        }
+    }
     uint32_t next(UErrorCode &errorCode);
 private:
     CollationIterator &source;

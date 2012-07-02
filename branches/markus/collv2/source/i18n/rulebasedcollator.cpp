@@ -112,8 +112,14 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
     }
 
     switch(attr) {
+    case UCOL_ALTERNATE_HANDLING:
+        ownedData->setAlternateHandling(value, defaultData->options, errorCode);
+        break;
     case UCOL_NORMALIZATION_MODE:
         ownedData->setFlag(CollationData::CHECK_FCD, value, defaultData->options, errorCode);
+        break;
+    case UCOL_STRENGTH:
+        ownedData->setStrength(value, defaultData->options, errorCode);
         break;
     default:
         // TODO

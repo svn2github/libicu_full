@@ -34,6 +34,7 @@ public:
   void TestRulesNonIgnorable(/* par */);
   void TestRulesShifted(/* par */);     
   void TestTable2NonIgnorable();
+  void TestTable2Shifted();
 private:
   void initRbUCA();
   void setCollNonIgnorable(Collator *coll);
