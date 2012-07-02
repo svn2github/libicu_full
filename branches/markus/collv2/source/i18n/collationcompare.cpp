@@ -192,37 +192,42 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             // for the "ignorable" test.
             uint32_t leftTertiary;
             do {
-                leftTertiary = leftSTBuffer[leftSTIndex++] & 0xffff;
+                leftTertiary = leftSTBuffer[leftSTIndex++];
                 U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
                          (leftTertiary & 0xc0c0) == 0);
+                leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
             } while(leftTertiary == 0);
 
             uint32_t rightTertiary;
             do {
-                rightTertiary = rightSTBuffer[rightSTIndex++] & 0xffff;
+                rightTertiary = rightSTBuffer[rightSTIndex++];
                 U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
                          (rightTertiary & 0xc0c0) == 0);
+                rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
             } while(rightTertiary == 0);
 
-            uint32_t leftCase = leftTertiary & 0xc000;
-            uint32_t rightCase = rightTertiary & 0xc000;
-            if(leftCase != rightCase) {
-                if((options & CollationData::UPPER_FIRST) == 0) {
-                    return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
-                } else {
-                    // Check for end-of-string before inverting the case bits or result.
-                    // Otherwise NO_CE_WEIGHT would sort greater than mixed/upper case.
-                    if(leftTertiary == Collation::NO_CE_WEIGHT) { return UCOL_LESS; }
-                    if(rightTertiary == Collation::NO_CE_WEIGHT) { return UCOL_GREATER; }
-                    return (leftCase < rightCase) ? UCOL_GREATER : UCOL_LESS;
+            if(leftTertiary != rightTertiary) {
+                // Turn the two case bits into full weights so that we handle
+                // end-of-string and merge-sorting properly:
+                // Pass through NO_CE_WEIGHT and MERGE_SEPARATOR
+                // and make real case bits larger than the MERGE_SEPARATOR.
+                uint32_t leftCase = leftTertiary;
+                if(leftTertiary > Collation::MERGE_SEPARATOR_TERTIARY) {
+                    leftCase = (leftCase & 0xc000) | 0x10000;
                 }
-            }
-
-            if(leftTertiary == Collation::NO_CE_WEIGHT) {
-                if(rightTertiary == Collation::NO_CE_WEIGHT) { break; }
-                return UCOL_LESS;
-            } else if(rightTertiary == Collation::NO_CE_WEIGHT) {
-                return UCOL_GREATER;
+                uint32_t rightCase = rightTertiary;
+                if(rightTertiary > Collation::MERGE_SEPARATOR_TERTIARY) {
+                    rightCase = (rightCase & 0xc000) | 0x10000;
+                }
+                if(leftCase != rightCase) {
+                    if((options & CollationData::UPPER_FIRST) != 0) {
+                        leftCase ^= 0xc000;
+                        rightCase ^= 0xc000;
+                    }
+                    return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
+                }
+            } else if(leftTertiary == Collation::NO_CE_WEIGHT) {
+                break;
             }
         }
     }
@@ -254,14 +259,12 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
         if(leftTertiary != rightTertiary) {
             if(CollationData::sortsTertiaryUpperCaseFirst(options)) {
-                // Check for end-of-string before inverting the case bits or result.
-                // Otherwise NO_CE_WEIGHT would sort greater than mixed/upper case.
-                if(leftTertiary == Collation::NO_CE_WEIGHT) { return UCOL_LESS; }
-                if(rightTertiary == Collation::NO_CE_WEIGHT) { return UCOL_GREATER; }
-                return (leftTertiary < rightTertiary) ? UCOL_GREATER : UCOL_LESS;
-            } else {
-                return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
+                // Pass through NO_CE_WEIGHT and MERGE_SEPARATOR
+                // and keep real tertiary weights larger than the MERGE_SEPARATOR.
+                if(leftTertiary > Collation::MERGE_SEPARATOR_TERTIARY) { leftTertiary ^= 0xc000; }
+                if(rightTertiary > Collation::MERGE_SEPARATOR_TERTIARY) { rightTertiary ^= 0xc000; }
             }
+            return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
         }
         if(leftTertiary == Collation::NO_CE_WEIGHT) { break; }
     }
