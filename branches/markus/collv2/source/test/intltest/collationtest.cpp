@@ -181,7 +181,7 @@ void CollationTest::TestImplicits() {
         return;
     }
     const UnicodeSet *sets[] = { &coreHan, &otherHan, &unassigned };
-    UChar32 prev;
+    UChar32 prev = 0;
     uint32_t prevPrimary = 0;
     UTF16CollationIterator ci(cd.getAlias(), NULL, NULL);
     for(int32_t i = 0; i < LENGTHOF(sets); ++i) {
@@ -1291,8 +1291,9 @@ UCAElements *readAnElement(FILE *data,
                     return NULL;
                 }
                 // Primary second bytes 03 and FF are compression terminators.
-                // TODO: 02 or 03?
-                if (j == 6 && (b == 2 || b == 0xff)) {
+                // TODO: 02 & 03 are usable when the lead byte is not compressible.
+                // 02 is unusable and 03 is the low compression terminator when the lead byte is compressible.
+                if (j == 6 && b == 0xff) {
                     fprintf(stderr, "Warning: invalid UCA primary second weight byte %02X for %s\n",
                             b, buffer);
                     return NULL;

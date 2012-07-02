@@ -29,13 +29,19 @@ public:
     // Special sort key bytes for all levels.
     static const uint8_t TERMINATOR_BYTE = 0;
     static const uint8_t LEVEL_SEPARATOR_BYTE = 1;
+    /**
+     * Merge-sort-key separator.
+     * Must not be used as the lead byte of any CE weight,
+     * nor as primary compression low terminator.
+     * Otherwise usable.
+     */
     static const uint8_t MERGE_SEPARATOR_BYTE = 2;
     static const uint32_t MERGE_SEPARATOR_PRIMARY = 0x02000000;  // U+FFFE
     static const uint32_t MERGE_SEPARATOR_TERTIARY = 0x0200;  // U+FFFE
     static const uint32_t MERGE_SEPARATOR_CE32 = 0x02000202;  // U+FFFE
 
     /**
-     * Primary compression low terminator.
+     * Primary compression low terminator, must be greater than MERGE_SEPARATOR_BYTE.
      * Reserved value in primary second byte if the lead byte is compressible.
      * Otherwise usable in all CE weight bytes.
      */

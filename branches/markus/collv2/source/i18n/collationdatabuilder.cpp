@@ -170,10 +170,10 @@ CollationDataBuilder::initHanRanges(UErrorCode &errorCode) {
     int32_t numHan = han.size() * step + 1;
     // Numbers of Han primaries per lead byte determined by
     // numbers of 2nd (not compressible) times 3rd primary byte values.
-    int32_t numHanPerLeadByte = 253 * 253;
+    int32_t numHanPerLeadByte = 254 * 254;
     int32_t numHanLeadBytes = (numHan + numHanPerLeadByte - 1) / numHanPerLeadByte;
     uint32_t hanPrimary = (uint32_t)(Collation::UNASSIGNED_IMPLICIT_BYTE - numHanLeadBytes) << 24;
-    hanPrimary |= 0x30300;
+    hanPrimary |= 0x20200;
     // TODO: Save [fixed first implicit byte xx] and [first implicit [hanPrimary, 05, 05]]
     // TODO: Set the range in invuca.
     UnicodeSetIterator hanIter(han);
