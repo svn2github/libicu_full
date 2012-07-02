@@ -67,7 +67,6 @@ private:
     void initHanCompat(UErrorCode &errorCode);
 
     UBool setJamoCEs(UErrorCode &errorCode);
-    void setHiragana(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);
 
     /**

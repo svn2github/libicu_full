@@ -186,18 +186,22 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         for(;;) {
             // Case bits cannot distinguish between 0=ignorable and 0=uncased/lowercase.
             // Therefore, ignore the case "weight" when the non-case tertiary weight is 0.
-            // The data has non-zero case bits only when the non-case tertiary bits are non-zero,
-            // so the "while" condition need not mask with 0x3fff for the "ignorable" test.
+            // The data has non-zero case bits and non-zero quaternary bits
+            // only when the non-case tertiary bits are non-zero,
+            // so the "while" condition need not mask with ONLY_TERTIARY_MASK
+            // for the "ignorable" test.
             uint32_t leftTertiary;
             do {
                 leftTertiary = leftSTBuffer[leftSTIndex++] & 0xffff;
-                U_ASSERT((leftTertiary & 0x3fff) != 0 || (leftTertiary & 0xc000) == 0);
+                U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                         (leftTertiary & 0xc0c0) == 0);
             } while(leftTertiary == 0);
 
             uint32_t rightTertiary;
             do {
                 rightTertiary = rightSTBuffer[rightSTIndex++] & 0xffff;
-                U_ASSERT((rightTertiary & 0x3fff) != 0 || (rightTertiary & 0xc000) == 0);
+                U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                         (rightTertiary & 0xc0c0) == 0);
             } while(rightTertiary == 0);
 
             uint32_t leftCase = leftTertiary & 0xc000;
@@ -228,17 +232,24 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
     int32_t leftSTIndex = 0;
     int32_t rightSTIndex = 0;
+    uint32_t anyQuaternaries = 0;
     for(;;) {
         uint32_t leftTertiary;
         do {
-            leftTertiary = leftSTBuffer[leftSTIndex++] & tertiaryMask;
-            U_ASSERT((leftTertiary & 0x3fff) != 0 || (leftTertiary & 0xc000) == 0);
+            leftTertiary = leftSTBuffer[leftSTIndex++];
+            anyQuaternaries |= leftTertiary;
+            U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                     (leftTertiary & 0xc0c0) == 0);
+            leftTertiary &= tertiaryMask;
         } while(leftTertiary == 0);
 
         uint32_t rightTertiary;
         do {
-            rightTertiary = rightSTBuffer[rightSTIndex++] & tertiaryMask;
-            U_ASSERT((rightTertiary & 0x3fff) != 0 || (rightTertiary & 0xc000) == 0);
+            rightTertiary = rightSTBuffer[rightSTIndex++];
+            anyQuaternaries |= rightTertiary;
+            U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                     (rightTertiary & 0xc0c0) == 0);
+            rightTertiary &= tertiaryMask;
         } while(rightTertiary == 0);
 
         if(leftTertiary != rightTertiary) {
@@ -256,11 +267,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     }
     if(CollationData::getStrength(options) <= UCOL_TERTIARY) { return UCOL_EQUAL; }
 
-    if(variableTop == 0 &&
-            ((options & CollationData::HIRAGANA_QUATERNARY) == 0 ||
-                (!left.getAnyHiragana() && !right.getAnyHiragana()))) {
-        // If "shifted" mode is off and hiraganaQuaternary is off
-        // or neither string contains Hiragana characters,
+    if(variableTop == 0 && (anyQuaternaries & 0xc0) == 0) {
+        // If "shifted" mode is off and there are no non-zero quaternary weights,
         // then there are no quaternary differences.
         return UCOL_EQUAL;
     }
@@ -274,8 +282,7 @@ public:
     QuaternaryIterator(CollationIterator &iter)
             : source(iter),
               variableTop(0),
-              withHiraganaQuaternary((iter.getData()->options & CollationData::HIRAGANA_QUATERNARY) != 0),
-              shifted(FALSE), hiragana(0) {
+              shifted(FALSE) {
         const CollationData *data = iter.getData();
         if((data->options & CollationData::ALTERNATE_MASK) != 0) {
             variableTop = data->variableTop;
@@ -285,26 +292,20 @@ public:
 private:
     CollationIterator &source;
     uint32_t variableTop;
-    UBool withHiraganaQuaternary;
     UBool shifted;
-    int8_t hiragana;
 };
 
 uint32_t
 QuaternaryIterator::next(UErrorCode &errorCode) {
     for(;;) {
         int64_t ce = source.nextCE(errorCode);
-        if(withHiraganaQuaternary) {
-            int8_t hira = source.getHiragana();
-            if(hira >= 0) { hiragana = hira; }
-        }
         // Extract the primary weight and use it as a quaternary unless we override it.
         uint32_t q = (uint32_t)(ce >> 32);
         if(q == 0) {
             // Skip completely-ignorables, and primary ignorables after a shifted primary.
             if(ce == 0 || shifted) { continue; }
             // Primary ignorable but not completely ignorable.
-            q = 0xffffffff - hiragana;
+            q = (uint32_t)(ce) | 0xffffff3f;  // Preserve the quaternary weight in bits 7..6.
         } else if(q <= Collation::MERGE_SEPARATOR_PRIMARY) {
             // Leave NO_CE_WEIGHT or MERGE_SEPARATOR_PRIMARY as is.
             shifted = FALSE;
@@ -314,7 +315,7 @@ QuaternaryIterator::next(UErrorCode &errorCode) {
         } else {
             // Regular CE.
             shifted = FALSE;
-            q = 0xffffffff - hiragana;
+            q = (uint32_t)(ce) | 0xffffff3f;  // Preserve the quaternary weight in bits 7..6.
         }
         return q;
     }

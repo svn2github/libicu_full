@@ -83,7 +83,6 @@ public:
             : trie(d->trie),
               data(d),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
-              hiragana(0), anyHiragana(FALSE),
               skipped(NULL) {}
 
     virtual ~CollationIterator();
@@ -110,7 +109,6 @@ public:
             }
             return ce;
         }
-        hiragana = 0;
         UChar32 c;
         uint32_t ce32 = handleNextCE32(c, errorCode);
         // Java: Emulate unsigned-int less-than comparison.
@@ -139,19 +137,6 @@ public:
         }
         return nextCEFromSpecialCE32(d, c, ce32, errorCode);
     }
-
-    /**
-     * Returns the Hiragana flag.
-     * The caller must remember the previous flag value.
-     * @return -1 inherit Hiragana-ness from previous character;
-     *         0 not Hiragana; 1 Hiragana
-     */
-    inline int8_t getHiragana() const { return hiragana; }
-
-    /**
-     * @return TRUE if this iterator has seen any Hiragana character
-     */
-    inline UBool getAnyHiragana() const { return anyHiragana; }
 
     /**
      * Returns the next code point (with post-increment).
@@ -299,9 +284,6 @@ private:
     // List of CEs.
     int32_t cesIndex, cesMaxIndex;
     const int64_t *ces;
-
-    int8_t hiragana;
-    UBool anyHiragana;
 
     SkippedState *skipped;
 

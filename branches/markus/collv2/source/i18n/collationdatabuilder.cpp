@@ -331,10 +331,9 @@ CollationDataBuilder::getSingleCE(UChar32 c, UErrorCode &errorCode) const {
             // Fetch the non-CODAN CE32 and continue.
             ce32 = ce32s.elementAti((ce32 >> 4) & 0xffff);
             break;
-        case Collation::HIRAGANA_TAG:
-            // Fetch the normal CE32 and continue.
-            ce32 = ce32s.elementAti(ce32 & 0xfffff);
-            break;
+        case Collation::RESERVED_TAG_11:
+            errorCode = U_INTERNAL_PROGRAM_ERROR;
+            return 0;
         case Collation::OFFSET_TAG:
             ce32 = getCE32FromOffsetCE32(c, ce32);
             break;
@@ -637,25 +636,6 @@ CollationDataBuilder::setJamoCEs(UErrorCode &errorCode) {
     return anyJamoAssigned;
 }
 
-void
-CollationDataBuilder::setHiragana(UErrorCode &errorCode) {
-    UnicodeSet hira(UNICODE_STRING_SIMPLE("[[:Hira:][\\u3099-\\u309C]]"), errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-    UnicodeSetIterator iter(hira);
-    while(iter.next()) {
-        UChar32 c = iter.getCodepoint();
-        uint32_t ce32 = utrie2_get32(trie, c);
-        if(ce32 == Collation::MIN_SPECIAL_CE32) { continue; }  // Only override a real CE32.
-        int32_t index = addCE32(ce32, errorCode);
-        if(index > 0xfffff) {
-            errorCode = U_BUFFER_OVERFLOW_ERROR;
-            return;
-        }
-        uint32_t hiraCE32 = makeSpecialCE32(Collation::HIRAGANA_TAG, index);
-        utrie2_set32(trie, c, hiraCE32, &errorCode);
-    }
-}
-
 U_CDECL_BEGIN
 
 static UBool U_CALLCONV
@@ -698,7 +678,6 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     buildContexts(errorCode);
 
     UBool anyJamoAssigned = setJamoCEs(errorCode);
-    setHiragana(errorCode);
     setLeadSurrogates(errorCode);
 
     // For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.

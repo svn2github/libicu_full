@@ -56,6 +56,11 @@ public:
     /** Lower 32 bits of a CE with common secondary and tertiary weights. */
     static const uint32_t COMMON_SEC_AND_TER_CE = 0x05000500;
 
+    /** Only the 2*6 bits for the pure tertiary weight. */
+    static const uint32_t ONLY_TERTIARY_MASK = 0x3f3f;
+    /** Case bits and tertiary bits. */
+    static const uint32_t CASE_AND_TERTIARY_MASK = 0xff3f;
+
     static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible
 
     static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // not compressible
@@ -130,12 +135,9 @@ public:
          */
         DIGIT_TAG = 10,
         /**
-         * Hiragana character, except U+3099..309C inherit their Hiragana-ness
-         * from the preceding character.
-         * TODO: Consider adding 3099..309C to the unsafe-backward set. (Do we need Hiragana quaternaries in backward iteration?)
-         * Bits 19..0: Index into uint32_t table for normal CE32.
+         * Unused.
          */
-        HIRAGANA_TAG = 11,
+        RESERVED_TAG_11 = 11,
         /**
          * Tag for a Hangul syllable.
          */

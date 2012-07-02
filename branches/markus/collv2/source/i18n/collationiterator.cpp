@@ -235,8 +235,6 @@ CollationIterator::resetToStart() {
 void
 CollationIterator::reset() {  // Needed as a separate function?
     cesIndex = -1;
-    hiragana = 0;
-    anyHiragana = FALSE;
     if(skipped != NULL) { skipped->clear(); }
 }
 
@@ -352,16 +350,9 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 ce32 = d->ce32s[(ce32 >> 4) & 0xffff];
                 break;
             }
-        case Collation::HIRAGANA_TAG:
-            if(0x3099 <= c && c <= 0x309c) {
-                hiragana = -1;
-            } else {
-                hiragana = 1;
-                anyHiragana = TRUE;
-            }
-            // Fetch the normal CE32 and continue.
-            ce32 = d->ce32s[ce32 & 0xfffff];
-            break;
+        case Collation::RESERVED_TAG_11:
+            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+            return 0;
         case Collation::HANGUL_TAG:
             setHangulExpansion(c);
             cesIndex = 1;
@@ -733,7 +724,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
         // case Collation::PREFIX_TAG:
         // TODO: case Collation::BUILDER_CONTEXT_TAG:
         // case Collation::DIGIT_TAG:
-        // case Collation::HIRAGANA_TAG:
+        // case Collation::RESERVED_TAG_11:
         // case Collation::HANGUL_TAG:
         // case Collation::LEAD_SURROGATE_TAG:
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
@@ -899,8 +890,6 @@ TwoWayCollationIterator::previousCE(UErrorCode &errorCode) {
         // TODO: Jump by delta code points if the direction changed?
         return ce;
     }
-    // TODO: Do we need to handle hiragana going backward?
-    // Note: v1 ucol_IGetPrevCE() does not handle 3099..309C inheriting the Hiragana-ness from the preceding character.
     UChar32 c = fwd.previousCodePoint(errorCode);
     if(c < 0) { return Collation::NO_CE; }
     if(fwd.data->isUnsafeBackward(c)) {
@@ -1012,11 +1001,9 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
                 ce32 = d->ce32s[(ce32 >> 4) & 0xffff];
                 break;
             }
-        case Collation::HIRAGANA_TAG:
-            // TODO: Do we need to handle hiragana going backward? (I.e., do string search or the CollationElementIterator need it?)
-            // Fetch the normal CE32 and continue.
-            ce32 = d->ce32s[ce32 & 0xfffff];
-            break;
+        case Collation::RESERVED_TAG_11:
+            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+            return 0;
         case Collation::HANGUL_TAG:
             fwd.setHangulExpansion(c);
             fwd.cesIndex = fwd.cesMaxIndex;

@@ -17,6 +17,9 @@
 
 U_NAMESPACE_BEGIN
 
+const uint32_t Collation::ONLY_TERTIARY_MASK;
+const uint32_t Collation::CASE_AND_TERTIARY_MASK;
+
 uint32_t
 Collation::incThreeBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressible, int32_t offset) {
     // Extract the third byte, minus the minimum byte value,
