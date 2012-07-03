@@ -26,10 +26,6 @@ class U_I18N_API CollationCompare /* not : public UObject because all methods ar
 public:
     static UCollationResult compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
                                                   UErrorCode &errorCode);
-
-private:
-    static UCollationResult compareQuaternary(CollationIterator &left, CollationIterator &right,
-                                              UErrorCode &errorCode);
 };
 
 U_NAMESPACE_END

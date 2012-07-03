@@ -3444,7 +3444,7 @@ struct  CEI {
 
 U_NAMESPACE_BEGIN
 
-
+namespace {
 //
 //  CEBuffer   A circular buffer of CEs from the text being searched.
 //
@@ -3592,6 +3592,8 @@ const CEI *CEBuffer::getPrevious(int32_t index) {
     buf[i].ce = ucol_previousProcessed(ceIter, &buf[i].lowIndex, &buf[i].highIndex, &status);
 
     return &buf[i];
+}
+
 }
 
 U_NAMESPACE_END

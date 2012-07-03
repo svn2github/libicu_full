@@ -23,34 +23,35 @@
 
 U_NAMESPACE_BEGIN
 
-// Buffer for secondary & tertiary weights.
-class STBuffer {
-public:
-    STBuffer() : length(0) {}
+namespace {
 
-    inline void append(uint32_t st, UErrorCode &errorCode) {
+class CEBuffer {
+public:
+    CEBuffer() : length(0) {}
+
+    inline void append(int64_t ce, UErrorCode &errorCode) {
         if(length < buffer.getCapacity()) {
-            buffer[length++] = st;
+            buffer[length++] = ce;
         } else {
-            doAppend(st, errorCode);
+            doAppend(ce, errorCode);
         }
     }
 
-    inline uint32_t operator[](ptrdiff_t i) const { return buffer[i]; }
+    inline int64_t operator[](ptrdiff_t i) const { return buffer[i]; }
 
     int32_t length;
 
 private:
-    STBuffer(const STBuffer &);
-    void operator=(const STBuffer &);
+    CEBuffer(const CEBuffer &);
+    void operator=(const CEBuffer &);
 
-    void doAppend(uint32_t st, UErrorCode &errorCode);
+    void doAppend(int64_t ce, UErrorCode &errorCode);
 
-    MaybeStackArray<uint32_t, 40> buffer;
+    MaybeStackArray<int64_t, 40> buffer;
 };
 
 void
-STBuffer::doAppend(uint32_t st, UErrorCode &errorCode) {
+CEBuffer::doAppend(int64_t ce, UErrorCode &errorCode) {
     // length == buffer.getCapacity()
     if(U_FAILURE(errorCode)) { return; }
     int32_t capacity = buffer.getCapacity();
@@ -60,22 +61,23 @@ STBuffer::doAppend(uint32_t st, UErrorCode &errorCode) {
     } else {
         newCapacity = 2 * capacity;
     }
-    uint32_t *p = buffer.resize(newCapacity, length);
+    int64_t *p = buffer.resize(newCapacity, length);
     if(p == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    p[length++] = st;
+    p[length++] = ce;
 }
+
+}  // namespace
 
 UCollationResult
 CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
                                         UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
-    // Buffers for secondary & tertiary weights.
-    STBuffer leftSTBuffer;
-    STBuffer rightSTBuffer;
+    CEBuffer leftBuffer;
+    CEBuffer rightBuffer;
 
     const CollationData *data = left.getData();
     int32_t options = data->options;
@@ -83,8 +85,10 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     if((options & CollationData::ALTERNATE_MASK) == 0) {
         variableTop = 0;
     } else {
-        variableTop = data->variableTop;
+        // +1 so that we can use "<" and primary ignorables test out early.
+        variableTop = data->variableTop + 1;
     }
+    UBool anyVariable = FALSE;
 
     // Fetch CEs, compare primaries, store secondary & tertiary weights.
     U_ALIGN_CODE(16);
@@ -94,30 +98,40 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         do {
             int64_t ce = left.nextCE(errorCode);
             leftPrimary = (uint32_t)(ce >> 32);
-            if(leftPrimary <= variableTop && leftPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
+            if(leftPrimary < variableTop && leftPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
                 // Ignore this CE, all following primary ignorables, and further variable CEs.
+                anyVariable = TRUE;
                 do {
-                    ce = left.nextCE(errorCode);
-                    leftPrimary = (uint32_t)(ce >> 32);
-                } while(leftPrimary <= variableTop &&
-                        (leftPrimary > Collation::MERGE_SEPARATOR_PRIMARY || leftPrimary == 0));
+                    // Store the primary of the variable CE.
+                    leftBuffer.append(ce & 0xffffffff00000000, errorCode);
+                    do {
+                        ce = left.nextCE(errorCode);
+                        leftPrimary = (uint32_t)(ce >> 32);
+                    } while(leftPrimary == 0);
+                } while(leftPrimary < variableTop &&
+                        leftPrimary > Collation::MERGE_SEPARATOR_PRIMARY);
             }
-            leftSTBuffer.append((uint32_t)ce, errorCode);
+            leftBuffer.append(ce, errorCode);
         } while(leftPrimary == 0);
 
         uint32_t rightPrimary;
         do {
             int64_t ce = right.nextCE(errorCode);
             rightPrimary = (uint32_t)(ce >> 32);
-            if(rightPrimary <= variableTop && rightPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
+            if(rightPrimary < variableTop && rightPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
                 // Ignore this CE, all following primary ignorables, and further variable CEs.
+                anyVariable = TRUE;
                 do {
-                    ce = right.nextCE(errorCode);
-                    rightPrimary = (uint32_t)(ce >> 32);
-                } while(rightPrimary <= variableTop &&
-                        (rightPrimary > Collation::MERGE_SEPARATOR_PRIMARY || rightPrimary == 0));
+                    // Store the primary of the variable CE.
+                    rightBuffer.append(ce & 0xffffffff00000000, errorCode);
+                    do {
+                        ce = right.nextCE(errorCode);
+                        rightPrimary = (uint32_t)(ce >> 32);
+                    } while(rightPrimary == 0);
+                } while(rightPrimary < variableTop &&
+                        rightPrimary > Collation::MERGE_SEPARATOR_PRIMARY);
             }
-            rightSTBuffer.append((uint32_t)ce, errorCode);
+            rightBuffer.append(ce, errorCode);
         } while(rightPrimary == 0);
 
         if(leftPrimary != rightPrimary) {
@@ -138,17 +152,17 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     // which is turned on separately.
     if(CollationData::getStrength(options) >= UCOL_SECONDARY) {
         if((options & CollationData::BACKWARD_SECONDARY) == 0) {
-            int32_t leftSTIndex = 0;
-            int32_t rightSTIndex = 0;
+            int32_t leftIndex = 0;
+            int32_t rightIndex = 0;
             for(;;) {
                 uint32_t leftSecondary;
                 do {
-                    leftSecondary = leftSTBuffer[leftSTIndex++] >> 16;
+                    leftSecondary = ((uint32_t)leftBuffer[leftIndex++]) >> 16;
                 } while(leftSecondary == 0);
 
                 uint32_t rightSecondary;
                 do {
-                    rightSecondary = rightSTBuffer[rightSTIndex++] >> 16;
+                    rightSecondary = ((uint32_t)rightBuffer[rightIndex++]) >> 16;
                 } while(rightSecondary == 0);
 
                 if(leftSecondary != rightSecondary) {
@@ -159,17 +173,17 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         } else {
             // French secondary level compares backwards.
             // Ignore the last item, the NO_CE terminator.
-            int32_t leftSTIndex = leftSTBuffer.length - 1;
-            int32_t rightSTIndex = rightSTBuffer.length - 1;
+            int32_t leftIndex = leftBuffer.length - 1;
+            int32_t rightIndex = rightBuffer.length - 1;
             for(;;) {
                 uint32_t leftSecondary = 0;
-                while(leftSecondary == 0 && leftSTIndex > 0) {
-                    leftSecondary = leftSTBuffer[--leftSTIndex] >> 16;
+                while(leftSecondary == 0 && leftIndex > 0) {
+                    leftSecondary = ((uint32_t)leftBuffer[--leftIndex]) >> 16;
                 }
 
                 uint32_t rightSecondary = 0;
-                while(rightSecondary == 0 && rightSTIndex > 0) {
-                    rightSecondary = rightSTBuffer[--rightSTIndex] >> 16;
+                while(rightSecondary == 0 && rightIndex > 0) {
+                    rightSecondary = ((uint32_t)rightBuffer[--rightIndex]) >> 16;
                 }
 
                 if(leftSecondary != rightSecondary) {
@@ -181,8 +195,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     }
 
     if((options & CollationData::CASE_LEVEL) != 0) {
-        int32_t leftSTIndex = 0;
-        int32_t rightSTIndex = 0;
+        int32_t leftIndex = 0;
+        int32_t rightIndex = 0;
         for(;;) {
             // Case bits cannot distinguish between 0=ignorable and 0=uncased/lowercase.
             // Therefore, ignore the case "weight" when the non-case tertiary weight is 0.
@@ -192,7 +206,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             // for the "ignorable" test.
             uint32_t leftTertiary;
             do {
-                leftTertiary = leftSTBuffer[leftSTIndex++];
+                leftTertiary = (uint32_t)leftBuffer[leftIndex++];
                 U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
                          (leftTertiary & 0xc0c0) == 0);
                 leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
@@ -200,7 +214,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
             uint32_t rightTertiary;
             do {
-                rightTertiary = rightSTBuffer[rightSTIndex++];
+                rightTertiary = (uint32_t)rightBuffer[rightIndex++];
                 U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
                          (rightTertiary & 0xc0c0) == 0);
                 rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
@@ -235,13 +249,13 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
     uint32_t tertiaryMask = CollationData::getTertiaryMask(options);
 
-    int32_t leftSTIndex = 0;
-    int32_t rightSTIndex = 0;
+    int32_t leftIndex = 0;
+    int32_t rightIndex = 0;
     uint32_t anyQuaternaries = 0;
     for(;;) {
         uint32_t leftTertiary;
         do {
-            leftTertiary = leftSTBuffer[leftSTIndex++];
+            leftTertiary = (uint32_t)leftBuffer[leftIndex++];
             anyQuaternaries |= leftTertiary;
             U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
                      (leftTertiary & 0xc0c0) == 0);
@@ -250,7 +264,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
         uint32_t rightTertiary;
         do {
-            rightTertiary = rightSTBuffer[rightSTIndex++];
+            rightTertiary = (uint32_t)rightBuffer[rightIndex++];
             anyQuaternaries |= rightTertiary;
             U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
                      (rightTertiary & 0xc0c0) == 0);
@@ -270,71 +284,48 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     }
     if(CollationData::getStrength(options) <= UCOL_TERTIARY) { return UCOL_EQUAL; }
 
-    if(variableTop == 0 && (anyQuaternaries & 0xc0) == 0) {
-        // If "shifted" mode is off and there are no non-zero quaternary weights,
+    if(!anyVariable && (anyQuaternaries & 0xc0) == 0) {
+        // If there are no "variable" CEs and no non-zero quaternary weights,
         // then there are no quaternary differences.
         return UCOL_EQUAL;
     }
-    left.resetToStart();
-    right.resetToStart();
-    return compareQuaternary(left, right, errorCode);
-}
 
-class QuaternaryIterator {
-public:
-    QuaternaryIterator(CollationIterator &iter)
-            : source(iter),
-              variableTop(0),
-              shifted(FALSE) {
-        const CollationData *data = iter.getData();
-        if((data->options & CollationData::ALTERNATE_MASK) != 0) {
-            variableTop = data->variableTop;
-        }
-    }
-    uint32_t next(UErrorCode &errorCode);
-private:
-    CollationIterator &source;
-    uint32_t variableTop;
-    UBool shifted;
-};
-
-uint32_t
-QuaternaryIterator::next(UErrorCode &errorCode) {
+    leftIndex = 0;
+    rightIndex = 0;
     for(;;) {
-        int64_t ce = source.nextCE(errorCode);
-        // Extract the primary weight and use it as a quaternary unless we override it.
-        uint32_t q = (uint32_t)(ce >> 32);
-        if(q == 0) {
-            // Skip completely-ignorables, and primary ignorables after a shifted primary.
-            if(ce == 0 || shifted) { continue; }
-            // Primary ignorable but not completely ignorable.
-            q = (uint32_t)(ce) | 0xffffff3f;  // Preserve the quaternary weight in bits 7..6.
-        } else if(q <= Collation::MERGE_SEPARATOR_PRIMARY) {
-            // Leave NO_CE_WEIGHT or MERGE_SEPARATOR_PRIMARY as is.
-            shifted = FALSE;
-        } else if(q <= variableTop) {
-            // Shift this variable primary weight into the quaternary level.
-            shifted = TRUE;
-        } else {
-            // Regular CE.
-            shifted = FALSE;
-            q = (uint32_t)(ce) | 0xffffff3f;  // Preserve the quaternary weight in bits 7..6.
-        }
-        return q;
-    }
-}
+        uint32_t leftQuaternary;
+        do {
+            int64_t ce = leftBuffer[leftIndex++];
+            uint32_t low16 = (uint32_t)ce & 0xffff;
+            if(low16 == 0) {
+                // Variable primary or completely ignorable.
+                leftQuaternary = (uint32_t)(ce >> 32);
+            } else if(low16 <= Collation::MERGE_SEPARATOR_TERTIARY) {
+                // Leave NO_CE_WEIGHT or MERGE_SEPARATOR as is.
+                leftQuaternary = low16;
+            } else {
+                // Regular CE, not tertiary ignorable.
+                // Preserve the quaternary weight in bits 7..6.
+                leftQuaternary = low16 | 0xffffff3f;
+            }
+        } while(leftQuaternary == 0);
 
-UCollationResult
-CollationCompare::compareQuaternary(CollationIterator &left, CollationIterator &right,
-                                    UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
-
-    QuaternaryIterator leftQI(left);
-    QuaternaryIterator rightQI(right);
-
-    for(;;) {
-        uint32_t leftQuaternary = leftQI.next(errorCode);
-        uint32_t rightQuaternary = rightQI.next(errorCode);
+        uint32_t rightQuaternary;
+        do {
+            int64_t ce = rightBuffer[rightIndex++];
+            uint32_t low16 = (uint32_t)ce & 0xffff;
+            if(low16 == 0) {
+                // Variable primary or completely ignorable.
+                rightQuaternary = (uint32_t)(ce >> 32);
+            } else if(low16 <= Collation::MERGE_SEPARATOR_TERTIARY) {
+                // Leave NO_CE_WEIGHT or MERGE_SEPARATOR as is.
+                rightQuaternary = low16;
+            } else {
+                // Regular CE, not tertiary ignorable.
+                // Preserve the quaternary weight in bits 7..6.
+                rightQuaternary = low16 | 0xffffff3f;
+            }
+        } while(rightQuaternary == 0);
 
         if(leftQuaternary != rightQuaternary) {
             // TODO: Script reordering?! v1 does not perform it for shifted primaries.
@@ -350,11 +341,6 @@ CollationCompare::compareQuaternary(CollationIterator &left, CollationIterator &
     }
     return UCOL_EQUAL;
 }
-
-// TODO: The quaternary sort key level needs at least
-// primary lead byte 0xff for non-shifted, non-Hiragana CEs,
-// and at least 0xfe for Hiragana, therefore we must limit variableTop
-// to a maximum lead byte of 0xfd (i.e., no trail weights).
 
 U_NAMESPACE_END
 
