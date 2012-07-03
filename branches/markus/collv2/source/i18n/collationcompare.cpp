@@ -195,30 +195,62 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     }
 
     if((options & CollationData::CASE_LEVEL) != 0) {
+        int32_t strength = CollationData::getStrength(options);
         int32_t leftIndex = 0;
         int32_t rightIndex = 0;
         for(;;) {
-            // Case bits cannot distinguish between 0=ignorable and 0=uncased/lowercase.
-            // Therefore, ignore the case "weight" when the non-case tertiary weight is 0.
-            // The data has non-zero case bits and non-zero quaternary bits
-            // only when the non-case tertiary bits are non-zero,
-            // so the "while" condition need not mask with ONLY_TERTIARY_MASK
-            // for the "ignorable" test.
-            uint32_t leftTertiary;
-            do {
-                leftTertiary = (uint32_t)leftBuffer[leftIndex++];
-                U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
-                         (leftTertiary & 0xc0c0) == 0);
+            uint32_t leftTertiary, rightTertiary;
+            if(strength == UCOL_PRIMARY) {
+                // Primary+case: Ignore case level weights of primary ignorables.
+                // Otherwise we would get a-umlaut > a
+                // which is not desirable for accent-insensitive sorting.
+                // Check for tertiary == 0 as well because variable CEs are stored
+                // with only primary weights.
+                int64_t ce;
+                do {
+                    ce = leftBuffer[leftIndex++];
+                    leftTertiary = (uint32_t)ce;
+                } while((uint32_t)(ce >> 32) == 0 || leftTertiary == 0);
                 leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
-            } while(leftTertiary == 0);
 
-            uint32_t rightTertiary;
-            do {
-                rightTertiary = (uint32_t)rightBuffer[rightIndex++];
-                U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
-                         (rightTertiary & 0xc0c0) == 0);
+                do {
+                    ce = rightBuffer[rightIndex++];
+                    rightTertiary = (uint32_t)ce;
+                } while((uint32_t)(ce >> 32) == 0 || rightTertiary == 0);
                 rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
-            } while(rightTertiary == 0);
+            } else if(strength == UCOL_SECONDARY) {
+                // Secondary+case: By analogy with the above,
+                // ignore case level weights of secondary ignorables.
+                do {
+                    leftTertiary = (uint32_t)leftBuffer[leftIndex++];
+                } while(leftTertiary <= 0xffff);
+                leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+
+                do {
+                    rightTertiary = (uint32_t)rightBuffer[rightIndex++];
+                } while(rightTertiary <= 0xffff);
+                rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+            } else {
+                // Case bits cannot distinguish between 0=ignorable and 0=uncased/lowercase.
+                // Therefore, ignore the case "weight" when the non-case tertiary weight is 0.
+                // The data has non-zero case bits and non-zero quaternary bits
+                // only when the non-case tertiary bits are non-zero,
+                // so the "while" condition need not mask with ONLY_TERTIARY_MASK
+                // for the "ignorable" test.
+                do {
+                    leftTertiary = (uint32_t)leftBuffer[leftIndex++];
+                    U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                             (leftTertiary & 0xc0c0) == 0);
+                    leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+                } while(leftTertiary == 0);
+
+                do {
+                    rightTertiary = (uint32_t)rightBuffer[rightIndex++];
+                    U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                             (rightTertiary & 0xc0c0) == 0);
+                    rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+                } while(rightTertiary == 0);
+            }
 
             if(leftTertiary != rightTertiary) {
                 // Turn the two case bits into full weights so that we handle
