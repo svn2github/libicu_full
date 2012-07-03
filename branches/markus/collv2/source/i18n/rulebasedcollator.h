@@ -554,10 +554,10 @@ public:  // TODO: Public only for testing.
             : data(d), defaultData(d), ownedData(od) {}
 
 private:
-    UCollationResult compare(const UChar *left, int32_t leftLength,
-                             const UChar *right, int32_t rightLength,
-                             UBool maybeNUL,
-                             UErrorCode &errorCode) const;
+    // Both lengths must be <0 or else both must be >=0.
+    UCollationResult doCompare(const UChar *left, int32_t leftLength,
+                               const UChar *right, int32_t rightLength,
+                               UErrorCode &errorCode) const;
 
     const CollationData *data;  // == defaultData or ownedData
     const CollationData *defaultData;

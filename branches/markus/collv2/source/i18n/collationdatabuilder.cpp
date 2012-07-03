@@ -134,6 +134,10 @@ CollationDataBuilder::initBase(UErrorCode &errorCode) {
 
     uint32_t hangulCE32 = makeSpecialCE32(Collation::HANGUL_TAG, 0u);
     utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
+
+    // Initialize the unsafe-backwards set:
+    // All combining marks and trail surrogates.
+    unsafeBackwardSet.applyPattern(UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
     // TODO
 }
 
@@ -152,6 +156,8 @@ CollationDataBuilder::initTailoring(const CollationData *b, UErrorCode &errorCod
 
     // For a tailoring, the default is to fall back to the base.
     trie = utrie2_open(Collation::MIN_SPECIAL_CE32, 0, &errorCode);
+
+    unsafeBackwardSet = *b->unsafeBackwardSet;
 
     if(U_FAILURE(errorCode)) { return; }
     // TODO
@@ -440,8 +446,10 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
             cond = reinterpret_cast<ConditionalCE32 *>(
                 conditionalCE32s[(int32_t)oldCE32 & 0xfffff]);
         }
+        UnicodeString suffix(s, cLength);
         UnicodeString context((UChar)prefix.length());
-        context.append(prefix).append(s, cLength, 0x7fffffff);
+        context.append(prefix).append(suffix);
+        unsafeBackwardSet.addAll(suffix);
         for(;;) {
             // invariant: context > cond->context
             int32_t next = cond->next;
@@ -687,6 +695,16 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     utrie2_freeze(trie, UTRIE2_32_VALUE_BITS, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
 
+    // Mark each lead surrogate as "unsafe"
+    // if any of its 1024 associated supplementary code points is "unsafe".
+    UChar32 c = 0x10000;
+    for(UChar lead = 0xd800; lead < 0xdc00; ++lead, c += 0x400) {
+        if(!unsafeBackwardSet.containsNone(c, c + 0x3ff)) {
+            unsafeBackwardSet.add(lead);
+        }
+    }
+    unsafeBackwardSet.freeze();
+
     // Create a CollationData container of aliases to this builder's finalized data.
     LocalPointer<CollationData> cd(new CollationData(nfcImpl));
     if(cd.isNull()) {
@@ -706,6 +724,7 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
     if(base != NULL) { cd->variableTop = base->variableTop; }
     cd->compressibleBytes = compressibleBytes;
+    cd->unsafeBackwardSet = &unsafeBackwardSet;
     return cd.orphan();
 }
 

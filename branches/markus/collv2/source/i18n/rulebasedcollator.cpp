@@ -183,8 +183,9 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes,
 UCollationResult
 RuleBasedCollator2::compare(const UnicodeString &left, const UnicodeString &right,
                             UErrorCode &errorCode) const {
-    return compare(left.getBuffer(), left.length(),
-                   right.getBuffer(), right.length(), FALSE, errorCode);
+    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
+    return doCompare(left.getBuffer(), left.length(),
+                     right.getBuffer(), right.length(), errorCode);
 }
 
 UCollationResult
@@ -199,15 +200,27 @@ RuleBasedCollator2::compare(const UnicodeString &left, const UnicodeString &righ
     int32_t rightLength = right.length();
     if(leftLength > length) { leftLength = length; }
     if(rightLength > length) { rightLength = length; }
-    return compare(left.getBuffer(), leftLength,
-                   right.getBuffer(), rightLength, FALSE, errorCode);
+    return doCompare(left.getBuffer(), leftLength,
+                     right.getBuffer(), rightLength, errorCode);
 }
 
 UCollationResult
 RuleBasedCollator2::compare(const UChar *left, int32_t leftLength,
                             const UChar *right, int32_t rightLength,
                             UErrorCode &errorCode) const {
-    return compare(left, leftLength, right, rightLength, TRUE, errorCode);
+    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
+    if((left == NULL && leftLength != 0) || (right == NULL && rightLength != 0)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return UCOL_EQUAL;
+    }
+    // Make sure both or neither strings have a known length.
+    // We do not optimize for mixed length/termination.
+    if(leftLength >= 0) {
+        if(rightLength < 0) { rightLength = u_strlen(right); }
+    } else {
+        if(rightLength >= 0) { leftLength = u_strlen(left); }
+    }
+    return doCompare(left, leftLength, right, rightLength, errorCode);
 }
 
 static int32_t
@@ -229,33 +242,50 @@ findEndOrFFFE(const UChar *s, int32_t i, int32_t &length) {
 }
 
 UCollationResult
-RuleBasedCollator2::compare(const UChar *left, int32_t leftLength,
-                            const UChar *right, int32_t rightLength,
-                            UBool maybeNUL,
-                            UErrorCode &errorCode) const {
-    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
-    if((left == NULL && (leftLength != 0)) || (right == NULL && (rightLength != 0))) {
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
+                              const UChar *right, int32_t rightLength,
+                              UErrorCode &errorCode) const {
+    // U_FAILURE(errorCode) checked by caller.
+    if(left == right && leftLength == rightLength) {
         return UCOL_EQUAL;
     }
 
     const UChar *leftLimit;
     const UChar *rightLimit;
-    if(maybeNUL) {
-        leftLimit = (leftLength >= 0) ? left + leftLength : NULL;
-        rightLimit = (rightLength >= 0) ? right + rightLength : NULL;
+    int32_t equalPrefixLength = 0;  // Identical-prefix test.
+    if(leftLength < 0) {
+        leftLimit = NULL;
+        rightLimit = NULL;
+        UChar c;
+        while((c = left[equalPrefixLength]) == right[equalPrefixLength]) {
+            if(c == 0) { return UCOL_EQUAL; }
+            ++equalPrefixLength;
+        }
     } else {
-        U_ASSERT(leftLength >= 0);
-        U_ASSERT(rightLength >= 0);
         leftLimit = left + leftLength;
         rightLimit = right + rightLength;
-    }
-    if(left == right && leftLength == rightLength) {
-        return UCOL_EQUAL;
+        for(;;) {
+            if(equalPrefixLength == leftLength) {
+                if(equalPrefixLength == rightLength) { return UCOL_EQUAL; }
+                break;
+            } else if(equalPrefixLength == rightLength ||
+                      left[equalPrefixLength] != right[equalPrefixLength]) {
+                break;
+            }
+            ++equalPrefixLength;
+        }
     }
 
-    // TODO: Add identical-prefix test.
-    int32_t strength = data->getStrength();
+    // Identical prefix: Back up to the start of a contraction or reordering sequence.
+    if(equalPrefixLength > 0) {
+        if((equalPrefixLength != leftLength && data->isUnsafeBackward(left[equalPrefixLength])) ||
+                (equalPrefixLength != rightLength && data->isUnsafeBackward(right[equalPrefixLength]))) {
+            while(--equalPrefixLength > 0 && data->isUnsafeBackward(left[equalPrefixLength])) {}
+        }
+        left += equalPrefixLength;
+        right += equalPrefixLength;
+    }
+
     UCollationResult result;
     if((data->options & CollationData::CHECK_FCD) == 0) {
         UTF16CollationIterator leftIter(data, left, leftLimit);
@@ -266,11 +296,16 @@ RuleBasedCollator2::compare(const UChar *left, int32_t leftLength,
         FCDUTF16CollationIterator rightIter(data, right, rightLimit, errorCode);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
     }
-    if(result != UCOL_EQUAL || strength < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
+    if(result != UCOL_EQUAL || data->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
         return result;
     }
 
     // TODO: If NUL-terminated, get actual limits from iterators?
+
+    if(leftLength > 0) {
+        leftLength -= equalPrefixLength;
+        rightLength -= equalPrefixLength;
+    }
 
     uint32_t options = U_COMPARE_CODE_POINT_ORDER;
     if((data->options & CollationData::CHECK_FCD) == 0) {

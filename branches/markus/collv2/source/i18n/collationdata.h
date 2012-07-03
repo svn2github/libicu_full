@@ -17,6 +17,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/ucol.h"
+#include "unicode/uniset.h"
 #include "collation.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
@@ -89,7 +90,8 @@ struct U_I18N_API CollationData : public UMemory {
               fcd16_F00(NULL), nfcImpl(nfc),
               options(UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT),
               variableTop(0), zeroPrimary(0x12000000),
-              compressibleBytes(NULL), reorderTable(NULL) {}
+              compressibleBytes(NULL), reorderTable(NULL),
+              unsafeBackwardSet(NULL) {}
 
     void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
 
@@ -149,10 +151,7 @@ struct U_I18N_API CollationData : public UMemory {
 #endif
 
     UBool isUnsafeBackward(UChar32 c) const {
-        if(U_IS_TRAIL(c)) { return TRUE; }
-        return TRUE;  // TODO
-        // TODO: Are all cc!=0 marked as unsafe for prevCE() (because of discontiguous contractions)?
-        // TODO: Use a frozen UnicodeSet rather than an imprecise bit set, at least initially.
+        return unsafeBackwardSet->contains(c);
     }
 
     UBool isCompressibleLeadByte(uint32_t b) const {
@@ -207,6 +206,11 @@ struct U_I18N_API CollationData : public UMemory {
     const UBool *compressibleBytes;
     /** 256-byte table for reordering permutation of primary lead bytes; NULL if no reordering. */
     uint8_t *reorderTable;
+    /**
+     * Set of code points that are unsafe for starting string comparison after an identical prefix,
+     * or in backwards CE iteration.
+     */
+    const UnicodeSet *unsafeBackwardSet;
 };
 
 U_NAMESPACE_END

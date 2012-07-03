@@ -135,6 +135,7 @@ private:
     UnicodeSet contextChars;
     // Serialized UCharsTrie structures for finalized contexts.
     UnicodeString contexts;
+    UnicodeSet unsafeBackwardSet;
 };
 
 #if 0
