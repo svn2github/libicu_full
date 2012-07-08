@@ -90,6 +90,12 @@ RuleBasedCollator2::getTailoredSet(UErrorCode &status) const {
     return NULL;  // TODO
 }
 
+/* TODO: static
+UColAttributeValue
+RuleBasedCollator2::getAttribute(const CollationData *data, UColAttribute attr, UErrorCode &errorCode) {
+    return UCOL_DEFAULT;  // TODO
+}
+*/
 UColAttributeValue
 RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) {
     return UCOL_DEFAULT;  // TODO
@@ -99,9 +105,10 @@ void
 RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
                                  UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
+    if(value == getAttribute(attr, errorCode) || U_FAILURE(errorCode)) { return; }
+    // TODO: UCOL_DEFAULT -- is getAttribute() == getDefaultAttribute()?
     if(ownedData == NULL) {
         if(value == UCOL_DEFAULT) { return; }
-        if(value == getAttribute(attr, errorCode) || U_FAILURE(errorCode)) { return; }
         ownedData = new CollationData(*defaultData);
         if(ownedData == NULL) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;

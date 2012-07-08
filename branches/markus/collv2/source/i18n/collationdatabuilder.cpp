@@ -294,6 +294,16 @@ CollationDataBuilder::isAssigned(UChar32 c) const {
     return ce32 != Collation::MIN_SPECIAL_CE32 && ce32 != Collation::UNASSIGNED_CE32;
 }
 
+uint32_t
+CollationDataBuilder::getLongPrimaryIfSingleCE(UChar32 c) const {
+    uint32_t ce32 = utrie2_get32(trie, c);
+    if(Collation::isLongPrimaryCE32(ce32)) {
+        return Collation::primaryFromLongPrimaryCE32(ce32);
+    } else {
+        return 0;
+    }
+}
+
 int64_t
 CollationDataBuilder::getSingleCE(UChar32 c, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return 0; }
@@ -855,6 +865,17 @@ CollationDataBuilder::addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &tr
         contexts.append(context);
     }
     return index;
+}
+
+int32_t
+CollationDataBuilder::serializeTrie(void *data, int32_t capacity, UErrorCode &errorCode) const {
+    return utrie2_serialize(trie, data, capacity, &errorCode);
+}
+
+int32_t
+CollationDataBuilder::serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
+                                                 UErrorCode &errorCode) const {
+    return unsafeBackwardSet.serialize(data, capacity, errorCode);
 }
 
 // TODO: In CollationWeights allocator,

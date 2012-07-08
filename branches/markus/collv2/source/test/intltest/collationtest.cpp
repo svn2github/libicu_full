@@ -722,6 +722,8 @@ static UVersionInfo UCAVersion;
 
 static UCAElements le;
 
+static uint32_t gVariableTop;  // TODO: store in the base builder, or otherwise make this not be a global variable
+
 // returns number of characters read
 static int32_t readElement(char **from, char *to, char separator, UErrorCode *status) {
     if(U_FAILURE(*status)) {
@@ -856,7 +858,7 @@ int32_t getReorderCode(const char* name) {
 
 UCAElements *readAnElement(FILE *data,
                            const CollationDataBuilder &builder,
-                           tempUCATable *t, UCAConstants *consts, LeadByteConstants *leadByteConstants,
+                           UCAConstants *consts, LeadByteConstants *leadByteConstants,
                            int64_t ces[32], int32_t &cesLength,
                            UErrorCode *status) {
     static int scriptDataWritten = 0;
@@ -896,8 +898,7 @@ UCAElements *readAnElement(FILE *data,
 
     enum ActionType {
       READCE,
-      READHEX1,
-      READHEX2,
+      READPRIMARY,
       READUCAVERSION,
       READLEADBYTETOSCRIPTS,
       READSCRIPTTOLEADBYTES,
@@ -926,42 +927,37 @@ UCAElements *readAnElement(FILE *data,
                   {"[first trailing",            consts->UCA_FIRST_TRAILING,            READCE},
                   {"[last trailing",             consts->UCA_LAST_TRAILING,             READCE},
 
-                  {"[fixed top",                    &consts->UCA_PRIMARY_TOP_MIN,       READHEX1},
-                  {"[fixed first implicit byte",    &consts->UCA_PRIMARY_IMPLICIT_MIN,  READHEX1},
-                  {"[fixed last implicit byte",     &consts->UCA_PRIMARY_IMPLICIT_MAX,  READHEX1},
-                  {"[fixed first trail byte",       &consts->UCA_PRIMARY_TRAILING_MIN,  READHEX1},
-                  {"[fixed last trail byte",        &consts->UCA_PRIMARY_TRAILING_MAX,  READHEX1},
-                  {"[fixed first special byte",     &consts->UCA_PRIMARY_SPECIAL_MIN,   READHEX1},
-                  {"[fixed last special byte",      &consts->UCA_PRIMARY_SPECIAL_MAX,   READHEX1},
-                  {"[variable top = ",              &t->options->variableTopValue,      READHEX2},
+                  {"[fixed top",                    NULL, IGNORE},
+                  {"[fixed first implicit byte",    NULL, IGNORE},
+                  {"[fixed last implicit byte",     NULL, IGNORE},
+                  {"[fixed first trail byte",       NULL, IGNORE},
+                  {"[fixed last trail byte",        NULL, IGNORE},
+                  {"[fixed first special byte",     NULL, IGNORE},
+                  {"[fixed last special byte",      NULL, IGNORE},
+                  {"[variable top = ",              &gVariableTop,                      READPRIMARY},
                   {"[UCA version = ",               NULL,                               READUCAVERSION},
                   {"[top_byte",                     NULL,                               READLEADBYTETOSCRIPTS},
                   {"[reorderingTokens",             NULL,                               READSCRIPTTOLEADBYTES},
                   {"[categories",                   NULL,                               IGNORE},
+                  // TODO: Do not ignore these -- they are important for tailoring,
+                  // for creating well-formed Collation Element Tables.
                   {"[first tertiary in secondary non-ignorable",                 NULL,                               IGNORE},
                   {"[last tertiary in secondary non-ignorable",                 NULL,                               IGNORE},
                   {"[first secondary in primary non-ignorable",                 NULL,                               IGNORE},
                   {"[last secondary in primary non-ignorable",                 NULL,                               IGNORE},
       };
-      for (cnt = 0; cnt<sizeof(vt)/sizeof(vt[0]); cnt++) {
+      for (cnt = 0; cnt<LENGTHOF(vt); cnt++) {
         uint32_t vtLen = (uint32_t)uprv_strlen(vt[cnt].name);
         if(uprv_strncmp(buffer, vt[cnt].name, vtLen) == 0) {
             ActionType what_to_do = vt[cnt].what_to_do;
             if (what_to_do == IGNORE) { //vt[cnt].what_to_do == IGNORE
                 return NULL;
-            } else if(what_to_do == READHEX1 || what_to_do == READHEX2) {
+            } else if(what_to_do == READPRIMARY) {
               pointer = buffer+vtLen;
-              int32_t numBytes = readElement(&pointer, primary, ']', status) / 2;
-              if(numBytes != (what_to_do == READHEX1 ? 1 : 2)) {
-                  fprintf(stderr, "Value of \"%s\" has unexpected number of %d bytes\n",
-                          buffer, (int)numBytes);
-                  //*status = U_INVALID_FORMAT_ERROR;
-                  return NULL;
-              }
-              *(vt[cnt].what) = (uint32_t)uprv_strtoul(primary, &pointer, 16);
-              if(*pointer != 0) {
-                  fprintf(stderr, "Value of \"%s\" is not a hexadecimal number\n", buffer);
-                  //*status = U_INVALID_FORMAT_ERROR;
+              readElement(&pointer, primary, ']', status);
+              *(vt[cnt].what) = parseWeight(primary, 0xffffffff, *status);
+              if(U_FAILURE(*status)) {
+                  fprintf(stderr, "Value of \"%s\" is not a primary weight\n", buffer);
                   return NULL;
               }
             } else if (what_to_do == READCE) {
@@ -1311,6 +1307,33 @@ UCAElements *readAnElement(FILE *data,
     return element;
 }
 
+static int32_t
+diffThreeBytePrimaries(uint32_t p1, uint32_t p2, UBool isCompressible) {
+    if((p1 & 0xffff0000) == (p2 & 0xffff0000)) {
+        // Same first two bytes.
+        return (int32_t)(p2 - p1) >> 8;
+    } else {
+        // Third byte: 254 bytes 02..FF
+        int32_t linear1 = (int32_t)((p1 >> 8) & 0xff) - 2;
+        int32_t linear2 = (int32_t)((p2 >> 8) & 0xff) - 2;
+        int32_t factor;
+        if(isCompressible) {
+            // Second byte for compressible lead byte: 251 bytes 04..FE
+            linear1 += 254 * ((int32_t)((p1 >> 16) & 0xff) - 4);
+            linear2 += 254 * ((int32_t)((p2 >> 16) & 0xff) - 4);
+            factor = 251 * 254;
+        } else {
+            // Second byte for incompressible lead byte: 254 bytes 02..FF
+            linear1 += 254 * ((int32_t)((p1 >> 16) & 0xff) - 2);
+            linear2 += 254 * ((int32_t)((p2 >> 16) & 0xff) - 2);
+            factor = 254 * 254;
+        }
+        linear1 += factor * (int32_t)((p1 >> 24) & 0xff);
+        linear2 += factor * (int32_t)((p2 >> 24) & 0xff);
+        return linear2 - linear1;
+    }
+}
+
 static void
 write_uca_table(const char *filename,
                 CollationDataBuilder &builder,
@@ -1324,23 +1347,8 @@ write_uca_table(const char *filename,
     }
     uint32_t line = 0;
     UCAElements *element = NULL;
-    UCATableHeader *myD = (UCATableHeader *)uprv_malloc(sizeof(UCATableHeader));
-    /* test for NULL */
-    if(myD == NULL) {
-        *status = U_MEMORY_ALLOCATION_ERROR;
-        fclose(data);
-        return;
-    }
-    uprv_memset(myD, 0, sizeof(UCATableHeader));
-    UColOptionSet *opts = (UColOptionSet *)uprv_malloc(sizeof(UColOptionSet));
-    /* test for NULL */
-    if(opts == NULL) {
-        *status = U_MEMORY_ALLOCATION_ERROR;
-        uprv_free(myD);
-        fclose(data);
-        return;
-    }
-    uprv_memset(opts, 0, sizeof(UColOptionSet));
+    // TODO: Turn UCAConstants into fields in the inverse-base table.
+    // Pass the inverse-base builder into the parsing function.
     UCAConstants consts;
     uprv_memset(&consts, 0, sizeof(consts));
 
@@ -1369,27 +1377,14 @@ write_uca_table(const char *filename,
 
     // TODO: uprv_memset(inverseTable, 0xDA, sizeof(int32_t)*3*0xFFFF);
 
-    opts->variableTopValue = 0;
-    opts->strength = UCOL_TERTIARY;
-    opts->frenchCollation = UCOL_OFF;
-    opts->alternateHandling = UCOL_NON_IGNORABLE; /* attribute for handling variable elements*/
-    opts->caseFirst = UCOL_OFF;         /* who goes first, lower case or uppercase */
-    opts->caseLevel = UCOL_OFF;         /* do we have an extra case level */
-    opts->normalizationMode = UCOL_OFF; /* attribute for normalization */
-    opts->hiraganaQ = UCOL_OFF; /* attribute for JIS X 4061, used only in Japanese */
-    opts->numericCollation = UCOL_OFF;
-    myD->jamoSpecial = FALSE;
-
-    tempUCATable *t = uprv_uca_initTempTable(myD, opts, NULL, IMPLICIT_TAG, LEAD_SURROGATE_TAG, status);
     if(U_FAILURE(*status))
     {
-        fprintf(stderr, "Failed to init UCA temp table: %s\n", u_errorName(*status));
-        uprv_free(opts);
-        uprv_free(myD);
+        fprintf(stderr, "Failed to initialize data structures for parsing FractionalUCA.txt - %s\n", u_errorName(*status));
         fclose(data);
         return;
     }
 
+    UChar32 maxCodePoint = 0;
     int32_t surrogateCount = 0;
     while(!feof(data)) {
         if(U_FAILURE(*status)) {
@@ -1404,7 +1399,7 @@ write_uca_table(const char *filename,
         }
         int64_t ces[32];
         int32_t cesLength = 0;
-        element = readAnElement(data, builder, t, &consts, &leadByteConstants, ces, cesLength, status);
+        element = readAnElement(data, builder, &consts, &leadByteConstants, ces, cesLength, status);
         if(element != NULL) {
             // we have read the line, now do something sensible with the read data!
 
@@ -1489,29 +1484,119 @@ write_uca_table(const char *filename,
 #endif
             if(!((int32_t)element->cSize > 1 && element->cPoints[0] == 0xFDD0)) {
                 // TODO: We ignore the maximum CE for U+FFFF which has [EF FE, 05, 05] in v1.
-                // CollationDataBuilder::initBase() sets a different CE.
+                // CollationDataBuilder::initBase() sets a different (higher) CE.
                 uint32_t p = (uint32_t)(ces[0] >> 32);
-                if(p != 0xeffe0000) {
-                    UnicodeString prefix(FALSE, element->prefixChars, (int32_t)element->prefixSize);
-                    UnicodeString s(FALSE, element->cPoints, (int32_t)element->cSize);
-                    builder.add(prefix, s, ces, cesLength, *status);
-                    // TODO: Detect ranges of characters in primary code point order.
-                }
+                if(p == 0xeffe0000) { continue; }
+                UnicodeString prefix(FALSE, element->prefixChars, (int32_t)element->prefixSize);
+                UnicodeString s(FALSE, element->cPoints, (int32_t)element->cSize);
+                builder.add(prefix, s, ces, cesLength, *status);
+
+                UChar32 c = s.char32At(0);
+                if(c > maxCodePoint) { maxCodePoint = c; }
             }
         }
     }
 
+    int32_t numRanges = 0;
+    int32_t numRangeCodePoints = 0;
+    UChar32 rangeFirst = U_SENTINEL;
+    UChar32 rangeLast = U_SENTINEL;
+    uint32_t rangeFirstPrimary = 0;
+    uint32_t rangeLastPrimary = 0;
+    int32_t rangeStep = 0;
+
+    // Detect ranges of characters in primary code point order,
+    // with 3-byte primaries and
+    // with consistent "step" differences between adjacent primaries.
+    // Start at U+0180: No ranges for common Latin characters.
+    // Go one beyond maxCodePoint in case a range ends there.
+    for(UChar32 c = 0x180; c <= (maxCodePoint + 1); ++c) {
+        UBool action;
+        uint32_t p = builder.getLongPrimaryIfSingleCE(c);
+        if(p != 0) {
+            // p is a "long" (three-byte) primary.
+            if(rangeFirst >= 0 && c == (rangeLast + 1) && p > rangeLastPrimary) {
+                // Find the offset between the two primaries.
+                int32_t step = diffThreeBytePrimaries(
+                    rangeLastPrimary, p, builder.isCompressiblePrimary(p));
+                if(rangeFirst == rangeLast) {
+                    // c == rangeFirst + 1, store the "step" between range primaries.
+                    rangeStep = step;
+                    rangeLast = c;
+                    rangeLastPrimary = p;
+                    action = 0;  // continue range
+                } else if(rangeStep == step) {
+                    // Continue the range with the same "step" difference.
+                    rangeLast = c;
+                    rangeLastPrimary = p;
+                    action = 0;  // continue range
+                } else {
+                    action = 1;  // maybe finish range, start a new one
+                }
+            } else {
+                action = 1;  // maybe finish range, start a new one
+            }
+        } else {
+            action = -1;  // maybe finish range, do not start a new one
+        }
+        if(action != 0 && rangeFirst >= 0) {
+            // Finish a range.
+            // Set offset CE32s for a long range, leave single CEs for a short range.
+            int32_t rangeLength = rangeLast - rangeFirst + 1;
+            if(rangeLength >= 10 && 2 <= rangeStep && rangeStep <= 0xff) {  // TODO: rangeLength >= 40
+                // Modify the FractionalUCA generator to use the same
+                // primary-weight incrementation.
+                builder.setThreeByteOffsetRange(rangeFirst, rangeLast,
+                                                rangeFirstPrimary, rangeStep, *status);
+                if(U_FAILURE(*status)) {
+                    fprintf(stderr,
+                            "failure setting code point order range U+%04lx..U+%04lx "
+                            "%08lx..%08lx step %d - %s\n",
+                            (long)rangeFirst, (long)rangeLast,
+                            (long)rangeFirstPrimary, (long)rangeLastPrimary,
+                            (int)rangeStep, u_errorName(*status));
+                } else {
+                    printf("* set code point order range U+%04lx..U+%04lx [%d] "
+                            "%08lx..%08lx step %d\n",
+                            (long)rangeFirst, (long)rangeLast,
+                            (int)rangeLength,
+                            (long)rangeFirstPrimary, (long)rangeLastPrimary,
+                            (int)rangeStep);
+                    ++numRanges;
+                    numRangeCodePoints += rangeLength;
+                }
+            }
+            rangeFirst = U_SENTINEL;
+        }
+        if(action > 0) {
+            // Start a new range.
+            rangeFirst = rangeLast = c;
+            rangeFirstPrimary = rangeLastPrimary = p;
+        }
+    }
+    printf("** set %d ranges with %d code points\n", (int)numRanges, (int)numRangeCodePoints);
+
+    // TODO: Probably best to work in two passes.
+    // Pass 1 for reading all data, setting isCompressible flags (and reordering groups)
+    // and finding ranges.
+    // Then set the ranges in a newly initialized builder
+    // for optimal compression (makes sure that adjacent blocks can overlap easily).
+    // Then set all mappings outside the ranges.
+    //
+    // In the first pass, we could store mappings in a simple list,
+    // with single-character/single-long-primary-CE mappings in a UTrie2;
+    // or store the mappings in a temporary builder;
+    // or we could just parse the input file again in the second pass.
+    //
+    // Ideally set/copy U+0000..U+017F before setting anything else,
+    // then set default Han/Hangul, then copy non-range mappings.
+    // It should be easy to copy mappings from an un-built builder to a new one.
+
     if(UCAVersion[0] == 0 && UCAVersion[1] == 0 && UCAVersion[2] == 0 && UCAVersion[3] == 0) {
         fprintf(stderr, "UCA version not specified. Cannot create data file!\n");
-        uprv_uca_closeTempTable(t);
-        uprv_free(opts);
-        uprv_free(myD);
         fclose(data);
         return;
     }
-/*    {
-        uint32_t trieWord = utrie_get32(t->mapping, 0xDC01, NULL);
-    }*/
 
     if (beVerbose) {
         printf("\nLines read: %u\n", (int)line);
@@ -1550,9 +1635,6 @@ write_uca_table(const char *filename,
 
     if(U_FAILURE(*status)) {
         fprintf(stderr, "Error creating table: %s\n", u_errorName(*status));
-        uprv_uca_closeTempTable(t);
-        uprv_free(opts);
-        uprv_free(myD);
         fclose(data);
         return -1;
     }
@@ -1578,10 +1660,6 @@ write_uca_table(const char *filename,
     uprv_free(inverse);
 #endif
 
-    uprv_uca_closeTempTable(t);
-    uprv_free(myD);
-    uprv_free(opts);
-    
     uprv_free(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_INDEX);
     uprv_free(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA);
     uprv_free(leadByteConstants.SCRIPT_TO_LEAD_BYTES_INDEX);
@@ -1609,7 +1687,38 @@ makeDUCETFromFractionalUCA(CollationDataBuilder &builder, UErrorCode &errorCode)
 
     builder.initBase(errorCode);
     write_uca_table(path.data(), builder, &errorCode);
-    return builder.build(errorCode);
+    CollationData *cd = builder.build(errorCode);
+    printf("*** DUCET part sizes ***\n");
+    UErrorCode trieErrorCode = U_ZERO_ERROR;
+    int32_t length = builder.serializeTrie(NULL, 0, trieErrorCode);
+    printf("  trie size:                    %6ld\n", (long)length);
+    int32_t totalSize = length;
+    length = builder.lengthOfCE32s();
+    printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
+    totalSize += length * 4;
+    length = builder.lengthOfCEs();
+    printf("  CEs:              %6ld *8 = %6ld\n", (long)length, (long)length * 8);
+    totalSize += length * 8;
+    length = builder.lengthOfContexts();
+    printf("  contexts:         %6ld *2 = %6ld\n", (long)length, (long)length * 2);
+    totalSize += length * 2;
+    // TODO: Allocate Jamo CEs inside the array of CEs?! Then we just need to store an offset. -1 if from base.
+    length = 19+21+27;
+    printf("  Jamo CEs:         %6ld *8 = %6ld\n", (long)length, (long)length * 8);
+    totalSize += length * 8;
+    length = 0xF00;
+    printf("  fcd16_F00:        %6ld *2 = %6ld\n", (long)length, (long)length * 2);
+    totalSize += length * 2;
+    // TODO: Combine compressibleBytes with reordering group data.
+    printf("  compressibleBytes:               256\n");
+    totalSize += 256;
+    UErrorCode setErrorCode = U_ZERO_ERROR;
+    length = builder.serializeUnsafeBackwardSet(NULL, 0, setErrorCode);
+    printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
+    totalSize += length * 2;
+    printf("*** DUCET size:                 %6ld\n", (long)totalSize);
+    printf("  missing: headers, options, reordering group data\n");
+    return cd;
 }
 
 extern const CollationData *
@@ -1623,7 +1732,7 @@ getDUCETData(UErrorCode &errorCode) {
     }
     LocalPointer<CollationDataBuilder> builder(new CollationDataBuilder(errorCode));
     LocalPointer<CollationData> ducet(makeDUCETFromFractionalUCA(*builder, errorCode));
-    ducet->variableTop = 0x0cfe0000;  // TODO: Parse from [variable top = 0C FE].
+    ducet->variableTop = gVariableTop;
     if(U_SUCCESS(errorCode)) {
         Mutex lock;
         if(gDucet == NULL) {

@@ -45,13 +45,27 @@ public:
 
     void initTailoring(const CollationData *b, UErrorCode &errorCode);
 
+    UBool isCompressibleLeadByte(uint32_t b) const {
+        return compressibleBytes != NULL ? compressibleBytes[b] : base->isCompressibleLeadByte(b);
+    }
+
+    inline UBool isCompressiblePrimary(uint32_t p) const {
+        return isCompressibleLeadByte(p >> 24);
+    }
+
     /**
      * @return TRUE if c has CEs in this builder
      */
     UBool isAssigned(UChar32 c) const;
 
     /**
-     * Returns the single CE for c.
+     * @return the three-byte primary if c maps to a single such CE and has no context data,
+     * otherwise returns 0.
+     */
+    uint32_t getLongPrimaryIfSingleCE(UChar32 c) const;
+
+    /**
+     * @return the single CE for c.
      * Sets an error code if c does not have a single CE.
      */
     int64_t getSingleCE(UChar32 c, UErrorCode &errorCode) const;
@@ -60,17 +74,10 @@ public:
              const int64_t ces[], int32_t cesLength,
              UErrorCode &errorCode);
 
-    CollationData *build(UErrorCode &errorCode);
-
-private:
-    void initHanRanges(UErrorCode &errorCode);
-    void initHanCompat(UErrorCode &errorCode);
-
-    UBool setJamoCEs(UErrorCode &errorCode);
-    void setLeadSurrogates(UErrorCode &errorCode);
-
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order.
+     * None of the code points in the range should have complex mappings so far
+     * (expansions/contractions/prefixes).
      * @param start first code point
      * @param end last code point (inclusive)
      * @param primary primary weight for 'start'
@@ -81,6 +88,23 @@ private:
     uint32_t setThreeByteOffsetRange(UChar32 start, UChar32 end,
                                      uint32_t primary, int32_t step,
                                      UErrorCode &errorCode);
+
+    CollationData *build(UErrorCode &errorCode);
+
+    int32_t lengthOfCE32s() const { return ce32s.size(); }
+    int32_t lengthOfCEs() const { return ce64s.size(); }
+    int32_t lengthOfContexts() const { return contexts.length(); }
+
+    int32_t serializeTrie(void *data, int32_t capacity, UErrorCode &errorCode) const;
+    int32_t serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
+                                       UErrorCode &errorCode) const;
+
+private:
+    void initHanRanges(UErrorCode &errorCode);
+    void initHanCompat(UErrorCode &errorCode);
+
+    UBool setJamoCEs(UErrorCode &errorCode);
+    void setLeadSurrogates(UErrorCode &errorCode);
 
     static uint32_t makeLongPrimaryCE32(uint32_t p) { return p + 1; }
 
@@ -110,14 +134,6 @@ private:
     void buildContext(UChar32 c, UErrorCode &errorCode);
     int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
                            UErrorCode &errorCode);
-
-    UBool isCompressibleLeadByte(uint32_t b) const {
-        return compressibleBytes != NULL ? compressibleBytes[b] : base->isCompressibleLeadByte(b);
-    }
-
-    inline UBool isCompressiblePrimary(uint32_t p) const {
-        return isCompressibleLeadByte(p >> 24);
-    }
 
     const Normalizer2Impl &nfcImpl;
     const CollationData *base;
