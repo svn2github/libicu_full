@@ -75,7 +75,8 @@ public:
              UErrorCode &errorCode);
 
     /**
-     * Sets three-byte-primary CEs for a range of code points in code point order.
+     * Sets three-byte-primary CEs for a range of code points in code point order,
+     * if it is worth doing.
      * None of the code points in the range should have complex mappings so far
      * (expansions/contractions/prefixes).
      * @param start first code point
@@ -83,11 +84,11 @@ public:
      * @param primary primary weight for 'start'
      * @param step per-code point primary-weight increment
      * @param errorCode ICU in/out error code
-     * @return the next primary after 'end': start primary incremented by ((end-start)+1)*step
+     * @return TRUE if an OFFSET_TAG range was used for start..end
      */
-    uint32_t setThreeByteOffsetRange(UChar32 start, UChar32 end,
-                                     uint32_t primary, int32_t step,
-                                     UErrorCode &errorCode);
+    UBool setThreeByteOffsetRange(UChar32 start, UChar32 end,
+                                  uint32_t primary, int32_t step,
+                                  UErrorCode &errorCode);
 
     CollationData *build(UErrorCode &errorCode);
 
@@ -102,6 +103,21 @@ public:
 private:
     void initHanRanges(UErrorCode &errorCode);
     void initHanCompat(UErrorCode &errorCode);
+
+    /**
+     * Sets three-byte-primary CEs for a range of code points in code point order.
+     * None of the code points in the range should have complex mappings so far
+     * (expansions/contractions/prefixes).
+     * @param start first code point
+     * @param end last code point (inclusive)
+     * @param primary primary weight for 'start'
+     * @param step per-code point primary-weight increment
+     * @param errorCode ICU in/out error code
+     * @return the next primary after 'end': start primary incremented by ((end-start)+1)*step
+     */
+    uint32_t setThreeBytePrimaryRange(UChar32 start, UChar32 end,
+                                      uint32_t primary, int32_t step,
+                                      UErrorCode &errorCode);
 
     UBool setJamoCEs(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);

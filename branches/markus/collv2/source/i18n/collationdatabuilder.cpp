@@ -197,10 +197,10 @@ CollationDataBuilder::initHanRanges(UErrorCode &errorCode) {
         UChar32 end = hanIter.getCodepointEnd();
         if(start > 0xffff && endOfExtA >= 0) {
             // Insert extension A.
-            hanPrimary = setThreeByteOffsetRange(0x3400, endOfExtA, hanPrimary, step, errorCode);
+            hanPrimary = setThreeBytePrimaryRange(0x3400, endOfExtA, hanPrimary, step, errorCode);
             endOfExtA = -1;
         }
-        hanPrimary = setThreeByteOffsetRange(start, end, hanPrimary, step, errorCode);
+        hanPrimary = setThreeBytePrimaryRange(start, end, hanPrimary, step, errorCode);
     }
 }
 
@@ -239,24 +239,28 @@ CollationDataBuilder::initHanCompat(UErrorCode &errorCode) {
     }
 }
 
-uint32_t
+UBool
 CollationDataBuilder::setThreeByteOffsetRange(UChar32 start, UChar32 end,
                                               uint32_t primary, int32_t step,
                                               UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return 0; }
+    if(U_FAILURE(errorCode)) { return FALSE; }
     U_ASSERT(start <= end);
-    U_ASSERT(1 <= step && step <= 255);
     // TODO: Do we need to check what values are currently set for start..end?
     // An offset range is worth it only if we can achieve an overlap between
     // adjacent UTrie2 blocks of 32 code points each.
     // An offset CE is also a little more expensive to look up and compute
     // than a simple CE.
-    // We could calculate how many code points are in each block,
-    // but a simple minimum range length check should suffice.
-    UChar32 limit = end + 1;
-    UBool isCompressible = isCompressiblePrimary(primary);
-    if((limit - start) >= 40) {  // >= 40 code points in the range
+    // If the range spans at least three UTrie2 block boundaries (> 64 code points),
+    // then we take it.
+    // If the range spans one or two block boundaries and there are
+    // at least 4 code points on either side, then we take it.
+    // (We could additionally require a minimum range length of, say, 16.)
+    int32_t blockDelta = (end >> 5) - (start >> 5);
+    if(2 <= step && step <= 0x7f &&
+            (blockDelta >= 3 ||
+            (blockDelta > 0 && (start & 0x1f) <= 0x1c && (end & 0x1f) >= 3))) {
         int64_t dataCE = ((int64_t)primary << 32) | (start << 8) | step;
+        if(isCompressiblePrimary(primary)) { dataCE |= 0x80; }
         int32_t index = addCE(dataCE, errorCode);
         if(U_FAILURE(errorCode)) { return 0; }
         if(index > 0xfffff) {
@@ -265,8 +269,21 @@ CollationDataBuilder::setThreeByteOffsetRange(UChar32 start, UChar32 end,
         }
         uint32_t offsetCE32 = makeSpecialCE32(Collation::OFFSET_TAG, index);
         utrie2_setRange32(trie, start, end, offsetCE32, TRUE, &errorCode);
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+uint32_t
+CollationDataBuilder::setThreeBytePrimaryRange(UChar32 start, UChar32 end,
+                                               uint32_t primary, int32_t step,
+                                               UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    UBool isCompressible = isCompressiblePrimary(primary);
+    if(setThreeByteOffsetRange(start, end, primary, step, errorCode)) {
         return Collation::incThreeBytePrimaryByOffset(primary, isCompressible,
-                                                      (limit - start) * step);
+                                                      (end - start + 1) * step);
     } else {
         // Short range: Set individual CE32s.
         for(;;) {
@@ -281,11 +298,8 @@ CollationDataBuilder::setThreeByteOffsetRange(UChar32 start, UChar32 end,
 uint32_t
 CollationDataBuilder::getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const {
     int64_t dataCE = ce64s.elementAti((int32_t)ce32 & 0xfffff);
-    uint32_t p = (uint32_t)(dataCE >> 32);  // three-byte primary pppppp00
-    int32_t lower32 = (int32_t)dataCE;  // base code point b & step s: bbbbbbss
-    int32_t offset = (c - (lower32 >> 8)) * (lower32 & 0xff);  // delta * increment
-    return makeLongPrimaryCE32(
-        Collation::incThreeBytePrimaryByOffset(p, isCompressiblePrimary(p), offset));
+    uint32_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
+    return makeLongPrimaryCE32(p);
 }
 
 UBool
@@ -756,8 +770,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
         errorCode = U_INTERNAL_PROGRAM_ERROR;
         return;
     }
-    ConditionalCE32 *cond = reinterpret_cast<ConditionalCE32 *>(
-        conditionalCE32s[(int32_t)ce32 & 0xfffff]);
+    ConditionalCE32 *cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[ce32 & 0xfffff]);
     if(cond->next < 0) {
         // Impossible: No actual contexts after the list head.
         errorCode = U_INTERNAL_PROGRAM_ERROR;

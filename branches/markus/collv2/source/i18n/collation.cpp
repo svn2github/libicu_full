@@ -42,10 +42,13 @@ Collation::incThreeBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressibl
     return primary | ((basePrimary & 0xff000000) + (uint32_t)(offset << 24));
 }
 
-int64_t
-Collation::getCEFromThreeByteOffset(uint32_t basePrimary, UBool isCompressible, int32_t offset) {
-    uint32_t primary = incThreeBytePrimaryByOffset(basePrimary, isCompressible, offset);
-    return ((int64_t)primary << 32) | COMMON_SEC_AND_TER_CE;
+uint32_t
+Collation::getThreeBytePrimaryForOffsetData(UChar32 c, int64_t dataCE) {
+    uint32_t p = (uint32_t)(dataCE >> 32);  // three-byte primary pppppp00
+    int32_t lower32 = (int32_t)dataCE;  // base code point b & step s: bbbbbbss (bit 7: isCompressible)
+    int32_t offset = (c - (lower32 >> 8)) * (lower32 & 0x7f);  // delta * increment
+    UBool isCompressible = (lower32 & 0x80) != 0;
+    return Collation::incThreeBytePrimaryByOffset(p, isCompressible, offset);
 }
 
 uint32_t

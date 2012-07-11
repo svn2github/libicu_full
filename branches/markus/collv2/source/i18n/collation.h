@@ -165,7 +165,8 @@ public:
          * This data "CE" has the following bit fields:
          * Bits 63..32: Three-byte primary pppppp00.
          *      31.. 8: Start/base code point of the in-order range.
-         *       7.. 0: Per-code point primary-weight increment.
+         *           7: Flag isCompressible primary.
+         *       6.. 0: Per-code point primary-weight increment.
          */
         OFFSET_TAG = 14,
         /**
@@ -223,11 +224,9 @@ public:
                                                 int32_t offset);
 
     /**
-     * Computes a CE from a 3-byte base primary and a code point offset.
-     * See OFFSET_TAG.
+     * Computes a 3-byte primary for c's OFFSET_TAG data "CE".
      */
-    static int64_t getCEFromThreeByteOffset(uint32_t basePrimary, UBool isCompressible,
-                                            int32_t offset);
+    static uint32_t getThreeBytePrimaryForOffsetData(UChar32 c, int64_t dataCE);
 
     /**
      * Returns the unassigned-character implicit primary weight for any valid code point c.

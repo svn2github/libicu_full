@@ -401,17 +401,15 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
 
 int64_t
 CollationIterator::getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32) {
-    int64_t dataCE = d->ces[(int32_t)ce32 & 0xfffff];
-    uint32_t p = (uint32_t)(dataCE >> 32);  // three-byte primary pppppp00
-    int32_t lower32 = (int32_t)dataCE;  // base code point b & step s: bbbbbbss
-    int32_t offset = (c - (lower32 >> 8)) * (lower32 & 0xff);  // delta * increment
-    return Collation::getCEFromThreeByteOffset(p, d->isCompressiblePrimary(p), offset);
+    int64_t dataCE = d->ces[ce32 & 0xfffff];
+    int64_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
+    return (p << 32) | Collation::COMMON_SEC_AND_TER_CE;
 }
 
 uint32_t
 CollationIterator::getCE32FromPrefix(const CollationData *d, uint32_t ce32,
                                      UErrorCode &errorCode) {
-    const UChar *p = d->contexts + ((int32_t)ce32 & 0xfffff);
+    const UChar *p = d->contexts + (ce32 & 0xfffff);
     ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no prefix match.
     p += 2;
     // Number of code points read before the original code point.

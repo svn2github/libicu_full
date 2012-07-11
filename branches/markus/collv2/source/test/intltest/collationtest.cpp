@@ -1385,6 +1385,10 @@ write_uca_table(const char *filename,
     }
 
     UChar32 maxCodePoint = 0;
+    int32_t numArtificialSecondaries = 0;
+    int32_t numExtraSecondaryExpansions = 0;
+    int32_t numExtraExpansionCEs = 0;
+    int32_t numDiffTertiaries = 0;
     int32_t surrogateCount = 0;
     while(!feof(data)) {
         if(U_FAILURE(*status)) {
@@ -1493,9 +1497,35 @@ write_uca_table(const char *filename,
 
                 UChar32 c = s.char32At(0);
                 if(c > maxCodePoint) { maxCodePoint = c; }
+
+                if(cesLength >= 2 && p != 0) {
+                    int64_t prevCE = ces[0];
+                    for(int32_t i = 1; i < cesLength; ++i) {
+                        int64_t ce = ces[i];
+                        if((uint32_t)(ce >> 32) == 0 && ((uint32_t)ce >> 16) > 0xdb99 && (uint32_t)(prevCE >> 32) != 0) {
+                            ++numArtificialSecondaries;
+                            if(cesLength == 2) {
+                                ++numExtraSecondaryExpansions;
+                                numExtraExpansionCEs += 2;
+                            } else {
+                                ++numExtraExpansionCEs;
+                            }
+                            if(((uint32_t)prevCE & 0x3f3f) != ((uint32_t)ce & 0x3f3f)) {
+                                ++numDiffTertiaries;
+                            }
+                        }
+                        prevCE = ce;
+                    }
+                }
             }
         }
     }
+
+    // TODO: Remove analysis & output.
+    printf("*** number of artificial secondary CEs:                 %6ld\n", (long)numArtificialSecondaries);
+    printf("    number of 2-CE expansions that could be single CEs: %6ld\n", (long)numExtraSecondaryExpansions);
+    printf("    number of extra expansion CEs:                      %6ld\n", (long)numExtraExpansionCEs);
+    printf("    number of artificial sec. CEs w. diff. tertiaries:  %6ld\n", (long)numDiffTertiaries);
 
     int32_t numRanges = 0;
     int32_t numRangeCodePoints = 0;
@@ -1503,11 +1533,12 @@ write_uca_table(const char *filename,
     UChar32 rangeLast = U_SENTINEL;
     uint32_t rangeFirstPrimary = 0;
     uint32_t rangeLastPrimary = 0;
-    int32_t rangeStep = 0;
+    int32_t rangeStep = -1;
 
     // Detect ranges of characters in primary code point order,
     // with 3-byte primaries and
     // with consistent "step" differences between adjacent primaries.
+    // TODO: Modify the FractionalUCA generator to use the same primary-weight incrementation.
     // Start at U+0180: No ranges for common Latin characters.
     // Go one beyond maxCodePoint in case a range ends there.
     for(UChar32 c = 0x180; c <= (maxCodePoint + 1); ++c) {
@@ -1519,7 +1550,7 @@ write_uca_table(const char *filename,
                 // Find the offset between the two primaries.
                 int32_t step = diffThreeBytePrimaries(
                     rangeLastPrimary, p, builder.isCompressiblePrimary(p));
-                if(rangeFirst == rangeLast) {
+                if(rangeFirst == rangeLast && step >= 2) {
                     // c == rangeFirst + 1, store the "step" between range primaries.
                     rangeStep = step;
                     rangeLast = c;
@@ -1542,31 +1573,29 @@ write_uca_table(const char *filename,
         if(action != 0 && rangeFirst >= 0) {
             // Finish a range.
             // Set offset CE32s for a long range, leave single CEs for a short range.
-            int32_t rangeLength = rangeLast - rangeFirst + 1;
-            if(rangeLength >= 10 && 2 <= rangeStep && rangeStep <= 0xff) {  // TODO: rangeLength >= 40
-                // Modify the FractionalUCA generator to use the same
-                // primary-weight incrementation.
-                builder.setThreeByteOffsetRange(rangeFirst, rangeLast,
-                                                rangeFirstPrimary, rangeStep, *status);
-                if(U_FAILURE(*status)) {
-                    fprintf(stderr,
-                            "failure setting code point order range U+%04lx..U+%04lx "
-                            "%08lx..%08lx step %d - %s\n",
-                            (long)rangeFirst, (long)rangeLast,
-                            (long)rangeFirstPrimary, (long)rangeLastPrimary,
-                            (int)rangeStep, u_errorName(*status));
-                } else {
-                    printf("* set code point order range U+%04lx..U+%04lx [%d] "
-                            "%08lx..%08lx step %d\n",
-                            (long)rangeFirst, (long)rangeLast,
-                            (int)rangeLength,
-                            (long)rangeFirstPrimary, (long)rangeLastPrimary,
-                            (int)rangeStep);
-                    ++numRanges;
-                    numRangeCodePoints += rangeLength;
-                }
+            UBool didSetRange = builder.setThreeByteOffsetRange(
+                rangeFirst, rangeLast,
+                rangeFirstPrimary, rangeStep, *status);
+            if(U_FAILURE(*status)) {
+                fprintf(stderr,
+                        "failure setting code point order range U+%04lx..U+%04lx "
+                        "%08lx..%08lx step %d - %s\n",
+                        (long)rangeFirst, (long)rangeLast,
+                        (long)rangeFirstPrimary, (long)rangeLastPrimary,
+                        (int)rangeStep, u_errorName(*status));
+            } else if(didSetRange) {
+                int32_t rangeLength = rangeLast - rangeFirst + 1;
+                printf("* set code point order range U+%04lx..U+%04lx [%d] "
+                        "%08lx..%08lx step %d\n",
+                        (long)rangeFirst, (long)rangeLast,
+                        (int)rangeLength,
+                        (long)rangeFirstPrimary, (long)rangeLastPrimary,
+                        (int)rangeStep);
+                ++numRanges;
+                numRangeCodePoints += rangeLength;
             }
             rangeFirst = U_SENTINEL;
+            rangeStep = -1;
         }
         if(action > 0) {
             // Start a new range.
@@ -1589,8 +1618,15 @@ write_uca_table(const char *filename,
     // or we could just parse the input file again in the second pass.
     //
     // Ideally set/copy U+0000..U+017F before setting anything else,
-    // then set default Han/Hangul, then copy non-range mappings.
+    // then set default Han/Hangul, then set the ranges, then copy non-range mappings.
     // It should be easy to copy mappings from an un-built builder to a new one.
+    // Add CollationDataBuilder::copyFrom(builder, code point, errorCode) -- copy contexts & expansions.
+
+    // TODO: Analyse why DUCET data is large.
+    // Size of expansions for canonical decompositions?
+    // Size of expansions for compatibility decompositions?
+    // For the latter, consider storing some of them as specials,
+    //   decompose at runtime?? Store unusual tertiary in special CE32?
 
     if(UCAVersion[0] == 0 && UCAVersion[1] == 0 && UCAVersion[2] == 0 && UCAVersion[3] == 0) {
         fprintf(stderr, "UCA version not specified. Cannot create data file!\n");
