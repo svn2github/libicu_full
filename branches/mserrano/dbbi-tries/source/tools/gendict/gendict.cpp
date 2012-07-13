@@ -128,16 +128,19 @@ public:
 private:
     char transform(UChar32 c, UErrorCode &status) {
         if (transformType == DictionaryData::TRANSFORM_TYPE_OFFSET) {
+            if (c == 0x200D) { return (char)0xFF; }
+            else if (c == 0x200C) { return (char)0xFE; }
             int32_t delta = c - transformConstant;
-            if (delta < 0 || 0xFF < delta) {
+            if (delta < 0 || 0xFD < delta) {
                 fprintf(stderr, "Codepoint U+%04lx out of range for --transform offset-%04lx!\n",
                         (long)c, (long)transformConstant);
                 exit(U_ILLEGAL_ARGUMENT_ERROR); // TODO: should return and print the line number
             }
             return (char)delta;
-        } else // no such transform type
+        } else { // no such transform type 
             status = U_INTERNAL_PROGRAM_ERROR;
             return (char)c; // it should be noted this transform type will not generally work
+        }
     }
 
     void transform(const UnicodeString &word, CharString &buf, UErrorCode &errorCode) {
@@ -177,7 +180,7 @@ public:
         if (bt) {
             CharString buf;
             transform(word, buf, status);
-            bt->add(buf.data(), value, status);
+            bt->add(buf.toStringPiece(), value, status);
         }
         if (ut) { ut->add(word, value, status); }
     }
@@ -376,6 +379,10 @@ int  main(int argc, char **argv) {
         dict.serializeUChars(usp, status);
         outDataSize = usp.length() * U_SIZEOF_UCHAR;
         outData = usp.getBuffer();
+    }
+    if (status.isFailure()) {
+        fprintf(stderr, "gendict: got failure of type %s while serializing\n", status.errorName());
+        exit(status.reset());
     }
     if (verbose) { puts("Opening output file..."); }
     UNewDataMemory *pData = udata_create(NULL, NULL, outFileName, &dataInfo, copyright, status);

@@ -9,9 +9,12 @@
 * created by: Markus W. Scherer & Maxime Serrano
 */
 
+#include "dictionarydata.h"
+#include "unicode/ucharstrie.h"
+#include "unicode/bytestrie.h"
+#include "triedict.h"
 #include "unicode/udata.h"
 #include "cmemory.h"
-#include "dictionarydata.h"
 
 U_NAMESPACE_BEGIN
 
@@ -24,11 +27,123 @@ UBool DictionaryData::assertTrieType(int32_t type, UErrorCode &errorCode) const 
 
 UChar32 DictionaryData::getTransformOffset(UErrorCode &errorCode) const { 
     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
-    if((transform & TRANSFORM_TYPE_MASK) != TRANSFORM_TYPE_OFFSET) {
+    if ((transform & TRANSFORM_TYPE_MASK) != TRANSFORM_TYPE_OFFSET) {
         errorCode = U_INVALID_FORMAT_ERROR;
         return U_SENTINEL;
     }
     return transform & TRANSFORM_OFFSET_MASK;
+}
+
+UCharsDictionaryMatcher::~UCharsDictionaryMatcher() {
+    udata_close(file);
+}
+
+int32_t UCharsDictionaryMatcher::getType() const {
+    return DictionaryData::TRIE_TYPE_UCHARS;
+}
+
+int32_t UCharsDictionaryMatcher::matches(UText *text, int32_t maxLength, int *lengths, int &count, int limit, int32_t *values) const {
+    UCharsTrie uct(characters);
+    UChar32 c = utext_next32(text);
+    if (c < 0) {
+        return 0;
+    }
+    UStringTrieResult result = uct.first(c);
+    int32_t numChars = 1;
+    count = 0;
+    for (;;) {
+        if (USTRINGTRIE_HAS_VALUE(result)) {
+            if (count < limit) {
+                if (values != NULL) {
+                    values[count] = uct.getValue();
+                }
+                lengths[count++] = numChars;
+            }
+            if (result == USTRINGTRIE_FINAL_VALUE) {
+                break;
+            }
+        }
+        else if (result == USTRINGTRIE_NO_MATCH) {
+            break;
+        }
+
+        // TODO: why do we have a text limit if the UText knows its length?
+        if (numChars >= maxLength) {
+            break;
+        }
+
+        c = utext_next32(text);
+        if (c < 0) {
+            break;
+        }
+        ++numChars;
+        result = uct.next(c);
+    }
+    return numChars;
+}
+
+BytesDictionaryMatcher::~BytesDictionaryMatcher() {
+    udata_close(file);
+}
+
+UChar32 BytesDictionaryMatcher::transform(UChar32 c) const {
+    if ((transformConstant & DictionaryData::TRANSFORM_TYPE_MASK) == DictionaryData::TRANSFORM_TYPE_OFFSET) {
+        if (c == 0x200D) {
+            return 0xFF;
+        } else if (c == 0x200C) {
+            return 0xFE;
+        }
+        int32_t delta = c - (transformConstant & DictionaryData::TRANSFORM_OFFSET_MASK);
+        if (delta < 0 || 0xFD < delta) {
+            return U_SENTINEL;
+        }
+        return (UChar32)delta;
+    }
+    return c;
+}
+
+int32_t BytesDictionaryMatcher::getType() const {
+    return DictionaryData::TRIE_TYPE_BYTES;
+}
+
+int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength, int *lengths, int &count, int limit, int32_t *values) const {
+    BytesTrie bt(characters);
+    UChar32 c = utext_next32(text);
+    if (c < 0) {
+        return 0;
+    }
+    UStringTrieResult result = bt.first(transform(c));
+    int32_t numChars = 1;
+    count = 0;
+    for (;;) {
+        if (USTRINGTRIE_HAS_VALUE(result)) {
+            if (count < limit) {
+                if (values != NULL) {
+                    values[count] = bt.getValue();
+            }
+                lengths[count++] = numChars;
+            }
+            if (result == USTRINGTRIE_FINAL_VALUE) {
+                break;
+            }
+        }
+        else if (result == USTRINGTRIE_NO_MATCH) {
+            break;
+        }
+
+        // TODO: why do we have a text limit if the UText knows its length?
+        if (numChars >= maxLength) {
+            break;
+        }
+
+        c = utext_next32(text);
+        if (c < 0) {
+            break;
+        }
+        ++numChars;
+        result = bt.next(transform(c));
+    }
+    return numChars;
 }
 
 
@@ -75,7 +190,7 @@ udict_swap(const UDataSwapper *ds, const void *inData, int32_t length,
     }
 
     for (i = 0; i < DictionaryData::IX_COUNT; i++) {
-       indexes[i] = udata_readInt32(ds, inIndexes[i]);
+        indexes[i] = udata_readInt32(ds, inIndexes[i]);
     }
 
     size = indexes[DictionaryData::IX_TOTAL_SIZE];
@@ -97,12 +212,10 @@ udict_swap(const UDataSwapper *ds, const void *inData, int32_t length,
         int32_t trieType = indexes[DictionaryData::IX_TRIE_TYPE] & DictionaryData::TRIE_TYPE_MASK;
         int32_t nextOffset = indexes[DictionaryData::IX_RESERVED1_OFFSET];
 
-        if (trieType == DictionaryData::TRIE_TYPE_BYTES) {
-           // we're done!
-           ;
-        }
-        else if (trieType == DictionaryData::TRIE_TYPE_UCHARS) {
+        if (trieType == DictionaryData::TRIE_TYPE_UCHARS) {
             ds->swapArray16(ds, inBytes + offset, nextOffset - offset, outBytes + offset, pErrorCode);
+        } else if (trieType == DictionaryData::TRIE_TYPE_BYTES) {
+            // nothing to do
         } else {
             udata_printError(ds, "udict_swap(): unknown trie type!\n");
             *pErrorCode = U_UNSUPPORTED_ERROR;

@@ -16,11 +16,16 @@
 
 #if !UCONFIG_NO_BREAK_ITERATION
 
+#include "unicode/utext.h"
 #include "unicode/udata.h"
 #include "udataswp.h"
 #include "unicode/uobject.h"
+#include "unicode/ustringtrie.h"
 
 U_NAMESPACE_BEGIN
+
+class UCharsTrie;
+class BytesTrie;
 
 class U_COMMON_API DictionaryData : public UMemory {
 public:
@@ -92,6 +97,53 @@ private:
 
     int32_t trieType;  // indexes[IX_TRIE_TYPE]
     int32_t transform;  // indexes[IX_TRANSFORM]
+};
+
+/**
+ * Wrapper class around generic dictionaries, implementing matches().
+ * getType() should return a TRIE_TYPE_??? constant from DictionaryData.
+ * 
+ * All implementations of this interface must be threadsafe if they are to be used inside of the
+ * dictionary-based break iteration code.
+ */
+class U_COMMON_API DictionaryMatcher {
+public:
+    // this should emulate CompactTrieDictionary::matches()
+    virtual int32_t matches(UText *text, int32_t maxLength, int32_t *lengths, int &count, int limit, int32_t *values = NULL) const = 0;
+    /** @return DictionaryData::TRIE_TYPE_XYZ */
+    virtual int32_t getType() const = 0;
+};
+
+// Implementation of the DictionaryMatcher interface for a UCharsTrie dictionary
+class U_COMMON_API UCharsDictionaryMatcher : public DictionaryMatcher {
+public:
+    // constructs a new UCharsDictionaryMatcher.
+    // The UDataMemory * will be closed on this object's destruction.
+    UCharsDictionaryMatcher(const UChar *c, UDataMemory *f) : characters(c), file(f) { }
+    ~UCharsDictionaryMatcher();
+    virtual int32_t matches(UText *text, int32_t maxLength, int32_t *lengths, int &count, int limit, int32_t *values = NULL) const;
+    virtual int32_t getType() const;
+private:
+    const UChar *characters;
+    UDataMemory *file;
+};
+
+// Implementation of the DictionaryMatcher interface for a BytesTrie dictionary
+class U_COMMON_API BytesDictionaryMatcher : public DictionaryMatcher {
+public:
+    // constructs a new BytesTrieDictionaryMatcher
+    // the transform constant should be the constant read from the file, not a masked version!
+    // the UDataMemory * fed in here will be closed on this object's destruction
+    BytesDictionaryMatcher(const char *c, int32_t t, UDataMemory *f) : characters(c), transformConstant(t), file(f) { }
+    ~BytesDictionaryMatcher();
+    virtual int32_t matches(UText *text, int32_t maxLength, int32_t *lengths, int &count, int limit, int32_t *values = NULL) const;
+    virtual int32_t getType() const;
+private:
+    UChar32 transform(UChar32 c) const;
+
+    const char *characters;
+    int32_t transformConstant;
+    UDataMemory *file;
 };
 
 U_NAMESPACE_END

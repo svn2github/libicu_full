@@ -16,7 +16,7 @@
 
 U_NAMESPACE_BEGIN
 
-class TrieWordDictionary;
+class DictionaryMatcher;
 
 /*******************************************************************
  * DictionaryBreakEngine
@@ -135,7 +135,7 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
 
 /**
  * <p>ThaiBreakEngine is a kind of DictionaryBreakEngine that uses a
- * TrieWordDictionary and heuristics to determine Thai-specific breaks.</p>
+ * dictionary and heuristics to determine Thai-specific breaks.</p>
  *
  * <p>After it is constructed a ThaiBreakEngine may be shared between
  * threads without synchronization.</p>
@@ -152,17 +152,17 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
   UnicodeSet                fBeginWordSet;
   UnicodeSet                fSuffixSet;
   UnicodeSet                fMarkSet;
-  const TrieWordDictionary  *fDictionary;
+  DictionaryMatcher  *fDictionary;
 
  public:
 
   /**
    * <p>Default constructor.</p>
    *
-   * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the
+   * @param adoptDictionary A DictionaryMatcher to adopt. Deleted when the
    * engine is deleted.
    */
-  ThaiBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status);
+  ThaiBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status);
 
   /**
    * <p>Virtual destructor.</p>
@@ -198,7 +198,7 @@ enum LanguageType {
 
 /**
  * <p>CjkBreakEngine is a kind of DictionaryBreakEngine that uses a
- * TrieWordDictionary with costs associated with each word and
+ * dictionary with costs associated with each word and
  * Viterbi decoding to determine CJK-specific breaks.</p>
  */
 class CjkBreakEngine : public DictionaryBreakEngine {
@@ -212,18 +212,18 @@ class CjkBreakEngine : public DictionaryBreakEngine {
   UnicodeSet                fKatakanaWordSet;
   UnicodeSet                fHiraganaWordSet;
 
-  const TrieWordDictionary  *fDictionary;
+  DictionaryMatcher  *fDictionary;
 
  public:
 
     /**
      * <p>Default constructor.</p>
      *
-     * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the
-     * engine is deleted. The TrieWordDictionary must contain costs for each word
+     * @param adoptDictionary A DictionaryMatcher to adopt. Deleted when the
+     * engine is deleted. The DictionaryMatcher must contain costs for each word
      * in order for the dictionary to work properly.
      */
-  CjkBreakEngine(const TrieWordDictionary *adoptDictionary, LanguageType type, UErrorCode &status);
+  CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType type, UErrorCode &status);
 
     /**
      * <p>Virtual destructor.</p>
@@ -269,7 +269,7 @@ class KhmerBreakEngine : public DictionaryBreakEngine {
   UnicodeSet                fEndWordSet; 
   UnicodeSet                fBeginWordSet; 
   UnicodeSet                fMarkSet; 
-  const TrieWordDictionary  *fDictionary; 
+  DictionaryMatcher  *fDictionary; 
  
  public: 
  
@@ -279,7 +279,7 @@ class KhmerBreakEngine : public DictionaryBreakEngine {
    * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the 
    * engine is deleted. 
    */ 
-  KhmerBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status); 
+  KhmerBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status); 
  
   /** 
    * <p>Virtual destructor.</p> 

@@ -1305,7 +1305,6 @@ static const struct {
 
 #if !UCONFIG_NO_BREAK_ITERATION
     {"char",                     "brk", ubrk_swap},
-    {"thaidict",                 "ctd", triedict_swap},
 #endif
 
 #if 0

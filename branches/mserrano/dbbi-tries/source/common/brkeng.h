@@ -18,6 +18,8 @@ U_NAMESPACE_BEGIN
 class UnicodeSet;
 class UStack;
 class CompactTrieDictionary;
+class UCharsTrie;
+class DictionaryMatcher;
 
 /*******************************************************************
  * LanguageBreakEngine
@@ -273,6 +275,17 @@ class ICULanguageBreakFactory : public LanguageBreakFactory {
   */
   virtual const LanguageBreakEngine *loadEngineFor(UChar32 c, int32_t breakType);
 
+  /**
+   * <p>Create a DictionaryMatcher for the specified script and break type.</p>
+   * @param script An ISO 15924 script code that identifies the dictionary to be
+   * created.
+   * @param breakType The kind of text break for which a dictionary is 
+   * sought.
+   * @return A DictionaryMatcher with the desired characteristics, or NULL.
+   */
+  virtual DictionaryMatcher *loadDictionaryMatcherFor(UScriptCode script, int32_t breakType);
+
+protected:
  /**
   * <p>Create a CompactTrieDictionary for the specified script and break type.</p>
   *
@@ -280,7 +293,7 @@ class ICULanguageBreakFactory : public LanguageBreakFactory {
   * created.
   * @param breakType The kind of text break for which a dictionary is
   * sought.
-  * @return A CompactTrieDictionary with the desired characteristics, or 0.
+  * @return A CompactTrieDictionary with the desired characteristics, or NULL.
   */
   virtual const CompactTrieDictionary *loadDictionaryFor(UScriptCode script, int32_t breakType);
 

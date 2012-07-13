@@ -84,6 +84,9 @@ Set the transform type. Should only be specified with
 Currently supported transforms are:
 .BR offset-<hex-number>,
 which specifies an offset to subtract from all input characters.
+It should be noted that the offset transform also maps U+200D 
+to 0xFF and U+200C to 0xFE, in order to offer compatibility to 
+languages that require these characters.
 A transform must be specified for a bytes trie, and when applied 
 to the non-value characters in the 
 .IR input-file

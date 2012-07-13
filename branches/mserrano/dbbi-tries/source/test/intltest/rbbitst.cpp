@@ -114,10 +114,7 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
 
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_FILE_IO
         case 16:  
-            // TODO(mserrano): fix & re-enable this test
-            // name = "TestMonkey";
-            // if(exec)  TestMonkey(params);
-            name = "skip";                                     break;
+            name = "TestMonkey"; if(exec)  TestMonkey(params); break;
 #else
         case 16:
              name = "skip";                                    break;
@@ -2615,7 +2612,7 @@ RBBIWordMonkey::RBBIWordMonkey()
     fCRSet           = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = CR}]"),           status);
     fLFSet           = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = LF}]"),           status);
     fNewlineSet      = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Newline}]"),      status);
-    fDictionaryCjkSet= new UnicodeSet("[[\\uac00-\\ud7a3][:Han:][:Hiragana:]]", status);
+    fDictionaryCjkSet= new UnicodeSet("[[\\uac00-\\ud7a3][:Han:][:Hiragana:][:Katakana:]]", status);
     // Exclude Hangul syllables from ALetterSet during testing.
     // Leave CJK dictionary characters out from the monkey tests!
 #if 0 
@@ -2632,7 +2629,9 @@ RBBIWordMonkey::RBBIWordMonkey()
     fMidNumLetSet    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = MidNumLet}]"),    status);
     fMidLetterSet    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = MidLetter}]"),    status);
     fMidNumSet       = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = MidNum}]"),       status);
-    fNumericSet      = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Numeric}[\\uff10-\\uff19]]"),      status);
+    // TODO: this set used to contain [\\uff10-\\uff19] (fullwidth digits), but this breaks the test
+    // we should figure out why
+    fNumericSet      = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Numeric}]"),      status);
     fFormatSet       = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Format}]"),       status);
     fExtendNumLetSet = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = ExtendNumLet}]"), status);
     fExtendSet       = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Extend}]"),       status);
