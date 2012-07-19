@@ -3,7 +3,7 @@
 // * Copyright (C) 2012 International Business Machines
 // * Corporation and others.  All Rights Reserved.
 // * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
-// * Source File:<path>/plurals.xml
+// * Source File:<path>/plurals.xml, ordinals.xml
 // *
 // ***************************************************************************
 plurals:table(nofallback){

@@ -12,10 +12,7 @@ en_BE{
             "BEF",
             "Belgian Franc",
             {
-                /**
-                 * Duplicated from NumberPatterns resource
-                 */
-                "#,##0.00 ¤",
+                "#,##0.00 ¤;-#,##0.00 ¤",
                 ",",
                 ".",
             }

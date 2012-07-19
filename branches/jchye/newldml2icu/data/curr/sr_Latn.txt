@@ -448,7 +448,7 @@ sr_Latn{
             "Izraelska funta (ILP)",
         }
         ILR{
-            "ILR" /** ===  */,
+            "ILR",
             "stari izraelski šekeli",
         }
         ILS{
@@ -468,7 +468,7 @@ sr_Latn{
             "Iranijski rial (IRR)",
         }
         ISJ{
-            "ISJ" /** ===  */,
+            "ISJ",
             "stara islandska kruna",
         }
         ISK{

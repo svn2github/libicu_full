@@ -28,7 +28,7 @@ fr{
             "afghani afghan",
         }
         ALK{
-            "ALK" /** ===  */,
+            "ALK",
             "lek albanais (1947–1961)",
         }
         ALL{

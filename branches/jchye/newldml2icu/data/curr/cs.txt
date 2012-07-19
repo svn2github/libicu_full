@@ -28,7 +28,7 @@ cs{
             "afghánský afghán",
         }
         ALK{
-            "ALK" /** ===  */,
+            "ALK",
             "albánské lek (1946-1965)",
         }
         ALL{
@@ -404,7 +404,7 @@ cs{
             "izraelská libra",
         }
         ILR{
-            "ILR" /** ===  */,
+            "ILR",
             "izraelský šekel (1980-1985)",
         }
         ILS{
@@ -424,7 +424,7 @@ cs{
             "íránský rijál",
         }
         ISJ{
-            "ISJ" /** ===  */,
+            "ISJ",
             "islandská koruna (1918-1981)",
         }
         ISK{

@@ -41,8 +41,8 @@ te{
     calendar{
         gregorian{
             AmPmMarkers{
-                "ఉ",
-                "సా",
+                "పూర్వాహ్నం",
+                "అపరాహ్నం",
             }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
