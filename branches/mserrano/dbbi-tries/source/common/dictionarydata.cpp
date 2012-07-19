@@ -18,22 +18,6 @@
 
 U_NAMESPACE_BEGIN
 
-UBool DictionaryData::assertTrieType(int32_t type, UErrorCode &errorCode) const {
-    if(U_FAILURE(errorCode)) { return FALSE; }
-    if(type == trieType) { return TRUE; }
-    errorCode = U_INVALID_FORMAT_ERROR;
-    return FALSE;
-}
-
-UChar32 DictionaryData::getTransformOffset(UErrorCode &errorCode) const { 
-    if(U_FAILURE(errorCode)) { return U_SENTINEL; }
-    if ((transform & TRANSFORM_TYPE_MASK) != TRANSFORM_TYPE_OFFSET) {
-        errorCode = U_INVALID_FORMAT_ERROR;
-        return U_SENTINEL;
-    }
-    return transform & TRANSFORM_OFFSET_MASK;
-}
-
 UCharsDictionaryMatcher::~UCharsDictionaryMatcher() {
     udata_close(file);
 }

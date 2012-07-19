@@ -1863,7 +1863,7 @@ getLanguageBreakEngineFromFactory(UChar32 c, int32_t breakType)
 //-------------------------------------------------------------------------------
 //
 //  getLanguageBreakEngine  Find an appropriate LanguageBreakEngine for the
-//                          the characer c.
+//                          the character c.
 //
 //-------------------------------------------------------------------------------
 const LanguageBreakEngine *

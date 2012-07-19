@@ -29,23 +29,6 @@ class BytesTrie;
 
 class U_COMMON_API DictionaryData : public UMemory {
 public:
-    DictionaryData()
-            : memory(NULL), bytes(NULL), uchars(NULL),
-              trieType(TRIE_TYPE_BYTES), transform(TRANSFORM_NONE) {
-    }
-    ~DictionaryData();
-
-    /** Loads the name.dict file from the packageName. */
-    void load(const char *packageName, const char *name, UErrorCode &errorCode);
-
-    /**
-     * Checks that the the trie type in the data is the expected type.
-     * Sets an error code if the types differ.
-     * @param type TRIE_HAS_VALUES | TRIE_TYPE_BYTES etc.
-     * @return TRUE if the data has the expected type
-     */
-    UBool assertTrieType(int32_t type, UErrorCode &errorCode) const;
-
     static const int32_t TRIE_TYPE_BYTES = 0;
     static const int32_t TRIE_TYPE_UCHARS = 1;
     static const int32_t TRIE_TYPE_MASK = 7;
@@ -55,17 +38,6 @@ public:
     static const int32_t TRANSFORM_TYPE_OFFSET = 0x1000000;
     static const int32_t TRANSFORM_TYPE_MASK = 0x7f000000;
     static const int32_t TRANSFORM_OFFSET_MASK = 0x1fffff;
-
-
-    /**
-     * Returns the transformation offset.
-     * Sets an error code if the data does not specify an offset transformation.
-     * @return the transformation offset
-     */
-    UChar32 getTransformOffset(UErrorCode &errorCode) const;
-
-    const char *getBytesTrie() const { return bytes; }
-    const UChar *getUCharsTrie() const { return uchars; }
 
     enum {
         // Byte offsets from the start of the data, after the generic header.
@@ -83,20 +55,6 @@ public:
         IX_RESERVED7,
         IX_COUNT
     };
-
-private:
-    static UBool U_CALLCONV
-    isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
-
-    UDataMemory *memory;
-    UVersionInfo dataVersion;
-
-    // At most one of the following pointers can be non-NULL.
-    const char *bytes;
-    const UChar *uchars;
-
-    int32_t trieType;  // indexes[IX_TRIE_TYPE]
-    int32_t transform;  // indexes[IX_TRANSFORM]
 };
 
 /**
