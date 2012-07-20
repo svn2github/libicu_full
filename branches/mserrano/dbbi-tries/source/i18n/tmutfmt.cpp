@@ -5,12 +5,13 @@
  *******************************************************************************
  */
 
-#include <typeinfo>  // for 'typeid' to work
+#include "utypeinfo.h"  // for 'typeid' to work
 
 #include "unicode/tmutfmt.h"
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "uvector.h"
 #include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"

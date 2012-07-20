@@ -1031,6 +1031,8 @@ void DecimalFormat::handleChanged() {
     debug("No fastpath: fMinFractionDigits>0");
   } else if(fCurrencySignCount > fgCurrencySignCountZero) {
     debug("No fastpath: fCurrencySignCount > fgCurrencySignCountZero");
+  } else if(fRoundingIncrement!=0) {
+    debug("No fastpath: fRoundingIncrement!=0");
   } else {
     data.fFastpathStatus = kFastpathYES;
     debug("kFastpathYES!");
@@ -1044,8 +1046,9 @@ DecimalFormat::format(int64_t number,
                       UnicodeString& appendTo,
                       FieldPosition& fieldPosition) const
 {
-  FieldPositionOnlyHandler handler(fieldPosition);
-  return _format(number, appendTo, handler);
+    UErrorCode status = U_ZERO_ERROR;
+    FieldPositionOnlyHandler handler(fieldPosition);
+    return _format(number, appendTo, handler, status);
 }
 
 UnicodeString&
@@ -1055,16 +1058,19 @@ DecimalFormat::format(int64_t number,
                       UErrorCode& status) const
 {
     FieldPositionIteratorHandler handler(posIter, status);
-    return _format(number, appendTo, handler);
+    return _format(number, appendTo, handler, status);
 }
 
 UnicodeString&
 DecimalFormat::_format(int64_t number,
                        UnicodeString& appendTo,
-                       FieldPositionHandler& handler) const
+                       FieldPositionHandler& handler,
+                       UErrorCode &status) const
 {
     // Bottleneck function for formatting int64_t
-    UErrorCode status = U_ZERO_ERROR;
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
 
 #if UCONFIG_FORMAT_FASTPATHS_49
   // const UnicodeString *posPrefix = fPosPrefixPattern;
@@ -1103,14 +1109,14 @@ DecimalFormat::_format(int64_t number,
         // Slide the number to the start of the output str
     U_ASSERT(destIdx >= 0);
     int32_t length = MAX_IDX - destIdx -1;
-    //uprv_memmove(outputStr, outputStr+MAX_IDX-length, length);
     int32_t prefixLen = appendAffix(appendTo, number, handler, number<0, TRUE);
-
     int32_t maxIntDig = getMaximumIntegerDigits();
-    int32_t prependZero = getMinimumIntegerDigits() - length;
+    int32_t destlength = length<=maxIntDig?length:maxIntDig; // dest length pinned to max int digits
+
+    int32_t prependZero = getMinimumIntegerDigits() - destlength;
 
 #ifdef FMT_DEBUG
-    printf("prependZero=%d, length=%d, minintdig=%d\n", prependZero, length, getMinimumIntegerDigits());
+    printf("prependZero=%d, length=%d, minintdig=%d maxintdig=%d destlength=%d skip=%d\n", prependZero, length, getMinimumIntegerDigits(), maxIntDig, destlength, length-destlength);
 #endif    
     int32_t intBegin = appendTo.length();
 
@@ -1118,7 +1124,9 @@ DecimalFormat::_format(int64_t number,
       appendTo.append(0x0030); // '0'
     }
 
-    appendTo.append(outputStr+destIdx, length);
+    appendTo.append(outputStr+destIdx+
+                    (length-destlength), // skip any leading digits
+                    destlength);
     handler.addAttribute(kIntegerField, intBegin, appendTo.length());
 
     int32_t suffixLen = appendAffix(appendTo, number, handler, number<0, FALSE);
@@ -1148,8 +1156,9 @@ DecimalFormat::format(  double number,
                         UnicodeString& appendTo,
                         FieldPosition& fieldPosition) const
 {
+    UErrorCode status = U_ZERO_ERROR;
     FieldPositionOnlyHandler handler(fieldPosition);
-    return _format(number, appendTo, handler);
+    return _format(number, appendTo, handler, status);
 }
 
 UnicodeString&
@@ -1159,14 +1168,18 @@ DecimalFormat::format(  double number,
                         UErrorCode& status) const
 {
   FieldPositionIteratorHandler handler(posIter, status);
-  return _format(number, appendTo, handler);
+  return _format(number, appendTo, handler, status);
 }
 
 UnicodeString&
 DecimalFormat::_format( double number,
                         UnicodeString& appendTo,
-                        FieldPositionHandler& handler) const
+                        FieldPositionHandler& handler,
+                        UErrorCode &status) const
 {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
     // Special case for NaN, sets the begin and end index to be the
     // the string length of localized name of NaN.
     // TODO:  let NaNs go through DigitList.
@@ -1181,7 +1194,6 @@ DecimalFormat::_format( double number,
         return appendTo;
     }
 
-    UErrorCode status = U_ZERO_ERROR;
     DigitList digits;
     digits.set(number);
     _format(digits, appendTo, handler, status);
