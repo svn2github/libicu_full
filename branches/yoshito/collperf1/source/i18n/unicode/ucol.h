@@ -496,6 +496,16 @@ ucol_strcoll(    const    UCollator    *coll,
         const    UChar        *target,
         int32_t            targetLength);
 
+/* TODO */
+U_INTERNAL UCollationResult U_EXPORT2
+ucol_strcoll_utf8(
+        const UCollator *coll,
+        const uint8_t   *source,
+        int32_t         sourceLength,
+        const uint8_t   *target,
+        int32_t         targetLength);
+
+
 /**
  * Determine if one string is greater than another.
  * This function is equivalent to {@link #ucol_strcoll } == UCOL_GREATER
