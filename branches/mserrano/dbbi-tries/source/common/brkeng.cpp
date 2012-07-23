@@ -306,29 +306,22 @@ ICULanguageBreakFactory::loadDictionaryMatcherFor(UScriptCode script, int32_t /*
         const int32_t *indexes = (const int32_t *)data;
         const uint32_t offset = indexes[DictionaryData::IX_STRING_TRIE_OFFSET];
         const uint32_t trieType = indexes[DictionaryData::IX_TRIE_TYPE] & DictionaryData::TRIE_TYPE_MASK;
+        DictionaryMatcher *m = NULL;
         if (trieType == DictionaryData::TRIE_TYPE_BYTES) {
             const int32_t transform = indexes[DictionaryData::IX_TRANSFORM];
             const char *characters = (const char *)(data + offset);
-            DictionaryMatcher *m = new BytesDictionaryMatcher(characters, transform, file);
-            if (m == NULL) {
-                // no one exists to take ownership, memory allocation failed
-                udata_close(file); 
-            }
-            return m;
+            m = new BytesDictionaryMatcher(characters, transform, file);
         }
         else if (trieType == DictionaryData::TRIE_TYPE_UCHARS) {
             const UChar *characters = (const UChar *)(data + offset);
-            DictionaryMatcher *m = new UCharsDictionaryMatcher(characters, file);
-            if (m == NULL) {
-                // no one exists to take ownership, memory allocation failed
-                udata_close(file);
-            }
-            return m;
+            m = new UCharsDictionaryMatcher(characters, file);
         }
-        else {
+        if (m == NULL) {
+            // no matcher exists to take ownership - either we are an invalid 
+            // type or memory allocation failed
             udata_close(file);
-            return NULL;
         }
+        return m;
     } else if (dictfname != NULL) {
         UChar c = 0x0020;
         status = U_ZERO_ERROR;
