@@ -457,6 +457,7 @@ windowsZones:table(nofallback){
             BB{"America/Barbados"}
             BL{"America/St_Barthelemy"}
             BO{"America/La_Paz"}
+            BQ{"America/Kralendijk"}
             BR{
                 "America/Manaus America/Boa_Vista America/Eirunepe America/Porto_Velh"
                 "o America/Rio_Branco"
@@ -474,6 +475,7 @@ windowsZones:table(nofallback){
             MQ{"America/Martinique"}
             MS{"America/Montserrat"}
             PR{"America/Puerto_Rico"}
+            SX{"America/Lower_Princes"}
             TT{"America/Port_of_Spain"}
             VC{"America/St_Vincent"}
             VG{"America/Tortola"}
