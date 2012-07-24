@@ -3,7 +3,7 @@
 # VERSION: UCA=6.1.0, UCD=6.1.0
 # For a description of the format and usage, see CollationAuxiliary.html
 
-[UCA version = 6.1.0]
+[UCA version = 6.2.0]
 
 0000; [,,]
 0001; [,,]
