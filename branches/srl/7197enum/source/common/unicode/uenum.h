@@ -171,4 +171,33 @@ uenum_openFromStringEnumeration(icu::StringEnumeration* adopted, UErrorCode* ec)
 
 #endif
 
+#ifndef U_HIDE_DRAFT_API
+/**
+ * Given an array of const UChar* strings,
+ * return a UEnumeration.  String pointers from 0..count-1 must not be null.
+ * @param strings array of const UChar* strings (each null terminated)
+ * @param count length of the array
+ * @param ec error code
+ * @draft ICU 50
+ */
+U_CAPI UEnumeration* U_EXPORT2
+uenum_openUCharStringsEnumeration(const UChar* const* strings, int32_t count,
+                                 UErrorCode* ec);
+#endif
+
+/* Note:  next function is not hidden as draft, as it is used internally (it was formerly an internal function). */
+
+/**
+ * Given an array of const char* strings (invariant chars only),
+ * return a UEnumeration.  String pointers from 0..count-1 must not be null.
+ * @param strings array of char* strings (each null terminated)
+ * @param count length of the array
+ * @param ec error code
+ * @draft ICU 50
+ */
+U_CAPI UEnumeration* U_EXPORT2
+uenum_openCharStringsEnumeration(const char* const* strings, int32_t count,
+                                 UErrorCode* ec);
+
+
 #endif
