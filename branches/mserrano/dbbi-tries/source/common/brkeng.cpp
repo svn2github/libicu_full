@@ -11,7 +11,6 @@
 
 #include "brkeng.h"
 #include "dictbe.h"
-#include "triedict.h"
 #include "unicode/uchar.h"
 #include "unicode/uniset.h"
 #include "unicode/chariter.h"
@@ -327,57 +326,6 @@ ICULanguageBreakFactory::loadDictionaryMatcherFor(UScriptCode script, int32_t /*
         status = U_ZERO_ERROR;
         // something.
         return NULL;
-    }
-    return NULL;
-}
-
-
-const CompactTrieDictionary *
-ICULanguageBreakFactory::loadDictionaryFor(UScriptCode script, int32_t /*breakType*/) {
-    UErrorCode status = U_ZERO_ERROR;
-    // Open root from brkitr tree.
-    char dictnbuff[256];
-    char ext[4]={'\0'};
-
-    UResourceBundle *b = ures_open(U_ICUDATA_BRKITR, "", &status);
-    b = ures_getByKeyWithFallback(b, "dictionaries", b, &status);
-    b = ures_getByKeyWithFallback(b, uscript_getShortName(script), b, &status);
-    int32_t dictnlength = 0;
-    const UChar *dictfname = ures_getString(b, &dictnlength, &status);
-    if (U_SUCCESS(status) && (size_t)dictnlength >= sizeof(dictnbuff)) {
-        dictnlength = 0;
-        status = U_BUFFER_OVERFLOW_ERROR;
-    }
-    if (U_SUCCESS(status) && dictfname) {
-        UChar* extStart=u_strchr(dictfname, 0x002e);
-        int len = 0;
-        if(extStart!=NULL){
-            len = (int)(extStart-dictfname);
-            u_UCharsToChars(extStart+1, ext, sizeof(ext)); // nul terminates the buff
-            u_UCharsToChars(dictfname, dictnbuff, len);
-        }
-        dictnbuff[len]=0; // nul terminate
-    }
-    ures_close(b);
-    UDataMemory *file = udata_open(U_ICUDATA_BRKITR, ext, dictnbuff, &status);
-    if (U_SUCCESS(status)) {
-        const CompactTrieDictionary *dict = new CompactTrieDictionary(
-            file, status);
-        if (U_SUCCESS(status) && dict == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-        }
-        if (U_FAILURE(status)) {
-            delete dict;
-            dict = NULL;
-        }
-        return dict;
-    } else if (dictfname != NULL) {
-        //create dummy dict if dictionary filename not valid
-        UChar c = 0x0020;
-        status = U_ZERO_ERROR;
-        MutableTrieDictionary *mtd = new MutableTrieDictionary(c, status, TRUE);
-        mtd->addWord(&c, 1, status, 1);
-        return new CompactTrieDictionary(*mtd, status);  
     }
     return NULL;
 }

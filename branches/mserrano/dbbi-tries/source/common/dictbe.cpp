@@ -15,7 +15,6 @@
 #include "unicode/chariter.h"
 #include "unicode/ubrk.h"
 #include "uvector.h"
-#include "triedict.h"
 #include "uassert.h"
 #include "unicode/normlzr.h"
 #include "cmemory.h"

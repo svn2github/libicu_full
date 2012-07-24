@@ -12,7 +12,6 @@
 #include "dictionarydata.h"
 #include "unicode/ucharstrie.h"
 #include "unicode/bytestrie.h"
-#include "triedict.h"
 #include "unicode/udata.h"
 #include "cmemory.h"
 
