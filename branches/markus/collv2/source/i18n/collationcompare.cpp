@@ -218,9 +218,16 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                     rightTertiary = (uint32_t)ce;
                 } while((uint32_t)(ce >> 32) == 0 || rightTertiary == 0);
                 rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
-            } else if(strength == UCOL_SECONDARY) {
+            } else {
                 // Secondary+case: By analogy with the above,
                 // ignore case level weights of secondary ignorables.
+                // Tertiary+case: If we turned 0.0.ct into 0.0.c.t (c=case weight)
+                // then 0.0.c.t would be ill-formed because c<upper would be less than
+                // uppercase weights on primary and secondary CEs.
+                // (See UCA section 3.7 condition 2.)
+                // We could construct a special case weight higher than uppercase,
+                // but it's simpler to always ignore case weights of secondary ignorables,
+                // turning 0.0.ct into 0.0.0.t.
                 do {
                     leftTertiary = (uint32_t)leftBuffer[leftIndex++];
                 } while(leftTertiary <= 0xffff);
@@ -230,26 +237,6 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                     rightTertiary = (uint32_t)rightBuffer[rightIndex++];
                 } while(rightTertiary <= 0xffff);
                 rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
-            } else {
-                // Case bits cannot distinguish between 0=ignorable and 0=uncased/lowercase.
-                // Therefore, ignore the case "weight" when the non-case tertiary weight is 0.
-                // The data has non-zero case bits and non-zero quaternary bits
-                // only when the non-case tertiary bits are non-zero,
-                // so the "while" condition need not mask with ONLY_TERTIARY_MASK
-                // for the "ignorable" test.
-                do {
-                    leftTertiary = (uint32_t)leftBuffer[leftIndex++];
-                    U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
-                             (leftTertiary & 0xc0c0) == 0);
-                    leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
-                } while(leftTertiary == 0);
-
-                do {
-                    rightTertiary = (uint32_t)rightBuffer[rightIndex++];
-                    U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
-                             (rightTertiary & 0xc0c0) == 0);
-                    rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
-                } while(rightTertiary == 0);
             }
 
             if(leftTertiary != rightTertiary) {
@@ -267,8 +254,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 }
                 if(leftCase != rightCase) {
                     if((options & CollationData::UPPER_FIRST) != 0) {
-                        leftCase ^= 0xc000;
-                        rightCase ^= 0xc000;
+                        leftCase ^= 0x8000;
+                        rightCase ^= 0x8000;
                     }
                     return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
                 }
@@ -285,30 +272,37 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     int32_t rightIndex = 0;
     uint32_t anyQuaternaries = 0;
     for(;;) {
-        uint32_t leftTertiary;
+        uint32_t leftLower32, leftTertiary;
         do {
-            leftTertiary = (uint32_t)leftBuffer[leftIndex++];
-            anyQuaternaries |= leftTertiary;
-            U_ASSERT((leftTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
-                     (leftTertiary & 0xc0c0) == 0);
-            leftTertiary &= tertiaryMask;
+            leftLower32 = (uint32_t)leftBuffer[leftIndex++];
+            anyQuaternaries |= leftLower32;
+            U_ASSERT((leftLower32 & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                     (leftLower32 & 0xc0c0) == 0);
+            leftTertiary = leftLower32 & tertiaryMask;
         } while(leftTertiary == 0);
 
-        uint32_t rightTertiary;
+        uint32_t rightLower32, rightTertiary;
         do {
-            rightTertiary = (uint32_t)rightBuffer[rightIndex++];
-            anyQuaternaries |= rightTertiary;
-            U_ASSERT((rightTertiary & Collation::ONLY_TERTIARY_MASK) != 0 ||
-                     (rightTertiary & 0xc0c0) == 0);
-            rightTertiary &= tertiaryMask;
+            rightLower32 = (uint32_t)rightBuffer[rightIndex++];
+            anyQuaternaries |= rightLower32;
+            U_ASSERT((rightLower32 & Collation::ONLY_TERTIARY_MASK) != 0 ||
+                     (rightLower32 & 0xc0c0) == 0);
+            rightTertiary = rightLower32 & tertiaryMask;
         } while(rightTertiary == 0);
 
         if(leftTertiary != rightTertiary) {
             if(CollationData::sortsTertiaryUpperCaseFirst(options)) {
                 // Pass through NO_CE_WEIGHT and MERGE_SEPARATOR
                 // and keep real tertiary weights larger than the MERGE_SEPARATOR.
-                if(leftTertiary > Collation::MERGE_SEPARATOR_TERTIARY) { leftTertiary ^= 0xc000; }
-                if(rightTertiary > Collation::MERGE_SEPARATOR_TERTIARY) { rightTertiary ^= 0xc000; }
+                // Do not change the artificial uppercase weight of a secondary ignorable 0.0.ut,
+                // to keep tertiary weights well-formed.
+                // (They must be greater than tertiaries in primary and secondary CEs.)
+                if(leftTertiary > Collation::MERGE_SEPARATOR_TERTIARY && leftLower32 > 0xffff) {
+                    leftTertiary ^= 0x8000;
+                }
+                if(rightTertiary > Collation::MERGE_SEPARATOR_TERTIARY && rightLower32 > 0xffff) {
+                    rightTertiary ^= 0x8000;
+                }
             }
             return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
         }
