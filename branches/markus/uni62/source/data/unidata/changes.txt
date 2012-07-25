@@ -140,8 +140,8 @@ http://unicode.org/Public/idna/6.2.0/
 
 * UCA
 
-- get output from Mark's tools; look in
-    http://www.unicode.org/Public/UCA/6.1.0/CollationAuxiliary-<dev. version>.txt
+- get output from Mark's tools; look in http://www.unicode.org/Public/UCA/6.2.0/
+- CLDR root files for ICU are in CollationAuxiliary.zip; unpack that
 - update source/data/unidata/FractionalUCA.txt with FractionalUCA_SHORT.txt
 - update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt
   (note removing the underscore before "Rules")
@@ -151,8 +151,7 @@ http://unicode.org/Public/idna/6.2.0/
 - check test file diffs for previously commented-out, known-failing data lines;
   probably need to keep those commented out
 - check FractionalUCA.txt for manual changes of lead bytes from IMPLICIT to Hani
-- run makeuca.sh:
-  ~/svn.icu/tools/trunk/src/unicode$ ./makeuca.sh ~/svn.icu/trunk/src ~/svn.icu/trunk/bld
+- run genuca, see command line above
 - rebuild ICU4C
 - refresh ICU4J collation data:
   (subset of instructions above for properties data refresh, except copies all coll/*)
