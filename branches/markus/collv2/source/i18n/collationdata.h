@@ -224,6 +224,12 @@ public:
             : CollationData(nfc),
               scripts(NULL), scriptsLength(0) {}
 
+    /**
+     * @return the lowest primary weight for the script,
+     *         or 0 if the script does not occur in the data
+     */
+    uint32_t getLowestPrimaryForScript(int32_t script) const;
+
     int32_t getEquivalentScripts(int32_t script,
                                  int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;
 

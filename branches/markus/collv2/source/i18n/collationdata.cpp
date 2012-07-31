@@ -121,6 +121,20 @@ CollationBaseData::findScript(int32_t script) const {
     return -1;
 }
 
+uint32_t
+CollationBaseData::getLowestPrimaryForScript(int32_t script) const {
+    int32_t b = scriptByteFromInt(script);
+    if(b < 0) { return 0; }
+    for(int32_t i = 0; i < scriptsLength;) {
+        int32_t limit = i + 1 + (scripts[i] & 0xff);
+        for(int32_t j = i + 1; j < limit; ++j) {
+            if(b == ((int32_t)scripts[j] & 0xff)) { return scripts[j] & ~0xff; }
+        }
+        i = limit;
+    }
+    return 0;
+}
+
 int32_t
 CollationBaseData::getEquivalentScripts(int32_t script,
                                         int32_t dest[], int32_t capacity,
