@@ -24,8 +24,6 @@
 
 U_NAMESPACE_BEGIN
 
-class CollationIterator;
-
 /**
  * Collation data container.
  */
@@ -91,6 +89,7 @@ struct U_I18N_API CollationData : public UMemory {
               options(UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT),
               variableTop(0), zeroPrimary(0x12000000),
               compressibleBytes(NULL), reorderTable(NULL),
+              reorderCodes(NULL), reorderCodesLength(0),
               unsafeBackwardSet(NULL) {}
 
     void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
@@ -205,12 +204,91 @@ struct U_I18N_API CollationData : public UMemory {
     /** 256 flags for which primary-weight lead bytes are compressible. */
     const UBool *compressibleBytes;
     /** 256-byte table for reordering permutation of primary lead bytes; NULL if no reordering. */
-    uint8_t *reorderTable;
+    const uint8_t *reorderTable;
+    /** Array of reorder codes; NULL if no reordering. */
+    const int32_t *reorderCodes;
+    int32_t reorderCodesLength;
     /**
      * Set of code points that are unsafe for starting string comparison after an identical prefix,
      * or in backwards CE iteration.
      */
     const UnicodeSet *unsafeBackwardSet;
+};
+
+/**
+ * Collation data container with additional data for the collation base (root/default).
+ */
+struct U_I18N_API CollationBaseData : public CollationData {
+public:
+    CollationBaseData(const Normalizer2Impl &nfc)
+            : CollationData(nfc),
+              scripts(NULL), scriptsLength(0) {}
+
+    int32_t getEquivalentScripts(int32_t script,
+                                 int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;
+
+    /**
+     * Writes the permutation table for the given reordering of scripts and groups,
+     * mapping from default-order primary-weight lead bytes to reordered lead bytes.
+     * The caller checks for illegal arguments and
+     * takes care of [DEFAULT] and memory allocation.
+     */
+    void makeReorderTable(const int32_t *reorder, int32_t length,
+                          uint8_t table[256], UErrorCode &errorCode) const;
+
+    /**
+     * Data for scripts and reordering groups.
+     * Uses include building a reordering permutation table and
+     * providing script boundaries to AlphabeticIndex.
+     *
+     * This data is a sorted list of primary-weight lead byte ranges (reordering groups),
+     * each with a list of pairs sorted in base collation order;
+     * each pair contains a script/reorder code and the lowest primary weight for that script.
+     *
+     * Data structure:
+     * - Each reordering group is encoded in n+1 integers.
+     *   - First integer:
+     *     Bits 31..24: First byte of the reordering group's range.
+     *     Bits 23..16: Last byte of the reordering group's range.
+     *     Bits  7.. 0: Length n of the list of primary/script pairs.
+     *   - Each pair is an integer with the at-most-three-byte lowest primary weight for the script,
+     *     and the script/reorder code in the low byte, encoded by scriptByteFromInt().
+     */
+    const uint32_t *scripts;
+    int32_t scriptsLength;
+
+    /**
+     * Maps a script or reorder code to a byte value.
+     * When we need to represent script codes 248 and higher,
+     * or reorder codes 0x1008 and higher,
+     * then we need to make an incompatible change to this mapping and
+     * thus to the CollationBaseData data structure.
+     */
+    static int32_t scriptByteFromInt(int32_t script) {
+        if(script < SCRIPT_BYTE_LIMIT) { return script; }
+        script -= UCOL_REORDER_CODE_FIRST;
+        if(0 <= script && script <= (0xff - SCRIPT_BYTE_LIMIT)) {
+            return SCRIPT_BYTE_LIMIT + script;
+        }
+        return USCRIPT_INVALID_CODE;  // -1
+    }
+    /** Inverse of scriptByteFromInt(). */
+    static int32_t scriptIntFromByte(int32_t b) {
+        // assert 0 <= b <= 0xff
+        return b < SCRIPT_BYTE_LIMIT ? b : UCOL_REORDER_CODE_FIRST + b - SCRIPT_BYTE_LIMIT;
+    }
+
+private:
+    int32_t findScript(int32_t script) const;
+
+    /**
+     * Constant for scriptByteFromInt() and scriptIntFromByte().
+     * Codes for scripts encoded in Unicode (e.g., USCRIPT_GREEK) must be below this limit.
+     * Reorder codes (e.g., UCOL_REORDER_CODE_PUNCTUATION) are offset to start from here,
+     * so that UCOL_REORDER_CODE_FIRST maps to this value.
+     * Changing this value changes the collation base data format.
+     */
+    static const int32_t SCRIPT_BYTE_LIMIT = 0xf8;
 };
 
 U_NAMESPACE_END

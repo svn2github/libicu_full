@@ -549,9 +549,11 @@ public:
 
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationData *d)
-            : data(d), defaultData(d), ownedData(NULL) {}
+            : data(d), defaultData(d), ownedData(NULL),
+              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0) {}
     RuleBasedCollator2(const CollationData *d, CollationData *od)
-            : data(d), defaultData(d), ownedData(od) {}
+            : data(d), defaultData(d), ownedData(od),
+              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0) {}
 
 private:
     // Both lengths must be <0 or else both must be >=0.
@@ -559,9 +561,14 @@ private:
                                const UChar *right, int32_t rightLength,
                                UErrorCode &errorCode) const;
 
+    UBool ensureOwnedData(UErrorCode &errorCode);
+
     const CollationData *data;  // == defaultData or ownedData
     const CollationData *defaultData;
     CollationData *ownedData;  // NULL until cloned from defaultData & modified
+    uint8_t *ownedReorderTable;
+    int32_t *ownedReorderCodes;
+    int32_t ownedReorderCodesCapacity;
 };
 
 U_NAMESPACE_END

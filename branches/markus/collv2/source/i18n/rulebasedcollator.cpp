@@ -32,10 +32,9 @@ U_NAMESPACE_BEGIN
 // TODO: Add UTRACE_... calls back in.
 
 RuleBasedCollator2::~RuleBasedCollator2() {
-    if(ownedData != NULL) {
-        delete ownedData->reorderTable;
-        delete ownedData;
-    }
+    delete ownedData;
+    uprv_free(ownedReorderTable);
+    uprv_free(ownedReorderCodes);
 }
 
 Collator *
@@ -90,6 +89,19 @@ RuleBasedCollator2::getTailoredSet(UErrorCode &status) const {
     return NULL;  // TODO
 }
 
+UBool
+RuleBasedCollator2::ensureOwnedData(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return FALSE; }
+    if(ownedData != NULL) { return TRUE; }
+    ownedData = new CollationData(*defaultData);
+    if(ownedData == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return FALSE;
+    }
+    data = ownedData;
+    return TRUE;
+}
+
 /* TODO: static
 UColAttributeValue
 RuleBasedCollator2::getAttribute(const CollationData *data, UColAttribute attr, UErrorCode &errorCode) {
@@ -108,14 +120,7 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
     if(value == getAttribute(attr, errorCode) || U_FAILURE(errorCode)) { return; }
     // TODO: UCOL_DEFAULT -- is getAttribute() == getDefaultAttribute()?
     if(ownedData == NULL) {
-        if(value == UCOL_DEFAULT) { return; }
-        ownedData = new CollationData(*defaultData);
-        if(ownedData == NULL) {
-            errorCode = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-        // TODO: clone the reorderTable and maybe more
-        data = ownedData;
+        if(value == UCOL_DEFAULT || !ensureOwnedData(errorCode)) { return; }
     }
 
     switch(attr) {
@@ -167,25 +172,83 @@ RuleBasedCollator2::setVariableTop(const uint32_t varTop, UErrorCode &errorCode)
     // TODO
 }
 
+static const CollationBaseData *ucol_getCollationBaseData(UErrorCode &errorCode) { return NULL; }  // TODO
+
 int32_t
-RuleBasedCollator2::getReorderCodes(int32_t *dest,
-                                    int32_t destCapacity,
+RuleBasedCollator2::getReorderCodes(int32_t *dest, int32_t capacity,
                                     UErrorCode &errorCode) const {
-    return 0;  // TODO
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(capacity < 0 || (dest == NULL && capacity > 0)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    int32_t length = data->reorderCodesLength;
+    if(length == 0) { return 0; }
+    if(length > capacity) {
+        errorCode = U_BUFFER_OVERFLOW_ERROR;
+        return length;
+    }
+    uprv_memcpy(dest, data->reorderCodes, length * 4);
+    return length;
 }
 
 void
-RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes,
-                                    int32_t reorderCodesLength,
+RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
                                     UErrorCode &errorCode) {
-    // TODO
+    if(U_FAILURE(errorCode)) { return; }
+    if(length < 0 || (reorderCodes == NULL && length > 0)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    if(length == 1 && reorderCodes[0] == UCOL_REORDER_CODE_DEFAULT) {
+        if(ownedData != NULL) {
+            ownedData->reorderTable = defaultData->reorderTable;
+            ownedData->reorderCodes = defaultData->reorderCodes;
+            ownedData->reorderCodesLength = defaultData->reorderCodesLength;
+        }
+        return;
+    }
+    if(!ensureOwnedData(errorCode)) { return; }
+    if(ownedReorderTable == NULL) {
+        ownedReorderTable = (uint8_t *)uprv_malloc(256);
+        if(ownedReorderTable == NULL) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+    }
+    const CollationBaseData *baseData = ucol_getCollationBaseData(errorCode);
+    baseData->makeReorderTable(reorderCodes, length, ownedReorderTable, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+    if(length > ownedReorderCodesCapacity) {
+        int32_t newCapacity = length + 20;
+        int32_t *newReorderCodes = (int32_t *)uprv_malloc(newCapacity * 4);
+        if(newReorderCodes == NULL) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        uprv_free(ownedReorderCodes);
+        ownedReorderCodes = newReorderCodes;
+        ownedReorderCodesCapacity = newCapacity;
+    }
+    uprv_memcpy(ownedReorderCodes, reorderCodes, length * 4);
+    ownedData->reorderTable = ownedReorderTable;
+    ownedData->reorderCodes = ownedReorderCodes;
+    ownedData->reorderCodesLength = length;
 }
 
-/* TODO int32_t getEquivalentReorderCodes(int32_t reorderCode,
-                                int32_t* dest,
-                                int32_t destCapacity,
-                                UErrorCode& status) */
-
+int32_t
+RuleBasedCollator2::getEquivalentReorderCodes(int32_t reorderCode,
+                                              int32_t *dest, int32_t capacity,
+                                              UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(capacity < 0 || (dest == NULL && capacity > 0)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    const CollationBaseData *baseData = ucol_getCollationBaseData(errorCode);
+    if(U_FAILURE(errorCode)) { return 0; }
+    return baseData->getEquivalentScripts(reorderCode, dest, capacity, errorCode);
+}
 
 UCollationResult
 RuleBasedCollator2::compare(const UnicodeString &left, const UnicodeString &right,
