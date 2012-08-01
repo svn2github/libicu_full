@@ -303,8 +303,8 @@ ICULanguageBreakFactory::loadDictionaryMatcherFor(UScriptCode script, int32_t /*
         // build trie
         const uint8_t *data = (const uint8_t *)udata_getMemory(file);
         const int32_t *indexes = (const int32_t *)data;
-        const uint32_t offset = indexes[DictionaryData::IX_STRING_TRIE_OFFSET];
-        const uint32_t trieType = indexes[DictionaryData::IX_TRIE_TYPE] & DictionaryData::TRIE_TYPE_MASK;
+        const int32_t offset = indexes[DictionaryData::IX_STRING_TRIE_OFFSET];
+        const int32_t trieType = indexes[DictionaryData::IX_TRIE_TYPE] & DictionaryData::TRIE_TYPE_MASK;
         DictionaryMatcher *m = NULL;
         if (trieType == DictionaryData::TRIE_TYPE_BYTES) {
             const int32_t transform = indexes[DictionaryData::IX_TRANSFORM];
