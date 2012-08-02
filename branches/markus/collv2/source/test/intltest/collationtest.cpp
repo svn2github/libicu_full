@@ -1018,9 +1018,10 @@ UCAElements *readAnElement(FILE *data,
                 char ucd[U_MAX_VERSION_STRING_LENGTH];
                 u_versionToString(UCAVersion, uca);
                 u_versionToString(UCDVersion, ucd);
-                fprintf(stderr, "error: UCA version %s != UCD version %s (temporarily change the FractionalUCA.txt UCA version during Unicode version upgrade)\n", uca, ucd);
-                *status = U_INVALID_FORMAT_ERROR;
-                return NULL;
+                // Warning, not error, to permit bootstrapping during a version upgrade.
+                fprintf(stderr, "warning: UCA version %s != UCD version %s (temporarily change the FractionalUCA.txt UCA version during Unicode version upgrade)\n", uca, ucd);
+                // *status = U_INVALID_FORMAT_ERROR;
+                // return NULL;
               }
             } else if (what_to_do == READLEADBYTETOSCRIPTS) { //vt[cnt].what_to_do == READLEADBYTETOSCRIPTS
                 pointer = buffer + vtLen;
@@ -1081,7 +1082,7 @@ UCAElements *readAnElement(FILE *data,
                         }
                 }
             } else if (what_to_do == READSCRIPTTOLEADBYTES) { //vt[cnt].what_to_do == READSCRIPTTOLEADBYTES
-                uint16_t leadByteArray[100];
+                uint16_t leadByteArray[256];
                 uint32_t leadByteArrayCount = 0;
                 char scriptName[100];
 
