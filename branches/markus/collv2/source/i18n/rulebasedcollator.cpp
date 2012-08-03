@@ -43,8 +43,7 @@ RuleBasedCollator2::clone() const {
 }
 
 Collator *
-RuleBasedCollator2::safeClone() {
-    // TODO: safeClone() should be const, see http://bugs.icu-project.org/trac/ticket/9346
+RuleBasedCollator2::safeClone() const {
     return NULL;  // TODO
 }
 
@@ -55,17 +54,12 @@ RuleBasedCollator2::operator==(const Collator& other) const {
     return FALSE;  // TODO
 }
 
-UBool
-RuleBasedCollator2::operator!=(const Collator& other) const {
-    return FALSE;  // TODO
-}
-
 int32_t
 RuleBasedCollator2::hashCode() const {
     return 0;  // TODO
 }
 
-const Locale
+Locale
 RuleBasedCollator2::getLocale(ULocDataLocaleType type, UErrorCode& status) const {
     return Locale::getDefault();
 }
@@ -109,7 +103,7 @@ RuleBasedCollator2::getAttribute(const CollationData *data, UColAttribute attr, 
 }
 */
 UColAttributeValue
-RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) {
+RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) const {
     return UCOL_DEFAULT;  // TODO
 }
 
@@ -139,19 +133,6 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
     }
 }
 
-Collator::ECollationStrength
-RuleBasedCollator2::getStrength() const {
-    UErrorCode errorCode = U_ZERO_ERROR;
-    // TODO: getAttribute() should be const, see http://bugs.icu-project.org/trac/ticket/9346
-    return (ECollationStrength)const_cast<RuleBasedCollator2 *>(this)->getAttribute(UCOL_STRENGTH, errorCode);
-}
-
-void
-RuleBasedCollator2::setStrength(ECollationStrength strength) {
-    UErrorCode errorCode = U_ZERO_ERROR;
-    setAttribute(UCOL_STRENGTH, (UColAttributeValue)strength, errorCode);
-}
-
 uint32_t
 RuleBasedCollator2::getVariableTop(UErrorCode &errorCode) const {
     return 0;  // TODO
@@ -163,12 +144,12 @@ RuleBasedCollator2::setVariableTop(const UChar *varTop, int32_t len, UErrorCode 
 }
 
 uint32_t
-RuleBasedCollator2::setVariableTop(const UnicodeString varTop, UErrorCode &errorCode) {
+RuleBasedCollator2::setVariableTop(const UnicodeString &varTop, UErrorCode &errorCode) {
     return 0;  // TODO
 }
 
 void
-RuleBasedCollator2::setVariableTop(const uint32_t varTop, UErrorCode &errorCode) {
+RuleBasedCollator2::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
     // TODO
 }
 

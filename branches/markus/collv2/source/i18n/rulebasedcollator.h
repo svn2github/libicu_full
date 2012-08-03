@@ -136,14 +136,6 @@ public:
     virtual UBool operator==(const Collator& other) const;
 
     /**
-     * Returns true if argument is not the same as this object.
-     * @param other Collator object to be compared
-     * @return returns true if argument is not the same as this object.
-     * @stable ICU 2.0
-     */
-    virtual UBool operator!=(const Collator& other) const;
-
-    /**
      * Makes a deep copy of the object.
      * The caller owns the returned object.
      * @return the cloned object.
@@ -281,7 +273,7 @@ public:
     *         was instantiated from rules, locale is empty.
     * @deprecated ICU 2.8 likely to change in ICU 3.0, based on feedback
     */
-    virtual const Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
+    virtual Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
 
     /**
      * Gets the table-based rules for the collation object.
@@ -385,7 +377,7 @@ public:
      * @stable ICU 2.2
      */
     virtual UColAttributeValue getAttribute(UColAttribute attr,
-                                            UErrorCode &status);
+                                            UErrorCode &status) const;
 
     /**
      * Sets the variable top to a collation element value of a string supplied.
@@ -408,7 +400,7 @@ public:
      * @return a 32 bit value containing the value of the variable top in upper 16 bits. Lower 16 bits are undefined
      * @stable ICU 2.0
      */
-    virtual uint32_t setVariableTop(const UnicodeString varTop, UErrorCode &status);
+    virtual uint32_t setVariableTop(const UnicodeString &varTop, UErrorCode &status);
 
     /**
      * Sets the variable top to a collation element value supplied. Variable top is set to the upper 16 bits.
@@ -417,7 +409,7 @@ public:
      * @param status error code (not changed by function)
      * @stable ICU 2.0
      */
-    virtual void setVariableTop(const uint32_t varTop, UErrorCode &status);
+    virtual void setVariableTop(uint32_t varTop, UErrorCode &status);
 
     /**
      * Gets the variable top value of a Collator.
@@ -443,7 +435,7 @@ public:
      * @return pointer to the new clone, user should remove it.
      * @stable ICU 2.2
      */
-    virtual Collator* safeClone();
+    virtual Collator* safeClone() const;
 
     /**
      * Get the sort key as an array of bytes from an UnicodeString.
@@ -472,26 +464,6 @@ public:
      */
     virtual int32_t getSortKey(const UChar *source, int32_t sourceLength,
                                uint8_t *result, int32_t resultLength) const;
-
-    /** TODO: Move to base class.
-    * Determines the minimum strength that will be use in comparison or
-    * transformation.
-    * <p>E.g. with strength == SECONDARY, the tertiary difference is ignored
-    * <p>E.g. with strength == PRIMARY, the secondary and tertiary difference
-    * are ignored.
-    * @return the current comparison level.
-    * @see RuleBasedCollator#setStrength
-    * @deprecated ICU 2.6 Use getAttribute(UCOL_STRENGTH...) instead
-    */
-    virtual ECollationStrength getStrength(void) const;
-
-    /** TODO: Move to base class.
-    * Sets the minimum strength to be used in comparison or transformation.
-    * @see RuleBasedCollator#getStrength
-    * @param newStrength the new comparison level.
-    * @deprecated ICU 2.6 Use setAttribute(UCOL_STRENGTH...) instead
-    */
-    virtual void setStrength(ECollationStrength newStrength);
 
     /**
      * Retrieves the reordering codes for this collator.
