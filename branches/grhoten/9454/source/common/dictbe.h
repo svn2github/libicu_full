@@ -1,6 +1,6 @@
 /**
  *******************************************************************************
- * Copyright (C) 2006,2011, International Business Machines Corporation        *
+ * Copyright (C) 2006-2012 International Business Machines Corporation         *
  * and others. All Rights Reserved.                                            *
  *******************************************************************************
  */
@@ -13,6 +13,7 @@
 #include "unicode/utext.h"
 
 #include "brkeng.h"
+#include "uhash.h"
 
 U_NAMESPACE_BEGIN
 
@@ -241,6 +242,54 @@ class KhmerBreakEngine : public DictionaryBreakEngine {
                                            int32_t rangeEnd, 
                                            UStack &foundBreaks ) const; 
  
+}; 
+ 
+ 
+/******************************************************************* 
+ * HangulBreakEngine 
+ */ 
+ 
+/** 
+ * <p>HangulBreakEngine is a kind of DictionaryBreakEngine that splits
+ * Korean particles off the end of the default tokens.</p>
+ * 
+ * <p>After it is constructed a HangulBreakEngine may be shared between 
+ * threads without synchronization.</p> 
+ */ 
+class HangulBreakEngine : public DictionaryBreakEngine { 
+private: 
+    UHashtable lastCharOfWordHash;
+    UnicodeSet middleWords; 
+ 
+public: 
+ 
+    /** 
+     * <p>Default constructor.</p> 
+     * 
+     * @param adoptDictionary A TrieWordDictionary to adopt. Deleted when the 
+     * engine is deleted. 
+     */ 
+    HangulBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status); 
+ 
+    /** 
+     * <p>Virtual destructor.</p> 
+     */ 
+    virtual ~HangulBreakEngine(); 
+ 
+protected: 
+   /** 
+    * <p>Divide up a range of known dictionary characters.</p> 
+    * 
+    * @param text A UText representing the text 
+    * @param rangeStart The start of the range of dictionary characters 
+    * @param rangeEnd The end of the range of dictionary characters 
+    * @param foundBreaks Output of C array of int32_t break positions, or 0 
+    * @return The number of breaks found 
+    */ 
+    virtual int32_t divideUpDictionaryRange( UText *text, 
+                                             int32_t rangeStart, 
+                                             int32_t rangeEnd, 
+                                             UStack &foundBreaks ) const; 
 }; 
  
  

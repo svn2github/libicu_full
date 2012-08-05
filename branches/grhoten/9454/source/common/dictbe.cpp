@@ -1,6 +1,6 @@
 /**
  *******************************************************************************
- * Copyright (C) 2006-2008,2011, International Business Machines Corporation   *
+ * Copyright (C) 2006-2012, International Business Machines Corporation        *
  * and others. All Rights Reserved.                                            *
  *******************************************************************************
  */
@@ -16,6 +16,17 @@
 #include "unicode/ubrk.h"
 #include "uvector.h"
 #include "triedict.h"
+
+
+U_CDECL_BEGIN
+/**
+ * Deleter for UVector
+ */
+static void U_CALLCONV
+deleteUVector(void *obj) {
+   delete (icu::UVector*) obj;
+}
+U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
@@ -651,6 +662,111 @@ foundBest:
     return wordsFound;
 }
 
+// Minimum number of characters for two words
+#define HANGUL_MIN_WORD_SPAN 1
+
+HangulBreakEngine::HangulBreakEngine(const TrieWordDictionary *adoptDictionary, UErrorCode &status)
+    : DictionaryBreakEngine((1<<UBRK_WORD) | (1<<UBRK_LINE))
+{
+    UnicodeSet hangulSet(UNICODE_STRING_SIMPLE("[[:Hang:]&[:Word_Break=ALetter:]]"), status);
+    if (U_SUCCESS(status)) {
+        setCharacters(hangulSet);
+    }
+
+    /**
+     * The vowel \uc774 (yi) is used when a word ends in a consonant and a particle
+     * starts with a consonant.
+     * These other words are for name titles, like Mister, Miss and so forth.
+     */
+    middleWords.add(0xad70);
+    middleWords.add(0xb124);
+    middleWords.add(0xb2d8);
+    middleWords.add(0xc528);
+    middleWords.add(0xc591);
+
+    // Decompress the dictionary. The list of particles to detatch are usually short
+    // and the list of particles are unlikely to be larger than 400, and 100 is more likely.
+    uprv_memset(&lastCharOfWordHash, 0, sizeof(UHashtable));
+    uhash_init(&lastCharOfWordHash, uhash_hashLong, uhash_compareLong, NULL, &status);
+    uhash_setValueDeleter(&lastCharOfWordHash, deleteUVector);
+    StringEnumeration *strEnum = adoptDictionary->openWords(status);
+    const UnicodeString *particle;
+    while ((particle=strEnum->snext(status))!=NULL) {
+        UChar32 lastChar = particle->char32At(particle->length()-1);
+        UVector *particleList = (UVector *)uhash_iget(&lastCharOfWordHash, lastChar);
+        if (particleList == NULL) {
+            particleList = new UVector(status);
+            uhash_iput(&lastCharOfWordHash, lastChar, particleList, &status);
+        }
+        // Do a gready match. Match longer particles before the shorter ones.
+        int32_t insertAt;
+        for (insertAt = 0; insertAt < particleList->size(); insertAt++) {
+            UnicodeString *currPart = (UnicodeString *)particleList->elementAt(insertAt);
+            if (currPart->length() <= particle->length()) {
+                break;
+            }
+        }
+        particleList->insertElementAt(particle->clone(), insertAt, status);
+    }
+    delete strEnum;
+    delete adoptDictionary;
+
+    // Compact for caching.
+    middleWords.compact();
+}
+
+HangulBreakEngine::~HangulBreakEngine() {
+    uhash_close(&lastCharOfWordHash);
+}
+
+int32_t
+HangulBreakEngine::divideUpDictionaryRange( UText *text,
+                                            int32_t rangeStart,
+                                            int32_t rangeEnd,
+                                            UStack &foundBreaks ) const
+{
+    if ((rangeEnd - rangeStart) < HANGUL_MIN_WORD_SPAN) {
+        return 0;       // Not enough characters to split off a word
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    utext_setNativeIndex(text, rangeEnd - 1);
+    UVector *particleList = (UVector *)uhash_iget(&lastCharOfWordHash, utext_current32(text));
+
+    if (particleList != NULL) {
+        UnicodeString matchableSuffix;
+        UnicodeString *longestParticle = (UnicodeString *)particleList->elementAt(0);
+        // These are generally short strings. Make it easy to compare by creating a cache of the short string.
+        // TODO: Handle Korean text other than NFC based.
+        while (utext_getNativeIndex(text) >= rangeStart && matchableSuffix.length() <= longestParticle->length()) {
+            UChar32 uc = utext_current32(text);
+            utext_previous32(text);
+            matchableSuffix.insert(0, uc);
+        }
+        
+        for (int32_t particleIdx = 0; particleIdx < particleList->size(); particleIdx++) {
+            UnicodeString *particle = (UnicodeString *)particleList->elementAt(particleIdx);
+            if (matchableSuffix.endsWith(*particle)) {
+                int32_t countBreaks = 2;
+                int32_t requestedSplitPos = rangeEnd - particle->length();
+                // TODO Complete conversion of this code and tests.
+                // if (requestedSplitPos > 1) {
+                //     UChar lastCharOfFirstToken = matchableSuffix.charAt(requestedSplitPos - 1);
+                //     if (requestedSplitPos > 2 && lastCharOfFirstToken == 0xc774) || middleWords.contains(lastCharOfFirstToken)) {
+                //        foundBreaks.push(requestedSplitPos - 1, status);
+                //        countBreaks++;
+                //     }
+                // }
+                foundBreaks.push(requestedSplitPos, status);
+                foundBreaks.push(rangeEnd, status);
+                return countBreaks;
+            }
+        }
+    }
+    return 0;
+}
+
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_BREAK_ITERATION */
+

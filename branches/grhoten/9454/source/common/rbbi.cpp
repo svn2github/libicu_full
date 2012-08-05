@@ -10,7 +10,7 @@
 //                   class RuleBasedBreakIterator
 //
 
-#include "utypeinfo.h"  // for 'typeid' to work
+#include <typeinfo>  // for 'typeid' to work
 
 #include "unicode/utypes.h"
 
@@ -816,11 +816,14 @@ int32_t RuleBasedBreakIterator::preceding(int32_t offset) {
         // TODO: binary search?
         // TODO: What if offset is outside range, but break is not?
         if (offset > fCachedBreakPositions[0]
-                && offset <= fCachedBreakPositions[fNumCachedBreakPositions - 1]) {
+                && offset <= fCachedBreakPositions[fNumCachedBreakPositions - 1])
+        {
             fPositionInCache = 0;
             while (fPositionInCache < fNumCachedBreakPositions
-                   && offset > fCachedBreakPositions[fPositionInCache])
+                   && offset >= fCachedBreakPositions[fPositionInCache])
+            {
                 ++fPositionInCache;
+            }
             --fPositionInCache;
             // If we're at the beginning of the cache, need to reevaluate the
             // rule status
@@ -1615,10 +1618,9 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
                             int32_t endPos,
                             UBool reverse) {
     // Reset the old break cache first.
-    uint32_t dictionaryCount = fDictionaryCharCount;
     reset();
 
-    if (dictionaryCount <= 1 || (endPos - startPos) <= 1) {
+    if ((endPos - startPos) <= 1) {
         return (reverse ? startPos : endPos);
     }
     

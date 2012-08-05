@@ -1,6 +1,6 @@
 /*
  ************************************************************************************
- * Copyright (C) 2006-2011, International Business Machines Corporation
+ * Copyright (C) 2006-2012, International Business Machines Corporation
  * and others. All Rights Reserved.
  ************************************************************************************
  */
@@ -223,6 +223,9 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
         if (dict != NULL) {
             const LanguageBreakEngine *engine = NULL;
             switch(code) {
+            case USCRIPT_HANGUL:
+                engine = new HangulBreakEngine(dict, status);
+                break;
             case USCRIPT_THAI:
                 engine = new ThaiBreakEngine(dict, status);
                 break;

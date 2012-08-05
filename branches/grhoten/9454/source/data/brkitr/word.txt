@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2002-2011, International Business Machines Corporation 
+# Copyright (C) 2002-2012, International Business Machines Corporation 
 # and others. All Rights Reserved.
 #
 # file:  word.txt
@@ -43,7 +43,7 @@ $ExtendNumLet = [\p{Word_Break = ExtendNumLet}];
 #   5.0 or later as the definition of Complex_Context was corrected to include all
 #   characters requiring dictionary break.
 
-$dictionary   = [:LineBreak = Complex_Context:];
+$dictionary   = [[:LineBreak = Complex_Context:][[:Script = Hang:]&[:Word_Break=ALetter:]]];
 $Control        = [\p{Grapheme_Cluster_Break = Control}]; 
 $ALetterPlus  = [$ALetter [$dictionary-$Extend-$Control]];   # Note:  default ALetter does not
                                                              #  include the dictionary characters.

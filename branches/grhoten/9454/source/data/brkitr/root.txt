@@ -16,6 +16,7 @@ root{
         word:process(dependency){"word.brk"}
     }
     dictionaries{
+        Hang:process(dependency){"koreandict.ctd"}
         Khmr:process(dependency){"khmerdict.ctd"}
         Thai:process(dependency){"thaidict.ctd"}
     }
