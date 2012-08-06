@@ -96,25 +96,27 @@ RuleBasedCollator2::ensureOwnedData(UErrorCode &errorCode) {
     return TRUE;
 }
 
-/* TODO: static
-UColAttributeValue
-RuleBasedCollator2::getAttribute(const CollationData *data, UColAttribute attr, UErrorCode &errorCode) {
-    return UCOL_DEFAULT;  // TODO
-}
-*/
 UColAttributeValue
 RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return UCOL_DEFAULT; }
     return UCOL_DEFAULT;  // TODO
 }
 
 void
 RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
                                  UErrorCode &errorCode) {
+    UColAttributeValue oldValue = getAttribute(attr, errorCode);
     if(U_FAILURE(errorCode)) { return; }
-    if(value == getAttribute(attr, errorCode) || U_FAILURE(errorCode)) { return; }
-    // TODO: UCOL_DEFAULT -- is getAttribute() == getDefaultAttribute()?
+    if(value == oldValue) {
+        setAttributeExplicitly(attr);
+        return;
+    }
     if(ownedData == NULL) {
-        if(value == UCOL_DEFAULT || !ensureOwnedData(errorCode)) { return; }
+        if(value == UCOL_DEFAULT) {
+            setAttributeDefault(attr);
+            return;
+        }
+        if(!ensureOwnedData(errorCode)) { return; }
     }
 
     switch(attr) {
@@ -130,6 +132,12 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
     default:
         // TODO
         break;
+    }
+    if(U_FAILURE(errorCode)) { return; }
+    if(value == UCOL_DEFAULT) {
+        setAttributeDefault(attr);
+    } else {
+        setAttributeExplicitly(attr);
     }
 }
 

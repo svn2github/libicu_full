@@ -522,12 +522,24 @@ public:
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationData *d)
             : data(d), defaultData(d), ownedData(NULL),
-              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0) {}
+              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0),
+              explicitlySetAttributes(0) {}
     RuleBasedCollator2(const CollationData *d, CollationData *od)
             : data(d), defaultData(d), ownedData(od),
-              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0) {}
+              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0),
+              explicitlySetAttributes(0) {}
 
 private:
+    /**
+     * Enumeration of attributes that are relevant for short definition strings
+     * (e.g., ucol_getShortDefinitionString()) and the related ucol_getAttributeOrDefault().
+     * Effectively extends UColAttribute.
+     */
+    enum Attributes {
+        ATTR_VARIABLE_TOP = UCOL_ATTRIBUTE_COUNT,
+        ATTR_LIMIT
+    };
+
     // Both lengths must be <0 or else both must be >=0.
     UCollationResult doCompare(const UChar *left, int32_t leftLength,
                                const UChar *right, int32_t rightLength,
@@ -535,12 +547,24 @@ private:
 
     UBool ensureOwnedData(UErrorCode &errorCode);
 
+    void setAttributeDefault(int32_t attribute) {
+        explicitlySetAttributes &= ~((uint32_t)1 << attribute);
+    }
+    void setAttributeExplicitly(int32_t attribute) {
+        explicitlySetAttributes |= (uint32_t)1 << attribute;
+    }
+    UBool attributeHasBeenSetExplicitly(int32_t attribute) {
+        // assert(0 <= attribute < ATTR_LIMIT);
+        return (UBool)((explicitlySetAttributes & ((uint32_t)1 << attribute)) != 0);
+    }
+
     const CollationData *data;  // == defaultData or ownedData
     const CollationData *defaultData;
     CollationData *ownedData;  // NULL until cloned from defaultData & modified
     uint8_t *ownedReorderTable;
     int32_t *ownedReorderCodes;
     int32_t ownedReorderCodesCapacity;
+    uint32_t explicitlySetAttributes;
 };
 
 U_NAMESPACE_END
