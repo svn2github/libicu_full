@@ -927,6 +927,9 @@ UCAElements *readAnElement(FILE *data,
                   {"[first trailing",            consts->UCA_FIRST_TRAILING,            READCE},
                   {"[last trailing",             consts->UCA_LAST_TRAILING,             READCE},
 
+                  {"[Unified_Ideograph",            NULL, IGNORE},  // TODO
+                  {"[script_first",                 NULL, IGNORE},  // TODO
+
                   {"[fixed top",                    NULL, IGNORE},
                   {"[fixed first implicit byte",    NULL, IGNORE},
                   {"[fixed last implicit byte",     NULL, IGNORE},
