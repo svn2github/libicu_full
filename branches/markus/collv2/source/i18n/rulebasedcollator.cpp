@@ -39,12 +39,8 @@ RuleBasedCollator2::~RuleBasedCollator2() {
 
 Collator *
 RuleBasedCollator2::clone() const {
-    return NULL;  // TODO
-}
-
-Collator *
-RuleBasedCollator2::safeClone() const {
-    return NULL;  // TODO
+    // TODO: new RuleBasedCollator2(), copyFrom(*this, UErrorCode), delete & return NULL if U_FAILURE
+    return NULL;
 }
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedCollator2)

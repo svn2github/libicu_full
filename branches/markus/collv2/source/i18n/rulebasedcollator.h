@@ -136,9 +136,8 @@ public:
     virtual UBool operator==(const Collator& other) const;
 
     /**
-     * Makes a deep copy of the object.
-     * The caller owns the returned object.
-     * @return the cloned object.
+     * Makes a copy of this object.
+     * @return a copy of this object, owned by the caller
      * @stable ICU 2.0
      */
     virtual Collator* clone(void) const;
@@ -167,6 +166,9 @@ public:
      */
     virtual CollationElementIterator* createCollationElementIterator(
                                          const CharacterIterator& source) const;
+
+    // Make deprecated versions of Collator::compare() visible.
+    using Collator::compare;
 
     /**
     * The comparison function compares the character data stored in two
@@ -218,9 +220,9 @@ public:
     * than target
     * @stable ICU 2.6
     */
-    virtual UCollationResult compare(const UChar *left, int32_t leftLength,
-                                     const UChar *right, int32_t rightLength,
-                                     UErrorCode &errorCode) const;
+    virtual UCollationResult compare(const UChar* source, int32_t sourceLength,
+                                     const UChar* target, int32_t targetLength,
+                                     UErrorCode &status) const;
 
     /**
     * Transforms a specified region of the string into a series of characters
@@ -431,13 +433,6 @@ public:
     virtual UnicodeSet *getTailoredSet(UErrorCode &status) const;
 
     /**
-     * Thread safe cloning operation.
-     * @return pointer to the new clone, user should remove it.
-     * @stable ICU 2.2
-     */
-    virtual Collator* safeClone() const;
-
-    /**
      * Get the sort key as an array of bytes from an UnicodeString.
      * @param source string to be processed.
      * @param result buffer to store result in. If NULL, number of bytes needed
@@ -513,10 +508,10 @@ public:
      * @see Collator#setReorderCodes
      * @draft ICU 4.8 
      */
-    static int32_t getEquivalentReorderCodes(int32_t reorderCode,
-                                int32_t* dest,
-                                int32_t destCapacity,
-                                UErrorCode& status);
+    static int32_t U_EXPORT2 getEquivalentReorderCodes(
+            int32_t reorderCode,
+            int32_t* dest, int32_t destCapacity,
+            UErrorCode& status);
 #endif  /* U_HIDE_DRAFT_API */
 
 public:  // TODO: Public only for testing.
