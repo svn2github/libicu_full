@@ -330,7 +330,7 @@ static const UEnumeration UCHARSTRENUM_U_VT = {
 U_CDECL_END
 
 U_CAPI UEnumeration* U_EXPORT2
-uenum_openCharStringsEnumeration(const char* const* strings, int32_t count,
+uenum_openCharStringsEnumeration(const char* const strings[], int32_t count,
                                  UErrorCode* ec) {
     UCharStringEnumeration* result = NULL;
     if (U_SUCCESS(*ec) && count >= 0 && (count == 0 || strings != 0)) {
@@ -349,7 +349,7 @@ uenum_openCharStringsEnumeration(const char* const* strings, int32_t count,
 }
 
 U_CAPI UEnumeration* U_EXPORT2
-uenum_openUCharStringsEnumeration(const UChar* const* strings, int32_t count,
+uenum_openUCharStringsEnumeration(const UChar* const strings[], int32_t count,
                                  UErrorCode* ec) {
     UCharStringEnumeration* result = NULL;
     if (U_SUCCESS(*ec) && count >= 0 && (count == 0 || strings != 0)) {
