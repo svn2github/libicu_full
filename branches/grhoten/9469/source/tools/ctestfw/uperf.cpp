@@ -322,7 +322,7 @@ void UPerfTest::setPath( char* pathVal )
 }
 
 // call individual tests, to be overriden to call implementations
-UPerfFunction* UPerfTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* par )
+UPerfFunction* UPerfTest::runIndexedTest( int32_t /*index*/, UBool /*exec*/, const char* & /*name*/, char* /*par*/ )
 {
     // to be overriden by a method like:
     /*
@@ -333,7 +333,6 @@ UPerfFunction* UPerfTest::runIndexedTest( int32_t index, UBool exec, const char*
     }
     */
     fprintf(stderr,"*** runIndexedTest needs to be overriden! ***");
-    name = ""; exec = exec; index = index; par = par;
     return NULL;
 }
 

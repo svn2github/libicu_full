@@ -74,7 +74,7 @@ static void udbg_setup(void) {
 
 
 
-U_CAPI const UnicodeString& U_EXPORT2 udbg_enumString(UDebugEnumType type, int32_t field) {
+U_TOOLUTIL_API const UnicodeString& U_EXPORT2 udbg_enumString(UDebugEnumType type, int32_t field) {
     if(strs == NULL ) {
         udbg_setup();
     }
