@@ -4270,7 +4270,7 @@ $as_echo "$ac_use_strict_options" >&6; }
         fi
         if test "$GXX" = yes
         then
-            CXXFLAGS="$CXXFLAGS -W -Wall -pedantic -Wpointer-arith -Wwrite-strings -Wlong-long"
+            CXXFLAGS="$CXXFLAGS -W -Wall -pedantic -Wpointer-arith -Wwrite-strings -Wno-long-long"
         else
             case "${host}" in
             *-*-cygwin)

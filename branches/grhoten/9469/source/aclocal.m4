@@ -466,7 +466,7 @@ AC_DEFUN(AC_CHECK_STRICT_COMPILE,
         fi
         if test "$GXX" = yes
         then
-            CXXFLAGS="$CXXFLAGS -W -Wall -pedantic -Wpointer-arith -Wwrite-strings -Wlong-long"
+            CXXFLAGS="$CXXFLAGS -W -Wall -pedantic -Wpointer-arith -Wwrite-strings -Wno-long-long"
         else
             case "${host}" in
             *-*-cygwin)
