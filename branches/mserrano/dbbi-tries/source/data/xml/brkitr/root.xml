@@ -24,11 +24,11 @@
                 <icu:title    icu:dependency="title.brk"/>
             </icu:boundaries>
             <icu:dictionaries>
-                <icu:dictionary type="Thai" icu:dependency="thaidict.ctd"/>
-                <icu:dictionary type="Khmr" icu:dependency="khmerdict.ctd"/>
-                <icu:dictionary type="Hani" icu:dependency="cjdict.ctd"/>
-                <icu:dictionary type="Hira" icu:dependency="cjdict.ctd"/>
-                <icu:dictionary type="Kata" icu:dependency="cjdict.ctd"/>
+                <icu:dictionary type="Thai" icu:dependency="thaidict.dict"/>
+                <icu:dictionary type="Khmr" icu:dependency="khmerdict.dict"/>
+                <icu:dictionary type="Hani" icu:dependency="cjdict.dict"/>
+                <icu:dictionary type="Hira" icu:dependency="cjdict.dict"/>
+                <icu:dictionary type="Kata" icu:dependency="cjdict.dict"/>
             </icu:dictionaries>
         </icu:breakIteratorData>
     </special>

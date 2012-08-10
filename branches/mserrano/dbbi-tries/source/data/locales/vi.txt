@@ -2,8 +2,8 @@
 // *
 // * Copyright (C) 2012 International Business Machines
 // * Corporation and others.  All Rights Reserved.
-// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
-// * Source File:<path>/common/main/vi.xml
+// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
+// * Source File: <path>/common/main/vi.xml
 // *
 // ***************************************************************************
 /**
@@ -28,6 +28,46 @@ vi{
                 decimalFormat{"#,##0.###"}
                 percentFormat{"#,##0%"}
                 scientificFormat{"#E0"}
+            }
+            patternsShort{
+                decimalFormat{
+                    1000{
+                        other{"0.0 N"}
+                    }
+                    10000{
+                        other{"00 N"}
+                    }
+                    100000{
+                        other{"000 N"}
+                    }
+                    1000000{
+                        other{"0.0 Tr"}
+                    }
+                    10000000{
+                        other{"00 Tr"}
+                    }
+                    100000000{
+                        other{"000 Tr"}
+                    }
+                    1000000000{
+                        other{"0.0 Tỷ"}
+                    }
+                    10000000000{
+                        other{"00 Tỷ"}
+                    }
+                    100000000000{
+                        other{"000 Tỷ"}
+                    }
+                    1000000000000{
+                        other{"0.0 NT"}
+                    }
+                    10000000000000{
+                        other{"00 NT"}
+                    }
+                    100000000000000{
+                        other{"000 NT"}
+                    }
+                }
             }
             symbols{
                 decimal{","}

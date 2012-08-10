@@ -694,12 +694,12 @@ NumberFormatTest::escape(UnicodeString& s)
 // -------------------------------------
 static const char* testCases[][2]= {
      /* locale ID */  /* expected */
-    {"ca_ES_PREEURO", "1.150\\u00A0\\u20A7" },
+    {"ca_ES_PREEURO", "\\u20A7\\u00A01.150" },
     {"de_LU_PREEURO", "1,150\\u00A0F" },
     {"el_GR_PREEURO", "1.150,50\\u00A0\\u0394\\u03C1\\u03C7" },
     {"en_BE_PREEURO", "1.150,50\\u00A0BEF" },
     {"es_ES_PREEURO", "1.150\\u00A0\\u20A7" },
-    {"eu_ES_PREEURO", "1.150\\u00A0\\u20A7" },
+    {"eu_ES_PREEURO", "\\u20A7\\u00A01.150" },
     {"gl_ES_PREEURO", "1.150\\u00A0\\u20A7" },
     {"it_IT_PREEURO", "ITL\\u00A01.150" },
     {"pt_PT_PREEURO", "1,150$50\\u00A0Esc."},
@@ -6378,6 +6378,11 @@ void NumberFormatTest::TestDecimal() {
         }
     }
     
+#if U_PLATFORM != U_PF_CYGWIN || defined(CYGWINMSVC)
+    /*
+     * This test fails on Cygwin (1.7.16) using GCC because of a rounding issue with strtod().
+     * See #9463
+     */
     {
         // Check that a parse returns a decimal number with full accuracy
         UErrorCode status = U_ZERO_ERROR;
@@ -6395,6 +6400,7 @@ void NumberFormatTest::TestDecimal() {
             delete fmtr;
         }
     }
+#endif
 
 }
 
