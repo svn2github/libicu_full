@@ -20,6 +20,7 @@
 #include "unicode/ustring.h"
 #include "charstr.h"
 #include "collation.h"
+#include "collationbasedatabuilder.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
 #include "collationiterator.h"
@@ -33,7 +34,7 @@
 // TODO: Move to ucbuf.h
 U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
 
-extern const CollationData *getDUCETData(UErrorCode &errorCode);
+extern const CollationBaseData *getCollationBaseData(UErrorCode &errorCode);
 
 class CollationTest : public IntlTest {
 public:
@@ -95,8 +96,8 @@ private:
     UnicodeString fileLine;
     int32_t fileLineNumber;
     UnicodeString fileTestName;
-    CollationDataBuilder *baseBuilder;
-    CollationData *baseData;
+    CollationBaseDataBuilder *baseBuilder;
+    CollationBaseData *baseData;
     const CollationData *collData;
 };
 
@@ -120,10 +121,10 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
 void CollationTest::TestMinMax() {
     IcuTestErrorCode errorCode(*this, "TestMinMax");
 
-    CollationDataBuilder builder(errorCode);
+    CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationData> cd(builder.build(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
+    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
         return;
     }
 
@@ -155,10 +156,10 @@ void CollationTest::TestMinMax() {
 void CollationTest::TestImplicits() {
     IcuTestErrorCode errorCode(*this, "TestImplicits");
 
-    CollationDataBuilder builder(errorCode);
+    CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationData> cd(builder.build(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
+    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
         return;
     }
 
@@ -218,10 +219,10 @@ void CollationTest::TestImplicits() {
 void CollationTest::TestNulTerminated() {
     IcuTestErrorCode errorCode(*this, "TestNulTerminated");
 
-    CollationDataBuilder builder(errorCode);
+    CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationData> cd(builder.build(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
+    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
         return;
     }
 
@@ -258,10 +259,10 @@ private:
 void CollationTest::TestFCD() {
     IcuTestErrorCode errorCode(*this, "TestFCD");
 
-    CollationDataBuilder builder(errorCode);
+    CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationData> cd(builder.build(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationDataBuilder.build()")) {
+    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
         return;
     }
 
@@ -504,16 +505,16 @@ int32_t CollationTest::parseStringAndCEs(UnicodeString &prefix, UnicodeString &s
 
 void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     delete baseBuilder;
-    baseBuilder = new CollationDataBuilder(errorCode);
+    baseBuilder = new CollationBaseDataBuilder(errorCode);
     if(errorCode.isFailure()) {
         errln(fileTestName);
-        errln("new CollationDataBuilder() failed");
+        errln("new CollationBaseDataBuilder() failed");
         return;
     }
     baseBuilder->initBase(errorCode);
     if(errorCode.isFailure()) {
         errln(fileTestName);
-        errln("CollationDataBuilder.initBase() failed");
+        errln("CollationBaseDataBuilder.initBase() failed");
         return;
     }
 
@@ -528,17 +529,17 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         baseBuilder->add(prefix, s, ces, cesLength, errorCode);
         if(errorCode.isFailure()) {
             errln(fileTestName);
-            errln("CollationDataBuilder.add() failed");
+            errln("CollationBaseDataBuilder.add() failed");
             errln(fileLine);
             return;
         }
     }
     if(errorCode.isFailure()) { return; }
     delete baseData;
-    baseData = baseBuilder->build(errorCode);
+    baseData = baseBuilder->buildBaseData(errorCode);
     if(errorCode.isFailure()) {
         errln(fileTestName);
-        errln("CollationDataBuilder.build() failed");
+        errln("CollationBaseDataBuilder.buildBaseData() failed");
     }
     collData = baseData;
 }
@@ -666,8 +667,8 @@ void CollationTest::TestDataDriven() {
             fileTestName = fileLine;
             logln(fileLine);
             fileLine.remove();
-        } else if(fileLine == UNICODE_STRING("@ DUCET", 7)) {
-            collData = getDUCETData(errorCode);
+        } else if(fileLine == UNICODE_STRING("@ root", 6)) {
+            collData = getCollationBaseData(errorCode);
             fileLine.remove();
         } else if(fileLine == UNICODE_STRING("@ rawbase", 9)) {
             buildBase(f.getAlias(), errorCode);
@@ -857,7 +858,7 @@ int32_t getReorderCode(const char* name) {
 }
 
 UCAElements *readAnElement(FILE *data,
-                           const CollationDataBuilder &builder,
+                           const CollationBaseDataBuilder &builder,
                            UCAConstants *consts, LeadByteConstants *leadByteConstants,
                            int64_t ces[32], int32_t &cesLength,
                            UErrorCode *status) {
@@ -1340,7 +1341,7 @@ diffThreeBytePrimaries(uint32_t p1, uint32_t p2, UBool isCompressible) {
 
 static void
 write_uca_table(const char *filename,
-                CollationDataBuilder &builder,
+                CollationBaseDataBuilder &builder,
                 UErrorCode *status)
 {
     FILE *data = fopen(filename, "r");
@@ -1492,7 +1493,7 @@ write_uca_table(const char *filename,
 #endif
             if(!((int32_t)element->cSize > 1 && element->cPoints[0] == 0xFDD0)) {
                 // TODO: We ignore the maximum CE for U+FFFF which has [EF FE, 05, 05] in v1.
-                // CollationDataBuilder::initBase() sets a different (higher) CE.
+                // CollationBaseDataBuilder::initBase() sets a different (higher) CE.
                 uint32_t p = (uint32_t)(ces[0] >> 32);
                 if(p == 0xeffe0000) { continue; }
                 UnicodeString prefix(FALSE, element->prefixChars, (int32_t)element->prefixSize);
@@ -1577,7 +1578,7 @@ write_uca_table(const char *filename,
         if(action != 0 && rangeFirst >= 0) {
             // Finish a range.
             // Set offset CE32s for a long range, leave single CEs for a short range.
-            UBool didSetRange = builder.setThreeByteOffsetRange(
+            UBool didSetRange = builder.maybeSetPrimaryRange(
                 rangeFirst, rangeLast,
                 rangeFirstPrimary, rangeStep, *status);
             if(U_FAILURE(*status)) {
@@ -1626,7 +1627,7 @@ write_uca_table(const char *filename,
     // It should be easy to copy mappings from an un-built builder to a new one.
     // Add CollationDataBuilder::copyFrom(builder, code point, errorCode) -- copy contexts & expansions.
 
-    // TODO: Analyse why DUCET data is large.
+    // TODO: Analyse why CLDR root collation data is large.
     // Size of expansions for canonical decompositions?
     // Size of expansions for compatibility decompositions?
     // For the latter, consider storing some of them as specials,
@@ -1710,8 +1711,8 @@ write_uca_table(const char *filename,
     return;
 }
 
-static CollationData *
-makeDUCETFromFractionalUCA(CollationDataBuilder &builder, UErrorCode &errorCode) {
+static CollationBaseData *
+makeBaseDataFromFractionalUCA(CollationBaseDataBuilder &builder, UErrorCode &errorCode) {
     CharString path(IntlTest::getSourceTestData(errorCode), errorCode);
     path.appendPathPart("..", errorCode);
     path.appendPathPart("..", errorCode);
@@ -1727,8 +1728,8 @@ makeDUCETFromFractionalUCA(CollationDataBuilder &builder, UErrorCode &errorCode)
 
     builder.initBase(errorCode);
     write_uca_table(path.data(), builder, &errorCode);
-    CollationData *cd = builder.build(errorCode);
-    printf("*** DUCET part sizes ***\n");
+    CollationBaseData *cd = builder.buildBaseData(errorCode);
+    printf("*** CLDR root collation part sizes ***\n");
     UErrorCode trieErrorCode = U_ZERO_ERROR;
     int32_t length = builder.serializeTrie(NULL, 0, trieErrorCode);
     printf("  trie size:                    %6ld\n", (long)length);
@@ -1756,29 +1757,29 @@ makeDUCETFromFractionalUCA(CollationDataBuilder &builder, UErrorCode &errorCode)
     length = builder.serializeUnsafeBackwardSet(NULL, 0, setErrorCode);
     printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
     totalSize += length * 2;
-    printf("*** DUCET size:                 %6ld\n", (long)totalSize);
+    printf("*** CLDR root collation size:   %6ld\n", (long)totalSize);
     printf("  missing: headers, options, reordering group data\n");
     return cd;
 }
 
-extern const CollationData *
-getDUCETData(UErrorCode &errorCode) {
+extern const CollationBaseData *
+getCollationBaseData(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return NULL; }
-    static CollationDataBuilder *gDucetBuilder = NULL;
-    static CollationData *gDucet = NULL;
+    static CollationBaseDataBuilder *gBaseDataBuilder = NULL;
+    static CollationBaseData *gBaseData = NULL;
     {
         Mutex lock;
-        if(gDucet != NULL) { return gDucet; }
+        if(gBaseData != NULL) { return gBaseData; }
     }
-    LocalPointer<CollationDataBuilder> builder(new CollationDataBuilder(errorCode));
-    LocalPointer<CollationData> ducet(makeDUCETFromFractionalUCA(*builder, errorCode));
-    ducet->variableTop = gVariableTop;
+    LocalPointer<CollationBaseDataBuilder> builder(new CollationBaseDataBuilder(errorCode));
+    LocalPointer<CollationBaseData> baseData(makeBaseDataFromFractionalUCA(*builder, errorCode));
+    baseData->variableTop = gVariableTop;
     if(U_SUCCESS(errorCode)) {
         Mutex lock;
-        if(gDucet == NULL) {
-            gDucetBuilder = builder.orphan();
-            gDucet = ducet.orphan();
+        if(gBaseData == NULL) {
+            gBaseDataBuilder = builder.orphan();
+            gBaseData = baseData.orphan();
         }
     }
-    return gDucet;
+    return gBaseData;
 }

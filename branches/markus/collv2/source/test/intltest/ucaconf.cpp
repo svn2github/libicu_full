@@ -19,10 +19,10 @@
 #include "cstring.h"
 #include "uparse.h"
 
-#include "collationdata.h"  // TODO: Temporarily for getDUCETData().
+#include "collationdata.h"  // TODO: Temporarily for getCollationBaseData().
 
-extern const CollationData *
-getDUCETData(UErrorCode &errorCode);
+extern const CollationBaseData *
+getCollationBaseData(UErrorCode &errorCode);
 
 UCAConformanceTest::UCAConformanceTest() :
 rbUCA(NULL),
@@ -34,9 +34,9 @@ status(U_ZERO_ERROR)
         errln("ERROR - UCAConformanceTest: Unable to open UCA collator!");
     }
 
-    getDUCETData(status);
+    getCollationBaseData(status);
     if(U_FAILURE(status)) {
-        errln("ERROR - UCAConformanceTest: Unable to open DUCET collator!");
+        errln("ERROR - UCAConformanceTest: Unable to open CLDR root collator!");
     }
 
     const char *srcDir = IntlTest::getSourceTestData(status);
@@ -296,14 +296,14 @@ void UCAConformanceTest::TestRulesShifted(/* par */) {
 #include "rulebasedcollator.h"
 
 void UCAConformanceTest::TestTable2NonIgnorable() {
-    RuleBasedCollator2 coll(getDUCETData(status));
+    RuleBasedCollator2 coll(getCollationBaseData(status));
     setCollNonIgnorable(&coll);
     openTestFile("NON_IGNORABLE");
     testConformance(&coll);
 }
 
 void UCAConformanceTest::TestTable2Shifted() {
-    RuleBasedCollator2 coll(getDUCETData(status));
+    RuleBasedCollator2 coll(getCollationBaseData(status));
     setCollShifted(&coll);
     openTestFile("SHIFTED");
     testConformance(&coll);

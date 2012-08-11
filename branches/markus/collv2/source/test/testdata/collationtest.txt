@@ -181,8 +181,8 @@ a\u0331\u0331\u0331\u030a\u0301\u0358\u0358\u0358  5a14.. .d01e. .d01e. .d01e. .
 # a+dot below & stem+augmentation dot, followed by contiguous d+z+acute
 a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 
-** test: rudimentary, hardcoded DUCET test
-@ DUCET
+** test: rudimentary, hardcoded CLDR root collation test
+@ root
 * CEs
 a       27..
 ä       27.. .9d.
@@ -226,12 +226,6 @@ c 11223344.5566.77
 #&z < a <<< A
 # allow comments
 #< b <<< B
-
-** test: from DUCET
-# no rawbase, no rules
-
-#* compare
-#...
 
 ** test: German phonebook rules
 

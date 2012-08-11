@@ -35,19 +35,15 @@ class UCharsTrieBuilder;
  * Takes (character, CE) pairs and builds them into runtime data structures.
  * Supports characters with context prefixes and contraction suffixes.
  */
-class U_I18N_API CollationDataBuilder : public UMemory {
+class U_I18N_API CollationDataBuilder : public UObject {
 public:
     CollationDataBuilder(UErrorCode &errorCode);
 
-    ~CollationDataBuilder();
+    virtual ~CollationDataBuilder();
 
-    void initBase(UErrorCode &errorCode);
+    virtual void initTailoring(const CollationData *b, UErrorCode &errorCode);
 
-    void initTailoring(const CollationData *b, UErrorCode &errorCode);
-
-    UBool isCompressibleLeadByte(uint32_t b) const {
-        return compressibleBytes != NULL ? compressibleBytes[b] : base->isCompressibleLeadByte(b);
-    }
+    virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
     inline UBool isCompressiblePrimary(uint32_t p) const {
         return isCompressibleLeadByte(p >> 24);
@@ -76,7 +72,7 @@ public:
 
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order,
-     * if it is worth doing.
+     * if it is worth doing; otherwise no change is made.
      * None of the code points in the range should have complex mappings so far
      * (expansions/contractions/prefixes).
      * @param start first code point
@@ -86,26 +82,13 @@ public:
      * @param errorCode ICU in/out error code
      * @return TRUE if an OFFSET_TAG range was used for start..end
      */
-    UBool setThreeByteOffsetRange(UChar32 start, UChar32 end,
-                                  uint32_t primary, int32_t step,
-                                  UErrorCode &errorCode);
-
-    CollationData *build(UErrorCode &errorCode);
-
-    int32_t lengthOfCE32s() const { return ce32s.size(); }
-    int32_t lengthOfCEs() const { return ce64s.size(); }
-    int32_t lengthOfContexts() const { return contexts.length(); }
-
-    int32_t serializeTrie(void *data, int32_t capacity, UErrorCode &errorCode) const;
-    int32_t serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
-                                       UErrorCode &errorCode) const;
-
-private:
-    void initHanRanges(UErrorCode &errorCode);
-    void initHanCompat(UErrorCode &errorCode);
+    UBool maybeSetPrimaryRange(UChar32 start, UChar32 end,
+                               uint32_t primary, int32_t step,
+                               UErrorCode &errorCode);
 
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order.
+     * Sets range values if that is worth doing, or else individual values.
      * None of the code points in the range should have complex mappings so far
      * (expansions/contractions/prefixes).
      * @param start first code point
@@ -115,10 +98,21 @@ private:
      * @param errorCode ICU in/out error code
      * @return the next primary after 'end': start primary incremented by ((end-start)+1)*step
      */
-    uint32_t setThreeBytePrimaryRange(UChar32 start, UChar32 end,
-                                      uint32_t primary, int32_t step,
-                                      UErrorCode &errorCode);
+    uint32_t setPrimaryRangeAndReturnNext(UChar32 start, UChar32 end,
+                                          uint32_t primary, int32_t step,
+                                          UErrorCode &errorCode);
 
+    virtual CollationData *buildTailoring(UErrorCode &errorCode);
+
+    int32_t lengthOfCE32s() const { return ce32s.size(); }
+    int32_t lengthOfCEs() const { return ce64s.size(); }
+    int32_t lengthOfContexts() const { return contexts.length(); }
+
+    int32_t serializeTrie(void *data, int32_t capacity, UErrorCode &errorCode) const;
+    int32_t serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
+                                       UErrorCode &errorCode) const;
+
+protected:
     UBool setJamoCEs(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);
 
@@ -146,6 +140,8 @@ private:
     uint32_t encodeCEsAsCE32s(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
     uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
 
+    void buildMappings(CollationData &cd, UErrorCode &errorCode);
+
     void buildContexts(UErrorCode &errorCode);
     void buildContext(UChar32 c, UErrorCode &errorCode);
     int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
@@ -158,16 +154,15 @@ private:
     UVector64 ce64s;
     UVector conditionalCE32s;  // vector of ConditionalCE32
     int64_t jamoCEs[19+21+27];
-    // Linear FCD16 data table for U+0000..U+0EFF.
-    uint16_t *fcd16_F00;
-    // Flags for which primary-weight lead bytes are compressible.
-    // NULL in a tailoring builder, consult the base instead.
-    UBool *compressibleBytes;
     // Characters that have context (prefixes or contraction suffixes).
     UnicodeSet contextChars;
     // Serialized UCharsTrie structures for finalized contexts.
     UnicodeString contexts;
     UnicodeSet unsafeBackwardSet;
+
+private:
+    // No ICU "poor man's RTTI" for this class nor its subclasses.
+    virtual UClassID getDynamicClassID() const;
 };
 
 #if 0

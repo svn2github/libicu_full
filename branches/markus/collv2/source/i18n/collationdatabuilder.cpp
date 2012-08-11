@@ -77,8 +77,7 @@ U_CDECL_END
 CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
         : nfcImpl(*Normalizer2Factory::getNFCImpl(errorCode)),
           base(NULL), trie(NULL),
-          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode),
-          fcd16_F00(NULL), compressibleBytes(NULL) {
+          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode) {
     // Reserve the first CE32 for U+0000.
     ce32s.addElement(0, errorCode);
     conditionalCE32s.setDeleter(uprv_deleteConditionalCE32);
@@ -86,59 +85,6 @@ CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
 
 CollationDataBuilder::~CollationDataBuilder() {
     utrie2_close(trie);
-    uprv_free(fcd16_F00);
-    uprv_free(compressibleBytes);
-}
-
-void
-CollationDataBuilder::initBase(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return; }
-    if(trie != NULL) {
-        errorCode = U_INVALID_STATE_ERROR;
-        return;
-    }
-
-    fcd16_F00 = (uint16_t *)uprv_malloc(0xf00 * 2);
-    if(fcd16_F00 == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    for(UChar32 c = 0; c < 0xf00; ++c) {
-        fcd16_F00[c] = nfcImpl.getFCD16(c);
-    }
-
-    compressibleBytes = (UBool *)uprv_malloc(256);
-    if(compressibleBytes == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    // Not compressible:
-    // - digits
-    // - Latin
-    // - Hani
-    // - trail weights
-    // Some scripts are compressible, some are not.
-    uprv_memset(compressibleBytes, FALSE, 256);
-    compressibleBytes[Collation::UNASSIGNED_IMPLICIT_BYTE] = TRUE;
-
-    // For a base, the default is to compute an unassigned-character implicit CE.
-    // This includes surrogate code points; see the last option in
-    // UCA section 7.1.1 Handling Ill-Formed Code Unit Sequences.
-    trie = utrie2_open(Collation::UNASSIGNED_CE32, 0, &errorCode);
-
-    utrie2_set32(trie, 0xfffe, Collation::MERGE_SEPARATOR_CE32, &errorCode);
-    utrie2_set32(trie, 0xffff, Collation::MAX_REGULAR_CE32, &errorCode);
-
-    initHanRanges(errorCode);
-    initHanCompat(errorCode);
-
-    uint32_t hangulCE32 = makeSpecialCE32(Collation::HANGUL_TAG, 0u);
-    utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
-
-    // Initialize the unsafe-backwards set:
-    // All combining marks and trail surrogates.
-    unsafeBackwardSet.applyPattern(UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
-    // TODO
 }
 
 void
@@ -163,86 +109,10 @@ CollationDataBuilder::initTailoring(const CollationData *b, UErrorCode &errorCod
     // TODO
 }
 
-void
-CollationDataBuilder::initHanRanges(UErrorCode &errorCode) {
-    // Preset the Han ranges as ranges of offset CE32s.
-    // See http://www.unicode.org/reports/tr10/#Implicit_Weights
-    UnicodeSet han(UNICODE_STRING_SIMPLE("[:Unified_Ideograph:]"), errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-    // Multiply the number of code points by (gap+1).
-    // Add one for tailoring after the last Han character.
-    int32_t gap = 1;
-    int32_t step = gap + 1;
-    int32_t numHan = han.size() * step + 1;
-    // Numbers of Han primaries per lead byte determined by
-    // numbers of 2nd (not compressible) times 3rd primary byte values.
-    int32_t numHanPerLeadByte = 254 * 254;
-    int32_t numHanLeadBytes = (numHan + numHanPerLeadByte - 1) / numHanPerLeadByte;
-    uint32_t hanPrimary = (uint32_t)(Collation::UNASSIGNED_IMPLICIT_BYTE - numHanLeadBytes) << 24;
-    hanPrimary |= 0x20200;
-    // TODO: Save [fixed first implicit byte xx] and [first implicit [hanPrimary, 05, 05]]
-    // TODO: Set the range in invuca.
-    UnicodeSetIterator hanIter(han);
-    // Unihan extension A sorts after the other BMP ranges.
-    UChar32 endOfExtA;
-    if(!hanIter.nextRange() ||
-        hanIter.getCodepoint() != 0x3400 || (endOfExtA = hanIter.getCodepointEnd()) < 0x4d00
-    ) {
-        // The first range does not look like Unihan extension A.
-        errorCode = U_INTERNAL_PROGRAM_ERROR;
-        return;
-    }
-    while(hanIter.nextRange()) {
-        UChar32 start = hanIter.getCodepoint();
-        UChar32 end = hanIter.getCodepointEnd();
-        if(start > 0xffff && endOfExtA >= 0) {
-            // Insert extension A.
-            hanPrimary = setThreeBytePrimaryRange(0x3400, endOfExtA, hanPrimary, step, errorCode);
-            endOfExtA = -1;
-        }
-        hanPrimary = setThreeBytePrimaryRange(start, end, hanPrimary, step, errorCode);
-    }
-}
-
-void
-CollationDataBuilder::initHanCompat(UErrorCode &errorCode) {
-    // Set the compatibility ideographs which decompose to regular ones.
-    UnicodeSet compat(UNICODE_STRING_SIMPLE("[[:Hani:]&[:L:]&[:NFD_QC=No:]]"), errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-    UnicodeSetIterator iter(compat);
-    UChar buffer[4];
-    int32_t length;
-    while(iter.next()) {
-        // Get the singleton decomposition Han character.
-        UChar32 c = iter.getCodepoint();
-        const UChar *decomp = nfcImpl.getDecomposition(c, buffer, length);
-        U_ASSERT(length > 0);
-        int32_t i = 0;
-        UChar32 han;
-        U16_NEXT_UNSAFE(decomp, i, han);
-        U_ASSERT(i == length);  // Expect a singleton decomposition.
-        // Give c its decomposition's regular CE32.
-        uint32_t ce32 = utrie2_get32(trie, han);
-        if(Collation::isSpecialCE32(ce32)) {
-            if(Collation::getSpecialCE32Tag(ce32) != Collation::OFFSET_TAG) {
-                errorCode = U_INTERNAL_PROGRAM_ERROR;
-                return;
-            }
-            ce32 = getCE32FromOffsetCE32(han, ce32);
-        } else {
-            if(!Collation::isLongPrimaryCE32(ce32)) {
-                errorCode = U_INTERNAL_PROGRAM_ERROR;
-                return;
-            }
-        }
-        utrie2_set32(trie, c, ce32, &errorCode);
-    }
-}
-
 UBool
-CollationDataBuilder::setThreeByteOffsetRange(UChar32 start, UChar32 end,
-                                              uint32_t primary, int32_t step,
-                                              UErrorCode &errorCode) {
+CollationDataBuilder::maybeSetPrimaryRange(UChar32 start, UChar32 end,
+                                           uint32_t primary, int32_t step,
+                                           UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return FALSE; }
     U_ASSERT(start <= end);
     // TODO: Do we need to check what values are currently set for start..end?
@@ -276,12 +146,12 @@ CollationDataBuilder::setThreeByteOffsetRange(UChar32 start, UChar32 end,
 }
 
 uint32_t
-CollationDataBuilder::setThreeBytePrimaryRange(UChar32 start, UChar32 end,
-                                               uint32_t primary, int32_t step,
-                                               UErrorCode &errorCode) {
+CollationDataBuilder::setPrimaryRangeAndReturnNext(UChar32 start, UChar32 end,
+                                                   uint32_t primary, int32_t step,
+                                                   UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
     UBool isCompressible = isCompressiblePrimary(primary);
-    if(setThreeByteOffsetRange(start, end, primary, step, errorCode)) {
+    if(maybeSetPrimaryRange(start, end, primary, step, errorCode)) {
         return Collation::incThreeBytePrimaryByOffset(primary, isCompressible,
                                                       (end - start + 1) * step);
     } else {
@@ -300,6 +170,11 @@ CollationDataBuilder::getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const {
     int64_t dataCE = ce64s.elementAti((int32_t)ce32 & 0xfffff);
     uint32_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
     return makeLongPrimaryCE32(p);
+}
+
+UBool
+CollationDataBuilder::isCompressibleLeadByte(uint32_t b) const {
+    return base->isCompressibleLeadByte(b);
 }
 
 UBool
@@ -703,7 +578,26 @@ CollationDataBuilder::setLeadSurrogates(UErrorCode &errorCode) {
 }
 
 CollationData *
-CollationDataBuilder::build(UErrorCode &errorCode) {
+CollationDataBuilder::buildTailoring(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return NULL; }
+
+    // Create a CollationData container of aliases to this builder's finalized data.
+    LocalPointer<CollationData> cd(new CollationData(nfcImpl));
+    if(cd.isNull()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    buildMappings(*cd, errorCode);
+    if(U_FAILURE(errorCode)) { return NULL; }
+
+    cd->fcd16_F00 = base->fcd16_F00;
+    cd->variableTop = base->variableTop;
+    cd->compressibleBytes = base->compressibleBytes;
+    return cd.orphan();
+}
+
+void
+CollationDataBuilder::buildMappings(CollationData &cd, UErrorCode &errorCode) {
     // TODO: Prevent build() after build().
     // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
 
@@ -717,7 +611,7 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     utrie2_set32(trie, 0, makeSpecialCE32(Collation::IMPLICIT_TAG, 0u), &errorCode);
 
     utrie2_freeze(trie, UTRIE2_32_VALUE_BITS, &errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
+    if(U_FAILURE(errorCode)) { return; }
 
     // Mark each lead surrogate as "unsafe"
     // if any of its 1024 associated supplementary code points is "unsafe".
@@ -729,27 +623,17 @@ CollationDataBuilder::build(UErrorCode &errorCode) {
     }
     unsafeBackwardSet.freeze();
 
-    // Create a CollationData container of aliases to this builder's finalized data.
-    LocalPointer<CollationData> cd(new CollationData(nfcImpl));
-    if(cd.isNull()) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-    cd->trie = trie;
-    cd->ce32s = reinterpret_cast<const uint32_t *>(ce32s.getBuffer());
-    cd->ces = ce64s.getBuffer();
-    cd->contexts = contexts.getBuffer();
-    cd->base = base;
+    cd.trie = trie;
+    cd.ce32s = reinterpret_cast<const uint32_t *>(ce32s.getBuffer());
+    cd.ces = ce64s.getBuffer();
+    cd.contexts = contexts.getBuffer();
+    cd.base = base;
     if(anyJamoAssigned || base == NULL) {
-        cd->jamoCEs = jamoCEs;
+        cd.jamoCEs = jamoCEs;
     } else {
-        cd->jamoCEs = base->jamoCEs;
+        cd.jamoCEs = base->jamoCEs;
     }
-    cd->fcd16_F00 = (fcd16_F00 != NULL) ? fcd16_F00 : base->fcd16_F00;
-    if(base != NULL) { cd->variableTop = base->variableTop; }
-    cd->compressibleBytes = compressibleBytes;
-    cd->unsafeBackwardSet = &unsafeBackwardSet;
-    return cd.orphan();
+    cd.unsafeBackwardSet = &unsafeBackwardSet;
 }
 
 void
@@ -890,6 +774,8 @@ CollationDataBuilder::serializeUnsafeBackwardSet(uint16_t *data, int32_t capacit
                                                  UErrorCode &errorCode) const {
     return unsafeBackwardSet.serialize(data, capacity, errorCode);
 }
+
+UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(CollationDataBuilder)
 
 // TODO: In CollationWeights allocator,
 // try to treat secondary & tertiary weights as 3/4-byte weights with bytes 1 & 2 == 0.
