@@ -43,6 +43,18 @@ public:
     /** Non-functional in this subclass. */
     virtual void initTailoring(const CollationData *b, UErrorCode &errorCode);
 
+    /**
+     * Sets the Han ranges as ranges of offset CE32s.
+     * Note: Unihan extension A sorts after the other BMP ranges.
+     * See http://www.unicode.org/reports/tr10/#Implicit_Weights
+     *
+     * @param ranges array of ranges of [:Unified_Ideograph:] in collation order,
+     *               as (start, end) code point pairs
+     * @param length number of code points (not pairs)
+     * @param errorCode in/out error code
+     */
+    void initHanRanges(const UChar32 ranges[], int32_t length, UErrorCode &errorCode);
+
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
     void setCompressibleLeadByte(uint32_t b);
@@ -56,9 +68,6 @@ public:
     virtual CollationData *buildTailoring(UErrorCode &errorCode);
 
 private:
-    void initHanRanges(UErrorCode &errorCode);
-    void initHanCompat(UErrorCode &errorCode);
-
     void finishPreviousReorderingGroup(uint32_t lastByte);
 
     // Linear FCD16 data table for U+0000..U+0EFF.

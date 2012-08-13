@@ -156,10 +156,8 @@ void CollationTest::TestMinMax() {
 void CollationTest::TestImplicits() {
     IcuTestErrorCode errorCode(*this, "TestImplicits");
 
-    CollationBaseDataBuilder builder(errorCode);
-    builder.initBase(errorCode);
-    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
+    const CollationBaseData *cd = getCollationBaseData(errorCode);
+    if(errorCode.logIfFailureAndReset("getCollationBaseData()")) {
         return;
     }
 
@@ -184,7 +182,7 @@ void CollationTest::TestImplicits() {
     const UnicodeSet *sets[] = { &coreHan, &otherHan, &unassigned };
     UChar32 prev = 0;
     uint32_t prevPrimary = 0;
-    UTF16CollationIterator ci(cd.getAlias(), NULL, NULL);
+    UTF16CollationIterator ci(cd, NULL, NULL);
     for(int32_t i = 0; i < LENGTHOF(sets); ++i) {
         LocalPointer<UnicodeSetIterator> iter(new UnicodeSetIterator(*sets[i]));
         while(iter->next()) {
@@ -860,6 +858,7 @@ UCAElements *readAnElement(FILE *data,
       READCE,
       READPRIMARY,
       READFIRSTPRIMARY,
+      READUNIFIEDIDEOGRAPH,
       READUCAVERSION,
       READLEADBYTETOSCRIPTS,
       IGNORE
@@ -887,7 +886,7 @@ UCAElements *readAnElement(FILE *data,
                   {"[first trailing",            consts->UCA_FIRST_TRAILING,            READCE},
                   {"[last trailing",             consts->UCA_LAST_TRAILING,             READCE},
 
-                  {"[Unified_Ideograph",            NULL, IGNORE},  // TODO
+                  {"[Unified_Ideograph",            NULL, READUNIFIEDIDEOGRAPH},
                   {"[first_primary",                NULL, READFIRSTPRIMARY},
 
                   {"[fixed top",                    NULL, IGNORE},
@@ -963,6 +962,35 @@ UCAElements *readAnElement(FILE *data,
                             buffer, u_errorName(*status));
                     return NULL;
                 }
+            } else if(what_to_do == READUNIFIEDIDEOGRAPH) {
+                pointer = buffer+vtLen;
+                UVector32 unihan(*status);
+                if(U_FAILURE(*status)) { return NULL; }
+                for(;;) {
+                    skipWhiteSpace(&pointer, status);
+                    if(*pointer == ']') { break; }
+                    if(*pointer == 0) {
+                        // Missing ] after ranges.
+                        *status = U_INVALID_FORMAT_ERROR;
+                        return NULL;
+                    }
+                    char *s = pointer;
+                    while(*s != ' ' && *s != '\t' && *s != ']' && *s != '\0') { ++s; }
+                    char c = *s;
+                    *s = 0;
+                    uint32_t start, end;
+                    u_parseCodePointRange(pointer, &start, &end, status);
+                    *s = c;
+                    if(U_FAILURE(*status)) {
+                        fprintf(stderr, "Syntax error: unable to parse one of the ranges from line '%s'\n", buffer);
+                        *status = U_INVALID_FORMAT_ERROR;
+                        return NULL;
+                    }
+                    unihan.addElement((UChar32)start, *status);
+                    unihan.addElement((UChar32)end, *status);
+                    pointer = s;
+                }
+                builder.initHanRanges(unihan.getBuffer(), unihan.size(), *status);
             } else if (what_to_do == READCE) {
               // TODO: combine & clean up the two CE parsers
 #if 0  // TODO

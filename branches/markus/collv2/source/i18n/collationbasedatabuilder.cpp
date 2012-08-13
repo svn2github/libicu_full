@@ -17,7 +17,6 @@
 #include "unicode/ucharstriebuilder.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
-#include "unicode/usetiter.h"
 #include "unicode/utf16.h"
 #include "collation.h"
 #include "collationbasedatabuilder.h"
@@ -68,9 +67,6 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
     utrie2_set32(trie, 0xfffe, Collation::MERGE_SEPARATOR_CE32, &errorCode);
     utrie2_set32(trie, 0xffff, Collation::MAX_REGULAR_CE32, &errorCode);
 
-    initHanRanges(errorCode);
-    initHanCompat(errorCode);
-
     uint32_t hangulCE32 = makeSpecialCE32(Collation::HANGUL_TAG, 0u);
     utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
 
@@ -86,16 +82,27 @@ CollationBaseDataBuilder::initTailoring(const CollationData *, UErrorCode &error
 }
 
 void
-CollationBaseDataBuilder::initHanRanges(UErrorCode &errorCode) {
-    // Preset the Han ranges as ranges of offset CE32s.
-    // See http://www.unicode.org/reports/tr10/#Implicit_Weights
-    UnicodeSet han(UNICODE_STRING_SIMPLE("[:Unified_Ideograph:]"), errorCode);
-    if(U_FAILURE(errorCode)) { return; }
+CollationBaseDataBuilder::initHanRanges(const UChar32 ranges[], int32_t length, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode) || length == 0) { return; }
+    if((length & 1) != 0) {  // incomplete start/end pairs
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    if(isAssigned(0x4e00)) {  // already set
+        errorCode = U_INVALID_STATE_ERROR;
+        return;
+    }
+    int32_t numHanCodePoints = 0;
+    for(int32_t i = 0; i < length; i += 2) {
+        UChar32 start = ranges[i];
+        UChar32 end = ranges[i + 1];
+        numHanCodePoints += end - start + 1;
+    }
     // Multiply the number of code points by (gap+1).
     // Add one for tailoring after the last Han character.
     int32_t gap = 1;
     int32_t step = gap + 1;
-    int32_t numHan = han.size() * step + 1;
+    int32_t numHan = numHanCodePoints * step + 1;
     // Numbers of Han primaries per lead byte determined by
     // numbers of 2nd (not compressible) times 3rd primary byte values.
     int32_t numHanPerLeadByte = 254 * 254;
@@ -104,60 +111,10 @@ CollationBaseDataBuilder::initHanRanges(UErrorCode &errorCode) {
     hanPrimary |= 0x20200;
     // TODO: Save [fixed first implicit byte xx] and [first implicit [hanPrimary, 05, 05]]
     // TODO: Set the range in invuca.
-    UnicodeSetIterator hanIter(han);
-    // Unihan extension A sorts after the other BMP ranges.
-    UChar32 endOfExtA;
-    if(!hanIter.nextRange() ||
-        hanIter.getCodepoint() != 0x3400 || (endOfExtA = hanIter.getCodepointEnd()) < 0x4d00
-    ) {
-        // The first range does not look like Unihan extension A.
-        errorCode = U_INTERNAL_PROGRAM_ERROR;
-        return;
-    }
-    while(hanIter.nextRange()) {
-        UChar32 start = hanIter.getCodepoint();
-        UChar32 end = hanIter.getCodepointEnd();
-        if(start > 0xffff && endOfExtA >= 0) {
-            // Insert extension A.
-            hanPrimary = setPrimaryRangeAndReturnNext(0x3400, endOfExtA, hanPrimary, step, errorCode);
-            endOfExtA = -1;
-        }
+    for(int32_t i = 0; i < length; i += 2) {
+        UChar32 start = ranges[i];
+        UChar32 end = ranges[i + 1];
         hanPrimary = setPrimaryRangeAndReturnNext(start, end, hanPrimary, step, errorCode);
-    }
-}
-
-void
-CollationBaseDataBuilder::initHanCompat(UErrorCode &errorCode) {
-    // Set the compatibility ideographs which decompose to regular ones.
-    UnicodeSet compat(UNICODE_STRING_SIMPLE("[[:Hani:]&[:L:]&[:NFD_QC=No:]]"), errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-    UnicodeSetIterator iter(compat);
-    UChar buffer[4];
-    int32_t length;
-    while(iter.next()) {
-        // Get the singleton decomposition Han character.
-        UChar32 c = iter.getCodepoint();
-        const UChar *decomp = nfcImpl.getDecomposition(c, buffer, length);
-        U_ASSERT(length > 0);
-        int32_t i = 0;
-        UChar32 han;
-        U16_NEXT_UNSAFE(decomp, i, han);
-        U_ASSERT(i == length);  // Expect a singleton decomposition.
-        // Give c its decomposition's regular CE32.
-        uint32_t ce32 = utrie2_get32(trie, han);
-        if(Collation::isSpecialCE32(ce32)) {
-            if(Collation::getSpecialCE32Tag(ce32) != Collation::OFFSET_TAG) {
-                errorCode = U_INTERNAL_PROGRAM_ERROR;
-                return;
-            }
-            ce32 = getCE32FromOffsetCE32(han, ce32);
-        } else {
-            if(!Collation::isLongPrimaryCE32(ce32)) {
-                errorCode = U_INTERNAL_PROGRAM_ERROR;
-                return;
-            }
-        }
-        utrie2_set32(trie, c, ce32, &errorCode);
     }
 }
 
