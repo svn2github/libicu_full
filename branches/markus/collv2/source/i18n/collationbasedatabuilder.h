@@ -45,6 +45,11 @@ public:
 
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
+    void setCompressibleLeadByte(uint32_t b);
+
+    void addFirstPrimary(int32_t script, UBool firstInGroup, uint32_t primary,
+                         UErrorCode &errorCode);
+
     CollationBaseData *buildBaseData(UErrorCode &errorCode);
 
     /** Non-functional in this subclass. */
@@ -54,11 +59,13 @@ private:
     void initHanRanges(UErrorCode &errorCode);
     void initHanCompat(UErrorCode &errorCode);
 
+    void finishPreviousReorderingGroup(uint32_t lastByte);
+
     // Linear FCD16 data table for U+0000..U+0EFF.
-    uint16_t *fcd16_F00;
+    uint16_t fcd16_F00[0xf00];
     // Flags for which primary-weight lead bytes are compressible.
-    // NULL in a tailoring builder, consult the base instead.
-    UBool *compressibleBytes;
+    UBool compressibleBytes[256];
+    UVector32 scripts;
 };
 
 U_NAMESPACE_END

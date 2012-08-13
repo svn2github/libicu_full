@@ -1111,7 +1111,7 @@ FF9F; [, DA A5, A3]
 20E9; [, DB 89, 05]
 101FD; [, DB 99, 05]
 
-[script_first SPACE 03 02 02]
+[first_primary group SPACE 03 02 02]
 
 0009; [03 40, 05, 05]
 
@@ -1149,7 +1149,7 @@ FF9F; [, DA A5, A3]
 2007; [04, 05, 35]
 202F; [04, 05, 35]
 
-[script_first PUNCTUATION 06 02 02]
+[first_primary group PUNCTUATION 06 02 02]
 
 203E; [06 40, 05, 05]
 FE49; [06 40, 05, 09]
@@ -2448,7 +2448,7 @@ AA5C; [0C 7F E4, 05, 05]
 
 10A7F; [0C 80 72, 05, 05]
 
-[script_first SYMBOL 0D 02 02]
+[first_primary group SYMBOL 0D 02 02]
 
 0060; [0D 0A, 05, 05]
 1FEF; [0D 0A, 05, 05]
@@ -11162,7 +11162,7 @@ FF70; [0E 27, 05, A3]
 30FD; [0E 29, 05, 05]
 30FE; [0E 29, 05, 05][, DA 95, 05]
 
-[script_first CURRENCY 0F 02 02]
+[first_primary group CURRENCY 0F 02 02]
 
 00A4; [0F 0A, 05, 05]
 
@@ -11254,7 +11254,7 @@ FFE6; [0F 38, 05, 07]
 
 FDFC; [0F 5C, 05, 05]
 
-[script_first DIGIT 10 02 02]
+[first_primary group DIGIT 10 02 02]
 
 09F4; [10 0A, 05, 05]
 
@@ -12594,7 +12594,7 @@ A629; [24, 05, 05][, E0 DD, 05]
 32C8; [24, 05, 09][E0 37 48, 05, 09]
 3361; [24, 05, 09][E0 4B 22, 05, 09]
 
-[script_first Latn 26 02 02]
+[first_primary group Latn 26 02 02]
 
 0061; [27, 05, 05]
 FF41; [27, 05, 07]
@@ -15225,7 +15225,7 @@ A724; [5A 9A, 05, 8F]
 
 02AD; [5A B0, 05, 05]
 
-[script_first Grek 5B 04 02]
+[first_primary group Grek 5B 04 02]
 
 03B1; [5B 0A, 05, 05]
 1D6C2; [5B 0A, 05, 0B]
@@ -15914,7 +15914,7 @@ A724; [5A 9A, 05, 8F]
 03F8; [5B 60, 05, 05]
 03F7; [5B 60, 05, 8F]
 
-[script_first Copt 5B 62 02]
+[first_primary       Copt 5B 62 02]
 
 2C81; [5B 62 04, 05, 05]
 2C80; [5B 62 04, 05, 8F]
@@ -16097,7 +16097,7 @@ A724; [5A 9A, 05, 8F]
 2CE3; [5B 63 E2, 05, 05]
 2CE2; [5B 63 E2, 05, 8F]
 
-[script_first Cyrl 5C 02 02]
+[first_primary group Cyrl 5C 02 02]
 
 0430; [5C 0A, 05, 05]
 2DF6; [5C 0A, 05, 09]
@@ -16719,7 +16719,7 @@ A65E; [5D 63, 05, 8F]
 04CF; [5D 69, 05, 05]
 04C0; [5D 69, 05, 8F]
 
-[script_first Glag 5D 6B 02]
+[first_primary       Glag 5D 6B 02]
 
 2C30; [5D 6B 04, 05, 05]
 2C00; [5D 6B 04, 05, 8F]
@@ -16862,7 +16862,7 @@ A65E; [5D 63, 05, 8F]
 2C5E; [5D 6C 7A, 05, 05]
 2C2E; [5D 6C 7A, 05, 8F]
 
-[script_first Geor 5E 04 02]
+[first_primary group Geor 5E 04 02]
 
 10D0; [5E 0A, 05, 05]
 
@@ -17077,7 +17077,7 @@ A65E; [5D 63, 05, 8F]
 
 10FF; [5E B4, 05, 05]
 
-[script_first Armn 5F 04 02]
+[first_primary group Armn 5F 04 02]
 
 0561; [5F 0A, 05, 05]
 0531; [5F 0A, 05, 8F]
@@ -17201,7 +17201,7 @@ FB16; [5F 44, 05, 09][5F 34, 05, 09]
 
 0559; [5F 56, 05, 05]
 
-[script_first Hebr 60 04 02]
+[first_primary group Hebr 60 04 02]
 
 05D0; [60 0A, 05, 05]
 2135; [60 0A, 05, 09]
@@ -17303,7 +17303,7 @@ FB2C; [60 32, 05, 05][, D1 91, 05][, D1 81, 05]
 FB28; [60 34, 05, 0B]
 FB4A; [60 34, 05, 05][, D1 91, 05]
 
-[script_first Phnx 60 36 02]
+[first_primary       Phnx 60 36 02]
 
 10900; [60 36 04, 05, 05]
 
@@ -17349,7 +17349,7 @@ FB4A; [60 34, 05, 05][, D1 91, 05]
 
 10915; [60 36 AC, 05, 05]
 
-[script_first Samr 60 36 B0]
+[first_primary       Samr 60 36 B0]
 
 0800; [60 36 B4, 05, 05]
 
@@ -17403,7 +17403,7 @@ FB4A; [60 34, 05, 05][, D1 91, 05]
 
 081B; [60 37 82, 05, 05]
 
-[script_first Arab 61 02 02]
+[first_primary group Arab 61 02 02]
 
 0621; [61 0A, 05, 05]
 0674; [61 0A, 05, 09]
@@ -18674,7 +18674,7 @@ FBB0; [62 A1, 05, 33][, D3 D9, 33]
 
 077B; [62 A5, 05, 05]
 
-[script_first Syrc 62 A7 02]
+[first_primary       Syrc 62 A7 02]
 
 0710; [62 A7 04, 05, 05]
 
@@ -18737,7 +18737,7 @@ FBB0; [62 A1, 05, 33][, D3 D9, 33]
 
 072C; [62 A7 D4, 05, 05]
 
-[script_first Mand 62 A7 D8]
+[first_primary       Mand 62 A7 D8]
 
 0840; [62 A7 DC, 05, 05]
 
@@ -18789,7 +18789,7 @@ FBB0; [62 A1, 05, 33][, D3 D9, 33]
 
 0858; [62 A8 A2, 05, 05]
 
-[script_first Thaa 63 04 02]
+[first_primary group Thaa 63 04 02]
 
 0780; [63 0A, 05, 05]
 
@@ -18891,7 +18891,7 @@ FBB0; [62 A1, 05, 33][, D3 D9, 33]
 
 07B0; [63 6C, 05, 05]
 
-[script_first Nkoo 63 6E 02]
+[first_primary       Nkoo 63 6E 02]
 
 07CA; [63 6E 04, 05, 05]
 
@@ -18960,7 +18960,7 @@ FBB0; [62 A1, 05, 33][, D3 D9, 33]
 
 07F5; [63 6E FC, 05, 05]
 
-[script_first Tfng 63 6F 02]
+[first_primary       Tfng 63 6F 02]
 
 2D30; [63 6F 0A, 05, 05]
 
@@ -19076,7 +19076,7 @@ FBB0; [62 A1, 05, 33][, D3 D9, 33]
 
 2D6F; [63 70 D0, 05, 05]
 
-[script_first Ethi 64 02 02]
+[first_primary group Ethi 64 02 02]
 
 1200; [64 0A, 05, 05]
 
@@ -19984,7 +19984,7 @@ AB2E; [66 EC, 05, 05]
 
 2DDE; [67 AD, 05, 05]
 
-[script_first Deva 68 04 02]
+[first_primary group Deva 68 04 02]
 
 0950; [68 0A, 05, 05]
 
@@ -20205,7 +20205,7 @@ A8FB; [68 9A, 05, 05]
 
 094D; [68 CC, 05, 05]
 
-[script_first Beng 69 04 02]
+[first_primary group Beng 69 04 02]
 
 0985; [69 0A, 05, 05]
 
@@ -20341,7 +20341,7 @@ A8FB; [68 9A, 05, 05]
 
 09D7; [69 88, 05, 05]
 
-[script_first Guru 6A 04 02]
+[first_primary group Guru 6A 04 02]
 
 0A74; [6A 0A, 05, 05]
 
@@ -20463,7 +20463,7 @@ A8FB; [68 9A, 05, 05]
 
 0A4D; [6A 7A, 05, 05]
 
-[script_first Gujr 6B 04 02]
+[first_primary group Gujr 6B 04 02]
 
 0AD0; [6B 0A, 05, 05]
 
@@ -20601,7 +20601,7 @@ A8FB; [68 9A, 05, 05]
 
 0ACD; [6B 90, 05, 05]
 
-[script_first Orya 6C 04 02]
+[first_primary group Orya 6C 04 02]
 
 0B05; [6C 0A, 05, 05]
 
@@ -20742,7 +20742,7 @@ A8FB; [68 9A, 05, 05]
 
 0B57; [6C 8E, 05, 05]
 
-[script_first Taml 6D 04 02]
+[first_primary group Taml 6D 04 02]
 
 0BD0; [6D 0A, 05, 05]
 
@@ -20848,7 +20848,7 @@ A8FB; [68 9A, 05, 05]
 
 0BD7; [6D 6C, 05, 05]
 
-[script_first Telu 6E 04 02]
+[first_primary group Telu 6E 04 02]
 
 0C05; [6E 0A, 05, 05]
 
@@ -20995,7 +20995,7 @@ A8FB; [68 9A, 05, 05]
 
 0C56; [6E 98, 05, 05]
 
-[script_first Knda 6F 04 02]
+[first_primary group Knda 6F 04 02]
 
 0C85; [6F 0A, 05, 05]
 
@@ -21149,7 +21149,7 @@ A8FB; [68 9A, 05, 05]
 
 0CD6; [6F 9A, 05, 05]
 
-[script_first Mlym 70 04 02]
+[first_primary group Mlym 70 04 02]
 
 0D05; [70 0A, 05, 05]
 
@@ -21305,7 +21305,7 @@ A8FB; [68 9A, 05, 05]
 
 0D4D; [70 98, 05, 05]
 
-[script_first Sinh 71 04 02]
+[first_primary group Sinh 71 04 02]
 
 0D85; [71 0A, 05, 05]
 
@@ -21466,7 +21466,7 @@ A8FB; [68 9A, 05, 05]
 
 0DCA; [71 A2, 05, 05]
 
-[script_first Mtei 71 A4 02]
+[first_primary       Mtei 71 A4 02]
 
 AAF2; [71 A4 04, 05, 05]
 
@@ -21594,7 +21594,7 @@ ABED; [71 A5 F2, 05, 05]
 
 AAF6; [71 A5 FA, 05, 05]
 
-[script_first Sylo 71 A6 02]
+[first_primary       Sylo 71 A6 02]
 
 A800; [71 A6 08, 05, 05]
 
@@ -21674,7 +21674,7 @@ A826; [71 A7 36, 05, 05]
 
 A827; [71 A7 3E, 05, 05]
 
-[script_first Saur 71 A7 42]
+[first_primary       Saur 71 A7 42]
 
 A882; [71 A7 46, 05, 05]
 
@@ -21810,7 +21810,7 @@ A8C3; [71 A9 5A, 05, 05]
 
 A8C4; [71 A9 62, 05, 05]
 
-[script_first Kthi 71 A9 66]
+[first_primary       Kthi 71 A9 66]
 
 11083; [71 A9 6A, 05, 05]
 
@@ -21919,7 +21919,7 @@ A8C4; [71 A9 62, 05, 05]
 
 110B9; [71 AB 0E, 05, 05]
 
-[script_first Shrd 71 AB 12]
+[first_primary       Shrd 71 AB 12]
 
 111C4; [71 AB 16, 05, 05]
 
@@ -22053,7 +22053,7 @@ A8C4; [71 A9 62, 05, 05]
 
 111C3; [71 AD 2A, 05, 05]
 
-[script_first Takr 71 AD 2E]
+[first_primary       Takr 71 AD 2E]
 
 11680; [71 AD 32, 05, 05]
 
@@ -22161,7 +22161,7 @@ A8C4; [71 A9 62, 05, 05]
 
 116B6; [71 AE D8, 05, 05]
 
-[script_first Sund 71 AE DC]
+[first_primary       Sund 71 AE DC]
 
 1B83; [71 AE E0, 05, 05]
 1BBA; [71 AE E0, 05, 09]
@@ -22262,7 +22262,7 @@ A8C4; [71 A9 62, 05, 05]
 
 1BAB; [71 B0 64, 05, 05]
 
-[script_first Brah 71 B0 68]
+[first_primary       Brah 71 B0 68]
 
 11005; [71 B0 6C, 05, 05]
 
@@ -22400,7 +22400,7 @@ A8C4; [71 A9 62, 05, 05]
 
 11046; [71 B2 90, 05, 05]
 
-[script_first Khar 71 B2 94]
+[first_primary       Khar 71 B2 94]
 
 10A00; [71 B2 98, 05, 05]
 
@@ -22486,7 +22486,7 @@ A8C4; [71 A9 62, 05, 05]
 
 10A3F; [71 B3 E6, 05, 05]
 
-[script_first Thai 72 04 02]
+[first_primary group Thai 72 04 02]
 
 0E01; [72 0A, 05, 05]
 0E40 0E01; [72 0A, 05, 05][72 7E, 05, 3D]
@@ -22847,7 +22847,7 @@ A8C4; [71 A9 62, 05, 05]
 
 0E45; [72 88, 05, 05]
 
-[script_first Laoo 73 04 02]
+[first_primary group Laoo 73 04 02]
 
 0EDE; [73 0A, 05, 05]
 
@@ -23093,7 +23093,7 @@ A8C4; [71 A9 62, 05, 05]
 
 0EC4; [73 68, 05, 05]
 
-[script_first Tavt 73 6A 02]
+[first_primary       Tavt 73 6A 02]
 
 AA80; [73 6A 04, 05, 05]
 AAB5 AA80; [73 6A 04, 05, 05][73 6B B2, 05, 3D]
@@ -23469,7 +23469,7 @@ AADB; [73 6C 18, 05, 05]
 
 AADC; [73 6C 20, 05, 05]
 
-[script_first Tibt 74 04 02]
+[first_primary group Tibt 74 04 02]
 
 0F40; [74 0A, 05, 05]
 0F69; [74 0A, 05, 05][74 8C, 05, 05]
@@ -23691,7 +23691,7 @@ AADC; [73 6C 20, 05, 05]
 
 0F84; [74 C8, 05, 05]
 
-[script_first Lepc 74 CA 02]
+[first_primary       Lepc 74 CA 02]
 
 1C00; [74 CA 04, 05, 05]
 
@@ -23809,7 +23809,7 @@ AADC; [73 6C 20, 05, 05]
 
 1C35; [74 CB D2, 05, 05]
 
-[script_first Phag 74 CB D6]
+[first_primary       Phag 74 CB D6]
 
 A840; [74 CB DA, 05, 05]
 
@@ -23915,7 +23915,7 @@ A866; [74 CD 76, 05, 05]
 
 A873; [74 CD 7E, 05, 05]
 
-[script_first Limb 74 CD 82]
+[first_primary       Limb 74 CD 82]
 
 1900; [74 CD 86, 05, 05]
 
@@ -24017,7 +24017,7 @@ A873; [74 CD 7E, 05, 05]
 
 1938; [74 CF 1A, 05, 05]
 
-[script_first Tglg 74 CF 1E]
+[first_primary       Tglg 74 CF 1E]
 
 1700; [74 CF 22, 05, 05]
 
@@ -24059,7 +24059,7 @@ A873; [74 CD 7E, 05, 05]
 
 1714; [74 CF BA, 05, 05]
 
-[script_first Hano 74 CF BE]
+[first_primary       Hano 74 CF BE]
 
 1720; [74 CF C2, 05, 05]
 
@@ -24103,7 +24103,7 @@ A873; [74 CD 7E, 05, 05]
 
 1734; [74 D0 68, 05, 05]
 
-[script_first Buhd 74 D0 6C]
+[first_primary       Buhd 74 D0 6C]
 
 1740; [74 D0 70, 05, 05]
 
@@ -24145,7 +24145,7 @@ A873; [74 CD 7E, 05, 05]
 
 1753; [74 D1 0E, 05, 05]
 
-[script_first Tagb 74 D1 12]
+[first_primary       Tagb 74 D1 12]
 
 1760; [74 D1 16, 05, 05]
 
@@ -24183,7 +24183,7 @@ A873; [74 CD 7E, 05, 05]
 
 1773; [74 D1 9E, 05, 05]
 
-[script_first Bugi 74 D1 A2]
+[first_primary       Bugi 74 D1 A2]
 
 1A00; [74 D1 A6, 05, 05]
 
@@ -24241,7 +24241,7 @@ A873; [74 CD 7E, 05, 05]
 
 1A1B; [74 D2 84, 05, 05]
 
-[script_first Batk 74 D2 88]
+[first_primary       Batk 74 D2 88]
 
 1BC0; [74 D2 8C, 05, 05]
 1BC1; [74 D2 8C, 05, 09]
@@ -24325,7 +24325,7 @@ A873; [74 CD 7E, 05, 05]
 
 1BF3; [74 D3 82, 05, 05]
 
-[script_first Rjng 74 D3 86]
+[first_primary       Rjng 74 D3 86]
 
 A930; [74 D3 8A, 05, 05]
 
@@ -24399,7 +24399,7 @@ A952; [74 D4 A0, 05, 05]
 
 A953; [74 D4 A8, 05, 05]
 
-[script_first Kali 74 D4 AC]
+[first_primary       Kali 74 D4 AC]
 
 A90A; [74 D4 B0, 05, 05]
 
@@ -24467,7 +24467,7 @@ A929; [74 D5 AE, 05, 05]
 
 A92A; [74 D5 B6, 05, 05]
 
-[script_first Mymr 75 02 02]
+[first_primary group Mymr 75 02 02]
 
 1000; [75 0A, 05, 05]
 
@@ -24772,7 +24772,7 @@ AA75; [76 3B, 05, 05]
 
 AA76; [76 3D, 05, 05]
 
-[script_first Cakm 76 3F 02]
+[first_primary       Cakm 76 3F 02]
 
 11103; [76 3F 04, 05, 05]
 
@@ -24876,7 +24876,7 @@ AA76; [76 3D, 05, 05]
 
 11134; [76 40 92, 05, 05]
 
-[script_first Khmr 77 04 02]
+[first_primary group Khmr 77 04 02]
 
 1780; [77 0A, 05, 05]
 
@@ -25018,7 +25018,7 @@ AA76; [76 3D, 05, 05]
 
 17D2; [77 94, 05, 05]
 
-[script_first Tale 77 96 02]
+[first_primary       Tale 77 96 02]
 
 1950; [77 96 04, 05, 05]
 
@@ -25090,7 +25090,7 @@ AA76; [76 3D, 05, 05]
 
 1974; [77 97 1A, 05, 05]
 
-[script_first Talu 77 97 1E]
+[first_primary       Talu 77 97 1E]
 
 1980; [77 97 22, 05, 05]
 
@@ -25234,7 +25234,7 @@ AA76; [76 3D, 05, 05]
 
 19C9; [77 99 56, 05, 05]
 
-[script_first Lana 77 99 5A]
+[first_primary       Lana 77 99 5A]
 
 1A20; [77 99 5E, 05, 05]
 
@@ -25396,7 +25396,7 @@ AA76; [76 3D, 05, 05]
 
 1A60; [77 9B CA, 05, 05]
 
-[script_first Cham 77 9B CE]
+[first_primary       Cham 77 9B CE]
 
 AA00; [77 9B D2, 05, 05]
 
@@ -25536,7 +25536,7 @@ AA4C; [77 9D F6, 05, 05]
 
 AA4D; [77 9E 04, 05, 05]
 
-[script_first Bali 77 9E 08]
+[first_primary       Bali 77 9E 08]
 
 1B05; [77 9E 0C, 05, 05]
 
@@ -25689,7 +25689,7 @@ AA4D; [77 9E 04, 05, 05]
 
 1B44; [77 A0 40, 05, 05]
 
-[script_first Java 77 A0 44]
+[first_primary       Java 77 A0 44]
 
 A984; [77 A0 48, 05, 05]
 
@@ -25810,7 +25810,7 @@ A9B5; [77 A2 1C, 05, 05]
 
 A9C0; [77 A2 24, 05, 05]
 
-[script_first Mong 77 A2 28]
+[first_primary       Mong 77 A2 28]
 
 1880; [77 A2 2C, 05, 05]
 
@@ -26074,7 +26074,7 @@ A9C0; [77 A2 24, 05, 05]
 
 18A9; [77 A6 54, 05, 05]
 
-[script_first Olck 77 A6 58]
+[first_primary       Olck 77 A6 58]
 
 1C5A; [77 A6 5C, 05, 05]
 
@@ -26148,7 +26148,7 @@ A9C0; [77 A2 24, 05, 05]
 
 1C7D; [77 A7 7A, 05, 05]
 
-[script_first Cher 77 A7 7E]
+[first_primary       Cher 77 A7 7E]
 
 13A0; [77 A7 82, 05, 05]
 
@@ -26320,7 +26320,7 @@ A9C0; [77 A2 24, 05, 05]
 
 13F4; [77 AA 34, 05, 05]
 
-[script_first Cans 77 AA 38]
+[first_primary       Cans 77 AA 38]
 
 1401; [77 AA 3C, 05, 05]
 
@@ -27736,7 +27736,7 @@ A9C0; [77 A2 24, 05, 05]
 
 18F5; [77 C0 D0, 05, 05]
 
-[script_first Ogam 77 C0 D4]
+[first_primary       Ogam 77 C0 D4]
 
 1681; [77 C0 D8, 05, 05]
 
@@ -27790,7 +27790,7 @@ A9C0; [77 A2 24, 05, 05]
 
 169A; [77 C1 A6, 05, 05]
 
-[script_first Runr 77 C1 AA]
+[first_primary       Runr 77 C1 AA]
 
 16A0; [77 C1 AE, 05, 05]
 16A1; [77 C1 AE, 05, 09][, DB A9, 09]
@@ -27908,7 +27908,7 @@ A9C0; [77 A2 24, 05, 05]
 16E7; [77 C2 DC, 05, 09][, DB A9, 09]
 16E8; [77 C2 DC, 05, 09][, DB B9, 09]
 
-[script_first Orkh 77 C2 E0]
+[first_primary       Orkh 77 C2 E0]
 
 10C00; [77 C2 E4, 05, 05]
 10C01; [77 C2 E4, 05, 09][, DB A9, 09]
@@ -28028,7 +28028,7 @@ A9C0; [77 A2 24, 05, 05]
 
 10C48; [77 C4 50, 05, 05]
 
-[script_first Vaii 77 C4 54]
+[first_primary       Vaii 77 C4 54]
 
 A500; [77 C4 58, 05, 05]
 
@@ -28586,7 +28586,7 @@ A60B; [77 CC E0, 05, 05]
 
 A60C; [77 CC E8, 05, 05]
 
-[script_first Bamu 77 CC EC]
+[first_primary       Bamu 77 CC EC]
 
 A6A0; [77 CC F0, 05, 05]
 
@@ -29886,7 +29886,7 @@ A6EF; [77 CF 7A, 05, 05]
 
 16A38; [77 E1 AE, 05, 05]
 
-[script_first Hang 78 04 02]
+[first_primary group Hang 78 04 02]
 
 1100; [78 0A, 05, 05]
 3131; [78 0A, 05, 09]
@@ -30779,7 +30779,7 @@ D7FA; [78 9A 76, 05, 05]
 
 D7FB; [78 9A 7E, 05, 05]
 
-[script_first Kana 79 04 02]
+[first_primary group Kana 79 04 02]
 
 3041; [79 0A, 05, 19]
 3042; [79 0A, 05, 9B]
@@ -31223,7 +31223,7 @@ FF66; [79 6A, 05, A3]
 30F3; [79 6C, 05, A1]
 FF9D; [79 6C, 05, A3]
 
-[script_first Bopo 7A 04 02]
+[first_primary group Bopo 7A 04 02]
 
 3105; [7A 0A, 05, 05]
 31A0; [7A 0A, 05, 09][, DB B9, 09]
@@ -31344,7 +31344,7 @@ FF9D; [79 6C, 05, A3]
 
 312D; [7A 6E, 05, 05]
 
-[script_first Yiii 7A 70 02]
+[first_primary       Yiii 7A 70 02]
 
 A000; [7A 70 04, 05, 05]
 
@@ -33676,7 +33676,7 @@ A48B; [7A 95 3A, 05, 05]
 
 A48C; [7A 95 42, 05, 05]
 
-[script_first Lisu 7A 95 46]
+[first_primary       Lisu 7A 95 46]
 
 A4F8; [7A 95 4A, 05, 05]
 
@@ -33770,7 +33770,7 @@ A4F6; [7A 96 B0, 05, 05]
 
 A4F7; [7A 96 B8, 05, 05]
 
-[script_first Plrd 7A 96 BC]
+[first_primary       Plrd 7A 96 BC]
 
 16F00; [7A 96 C0, 05, 05]
 
@@ -34034,7 +34034,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 16F9F; [7A 9A D8, 05, 05]
 
-[script_first Lyci 7A 9A DC]
+[first_primary       Lyci 7A 9A DC]
 
 10280; [7A 9A E0, 05, 05]
 
@@ -34094,7 +34094,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1029C; [7A 9B C6, 05, 05]
 
-[script_first Cari 7A 9B CA]
+[first_primary       Cari 7A 9B CA]
 
 102A0; [7A 9B CE, 05, 05]
 
@@ -34194,7 +34194,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 102D0; [7A 9D 5A, 05, 05]
 
-[script_first Lydi 7A 9D 5E]
+[first_primary       Lydi 7A 9D 5E]
 
 10920; [7A 9D 62, 05, 05]
 
@@ -34248,7 +34248,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 10939; [7A 9E 30, 05, 05]
 
-[script_first Ital 7A 9E 34]
+[first_primary       Ital 7A 9E 34]
 
 10300; [7A 9E 38, 05, 05]
 
@@ -34312,7 +34312,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1031E; [7A 9F 2E, 05, 05]
 
-[script_first Goth 7A 9F 32]
+[first_primary       Goth 7A 9F 32]
 
 10330; [7A 9F 36, 05, 05]
 
@@ -34368,7 +34368,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1034A; [7A A0 0C, 05, 05]
 
-[script_first Dsrt 7A A0 10]
+[first_primary       Dsrt 7A A0 10]
 
 10428; [7A A0 14, 05, 05]
 10400; [7A A0 14, 05, 8F]
@@ -34490,7 +34490,7 @@ A4F7; [7A 96 B8, 05, 05]
 1044F; [7A A1 52, 05, 05]
 10427; [7A A1 52, 05, 8F]
 
-[script_first Shaw 7A A1 56]
+[first_primary       Shaw 7A A1 56]
 
 10450; [7A A1 5A, 05, 05]
 
@@ -34588,7 +34588,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1047F; [7A A2 D8, 05, 05]
 
-[script_first Osma 7A A2 DC]
+[first_primary       Osma 7A A2 DC]
 
 10480; [7A A2 E0, 05, 05]
 
@@ -34650,7 +34650,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1049D; [7A A3 CE, 05, 05]
 
-[script_first Sora 7A A3 D2]
+[first_primary       Sora 7A A3 D2]
 
 110D0; [7A A3 D6, 05, 05]
 
@@ -34702,7 +34702,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 110E8; [7A A4 9C, 05, 05]
 
-[script_first Linb 7A A4 A0]
+[first_primary       Linb 7A A4 A0]
 
 10000; [7A A4 A4, 05, 05]
 
@@ -35126,7 +35126,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 100FA; [7A AB 5E, 05, 05]
 
-[script_first Cprt 7A AB 62]
+[first_primary       Cprt 7A AB 62]
 
 10800; [7A AB 66, 05, 05]
 
@@ -35238,7 +35238,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1083F; [7A AD 22, 05, 05]
 
-[script_first Sarb 7A AD 26]
+[first_primary       Sarb 7A AD 26]
 
 10A60; [7A AD 2A, 05, 05]
 
@@ -35298,7 +35298,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 10A7C; [7A AE 10, 05, 05]
 
-[script_first Avst 7A AE 14]
+[first_primary       Avst 7A AE 14]
 
 10B00; [7A AE 18, 05, 05]
 
@@ -35407,7 +35407,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 10B35; [7A AF BE, 05, 05]
 
-[script_first Armi 7A AF C2]
+[first_primary       Armi 7A AF C2]
 
 10840; [7A AF C6, 05, 05]
 
@@ -35453,7 +35453,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 10855; [7A B0 74, 05, 05]
 
-[script_first Prti 7A B0 78]
+[first_primary       Prti 7A B0 78]
 
 10B40; [7A B0 7C, 05, 05]
 
@@ -35499,7 +35499,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 10B55; [7A B1 2A, 05, 05]
 
-[script_first Phli 7A B1 2E]
+[first_primary       Phli 7A B1 2E]
 
 10B60; [7A B1 32, 05, 05]
 
@@ -35539,7 +35539,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 10B72; [7A B1 C2, 05, 05]
 
-[script_first Ugar 7A B1 C6]
+[first_primary       Ugar 7A B1 C6]
 
 10380; [7A B1 CA, 05, 05]
 
@@ -35601,7 +35601,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1039D; [7A B2 B8, 05, 05]
 
-[script_first Xpeo 7A B2 BC]
+[first_primary       Xpeo 7A B2 BC]
 
 103A0; [7A B2 C0, 05, 05]
 
@@ -35691,7 +35691,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 103CF; [7A B4 24, 05, 05]
 
-[script_first Xsux 7A B4 28]
+[first_primary       Xsux 7A B4 28]
 
 12000; [7A B4 2C, 05, 05]
 
@@ -37451,7 +37451,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1236E; [7A D0 44, 05, 05]
 
-[script_first Egyp 7A D0 48]
+[first_primary       Egyp 7A D0 48]
 
 13000; [7A D0 4C, 05, 05]
 
@@ -39595,8 +39595,8 @@ A4F7; [7A 96 B8, 05, 05]
 
 1342E; [7A F2 88, 05, 05]
 
-[script_first Merc 7A F2 8C]
-[script_first Mero 7A F2 8C]
+[first_primary       Merc 7A F2 8C]
+[first_primary       Mero 7A F2 8C]
 
 109A0; [7A F2 90, 05, 05]
 10980; [7A F2 90, 05, 09][, DB A9, 09]
@@ -39683,7 +39683,7 @@ A4F7; [7A 96 B8, 05, 05]
 
 1099F; [7A F3 66, 05, 05]
 
-[script_first Hani 7B 02 02]
+[first_primary group Hani 7B 02 02]
 
 2F00; [E0 04 06, 05, 09]
 3280; [E0 04 06, 05, 0D]

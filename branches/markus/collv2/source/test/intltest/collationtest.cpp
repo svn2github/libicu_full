@@ -690,33 +690,6 @@ void CollationTest::TestDataDriven() {
 #include "ucol_elm.h"
 #include "uparse.h"
 
-// script reordering structures
-typedef struct {
-    uint16_t reorderCode;
-    uint16_t offset;
-} ReorderIndex;
-
-typedef struct {
-    uint16_t LEAD_BYTE_TO_SCRIPTS_INDEX_LENGTH;
-    uint16_t* LEAD_BYTE_TO_SCRIPTS_INDEX;
-    uint16_t LEAD_BYTE_TO_SCRIPTS_DATA_LENGTH;
-    uint16_t* LEAD_BYTE_TO_SCRIPTS_DATA;
-    uint16_t LEAD_BYTE_TO_SCRIPTS_DATA_OFFSET;
-    
-    uint16_t SCRIPT_TO_LEAD_BYTES_INDEX_LENGTH;
-    ReorderIndex* SCRIPT_TO_LEAD_BYTES_INDEX;
-    uint16_t SCRIPT_TO_LEAD_BYTES_INDEX_COUNT;
-    uint16_t SCRIPT_TO_LEAD_BYTES_DATA_LENGTH;
-    uint16_t* SCRIPT_TO_LEAD_BYTES_DATA;
-    uint16_t SCRIPT_TO_LEAD_BYTES_DATA_OFFSET;
-} LeadByteConstants;
-
-#if 0  // TODO
-static int ReorderIndexComparer(const void *a, const void *b) {
-    return reinterpret_cast<const ReorderIndex*>(a)->reorderCode - reinterpret_cast<const ReorderIndex*>(b)->reorderCode;    
-}
-#endif
-
 static UBool beVerbose = FALSE;
 
 static UVersionInfo UCAVersion;
@@ -751,6 +724,7 @@ static int32_t readElement(char **from, char *to, char separator, UErrorCode *st
     return i;
 }
 
+/* TODO: remove?!
 static int32_t skipUntilWhiteSpace(char **from, UErrorCode *status) {
     if (U_FAILURE(*status)) {
         return 0;
@@ -762,6 +736,7 @@ static int32_t skipUntilWhiteSpace(char **from, UErrorCode *status) {
     }
     return count;
 }
+*/
 
 static int32_t skipWhiteSpace(char **from, UErrorCode *status) {
     if (U_FAILURE(*status)) {
@@ -826,20 +801,6 @@ static int32_t hex2num(char hex) {
     }
 }
 
-static const struct {
-    const char *name;
-    int32_t code;
-} specialReorderTokens[] = {
-    { "TERMINATOR", -2 },  // -2 means "ignore"
-    { "LEVEL-SEPARATOR", -2 },
-    { "FIELD-SEPARATOR", -2 },
-    { "COMPRESS", -2 },  // TODO: We should parse/store which lead bytes are compressible; there is a ticket for that.
-    { "PUNCTUATION", UCOL_REORDER_CODE_PUNCTUATION },
-    { "IMPLICIT", USCRIPT_HAN },  // Implicit weights are usually for Han characters. Han & unassigned share a lead byte.
-    { "TRAILING", -2 },  // We do not reorder trailing weights (those after implicits).
-    { "SPECIAL", -2 }  // We must never reorder internal, special CE lead bytes.
-};
-
 int32_t getReorderCode(const char* name) {
     int32_t code = ucol_findReorderingEntry(name);
     if (code >= 0) {
@@ -849,20 +810,18 @@ int32_t getReorderCode(const char* name) {
     if (code >= 0) {
         return code;
     }
-    for (int32_t i = 0; i < LENGTHOF(specialReorderTokens); ++i) {
-        if (0 == strcmp(name, specialReorderTokens[i].name)) {
-            return specialReorderTokens[i].code;
-        }
+    // Exception: The standard name is "PUNCT" but FractionalUCA.txt uses the long form.
+    if (0 == uprv_strcmp(name, "PUNCTUATION")) {
+        return UCOL_REORDER_CODE_PUNCTUATION;
     }
     return -1;  // Same as UCHAR_INVALID_CODE or USCRIPT_INVALID_CODE.
 }
 
 UCAElements *readAnElement(FILE *data,
-                           const CollationBaseDataBuilder &builder,
-                           UCAConstants *consts, LeadByteConstants *leadByteConstants,
+                           CollationBaseDataBuilder &builder,
+                           UCAConstants *consts,
                            int64_t ces[32], int32_t &cesLength,
                            UErrorCode *status) {
-    static int scriptDataWritten = 0;
     char buffer[2048], primary[100], secondary[100], tertiary[100];
     UChar leadByte[100], scriptCode[100];
     int32_t i = 0;
@@ -900,9 +859,9 @@ UCAElements *readAnElement(FILE *data,
     enum ActionType {
       READCE,
       READPRIMARY,
+      READFIRSTPRIMARY,
       READUCAVERSION,
       READLEADBYTETOSCRIPTS,
-      READSCRIPTTOLEADBYTES,
       IGNORE
     };
 
@@ -929,7 +888,7 @@ UCAElements *readAnElement(FILE *data,
                   {"[last trailing",             consts->UCA_LAST_TRAILING,             READCE},
 
                   {"[Unified_Ideograph",            NULL, IGNORE},  // TODO
-                  {"[script_first",                 NULL, IGNORE},  // TODO
+                  {"[first_primary",                NULL, READFIRSTPRIMARY},
 
                   {"[fixed top",                    NULL, IGNORE},
                   {"[fixed first implicit byte",    NULL, IGNORE},
@@ -941,7 +900,7 @@ UCAElements *readAnElement(FILE *data,
                   {"[variable top = ",              &gVariableTop,                      READPRIMARY},
                   {"[UCA version = ",               NULL,                               READUCAVERSION},
                   {"[top_byte",                     NULL,                               READLEADBYTETOSCRIPTS},
-                  {"[reorderingTokens",             NULL,                               READSCRIPTTOLEADBYTES},
+                  {"[reorderingTokens",             NULL,                               IGNORE},
                   {"[categories",                   NULL,                               IGNORE},
                   // TODO: Do not ignore these -- they are important for tailoring,
                   // for creating well-formed Collation Element Tables.
@@ -964,6 +923,46 @@ UCAElements *readAnElement(FILE *data,
                   fprintf(stderr, "Value of \"%s\" is not a primary weight\n", buffer);
                   return NULL;
               }
+            } else if(what_to_do == READFIRSTPRIMARY) {
+                pointer = buffer+vtLen;
+                skipWhiteSpace(&pointer, status);
+                UBool firstInGroup = FALSE;
+                if(uprv_strncmp(pointer, "group", 5) == 0) {
+                    firstInGroup = TRUE;
+                    pointer += 5;
+                    skipWhiteSpace(&pointer, status);
+                }
+                char scriptName[100];
+                int32_t length = readElement(&pointer, scriptName, ' ', status);
+                if (length <= 0) {
+                    fprintf(stderr, "Syntax error: unable to parse reorder code from line '%s'\n", buffer);
+                    *status = U_INVALID_FORMAT_ERROR;
+                    return NULL;
+                }
+                int32_t reorderCode = getReorderCode(scriptName);
+                if (reorderCode < 0) {
+                    fprintf(stderr, "Syntax error: unable to parse reorder code from line '%s'\n", buffer);
+                    *status = U_INVALID_FORMAT_ERROR;
+                    return NULL;
+                }
+                if (CollationBaseData::scriptByteFromInt(reorderCode) < 0) {
+                    fprintf(stderr, "reorder code %d for \"%s\" cannot be encoded by CollationBaseData::scriptByteFromInt(reorderCode)\n",
+                            reorderCode, scriptName);
+                    *status = U_INTERNAL_PROGRAM_ERROR;
+                    return NULL;
+                }
+                readElement(&pointer, primary, ']', status);
+                uint32_t weight = parseWeight(primary, 0xffffffff, *status);
+                if(U_FAILURE(*status)) {
+                    fprintf(stderr, "Value of \"%s\" is not a primary weight\n", buffer);
+                    return NULL;
+                }
+                builder.addFirstPrimary(reorderCode, firstInGroup, weight, *status);
+                if(U_FAILURE(*status)) {
+                    fprintf(stderr, "Failure setting data for \"%s\" - %s -- [first_primary] data out of order?\n",
+                            buffer, u_errorName(*status));
+                    return NULL;
+                }
             } else if (what_to_do == READCE) {
               // TODO: combine & clean up the two CE parsers
 #if 0  // TODO
@@ -1034,148 +1033,9 @@ UCAElements *readAnElement(FILE *data,
                 uint16_t leadByte = (hex2num(*pointer++) * 16);
                 leadByte += hex2num(*pointer++);
                 //printf("~~~~ processing lead byte = %02x\n", leadByte);
-                if (leadByte >= leadByteConstants->LEAD_BYTE_TO_SCRIPTS_INDEX_LENGTH) {
-                    fprintf(stderr, "Lead byte larger than allocated table!");
-                    // set status and return
-                    *status = U_INTERNAL_PROGRAM_ERROR;
-                    return NULL;
-                }
                 skipWhiteSpace(&pointer, status);
-
-                int32_t reorderCodeArray[100];
-                uint32_t reorderCodeArrayCount = 0;
-                char scriptName[100];
-                int32_t elementLength = 0;
-                while ((elementLength = readElement(&pointer, scriptName, ' ', status)) > 0) {
-                    if (scriptName[0] == ']') {
-                        break;
-                    }
-                    int32_t reorderCode = getReorderCode(scriptName);
-                    if (reorderCode == -2) {
-                        continue;  // Ignore "TERMINATOR" etc.
-                    }
-                    if (reorderCode < 0) {
-                        printf("Syntax error: unable to parse reorder code from '%s'\n", scriptName);
-                        *status = U_INVALID_FORMAT_ERROR;
-                        return NULL;
-                    }
-                    if (reorderCodeArrayCount >= LENGTHOF(reorderCodeArray)) {
-                        printf("reorder code array count is greater than allocated size!\n");
-                        *status = U_INTERNAL_PROGRAM_ERROR;
-                        return NULL;
-                    }
-                    reorderCodeArray[reorderCodeArrayCount++] = reorderCode;
-                }
-                //printf("reorderCodeArrayCount = %d\n", reorderCodeArrayCount);
-                switch (reorderCodeArrayCount) {
-                    case 0:
-                        leadByteConstants->LEAD_BYTE_TO_SCRIPTS_INDEX[leadByte] = 0;
-                        break;
-                    case 1:
-                        // TODO = move 0x8000 into defined constant
-                        leadByteConstants->LEAD_BYTE_TO_SCRIPTS_INDEX[leadByte] = 0x8000 | reorderCodeArray[0];
-                        break;
-                    default:
-                        if (reorderCodeArrayCount + leadByteConstants->LEAD_BYTE_TO_SCRIPTS_DATA_OFFSET > leadByteConstants->LEAD_BYTE_TO_SCRIPTS_DATA_LENGTH) {
-                            // Error condition
-                        }
-                        leadByteConstants->LEAD_BYTE_TO_SCRIPTS_INDEX[leadByte] = leadByteConstants->LEAD_BYTE_TO_SCRIPTS_DATA_OFFSET;
-                        leadByteConstants->LEAD_BYTE_TO_SCRIPTS_DATA[leadByteConstants->LEAD_BYTE_TO_SCRIPTS_DATA_OFFSET++] = reorderCodeArrayCount;
-                        for (int reorderCodeIndex = 0; reorderCodeIndex < (int)reorderCodeArrayCount; reorderCodeIndex++) {
-                            leadByteConstants->LEAD_BYTE_TO_SCRIPTS_DATA[leadByteConstants->LEAD_BYTE_TO_SCRIPTS_DATA_OFFSET++] = reorderCodeArray[reorderCodeIndex];
-                        }
-                }
-            } else if (what_to_do == READSCRIPTTOLEADBYTES) { //vt[cnt].what_to_do == READSCRIPTTOLEADBYTES
-                uint16_t leadByteArray[256];
-                uint32_t leadByteArrayCount = 0;
-                char scriptName[100];
-
-                pointer = buffer + vtLen;
-                skipWhiteSpace(&pointer, status);
-                readElement(&pointer, scriptName, '\t', status);
-                int32_t reorderCode = getReorderCode(scriptName);
-                if (reorderCode >= 0) {
-                    //printf("^^^ processing reorder code = %04x (%s)\n", reorderCode, scriptName);
-                    skipWhiteSpace(&pointer, status);
-
-                    int32_t elementLength = 0;
-                    char leadByteString[100];
-                    while ((elementLength = readElement(&pointer, leadByteString, '=', status)) == 2) {
-                        //printf("\tleadByteArrayCount = %d, elementLength = %d, leadByteString = %s\n", leadByteArrayCount, elementLength, leadByteString);
-                        uint32_t leadByte = (hex2num(leadByteString[0]) * 16) + hex2num(leadByteString[1]);
-                        leadByteArray[leadByteArrayCount++] = (uint16_t) leadByte;
-                        skipUntilWhiteSpace(&pointer, status);
-                    }
-
-                    if (leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT >= leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_LENGTH) {
-                        //printf("\tError condition\n");
-                        //printf("\tindex count = %d, total index size = %d\n", leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT, sizeof(leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX) / sizeof(leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX[0]));
-                        // Error condition
-                        *status = U_INTERNAL_PROGRAM_ERROR;
-                        return NULL;
-                    }
-                    leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX[leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT].reorderCode = reorderCode;
-
-                    //printf("\tlead byte count = %d\n", leadByteArrayCount);
-                    //printf("\tlead byte array = ");
-                    //for (int i = 0; i < leadByteArrayCount; i++) {
-                    //    printf("%02x, ", leadByteArray[i]);
-                    //}
-                    //printf("\n");
-
-                    switch (leadByteArrayCount) {
-                        case 0:
-                            leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX[leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT].offset = 0;
-                            break;
-                        case 1:
-                            // TODO = move 0x8000 into defined constant
-                            //printf("\t+++++ lead byte = &x\n", leadByteArray[0]);
-                            leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX[leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT].offset = 0x8000 | leadByteArray[0];
-                            break;
-                        default:
-                            //printf("\t+++++ lead bytes written to data block - %d\n", itemsToDataBlock++);
-                            //printf("\tlead bytes = ");
-                            //for (int i = 0; i < leadByteArrayCount; i++) {
-                            //    printf("%02x, ", leadByteArray[i]);
-                            //}
-                            //printf("\n");
-                            //printf("\tBEFORE data bytes = ");
-                            //for (int i = 0; i < leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET; i++) {
-                            //    printf("%02x, ", leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA[i]);
-                            //}
-                            //printf("\n");
-                            //printf("\tdata offset = %d, data length = %d\n", leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET, leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_LENGTH);
-                            if ((leadByteArrayCount + leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET) > leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_LENGTH) {
-                                //printf("\tError condition\n");
-                                // Error condition
-                                *status = U_INTERNAL_PROGRAM_ERROR;
-                                return NULL;
-                            }
-                            leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX[leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT].offset = leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET;
-                            leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA[leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET++] = leadByteArrayCount;
-                            scriptDataWritten++;
-                            memcpy(&leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA[leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET],
-                                leadByteArray, leadByteArrayCount * sizeof(leadByteArray[0]));
-                            scriptDataWritten += leadByteArrayCount;
-                            //printf("\tlead byte data written = %d\n", scriptDataWritten);
-                            //printf("\tcurrentIndex.reorderCode = %04x, currentIndex.offset = %04x\n", 
-                            //    leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT.reorderCode, leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT.offset);
-                            leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET += leadByteArrayCount;
-                            //printf("\tdata offset = %d\n", leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET);
-                            //printf("\tAFTER data bytes = ");
-                            //for (int i = 0; i < leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET; i++) {
-                            //    printf("%02x, ", leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA[i]);
-                            //}
-                            //printf("\n");
-                    }
-                    //if (reorderCode >= 0x1000) {
-                     //   printf("@@@@ reorderCode = %x, offset = %x\n", leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX[leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT].reorderCode, leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX[leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT].offset);
-                     //   for (int i = 0; i < leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA_OFFSET; i++) {
-                    //        printf("%02x, ", leadByteConstants->SCRIPT_TO_LEAD_BYTES_DATA[i]);
-                     //   }
-                    //    printf("\n");
-                   // }
-                    leadByteConstants->SCRIPT_TO_LEAD_BYTES_INDEX_COUNT++;
+                if (uprv_strstr(pointer, "COMPRESS") != NULL) {
+                    builder.setCompressibleLeadByte(leadByte);
                 }
             }
             return NULL;
@@ -1360,26 +1220,6 @@ write_uca_table(const char *filename,
     /* first set up constants for implicit calculation */
     uprv_uca_initImplicitConstants(status);
 
-    //printf("Allocating LeadByteConstants\n");
-    LeadByteConstants leadByteConstants;
-    uprv_memset(&leadByteConstants, 0x00, sizeof(LeadByteConstants));
-    
-    leadByteConstants.SCRIPT_TO_LEAD_BYTES_INDEX_LENGTH = 256;
-    leadByteConstants.SCRIPT_TO_LEAD_BYTES_INDEX = (ReorderIndex*) uprv_malloc(leadByteConstants.SCRIPT_TO_LEAD_BYTES_INDEX_LENGTH * sizeof(ReorderIndex));
-    uprv_memset(leadByteConstants.SCRIPT_TO_LEAD_BYTES_INDEX, 0x00, leadByteConstants.SCRIPT_TO_LEAD_BYTES_INDEX_LENGTH * sizeof(ReorderIndex));
-    leadByteConstants.SCRIPT_TO_LEAD_BYTES_DATA_LENGTH = 1024;
-    leadByteConstants.SCRIPT_TO_LEAD_BYTES_DATA = (uint16_t*) uprv_malloc(leadByteConstants.SCRIPT_TO_LEAD_BYTES_DATA_LENGTH * sizeof(uint16_t));
-    uprv_memset(leadByteConstants.SCRIPT_TO_LEAD_BYTES_DATA, 0x00, leadByteConstants.SCRIPT_TO_LEAD_BYTES_DATA_LENGTH * sizeof(uint16_t));
-    //printf("\tFinished Allocating LeadByteConstants\n");
-    
-    leadByteConstants.LEAD_BYTE_TO_SCRIPTS_INDEX_LENGTH = 256;
-    leadByteConstants.LEAD_BYTE_TO_SCRIPTS_INDEX = (uint16_t*) uprv_malloc(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_INDEX_LENGTH * sizeof(uint16_t));
-    uprv_memset(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_INDEX, 0x8000 | USCRIPT_INVALID_CODE, leadByteConstants.LEAD_BYTE_TO_SCRIPTS_INDEX_LENGTH * sizeof(uint16_t));
-    leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA_LENGTH = 1024;
-    leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA_OFFSET = 1;     // offset by 1 to leave zero location for those lead bytes with no reorder codes
-    leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA = (uint16_t*) uprv_malloc(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA_LENGTH * sizeof(uint16_t));
-    uprv_memset(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA, 0x00, leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA_LENGTH * sizeof(uint16_t));
-
     // TODO: uprv_memset(inverseTable, 0xDA, sizeof(int32_t)*3*0xFFFF);
 
     if(U_FAILURE(*status))
@@ -1408,7 +1248,7 @@ write_uca_table(const char *filename,
         }
         int64_t ces[32];
         int32_t cesLength = 0;
-        element = readAnElement(data, builder, &consts, &leadByteConstants, ces, cesLength, status);
+        element = readAnElement(data, builder, &consts, ces, cesLength, status);
         if(element != NULL) {
             // we have read the line, now do something sensible with the read data!
 
@@ -1701,11 +1541,6 @@ write_uca_table(const char *filename,
     uprv_free(inverse);
 #endif
 
-    uprv_free(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_INDEX);
-    uprv_free(leadByteConstants.LEAD_BYTE_TO_SCRIPTS_DATA);
-    uprv_free(leadByteConstants.SCRIPT_TO_LEAD_BYTES_INDEX);
-    uprv_free(leadByteConstants.SCRIPT_TO_LEAD_BYTES_DATA);
-    
     fclose(data);
 
     return;
@@ -1753,12 +1588,15 @@ makeBaseDataFromFractionalUCA(CollationBaseDataBuilder &builder, UErrorCode &err
     // TODO: Combine compressibleBytes with reordering group data.
     printf("  compressibleBytes:               256\n");
     totalSize += 256;
+    length = cd->scriptsLength;
+    printf("  scripts data:     %6ld *4 = %6ld\n", (long)length, (long)length * 4);
+    totalSize += length * 4;
     UErrorCode setErrorCode = U_ZERO_ERROR;
     length = builder.serializeUnsafeBackwardSet(NULL, 0, setErrorCode);
     printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
     totalSize += length * 2;
     printf("*** CLDR root collation size:   %6ld\n", (long)totalSize);
-    printf("  missing: headers, options, reordering group data\n");
+    printf("  missing: headers, options\n");
     return cd;
 }
 

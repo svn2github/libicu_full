@@ -33,12 +33,10 @@ U_NAMESPACE_BEGIN
 
 CollationBaseDataBuilder::CollationBaseDataBuilder(UErrorCode &errorCode)
         : CollationDataBuilder(errorCode),
-          fcd16_F00(NULL), compressibleBytes(NULL) {
+          scripts(errorCode) {
 }
 
 CollationBaseDataBuilder::~CollationBaseDataBuilder() {
-    uprv_free(fcd16_F00);
-    uprv_free(compressibleBytes);
 }
 
 void
@@ -49,20 +47,10 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
         return;
     }
 
-    fcd16_F00 = (uint16_t *)uprv_malloc(0xf00 * 2);
-    if(fcd16_F00 == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
     for(UChar32 c = 0; c < 0xf00; ++c) {
         fcd16_F00[c] = nfcImpl.getFCD16(c);
     }
 
-    compressibleBytes = (UBool *)uprv_malloc(256);
-    if(compressibleBytes == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
     // Not compressible:
     // - digits
     // - Latin
@@ -178,6 +166,69 @@ CollationBaseDataBuilder::isCompressibleLeadByte(uint32_t b) const {
     return compressibleBytes[b];
 }
 
+void
+CollationBaseDataBuilder::setCompressibleLeadByte(uint32_t b) {
+    compressibleBytes[b] = TRUE;
+}
+
+void
+CollationBaseDataBuilder::addFirstPrimary(int32_t script, UBool firstInGroup, uint32_t primary,
+                                          UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    if(script == USCRIPT_UNKNOWN) {
+        // We use this impossible value (Zzzz) while building the scripts data.
+        // It is also the code used in the API to separate low and high scripts.
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    script = CollationBaseData::scriptByteFromInt(script);
+    // The script code must be encodeable in our data structure,
+    // and the primary weight must at most be three bytes long.
+    if(script < 0 || (primary & 0xff) != 0) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    if(scripts.isEmpty()) {
+        if(!firstInGroup) {
+            errorCode = U_INVALID_STATE_ERROR;
+            return;
+        }
+    } else {
+        uint32_t prevPrimary = (uint32_t)scripts.elementAti(scripts.size() - 1);
+        if(firstInGroup) {
+            if((prevPrimary & 0xff000000) >= (primary & 0xff000000)) {
+                // The new group shares a lead byte with the previous group.
+                errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+                return;
+            }
+            finishPreviousReorderingGroup((primary >> 24) - 1);
+        } else {
+            if((prevPrimary & 0xffffff00) > primary) {
+                // Script/group first primaries must be added in ascending order.
+                // Two scripts can share a range, as with Merc=Mero.
+                errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+                return;
+            }
+        }
+    }
+    if(firstInGroup) {
+        scripts.addElement((int32_t)primary | USCRIPT_UNKNOWN, errorCode);
+    }
+    scripts.addElement((int32_t)primary | script, errorCode);
+}
+
+void
+CollationBaseDataBuilder::finishPreviousReorderingGroup(uint32_t lastByte) {
+    if(scripts.isEmpty()) { return; }
+    int32_t i = scripts.size() - 1;
+    int32_t x;
+    while(i > 0 && ((x = scripts.elementAti(--i)) & 0xff) != USCRIPT_UNKNOWN) {}
+    x &= 0xff000000;  // first byte
+    x |= (int32_t)lastByte << 16;  // last byte
+    x |= scripts.size() - i - 1;  // group length (number of script codes)
+    scripts.setElementAt(x, i);
+}
+
 CollationData *
 CollationBaseDataBuilder::buildTailoring(UErrorCode &errorCode) {
     if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
@@ -195,11 +246,14 @@ CollationBaseDataBuilder::buildBaseData(UErrorCode &errorCode) {
         return NULL;
     }
     buildMappings(*cd, errorCode);
+    finishPreviousReorderingGroup(Collation::UNASSIGNED_IMPLICIT_BYTE - 1);
     if(U_FAILURE(errorCode)) { return NULL; }
 
     cd->fcd16_F00 = fcd16_F00;
     // TODO: cd->variableTop = variableTop;
     cd->compressibleBytes = compressibleBytes;
+    cd->scripts = reinterpret_cast<const uint32_t *>(scripts.getBuffer());
+    cd->scriptsLength = scripts.size();
     return cd.orphan();
 }
 

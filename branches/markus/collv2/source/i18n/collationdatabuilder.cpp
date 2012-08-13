@@ -69,7 +69,7 @@ U_CDECL_BEGIN
 
 U_CAPI void U_CALLCONV
 uprv_deleteConditionalCE32(void *obj) {
-    delete reinterpret_cast<ConditionalCE32 *>(obj);
+    delete static_cast<ConditionalCE32 *>(obj);
 }
 
 U_CDECL_END
@@ -327,7 +327,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
         if(!isContractionCE32(oldCE32)) {
             utrie2_set32(trie, c, ce32, &errorCode);
         } else {
-            ConditionalCE32 *cond = reinterpret_cast<ConditionalCE32 *>(
+            ConditionalCE32 *cond = static_cast<ConditionalCE32 *>(
                 conditionalCE32s[(int32_t)oldCE32 & 0xfffff]);
             cond->ce32 = ce32;
         }
@@ -340,9 +340,9 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
             if(U_FAILURE(errorCode)) { return; }
             utrie2_set32(trie, c, makeSpecialCE32(Collation::CONTRACTION_TAG, index), &errorCode);
             contextChars.add(c);
-            cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[index]);
+            cond = static_cast<ConditionalCE32 *>(conditionalCE32s[index]);
         } else {
-            cond = reinterpret_cast<ConditionalCE32 *>(
+            cond = static_cast<ConditionalCE32 *>(
                 conditionalCE32s[(int32_t)oldCE32 & 0xfffff]);
         }
         UnicodeString suffix(s, cLength);
@@ -359,14 +359,14 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
                 cond->next = index;
                 break;
             }
-            ConditionalCE32 *nextCond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[next]);
+            ConditionalCE32 *nextCond = static_cast<ConditionalCE32 *>(conditionalCE32s[next]);
             int8_t cmp = context.compare(nextCond->context);
             if(cmp < 0) {
                 // Insert a new ConditionalCE32 between cond and nextCond.
                 int32_t index = addConditionalCE32(context, ce32, errorCode);
                 if(U_FAILURE(errorCode)) { return; }
                 cond->next = index;
-                reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[index])->next = next;
+                static_cast<ConditionalCE32 *>(conditionalCE32s[index])->next = next;
                 break;
             } else if(cmp == 0) {
                 // Same context as before, overwrite its ce32.
@@ -654,7 +654,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
         errorCode = U_INTERNAL_PROGRAM_ERROR;
         return;
     }
-    ConditionalCE32 *cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[ce32 & 0xfffff]);
+    ConditionalCE32 *cond = static_cast<ConditionalCE32 *>(conditionalCE32s[ce32 & 0xfffff]);
     if(cond->next < 0) {
         // Impossible: No actual contexts after the list head.
         errorCode = U_INTERNAL_PROGRAM_ERROR;
@@ -667,7 +667,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
     UCharsTrieBuilder prefixBuilder(errorCode);
     UCharsTrieBuilder contractionBuilder(errorCode);
     do {
-        cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
+        cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
         // The prefix or suffix can be empty, but not both.
         U_ASSERT(cond->context.length() > 1);
         int32_t prefixLength = cond->context[0];
@@ -676,7 +676,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
         ConditionalCE32 *firstCond = cond;
         ConditionalCE32 *lastCond = cond;
         while(cond->next >= 0 &&
-                (cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]))
+                (cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]))
                     ->context.startsWith(prefix)) {
             lastCond = cond;
         }
@@ -695,7 +695,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             cond = firstCond;
             if(cond->context.length() == suffixStart) {
                 emptySuffixCE32 = cond->ce32;
-                cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
+                cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
             } else {
                 emptySuffixCE32 = defaultCE32;
             }
@@ -714,7 +714,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
                 }
                 contractionBuilder.add(suffix, (int32_t)cond->ce32, errorCode);
                 if(cond == lastCond) { break; }
-                cond = reinterpret_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
+                cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
             }
             int32_t index = addContextTrie(emptySuffixCE32, contractionBuilder, errorCode);
             if(U_FAILURE(errorCode)) { return; }
