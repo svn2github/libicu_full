@@ -18,12 +18,6 @@
 ******************************************************************************
 */
 
-/*
- * Defines _XOPEN_SOURCE for access to POSIX functions.
- * Must be before any other #includes.
- */
-#include "uposixdefs.h"
-
 #include "locmap.h"
 #include "unicode/ustdio.h"
 #include "ufile.h"
