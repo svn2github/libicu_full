@@ -1650,9 +1650,8 @@ typedef enum UGraphemeClusterBreak {
     U_GCB_V = 9,                /*[V]*/
     U_GCB_SPACING_MARK = 10,    /*[SM]*/ /* from here on: new in Unicode 5.1/ICU 4.0 */
     U_GCB_PREPEND = 11,         /*[PP]*/
-    U_GCB_AFTER_JOINER = 12,    /*[AJ]*/ /* new in Unicode 6.2/ICU 50 */
-    U_GCB_JOINER = 13,          /*[J]*/ /* new in Unicode 6.2/ICU 50 */
-    U_GCB_COUNT = 14
+    U_GCB_REGIONAL_INDICATOR = 12,  /*[RI]*/ /* new in Unicode 6.2/ICU 50 */
+    U_GCB_COUNT = 13
 } UGraphemeClusterBreak;
 
 /**
@@ -1682,9 +1681,8 @@ typedef enum UWordBreakValues {
     U_WB_LF = 10,               /*[LF]*/
     U_WB_MIDNUMLET =11,         /*[MB]*/
     U_WB_NEWLINE =12,           /*[NL]*/
-    U_WB_AFTER_JOINER = 13,     /*[AJ]*/ /* new in Unicode 6.2/ICU 50 */
-    U_WB_JOINER = 14,           /*[J]*/ /* new in Unicode 6.2/ICU 50 */
-    U_WB_COUNT = 15
+    U_WB_REGIONAL_INDICATOR = 13,   /*[RI]*/ /* new in Unicode 6.2/ICU 50 */
+    U_WB_COUNT = 14
 } UWordBreakValues;
 
 /**
@@ -1772,7 +1770,7 @@ typedef enum ULineBreak {
     U_LB_CLOSE_PARENTHESIS = 36, /*[CP]*/ /* new in Unicode 5.2/ICU 4.4 */
     U_LB_CONDITIONAL_JAPANESE_STARTER = 37,/*[CJ]*/ /* new in Unicode 6.1/ICU 49 */
     U_LB_HEBREW_LETTER = 38,     /*[HL]*/ /* new in Unicode 6.1/ICU 49 */
-    U_LB_ZERO_WIDTH_JOINER = 39, /*[ZJ]*/ /* new in Unicode 6.2/ICU 50 */
+    U_LB_REGIONAL_INDICATOR = 39,/*[RI]*/ /* new in Unicode 6.2/ICU 50 */
     U_LB_COUNT = 40
 } ULineBreak;
 
