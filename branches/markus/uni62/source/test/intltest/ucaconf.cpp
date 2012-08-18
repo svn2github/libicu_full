@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 2002-2010, International Business Machines Corporation and
+ * Copyright (c) 2002-2012, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -36,6 +36,11 @@ status(U_ZERO_ERROR)
     }
     uprv_strcpy(testDataPath, srcDir);
     uprv_strcat(testDataPath, "CollationTest_");
+
+    UVersionInfo uniVersion;
+    static const UVersionInfo v62 = { 6, 2, 0, 0 };
+    u_getUnicodeVersion(uniVersion);
+    isAtLeastUCA62 = uprv_memcmp(uniVersion, v62, 4) >= 0;
 }
 
 UCAConformanceTest::~UCAConformanceTest()
@@ -90,7 +95,7 @@ void UCAConformanceTest::setCollNonIgnorable(UCollator *coll)
   ucol_setAttribute(coll, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
   ucol_setAttribute(coll, UCOL_CASE_FIRST, UCOL_OFF, &status);
   ucol_setAttribute(coll, UCOL_CASE_LEVEL, UCOL_OFF, &status);
-  ucol_setAttribute(coll, UCOL_STRENGTH, UCOL_TERTIARY, &status);
+  ucol_setAttribute(coll, UCOL_STRENGTH, isAtLeastUCA62 ? UCOL_IDENTICAL : UCOL_TERTIARY, &status);
   ucol_setAttribute(coll, UCOL_ALTERNATE_HANDLING, UCOL_NON_IGNORABLE, &status);
 }
 
@@ -99,7 +104,7 @@ void UCAConformanceTest::setCollShifted(UCollator *coll)
     ucol_setAttribute(coll, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
     ucol_setAttribute(coll, UCOL_CASE_FIRST, UCOL_OFF, &status);
     ucol_setAttribute(coll, UCOL_CASE_LEVEL, UCOL_OFF, &status);
-    ucol_setAttribute(coll, UCOL_STRENGTH, UCOL_QUATERNARY, &status);
+    ucol_setAttribute(coll, UCOL_STRENGTH, isAtLeastUCA62 ? UCOL_IDENTICAL : UCOL_QUATERNARY, &status);
     ucol_setAttribute(coll, UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, &status);
 }
 
@@ -149,11 +154,33 @@ void UCAConformanceTest::openTestFile(const char *type)
     }
 }
 
-void UCAConformanceTest::testConformance(UCollator *coll) 
+UBool
+skipLineBecauseOfBug(const UChar *s, int32_t length, UBool isShifted) {
+    // TODO: Fix ICU ticket #8052
+    if(length >= 3 &&
+            (s[0] == 0xfb2 || s[0] == 0xfb3) &&
+            s[1] == 0x334 &&
+            (s[2] == 0xf73 || s[2] == 0xf75 || s[2] == 0xf81)) {
+        return TRUE;
+    }
+    // TODO: Fix ICU ticket #9361
+    if(isShifted && length >= 2 && s[0] == 0xfffe) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+UCollationResult
+normalizeResult(int32_t result) {
+    return result<0 ? UCOL_LESS : result==0 ? UCOL_EQUAL : UCOL_GREATER;
+}
+
+void UCAConformanceTest::testConformance(const UCollator *coll) 
 {
     if(testFile == 0) {
         return;
     }
+    UBool isShifted = ucol_getAttribute(coll, UCOL_ALTERNATE_HANDLING, &status) == UCOL_SHIFTED;
 
     int32_t line = 0;
 
@@ -170,7 +197,6 @@ void UCAConformanceTest::testConformance(UCollator *coll)
     int32_t buflen = 0, oldBlen = 0;
     uint32_t first = 0;
     uint32_t offset = 0;
-    UnicodeString oldS, newS;
 
 
     while (fgets(lineB, 1024, testFile) != NULL) {
@@ -191,48 +217,47 @@ void UCAConformanceTest::testConformance(UCollator *coll)
         buflen = offset;
         buffer[offset++] = 0;
 
+        if(skipLineBecauseOfBug(buffer, buflen, isShifted)) {
+            logln("Skipping line %i because of a known bug", line);
+            continue;
+        }
+
         resLen = ucol_getSortKey(coll, buffer, buflen, newSk, 1024);
 
-        int32_t res = 0, cmpres = 0, cmpres2 = 0;
-
         if(oldSk != NULL) {
-            res = strcmp((char *)oldSk, (char *)newSk);
-            cmpres = ucol_strcoll(coll, oldB, oldBlen, buffer, buflen);
-            cmpres2 = ucol_strcoll(coll, buffer, buflen, oldB, oldBlen);
+            int32_t skres = strcmp((char *)oldSk, (char *)newSk);
+            int32_t cmpres = ucol_strcoll(coll, oldB, oldBlen, buffer, buflen);
+            int32_t cmpres2 = ucol_strcoll(coll, buffer, buflen, oldB, oldBlen);
 
             if(cmpres != -cmpres2) {
                 errln("Compare result not symmetrical on line %i", line);
             }
 
-            if(((res&0x80000000) != (cmpres&0x80000000)) || (res == 0 && cmpres != 0) || (res != 0 && cmpres == 0)) {
-                errln("Difference between ucol_strcoll and sortkey compare on line %i", line);
+            if(cmpres != normalizeResult(skres)) {
+                errln("Difference between ucol_strcoll (%d) and sortkey compare (%d) on line %i",
+                      cmpres, skres, line);
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
             }
 
+            int32_t res = cmpres;
+            if(res == 0 && !isAtLeastUCA62) {
+                // Up to UCA 6.1, the collation test files use a custom tie-breaker,
+                // comparing the raw input strings.
+                res = u_strcmpCodePointOrder(oldB, buffer);
+                // Starting with UCA 6.2, the collation test files use the standard UCA tie-breaker,
+                // comparing the NFD versions of the input strings,
+                // which we do via setting strength=identical.
+            }
             if(res > 0) {
                 errln("Line %i is not greater or equal than previous line", line);
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
+                UnicodeString oldS, newS;
                 prettify(CollationKey(oldSk, oldLen), oldS);
                 prettify(CollationKey(newSk, resLen), newS);
                 errln("  Previous key: "+oldS);
                 errln("  Current key:  "+newS);
-            } else if(res == 0) { /* equal */
-                res = u_strcmpCodePointOrder(oldB, buffer);
-                if (res == 0) {
-                    errln("Probable error in test file on line %i (comparing identical strings)", line);
-                    errln("  Data line %s", lineB);
-                }
-                /*
-                 * UCA 6.0 test files can have lines that compare == if they are
-                 * different strings but canonically equivalent.
-                else if (res > 0) {
-                    errln("Sortkeys are identical, but code point compare gives >0 on line %i", line);
-                    errln("  Previous data line %s", oldLineB);
-                    errln("  Current data line  %s", lineB);
-                }
-                 */
             }
         }
 

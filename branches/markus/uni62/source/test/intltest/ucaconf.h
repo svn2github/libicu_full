@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 2002-2003, International Business Machines Corporation and
+ * Copyright (c) 2002-2012, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -37,7 +37,7 @@ private:
   void initRbUCA();
   void setCollNonIgnorable(UCollator *coll);
   void setCollShifted(UCollator *coll);
-  void testConformance(UCollator *coll);
+  void testConformance(const UCollator *coll);
   void openTestFile(const char *type);
 
   UCollator *UCA;
@@ -45,6 +45,7 @@ private:
   FILE *testFile;
   UErrorCode status;
   char testDataPath[1024];
+  UBool isAtLeastUCA62;
 };
 
 #endif /* #if !UCONFIG_NO_COLLATION */
