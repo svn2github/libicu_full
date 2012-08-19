@@ -178,7 +178,7 @@ void
 CollationBaseDataBuilder::finishPreviousReorderingGroup(uint32_t lastByte) {
     if(scripts.isEmpty()) { return; }
     int32_t i = scripts.size() - 1;
-    int32_t x;
+    int32_t x = 0;
     while(i > 0 && ((x = scripts.elementAti(--i)) & 0xff) != USCRIPT_UNKNOWN) {}
     x &= 0xff000000;  // first byte
     x |= (int32_t)lastByte << 16;  // last byte

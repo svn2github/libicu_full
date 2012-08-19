@@ -19,6 +19,7 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
+#include "collationfcd.h"
 #include "collationiterator.h"
 #include "normalizer2impl.h"
 #include "uassert.h"

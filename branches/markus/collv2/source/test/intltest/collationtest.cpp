@@ -28,6 +28,7 @@
 #include "normalizer2impl.h"
 #include "ucbuf.h"
 #include "utf16collationiterator.h"
+#include "writesrc.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -1628,6 +1629,118 @@ makeBaseDataFromFractionalUCA(CollationBaseDataBuilder &builder, UErrorCode &err
     return cd;
 }
 
+// TODO: Put this into genuca.
+// Make preparseucd.py write fcd_data.h mapping code point ranges to FCD16 values,
+// use that in genuca rather than properties APIs.
+
+/**
+ * Adds each lead surrogate to the bmp set if any of the 1024
+ * associated supplementary code points is in the supp set.
+ * These can be one and the same set.
+ */
+static void
+setLeadSurrogatesForAssociatedSupplementary(UnicodeSet &bmp, const UnicodeSet &supp) {
+    UChar32 c = 0x10000;
+    for(UChar lead = 0xd800; lead < 0xdc00; ++lead, c += 0x400) {
+        if(supp.containsSome(c, c + 0x3ff)) {
+            bmp.add(lead);
+        }
+    }
+}
+
+static int32_t
+makeBMPFoldedBitSet(const UnicodeSet &set, uint8_t index[0x800], uint32_t bits[256],
+                    UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    bits[0] = 0;  // no bits set
+    bits[1] = 0xffffffff;  // all bits set
+    int32_t bitsLength = 2;
+    int32_t i = 0;
+    for(UChar32 c = 0; c <= 0xffff; c += 0x20, ++i) {
+        if(set.containsNone(c, c + 0x1f)) {
+            index[i] = 0;
+        } else if(set.contains(c, c + 0x1f)) {
+            index[i] = 1;
+        } else {
+            uint32_t b = 0;
+            for(int32_t j = 0; j <= 0x1f; ++j) {
+                if(set.contains(c + j)) {
+                    b |= (uint32_t)1 << j;
+                }
+            }
+            int32_t k;
+            for(k = 2;; ++k) {
+                if(k == bitsLength) {
+                    // new bit combination
+                    if(bitsLength == 256) {
+                        errorCode = U_BUFFER_OVERFLOW_ERROR;
+                        return 0;
+                    }
+                    bits[bitsLength++] = b;
+                    break;
+                }
+                if(bits[k] == b) {
+                    // duplicate bit combination
+                    break;
+                }
+            }
+            index[i] = k;
+        }
+    }
+    return bitsLength;
+}
+
+/**
+ * Builds data for the FCD check fast path.
+ * For details see the CollationFCD class comments.
+ */
+static void
+buildFCDData(UErrorCode &errorCode) {
+    UnicodeSet lcccSet(UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
+    UnicodeSet tcccSet(UNICODE_STRING_SIMPLE("[:^tccc=0:]"), errorCode);
+    setLeadSurrogatesForAssociatedSupplementary(tcccSet, tcccSet);
+    // The following supp(lccc)->lead(tccc) should be unnecessary
+    // after the previous supp(tccc)->lead(tccc)
+    // because there should not be any characters with lccc!=0 and tccc=0.
+    // It is safe and harmless.
+    setLeadSurrogatesForAssociatedSupplementary(tcccSet, lcccSet);
+    setLeadSurrogatesForAssociatedSupplementary(lcccSet, lcccSet);
+    uint8_t lcccIndex[0x800], tcccIndex[0x800];
+    uint32_t lcccBits[256], tcccBits[256];
+    int32_t lcccBitsLength = makeBMPFoldedBitSet(lcccSet, lcccIndex, lcccBits, errorCode);
+    int32_t tcccBitsLength = makeBMPFoldedBitSet(tcccSet, tcccIndex, tcccBits, errorCode);
+    printf("@@@ lcccBitsLength=%d -> %d bytes\n", lcccBitsLength, 0x800 + lcccBitsLength * 4);
+    printf("@@@ tcccBitsLength=%d -> %d bytes\n", tcccBitsLength, 0x800 + tcccBitsLength * 4);
+
+    if(U_FAILURE(errorCode)) { return; }
+
+    FILE *f=usrc_create("", "collationfcd.cpp",  // TODO: path
+                        "icu/tools/unicode/c/genuca/genuca.cpp");  // TODO: generator .cpp
+    if(f==NULL) {
+        errorCode=U_FILE_ACCESS_ERROR;
+        return;
+    }
+    fputs("#include \"unicode/utypes.h\"\n", f);
+    fputs("#include \"collationfcd.h\"\n\n", f);
+    usrc_writeArray(f,
+        "const uint8_t CollationFCD::lcccIndex[%ld]={\n",
+        lcccIndex, 8, 0x800,
+        "\n};\n\n");
+    usrc_writeArray(f,
+        "const uint32_t CollationFCD::lcccBits[%ld]={\n",
+        lcccBits, 32, lcccBitsLength,
+        "\n};\n\n");
+    usrc_writeArray(f,
+        "const uint8_t CollationFCD::tcccIndex[%ld]={\n",
+        tcccIndex, 8, 0x800,
+        "\n};\n\n");
+    usrc_writeArray(f,
+        "const uint32_t CollationFCD::tcccBits[%ld]={\n",
+        tcccBits, 32, tcccBitsLength,
+        "\n};\n");
+    fclose(f);
+}
+
 extern const CollationBaseData *
 getCollationBaseData(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return NULL; }
@@ -1637,6 +1750,7 @@ getCollationBaseData(UErrorCode &errorCode) {
         Mutex lock;
         if(gBaseData != NULL) { return gBaseData; }
     }
+    buildFCDData(errorCode);
     LocalPointer<CollationBaseDataBuilder> builder(new CollationBaseDataBuilder(errorCode));
     LocalPointer<CollationBaseData> baseData(makeBaseDataFromFractionalUCA(*builder, errorCode));
     baseData->variableTop = gVariableTop;
