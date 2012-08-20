@@ -53,8 +53,10 @@ U_NAMESPACE_BEGIN
 class U_I18N_API CollationFCD {
 public:
     // TODO: add unit tests to make sure this agrees with other properties APIs
-    // TODO: Do all of these tests actually improve performance?
-    static inline UBool hasLccc(UChar c) {
+    static inline UBool hasLccc(UChar32 c) {
+        // assert c <= 0xffff
+        // c can be negative, e.g., U_SENTINEL from UCharIterator;
+        // that is handled in the first test.
         int32_t i;
         return
             // U+0300 is the first character with lccc!=0.
@@ -63,13 +65,31 @@ public:
             (lcccBits[i] & ((uint32_t)1 << (c & 0x1f))) != 0;
     }
 
-    static inline UBool hasTccc(UChar c) {
+    static inline UBool hasTccc(UChar32 c) {
+        // assert c <= 0xffff
+        // c can be negative, e.g., U_SENTINEL from UCharIterator;
+        // that is handled in the first test.
         int32_t i;
         return
             // U+00C0 is the first character with tccc!=0.
             c >= 0xc0 &&
             (i = tcccIndex[c >> 5]) != 0 &&
             (tcccBits[i] & ((uint32_t)1 << (c & 0x1f))) != 0;
+    }
+
+    /**
+     * Tibetan composite vowel signs (U+0F73, U+0F75, U+0F81)
+     * must be decomposed before reaching the core collation code,
+     * or else some sequences including them, even ones passing the FCD check,
+     * do not yield canonically equivalent results.
+     *
+     * This is a fast and imprecise test.
+     *
+     * @param c a code point
+     * @return TRUE if c is U+0F73, U+0F75 or U+0F81 or one of several other Tibetan characters
+     */
+    static inline UBool maybeTibetanCompositeVowel(UChar32 c) {
+        return (c & 0x1fff01) == 0xf01;
     }
 
 private:

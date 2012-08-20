@@ -1611,9 +1611,6 @@ makeBaseDataFromFractionalUCA(CollationBaseDataBuilder &builder, UErrorCode &err
     length = 19+21+27;
     printf("  Jamo CEs:         %6ld *8 = %6ld\n", (long)length, (long)length * 8);
     totalSize += length * 8;
-    length = 0xF00;
-    printf("  fcd16_F00:        %6ld *2 = %6ld\n", (long)length, (long)length * 2);
-    totalSize += length * 2;
     // TODO: Combine compressibleBytes with reordering group data.
     printf("  compressibleBytes:               256\n");
     totalSize += 256;
@@ -1720,7 +1717,8 @@ buildFCDData(UErrorCode &errorCode) {
         errorCode=U_FILE_ACCESS_ERROR;
         return;
     }
-    fputs("#include \"unicode/utypes.h\"\n", f);
+    fputs("#include \"unicode/utypes.h\"\n\n", f);
+    fputs("#if !UCONFIG_NO_COLLATION\n\n", f);
     fputs("#include \"collationfcd.h\"\n\n", f);
     usrc_writeArray(f,
         "const uint8_t CollationFCD::lcccIndex[%ld]={\n",
@@ -1737,7 +1735,8 @@ buildFCDData(UErrorCode &errorCode) {
     usrc_writeArray(f,
         "const uint32_t CollationFCD::tcccBits[%ld]={\n",
         tcccBits, 32, tcccBitsLength,
-        "\n};\n");
+        "\n};\n\n");
+    fputs("#endif  // !UCONFIG_NO_COLLATION\n", f);
     fclose(f);
 }
 

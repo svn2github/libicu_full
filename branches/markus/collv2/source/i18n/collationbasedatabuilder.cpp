@@ -46,10 +46,6 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
         return;
     }
 
-    for(UChar32 c = 0; c < 0xf00; ++c) {
-        fcd16_F00[c] = nfcImpl.getFCD16(c);
-    }
-
     // Not compressible:
     // - digits
     // - Latin
@@ -206,7 +202,6 @@ CollationBaseDataBuilder::buildBaseData(UErrorCode &errorCode) {
     finishPreviousReorderingGroup(Collation::UNASSIGNED_IMPLICIT_BYTE - 1);
     if(U_FAILURE(errorCode)) { return NULL; }
 
-    cd->fcd16_F00 = fcd16_F00;
     // TODO: cd->variableTop = variableTop;
     cd->compressibleBytes = compressibleBytes;
     cd->scripts = reinterpret_cast<const uint32_t *>(scripts.getBuffer());

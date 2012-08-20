@@ -85,7 +85,7 @@ struct U_I18N_API CollationData : public UMemory {
             : trie(NULL),
               ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
               jamoCEs(NULL),
-              fcd16_F00(NULL), nfcImpl(nfc),
+              nfcImpl(nfc),
               options(UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT),
               variableTop(0), zeroPrimary(0x12000000),
               compressibleBytes(NULL), reorderTable(NULL),
@@ -165,9 +165,7 @@ struct U_I18N_API CollationData : public UMemory {
      * Returns the FCD16 value for code point c. c must be >= 0.
      */
     uint16_t getFCD16(UChar32 c) const {
-        if(c < 0xf00) { return fcd16_F00[c]; }
-        if(c < 0xd800 && !nfcImpl.singleLeadMightHaveNonZeroFCD16(c)) { return 0; }
-        return nfcImpl.getFCD16FromNormData(c);
+        return nfcImpl.getFCD16(c);
     }
 
     /** Main lookup trie. */
@@ -192,8 +190,6 @@ struct U_I18N_API CollationData : public UMemory {
         // TODO
         // Build & return a simple array of CEs.
         // Tailoring: Only necessary if Jamos are tailored.
-    /** Linear FCD16 data table for U+0000..U+0EFF. */
-    const uint16_t *fcd16_F00;
     const Normalizer2Impl &nfcImpl;
     /** Collation::CHECK_FCD etc. */
     int32_t options;

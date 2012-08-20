@@ -8,6 +8,9 @@
  */
 
 #include "unicode/utypes.h"
+
+#if !UCONFIG_NO_COLLATION
+
 #include "collationfcd.h"
 
 const uint8_t CollationFCD::lcccIndex[2048]={
@@ -290,3 +293,5 @@ const uint32_t CollationFCD::tcccBits[114]={
 0xfc00,0x55555000,0x36db02a5,0x46100000,0x47900000,0x3ff08000,0x30000,0x3ffff,0x3800,0x80000,1,0xc19d0000,2,0x400000,0x35,0x5f7ffc00,
 0x7fdb,0x7f
 };
+
+#endif  // !UCONFIG_NO_COLLATION

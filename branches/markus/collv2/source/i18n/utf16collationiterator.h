@@ -60,18 +60,6 @@ protected:
 
     virtual UBool foundNULTerminator();
 
-    /**
-     * Returns the next code point, or <0 if none, assuming pos==limit.
-     * Post-increment semantics.
-     */
-    virtual UChar32 handleNextCodePoint(UErrorCode &errorCode);
-
-    /**
-     * Returns the previous code point, or <0 if none, assuming pos==start.
-     * Pre-decrement semantics.
-     */
-    virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode);
-
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
@@ -84,7 +72,7 @@ protected:
     // limit can be NULL for NUL-terminated strings.
     // This class assumes that whole code points are stored within [start..limit[.
     // That is, a trail surrogate at start or a lead surrogate at limit-1
-    // will be assumed to be surrogate code points rather than attempting to pair it
+    // will be assumed to be a surrogate code point rather than attempting to pair it
     // with a surrogate retrieved from the subclass.
     const UChar *start, *pos, *limit;
     // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
@@ -102,18 +90,36 @@ public:
 
     virtual void resetToStart();
 
-    inline void setSmallSteps(UBool small) { smallSteps = small; }
+    virtual UChar32 nextCodePoint(UErrorCode &errorCode);
+
+    virtual UChar32 previousCodePoint(UErrorCode &errorCode);
 
 protected:
-    virtual UChar32 handleNextCodePoint(UErrorCode &errorCode);
+    virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
-    virtual UChar32 handlePreviousCodePoint(UErrorCode &errorCode);
+    virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
+
+    virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
     virtual const void *saveLimitAndSetAfter(UChar32 c);
 
     virtual void restoreLimit(const void *savedLimit);
 
 private:
+    /**
+     * Makes the next text segment available, if there is one.
+     * To be called when inFastPath || pos == limit.
+     * @return TRUE if there is more text and pos != limit
+     */
+    UBool nextSegment(UErrorCode &errorCode);
+
+    /**
+     * Makes the previous text segment available, if there is one.
+     * To be called when inFastPath || pos == start.
+     * @return TRUE if there is more text and pos != start
+     */
+    UBool previousSegment(UErrorCode &errorCode);
+
     /**
      * Tibetan composite vowel signs (U+0F73, U+0F75, U+0F81)
      * must be decomposed before reaching the core collation code,
@@ -129,16 +135,26 @@ private:
         return fcd16 == 0x8182 || fcd16 == 0x8184;
     }
 
+    UBool normalize(UErrorCode &errorCode);
+
     // Text pointers: The input text is [rawStart, rawLimit[
     // where rawLimit can be NULL for NUL-terminated text.
+    //
+    // Fast path:
+    //
+    // Fetching characters is combined with a very quick boundary check.
+    // No tracking of an FCD segment. limit == rawLimit.
+    //
+    // Slow path:
+    //
     // segmentStart and segmentLimit point into the text and indicate
     // the start and exclusive end of the text segment currently being processed.
     // They are at FCD boundaries.
-    // Either the current text segment already passes the FCD test
+    // Either the current text segment already passes the FCD check
     // and segmentStart==start<=pos<=limit==segmentLimit,
     // or the current segment had to be normalized so that
     // [segmentStart, segmentLimit[ turned into the normalized string,
-    // corresponding to buffer.getStart()==start<=pos<=limit==buffer.getLimit().
+    // corresponding to normalized.getBuffer()==start<=pos<=limit==start+normalized.length().
     const UChar *rawStart;
     const UChar *segmentStart;
     const UChar *segmentLimit;
@@ -149,12 +165,10 @@ private:
     // it tracks the positive number of normalized UChars
     // between the start pointer and the temporary iteration limit.
     int32_t lengthBeforeLimit;
-    // We make small steps for string comparisons and larger steps for sort key generation.
-    UBool smallSteps;
 
     const Normalizer2Impl &nfcImpl;
     UnicodeString normalized;
-    ReorderingBuffer buffer;
+    UBool inFastPath;
 };
 
 U_NAMESPACE_END

@@ -70,8 +70,6 @@ public:
 private:
     void finishPreviousReorderingGroup(uint32_t lastByte);
 
-    // Linear FCD16 data table for U+0000..U+0EFF.
-    uint16_t fcd16_F00[0xf00];
     // Flags for which primary-weight lead bytes are compressible.
     UBool compressibleBytes[256];
     UVector32 scripts;

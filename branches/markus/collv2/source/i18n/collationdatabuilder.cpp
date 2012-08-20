@@ -590,7 +590,6 @@ CollationDataBuilder::buildTailoring(UErrorCode &errorCode) {
     buildMappings(*cd, errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
 
-    cd->fcd16_F00 = base->fcd16_F00;
     cd->variableTop = base->variableTop;
     cd->compressibleBytes = base->compressibleBytes;
     return cd.orphan();
