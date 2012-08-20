@@ -154,7 +154,7 @@ void UCAConformanceTest::openTestFile(const char *type)
     }
 }
 
-UBool
+static UBool
 skipLineBecauseOfBug(const UChar *s, int32_t length, UBool isShifted) {
     // TODO: Fix ICU ticket #8052
     if(length >= 3 &&
@@ -170,7 +170,7 @@ skipLineBecauseOfBug(const UChar *s, int32_t length, UBool isShifted) {
     return FALSE;
 }
 
-UCollationResult
+static UCollationResult
 normalizeResult(int32_t result) {
     return result<0 ? UCOL_LESS : result==0 ? UCOL_EQUAL : UCOL_GREATER;
 }
@@ -193,36 +193,33 @@ void UCAConformanceTest::testConformance(const UCollator *coll)
     uint8_t sk1[1024], sk2[1024];
     uint8_t *oldSk = NULL, *newSk = sk1;
 
-    int32_t resLen = 0, oldLen = 0;
-    int32_t buflen = 0, oldBlen = 0;
+    int32_t oldLen = 0;
+    int32_t oldBlen = 0;
     uint32_t first = 0;
-    uint32_t offset = 0;
 
 
     while (fgets(lineB, 1024, testFile) != NULL) {
         // remove trailing whitespace
         u_rtrim(lineB);
-        offset = 0;
 
         line++;
-        if(*lineB == 0 || strlen(lineB) < 3 || lineB[0] == '#') {
+        if(*lineB == 0 || lineB[0] == '#') {
             continue;
         }
-        offset = u_parseString(lineB, buffer, 1024, &first, &status);
+        int32_t buflen = u_parseString(lineB, buffer, 1024, &first, &status);
         if(U_FAILURE(status)) {
             errln("Error parsing line %ld (%s): %s\n",
                   (long)line, u_errorName(status), lineB);
             status = U_ZERO_ERROR;
         }
-        buflen = offset;
-        buffer[offset++] = 0;
+        buffer[buflen] = 0;
 
         if(skipLineBecauseOfBug(buffer, buflen, isShifted)) {
             logln("Skipping line %i because of a known bug", line);
             continue;
         }
 
-        resLen = ucol_getSortKey(coll, buffer, buflen, newSk, 1024);
+        int32_t resLen = ucol_getSortKey(coll, buffer, buflen, newSk, 1024);
 
         if(oldSk != NULL) {
             int32_t skres = strcmp((char *)oldSk, (char *)newSk);
