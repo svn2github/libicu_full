@@ -2853,6 +2853,7 @@ private:
     UnicodeSet  *fCJ;
     UnicodeSet  *fHL;
     UnicodeSet  *fID;
+    UnicodeSet  *fRI;
     UnicodeSet  *fSA;
     UnicodeSet  *fXX;
 
@@ -2908,6 +2909,7 @@ RBBILineMonkey::RBBILineMonkey()
     fCJ    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=CJ}]"), status);
     fHL    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=HL}]"), status);
     fID    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=ID}]"), status);
+    fRI    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=RI}]"), status);
     fSA    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=SA}]"), status);
     fSG    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\ud800-\\udfff]"), status);
     fXX    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=XX}]"), status);
@@ -2962,6 +2964,7 @@ RBBILineMonkey::RBBILineMonkey()
     fSets->addElement(fHL, status);
     fSets->addElement(fID, status);
     fSets->addElement(fWJ, status);
+    fSets->addElement(fRI, status);
     fSets->addElement(fSA, status);
     fSets->addElement(fSG, status);
 
@@ -3410,6 +3413,12 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
             continue;
         }
 
+        // LB30a  Do not break between regional indicators.
+        //        RI x RI
+        if (fRI->contains(prevChar) && fRI->contains(thisChar)) {
+            continue;
+        }
+
         // LB 31    Break everywhere else
         break;
 
@@ -3463,6 +3472,7 @@ RBBILineMonkey::~RBBILineMonkey() {
     delete fCJ;
     delete fHL;
     delete fID;
+    delete fRI;
     delete fSA;
     delete fSG;
     delete fXX;
