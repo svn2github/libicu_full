@@ -25,8 +25,10 @@
 #define UCLN_TYPE_IS_COMMON
 #include "ucln_imp.h"
 
+U_NAMESPACE_BEGIN
+
 static UBool gICUInitialized = FALSE;
-static UMTX  gICUInitMutex   = NULL;
+static UMutex  gICUInitMutex = U_MUTEX_INITIALIZER;
 
 static cleanupFunc *gCommonCleanupFunctions[UCLN_COMMON_COUNT];
 static cleanupFunc *gLibCleanupFunctions[UCLN_COMMON];
@@ -58,7 +60,6 @@ u_cleanup(void)
 
     ucln_lib_cleanup();
 
-    umtx_destroy(&gICUInitMutex);
     umtx_cleanup();
     cmemory_cleanup();       /* undo any heap functions set by u_setMemoryFunctions(). */
     gICUInitialized = FALSE;
@@ -103,11 +104,11 @@ ucln_registerCleanup(ECleanupLibraryType type,
 }
 
 U_CFUNC UBool ucln_lib_cleanup(void) {
-    ECleanupLibraryType libType = UCLN_START;
-    ECleanupCommonType commonFunc = UCLN_COMMON_START;
+    int32_t libType = UCLN_START;
+    int32_t commonFunc = UCLN_COMMON_START;
 
     for (libType++; libType<UCLN_COMMON; libType++) {
-        ucln_cleanupOne(libType);
+        ucln_cleanupOne(static_cast<ECleanupLibraryType>(libType));
     }
 
     for (commonFunc++; commonFunc<UCLN_COMMON_COUNT; commonFunc++) {
@@ -122,3 +123,5 @@ U_CFUNC UBool ucln_lib_cleanup(void) {
 #endif
     return TRUE;
 }
+
+U_NAMESPACE_END

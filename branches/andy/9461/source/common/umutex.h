@@ -117,40 +117,54 @@
  * an alternative C++ mutex API is defined in the file common/mutex.h
  */
 
+/*
+ * UMutex - Mutexes for use by ICU implementation code.
+ *          Must be declared as static or globals. Can not appear as members
+ *          of other objects.
+ *          Must be initialized.
+ *          Example:
+ *            static UMutex = U_MUTEX_INITIALIZER;
+ */
+
+#if U_PLATFORM_HAS_WIN32_API
+struct UMutex {
+  /* TODO */
+  CRITICAL_SECTION  cs;
+};
+#define U_MUTEX_INITIALIZER {}
+
+#elif defined POSIX
+#include <pthread.h>
+struct UMutex {
+    pthread_mutex_t  mutex;
+};
+#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
+
+#else
+/* Unknow platform type. */
+struct UMutex {
+    void *fMutex;
+};
+#define U_MUTEX_INITIALIZER {NULL}
+
+#endif
+
+typedef struct UMutex UMutex;
+    
 /* Lock a mutex.
  * @param mutex The given mutex to be locked.  Pass NULL to specify
  *              the global ICU mutex.  Recursive locks are an error
  *              and may cause a deadlock on some platforms.
  */
-U_CAPI void U_EXPORT2 umtx_lock   ( UMTX* mutex ); 
+U_CAPI void U_EXPORT2 umtx_lock(UMutex* mutex); 
 
 /* Unlock a mutex. Pass in NULL if you want the single global
    mutex. 
  * @param mutex The given mutex to be unlocked.  Pass NULL to specify
  *              the global ICU mutex.
  */
-U_CAPI void U_EXPORT2 umtx_unlock ( UMTX* mutex );
+U_CAPI void U_EXPORT2 umtx_unlock (UMutex* mutex);
 
-/* Initialize a mutex. Use it this way:
-   umtx_init( &aMutex ); 
- * ICU Mutexes do not need explicit initialization before use.  Use of this
- *   function is not necessary.
- * Initialization of an already initialized mutex has no effect, and is safe to do.
- * Initialization of mutexes is thread safe.  Two threads can concurrently 
- *   initialize the same mutex without causing problems.
- * @param mutex The given mutex to be initialized
- */
-U_CAPI void U_EXPORT2 umtx_init   ( UMTX* mutex );
-
-/* Destroy a mutex. This will free the resources of a mutex.
- * Use it this way:
- *   umtx_destroy( &aMutex ); 
- * Destroying an already destroyed mutex has no effect, and causes no problems.
- * This function is not thread safe.  Two threads must not attempt to concurrently
- *   destroy the same mutex.
- * @param mutex The given mutex to be destroyed.
- */
-U_CAPI void U_EXPORT2 umtx_destroy( UMTX *mutex );
 
 /*
  * Atomic Increment and Decrement of an int32_t value.

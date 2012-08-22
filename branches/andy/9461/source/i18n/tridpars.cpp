@@ -45,7 +45,7 @@ static Hashtable* SPECIAL_INVERSES = NULL;
 /**
  * The mutex controlling access to SPECIAL_INVERSES
  */
-static UMTX LOCK = 0;
+static UMutex LOCK = U_MUTEX_INITIALIZER;
 
 TransliteratorIDParser::Specs::Specs(const UnicodeString& s, const UnicodeString& t,
                                      const UnicodeString& v, UBool sawS,
@@ -928,7 +928,6 @@ void TransliteratorIDParser::cleanup() {
         delete SPECIAL_INVERSES;
         SPECIAL_INVERSES = NULL;
     }
-    umtx_destroy(&LOCK);
 }
 
 U_NAMESPACE_END

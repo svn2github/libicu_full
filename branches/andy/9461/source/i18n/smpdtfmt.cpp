@@ -204,7 +204,7 @@ static const int32_t gFieldRangeBias[] = {
     -1,  // 'U' - UDAT_YEAR_NAME_FIELD
 };
 
-static UMTX LOCK;
+static UMutex LOCK = U_MUTEX_INITIALIZER;
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SimpleDateFormat)
 

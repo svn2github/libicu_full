@@ -48,7 +48,7 @@ static void debug_chnsecal_msg(const char *pat, ...)
 
 
 // --- The cache --
-static UMTX astroLock = 0;  // pod bay door lock
+static UMutex astroLock = U_MUTEX_INITIALIZER;  // pod bay door lock
 static icu::CalendarAstronomer *gChineseCalendarAstro = NULL;
 static icu::CalendarCache *gChineseCalendarWinterSolsticeCache = NULL;
 static icu::CalendarCache *gChineseCalendarNewYearCache = NULL;
@@ -90,7 +90,6 @@ static UBool calendar_chinese_cleanup(void) {
         delete gChineseCalendarNewYearCache;
         gChineseCalendarNewYearCache = NULL;
     }
-    umtx_destroy(&astroLock);
     return TRUE;
 }
 U_CDECL_END

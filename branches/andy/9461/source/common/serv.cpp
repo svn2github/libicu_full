@@ -331,7 +331,7 @@ U_CDECL_END
 ******************************************************************
 */
 
-static UMTX lock;
+static UMutex lock = U_MUTEX_INITIALIZER;
 
 ICUService::ICUService()
 : name()
@@ -401,7 +401,7 @@ ICUService::getKey(ICUServiceKey& key, UnicodeString* actualReturn, UErrorCode& 
 // reentrantly even without knowing the thread.
 class XMutex : public UMemory {
 public:
-    inline XMutex(UMTX *mutex, UBool reentering) 
+    inline XMutex(UMutex *mutex, UBool reentering) 
         : fMutex(mutex)
         , fActive(!reentering) 
     {
@@ -412,7 +412,7 @@ public:
     }
 
 private:
-    UMTX  *fMutex;
+    UMutex  *fMutex;
     UBool fActive;
 };
 

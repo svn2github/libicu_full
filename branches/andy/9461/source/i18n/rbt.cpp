@@ -24,7 +24,7 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedTransliterator)
 
-static UMTX  transliteratorDataMutex = NULL;
+static UMutex transliteratorDataMutex = U_MUTEX_INITIALIZER;
 static Replaceable *gLockedText = NULL;
 
 void RuleBasedTransliterator::_construct(const UnicodeString& rules,

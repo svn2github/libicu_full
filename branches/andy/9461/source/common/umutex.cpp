@@ -161,14 +161,8 @@ struct ICUMutex {
  *   For Windows, it will be lazily instantiated on first use.
  */
 
-#if defined(POSIX)
-static UMTX  globalUMTX;
-static ICUMutex globalMutex = {&globalUMTX, FALSE, NULL, 0, PLATFORM_MUTEX_INITIALIZER, NULL};
-static UMTX  globalUMTX = &globalMutex;
-#else
-static UMTX  globalUMTX = NULL;
-#endif
 
+#if 0
 /* Head of the list of all ICU mutexes.
  * Linked list is through ICUMutex::next
  * Modifications to the list are synchronized with the global mutex.
@@ -601,4 +595,4 @@ U_CFUNC UBool umtx_cleanup(void) {
     return TRUE;
 }
 
-
+#endif // of hack to get it to build.

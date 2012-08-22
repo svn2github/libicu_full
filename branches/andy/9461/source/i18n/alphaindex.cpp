@@ -654,7 +654,7 @@ void AlphabeticIndex::staticCleanup() {
 //                  sufficiently heavy that the cost of the mutex check is not significant.
 
 void AlphabeticIndex::staticInit(UErrorCode &status) {
-    static UMTX IndexCharsInitMutex;
+    static UMutex IndexCharsInitMutex = U_MUTEX_INITIALIZER;
 
     Mutex mutex(&IndexCharsInitMutex);
     if (indexCharactersAreInitialized || U_FAILURE(status)) {

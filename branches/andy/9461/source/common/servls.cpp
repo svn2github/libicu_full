@@ -25,7 +25,7 @@
 
 U_NAMESPACE_BEGIN
 
-static UMTX llock;
+static UMutex llock = U_MUTEX_INITIALIZER;
 ICULocaleService::ICULocaleService()
   : fallbackLocale(Locale::getDefault())
 {
