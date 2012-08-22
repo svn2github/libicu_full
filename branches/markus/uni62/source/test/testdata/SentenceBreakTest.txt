@@ -1,5 +1,5 @@
-﻿# SentenceBreakTest-6.2.0.txt
-# Date: 2012-08-14, 17:55:00 GMT [MD]
+# SentenceBreakTest-6.2.0.txt
+# Date: 2012-08-22, 12:41:18 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2012 Unicode, Inc.
@@ -15,7 +15,7 @@
 #	× wherever there is not.
 #  <comment> the format can change, but currently it shows:
 #	- the sample character name
-#	- (x) the Sentence_Break property* for the sample character
+#	- (x) the Sentence_Break property value for the sample character
 #	- [x] the rule that determines whether there is a break or not
 #
 # These samples may be extended or changed in the future.

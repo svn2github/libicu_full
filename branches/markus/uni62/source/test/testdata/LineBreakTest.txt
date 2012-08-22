@@ -1,5 +1,5 @@
-﻿# LineBreakTest-6.2.0.txt
-# Date: 2012-08-14, 17:54:58 GMT [MD]
+# LineBreakTest-6.2.0.txt
+# Date: 2012-08-22, 12:41:17 GMT [MD]
 #
 # Unicode Character Database
 # Copyright (c) 1991-2012 Unicode, Inc.
@@ -15,7 +15,7 @@
 #	× wherever there is not.
 #  <comment> the format can change, but currently it shows:
 #	- the sample character name
-#	- (x) the Line_Break property* for the sample character
+#	- (x) the Line_Break property value for the sample character
 #	- [x] the rule that determines whether there is a break or not
 # Note: The Line Break tests use tailoring of numbers described in Example 7 of Section 8.2 Examples of Customization.
 # They also differ from the results produced by a pair table implementation in sequences like: ZW SP CL.
@@ -6216,7 +6216,6 @@
 × 306E ÷ 30D1 ÷ 30F3 ÷	#  × [0.3] HIRAGANA LETTER NO (ID) ÷ [999.0] KATAKANA LETTER PA (ID) ÷ [999.0] KATAKANA LETTER N (ID) ÷ [0.3]
 × 3046 ÷ 3000 ÷ 3048 ÷ 3000 ÷ 304A × 300D ÷	#  × [0.3] HIRAGANA LETTER U (ID) ÷ [999.0] IDEOGRAPHIC SPACE (ID) ÷ [999.0] HIRAGANA LETTER E (ID) ÷ [999.0] IDEOGRAPHIC SPACE (ID) ÷ [999.0] HIRAGANA LETTER O (ID) × [13.02] RIGHT CORNER BRACKET (CL) ÷ [0.3]
 × 308B × 0020 ÷ C740 ÷ C601 × 0020 ÷ 306B ÷	#  × [0.3] HIRAGANA LETTER RU (ID) × [7.01] SPACE (SP) ÷ [18.0] HANGUL SYLLABLE EUN (H3) ÷ [999.0] HANGUL SYLLABLE YEONG (H3) × [7.01] SPACE (SP) ÷ [18.0] HIRAGANA LETTER NI (ID) ÷ [0.3]
-× 3057 × 3087 ÷ 3046 ÷	#  × [0.3] HIRAGANA LETTER SI (ID) × [21.03] HIRAGANA LETTER SMALL YO (CJ_NS) ÷ [999.0] HIRAGANA LETTER U (ID) ÷ [0.3]
 × 3057 × 3087 ÷ 3046 × 3002 ÷	#  × [0.3] HIRAGANA LETTER SI (ID) × [21.03] HIRAGANA LETTER SMALL YO (CJ_NS) ÷ [999.0] HIRAGANA LETTER U (ID) × [13.02] IDEOGRAPHIC FULL STOP (CL) ÷ [0.3]
 × 30E0 ÷ 306E ÷ 4E00 ÷	#  × [0.3] KATAKANA LETTER MU (ID) ÷ [999.0] HIRAGANA LETTER NO (ID) ÷ [999.0] CJK UNIFIED IDEOGRAPH-4E00 (ID) ÷ [0.3]
 × 30D5 ÷ 30EA ÷	#  × [0.3] KATAKANA LETTER HU (ID) ÷ [999.0] KATAKANA LETTER RI (ID) ÷ [0.3]
@@ -6334,6 +6333,6 @@
 × 0020 ÷ 200D × 0646 ÷	#  × [0.3] SPACE (SP) ÷ [18.0] ZERO WIDTH JOINER (CM) × [28.0] ARABIC LETTER NOON (AL) ÷ [0.3]
 × 0646 × 200D × 0020 ÷	#  × [0.3] ARABIC LETTER NOON (AL) × [9.0] ZERO WIDTH JOINER (CM) × [7.01] SPACE (SP) ÷ [0.3]
 #
-# Lines: 6311
+# Lines: 6310
 #
 # EOF
