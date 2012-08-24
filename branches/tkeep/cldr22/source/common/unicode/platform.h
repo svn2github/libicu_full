@@ -392,6 +392,35 @@
 #   define U_HAVE_DEBUG_LOCATION_NEW 0
 #endif
 
+/* Compatibility with non clang compilers */
+#ifndef __has_attribute
+#    define __has_attribute(x) 0
+#endif
+
+/**
+ * \def U_MALLOC_ATTR
+ * Attribute to mark functions as malloc-like
+ * @internal
+ */
+#if defined(__GNUC__) && __GNUC__>=3
+#    define U_MALLOC_ATTR __attribute__ ((__malloc__))
+#else
+#    define U_MALLOC_ATTR
+#endif
+
+/**
+ * \def U_ALLOC_SIZE_ATTR
+ * Attribute to specify the size of the allocated buffer for malloc-like functions
+ * @internal
+ */
+#if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))) || __has_attribute(alloc_size)
+#   define U_ALLOC_SIZE_ATTR(X) __attribute__ ((alloc_size(X)))
+#   define U_ALLOC_SIZE_ATTR2(X,Y) __attribute__ ((alloc_size(X,Y)))
+#else
+#   define U_ALLOC_SIZE_ATTR(X)
+#   define U_ALLOC_SIZE_ATTR2(X,Y)
+#endif
+
 /** @} */
 
 /*===========================================================================*/
@@ -606,8 +635,13 @@
      * does not support u"abc" string literals.
      * gcc 4.4 defines the __CHAR16_TYPE__ macro to a usable type but
      * does not support u"abc" string literals.
+     * C++11 requires support for UTF-16 literals
      */
-#   define U_HAVE_CHAR16_T 0
+#   if (defined(__cplusplus) && __cplusplus >= 201103L)
+#       define U_HAVE_CHAR16_T 1
+#   else
+#       define U_HAVE_CHAR16_T 0
+#   endif
 #endif
 
 /**
@@ -619,15 +653,11 @@
  */
 #ifdef U_DECLARE_UTF16
     /* Use the predefined value. */
-#elif (defined(__xlC__) && defined(__IBM_UTF_LITERAL) && U_SIZEOF_WCHAR_T != 2) \
+#elif U_HAVE_CHAR16_T \
+    || (defined(__xlC__) && defined(__IBM_UTF_LITERAL) && U_SIZEOF_WCHAR_T != 2) \
     || (defined(__HP_aCC) && __HP_aCC >= 035000) \
-    || (defined(__HP_cc) && __HP_cc >= 111106) \
-    || U_HAVE_CHAR16_T
+    || (defined(__HP_cc) && __HP_cc >= 111106)
 #   define U_DECLARE_UTF16(string) u ## string
-#elif (defined(__SUNPRO_CC) && __SUNPRO_CC >= 0x550)
-/* || (defined(__SUNPRO_C) && __SUNPRO_C >= 0x580) */
-/* Sun's C compiler has issues with this notation, and it's unreliable. */
-#   define U_DECLARE_UTF16(string) U ## string
 #elif U_SIZEOF_WCHAR_T == 2 \
     && (U_CHARSET_FAMILY == 0 || (U_PF_OS390 <= U_PLATFORM && U_PLATFORM <= U_PF_OS400 && defined(__UCS2__)))
 #   define U_DECLARE_UTF16(string) L ## string
