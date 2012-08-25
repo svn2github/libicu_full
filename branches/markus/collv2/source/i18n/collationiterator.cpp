@@ -202,7 +202,11 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             // avoiding the function call and the nextSkippedCodePoint() overhead.
             const UChar *p = d->contexts + ((int32_t)(ce32 >> 2) & 0x3ffff);
             uint32_t defaultCE32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
-            p += 2;
+            if(numCpFwd == 0) {
+                // Reached the temporary limit.
+                ce32 = defaultCE32;
+                break;
+            }
             UChar32 nextCp = nextCodePoint(errorCode);
             if(nextCp < 0) {
                 // No more text.
@@ -213,7 +217,8 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 backwardNumCodePoints(1, errorCode);
                 ce32 = defaultCE32;
             } else {
-                ce32 = nextCE32FromContraction(d, c, p, defaultCE32,
+                if(numCpFwd > 0) { --numCpFwd; }
+                ce32 = nextCE32FromContraction(d, c, p + 2, defaultCE32,
                                                (ce32 & 1) != 0, nextCp, errorCode);
                 if(ce32 == 0x100) {
                     // CEs from a discontiguous contraction plus the skipped combining marks.
@@ -238,6 +243,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                     if(digit != 0 || !digits.isEmpty()) {
                         digits.append(digit, errorCode);
                     }
+                    if(numCpFwd == 0) { break; }
                     c = nextCodePoint(errorCode);
                     if(c < 0) { break; }
                     ce32 = data->getCE32(c);
@@ -250,6 +256,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                         backwardNumCodePoints(1, errorCode);
                         break;
                     }
+                    if(numCpFwd > 0) { --numCpFwd; }
                 }
                 int32_t length = digits.length();
                 if(length == 0) {
@@ -347,8 +354,10 @@ CollationIterator::getCE32FromPrefix(const CollationData *d, uint32_t ce32,
 UChar32
 CollationIterator::nextSkippedCodePoint(UErrorCode &errorCode) {
     if(skipped != NULL && skipped->hasNext()) { return skipped->next(); }
+    if(numCpFwd == 0) { return U_SENTINEL; }
     UChar32 c = nextCodePoint(errorCode);
     if(skipped != NULL && !skipped->isEmpty() && c >= 0) { skipped->incBeyond(); }
+    if(numCpFwd > 0 && c >= 0) { --numCpFwd; }
     return c;
 }
 
@@ -358,6 +367,7 @@ CollationIterator::backwardNumSkipped(int32_t n, UErrorCode &errorCode) {
         n = skipped->backwardNumCodePoints(n);
     }
     backwardNumCodePoints(n, errorCode);
+    if(numCpFwd >= 0) { numCpFwd += n; }
 }
 
 uint32_t
@@ -610,7 +620,6 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
         } else if(tag == Collation::CONTRACTION_TAG) {
             const UChar *p = d->contexts + ((int32_t)(ce32 >> 2) & 0x3ffff);
             uint32_t defaultCE32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
-            p += 2;
             UChar32 nextCp = nextSkippedCodePoint(errorCode);
             if(nextCp < 0) {
                 // No more text.
@@ -621,7 +630,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
                 backwardNumSkipped(1, errorCode);
                 ce32 = defaultCE32;
             } else {
-                ce32 = nextCE32FromContraction(d, c, p, defaultCE32,
+                ce32 = nextCE32FromContraction(d, c, p + 2, defaultCE32,
                                                (ce32 & 1) != 0, nextCp, errorCode);
                 U_ASSERT(ce32 != 0x100);
             }
@@ -958,7 +967,6 @@ CollationIterator::previousCEUnsafe(CEArray &backwardCEs, UChar32 c, UErrorCode 
     // complex optimizations.
     // TODO: Verify that the v1 code uses a backward buffer and gets into trouble
     // with a prefix match that would need to move before the backward buffer.
-    const void *savedLimit = saveLimitAndSetAfter(c);
     // Find the first safe character before c.
     int32_t numBackward = 1;
     while((c = previousCodePoint(errorCode)) >= 0) {
@@ -967,18 +975,34 @@ CollationIterator::previousCEUnsafe(CEArray &backwardCEs, UChar32 c, UErrorCode 
             break;
         }
     }
+    // Set the forward iteration limit.
+    // Note: This counts code points.
+    // We cannot enforce a limit in the middle of a surrogate pair or similar.
+    numCpFwd = numBackward;
     // Ensure that we don't see CEs from a later-in-text expansion.
     cesIndex = -1;
     // Go forward and collect the CEs.
     int32_t cesLength = 0;
-    int64_t ce;
-    while((ce = nextCE(errorCode)) != Collation::NO_CE) {
+    while(numCpFwd > 0) {
+        // nextCE() normally reads one code point.
+        // Contraction matching and digit specials read more and check numCpFwd.
+        --numCpFwd;
+        int64_t ce = nextCE(errorCode);
+        U_ASSERT(ce != Collation::NO_CE);
         cesLength = backwardCEs.append(cesLength, ce, errorCode);
+        if(cesIndex >= 0) {
+            do {
+                cesLength = backwardCEs.append(cesLength, ces[cesIndex++], errorCode);
+            } while(cesIndex <= cesMaxIndex);
+            cesIndex = -1;
+        }
     }
-    restoreLimit(savedLimit);
+    // Reset the forward iteration limit
+    // and move backward to before the segment for which we fetched CEs.
+    numCpFwd = -1;
     backwardNumCodePoints(numBackward, errorCode);
     // Use the collected CEs and return the last one.
-    U_ASSERT(0 != cesLength);
+    U_ASSERT(cesLength >= 2);
     ces = backwardCEs.getBuffer();
     cesIndex = cesMaxIndex = cesLength - 1;
     return ces[cesIndex];

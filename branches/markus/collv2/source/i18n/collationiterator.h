@@ -74,7 +74,8 @@ public:
             : trie(d->trie),
               data(d),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
-              skipped(NULL) {}
+              skipped(NULL),
+              numCpFwd(-1) {}
 
     virtual ~CollationIterator();
 
@@ -178,15 +179,6 @@ protected:
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode) = 0;
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode) = 0;
-
-    /**
-     * Saves the current iteration limit for later,
-     * and sets it to after c which was read by previousCodePoint() or equivalent.
-     */
-    virtual const void *saveLimitAndSetAfter(UChar32 c) = 0;
-
-    /** Restores the iteration limit from before saveLimitAndSetAfter(). */
-    virtual void restoreLimit(const void *savedLimit) = 0;
 
     // Main lookup trie of the data object.
     const UTrie2 *trie;
@@ -297,6 +289,13 @@ private:
     // 64-bit-CE buffer for forward and safe-backward iteration
     // (computed expansions and CODAN CEs).
     CEArray forwardCEs;
+
+    // Number of code points to read forward, or -1.
+    // Used as a forward iteration limit in previousCEUnsafe().
+    // TODO: Test this with contiguous & discontiguous contractions and digit specials!
+    //       Try to start iterating backwards from all code point boundaries
+    //       inside varied text.
+    int32_t numCpFwd;
 };
 
 U_NAMESPACE_END

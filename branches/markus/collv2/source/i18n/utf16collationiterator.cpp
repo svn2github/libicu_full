@@ -123,18 +123,6 @@ UTF16CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorC
     }
 }
 
-const void *
-UTF16CollationIterator::saveLimitAndSetAfter(UChar32 c) {
-    const UChar *savedLimit = limit;
-    limit = pos + U16_LENGTH(c);
-    return savedLimit;
-}
-
-void
-UTF16CollationIterator::restoreLimit(const void *savedLimit) {
-    limit = static_cast<const UChar *>(savedLimit);
-}
-
 // FCDUTF16CollationIterator ----------------------------------------------- ***
 
 FCDUTF16CollationIterator::FCDUTF16CollationIterator(
@@ -143,7 +131,6 @@ FCDUTF16CollationIterator::FCDUTF16CollationIterator(
         UErrorCode & /*errorCode*/)
         : UTF16CollationIterator(data, s, lim),
           rawStart(s), segmentStart(s), segmentLimit(NULL), rawLimit(lim),
-          lengthBeforeLimit(0),
           nfcImpl(data->nfcImpl),
           checkDir(1) {
 }
@@ -155,7 +142,6 @@ FCDUTF16CollationIterator::resetToStart() {
         limit = rawLimit;
         checkDir = 1;
     }
-    lengthBeforeLimit = 0;
     UTF16CollationIterator::resetToStart();
 }
 
@@ -183,9 +169,8 @@ FCDUTF16CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
         } else if(checkDir == 0 && pos != limit) {
             c = *pos++;
             break;
-        } else if(!switchToForward()) {
-            c = U_SENTINEL;
-            return Collation::MIN_SPECIAL_CE32;
+        } else {
+            switchToForward();
         }
     }
     return UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, c);
@@ -227,8 +212,8 @@ FCDUTF16CollationIterator::nextCodePoint(UErrorCode &errorCode) {
         } else if(checkDir == 0 && pos != limit) {
             c = *pos++;
             break;
-        } else if(!switchToForward()) {
-            return U_SENTINEL;
+        } else {
+            switchToForward();
         }
     }
     UChar trail;
@@ -294,8 +279,7 @@ FCDUTF16CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode &errorC
     }
 }
 
-// TODO: We might be able to make this void if we don't have to return FALSE when we reach lengthBeforeLimit.
-UBool
+void
 FCDUTF16CollationIterator::switchToForward() {
     U_ASSERT(checkDir < 0 || (checkDir == 0 && pos == limit));
     if(checkDir < 0) {
@@ -306,19 +290,9 @@ FCDUTF16CollationIterator::switchToForward() {
             checkDir = 1;  // Check forward.
         } else {  // pos < segmentLimit
             checkDir = 0;  // Stay in FCD segment.
-            return TRUE;
         }
     } else {
         // Reached the end of the FCD segment.
-        if(lengthBeforeLimit != 0) {
-            int32_t length = (int32_t)(limit - start);
-            if(lengthBeforeLimit <= length) {
-                // We have reached the end of the saveLimitAndSetAfter() range.
-                return FALSE;
-            }
-            // TODO: do this later so we need not move segmentStart?
-            lengthBeforeLimit -= length;
-        }
         if(start == segmentStart) {
             // The input text segment is FCD, extend it forward.
         } else {
@@ -329,7 +303,6 @@ FCDUTF16CollationIterator::switchToForward() {
         limit = rawLimit;
         checkDir = 1;
     }
-    return TRUE;
 }
 
 UBool
@@ -369,12 +342,6 @@ FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
         }
     }
     U_ASSERT(pos != limit);
-    if(lengthBeforeLimit != 0) {
-        // TODO: deal with start not having moved
-        if(lengthBeforeLimit < (int32_t)(limit - start)) {
-            limit = start + lengthBeforeLimit;
-        }
-    }
     checkDir = 0;
     return TRUE;
 }
@@ -400,7 +367,6 @@ FCDUTF16CollationIterator::switchToBackward() {
             // Switch to checking backward from it.
             pos = limit = segmentLimit = segmentStart;
         }
-        // TODO: lengthBeforeLimit??
         start = rawStart;
         checkDir = -1;
     }
@@ -440,33 +406,8 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
         }
     }
     U_ASSERT(pos != start);
-    if(lengthBeforeLimit != 0) {
-        // TODO: deal with limit not having moved
-        lengthBeforeLimit += (int32_t)(limit - start);
-    }
     checkDir = 0;
     return TRUE;
-}
-
-const void *
-FCDUTF16CollationIterator::saveLimitAndSetAfter(UChar32 c) {
-    // TODO
-    U_ASSERT(checkDir <= 0);
-    limit = pos + U16_LENGTH(c);
-    lengthBeforeLimit = (int32_t)(limit - start);
-    return NULL;
-}
-
-void
-FCDUTF16CollationIterator::restoreLimit(const void * /* savedLimit */) {
-    // TODO
-    if(checkDir > 0) {
-        limit = rawLimit;
-    } else if(start == segmentStart) {
-        limit = segmentLimit;
-    } else {
-        limit = normalized.getBuffer() + normalized.length();
-    }
 }
 
 UBool

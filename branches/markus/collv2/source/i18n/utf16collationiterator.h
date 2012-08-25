@@ -62,10 +62,6 @@ protected:
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
-    virtual const void *saveLimitAndSetAfter(UChar32 c);
-
-    virtual void restoreLimit(const void *savedLimit);
-
     // UTF-16 string pointers.
     // limit can be NULL for NUL-terminated strings.
     // This class assumes that whole code points are stored within [start..limit[.
@@ -100,17 +96,13 @@ protected:
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
-    virtual const void *saveLimitAndSetAfter(UChar32 c);
-
-    virtual void restoreLimit(const void *savedLimit);
-
 private:
     /**
      * Switches to forward checking if possible.
      * To be called when checkDir < 0 || (checkDir == 0 && pos == limit).
-     * @return TRUE if there is more text, checkDir > 0 || (checkDir == 0 && pos != limit)
+     * Returns with checkDir > 0 || (checkDir == 0 && pos != limit).
      */
-    UBool switchToForward();
+    void switchToForward();
 
     /**
      * Extend the FCD text segment forward or normalize around pos.
@@ -178,11 +170,6 @@ private:
     const UChar *segmentLimit;
     // rawLimit==NULL for a NUL-terminated string.
     const UChar *rawLimit;
-    // Normally zero.
-    // Between calls to saveLimitAndSetAfter() and restoreLimit(),
-    // it tracks the positive number of normalized UChars
-    // between the start pointer and the temporary iteration limit.
-    int32_t lengthBeforeLimit;
 
     const Normalizer2Impl &nfcImpl;
     UnicodeString normalized;
