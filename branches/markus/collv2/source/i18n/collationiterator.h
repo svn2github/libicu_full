@@ -63,15 +63,6 @@ private:
 /**
  * Collation element iterator and abstract character iterator.
  *
- * This iterator only moves forward through CE space.
- * For random access, use the TwoWayCollationIterator.
- *
- * Forward iteration and random access are separate for
- * - minimal state & setup for the forward-only iterator
- * - modularization
- * - smaller units of code, easier to understand
- * - easier porting of partial functionality to other languages
- *
  * When a method returns a code point value, it must be in 0..10FFFF,
  * except it can be negative as a sentinel value.
  */
@@ -137,6 +128,16 @@ public:
         }
         return nextCEFromSpecialCE32(d, c, ce32, errorCode);
     }
+    // TODO: Jump by delta code points if direction changed? (See ICU ticket #9104.)
+    // If so, then copy nextCE() to a not-inline slowNextCE()
+    // which keeps track of the text movements together with previousCE()
+    // and is used by the CollationElementIterator.
+    // Keep the normal, inline nextCE() maximally fast and efficient.
+
+    /**
+     * Returns the previous collation element.
+     */
+    int64_t previousCE(CEArray &backwardCEs, UErrorCode &errorCode);
 
     /**
      * Returns the next code point (with post-increment).
@@ -203,8 +204,6 @@ protected:
     // more text.
 
 private:
-    friend class TwoWayCollationIterator;
-
     int64_t nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                   UErrorCode &errorCode);
 
@@ -231,6 +230,14 @@ private:
             UCharsTrie &suffixes, uint32_t ce32,
             int32_t lookAhead, UChar32 c,
             UErrorCode &errorCode);
+
+    int64_t previousCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                                      UErrorCode &errorCode);
+
+    /**
+     * Returns the previous CE when data->isUnsafeBackward(c).
+     */
+    int64_t previousCEUnsafe(CEArray &backwardCEs, UChar32 c, UErrorCode &errorCode);
 
     /**
      * Appends CEs for a combining mark that was skipped in discontiguous contraction.
@@ -290,45 +297,6 @@ private:
     // 64-bit-CE buffer for forward and safe-backward iteration
     // (computed expansions and CODAN CEs).
     CEArray forwardCEs;
-};
-
-/**
- * Collation element and character iterator.
- * This iterator delegates to another CollationIterator
- * for forward iteration and character iteration,
- * and adds API for backward iteration.
- */
-class U_I18N_API TwoWayCollationIterator : public UObject {
-public:
-    TwoWayCollationIterator(CollationIterator &iter) : fwd(iter) {}
-
-    int64_t nextCE(UErrorCode &errorCode) {
-        return fwd.nextCE(errorCode);
-    }
-    // TODO: Jump by delta code points if direction changed? (See ICU ticket #9104.)
-    // If so, then copy nextCE() to a not-inline slowNextCE()
-    // which keeps track of the text movements together with previousCE()
-    // and is used by the CollationElementIterator.
-    // Keep the normal, inline nextCE() maximally fast and efficient.
-
-    /**
-     * Returns the previous collation element.
-     */
-    int64_t previousCE(UErrorCode &errorCode);
-
-private:
-    int64_t previousCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                                      UErrorCode &errorCode);
-
-    /**
-     * Returns the previous CE when data->isUnsafeBackward(c).
-     */
-    int64_t previousCEUnsafe(UChar32 c, UErrorCode &errorCode);
-
-    CollationIterator &fwd;
-
-    // 64-bit-CE buffer for unsafe-backward iteration.
-    CEArray backwardCEs;
 };
 
 U_NAMESPACE_END

@@ -788,27 +788,24 @@ CollationIterator::setCE32s(const CollationData *d, int32_t expIndex, int32_t le
     }
 }
 
-UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(CollationIterator)
-
-// TODO: TwoWayCollationIterator:
-// So far, this is just the initial code collection moved out of the base CollationIterator.
-// Move this implementation into a separate .cpp file?
+// TODO: Backward iteration:
+// So far, this is just the initial code collection.
 
 int64_t
-TwoWayCollationIterator::previousCE(UErrorCode &errorCode) {
-    if(fwd.cesIndex > 0) {
+CollationIterator::previousCE(CEArray &backwardCEs, UErrorCode &errorCode) {
+    if(cesIndex > 0) {
         // Return the previous buffered CE.
-        int64_t ce = fwd.ces[--fwd.cesIndex];
-        if(fwd.cesIndex == 0) { fwd.cesIndex = -1; }
+        int64_t ce = ces[--cesIndex];
+        if(cesIndex == 0) { cesIndex = -1; }
         // TODO: Jump by delta code points if the direction changed?
         return ce;
     }
-    UChar32 c = fwd.previousCodePoint(errorCode);
+    UChar32 c = previousCodePoint(errorCode);
     if(c < 0) { return Collation::NO_CE; }
-    if(fwd.data->isUnsafeBackward(c)) {
-        return previousCEUnsafe(c, errorCode);
+    if(data->isUnsafeBackward(c)) {
+        return previousCEUnsafe(backwardCEs, c, errorCode);
     }
-    uint32_t ce32 = fwd.data->getCE32(c);
+    uint32_t ce32 = data->getCE32(c);
     // Simple, safe-backwards iteration:
     // Get a CE going backwards, handle prefixes but no contractions.
     int64_t ce;
@@ -818,44 +815,44 @@ TwoWayCollationIterator::previousCE(UErrorCode &errorCode) {
     }
     const CollationData *d;
     if(ce32 == Collation::MIN_SPECIAL_CE32) {
-        d = fwd.data->base;
+        d = data->base;
         ce32 = d->getCE32(c);
         if(!Collation::isSpecialCE32(ce32)) {
             // Normal CE from the base data.
             return Collation::ceFromCE32(ce32);
         }
     } else {
-        d = fwd.data;
+        d = data;
     }
     return previousCEFromSpecialCE32(d, c, ce32, errorCode);
 }
 
 int64_t
-TwoWayCollationIterator::previousCEFromSpecialCE32(
+CollationIterator::previousCEFromSpecialCE32(
         const CollationData *d, UChar32 c, uint32_t ce32,
         UErrorCode &errorCode) {
     for(;;) {  // Loop while ce32 is special.
         int32_t tag = Collation::getSpecialCE32Tag(ce32);
         if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
             U_ASSERT(ce32 != Collation::MIN_SPECIAL_CE32);
-            fwd.setLatinExpansion(ce32);
-            return fwd.ces[1];
+            setLatinExpansion(ce32);
+            return ces[1];
         }
         switch(tag) {
         case Collation::EXPANSION32_TAG:
-            fwd.setCE32s(d, (ce32 >> 3) & 0x1ffff, (int32_t)ce32 & 7);
-            fwd.cesIndex = fwd.cesMaxIndex;
-            return fwd.ces[fwd.cesMaxIndex];
+            setCE32s(d, (ce32 >> 3) & 0x1ffff, (int32_t)ce32 & 7);
+            cesIndex = cesMaxIndex;
+            return ces[cesMaxIndex];
         case Collation::EXPANSION_TAG: {
-            fwd.ces = d->ces + ((ce32 >> 3) & 0x1ffff);
+            ces = d->ces + ((ce32 >> 3) & 0x1ffff);
             int32_t length = (int32_t)ce32 & 7;
-            if(length == 0) { length = (int32_t)*fwd.ces++; }
-            fwd.cesMaxIndex = length - 1;
-            fwd.cesIndex = fwd.cesMaxIndex;
-            return fwd.ces[fwd.cesMaxIndex];
+            if(length == 0) { length = (int32_t)*ces++; }
+            cesMaxIndex = length - 1;
+            cesIndex = cesMaxIndex;
+            return ces[cesMaxIndex];
         }
         case Collation::PREFIX_TAG:
-            ce32 = fwd.getCE32FromPrefix(d, ce32, errorCode);
+            ce32 = getCE32FromPrefix(d, ce32, errorCode);
             break;
         case Collation::CONTRACTION_TAG:
             // Must not occur. Backward contractions are handled by previousCEUnsafe().
@@ -868,7 +865,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             return 0;
 #endif
         case Collation::DIGIT_TAG:
-            if(fwd.data->options & CollationData::CODAN) {
+            if(data->options & CollationData::CODAN) {
                 // Collect digits, omit leading zeros.
                 CharString digits;
                 int32_t numLeadingZeros = 0;
@@ -880,16 +877,16 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
                         numLeadingZeros = 0;
                     }
                     digits.append(digit, errorCode);
-                    c = fwd.previousCodePoint(errorCode);
+                    c = previousCodePoint(errorCode);
                     if(c < 0) { break; }
-                    ce32 = fwd.data->getCE32(c);
+                    ce32 = data->getCE32(c);
                     if(ce32 == Collation::MIN_SPECIAL_CE32) {
-                        ce32 = fwd.data->base->getCE32(c);
+                        ce32 = data->base->getCE32(c);
                     }
                     if(!Collation::isSpecialCE32(ce32) ||
                         Collation::DIGIT_TAG != Collation::getSpecialCE32Tag(ce32)
                     ) {
-                        fwd.forwardNumCodePoints(1, errorCode);
+                        forwardNumCodePoints(1, errorCode);
                         break;
                     }
                 }
@@ -906,9 +903,9 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
                     *p++ = *q;
                     *q-- = digit;
                 }
-                fwd.setCodanCEs(digits.data(), length, errorCode);
-                fwd.cesIndex = fwd.cesMaxIndex;
-                return fwd.ces[fwd.cesMaxIndex];
+                setCodanCEs(digits.data(), length, errorCode);
+                cesIndex = cesMaxIndex;
+                return ces[cesMaxIndex];
             } else {
                 // Fetch the non-CODAN CE32 and continue.
                 ce32 = d->ce32s[(ce32 >> 4) & 0xffff];
@@ -918,9 +915,9 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
             return 0;
         case Collation::HANGUL_TAG:
-            fwd.setHangulExpansion(c);
-            fwd.cesIndex = fwd.cesMaxIndex;
-            return fwd.ces[fwd.cesMaxIndex];
+            setHangulExpansion(c);
+            cesIndex = cesMaxIndex;
+            return ces[cesMaxIndex];
         case Collation::LEAD_SURROGATE_TAG:
             // Must not occur. Backward iteration should never see lead surrogate code _unit_ data.
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
@@ -944,7 +941,7 @@ TwoWayCollationIterator::previousCEFromSpecialCE32(
 }
 
 int64_t
-TwoWayCollationIterator::previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
+CollationIterator::previousCEUnsafe(CEArray &backwardCEs, UChar32 c, UErrorCode &errorCode) {
     // We just move through the input counting safe and unsafe code points
     // without collecting the unsafe-backward substring into a buffer and
     // switching to it.
@@ -961,33 +958,35 @@ TwoWayCollationIterator::previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
     // complex optimizations.
     // TODO: Verify that the v1 code uses a backward buffer and gets into trouble
     // with a prefix match that would need to move before the backward buffer.
-    const void *savedLimit = fwd.saveLimitAndSetAfter(c);
+    const void *savedLimit = saveLimitAndSetAfter(c);
     // Find the first safe character before c.
     int32_t numBackward = 1;
-    while((c = fwd.previousCodePoint(errorCode)) >= 0) {
+    while((c = previousCodePoint(errorCode)) >= 0) {
         ++numBackward;
-        if(!fwd.data->isUnsafeBackward(c)) {
+        if(!data->isUnsafeBackward(c)) {
             break;
         }
     }
     // Ensure that we don't see CEs from a later-in-text expansion.
-    fwd.cesIndex = -1;
+    cesIndex = -1;
     // Go forward and collect the CEs.
     int32_t cesLength = 0;
     int64_t ce;
-    while((ce = nextCE(errorCode)) != Collation::NO_CE) {  // TODO: fwd.nextCE()??
+    while((ce = nextCE(errorCode)) != Collation::NO_CE) {
         cesLength = backwardCEs.append(cesLength, ce, errorCode);
     }
-    fwd.restoreLimit(savedLimit);
-    fwd.backwardNumCodePoints(numBackward, errorCode);
+    restoreLimit(savedLimit);
+    backwardNumCodePoints(numBackward, errorCode);
     // Use the collected CEs and return the last one.
     U_ASSERT(0 != cesLength);
-    fwd.ces = backwardCEs.getBuffer();
-    fwd.cesIndex = fwd.cesMaxIndex = cesLength - 1;
-    return fwd.ces[fwd.cesIndex];
+    ces = backwardCEs.getBuffer();
+    cesIndex = cesMaxIndex = cesLength - 1;
+    return ces[cesIndex];
     // TODO: Does this method deliver backward-iteration offsets tight enough
     // for string search? Is this equivalent to how v1 behaves?
 }
+
+UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(CollationIterator)
 
 U_NAMESPACE_END
 
