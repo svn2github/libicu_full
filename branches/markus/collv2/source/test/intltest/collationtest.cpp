@@ -1459,12 +1459,12 @@ write_uca_table(const char *filename,
                         (int)rangeStep, u_errorName(*status));
             } else if(didSetRange) {
                 int32_t rangeLength = rangeLast - rangeFirst + 1;
-                printf("* set code point order range U+%04lx..U+%04lx [%d] "
+                /*printf("* set code point order range U+%04lx..U+%04lx [%d] "
                         "%08lx..%08lx step %d\n",
                         (long)rangeFirst, (long)rangeLast,
                         (int)rangeLength,
                         (long)rangeFirstPrimary, (long)rangeLastPrimary,
-                        (int)rangeStep);
+                        (int)rangeStep);*/
                 ++numRanges;
                 numRangeCodePoints += rangeLength;
             }

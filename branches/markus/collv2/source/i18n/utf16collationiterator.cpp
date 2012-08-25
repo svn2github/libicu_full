@@ -27,8 +27,6 @@
 
 U_NAMESPACE_BEGIN
 
-UTF16CollationIterator::~UTF16CollationIterator() {}
-
 void
 UTF16CollationIterator::resetToStart() {
     pos = start;
@@ -137,24 +135,25 @@ UTF16CollationIterator::restoreLimit(const void *savedLimit) {
     limit = static_cast<const UChar *>(savedLimit);
 }
 
+// FCDUTF16CollationIterator ----------------------------------------------- ***
+
 FCDUTF16CollationIterator::FCDUTF16CollationIterator(
         const CollationData *data,
         const UChar *s, const UChar *lim,
         UErrorCode & /*errorCode*/)
         : UTF16CollationIterator(data, s, lim),
-          rawStart(s), segmentStart(NULL), segmentLimit(NULL), rawLimit(lim),
+          rawStart(s), segmentStart(s), segmentLimit(NULL), rawLimit(lim),
           lengthBeforeLimit(0),
           nfcImpl(data->nfcImpl),
-          inFastPath(TRUE) {
+          checkDir(1) {
 }
 
 void
 FCDUTF16CollationIterator::resetToStart() {
-    if(segmentStart != rawStart) {
-        start = rawStart;
+    if(checkDir < 0 || segmentStart != rawStart) {
+        start = segmentStart = rawStart;
         limit = rawLimit;
-        segmentStart = segmentLimit = NULL;
-        inFastPath = TRUE;
+        checkDir = 1;
     }
     lengthBeforeLimit = 0;
     UTF16CollationIterator::resetToStart();
@@ -162,78 +161,73 @@ FCDUTF16CollationIterator::resetToStart() {
 
 uint32_t
 FCDUTF16CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
-    if(pos == limit) {
-        // When an iteration limit is set we always use the FCD check slow path
-        // to track when we reach that limit.
-        // Otherwise we check if we reached the end of the input text,
-        // and if not then switch back to the FCD check fast path.
-        if(lengthBeforeLimit != 0) {
-            if(!nextSegment(errorCode)) {
+    for(;;) {
+        if(checkDir > 0) {
+            if(pos == limit) {
                 c = U_SENTINEL;
                 return Collation::MIN_SPECIAL_CE32;
             }
-        } else if(inFastPath || segmentLimit == rawLimit) {
-            c = U_SENTINEL;
-            return Collation::MIN_SPECIAL_CE32;
-        } else {
-            start = pos = segmentLimit;
-            limit = rawLimit;
-            inFastPath = TRUE;
-        }
-    }
-    // Fetch one code unit.
-    c = *pos++;
-    // Fast path: Do a quick boundary check.
-    if(inFastPath && CollationFCD::hasTccc(c) &&
-            (CollationFCD::maybeTibetanCompositeVowel(c) ||
-                (pos != limit && CollationFCD::hasLccc(*pos)))) {
-        // Code unit c has a non-zero trailing ccc (tccc!=0) and
-        // the next unit has a non-zero leading ccc (lccc!=0).
-        // Do a full FCD check and normalize if necessary.
-        --pos;
-        if(!nextSegment(errorCode)) {
+            c = *pos++;
+            if(CollationFCD::hasTccc(c)) {
+                if(CollationFCD::maybeTibetanCompositeVowel(c) ||
+                        (pos != limit && CollationFCD::hasLccc(*pos))) {
+                    --pos;
+                    if(!nextSegment(errorCode)) {
+                        c = U_SENTINEL;
+                        return Collation::MIN_SPECIAL_CE32;
+                    }
+                    c = *pos++;
+                }
+            }
+            break;
+        } else if(checkDir == 0 && pos != limit) {
+            c = *pos++;
+            break;
+        } else if(!switchToForward()) {
             c = U_SENTINEL;
             return Collation::MIN_SPECIAL_CE32;
         }
-        c = *pos++;
     }
     return UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, c);
 }
 
-// TODO: Figure out a way to *extend* a region of input-passes-FCD-check
-// rather than moving a tiny segment.
-// Especially when going forward after having gone backward.
+UBool
+FCDUTF16CollationIterator::foundNULTerminator() {
+    if(limit == NULL) {
+        limit = rawLimit = --pos;
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
 
 UChar32
 FCDUTF16CollationIterator::nextCodePoint(UErrorCode &errorCode) {
-    // Fast path, for contractions. Same as in handleNextCE32().
-    if(pos == limit) {
-        if(lengthBeforeLimit != 0) {
-            if(!nextSegment(errorCode)) {
+    UChar32 c;
+    for(;;) {
+        if(checkDir > 0) {
+            if(pos == limit) {
                 return U_SENTINEL;
             }
-        } else if(inFastPath || segmentLimit == rawLimit) {
-            return U_SENTINEL;
-        } else {
-            start = pos = segmentLimit;
-            limit = rawLimit;
-            inFastPath = TRUE;
-        }
-    }
-    UChar32 c = *pos++;
-    if(inFastPath) {
-        if(CollationFCD::hasTccc(c)) {
-            if(CollationFCD::maybeTibetanCompositeVowel(c) ||
-                    (pos != limit && CollationFCD::hasLccc(*pos))) {
-                --pos;
-                if(!nextSegment(errorCode)) {
-                    return U_SENTINEL;
+            c = *pos++;
+            if(CollationFCD::hasTccc(c)) {
+                if(CollationFCD::maybeTibetanCompositeVowel(c) ||
+                        (pos != limit && CollationFCD::hasLccc(*pos))) {
+                    --pos;
+                    if(!nextSegment(errorCode)) {
+                        return U_SENTINEL;
+                    }
+                    c = *pos++;
                 }
-                c = *pos++;
+            } else if(c == 0 && limit == NULL) {
+                limit = rawLimit = --pos;
+                return U_SENTINEL;
             }
-        } else if(c == 0 && limit == NULL) {
-            // We hit the NUL terminator; remember its pointer.
-            limit = rawLimit = --pos;
+            break;
+        } else if(checkDir == 0 && pos != limit) {
+            c = *pos++;
+            break;
+        } else if(!switchToForward()) {
             return U_SENTINEL;
         }
     }
@@ -248,11 +242,31 @@ FCDUTF16CollationIterator::nextCodePoint(UErrorCode &errorCode) {
 
 UChar32
 FCDUTF16CollationIterator::previousCodePoint(UErrorCode &errorCode) {
-    // Slow path should be ok for prefix matching and backward CE iteration.
-    if((inFastPath || pos == start) && !previousSegment(errorCode)) {
-        return U_SENTINEL;
+    UChar32 c;
+    for(;;) {
+        if(checkDir < 0) {
+            if(pos == start) {
+                return U_SENTINEL;
+            }
+            c = *--pos;
+            if(CollationFCD::hasLccc(c)) {
+                if(CollationFCD::maybeTibetanCompositeVowel(c) ||
+                        (pos != start && CollationFCD::hasTccc(*(pos - 1)))) {
+                    ++pos;
+                    if(!previousSegment(errorCode)) {
+                        return U_SENTINEL;
+                    }
+                    c = *--pos;
+                }
+            }
+            break;
+        } else if(checkDir == 0 && pos != start) {
+            c = *--pos;
+            break;
+        } else {
+            switchToBackward();
+        }
     }
-    UChar32 c = *--pos;
     UChar lead;
     if(U16_IS_TRAIL(c) && pos != start && U16_IS_LEAD(lead = *(pos - 1))) {
         --pos;
@@ -264,74 +278,83 @@ FCDUTF16CollationIterator::previousCodePoint(UErrorCode &errorCode) {
 
 void
 FCDUTF16CollationIterator::forwardNumCodePoints(int32_t num, UErrorCode &errorCode) {
-    if(inFastPath && !nextSegment(errorCode)) { return; }
-    while(num > 0 && (pos != limit || nextSegment(errorCode))) {
-        UChar32 c = *pos;
-        if(c == 0 && limit == NULL) {
-            limit = pos;
-            break;
-        }
-        ++pos;
+    // Specify the class to avoid a virtual-function indirection.
+    // In Java, we would declare this class final.
+    while(num > 0 && FCDUTF16CollationIterator::nextCodePoint(errorCode) >= 0) {
         --num;
-        if(U16_IS_LEAD(c) && pos != limit && U16_IS_TRAIL(*pos)) {
-            ++pos;
-        }
     }
 }
 
 void
 FCDUTF16CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode &errorCode) {
-    if(inFastPath && !previousSegment(errorCode)) { return; }
-    while(num > 0 && (pos != start || previousSegment(errorCode))) {
-        UChar32 c = *--pos;
+    // Specify the class to avoid a virtual-function indirection.
+    // In Java, we would declare this class final.
+    while(num > 0 && FCDUTF16CollationIterator::previousCodePoint(errorCode) >= 0) {
         --num;
-        if(U16_IS_TRAIL(c) && pos != start && U16_IS_LEAD(*(pos-1))) {
-            --pos;
-        }
     }
 }
 
+// TODO: We might be able to make this void if we don't have to return FALSE when we reach lengthBeforeLimit.
 UBool
-FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return FALSE; }
-    if(inFastPath) {
-        if(pos == rawLimit) { return FALSE; }
-        segmentStart = pos;
+FCDUTF16CollationIterator::switchToForward() {
+    U_ASSERT(checkDir < 0 || (checkDir == 0 && pos == limit));
+    if(checkDir < 0) {
+        // Turn around from backward checking.
+        start = segmentStart = pos;
+        if(pos == segmentLimit) {
+            limit = rawLimit;
+            checkDir = 1;  // Check forward.
+        } else {  // pos < segmentLimit
+            checkDir = 0;  // Stay in FCD segment.
+            return TRUE;
+        }
     } else {
-        U_ASSERT(pos == limit);
-        if(segmentLimit == rawLimit) { return FALSE; }
+        // Reached the end of the FCD segment.
         if(lengthBeforeLimit != 0) {
             int32_t length = (int32_t)(limit - start);
             if(lengthBeforeLimit <= length) {
                 // We have reached the end of the saveLimitAndSetAfter() range.
                 return FALSE;
             }
+            // TODO: do this later so we need not move segmentStart?
             lengthBeforeLimit -= length;
         }
-        segmentStart = segmentLimit;
+        if(start == segmentStart) {
+            // The input text segment is FCD, extend it forward.
+        } else {
+            // The input text segment needed to be normalized.
+            // Switch to checking forward from it.
+            pos = start = segmentStart = segmentLimit;
+        }
+        limit = rawLimit;
+        checkDir = 1;
     }
-    const UChar *p = segmentStart;
-    if(rawLimit == NULL && *p == 0) {
-        // We hit the NUL terminator; remember its pointer.
-        start = pos = limit = segmentStart = segmentLimit = rawLimit = p;
-        return FALSE;
-    }
+    return TRUE;
+}
+
+UBool
+FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return FALSE; }
+    U_ASSERT(checkDir > 0 && pos != limit);
+    // The input text [segmentStart..pos[ passes the FCD check.
+    const UChar *p = pos;
     uint16_t fcd16 = nfcImpl.nextFCD16(p, rawLimit);
     uint8_t leadCC = (uint8_t)(fcd16 >> 8);
     uint8_t prevCC = 0;
     for(;;) {
         if(leadCC != 0 && (prevCC > leadCC || isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the next FCD boundary and normalize.
+            const UChar *q;
             do {
-                segmentLimit = p;
+                q = p;
             } while(p != rawLimit && (fcd16 = nfcImpl.nextFCD16(p, rawLimit)) > 0xff);
-            if(!normalize(errorCode)) { return FALSE; }
+            if(!normalize(pos, q, errorCode)) { return FALSE; }
+            pos = start;
             break;
         }
         prevCC = (uint8_t)fcd16;
         if(p == rawLimit || prevCC == 0) {
             // FCD boundary after the last character.
-            start = segmentStart;
             limit = segmentLimit = p;
             break;
         }
@@ -341,34 +364,54 @@ FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
         leadCC = (uint8_t)(fcd16 >> 8);
         if(leadCC == 0) {
             // FCD boundary before the [q, p[ character.
-            start = segmentStart;
             limit = segmentLimit = q;
             break;
         }
     }
-    U_ASSERT(start < limit);
+    U_ASSERT(pos != limit);
     if(lengthBeforeLimit != 0) {
+        // TODO: deal with start not having moved
         if(lengthBeforeLimit < (int32_t)(limit - start)) {
             limit = start + lengthBeforeLimit;
         }
     }
-    pos = start;
-    inFastPath = FALSE;
+    checkDir = 0;
     return TRUE;
+}
+
+void
+FCDUTF16CollationIterator::switchToBackward() {
+    U_ASSERT(checkDir > 0 || (checkDir == 0 && pos == start));
+    if(checkDir > 0) {
+        // Turn around from forward checking.
+        limit = segmentLimit = pos;
+        if(pos == segmentStart) {
+            start = rawStart;
+            checkDir = -1;  // Check backward.
+        } else {  // pos > segmentStart
+            checkDir = 0;  // Stay in FCD segment.
+        }
+    } else {
+        // Reached the start of the FCD segment.
+        if(start == segmentStart) {
+            // The input text segment is FCD, extend it backward.
+        } else {
+            // The input text segment needed to be normalized.
+            // Switch to checking backward from it.
+            pos = limit = segmentLimit = segmentStart;
+        }
+        // TODO: lengthBeforeLimit??
+        start = rawStart;
+        checkDir = -1;
+    }
 }
 
 UBool
 FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return U_SENTINEL; }
-    if(inFastPath) {
-        if(pos == rawStart) { return FALSE; }
-        segmentLimit = pos;
-    } else {
-        U_ASSERT(pos == start);
-        if(segmentStart == rawStart) { return FALSE; }
-        segmentLimit = segmentStart;
-    }
-    const UChar *p = segmentLimit;
+    U_ASSERT(checkDir < 0 && pos != start);
+    // The input text [pos..segmentLimit[ passes the FCD check.
+    const UChar *p = pos;
     uint16_t fcd16 = nfcImpl.previousFCD16(rawStart, p);
     uint8_t trailCC = (uint8_t)fcd16;
     uint8_t nextCC = 0;
@@ -376,15 +419,14 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
         if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) || isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
             while(p != rawStart && (fcd16 = nfcImpl.previousFCD16(rawStart, p)) > 0xff) {}
-            segmentStart = p;
-            if(!normalize(errorCode)) { return FALSE; }
+            if(!normalize(p, pos, errorCode)) { return FALSE; }
+            pos = limit;
             break;
         }
         nextCC = (uint8_t)(fcd16 >> 8);
         if(p == rawStart || nextCC == 0) {
             // FCD boundary before the following character.
             start = segmentStart = p;
-            limit = segmentLimit;
             break;
         }
         // Fetch the previous character's fcd16 value.
@@ -394,22 +436,22 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
         if(trailCC == 0) {
             // FCD boundary after the [p, q[ character.
             start = segmentStart = q;
-            limit = segmentLimit;
             break;
         }
     }
-    U_ASSERT(start < limit);
+    U_ASSERT(pos != start);
     if(lengthBeforeLimit != 0) {
+        // TODO: deal with limit not having moved
         lengthBeforeLimit += (int32_t)(limit - start);
     }
-    pos = limit;
-    inFastPath = FALSE;
+    checkDir = 0;
     return TRUE;
 }
 
 const void *
 FCDUTF16CollationIterator::saveLimitAndSetAfter(UChar32 c) {
-    U_ASSERT(!inFastPath);
+    // TODO
+    U_ASSERT(checkDir <= 0);
     limit = pos + U16_LENGTH(c);
     lengthBeforeLimit = (int32_t)(limit - start);
     return NULL;
@@ -417,7 +459,8 @@ FCDUTF16CollationIterator::saveLimitAndSetAfter(UChar32 c) {
 
 void
 FCDUTF16CollationIterator::restoreLimit(const void * /* savedLimit */) {
-    if(inFastPath) {
+    // TODO
+    if(checkDir > 0) {
         limit = rawLimit;
     } else if(start == segmentStart) {
         limit = segmentLimit;
@@ -427,19 +470,21 @@ FCDUTF16CollationIterator::restoreLimit(const void * /* savedLimit */) {
 }
 
 UBool
-FCDUTF16CollationIterator::normalize(UErrorCode &errorCode) {
+FCDUTF16CollationIterator::normalize(const UChar *from, const UChar *to, UErrorCode &errorCode) {
     // NFD without argument checking.
     U_ASSERT(U_SUCCESS(errorCode));
     normalized.remove();
     {
         ReorderingBuffer buffer(nfcImpl, normalized);
-        if(!buffer.init((int32_t)(segmentLimit - segmentStart), errorCode)) { return FALSE; }
-        nfcImpl.decompose(segmentStart, segmentLimit, &buffer, errorCode);
+        if(!buffer.init((int32_t)(to - from), errorCode)) { return FALSE; }
+        nfcImpl.decompose(from, to, &buffer, errorCode);
         // The ReorderingBuffer destructor releases the "normalized" string.
     }
     if(U_FAILURE(errorCode)) { return FALSE; }
     // Switch collation processing into the FCD buffer
     // with the result of normalizing [segmentStart, segmentLimit[.
+    segmentStart = from;
+    segmentLimit = to;
     start = normalized.getBuffer();
     limit = start + normalized.length();
     return TRUE;

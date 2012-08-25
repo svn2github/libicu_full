@@ -37,8 +37,6 @@ public:
             : CollationIterator(d),
               start(s), pos(s), limit(lim) {}
 
-    virtual ~UTF16CollationIterator();
-
     virtual void resetToStart();
 
     void setText(const UChar *s, const UChar *lim) {
@@ -79,8 +77,7 @@ protected:
 };
 
 /**
- * Checks the input text for FCD, passes already-FCD segments into the base iterator,
- * and normalizes other segments on the fly.
+ * Incrementally checks the input text for FCD and normalizes where necessary.
  */
 class U_I18N_API FCDUTF16CollationIterator : public UTF16CollationIterator {
 public:
@@ -97,6 +94,8 @@ public:
 protected:
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
+    virtual UBool foundNULTerminator();
+
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
@@ -107,16 +106,30 @@ protected:
 
 private:
     /**
-     * Makes the next text segment available, if there is one.
-     * To be called when inFastPath || pos == limit.
-     * @return TRUE if there is more text and pos != limit
+     * Switches to forward checking if possible.
+     * To be called when checkDir < 0 || (checkDir == 0 && pos == limit).
+     * @return TRUE if there is more text, checkDir > 0 || (checkDir == 0 && pos != limit)
+     */
+    UBool switchToForward();
+
+    /**
+     * Extend the FCD text segment forward or normalize around pos.
+     * To be called when checkDir > 0 && pos != limit.
+     * @return TRUE if success, checkDir == 0 and pos != limit
      */
     UBool nextSegment(UErrorCode &errorCode);
 
     /**
-     * Makes the previous text segment available, if there is one.
-     * To be called when inFastPath || pos == start.
-     * @return TRUE if there is more text and pos != start
+     * Switches to backward checking.
+     * To be called when checkDir > 0 || (checkDir == 0 && pos == start).
+     * Returns with checkDir < 0 || (checkDir == 0 && pos != start).
+     */
+    void switchToBackward();
+
+    /**
+     * Extend the FCD text segment backward or normalize around pos.
+     * To be called when checkDir < 0 && pos != start.
+     * @return TRUE if success, checkDir == 0 and pos != start
      */
     UBool previousSegment(UErrorCode &errorCode);
 
@@ -135,25 +148,30 @@ private:
         return fcd16 == 0x8182 || fcd16 == 0x8184;
     }
 
-    UBool normalize(UErrorCode &errorCode);
+    UBool normalize(const UChar *from, const UChar *to, UErrorCode &errorCode);
 
     // Text pointers: The input text is [rawStart, rawLimit[
     // where rawLimit can be NULL for NUL-terminated text.
     //
-    // Fast path:
+    // checkDir > 0:
     //
-    // Fetching characters is combined with a very quick boundary check.
-    // No tracking of an FCD segment. limit == rawLimit.
+    // The input text [segmentStart..pos[ passes the FCD check.
+    // Moving forward checks incrementally.
+    // segmentLimit is undefined. limit == rawLimit.
     //
-    // Slow path:
+    // checkDir < 0:
+    // The input text [pos..segmentLimit[ passes the FCD check.
+    // Moving backward checks incrementally.
+    // segmentStart is undefined, start == rawStart.
     //
-    // segmentStart and segmentLimit point into the text and indicate
-    // the start and exclusive end of the text segment currently being processed.
-    // They are at FCD boundaries.
-    // Either the current text segment already passes the FCD check
+    // checkDir == 0:
+    //
+    // The input text [segmentStart..segmentLimit[ is being processed.
+    // These pointers are at FCD boundaries.
+    // Either this text segment already passes the FCD check
     // and segmentStart==start<=pos<=limit==segmentLimit,
     // or the current segment had to be normalized so that
-    // [segmentStart, segmentLimit[ turned into the normalized string,
+    // [segmentStart..segmentLimit[ turned into the normalized string,
     // corresponding to normalized.getBuffer()==start<=pos<=limit==start+normalized.length().
     const UChar *rawStart;
     const UChar *segmentStart;
@@ -168,7 +186,8 @@ private:
 
     const Normalizer2Impl &nfcImpl;
     UnicodeString normalized;
-    UBool inFastPath;
+    // Direction of incremental FCD check. See comments before rawStart.
+    int8_t checkDir;
 };
 
 U_NAMESPACE_END
