@@ -236,13 +236,11 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
 #endif
         case Collation::DIGIT_TAG:
             if(data->options & CollationData::CODAN) {
-                // Collect digits, omit leading zeros.
+                // Collect digits.
                 CharString digits;
                 for(;;) {
                     char digit = (char)(ce32 & 0xf);
-                    if(digit != 0 || !digits.isEmpty()) {
-                        digits.append(digit, errorCode);
-                    }
+                    digits.append(digit, errorCode);
                     if(numCpFwd == 0) { break; }
                     c = nextCodePoint(errorCode);
                     if(c < 0) { break; }
@@ -258,13 +256,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                     }
                     if(numCpFwd > 0) { --numCpFwd; }
                 }
-                int32_t length = digits.length();
-                if(length == 0) {
-                    // A string of only "leading" zeros.
-                    // Just use the NUL terminator in the digits buffer.
-                    length = 1;
-                }
-                setCodanCEs(digits.data(), length, errorCode);
+                setCodanCEs(digits.data(), digits.length(), errorCode);
                 cesIndex = (cesMaxIndex > 0) ? 1 : -1;
                 return ces[0];
             } else {
@@ -664,6 +656,21 @@ CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &e
         return;
     }
     U_ASSERT(length > 0);
+    int32_t pos = 0;
+    do {
+        // Skip leading zeros.
+        while(pos < (length - 1) && digits[pos] == 0) { ++pos; }
+        // Write a sequence of CEs for at most 254 digits at a time.
+        int32_t segmentLength = length - pos;
+        if(segmentLength > 254) { segmentLength = 254; }
+        setCodanSegmentCEs(digits + pos, segmentLength, errorCode);
+        pos += segmentLength;
+    } while(U_SUCCESS(errorCode) && pos < length);
+}
+
+void
+CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode) {
+    U_ASSERT(1 <= length && length <= 254);
     U_ASSERT(length == 1 || digits[0] != 0);
     uint32_t zeroPrimary = data->zeroPrimary;
     // Note: We use primary byte values 2..255: digits are not compressible.
@@ -681,39 +688,28 @@ CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &e
             forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
             return;
         }
+        // Two-byte primaries use second primary byte values 2..33.
+        // Large numbers use second primary byte values 131..255.
+        // That leaves 97 second primary byte values 34..130 for 97*254 medium numbers.
         value -= 32;
-        if(value < 40 * 254) {
-            // Three-byte primary for 32..10191, good for year numbers and more.
-            // 10191 = 32+40*254-1
+        if(value < 97 * 254) {
+            // Three-byte primary for 32..24669=32+97*254-1, good for year numbers and more.
             uint32_t primary = zeroPrimary |
                 ((2 + 32 + value / 254) << 16) | ((2 + value % 254) << 8);
             forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
             return;
         }
     }
-    // value > 10191, length >= 5
+    // value > 24669, length >= 5
 
-    // The second primary byte 74..255 indicates the number of digit pairs (3..184),
+    // The second primary byte value 131..255 indicates the number of digit pairs (3..127),
     // then we generate primary bytes with those pairs.
     // Omit trailing 00 pairs.
     // Decrement the value for the last pair.
-    // TODO: The documentation for UCOL_NUMERIC_COLLATION says
-    // "Note that the longest digit substring that can be treated as a single collation element
-    // is 254 digits (not counting leading zeros). If a digit substring is longer than that,
-    // the digits beyond the limit will be treated as a separate digit substring
-    // associated with a separate collation element."
-    // -> 1. Review whether we should keep the limit (modify this code)
-    //       or extend it (to what this code supports).
-    //    2. Review whether we handle an overflow as documented or by returning an overflow value.
-    if(length > 2 * 184) {
-        // Overflow
-        uint32_t primary = zeroPrimary | 0xffff00;
-        forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
-        return;
-    }
-    // Set the exponent. 3 pairs->74, 4 pairs->75, ..., 184 pairs->255.
+
+    // Set the exponent. 3 pairs->131, 4 pairs->132, ..., 127 pairs->255.
     int32_t numPairs = (length + 1) / 2;
-    uint32_t primary = zeroPrimary | ((74 - 3 + numPairs) << 16);
+    uint32_t primary = zeroPrimary | ((131 - 3 + numPairs) << 16);
     // Find the length without trailing 00 pairs.
     while(digits[length - 1] == 0 && digits[length - 2] == 0) {
         length -= 2;
@@ -877,16 +873,10 @@ CollationIterator::previousCEFromSpecialCE32(
 #endif
         case Collation::DIGIT_TAG:
             if(data->options & CollationData::CODAN) {
-                // Collect digits, omit leading zeros.
+                // Collect digits.
                 CharString digits;
-                int32_t numLeadingZeros = 0;
                 for(;;) {
                     char digit = (char)(ce32 & 0xf);
-                    if(digit == 0) {
-                        ++numLeadingZeros;
-                    } else {
-                        numLeadingZeros = 0;
-                    }
                     digits.append(digit, errorCode);
                     c = previousCodePoint(errorCode);
                     if(c < 0) { break; }
@@ -901,20 +891,15 @@ CollationIterator::previousCEFromSpecialCE32(
                         break;
                     }
                 }
-                int32_t length = digits.length() - numLeadingZeros;
-                if(length == 0) {
-                    // A string of only "leading" zeros.
-                    length = 1;
-                }
                 // Reverse the digit string.
                 char *p = digits.data();
-                char *q = p + length - 1;
+                char *q = p + digits.length() - 1;
                 while(p < q) {
                     char digit = *p;
                     *p++ = *q;
                     *q-- = digit;
                 }
-                setCodanCEs(digits.data(), length, errorCode);
+                setCodanCEs(digits.data(), digits.length(), errorCode);
                 cesIndex = cesMaxIndex;
                 return ces[cesMaxIndex];
             } else {

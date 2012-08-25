@@ -255,6 +255,12 @@ private:
     void setCodanCEs(const char *digits, int32_t length, UErrorCode &errorCode);
 
     /**
+     * Turns 1..254 digits into a sequence of CEs.
+     * Called by setCodanCEs() for each segment of at most 254 digits.
+     */
+    void setCodanSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode);
+
+    /**
      * Sets 2 or 3 buffered CEs from a Hangul syllable,
      * assuming that the constituent Jamos all have non-special CE32s.
      * Otherwise DECOMP_HANGUL would have to be set.
