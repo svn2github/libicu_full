@@ -674,42 +674,60 @@ CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UError
     U_ASSERT(length == 1 || digits[0] != 0);
     uint32_t zeroPrimary = data->zeroPrimary;
     // Note: We use primary byte values 2..255: digits are not compressible.
-    // TODO: Primary weights of compatibility digits zero are prefixes of these primary weights.
-    // Discuss/avoid? Maybe use a special single-byte primary just for CODAN??
-    if(length <= 5) {
+    if(length <= 7) {
         // Very dense encoding for small numbers.
         int32_t value = digits[0];
         for(int32_t i = 1; i < length; ++i) {
             value = value * 10 + digits[i];
         }
-        if(value <= 31) {
-            // Two-byte primary for 0..31, good for day & month numbers.
-            uint32_t primary = zeroPrimary | ((2 + value) << 16);
+        // Primary weight second byte values:
+        //     74 byte values   2.. 75 for small numbers in two-byte primary weights.
+        //     40 byte values  76..115 for medium numbers in three-byte primary weights.
+        //     16 byte values 116..131 for large numbers in four-byte primary weights.
+        //    124 byte values 132..255 for very large numbers with 4..127 digit pairs.
+        int32_t firstByte = 2;
+        int32_t numBytes = 74;
+        if(value < numBytes) {
+            // Two-byte primary for 0..73, good for day & month numbers etc.
+            uint32_t primary = zeroPrimary | ((firstByte + value) << 16);
             forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
             return;
         }
-        // Two-byte primaries use second primary byte values 2..33.
-        // Large numbers use second primary byte values 131..255.
-        // That leaves 97 second primary byte values 34..130 for 97*254 medium numbers.
-        value -= 32;
-        if(value < 97 * 254) {
-            // Three-byte primary for 32..24669=32+97*254-1, good for year numbers and more.
+        value -= numBytes;
+        firstByte += numBytes;
+        numBytes = 40;
+        if(value < numBytes * 254) {
+            // Three-byte primary for 74..10233=74+40*254-1, good for year numbers and more.
             uint32_t primary = zeroPrimary |
-                ((2 + 32 + value / 254) << 16) | ((2 + value % 254) << 8);
+                ((firstByte + value / 254) << 16) | ((2 + value % 254) << 8);
             forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
             return;
         }
+        value -= numBytes * 254;
+        firstByte += numBytes;
+        numBytes = 16;
+        if(value < numBytes * 254 * 254) {
+            // Four-byte primary for 10234..1042489=10234+16*254*254-1.
+            uint32_t primary = zeroPrimary | (2 + value % 254);
+            value /= 254;
+            primary |= (2 + value % 254) << 8;
+            value /= 254;
+            primary |= (firstByte + value % 254) << 16;
+            forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
+            return;
+        }
+        // original value > 1042489
     }
-    // value > 24669, length >= 5
+    U_ASSERT(length >= 7);
 
-    // The second primary byte value 131..255 indicates the number of digit pairs (3..127),
+    // The second primary byte value 132..255 indicates the number of digit pairs (4..127),
     // then we generate primary bytes with those pairs.
     // Omit trailing 00 pairs.
     // Decrement the value for the last pair.
 
-    // Set the exponent. 3 pairs->131, 4 pairs->132, ..., 127 pairs->255.
+    // Set the exponent. 4 pairs->132, 5 pairs->133, ..., 127 pairs->255.
     int32_t numPairs = (length + 1) / 2;
-    uint32_t primary = zeroPrimary | ((131 - 3 + numPairs) << 16);
+    uint32_t primary = zeroPrimary | ((132 - 4 + numPairs) << 16);
     // Find the length without trailing 00 pairs.
     while(digits[length - 1] == 0 && digits[length - 2] == 0) {
         length -= 2;
