@@ -292,8 +292,8 @@ void MultithreadTest::TestThreads()
 //               platform's mutex support is at least superficially there.
 //
 //----------------------------------------------------------------------
-static UMTX    gTestMutexA = NULL;
-static UMTX    gTestMutexB = NULL;
+static UMutex    gTestMutexA = U_MUTEX_INITIALIZER;
+static UMutex    gTestMutexB = U_MUTEX_INITIALIZER;
 
 static int     gThreadsStarted = 0; 
 static int     gThreadsInMiddle = 0;
