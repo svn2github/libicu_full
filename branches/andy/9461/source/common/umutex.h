@@ -22,6 +22,9 @@
 #include "unicode/uclean.h"
 #include "putilimp.h"
 
+// TODO: Test only, remove this.
+#define U_HAVE_GCC_ATOMICS 1
+
 #if defined(_MSC_VER) && _MSC_VER >= 1500
 # include <intrin.h>
 #endif
@@ -133,8 +136,9 @@ struct UMutex {
 };
 #define U_MUTEX_INITIALIZER {}
 
-#elif defined POSIX
+#elif U_PLATFORM_IMPLEMENTS_POSIX
 #include <pthread.h>
+
 struct UMutex {
     pthread_mutex_t  mutex;
 };
@@ -146,6 +150,7 @@ struct UMutex {
     void *fMutex;
 };
 #define U_MUTEX_INITIALIZER {NULL}
+#error Unknown Platform.
 
 #endif
 
@@ -164,7 +169,6 @@ U_CAPI void U_EXPORT2 umtx_lock(UMutex* mutex);
  *              the global ICU mutex.
  */
 U_CAPI void U_EXPORT2 umtx_unlock (UMutex* mutex);
-
 
 /*
  * Atomic Increment and Decrement of an int32_t value.

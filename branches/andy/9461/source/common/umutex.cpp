@@ -106,7 +106,6 @@ static UMtxFn        *pMutexLockFn    = NULL;
 static UMtxFn        *pMutexUnlockFn  = NULL;
 static const void    *gMutexContext   = NULL;
 
-
 #if defined(POSIX)
 /*
  *   umtx_lock
@@ -116,9 +115,8 @@ umtx_lock(UMutex *mutex) {
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    fprintf(stderr, "locking %x ...", &mutex->mutex);
-    pthread_mutex_lock(&(mutex->mutex));
-    fprintf(stderr, " done %x\n", &mutex->mutex);
+    int sysErr = pthread_mutex_lock(&mutex->mutex);
+    U_ASSERT(sysErr == 0);
 }
 
 
@@ -131,16 +129,14 @@ umtx_unlock(UMutex* mutex)
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    fprintf(stderr, "unlocking %x ...", &mutex->mutex);
-    pthread_mutex_unlock(&(mutex->mutex));
-    fprintf(stderr, " done %x\n", &mutex->mutex);
+    int sysErr = pthread_mutex_unlock(&mutex->mutex);
+    U_ASSERT(sysErr == 0);
 }
 
 #elif U_PLATFORM_HAS_WIN32_API
 // TODO
 
 #endif
-
 
 
 U_CAPI void U_EXPORT2 
