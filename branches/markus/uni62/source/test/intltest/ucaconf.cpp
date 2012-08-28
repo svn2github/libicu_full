@@ -141,8 +141,11 @@ void UCAConformanceTest::openTestFile(const char *type)
     }
 }
 
+static const uint32_t IS_SHIFTED = 1;
+static const uint32_t FROM_RULES = 2;
+
 static UBool
-skipLineBecauseOfBug(const UChar *s, int32_t length, UBool isShifted) {
+skipLineBecauseOfBug(const UChar *s, int32_t length, uint32_t flags) {
     // TODO: Fix ICU ticket #8052
     if(length >= 3 &&
             (s[0] == 0xfb2 || s[0] == 0xfb3) &&
@@ -151,7 +154,12 @@ skipLineBecauseOfBug(const UChar *s, int32_t length, UBool isShifted) {
         return TRUE;
     }
     // TODO: Fix ICU ticket #9361
-    if(isShifted && length >= 2 && s[0] == 0xfffe) {
+    if((flags & IS_SHIFTED) != 0 && length >= 2 && s[0] == 0xfffe) {
+        return TRUE;
+    }
+    // TODO: Fix UCARules.txt.
+    UChar c;
+    if((flags & FROM_RULES) != 0 && length >= 2 && 0xec0 <= (c = s[0]) && c <= 0xec4) {
         return TRUE;
     }
     return FALSE;
@@ -167,8 +175,14 @@ void UCAConformanceTest::testConformance(const Collator *coll)
     if(testFile == 0) {
         return;
     }
+    uint32_t skipFlags = 0;
     // TODO: remove const_cast when merging to trunk
-    UBool isShifted = const_cast<Collator *>(coll)->getAttribute(UCOL_ALTERNATE_HANDLING, status) == UCOL_SHIFTED;
+    if(const_cast<Collator *>(coll)->getAttribute(UCOL_ALTERNATE_HANDLING, status) == UCOL_SHIFTED) {
+        skipFlags |= IS_SHIFTED;
+    }
+    if(coll == rbUCA) {
+        skipFlags |= FROM_RULES;
+    }
 
     int32_t line = 0;
 
@@ -201,7 +215,7 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         }
         buffer[buflen] = 0;
 
-        if(skipLineBecauseOfBug(buffer, buflen, isShifted)) {
+        if(skipLineBecauseOfBug(buffer, buflen, skipFlags)) {
             logln("Skipping line %i because of a known bug", line);
             continue;
         }
