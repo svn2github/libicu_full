@@ -26,9 +26,11 @@ http://unicode.org/Public/idna/6.2.0/
 
 *** ICU Trac
 
-- ticket ??? final update to Unicode 6.2
+- ticket 9515: Unicode 6.2: final ICU update
 
-- ticket 9437 "update ICU to Unicode 6.2"
+- ticket 9514: UCA 6.2: fix UCARules.txt
+
+- ticket 9437: update ICU to Unicode 6.2
 - C++ branches/markus/uni62 at r32050 from trunk at r32041
 - Java branches/markus/uni62 at r32068 from trunk at r32066
 
