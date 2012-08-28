@@ -16,6 +16,7 @@
 
 #include "ucaconf.h"
 #include "unicode/ustring.h"
+#include "cmemory.h"
 #include "cstring.h"
 #include "uparse.h"
 
@@ -46,6 +47,11 @@ status(U_ZERO_ERROR)
     }
     uprv_strcpy(testDataPath, srcDir);
     uprv_strcat(testDataPath, "CollationTest_");
+
+    UVersionInfo uniVersion;
+    static const UVersionInfo v62 = { 6, 2, 0, 0 };
+    u_getUnicodeVersion(uniVersion);
+    isAtLeastUCA62 = uprv_memcmp(uniVersion, v62, 4) >= 0;
 }
 
 UCAConformanceTest::~UCAConformanceTest()
@@ -88,7 +94,7 @@ void UCAConformanceTest::setCollNonIgnorable(Collator *coll)
     coll->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
     coll->setAttribute(UCOL_CASE_FIRST, UCOL_OFF, status);
     coll->setAttribute(UCOL_CASE_LEVEL, UCOL_OFF, status);
-    coll->setAttribute(UCOL_STRENGTH, UCOL_TERTIARY, status);
+    coll->setAttribute(UCOL_STRENGTH, isAtLeastUCA62 ? UCOL_IDENTICAL : UCOL_TERTIARY, status);
     coll->setAttribute(UCOL_ALTERNATE_HANDLING, UCOL_NON_IGNORABLE, status);
 }
 
@@ -97,7 +103,7 @@ void UCAConformanceTest::setCollShifted(Collator *coll)
     coll->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
     coll->setAttribute(UCOL_CASE_FIRST, UCOL_OFF, status);
     coll->setAttribute(UCOL_CASE_LEVEL, UCOL_OFF, status);
-    coll->setAttribute(UCOL_STRENGTH, UCOL_QUATERNARY, status);
+    coll->setAttribute(UCOL_STRENGTH, isAtLeastUCA62 ? UCOL_IDENTICAL : UCOL_QUATERNARY, status);
     coll->setAttribute(UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, status);
 }
 
@@ -147,7 +153,12 @@ void UCAConformanceTest::openTestFile(const char *type)
     }
 }
 
-void UCAConformanceTest::testConformance(Collator *coll) 
+static UCollationResult
+normalizeResult(int32_t result) {
+    return result<0 ? UCOL_LESS : result==0 ? UCOL_EQUAL : UCOL_GREATER;
+}
+
+void UCAConformanceTest::testConformance(const Collator *coll) 
 {
     if(testFile == 0) {
         return;
@@ -163,41 +174,39 @@ void UCAConformanceTest::testConformance(Collator *coll)
 
     uint8_t sk1[1024], sk2[1024];
     uint8_t *oldSk = NULL, *newSk = sk1;
-    sk1[0] = sk2[0] = 0;
 
-    int32_t resLen = 0, oldLen = 0;
-    int32_t buflen = 0, oldBlen = 0;
+    int32_t oldLen = 0;
+    int32_t oldBlen = 0;
     uint32_t first = 0;
-    uint32_t offset = 0;
-    UnicodeString oldS, newS;
-
 
     while (fgets(lineB, 1024, testFile) != NULL) {
         // remove trailing whitespace
         u_rtrim(lineB);
-        offset = 0;
 
         line++;
-        if(*lineB == 0 || strlen(lineB) < 3 || lineB[0] == '#') {
+        if(*lineB == 0 || lineB[0] == '#') {
             continue;
         }
-        offset = u_parseString(lineB, buffer, 1024, &first, &status);
+        int32_t buflen = u_parseString(lineB, buffer, 1024, &first, &status);
         if(U_FAILURE(status)) {
             errln("Error parsing line %ld (%s): %s\n",
                   (long)line, u_errorName(status), lineB);
             status = U_ZERO_ERROR;
         }
-        buflen = offset;
-        buffer[offset++] = 0;
+        buffer[buflen] = 0;
 
-        // TODO: reenable -- resLen = coll->getSortKey(buffer, buflen, newSk, 1024);
-
-        int32_t res = 0, cmpres = 0, cmpres2 = 0;
+#if 0  // TODO: Reenable when the new implementation writes sort keys.
+        int32_t resLen = coll->getSortKey(buffer, buflen, newSk, 1024);
+#else
+        int32_t resLen = 0;
+#endif
 
         if(oldSk != NULL) {
-            res = strcmp((char *)oldSk, (char *)newSk);
-            cmpres = coll->compare(oldB, oldBlen, buffer, buflen, status);
-            cmpres2 = coll->compare(buffer, buflen, oldB, oldBlen, status);
+#if 0  // TODO: Reenable when the new implementation writes sort keys.
+            int32_t skres = strcmp((char *)oldSk, (char *)newSk);
+#endif
+            int32_t cmpres = coll->compare(oldB, oldBlen, buffer, buflen, status);
+            int32_t cmpres2 = coll->compare(buffer, buflen, oldB, oldBlen, status);
 
             if(cmpres != -cmpres2) {
                 errln("Compare result not symmetrical on line %i", line);
@@ -206,36 +215,32 @@ void UCAConformanceTest::testConformance(Collator *coll)
             // TODO: Compare with normalization turned off if the input passes the FCD test.
 
 #if 0  // TODO: Reenable when the new implementation writes sort keys.
-            if(((res&0x80000000) != (cmpres&0x80000000)) || (res == 0 && cmpres != 0) || (res != 0 && cmpres == 0)) {
-                errln("Difference between ucol_strcoll and sortkey compare on line %i", line);
+            if(cmpres != normalizeResult(skres)) {
+                errln("Difference between ucol_strcoll (%d) and sortkey compare (%d) on line %i",
+                      cmpres, skres, line);
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
             }
 #endif
 
-            if(cmpres > 0) {
+            int32_t res = cmpres;
+            if(res == 0 && !isAtLeastUCA62) {
+                // Up to UCA 6.1, the collation test files use a custom tie-breaker,
+                // comparing the raw input strings.
+                res = u_strcmpCodePointOrder(oldB, buffer);
+                // Starting with UCA 6.2, the collation test files use the standard UCA tie-breaker,
+                // comparing the NFD versions of the input strings,
+                // which we do via setting strength=identical.
+            }
+            if(res > 0) {
                 errln("Line %i is not greater or equal than previous line", line);
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
+                UnicodeString oldS, newS;
                 prettify(CollationKey(oldSk, oldLen), oldS);
                 prettify(CollationKey(newSk, resLen), newS);
                 errln("  Previous key: "+oldS);
                 errln("  Current key:  "+newS);
-            } else if(cmpres == 0) { /* equal */
-                res = u_strcmpCodePointOrder(oldB, buffer);
-                if (res == 0) {
-                    errln("Probable error in test file on line %i (comparing identical strings)", line);
-                    errln("  Data line %s", lineB);
-                }
-                /*
-                 * UCA 6.0 test files can have lines that compare == if they are
-                 * different strings but canonically equivalent.
-                else if (res > 0) {
-                    errln("Sortkeys are identical, but code point compare gives >0 on line %i", line);
-                    errln("  Previous data line %s", oldLineB);
-                    errln("  Current data line  %s", lineB);
-                }
-                 */
             }
         }
 

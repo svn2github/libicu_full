@@ -39,7 +39,7 @@ private:
   void initRbUCA();
   void setCollNonIgnorable(Collator *coll);
   void setCollShifted(Collator *coll);
-  void testConformance(Collator *coll);
+  void testConformance(const Collator *coll);
   void openTestFile(const char *type);
 
   RuleBasedCollator *UCA;  // rule-based so rules are available
@@ -47,6 +47,7 @@ private:
   FILE *testFile;
   UErrorCode status;
   char testDataPath[1024];
+  UBool isAtLeastUCA62;
 };
 
 #endif /* #if !UCONFIG_NO_COLLATION */
