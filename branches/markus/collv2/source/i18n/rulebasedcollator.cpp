@@ -95,20 +95,20 @@ RuleBasedCollator2::ensureOwnedData(UErrorCode &errorCode) {
 UColAttributeValue
 RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return UCOL_DEFAULT; }
-    int32_t option = 0;
+    int32_t option;
     switch(attr) {
     case UCOL_FRENCH_COLLATION:
-        option = data->options & CollationData::BACKWARD_SECONDARY;
+        option = CollationData::BACKWARD_SECONDARY;
         break;
     case UCOL_ALTERNATE_HANDLING:
         return data->getAlternateHandling();
     case UCOL_CASE_FIRST:
         return data->getCaseFirst();
     case UCOL_CASE_LEVEL:
-        option = data->options & CollationData::CASE_LEVEL;
+        option = CollationData::CASE_LEVEL;
         break;
     case UCOL_NORMALIZATION_MODE:
-        option = data->options & CollationData::CHECK_FCD;
+        option = CollationData::CHECK_FCD;
         break;
     case UCOL_STRENGTH:
         return (UColAttributeValue)data->getStrength();
@@ -116,13 +116,13 @@ RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) cons
         // Deprecated attribute, unsettable.
         return UCOL_OFF;
     case UCOL_NUMERIC_COLLATION:
-        option = data->options & CollationData::CODAN;
+        option = CollationData::CODAN;
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return UCOL_DEFAULT;
     }
-    return (option == 0) ? UCOL_OFF : UCOL_ON;
+    return ((data->options & option) == 0) ? UCOL_OFF : UCOL_ON;
 }
 
 void
