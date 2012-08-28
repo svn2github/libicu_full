@@ -57,7 +57,7 @@ RuleBasedCollator2::hashCode() const {
 
 Locale
 RuleBasedCollator2::getLocale(ULocDataLocaleType type, UErrorCode& status) const {
-    return Locale::getDefault();
+    return Locale::getDefault();  // TODO
 }
 
 // TODO: const UnicodeString& getRules(void) const;
@@ -95,7 +95,34 @@ RuleBasedCollator2::ensureOwnedData(UErrorCode &errorCode) {
 UColAttributeValue
 RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return UCOL_DEFAULT; }
-    return UCOL_DEFAULT;  // TODO
+    int32_t option = 0;
+    switch(attr) {
+    case UCOL_FRENCH_COLLATION:
+        option = data->options & CollationData::BACKWARD_SECONDARY;
+        break;
+    case UCOL_ALTERNATE_HANDLING:
+        return data->getAlternateHandling();
+    case UCOL_CASE_FIRST:
+        return data->getCaseFirst();
+    case UCOL_CASE_LEVEL:
+        option = data->options & CollationData::CASE_LEVEL;
+        break;
+    case UCOL_NORMALIZATION_MODE:
+        option = data->options & CollationData::CHECK_FCD;
+        break;
+    case UCOL_STRENGTH:
+        return (UColAttributeValue)data->getStrength();
+    case UCOL_HIRAGANA_QUATERNARY_MODE:
+        // Deprecated attribute, unsettable.
+        return UCOL_OFF;
+    case UCOL_NUMERIC_COLLATION:
+        option = data->options & CollationData::CODAN;
+        break;
+    default:
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return UCOL_DEFAULT;
+    }
+    return (option == 0) ? UCOL_OFF : UCOL_ON;
 }
 
 void
@@ -116,8 +143,17 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
     }
 
     switch(attr) {
+    case UCOL_FRENCH_COLLATION:
+        ownedData->setFlag(CollationData::BACKWARD_SECONDARY, value, defaultData->options, errorCode);
+        break;
     case UCOL_ALTERNATE_HANDLING:
         ownedData->setAlternateHandling(value, defaultData->options, errorCode);
+        break;
+    case UCOL_CASE_FIRST:
+        ownedData->setCaseFirst(value, defaultData->options, errorCode);
+        break;
+    case UCOL_CASE_LEVEL:
+        ownedData->setFlag(CollationData::CASE_LEVEL, value, defaultData->options, errorCode);
         break;
     case UCOL_NORMALIZATION_MODE:
         ownedData->setFlag(CollationData::CHECK_FCD, value, defaultData->options, errorCode);
@@ -125,8 +161,17 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
     case UCOL_STRENGTH:
         ownedData->setStrength(value, defaultData->options, errorCode);
         break;
+    case UCOL_HIRAGANA_QUATERNARY_MODE:
+        // Deprecated attribute. Check for valid values but do not change anything.
+        if(value != UCOL_OFF && value != UCOL_ON && value != UCOL_DEFAULT) {
+            errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+        break;
+    case UCOL_NUMERIC_COLLATION:
+        ownedData->setFlag(CollationData::CODAN, value, defaultData->options, errorCode);
+        break;
     default:
-        // TODO
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         break;
     }
     if(U_FAILURE(errorCode)) { return; }
@@ -139,22 +184,54 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
 
 uint32_t
 RuleBasedCollator2::getVariableTop(UErrorCode &errorCode) const {
-    return 0;  // TODO
+    return data->variableTop;
 }
 
 uint32_t
 RuleBasedCollator2::setVariableTop(const UChar *varTop, int32_t len, UErrorCode &errorCode) {
-    return 0;  // TODO
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(varTop == NULL && len !=0) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    if(len < 0) { len = u_strlen(varTop); }
+    if(len == 0) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    int64_t ce1, ce2;
+    if((data->options & CollationData::CHECK_FCD) == 0) {
+        UTF16CollationIterator ci(data, varTop, varTop + len);
+        ce1 = ci.nextCE(errorCode);
+        ce2 = ci.nextCE(errorCode);
+    } else {
+        FCDUTF16CollationIterator ci(data, varTop, varTop + len, errorCode);
+        ce1 = ci.nextCE(errorCode);
+        ce2 = ci.nextCE(errorCode);
+    }
+    if(ce1 == Collation::NO_CE || ce2 != Collation::NO_CE) {
+        errorCode = U_CE_NOT_FOUND_ERROR;
+        return 0;
+    }
+    setVariableTop((uint32_t)(ce1 >> 32), errorCode);
+    return data->variableTop;
 }
 
 uint32_t
 RuleBasedCollator2::setVariableTop(const UnicodeString &varTop, UErrorCode &errorCode) {
-    return 0;  // TODO
+    return setVariableTop(varTop.getBuffer(), varTop.length(), errorCode);
 }
 
 void
 RuleBasedCollator2::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
-    // TODO
+    if(U_FAILURE(errorCode) || varTop == data->variableTop) { return; }
+    if(!ensureOwnedData(errorCode)) { return; }
+    ownedData->variableTop = varTop;
+    if(varTop == defaultData->variableTop) {
+        setAttributeDefault(ATTR_VARIABLE_TOP);
+    } else {
+        setAttributeExplicitly(ATTR_VARIABLE_TOP);
+    }
 }
 
 static const CollationBaseData *ucol_getCollationBaseData(UErrorCode &errorCode) { return NULL; }  // TODO

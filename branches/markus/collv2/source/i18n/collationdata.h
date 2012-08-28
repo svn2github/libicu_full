@@ -112,8 +112,18 @@ struct U_I18N_API CollationData : public UMemory {
 
     void setCaseFirst(UColAttributeValue value, int32_t defaultOptions, UErrorCode &errorCode);
 
+    UColAttributeValue getCaseFirst() const {
+        int32_t option = options & CASE_FIRST_AND_UPPER_MASK;
+        return (option == 0) ? UCOL_OFF :
+                (option == CASE_FIRST) ? UCOL_LOWER_FIRST : UCOL_UPPER_FIRST;
+    }
+
     void setAlternateHandling(UColAttributeValue value,
                               int32_t defaultOptions, UErrorCode &errorCode);
+
+    UColAttributeValue getAlternateHandling() const {
+        return ((options & CollationData::ALTERNATE_MASK) == 0) ? UCOL_NON_IGNORABLE : UCOL_SHIFTED;
+    }
 
     static uint32_t getTertiaryMask(int32_t options) {
         // Remove the case bits from the tertiary weight when caseLevel is on or caseFirst is off.
