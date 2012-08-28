@@ -948,7 +948,7 @@ DigitList::isZero() const
 
 
 
-void * U_EXPORT2 DigitList::operator new(size_t size, void *stack, EStackMode mode) U_NO_THROW {
+void * U_EXPORT2 DigitList::operator new(size_t /*size*/, void *stack, EStackMode /*mode*/) U_NO_THROW {
   return stack;
 }
 
