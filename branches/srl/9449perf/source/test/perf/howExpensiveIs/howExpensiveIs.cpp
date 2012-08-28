@@ -37,6 +37,8 @@ int main(int argc, const char* argv[]){
     if(out==NULL) {
       fprintf(stderr,"Err: can't open %s for writing.\n", argv[1]);
       return 1;
+    } else {
+      fprintf(stderr, "# writing results to %s\n", argv[1]);
     }
     fprintf(out, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
     fprintf(out, "<tests icu=\"%s\">\n", U_ICU_VERSION);
@@ -44,6 +46,8 @@ int main(int argc, const char* argv[]){
   } else if(argc>2) {
     fprintf(stderr, "Err: usage: %s [ output-file.xml ]\n", argv[0]);
     return 1;
+  } else {
+    fprintf(stderr, "# (no output)\n");
   }
 
   runTests();
@@ -99,7 +103,8 @@ public:
       fflush(stderr);
 #endif
     }
-    *subTime = uprv_getMeanTime(times,ITERATIONS,marginOfError);
+    uint32_t iterations = ITERATIONS;
+    *subTime = uprv_getMeanTime(times,&iterations,marginOfError);
     return subIterations;
   }
 public:
@@ -485,7 +490,7 @@ public:
     
   int32_t run() {
     int32_t trial;
-    int i;
+    int i=0;
     UnicodeString buf;
     if(U_SUCCESS(setupStatus)) {
       for(i=0;i<U_LOTS_OF_TIMES;i++){
@@ -519,6 +524,13 @@ QuickTest(NumParseTestbeng,{    static UChar pattern[] = { 0x23 };    NumParseTe
 
 
 QuickTest(NullTest,{},{int j=U_LOTS_OF_TIMES;while(--j);return U_LOTS_OF_TIMES;},{})
+
+#if 0
+#include <time.h>
+
+QuickTest(RandomTest,{},{timespec ts; ts.tv_sec=rand()%4; int j=U_LOTS_OF_TIMES;while(--j) { ts.tv_nsec=100000+(rand()%10000)*1000000; nanosleep(&ts,NULL); return j;} return U_LOTS_OF_TIMES;},{})
+#endif
+
 OpenCloseTest(pattern,unum,open,{},(UNUM_PATTERN_DECIMAL,pattern,1,"en_US",0,&setupStatus),{})
 OpenCloseTest(default,unum,open,{},(UNUM_DEFAULT,NULL,-1,"en_US",0,&setupStatus),{})
 #if !UCONFIG_NO_CONVERSION
@@ -533,6 +545,12 @@ void runTests() {
     SieveTest t;
     runTestOn(t);
   }
+#if 0
+  {
+    RandomTest t;
+    runTestOn(t);
+  }
+#endif
   {
     NullTest t;
     runTestOn(t);
@@ -548,8 +566,8 @@ void runTests() {
     DO_NumTest("#","-2 ",-2);
     DO_NumTest("+#","+2",2);
     DO_NumTest("#,###.0","2222.0",2222.0);
-
     DO_NumTest("#.0","1.000000000000000000000000000000000000000000000000000000000000000000000000000000",1.0);
+    DO_NumTest("#","123456",123456);
 
     // attr
 #ifdef HAVE_UNUM_MAYBE
@@ -567,6 +585,9 @@ void runTests() {
   }
 #endif
 
+#ifndef SKIP_NUMFORMAT_TESTS
+#define SKIP_NUMFORMAT_TESTS
+#endif
 
 #ifndef SKIP_NUMFORMAT_TESTS
   // format tests
@@ -587,7 +608,6 @@ void runTests() {
     DO_NumFmtStringPieceTest("#.0000","123.4560",spPI);
     DO_NumFmtStringPieceTest("#.00","123.46",spPI);
     
-#if 1
     DO_NumFmtTest("#","0",0.0);
     DO_NumFmtTest("#","12345",12345);
     DO_NumFmtTest("#","-2",-2);
@@ -600,22 +620,23 @@ void runTests() {
     DO_NumFmtInt64Test("#","-2",-2);
     DO_NumFmtInt64Test("+#","+2",2);
   }
-#endif
 
   {
     Test_unum_opendefault t;
     runTestOn(t);
   }
+  {
+    Test_unum_openpattern t;
+    runTestOn(t);
+  }
+
+#endif /* skip numformat tests */
 #if !UCONFIG_NO_CONVERSION
   {
     Test_ucnv_opengb18030 t;
     runTestOn(t);
   }
 #endif
-  {
-    Test_unum_openpattern t;
-    runTestOn(t);
-  }
   {
     Test_ures_openroot t;
     runTestOn(t);

@@ -187,9 +187,6 @@ U_CALLCONV decimfmtAffixPatternValueComparator(UHashTok val1, UHashTok val2) {
 
 U_CDECL_END
 
-
-//#define FMT_DEBUG
-
 #ifdef FMT_DEBUG
 #include <stdio.h>
 static void _debugout(const char *f, int l, const UnicodeString& s) {
@@ -1869,11 +1866,7 @@ void DecimalFormat::parse(const UnicodeString& text,
     // status is used to record whether a number is infinite.
     UBool status[fgStatusLength];
 
-#if UCONFIG_INTERNAL_DIGITLIST
     DigitList *digits = result.getInternalDigitList(); // get one from the stack buffer
-#else
-    DigitList *digits = new DigitList;
-#endif
     if (digits == NULL) {
         return;    // no way to report error from here.
     }
@@ -1881,9 +1874,6 @@ void DecimalFormat::parse(const UnicodeString& text,
     if (fCurrencySignCount > fgCurrencySignCountZero) {
         if (!parseForCurrency(text, parsePosition, *digits,
                               status, currency)) {
-#if !UCONFIG_INTERNAL_DIGITLIST
-          delete digits;
-#endif
           return;
         }
     } else {
@@ -1894,9 +1884,6 @@ void DecimalFormat::parse(const UnicodeString& text,
                       parsePosition, *digits, status, currency)) {
             debug("!subparse(...) - rewind");
             parsePosition.setIndex(startIdx);
-#if !UCONFIG_INTERNAL_DIGITLIST
-            delete digits;
-#endif
             return;
         }
     }
@@ -1905,9 +1892,6 @@ void DecimalFormat::parse(const UnicodeString& text,
     if (status[fgStatusInfinite]) {
         double inf = uprv_getInfinity();
         result.setDouble(digits->isPositive() ? inf : -inf);
-#if !UCONFIG_INTERNAL_DIGITLIST
-        delete digits;
-#endif
         // TODO:  set the dl to infinity, and let it fall into the code below.
     }
 
@@ -2587,7 +2571,13 @@ printf("PP -> %d, SLOW = [%s]!    pp=%d, os=%d, err=%s\n", position, parsedNum.d
         return FALSE;
     }
 #endif
-    digits.set(parsedNum.toStringPiece(), err);
+    // uint32_t bits = (fastParseOk?kFastpathOk:0) |
+    //   (fastParseHadDecimal?0:kNoDecimal);
+    //printf("FPOK=%d, FPHD=%d, bits=%08X\n", fastParseOk, fastParseHadDecimal, bits);
+    digits.set(parsedNum.toStringPiece(),
+               err,
+               0//bits
+               );
 
     if (U_FAILURE(err)) {
 #ifdef FMT_DEBUG
