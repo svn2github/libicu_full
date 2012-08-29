@@ -22,9 +22,6 @@
 #include "unicode/uclean.h"
 #include "putilimp.h"
 
-// TODO: Test only, remove this.
-#define U_HAVE_GCC_ATOMICS 1
-
 #if defined(_MSC_VER) && _MSC_VER >= 1500
 # include <intrin.h>
 #endif
@@ -140,9 +137,11 @@ struct UMutex {
 #include <pthread.h>
 
 struct UMutex {
-    pthread_mutex_t  mutex;
+    pthread_mutex_t  fMutex;
+    UMTX             fUserMutex;
+    UBool            fInitialized;
 };
-#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
+#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER, NULL, FALSE}
 
 #else
 /* Unknow platform type. */

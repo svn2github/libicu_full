@@ -23,6 +23,7 @@
 #include "unicode/utypes.h"
 #include "uassert.h"
 #include "ucln_cmn.h"
+#include "uvector.h"
 
 /*
  * ICU Mutex wrappers.  Wrap operating system mutexes, giving the rest of ICU a
@@ -84,7 +85,6 @@
 
 #endif
 
-/*  Forward declarations */
 static void *mutexed_compare_and_swap(void **dest, void *newval, void *oldval);
 
 
@@ -93,6 +93,19 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;    // The ICU global mutex. U
                                 // passes NULL for the mutex pointer.
 
 static UMutex   implMutex = U_MUTEX_INITIALIZER;      
+
+// List of all user mutexes that have been initialized.
+// Used to allow us to destroy them when cleaning up ICU.
+// Normal platform mutexes are not kept track of in this way - they survive until the process is shut down.
+// Normal platfrom mutexes don't allocate storage, so not cleaning them up won't trigger memory leak complaints.
+//
+// Note: putting this list in allocated memory would be hard to arrange, because memory allocations
+//       are used as a flag to indicate that ICU has been initialized, and setting other ICU 
+//       override functions will no longer work.
+//
+static const int MUTEX_LIST_LIMIT = 100;
+static UMutex *gMutexList[MUTEX_LIST_LIMIT];
+static int gMutexListSize = 0;
 
 
 /*
@@ -106,6 +119,58 @@ static UMtxFn        *pMutexLockFn    = NULL;
 static UMtxFn        *pMutexUnlockFn  = NULL;
 static const void    *gMutexContext   = NULL;
 
+
+// Clean up (undo) the effects of u_setMutexFunctions().
+//
+static void usrMutexCleanup() {
+    if (pMutexDestroyFn != NULL) {
+        for (int i = 0; i < gMutexListSize; i++) {
+            UMutex *m = gMutexList[i];
+            U_ASSERT(m->fInitialized);
+            (*pMutexDestroyFn)(gMutexContext, &m->fUserMutex);
+            m->fInitialized = FALSE;
+        }
+        (*pMutexDestroyFn)(gMutexContext, &globalMutex.fUserMutex);
+        (*pMutexDestroyFn)(gMutexContext, &implMutex.fUserMutex);
+    }
+    gMutexListSize  = 0;
+    pMutexInitFn    = NULL;
+    pMutexDestroyFn = NULL;
+    pMutexLockFn    = NULL;
+    pMutexUnlockFn  = NULL;
+    gMutexContext   = NULL;
+}
+
+
+/*
+ * User mutex lock.
+ *
+ * User mutexes need to be initialized before they can be used. We use the impl mutex
+ * to synchronize the initialization check. This could be sped up on platforms that
+ * support alternate ways to safely check the initialization flag.
+ *
+ */
+static void usrMutexLock(UMutex *mutex) {
+    UErrorCode status = U_ZERO_ERROR;
+    if (!(mutex == &implMutex || mutex == &globalMutex)) {
+        umtx_lock(&implMutex);
+        if (!mutex->fInitialized) {
+            (*pMutexInitFn)(gMutexContext, &mutex->fUserMutex, &status);
+            U_ASSERT(U_SUCCESS(status));
+            mutex->fInitialized = TRUE;
+            U_ASSERT(gMutexListSize < MUTEX_LIST_LIMIT);
+            if (gMutexListSize < MUTEX_LIST_LIMIT) {
+                gMutexList[gMutexListSize] = mutex;
+                ++gMutexListSize;
+            }
+        }
+        umtx_unlock(&implMutex);
+    }
+    (*pMutexLockFn)(gMutexContext, &mutex->fUserMutex);
+}
+        
+
+
 #if defined(POSIX)
 /*
  *   umtx_lock
@@ -115,8 +180,12 @@ umtx_lock(UMutex *mutex) {
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    int sysErr = pthread_mutex_lock(&mutex->mutex);
-    U_ASSERT(sysErr == 0);
+    if (pMutexLockFn) {
+        usrMutexLock(mutex);
+    } else {
+        int sysErr = pthread_mutex_lock(&mutex->fMutex);
+        U_ASSERT(sysErr == 0);
+    }
 }
 
 
@@ -129,8 +198,12 @@ umtx_unlock(UMutex* mutex)
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    int sysErr = pthread_mutex_unlock(&mutex->mutex);
-    U_ASSERT(sysErr == 0);
+    if (pMutexUnlockFn) {
+        (*pMutexUnlockFn)(gMutexContext, &mutex->fUserMutex);
+    } else {
+        int sysErr = pthread_mutex_unlock(&mutex->fMutex);
+        U_ASSERT(sysErr == 0);
+    }
 }
 
 #elif U_PLATFORM_HAS_WIN32_API
@@ -142,7 +215,6 @@ umtx_unlock(UMutex* mutex)
 U_CAPI void U_EXPORT2 
 u_setMutexFunctions(const void *context, UMtxInitFn *i, UMtxFn *d, UMtxFn *l, UMtxFn *u,
                     UErrorCode *status) {
-#if 0
     if (U_FAILURE(*status)) {
         return;
     }
@@ -158,26 +230,32 @@ u_setMutexFunctions(const void *context, UMtxInitFn *i, UMtxFn *d, UMtxFn *l, UM
         *status = U_INVALID_STATE_ERROR;
         return;
     }
-    
-    /* Kill any existing global mutex.  POSIX platforms have a global mutex
-     * even before any other part of ICU is initialized.
-     */
-    umtx_destroy(&globalUMTX);
 
+    // Clean up any previously set user mutex functions.
+    // It's possible to call u_setMutexFunctions() more than once without without explicitly cleaning up,
+    // and the last call should take. Kind of a corner case, but it worked once, there is a test for
+    // it, so we keep it working. The global and impl mutexes will have been created by the
+    // previous u_setMutexFunctions(), and now need to be destroyed.
+
+    usrMutexCleanup();
+    
     /* Swap in the mutex function pointers.  */
     pMutexInitFn    = i;
     pMutexDestroyFn = d;
     pMutexLockFn    = l;
     pMutexUnlockFn  = u;
     gMutexContext   = context;
+    gMutexListSize  = 0;
 
-#if defined (POSIX) 
-    /* POSIX platforms must have a pre-initialized global mutex 
-     * to allow other mutexes to initialize safely. */
-    umtx_init(&globalUMTX);
-#endif
-#endif // temporary removal
+    /* Initialize the global and impl mutexes. Safe to do at this point because
+     * u_setMutexFunctions must be done in a single-threaded envioronment. Not thread safe.
+     */
+    (*pMutexInitFn)(gMutexContext, &globalMutex.fUserMutex, status);
+    globalMutex.fInitialized = TRUE;
+    (*pMutexInitFn)(gMutexContext, &implMutex.fUserMutex, status);
+    implMutex.fInitialized = TRUE;
 }
+
 
 
 /*   synchronized compare and swap function, for use when OS or compiler built-in
@@ -294,51 +372,23 @@ u_setAtomicIncDecFunctions(const void *context, UMtxAtomicFn *ip, UMtxAtomicFn *
 }
 
 
-
 /*
  *  Mutex Cleanup Function
- *
- *      reset the mutex function callback pointers.
+ *      Reset the mutex function callback pointers.
+ *      Called from the global ICU u_cleanup() function.
  */
 U_CFUNC UBool umtx_cleanup(void) {
-#if 0
-    ICUMutex *thisMutex = NULL;
-    ICUMutex *nextMutex = NULL;
-
     /* Extra, do-nothing function call to suppress compiler warnings on platforms where
      *   mutexed_compare_and_swap is not otherwise used.  */
-    mutexed_compare_and_swap(&globalUMTX, NULL, NULL);
-
-    /* Delete all of the ICU mutexes.  Do the global mutex last because it is used during
-     * the umtx_destroy operation of other mutexes.
-     */
-    for (thisMutex=mutexListHead; thisMutex!=NULL; thisMutex=nextMutex) {
-        UMTX *umtx = thisMutex->owner;
-        nextMutex = thisMutex->next;
-        U_ASSERT(*umtx = (void *)thisMutex);
-        if (umtx != &globalUMTX) {
-            umtx_destroy(umtx);
-        }
-    }
-    umtx_destroy(&globalUMTX);
-        
-    pMutexInitFn    = NULL;
-    pMutexDestroyFn = NULL;
-    pMutexLockFn    = NULL;
-    pMutexUnlockFn  = NULL;
-    gMutexContext   = NULL;
+    void *pv = &globalMutex;
+    mutexed_compare_and_swap(&pv, NULL, NULL);
+    usrMutexCleanup();
+           
     pIncFn          = NULL;
     pDecFn          = NULL;
     gIncDecContext  = NULL;
     gIncDecMutex    = NULL;
 
-#if defined (POSIX) 
-    /* POSIX platforms must come out of u_cleanup() with a functioning global mutex 
-     * to permit the safe resumption of use of ICU in multi-threaded environments. 
-     */
-    umtx_init(&globalUMTX);
-#endif
-#endif
     return TRUE;
 
 }
