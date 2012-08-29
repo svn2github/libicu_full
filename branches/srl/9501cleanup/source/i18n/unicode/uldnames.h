@@ -10,7 +10,7 @@
 
 /**
  * \file
- * \brief C++ API: Provides display names of Locale ids and their components.
+ * \brief C API: Provides display names of Locale ids and their components.
  */
 
 #include "unicode/utypes.h"

@@ -17,6 +17,11 @@
 ******************************************************************************
 */
 
+/**
+ * \file
+ * \brief C API: Definitions of integer types of various widths
+ */
+
 #ifndef _PTYPES_H
 #define _PTYPES_H
 

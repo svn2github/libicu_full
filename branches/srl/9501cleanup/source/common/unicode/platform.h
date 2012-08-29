@@ -36,7 +36,7 @@
  * and/or from other macros that are predefined by the compiler
  * or defined in standard (POSIX or platform or compiler) headers.
  *
- * As a temporary workaround, you can add an explicit #define for some macros
+ * As a temporary workaround, you can add an explicit <code>#define</code> for some macros
  * before it is first tested, or add an equivalent -D macro definition
  * to the compiler's command line.
  *

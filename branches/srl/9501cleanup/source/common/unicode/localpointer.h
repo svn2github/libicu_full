@@ -144,6 +144,10 @@ public:
         ptr=p;
     }
 protected:
+    /**
+     * Actual pointer.
+     * @internal
+     */
     T *ptr;
 private:
     // No comparison operators with other LocalPointerBases.

@@ -23,7 +23,7 @@
 
 /**
  * \file
- * \brief C API: Wrapper for DateTimePatternGenerator (unicode/dtptngen.h).
+ * \brief C API: Wrapper for icu::DateTimePatternGenerator (unicode/dtptngen.h).
  *
  * UDateTimePatternGenerator provides flexible generation of date format patterns, 
  * like "yy-MM-dd". The user can build up the generator by adding successive 
