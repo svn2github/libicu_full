@@ -188,6 +188,15 @@ a       27..
 ä       27.. .9d.
 \u0430  5c0a..
 
+** test: some simple string comparisons
+* compare
+# first string compares against ""
+= \u0000
+< a
+<1 b
+<3 B
+= \u0000B\u0000
+
 ** test: this is a description
 @ rawbase
 # string then list of CEs; empty leading weight=0, other empty=common
@@ -206,13 +215,6 @@ c 11223344.5566.77
 # use DB2 or BCP 47 attribute keywords?
 # allow changing attributes between "* compare" etc. but not inside any section
 # (an attribute ends a section, just like starting a section ends the previous one)
-
-#* compare
-# first string compares against ""
-#= \u0000
-#< a
-#< b
-#< ch
 
 # * CEs  # not sensitive to many attributes, e.g., strength
 #abch 20.. 22.. 30..20
