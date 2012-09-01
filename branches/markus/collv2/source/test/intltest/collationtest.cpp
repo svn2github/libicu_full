@@ -818,8 +818,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
         errln(fileTestName);
         errln("line %d Collator(normalization=%s).compare(current, previous) wrong order: %d != %d (%s)",
               (int)fileLineNumber, norm, order, -expectedOrder, errorCode.errorName());
-        errln(fileLine);
         errln(prevFileLine);
+        errln(fileLine);
         errorCode.reset();
         return FALSE;
     }
@@ -843,8 +843,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
             errln(fileTestName);
             errln("line %d Collator(normalization=%s).compare(current-NUL, previous-NUL) wrong order: %d != %d (%s)",
                   (int)fileLineNumber, norm, order, -expectedOrder, errorCode.errorName());
-            errln(fileLine);
             errln(prevFileLine);
+            errln(fileLine);
             errorCode.reset();
             return FALSE;
         }

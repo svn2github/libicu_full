@@ -459,10 +459,11 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
             return (intResult < 0) ? UCOL_LESS : UCOL_GREATER;
         }
         // Did we reach the end of either string?
+        // Both strings have the same number of merge separators,
+        // or else there would have been a primary-level difference.
+        U_ASSERT((leftEnd == leftLength) == (rightEnd == rightLength));
         if(leftEnd == leftLength) {
-            return (rightEnd == rightLength) ? UCOL_EQUAL : UCOL_LESS;
-        } else if(rightEnd == rightLength) {
-            return UCOL_GREATER;
+            return UCOL_EQUAL;
         }
         // Skip both U+FFFEs and continue.
         leftStart = leftEnd + 1;

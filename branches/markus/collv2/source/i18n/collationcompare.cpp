@@ -171,25 +171,55 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 if(leftSecondary == Collation::NO_CE_WEIGHT) { break; }
             }
         } else {
-            // French secondary level compares backwards.
-            // Ignore the last item, the NO_CE terminator.
-            int32_t leftIndex = leftBuffer.length - 1;
-            int32_t rightIndex = rightBuffer.length - 1;
+            // The backwards secondary level compares secondary weights backwards
+            // within segments separated by the merge separator (U+FFFE, weight 02).
+            int32_t leftStart = 0;
+            int32_t rightStart = 0;
             for(;;) {
-                uint32_t leftSecondary = 0;
-                while(leftSecondary == 0 && leftIndex > 0) {
-                    leftSecondary = ((uint32_t)leftBuffer[--leftIndex]) >> 16;
+                // Find the merge separator or the NO_CE terminator.
+                int32_t leftLimit = leftStart;
+                uint32_t leftLower32;
+                while((leftLower32 = (uint32_t)leftBuffer[leftLimit]) >
+                            Collation::MERGE_SEPARATOR_LOWER32 ||
+                        leftLower32 == 0) {
+                    ++leftLimit;
+                }
+                int32_t rightLimit = rightStart;
+                uint32_t rightLower32;
+                while((rightLower32 = (uint32_t)rightBuffer[rightLimit]) >
+                            Collation::MERGE_SEPARATOR_LOWER32 ||
+                        rightLower32 == 0) {
+                    ++rightLimit;
                 }
 
-                uint32_t rightSecondary = 0;
-                while(rightSecondary == 0 && rightIndex > 0) {
-                    rightSecondary = ((uint32_t)rightBuffer[--rightIndex]) >> 16;
+                // Compare the segments.
+                int32_t leftIndex = leftLimit;
+                int32_t rightIndex = rightLimit;
+                for(;;) {
+                    int32_t leftSecondary = 0;
+                    while(leftSecondary == 0 && leftIndex > leftStart) {
+                        leftSecondary = ((uint32_t)leftBuffer[--leftIndex]) >> 16;
+                    }
+
+                    int32_t rightSecondary = 0;
+                    while(rightSecondary == 0 && rightIndex > rightStart) {
+                        rightSecondary = ((uint32_t)rightBuffer[--rightIndex]) >> 16;
+                    }
+
+                    if(leftSecondary != rightSecondary) {
+                        return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
+                    }
+                    if(leftSecondary == 0) { break; }
                 }
 
-                if(leftSecondary != rightSecondary) {
-                    return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
-                }
-                if(leftSecondary == 0) { break; }
+                // Did we reach the end of either string?
+                // Both strings have the same number of merge separators,
+                // or else there would have been a primary-level difference.
+                U_ASSERT(leftBuffer[leftLimit] == rightBuffer[rightLimit]);
+                if(leftBuffer[leftLimit] == Collation::NO_CE) { break; }
+                // Skip both merge separators and continue.
+                leftStart = leftLimit + 1;
+                rightStart = rightLimit + 1;
             }
         }
     }

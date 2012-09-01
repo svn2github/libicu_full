@@ -232,6 +232,59 @@ a       27..
 <1 b
 <3 B
 
+** test: côté with forwards secondary
+@ root
+* compare
+<1 cote
+<2 coté
+<2 côte
+<2 côté
+
+** test: côté with forwards secondary vs. U+FFFE merge separator
+# Merged sort keys: On each level, any difference in the first segment
+# must trump any further difference.
+* compare
+<1 cote\uFFFEcôté
+<2 coté\uFFFEcôte
+<2 côte\uFFFEcoté
+<2 côté\uFFFEcote
+
+** test: côté with backwards secondary
+% backwards=on
+* compare
+<1 cote
+<2 côte
+<2 coté
+<2 côté
+
+** test: côté with backwards secondary vs. U+FFFE merge separator
+# Merged sort keys: On each level, any difference in the first segment
+# must trump any further difference.
+* compare
+<1 cote\uFFFEcôté
+<2 côte\uFFFEcoté
+<2 coté\uFFFEcôte
+<2 côté\uFFFEcote
+
+** test: U+FFFE on identical level
+@ root
+% strength=identical
+* compare
+# All of these control codes are completely-ignorable, so that
+# their low code points are compared with the merge separator.
+# The merge separator must compare less than any other character.
+<1 \uFFFE\u0001\u0002\u0003
+<i \u0001\uFFFE\u0002\u0003
+<i \u0001\u0002\uFFFE\u0003
+<i \u0001\u0002\u0003\uFFFE
+
+* compare
+# The merge separator must even compare less than U+0000.
+<1 \uFFFE\u0000\u0000
+<i \u0000\uFFFE\u0000
+<i \u0000\u0000\uFFFE
+
+
 ** test: this is a description
 @ rawbase
 # string then list of CEs; empty leading weight=0, other empty=common

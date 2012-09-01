@@ -38,6 +38,7 @@ public:
     static const uint8_t MERGE_SEPARATOR_BYTE = 2;
     static const uint32_t MERGE_SEPARATOR_PRIMARY = 0x02000000;  // U+FFFE
     static const uint32_t MERGE_SEPARATOR_TERTIARY = 0x0200;  // U+FFFE
+    static const uint32_t MERGE_SEPARATOR_LOWER32 = 0x02000200;  // U+FFFE
     static const uint32_t MERGE_SEPARATOR_CE32 = 0x02000202;  // U+FFFE
 
     /**
