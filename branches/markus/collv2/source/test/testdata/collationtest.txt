@@ -197,6 +197,41 @@ a       27..
 <3 B
 = \u0000B\u0000
 
+** test: compare with strength=primary
+% strength=primary
+* compare
+<1 a
+<1 b
+= B
+
+** test: compare with strength=secondary
+% strength=secondary
+* compare
+<1 a
+<1 b
+= B
+
+** test: compare with strength=tertiary
+% strength=tertiary
+* compare
+<1 a
+<1 b
+<3 B
+
+** test: compare with strength=quaternary
+% strength=quaternary
+* compare
+<1 a
+<1 b
+<3 B
+
+** test: compare with strength=identical
+% strength=identical
+* compare
+<1 a
+<1 b
+<3 B
+
 ** test: this is a description
 @ rawbase
 # string then list of CEs; empty leading weight=0, other empty=common
@@ -212,7 +247,6 @@ c 11223344.5566.77
 
 #% attribute=value
 #% strength=3
-# use DB2 or BCP 47 attribute keywords?
 # allow changing attributes between "* compare" etc. but not inside any section
 # (an attribute ends a section, just like starting a section ends the previous one)
 

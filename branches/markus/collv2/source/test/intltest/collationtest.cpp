@@ -83,6 +83,7 @@ private:
                               int64_t ces[], int32_t capacity,
                               IcuTestErrorCode &errorCode);
     int32_t parseRelationAndString(UnicodeString &s, IcuTestErrorCode &errorCode);
+    void parseAndSetAttribute(IcuTestErrorCode &errorCode);
     void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
     void replaceCollator(IcuTestErrorCode &errorCode);
 
@@ -563,6 +564,91 @@ int32_t CollationTest::parseRelationAndString(UnicodeString &s, IcuTestErrorCode
     return relation;
 }
 
+static const struct {
+    const char *name;
+    UColAttribute attr;
+} attributes[] = {
+    { "backwards", UCOL_FRENCH_COLLATION },
+    { "alternate", UCOL_ALTERNATE_HANDLING },
+    { "caseFirst", UCOL_CASE_FIRST },
+    { "caseLevel", UCOL_CASE_LEVEL },
+    // UCOL_NORMALIZATION_MODE is turned on and off automatically.
+    { "strength", UCOL_STRENGTH },
+    // UCOL_HIRAGANA_QUATERNARY_MODE is deprecated.
+    { "numeric", UCOL_NUMERIC_COLLATION }
+};
+
+static const struct {
+    const char *name;
+    UColAttributeValue value;
+} attributeValues[] = {
+    { "default", UCOL_DEFAULT },
+    { "primary", UCOL_PRIMARY },
+    { "secondary", UCOL_SECONDARY },
+    { "tertiary", UCOL_TERTIARY },
+    { "quaternary", UCOL_QUATERNARY },
+    { "identical", UCOL_IDENTICAL },
+    { "off", UCOL_OFF },
+    { "on", UCOL_ON },
+    { "shifted", UCOL_SHIFTED },
+    { "non-ignorable", UCOL_NON_IGNORABLE },
+    { "lower", UCOL_LOWER_FIRST },
+    { "upper", UCOL_UPPER_FIRST }
+};
+
+void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
+    int32_t start = skipSpaces(1);
+    int32_t equalPos = fileLine.indexOf(0x3d);
+    // TODO: handle  % reorder Grek Zzzz digit
+    // TODO: handle  % maxVariable symbol
+    if(equalPos < 0) {
+        errln("missing '=' on line %d", (int)fileLineNumber);
+        errln(fileLine);
+        errorCode.set(U_PARSE_ERROR);
+        return;
+    }
+
+    UnicodeString attrString = fileLine.tempSubStringBetween(start, equalPos);
+    UColAttribute attr;
+    for(int32_t i = 0;; ++i) {
+        if(i == LENGTHOF(attributes)) {
+            errln("invalid attribute name on line %d", (int)fileLineNumber);
+            errln(fileLine);
+            errorCode.set(U_PARSE_ERROR);
+            return;
+        }
+        if(attrString == UnicodeString(attributes[i].name, -1, US_INV)) {
+            attr = attributes[i].attr;
+            break;
+        }
+    }
+
+    UnicodeString valueString = fileLine.tempSubString(equalPos+1);
+    UColAttributeValue value;
+    for(int32_t i = 0;; ++i) {
+        if(i == LENGTHOF(attributeValues)) {
+            errln("invalid attribute value name on line %d", (int)fileLineNumber);
+            errln(fileLine);
+            errorCode.set(U_PARSE_ERROR);
+            return;
+        }
+        if(valueString == UnicodeString(attributeValues[i].name, -1, US_INV)) {
+            value = attributeValues[i].value;
+            break;
+        }
+    }
+
+    coll->setAttribute(attr, value, errorCode);
+    if(errorCode.isFailure()) {
+        errln("illegal attribute=value combination on line %d: %s",
+              (int)fileLineNumber, errorCode.errorName());
+        errln(fileLine);
+        errorCode.set(U_PARSE_ERROR);
+        return;
+    }
+    fileLine.remove();
+}
+
 void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     delete baseBuilder;
     baseBuilder = new CollationBaseDataBuilder(errorCode);
@@ -837,6 +923,8 @@ void CollationTest::TestDataDriven() {
         } else if(fileLine == UNICODE_STRING("@ rawbase", 9)) {
             buildBase(f.getAlias(), errorCode);
             replaceCollator(errorCode);
+        } else if(fileLine[0] == 0x25 && isSpace(fileLine[1])) {  // %
+            parseAndSetAttribute(errorCode);
         } else if(fileLine == UNICODE_STRING("* CEs", 5)) {
             checkCEs(f.getAlias(), errorCode);
         } else if(fileLine == UNICODE_STRING("* compare", 9)) {
