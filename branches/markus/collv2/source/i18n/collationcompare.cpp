@@ -254,7 +254,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 // Tertiary+case: If we turned 0.0.ct into 0.0.c.t (c=case weight)
                 // then 0.0.c.t would be ill-formed because c<upper would be less than
                 // uppercase weights on primary and secondary CEs.
-                // (See UCA section 3.7 condition 2.)
+                // (See UCA well-formedness condition 2.)
                 // We could construct a special case weight higher than uppercase,
                 // but it's simpler to always ignore case weights of secondary ignorables,
                 // turning 0.0.ct into 0.0.0.t.

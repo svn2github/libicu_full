@@ -25,11 +25,14 @@
 #include "collationdata.h"
 #include "collationdatabuilder.h"
 #include "collationiterator.h"
+#include "cstring.h"  // TODO: for uprv_strcmp()
 #include "intltest.h"
 #include "normalizer2impl.h"
 #include "rulebasedcollator.h"
 #include "ucbuf.h"
+#include "ucol_bld.h"  // TODO: for ucol_findReorderingEntry
 #include "utf16collationiterator.h"
+#include "uvectr32.h"
 #include "writesrc.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -38,6 +41,7 @@
 U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
 
 extern const CollationBaseData *getCollationBaseData(UErrorCode &errorCode);
+U_CAPI void U_EXPORT2 ucol_setCollationBaseData(const CollationBaseData *base);
 
 class CollationTest : public IntlTest {
 public:
@@ -84,6 +88,7 @@ private:
                               IcuTestErrorCode &errorCode);
     int32_t parseRelationAndString(UnicodeString &s, IcuTestErrorCode &errorCode);
     void parseAndSetAttribute(IcuTestErrorCode &errorCode);
+    void parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &errorCode);
     void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
     void replaceCollator(IcuTestErrorCode &errorCode);
 
@@ -602,6 +607,10 @@ void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
     // TODO: handle  % reorder Grek Zzzz digit
     // TODO: handle  % maxVariable symbol
     if(equalPos < 0) {
+        if(fileLine.compare(start, 7, UNICODE_STRING("reorder", 7)) == 0) {
+            parseAndSetReorderCodes(start + 7, errorCode);
+            return;
+        }
         errln("missing '=' on line %d", (int)fileLineNumber);
         errln(fileLine);
         errorCode.set(U_PARSE_ERROR);
@@ -643,7 +652,40 @@ void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
         errln("illegal attribute=value combination on line %d: %s",
               (int)fileLineNumber, errorCode.errorName());
         errln(fileLine);
-        errorCode.set(U_PARSE_ERROR);
+        return;
+    }
+    fileLine.remove();
+}
+
+void CollationTest::parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &errorCode) {
+    UVector32 reorderCodes(errorCode);
+    while(start < fileLine.length()) {
+        start = skipSpaces(start);
+        int32_t limit = start;
+        while(limit < fileLine.length() && !isSpace(fileLine[limit])) { ++limit; }
+        CharString name;
+        name.appendInvariantChars(fileLine.tempSubStringBetween(start, limit), errorCode);
+        int32_t code = ucol_findReorderingEntry(name.data());
+        if(code < 0) {
+            code = u_getPropertyValueEnum(UCHAR_SCRIPT, name.data());
+            if(code < 0) {
+                if(uprv_strcmp(name.data(), "default") == 0) {
+                    code = UCOL_REORDER_CODE_DEFAULT;
+                } else {
+                    errln("invalid reorder code '%s' on line %d", name.data(), (int)fileLineNumber);
+                    errln(fileLine);
+                    errorCode.set(U_PARSE_ERROR);
+                    return;
+                }
+            }
+        }
+        reorderCodes.addElement(code, errorCode);
+        start = limit;
+    }
+    coll->setReorderCodes(reorderCodes.getBuffer(), reorderCodes.size(), errorCode);
+    if(errorCode.isFailure()) {
+        errln("setReorderCodes() failed on line %d: %s", (int)fileLineNumber, errorCode.errorName());
+        errln(fileLine);
         return;
     }
     fileLine.remove();
@@ -2014,6 +2056,7 @@ getCollationBaseData(UErrorCode &errorCode) {
         if(gBaseData == NULL) {
             gBaseDataBuilder = builder.orphan();
             gBaseData = baseData.orphan();
+            ucol_setCollationBaseData(gBaseData);
         }
     }
     return gBaseData;

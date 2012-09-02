@@ -234,7 +234,14 @@ RuleBasedCollator2::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
     }
 }
 
-static const CollationBaseData *ucol_getCollationBaseData(UErrorCode &errorCode) { return NULL; }  // TODO
+// TODO: hack for prototyping, remove
+static const CollationBaseData *gBaseData = NULL;
+
+U_CAPI void U_EXPORT2 ucol_setCollationBaseData(const CollationBaseData *base) {
+    gBaseData = base;
+}
+
+static const CollationBaseData *ucol_getCollationBaseData(UErrorCode & /*errorCode*/) { return gBaseData; }  // TODO
 
 int32_t
 RuleBasedCollator2::getReorderCodes(int32_t *dest, int32_t capacity,

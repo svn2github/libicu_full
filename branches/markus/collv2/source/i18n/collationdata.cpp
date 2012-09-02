@@ -182,7 +182,7 @@ CollationBaseData::makeReorderTable(const int32_t *reorder, int32_t length,
     for(highByte = 0xff; highByte >= Collation::UNASSIGNED_IMPLICIT_BYTE; --highByte) {
         table[highByte] = highByte;
     }
-    // highByte = FC
+    // highByte == FC
 
     // Set intermediate bytes to 0 to indicate that they have not been set yet.
     for(int32_t i = lowByte; i <= highByte; ++i) {
@@ -227,7 +227,7 @@ CollationBaseData::makeReorderTable(const int32_t *reorder, int32_t length,
                 }
                 int32_t index = findScript(script);
                 if(index < 0) { continue; }
-                uint32_t head = scripts[i];
+                uint32_t head = scripts[index];
                 int32_t firstByte = (int32_t)(head >> 24);
                 int32_t lastByte = (int32_t)(head >> 16) & 0xff;
                 if(table[firstByte] != 0) {  // Duplicate or equivalent script.
@@ -246,7 +246,7 @@ CollationBaseData::makeReorderTable(const int32_t *reorder, int32_t length,
         }
         int32_t index = findScript(script);
         if(index < 0) { continue; }
-        uint32_t head = scripts[i];
+        uint32_t head = scripts[index];
         int32_t firstByte = (int32_t)(head >> 24);
         int32_t lastByte = (int32_t)(head >> 16) & 0xff;
         if(table[firstByte] != 0) {  // Duplicate or equivalent script.
@@ -257,7 +257,8 @@ CollationBaseData::makeReorderTable(const int32_t *reorder, int32_t length,
     }
 
     // Put all remaining scripts into the middle.
-    for(int32_t i = 0; i <= 0xff; ++i) {
+    // Avoid table[0] which must remain 0.
+    for(int32_t i = 1; i <= 0xff; ++i) {
         if(table[i] == 0) { table[i] = lowByte++; }
     }
     U_ASSERT(lowByte == highByte + 1);

@@ -284,6 +284,25 @@ a       27..
 <i \u0000\uFFFE\u0000
 <i \u0000\u0000\uFFFE
 
+** test: script reordering
+@ root
+% reorder Hani Zzzz digit
+* compare
+<1 ?
+<1 +
+<1 丂
+<1 a
+<1 α
+<1 5
+
+% reorder default
+* compare
+<1 ?
+<1 +
+<1 5
+<1 a
+<1 α
+<1 丂
 
 ** test: this is a description
 @ rawbase
