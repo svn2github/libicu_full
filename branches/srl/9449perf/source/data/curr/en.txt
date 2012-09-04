@@ -84,7 +84,7 @@ en{
             "Austrian Schilling",
         }
         AUD{
-            "AU$",
+            "A$",
             "Australian Dollar",
         }
         AWG{
@@ -1123,17 +1123,9 @@ en{
             "XRE",
             "RINET Funds",
         }
-        XSU{
-            "XSU",
-            "Sucre",
-        }
         XTS{
             "XTS",
             "Testing Currency Code",
-        }
-        XUA{
-            "XUA",
-            "ADB Unit of Account",
         }
         XXX{
             "XXX",
@@ -2246,10 +2238,12 @@ en{
             other{"CFA francs BEAC"}
         }
         XAG{
-            one{"Silver"}
+            one{"troy ounce of silver"}
+            other{"troy ounces of silver"}
         }
         XAU{
-            one{"Gold"}
+            one{"troy ounce of gold"}
+            other{"troy ounces of gold"}
         }
         XBA{
             one{"European composite unit"}
@@ -2292,31 +2286,28 @@ en{
             other{"CFA francs BCEAO"}
         }
         XPD{
-            one{"Palladium"}
+            one{"troy ounce of palladium"}
+            other{"troy ounces of palladium"}
         }
         XPF{
             one{"CFP franc"}
             other{"CFP francs"}
         }
         XPT{
-            one{"Platinum"}
+            one{"troy ounce of platinum"}
+            other{"troy ounces of platinum"}
         }
         XRE{
-            one{"RINET Funds"}
-        }
-        XSU{
-            one{"Sucre"}
-            other{"Sucres"}
+            one{"RINET Funds unit"}
+            other{"RINET Funds units"}
         }
         XTS{
-            one{"Testing Currency Code"}
-        }
-        XUA{
-            one{"ADB unit of account"}
-            other{"ADB units of account"}
+            one{"Testing Currency unit"}
+            other{"Testing Currency units"}
         }
         XXX{
-            one{"unknown currency"}
+            one{"(unknown unit of currency)"}
+            other{"(unknown currency)"}
         }
         YDD{
             one{"Yemeni dinar"}
@@ -2379,5 +2370,5 @@ en{
         one{"{0} {1}"}
         other{"{0} {1}"}
     }
-    Version{"2.0.67.6"}
+    Version{"2.0.76.64"}
 }
