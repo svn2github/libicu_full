@@ -172,9 +172,14 @@ static void usrMutexLock(UMutex *mutex) {
 
 
 #if defined(POSIX)
-/*
- *   umtx_lock
- */
+
+//
+// POSIX implementation of UMutex.
+//
+// Each UMutex has a corresponding pthread_mutex_t.
+// All are statically initialized and ready for use.
+// There is no runtime mutex initialization code needed.
+
 U_CAPI void  U_EXPORT2
 umtx_lock(UMutex *mutex) {
     if (mutex == NULL) {
@@ -189,9 +194,6 @@ umtx_lock(UMutex *mutex) {
 }
 
 
-/*
- * umtx_unlock
- */
 U_CAPI void  U_EXPORT2
 umtx_unlock(UMutex* mutex)
 {
@@ -207,9 +209,99 @@ umtx_unlock(UMutex* mutex)
 }
 
 #elif U_PLATFORM_HAS_WIN32_API
-// TODO
+//
+// Windows implementation of UMutex.
+//
+// Each UMutex has a corresponding Windows CRITICAL_SECTION.
+// CRITICAL_SECTIONS must be initialized before use. This is done
+//   with a InitOnceExcuteOnce operation.
+//
+// InitOnceExecuteOnce was introduced with Windows Vista. For now ICU
+// must support Windows XP, so we roll our own. ICU will switch to the
+// native Windows InitOnceExecuteOnce when possible.
 
-#endif
+typedef UBool (*U_PINIT_ONCE_FN) (
+  U_INIT_ONCE     *initOnce,
+  void            *parameter,
+  void            **context
+);
+
+UBool u_InitOnceExecuteOnce(
+  U_INIT_ONCE     *initOnce,
+  U_PINIT_ONCE_FN initFn,
+  void            *parameter,
+  void            **context) {
+      for (;;) {
+          long previousState = InterlockedCompareExchange( 
+              &initOnce->fState,  //  Destination,
+              1,                  //  Exchange Value
+              0);                 //  Compare value
+          if (previousState == 2) {
+              // Initialization was already completed.
+              if (context != NULL) {
+                  *context = initOnce->fContext;
+              }
+              return TRUE;
+          }
+          if (previousState == 1) {
+              // Initialization is in progress in some other thread.
+              // Loop until it completes.
+              Sleep(1);
+              continue;
+          }
+           
+          // Initialization needed. Execute the callback function to do it.
+          U_ASSERT(previousState == 0);
+          U_ASSERT(initOnce->fState == 1);
+          UBool success = (*initFn)(initOnce, parameter, &initOnce->fContext);
+          U_ASSERT(success); // ICU is not supporting the failure case.
+
+          // Assign the state indicating that initialization has completed.
+          // Using InterlockedCompareExchange to do it ensures that all
+          // threads will have a consistent view of memory.
+          previousState = InterlockedCompareExchange(&initOnce->fState, 2, 1);
+          U_ASSERT(previousState == 1);
+          // Next loop iteration will see the initialization and return.
+      }
+};
+
+static UBool winMutexInit(U_INIT_ONCE *initOnce, void *param, void **context) {
+    UMutex *mutex = static_cast<UMutex *>(param);
+    InitializeCriticalSection(&mutex->fCS);
+    return TRUE;
+}
+
+/*
+ *   umtx_lock
+ */
+U_CAPI void  U_EXPORT2
+umtx_lock(UMutex *mutex) {
+    if (mutex == NULL) {
+        mutex = &globalMutex;
+    }
+    if (pMutexLockFn) {
+        usrMutexLock(mutex);
+    } else {
+        u_InitOnceExecuteOnce(&mutex->fInitOnce, winMutexInit, mutex, NULL);
+        EnterCriticalSection(&mutex->fCS);
+    }
+}
+
+U_CAPI void  U_EXPORT2
+umtx_unlock(UMutex* mutex)
+{
+    if (mutex == NULL) {
+        mutex = &globalMutex;
+    }
+    if (pMutexUnlockFn) {
+        (*pMutexUnlockFn)(gMutexContext, &mutex->fUserMutex);
+    } else {
+        LeaveCriticalSection(&mutex->fCS);
+    }
+}
+
+
+#endif  // Windows Implementation
 
 
 U_CAPI void U_EXPORT2 

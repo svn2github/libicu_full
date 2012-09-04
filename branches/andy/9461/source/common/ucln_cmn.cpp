@@ -3,7 +3,7 @@
 * Copyright (C) 2001-2012, International Business Machines
 *                Corporation and others. All Rights Reserved.
 ******************************************************************************
-*   file name:  ucln_cmn.c
+*   file name:  ucln_cmn.cpp
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4

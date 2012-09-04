@@ -324,7 +324,7 @@
     <ClCompile Include="ucnvscsu.c" />
     <ClCompile Include="ucnvsel.cpp" />
     <ClCompile Include="cmemory.c" />
-    <ClCompile Include="ucln_cmn.c">
+    <ClCompile Include="ucln_cmn.cpp">
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</DisableLanguageExtensions>
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DisableLanguageExtensions>
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</DisableLanguageExtensions>

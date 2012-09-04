@@ -18,12 +18,16 @@
 #ifndef UMUTEX_H
 #define UMUTEX_H
 
+
+
+#include <Windows.h>
+
 #include "unicode/utypes.h"
 #include "unicode/uclean.h"
 #include "putilimp.h"
 
 #if defined(_MSC_VER) && _MSC_VER >= 1500
-# include <intrin.h>
+/* # include <intrin.h>  */
 #endif
 
 #if U_PLATFORM_IS_DARWIN_BASED
@@ -124,14 +128,33 @@
  *          Must be initialized.
  *          Example:
  *            static UMutex = U_MUTEX_INITIALIZER;
+ *          The declaration of struct UMutex is platform dependent.
  */
 
 #if U_PLATFORM_HAS_WIN32_API
-struct UMutex {
-  /* TODO */
-  CRITICAL_SECTION  cs;
-};
-#define U_MUTEX_INITIALIZER {}
+
+
+/*  U_INIT_ONCE mimics the windows API INIT_ONCE.
+ *  When ICU no longer needs to support Windows platforms (XP) that do not have
+ * a native INIT_ONCE, switch ICU over to the native Windows APIs.
+ */
+typedef struct U_INIT_ONCE {
+	long               fState;
+    void              *fContext;
+} U_INIT_ONCE;
+#define U_INIT_ONCE_STATIC_INIT {0, NULL}
+
+typedef struct UMutex {
+    U_INIT_ONCE       fInitOnce;
+    UMTX              fUserMutex;
+    UBool             fInitialized;  /* Applies to fUserMutex only. */
+    CRITICAL_SECTION  fCS;
+} UMutex;
+
+/* Initializer for a static UMUTEX. Deliberately contains no value for the
+ *  CRITICAL_SECTION.
+ */
+#define U_MUTEX_INITIALIZER {U_INIT_ONCE_STATIC_INIT, NULL, FALSE}
 
 #elif U_PLATFORM_IMPLEMENTS_POSIX
 #include <pthread.h>
