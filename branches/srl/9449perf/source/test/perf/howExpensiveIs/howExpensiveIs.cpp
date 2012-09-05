@@ -10,6 +10,15 @@
 #include "udbgutil.h"
 #include "unicode/ustring.h"
 #include "unicode/decimfmt.h"
+
+#if U_PLATFORM_IMPLEMENTS_POSIX
+#include <unistd.h>
+
+static void usage(const char *prog) {
+  fprintf(stderr, "Usage: %s [ -f outfile.xml ] [ -t 'TestName' ]\n", prog);
+}
+#endif
+
 void runTests(void);
 
 #ifndef ITERATIONS
@@ -19,8 +28,13 @@ void runTests(void);
 
 FILE *out = NULL;
 UErrorCode setupStatus = U_ZERO_ERROR;
+const char *outName = NULL;
+int listmode = 0;
+const char *testName = NULL;
+const char *progname = NULL;
+int errflg = 0;
 
-int main(int argc, const char* argv[]){
+int main(int argc, char * const * argv){
 #if U_DEBUG
   fprintf(stderr,"%s: warning: U_DEBUG is on.\n", argv[0]);
 #endif
@@ -32,23 +46,66 @@ int main(int argc, const char* argv[]){
   }
 #endif
 
+#if U_PLATFORM_IMPLEMENTS_POSIX
+  int c;
+  extern int optind;
+  extern char *optarg;
+  while((c=getopt(argc,argv,"lf:t:")) != EOF) {
+    switch(c) {
+    case 'f':
+      outName = optarg;
+      break;
+    case 'l':
+      listmode++;
+      break;
+    case 't':
+      testName = optarg;
+      break;
+    case '?':
+      errflg++;
+    }
+    if(errflg) {
+      usage(progname);
+      return 0;
+    }
+  }
+  /* for ( ; optind < argc; optind++) {     ... argv[optind] } */
+#else
   if(argc==2) {
-    out=fopen(argv[1],"w");
+    outName = argv[1];
+  } else if(argc>2) {
+    fprintf(stderr, "Err: usage: %s [ output-file.xml ]\n", argv[0]);
+  }
+#endif
+
+    if(listmode && outName != NULL ) {
+      fprintf(stderr, "Warning: no output when list mode\n");
+      outName=NULL;
+    }
+
+  if(outName != NULL) {
+
+
+    out=fopen(outName,"w");
     if(out==NULL) {
-      fprintf(stderr,"Err: can't open %s for writing.\n", argv[1]);
+      fprintf(stderr,"Err: can't open %s for writing.\n", outName);
       return 1;
     } else {
-      fprintf(stderr, "# writing results to %s\n", argv[1]);
+      fprintf(stderr, "# writing results to %s\n", outName);
     }
     fprintf(out, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
     fprintf(out, "<tests icu=\"%s\">\n", U_ICU_VERSION);
     fprintf(out, "<!-- %s -->\n", U_COPYRIGHT_STRING);
-  } else if(argc>2) {
-    fprintf(stderr, "Err: usage: %s [ output-file.xml ]\n", argv[0]);
-    return 1;
   } else {
     fprintf(stderr, "# (no output)\n");
   }
+  
+  if(listmode && testName!=NULL) {
+    fprintf(stderr, "ERR: no -l mode when specific test with -t\n");
+    usage(progname);
+    return 1;
+  }
+
 
   runTests();
   
@@ -116,7 +173,14 @@ public:
 
 void runTestOn(HowExpensiveTest &t) {
   if(U_FAILURE(setupStatus)) return; // silently
-  fprintf(stderr, "%s:%d: Running: %s\n", t.fFile, t.fLine, t.getName());
+  const char *tn = t.getName();
+  if(testName!=NULL && strcmp(tn,testName)) return; // skipped.
+  if(listmode) {
+    fprintf(stderr, "%s:%d:\t%s\n", t.fFile, t.fLine, t.getName());
+    return;
+  } else {
+    fprintf(stderr, "%s:%d: Running: %s\n", t.fFile, t.fLine, t.getName());
+  }
   double sieveTime = uprv_getSieveTime(NULL);
   double st;
   double me;
@@ -137,7 +201,7 @@ void runTestOn(HowExpensiveTest &t) {
 
   if(out!=NULL) {
     fprintf(out, "   <test name=\"%s\" standardizedTime=\"%f\" realDuration=\"%f\" marginOfError=\"%f\" iterations=\"%d\" />\n",
-            t.getName(),stn,st,me,iter);
+            tn,stn,st,me,iter);
     fflush(out);
   }
 }
@@ -264,6 +328,34 @@ public:
 };
 
 #define DO_AttrNumTest(p,n,x,a,v) { AttrNumTest t(p,n,x,__FILE__,__LINE__,a,v); runTestOn(t); }
+
+
+class NOXNumTest : public NumTest 
+{
+private:
+  UNumberFormatAttribute fAttr;
+  int32_t fAttrValue;
+  char name2[100];
+protected:
+  virtual const char *getClassName() {
+    sprintf(name2,"NOXNumTest:%d=%d", fAttr,fAttrValue);
+    return name2;
+  }
+public:
+  NOXNumTest(const char *pat, const char *num, double expect, const char *FILE, int LINE /*, UNumberFormatAttribute attr, int32_t newValue */) 
+    : NumTest(pat,num,expect,FILE,LINE) /* ,
+      fAttr(attr),
+      fAttrValue(newValue) */
+  {
+  }
+  virtual UNumberFormat* initFmt() {
+    UNumberFormat *fmt = NumTest::initFmt();
+    //unum_setAttribute(fmt, fAttr,fAttrValue);
+    return fmt;
+  }
+};
+
+#define DO_NOXNumTest(p,n,x) { NOXNumTest t(p,n,x,__FILE__,__LINE__); runTestOn(t); }
 
 #define DO_TripleNumTest(p,n,x) DO_AttrNumTest(p,n,x,UNUM_PARSE_ALL_INPUT,UNUM_YES) \
                                 DO_AttrNumTest(p,n,x,UNUM_PARSE_ALL_INPUT,UNUM_NO) \
@@ -586,11 +678,6 @@ void runTests() {
 #endif
 
 #ifndef SKIP_NUMFORMAT_TESTS
-#define SKIP_NUMFORMAT_TESTS
-#endif
-#endif
-
-#ifndef SKIP_NUMFORMAT_TESTS
   // format tests
   { 
     
@@ -622,6 +709,7 @@ void runTests() {
     DO_NumFmtInt64Test("+#","+2",2);
   }
 
+#ifndef SKIP_NUM_OPEN_TEST
   {
     Test_unum_opendefault t;
     runTestOn(t);
@@ -630,6 +718,7 @@ void runTests() {
     Test_unum_openpattern t;
     runTestOn(t);
   }
+#endif
 
 #endif /* skip numformat tests */
 #if !UCONFIG_NO_CONVERSION
