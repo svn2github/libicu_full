@@ -171,7 +171,7 @@ U_CAPI double uprv_getMeanTime(double *times, uint32_t *timeCount, double *margi
 #endif
     sd += (times[i]-meanTime)*(times[i]-meanTime);
   }
-  sd = sqrt(sd/(n-1));
+  sd = sqrt(sd/((double)n-1.0));
 
 #if U_DEBUG
   printf("sd: %.9f, mean: %.9f\n", sd, meanTime);
@@ -180,7 +180,7 @@ U_CAPI double uprv_getMeanTime(double *times, uint32_t *timeCount, double *margi
 #endif
 
   /* 1.960 = z sub 0.025 */
-  *marginOfError = 1.960 * (sd/sqrt(n));
+  *marginOfError = 1.960 * (sd/sqrt((double)n));
   /*printf("Margin of Error = %.4f (95%% confidence)\n", me);*/
 
   return meanTime;

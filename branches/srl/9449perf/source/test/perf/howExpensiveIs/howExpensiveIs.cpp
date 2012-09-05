@@ -588,6 +588,7 @@ void runTests() {
 #ifndef SKIP_NUMFORMAT_TESTS
 #define SKIP_NUMFORMAT_TESTS
 #endif
+#endif
 
 #ifndef SKIP_NUMFORMAT_TESTS
   // format tests
