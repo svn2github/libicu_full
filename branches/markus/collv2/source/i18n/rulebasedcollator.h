@@ -540,6 +540,9 @@ private:
                                const UChar *right, int32_t rightLength,
                                UErrorCode &errorCode) const;
 
+    void writeSortKey(const UChar *s, int32_t length,
+                      ByteSink &sink, UErrorCode &errorCode) const;
+
     UBool ensureOwnedData(UErrorCode &errorCode);
 
     void setAttributeDefault(int32_t attribute) {

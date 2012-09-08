@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 2001-2011, International Business Machines
+*   Copyright (C) 2001-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  bocsu.c
@@ -151,8 +151,8 @@ U_NAMESPACE_END
     } \
 }
 
-U_CFUNC void
-u_writeIdenticalLevelRun(const UChar *s, int32_t length, icu::ByteSink &sink);
+U_CFUNC UChar32
+u_writeIdenticalLevelRun(UChar32 prev, const UChar *s, int32_t length, icu::ByteSink &sink);
 
 U_CFUNC int32_t
 u_writeIdenticalLevelRunTwoChars(UChar32 first, UChar32 second, uint8_t *p);

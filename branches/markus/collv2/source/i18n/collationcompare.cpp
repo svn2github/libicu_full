@@ -99,7 +99,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             int64_t ce = left.nextCE(errorCode);
             leftPrimary = (uint32_t)(ce >> 32);
             if(leftPrimary < variableTop && leftPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
-                // Ignore this CE, all following primary ignorables, and further variable CEs.
+                // Variable CE, shift it to quaternary level.
+                // Ignore all following primary ignorables, and shift further variable CEs.
                 anyVariable = TRUE;
                 do {
                     // Store the primary of the variable CE.
@@ -119,7 +120,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             int64_t ce = right.nextCE(errorCode);
             rightPrimary = (uint32_t)(ce >> 32);
             if(rightPrimary < variableTop && rightPrimary > Collation::MERGE_SEPARATOR_PRIMARY) {
-                // Ignore this CE, all following primary ignorables, and further variable CEs.
+                // Variable CE, shift it to quaternary level.
+                // Ignore all following primary ignorables, and shift further variable CEs.
                 anyVariable = TRUE;
                 do {
                     // Store the primary of the variable CE.
@@ -143,7 +145,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             }
             return (leftPrimary < rightPrimary) ? UCOL_LESS : UCOL_GREATER;
         }
-        if(leftPrimary == Collation::NO_CE_WEIGHT) { break; }
+        if(leftPrimary == Collation::NO_CE_PRIMARY) { break; }
     }
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
@@ -168,7 +170,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 if(leftSecondary != rightSecondary) {
                     return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
                 }
-                if(leftSecondary == Collation::NO_CE_WEIGHT) { break; }
+                if(leftSecondary == Collation::NO_CE_WEIGHT16) { break; }
             }
         } else {
             // The backwards secondary level compares secondary weights backwards
@@ -272,14 +274,14 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             if(leftTertiary != rightTertiary) {
                 // Turn the two case bits into full weights so that we handle
                 // end-of-string and merge-sorting properly:
-                // Pass through NO_CE_WEIGHT and MERGE_SEPARATOR
+                // Pass through NO_CE and MERGE_SEPARATOR
                 // and make real case bits larger than the MERGE_SEPARATOR.
                 uint32_t leftCase = leftTertiary;
-                if(leftTertiary > Collation::MERGE_SEPARATOR_TERTIARY) {
+                if(leftTertiary > Collation::MERGE_SEPARATOR_WEIGHT16) {
                     leftCase = (leftCase & 0xc000) | 0x10000;
                 }
                 uint32_t rightCase = rightTertiary;
-                if(rightTertiary > Collation::MERGE_SEPARATOR_TERTIARY) {
+                if(rightTertiary > Collation::MERGE_SEPARATOR_WEIGHT16) {
                     rightCase = (rightCase & 0xc000) | 0x10000;
                 }
                 if(leftCase != rightCase) {
@@ -289,7 +291,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                     }
                     return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
                 }
-            } else if(leftTertiary == Collation::NO_CE_WEIGHT) {
+            } else if(leftTertiary == Collation::NO_CE_WEIGHT16) {
                 break;
             }
         }
@@ -322,21 +324,21 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
         if(leftTertiary != rightTertiary) {
             if(CollationData::sortsTertiaryUpperCaseFirst(options)) {
-                // Pass through NO_CE_WEIGHT and MERGE_SEPARATOR
+                // Pass through NO_CE and MERGE_SEPARATOR
                 // and keep real tertiary weights larger than the MERGE_SEPARATOR.
                 // Do not change the artificial uppercase weight of a secondary ignorable 0.0.ut,
                 // to keep tertiary weights well-formed.
                 // (They must be greater than tertiaries in primary and secondary CEs.)
-                if(leftTertiary > Collation::MERGE_SEPARATOR_TERTIARY && leftLower32 > 0xffff) {
+                if(leftTertiary > Collation::MERGE_SEPARATOR_WEIGHT16 && leftLower32 > 0xffff) {
                     leftTertiary ^= 0x8000;
                 }
-                if(rightTertiary > Collation::MERGE_SEPARATOR_TERTIARY && rightLower32 > 0xffff) {
+                if(rightTertiary > Collation::MERGE_SEPARATOR_WEIGHT16 && rightLower32 > 0xffff) {
                     rightTertiary ^= 0x8000;
                 }
             }
             return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
         }
-        if(leftTertiary == Collation::NO_CE_WEIGHT) { break; }
+        if(leftTertiary == Collation::NO_CE_WEIGHT16) { break; }
     }
     if(CollationData::getStrength(options) <= UCOL_TERTIARY) { return UCOL_EQUAL; }
 
@@ -356,8 +358,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             if(low16 == 0) {
                 // Variable primary or completely ignorable.
                 leftQuaternary = (uint32_t)(ce >> 32);
-            } else if(low16 <= Collation::MERGE_SEPARATOR_TERTIARY) {
-                // Leave NO_CE_WEIGHT or MERGE_SEPARATOR as is.
+            } else if(low16 <= Collation::MERGE_SEPARATOR_WEIGHT16) {
+                // Leave NO_CE or MERGE_SEPARATOR as is.
                 leftQuaternary = low16;
             } else {
                 // Regular CE, not tertiary ignorable.
@@ -373,8 +375,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             if(low16 == 0) {
                 // Variable primary or completely ignorable.
                 rightQuaternary = (uint32_t)(ce >> 32);
-            } else if(low16 <= Collation::MERGE_SEPARATOR_TERTIARY) {
-                // Leave NO_CE_WEIGHT or MERGE_SEPARATOR as is.
+            } else if(low16 <= Collation::MERGE_SEPARATOR_WEIGHT16) {
+                // Leave NO_CE or MERGE_SEPARATOR as is.
                 rightQuaternary = low16;
             } else {
                 // Regular CE, not tertiary ignorable.
@@ -393,7 +395,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             }
             return (leftQuaternary < rightQuaternary) ? UCOL_LESS : UCOL_GREATER;
         }
-        if(leftQuaternary == Collation::NO_CE_WEIGHT) { break; }
+        if(leftQuaternary == Collation::NO_CE_WEIGHT16) { break; }
     }
     return UCOL_EQUAL;
 }

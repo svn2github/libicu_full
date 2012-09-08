@@ -86,7 +86,7 @@ private:
     int32_t parseStringAndCEs(UnicodeString &prefix, UnicodeString &s,
                               int64_t ces[], int32_t capacity,
                               IcuTestErrorCode &errorCode);
-    int32_t parseRelationAndString(UnicodeString &s, IcuTestErrorCode &errorCode);
+    Collation::Level parseRelationAndString(UnicodeString &s, IcuTestErrorCode &errorCode);
     void parseAndSetAttribute(IcuTestErrorCode &errorCode);
     void parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &errorCode);
     void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
@@ -107,7 +107,7 @@ private:
 
     UBool checkCompareTwo(const UnicodeString &prevFileLine,
                           const UnicodeString &prevString, const UnicodeString &s,
-                          UCollationResult expectedOrder, UColAttributeValue expectedStrength,
+                          UCollationResult expectedOrder, Collation::Level expectedLevel,
                           IcuTestErrorCode &errorCode);
     void checkCompareStrings(UCHARBUF *f, IcuTestErrorCode &errorCode);
 
@@ -521,26 +521,38 @@ int32_t CollationTest::parseStringAndCEs(UnicodeString &prefix, UnicodeString &s
     return cesLength;
 }
 
-int32_t CollationTest::parseRelationAndString(UnicodeString &s, IcuTestErrorCode &errorCode) {
-    int32_t relation;
+Collation::Level CollationTest::parseRelationAndString(UnicodeString &s, IcuTestErrorCode &errorCode) {
+    Collation::Level relation;
     int32_t start;
     if(fileLine[0] == 0x3c) {  // <
         UChar second = fileLine[1];
-        if(0x31 <= second && second <= 0x34) {  // <1..<4
-            relation = second - 0x31;  // UCOL_PRIMARY..UCOL_QUATERNARY
-            start = 2;
-        } else if(second == 0x63) {  // <c
-            relation = UCOL_LOWER_FIRST;  // case level difference
-            start = 2;
-        } else if(second == 0x69) {  // <i
-            relation = UCOL_IDENTICAL;
-            start = 2;
-        } else {  // just <
-            relation = UCOL_STRENGTH_LIMIT;
+        start = 2;
+        switch(second) {
+        case 0x31:  // <1
+            relation = Collation::PRIMARY_LEVEL;
+            break;
+        case 0x32:  // <2
+            relation = Collation::SECONDARY_LEVEL;
+            break;
+        case 0x33:  // <3
+            relation = Collation::TERTIARY_LEVEL;
+            break;
+        case 0x34:  // <4
+            relation = Collation::QUATERNARY_LEVEL;
+            break;
+        case 0x63:  // <c
+            relation = Collation::CASE_LEVEL;
+            break;
+        case 0x69:  // <i
+            relation = Collation::IDENTICAL_LEVEL;
+            break;
+        default:  // just <
+            relation = Collation::NO_LEVEL;
             start = 1;
+            break;
         }
     } else if(fileLine[0] == 0x3d) {  // =
-        relation = UCOL_DEFAULT;
+        relation = Collation::ZERO_LEVEL;
         start = 1;
     } else {
         start = 0;
@@ -549,7 +561,7 @@ int32_t CollationTest::parseRelationAndString(UnicodeString &s, IcuTestErrorCode
         errln("no relation (= < <1 <2 <c <3 <4 <i) at beginning of line %d", (int)fileLineNumber);
         errln(fileLine);
         errorCode.set(U_PARSE_ERROR);
-        return 0;
+        return Collation::NO_LEVEL;
     }
     start = skipSpaces(start);
     UnicodeString prefix;
@@ -558,13 +570,13 @@ int32_t CollationTest::parseRelationAndString(UnicodeString &s, IcuTestErrorCode
         errln("prefix string not allowed for test string: on line %d", (int)fileLineNumber);
         errln(fileLine);
         errorCode.set(U_PARSE_ERROR);
-        return 0;
+        return Collation::NO_LEVEL;
     }
     if(start < fileLine.length()) {
         errln("unexpected line contents after test string on line %d", (int)fileLineNumber);
         errln(fileLine);
         errorCode.set(U_PARSE_ERROR);
-        return 0;
+        return Collation::NO_LEVEL;
     }
     return relation;
 }
@@ -837,7 +849,7 @@ void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
 
 UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                                      const UnicodeString &prevString, const UnicodeString &s,
-                                     UCollationResult expectedOrder, UColAttributeValue /*expectedStrength*/,
+                                     UCollationResult expectedOrder, Collation::Level /*expectedLevel*/,
                                      IcuTestErrorCode &errorCode) {
     const char *norm =
         (coll->getAttribute(UCOL_NORMALIZATION_MODE, errorCode) == UCOL_ON) ?
@@ -891,7 +903,7 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
             return FALSE;
         }
     }
-    // TODO: test getSortKey(), check expectedStrength (UCOL_STRENGTH_LIMIT is unspecified)
+    // TODO: test getSortKey(), check expectedLevel (UCOL_STRENGTH_LIMIT is unspecified)
     // TODO: test getSortKeyPart()
     return TRUE;
 }
@@ -904,22 +916,22 @@ void CollationTest::checkCompareStrings(UCHARBUF *f, IcuTestErrorCode &errorCode
     while(readLine(f, errorCode)) {
         if(fileLine.isEmpty()) { continue; }
         if(isSectionStarter(fileLine[0])) { break; }
-        int32_t relation = parseRelationAndString(s, errorCode);
+        Collation::Level relation = parseRelationAndString(s, errorCode);
         if(errorCode.isFailure()) {
             errorCode.reset();
             break;
         }
-        UCollationResult expectedOrder = (relation == UCOL_DEFAULT) ? UCOL_EQUAL : UCOL_LESS;
-        UColAttributeValue expectedStrength = (UColAttributeValue)relation;
+        UCollationResult expectedOrder = (relation == Collation::ZERO_LEVEL) ? UCOL_EQUAL : UCOL_LESS;
+        Collation::Level expectedLevel = relation;
         s.getTerminatedBuffer();  // Ensure NUL-termination.
         UBool isOk = TRUE;
         if(!needsNormalization(prevString, errorCode) && !needsNormalization(s, errorCode)) {
             coll->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_OFF, errorCode);
-            isOk = checkCompareTwo(prevFileLine, prevString, s, expectedOrder, expectedStrength, errorCode);
+            isOk = checkCompareTwo(prevFileLine, prevString, s, expectedOrder, expectedLevel, errorCode);
         }
         if(isOk) {
             coll->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, errorCode);
-            checkCompareTwo(prevFileLine, prevString, s, expectedOrder, expectedStrength, errorCode);
+            checkCompareTwo(prevFileLine, prevString, s, expectedOrder, expectedLevel, errorCode);
         }
         prevFileLine = fileLine;
         prevString = s;

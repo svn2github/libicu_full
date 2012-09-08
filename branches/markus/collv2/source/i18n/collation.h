@@ -37,7 +37,7 @@ public:
      */
     static const uint8_t MERGE_SEPARATOR_BYTE = 2;
     static const uint32_t MERGE_SEPARATOR_PRIMARY = 0x02000000;  // U+FFFE
-    static const uint32_t MERGE_SEPARATOR_TERTIARY = 0x0200;  // U+FFFE
+    static const uint32_t MERGE_SEPARATOR_WEIGHT16 = 0x0200;  // U+FFFE
     static const uint32_t MERGE_SEPARATOR_LOWER32 = 0x02000200;  // U+FFFE
     static const uint32_t MERGE_SEPARATOR_CE32 = 0x02000202;  // U+FFFE
 
@@ -56,7 +56,7 @@ public:
 
     /** Default secondary/tertiary weight lead byte. */
     static const uint8_t COMMON_BYTE = 5;
-    static const uint32_t COMMON_WEIGHT = 0x0500;
+    static const uint32_t COMMON_WEIGHT16 = 0x0500;
     /** Middle 16 bits of a CE with a common secondary weight. */
     static const uint32_t COMMON_SECONDARY_CE = 0x05000000;
     /** Lower 16 bits of a CE with a common tertiary weight. */
@@ -89,8 +89,36 @@ public:
     static const uint32_t UNASSIGNED_CE32 = 0xffffffff;  // Compute an unassigned-implicit CE.
 
     /** No CE: End of input. Only used in runtime code, not stored in data. */
-    static const uint32_t NO_CE_WEIGHT = 1;
-    static const int64_t NO_CE = 0x100010001;  // Primary/secondary/tertiary weights = 1.
+    static const uint32_t NO_CE_PRIMARY = 1;  // not a left-adjusted weight
+    static const uint32_t NO_CE_WEIGHT16 = 0x0100;  // weight of LEVEL_SEPARATOR_BYTE
+    static const int64_t NO_CE = 0x101000100;  // NO_CE_PRIMARY, NO_CE_WEIGHT16, NO_CE_WEIGHT16
+
+    /** Sort key levels. */
+    enum Level {
+        /** Unspecified level. */
+        NO_LEVEL,
+        PRIMARY_LEVEL,
+        SECONDARY_LEVEL,
+        CASE_LEVEL,
+        TERTIARY_LEVEL,
+        QUATERNARY_LEVEL,
+        IDENTICAL_LEVEL,
+        /** Beyond sort key bytes. */
+        ZERO_LEVEL
+    };
+
+    /**
+     * Sort key level flags: xx_FLAG = 1 << xx_LEVEL.
+     * In Java, use enum Level with flag() getters, or use EnumSet rather than hand-made bit sets.
+     */
+    static const uint32_t NO_LEVEL_FLAG = 1;
+    static const uint32_t PRIMARY_LEVEL_FLAG = 2;
+    static const uint32_t SECONDARY_LEVEL_FLAG = 4;
+    static const uint32_t CASE_LEVEL_FLAG = 8;
+    static const uint32_t TERTIARY_LEVEL_FLAG = 0x10;
+    static const uint32_t QUATERNARY_LEVEL_FLAG = 0x20;
+    static const uint32_t IDENTICAL_LEVEL_FLAG = 0x40;
+    static const uint32_t ZERO_LEVEL_FLAG = 0x80;
 
     /**
      * Special-CE32 tags, from bits 23..20 of a special 32-bit CE.

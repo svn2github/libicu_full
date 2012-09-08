@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 2001-2011, International Business Machines
+*   Copyright (C) 2001-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  bocsu.cpp
@@ -95,12 +95,11 @@ u_writeDiff(int32_t diff, uint8_t *p) {
  * Note that the identical-level run in a sort key is generated from
  * NFD text - there are never Hangul characters included.
  */
-U_CFUNC void
-u_writeIdenticalLevelRun(const UChar *s, int32_t length, icu::ByteSink &sink) {
+U_CFUNC UChar32
+u_writeIdenticalLevelRun(UChar32 prev, const UChar *s, int32_t length, icu::ByteSink &sink) {
     char scratch[64];
     int32_t capacity;
 
-    UChar32 prev=0;
     int32_t i=0;
     while(i<length) {
         char *buffer=sink.GetAppendBuffer(1, length*2, scratch, (int32_t)sizeof(scratch), &capacity);
@@ -127,11 +126,17 @@ u_writeIdenticalLevelRun(const UChar *s, int32_t length, icu::ByteSink &sink) {
 
             UChar32 c;
             U16_NEXT(s, i, length, c);
-            p=u_writeDiff(c-prev, p);
-            prev=c;
+            if(c==0xfffe) {
+                *p++=2;  // merge separator
+                prev=0;
+            } else {
+                p=u_writeDiff(c-prev, p);
+                prev=c;
+            }
         }
         sink.Append(buffer, (int32_t)(p-reinterpret_cast<uint8_t *>(buffer)));
     }
+    return prev;
 }
 
 U_CFUNC int32_t

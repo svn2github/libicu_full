@@ -18,11 +18,13 @@
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/ucol.h"
+#include "bocsu.h"
 #include "cmemory.h"
 #include "collation.h"
 #include "collationcompare.h"
 #include "collationdata.h"
 #include "collationiterator.h"
+#include "collationkeys.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
 #include "utf16collationiterator.h"
@@ -493,17 +495,58 @@ RuleBasedCollator2::getCollationKey(const UChar *source, int32_t sourceLength,
 }
 
 int32_t
-RuleBasedCollator2::getSortKey(const UnicodeString &source, uint8_t *result,
-                               int32_t resultLength) const {
-    if(resultLength > 0) { *result = 0; }
-    return 0;  // TODO
+RuleBasedCollator2::getSortKey(const UnicodeString &s,
+                               uint8_t *dest, int32_t capacity) const {
+    return getSortKey(s.getBuffer(), s.length(), dest, capacity);
 }
 
 int32_t
-RuleBasedCollator2::getSortKey(const UChar *source, int32_t sourceLength,
-                               uint8_t *result, int32_t resultLength) const {
-    if(resultLength > 0) { *result = 0; }
-    return 0;  // TODO
+RuleBasedCollator2::getSortKey(const UChar *s, int32_t length,
+                               uint8_t *dest, int32_t capacity) const {
+    if((s == NULL && length != 0) || capacity < 0 || (dest == NULL && capacity > 0)) {
+        return 0;
+    }
+    CheckedArrayByteSink sink(reinterpret_cast<char *>(dest), capacity);
+    UErrorCode errorCode = U_ZERO_ERROR;
+    writeSortKey(s, length, sink, errorCode);
+    return U_SUCCESS(errorCode) ? sink.NumberOfBytesAppended() : 0;
+}
+
+void
+RuleBasedCollator2::writeSortKey(const UChar *s, int32_t length,
+                                 ByteSink &sink, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return; }
+    const UChar *limit = (length >= 0) ? s + length : NULL;
+    CollationKeys::LevelCallback callback;
+    if((data->options & CollationData::CHECK_FCD) == 0) {
+        UTF16CollationIterator iter(data, s, limit);
+        CollationKeys::writeSortKeyUpToQuaternary(iter, sink, Collation::PRIMARY_LEVEL,
+                                                  callback, errorCode);
+    } else {
+        FCDUTF16CollationIterator iter(data, s, limit, errorCode);
+        CollationKeys::writeSortKeyUpToQuaternary(iter, sink, Collation::PRIMARY_LEVEL,
+                                                  callback, errorCode);
+    }
+    if(data->getStrength() == UCOL_IDENTICAL) {
+        const Normalizer2 *norm2 = Normalizer2Factory::getNFDInstance(errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        UnicodeString source((UBool)(length < 0), s, length);
+        int32_t qcYesLength = norm2->spanQuickCheckYes(source, errorCode);
+        static const char separator = 1;  // LEVEL_SEPARATOR_BYTE
+        sink.Append(&separator, 1);
+        UChar32 prev = 0;
+        if(qcYesLength > 0) {
+            prev = u_writeIdenticalLevelRun(prev, s, qcYesLength, sink);
+        }
+        if(qcYesLength < source.length()) {
+            UnicodeString rest(FALSE, s + qcYesLength, source.length() - qcYesLength);
+            UnicodeString nfd;
+            norm2->normalize(rest, nfd, errorCode);
+            u_writeIdenticalLevelRun(prev, nfd.getBuffer(), nfd.length(), sink);
+        }
+    }
+    static const char terminator = 0;  // TERMINATOR_BYTE
+    sink.Append(&terminator, 1);
 }
 
 CollationElementIterator *

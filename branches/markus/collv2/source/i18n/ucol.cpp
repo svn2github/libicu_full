@@ -4974,7 +4974,7 @@ ucol_calcSortKey(const    UCollator    *coll,
 
             if(compareIdent) {
                 result.Append(UCOL_LEVELTERMINATOR);
-                u_writeIdenticalLevelRun(s.string, len, result);
+                u_writeIdenticalLevelRun(0, s.string, len, result);
             }
         }
         result.Append(0);

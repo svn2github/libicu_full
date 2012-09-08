@@ -195,16 +195,10 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         }
         buffer[buflen] = 0;
 
-#if 0  // TODO: Reenable when the new implementation writes sort keys.
         int32_t resLen = coll->getSortKey(buffer, buflen, newSk, 1024);
-#else
-        int32_t resLen = 0;
-#endif
 
         if(oldSk != NULL) {
-#if 0  // TODO: Reenable when the new implementation writes sort keys.
             int32_t skres = strcmp((char *)oldSk, (char *)newSk);
-#endif
             int32_t cmpres = coll->compare(oldB, oldBlen, buffer, buflen, status);
             int32_t cmpres2 = coll->compare(buffer, buflen, oldB, oldBlen, status);
 
@@ -214,14 +208,12 @@ void UCAConformanceTest::testConformance(const Collator *coll)
 
             // TODO: Compare with normalization turned off if the input passes the FCD test.
 
-#if 0  // TODO: Reenable when the new implementation writes sort keys.
             if(cmpres != normalizeResult(skres)) {
                 errln("Difference between ucol_strcoll (%d) and sortkey compare (%d) on line %i",
                       cmpres, skres, line);
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
             }
-#endif
 
             int32_t res = cmpres;
             if(res == 0 && !isAtLeastUCA62) {
