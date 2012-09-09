@@ -99,7 +99,6 @@ private:
 
     static void appendByte(uint32_t b, ByteSink &sink);
     static void appendWeight16(uint32_t w, ByteSink &sink);
-    static void appendWeight24(uint32_t w, ByteSink &sink);
     static void appendWeight32(uint32_t w, ByteSink &sink);
 
     static void appendByte(uint32_t b, CharString &level, UErrorCode &errorCode) {

@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
-* Copyright (C) 1996-2011, International Business Machines Corporation and    *
-* others. All Rights Reserved.                                                *
+* Copyright (C) 1996-2012, International Business Machines Corporation and
+* others. All Rights Reserved.
 *******************************************************************************
 */
 //===============================================================================
@@ -133,6 +133,7 @@ CollationKey::setToBogus()
     fCapacity = 0;
     fCount = 0;
     fHashCode = kInvalidHashCode;
+    fBogus = TRUE;
 
     return *this;
 }

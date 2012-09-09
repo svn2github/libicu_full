@@ -15,6 +15,7 @@
 #include "unicode/errorcode.h"
 #include "unicode/localpointer.h"
 #include "unicode/normalizer2.h"
+#include "unicode/sortkey.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
@@ -105,6 +106,9 @@ private:
                       IcuTestErrorCode &errorCode);
     void checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode);
 
+    UBool getCollationKey(const UnicodeString &line,
+                          const UChar *s, int32_t length,
+                          CollationKey &key, IcuTestErrorCode &errorCode);
     UBool checkCompareTwo(const UnicodeString &prevFileLine,
                           const UnicodeString &prevString, const UnicodeString &s,
                           UCollationResult expectedOrder, Collation::Level expectedLevel,
@@ -847,9 +851,30 @@ void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     }
 }
 
+UBool CollationTest::getCollationKey(const UnicodeString &line,
+                                     const UChar *s, int32_t length,
+                                     CollationKey &key, IcuTestErrorCode &errorCode) {
+    const char *norm =
+        (coll->getAttribute(UCOL_NORMALIZATION_MODE, errorCode) == UCOL_ON) ?
+        "on" : "off";
+    if(errorCode.isFailure()) { return FALSE; }
+    coll->getCollationKey(s, length, key, errorCode);
+    if(errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("Collator(normalization=%s).getCollationKey() failed: %s",
+              norm, errorCode.errorName());
+        errln(line);
+        errorCode.reset();
+        return FALSE;
+    }
+    // TODO: if s contains U+FFFE, check that merged segments make the same key
+    // TODO: check that nextSortKeyPart() makes the same key, with increments of 1, 3, max
+    return TRUE;
+}
+
 UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                                      const UnicodeString &prevString, const UnicodeString &s,
-                                     UCollationResult expectedOrder, Collation::Level /*expectedLevel*/,
+                                     UCollationResult expectedOrder, Collation::Level expectedLevel,
                                      IcuTestErrorCode &errorCode) {
     const char *norm =
         (coll->getAttribute(UCOL_NORMALIZATION_MODE, errorCode) == UCOL_ON) ?
@@ -903,8 +928,49 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
             return FALSE;
         }
     }
-    // TODO: test getSortKey(), check expectedLevel (UCOL_STRENGTH_LIMIT is unspecified)
-    // TODO: test getSortKeyPart()
+    CollationKey prevKey;
+    if(!getCollationKey(prevFileLine, prevString.getBuffer(), prevString.length(),
+                        prevKey, errorCode)) {
+        return FALSE;
+    }
+    CollationKey key;
+    if(!getCollationKey(fileLine, s.getBuffer(), s.length(), key, errorCode)) { return FALSE; }
+    order = prevKey.compareTo(key, errorCode);
+    if(order != expectedOrder || errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("line %d Collator(normalization=%s).getCollationKey(previous, current).compareTo() wrong order: %d != %d (%s)",
+              (int)fileLineNumber, norm, order, expectedOrder, errorCode.errorName());
+        errln(prevFileLine);
+        errln(fileLine);
+        errorCode.reset();
+        return FALSE;
+    }
+    if(order != UCOL_EQUAL && expectedLevel != Collation::NO_LEVEL) {
+        int32_t prevKeyLength;
+        const uint8_t *prevBytes = prevKey.getByteArray(prevKeyLength);
+        int32_t keyLength;
+        const uint8_t *bytes = key.getByteArray(keyLength);
+        int32_t level = Collation::PRIMARY_LEVEL;
+        for(int32_t i = 0;; ++i) {
+            uint8_t b = prevBytes[i];
+            if(b != bytes[i]) { break; }
+            if(b == Collation::LEVEL_SEPARATOR_BYTE) {
+                ++level;
+                if(level == Collation::CASE_LEVEL &&
+                        coll->getAttribute(UCOL_CASE_LEVEL, errorCode) == UCOL_OFF) {
+                    ++level;
+                }
+            }
+        }
+        if(level != expectedLevel) {
+            errln(fileTestName);
+            errln("line %d Collator(normalization=%s).getCollationKey(previous, current).compareTo()=%d wrong level: %d != %d",
+                  (int)fileLineNumber, norm, order, level, expectedLevel);
+            errln(prevFileLine);
+            errln(fileLine);
+            return FALSE;
+        }
+    }
     return TRUE;
 }
 

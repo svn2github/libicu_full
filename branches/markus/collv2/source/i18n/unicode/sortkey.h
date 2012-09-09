@@ -1,6 +1,6 @@
 /*
  *****************************************************************************
- * Copyright (C) 1996-2011, International Business Machines Corporation and others.
+ * Copyright (C) 1996-2012, International Business Machines Corporation and others.
  * All Rights Reserved.
  *****************************************************************************
  *
@@ -39,6 +39,8 @@ U_NAMESPACE_BEGIN
 
 /* forward declaration */
 class RuleBasedCollator;
+class RuleBasedCollator2;
+class CollationKeyByteSink;
 
 /**
  *
@@ -280,6 +282,8 @@ private:
     * Allow private access to RuleBasedCollator
     */
     friend  class           RuleBasedCollator;
+    friend  class           RuleBasedCollator2;
+    friend  class           CollationKeyByteSink;
     /**
     * Bogus status
     */

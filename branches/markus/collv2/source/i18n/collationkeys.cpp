@@ -31,7 +31,8 @@ CollationKeys::LevelCallback::needToWrite(Collation::Level /*level*/) { return T
 /**
  * Map from collation strength (UColAttributeValue)
  * to a mask of Collation::Level bits up to that strength,
- * excluding the CASE_LEVEL.
+ * excluding the CASE_LEVEL which is independent of the strength,
+ * and excluding IDENTICAL_LEVEL which this function does not write.
  */
 static const uint32_t levelMasks[UCOL_STRENGTH_LIMIT] = {
     2,          // UCOL_PRIMARY -> PRIMARY_LEVEL
@@ -41,7 +42,7 @@ static const uint32_t levelMasks[UCOL_STRENGTH_LIMIT] = {
     0, 0, 0, 0,
     0, 0, 0, 0,
     0, 0, 0,
-    0x76        // UCOL_IDENTICAL -> up to IDENTICAL_LEVEL
+    0x36        // UCOL_IDENTICAL -> up to QUATERNARY_LEVEL
 };
 
 void
@@ -59,6 +60,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
     }
     // Minus the levels below minLevel.
     levels &= ~(((uint32_t)1 << minLevel) - 1);
+    if(levels == 0) { return; }
 
     uint32_t variableTop;
     if((options & CollationData::ALTERNATE_MASK) == 0) {
@@ -144,7 +146,11 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     compressedP1 = 0;
                 }
             }
-            appendWeight24(p, sink);
+            char p2 = (char)(p >> 16);
+            if(p2 != 0) {
+                char buffer[3] = { p2, (char)(p >> 8), (char)p };
+                sink.Append(buffer, (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : 3);
+            }
         }
 
         uint32_t lower32 = (uint32_t)ce;
@@ -196,9 +202,10 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     if(s == Collation::MERGE_SEPARATOR_WEIGHT16) {
                         anyMergeSeparators = TRUE;
                     }
-                    s -= 0x100;
+                    appendByte((s >> 8) - 1, secondaries, errorCode);
+                } else {
+                    appendReverseWeight16(s, secondaries, errorCode);
                 }
-                appendReverseWeight16(s, secondaries, errorCode);
                 prevSecondary = s;
             }
         }
@@ -338,7 +345,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
 
         if((levels & Collation::QUATERNARY_LEVEL_FLAG) != 0) {
             uint32_t q = lower32 & 0xffff;
-            if((q & 0xc000) == 0 && q > Collation::MERGE_SEPARATOR_WEIGHT16) {
+            if((q & 0xc0) == 0 && q > Collation::MERGE_SEPARATOR_WEIGHT16) {
                 ++commonQuaternaries;
             } else if(q <= Collation::MERGE_SEPARATOR_WEIGHT16 &&
                     (options & CollationData::ALTERNATE_MASK) == 0 &&
@@ -472,56 +479,43 @@ CollationKeys::appendByte(uint32_t b, ByteSink &sink) {
 
 void
 CollationKeys::appendWeight16(uint32_t w, ByteSink &sink) {
-    if(w != 0) {
-        char buffer[2] = { (char)(w >> 8), (char)w };
-        sink.Append(buffer, (buffer[1] == 0) ? 1 : 2);
-    }
-}
-
-void
-CollationKeys::appendWeight24(uint32_t w, ByteSink &sink) {
-    if(w != 0) {
-        char buffer[3] = { (char)(w >> 16), (char)(w >> 8), (char)w };
-        sink.Append(buffer, (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : 3);
-    }
+    U_ASSERT((w & 0xffff) != 0);
+    char buffer[2] = { (char)(w >> 8), (char)w };
+    sink.Append(buffer, (buffer[1] == 0) ? 1 : 2);
 }
 
 void
 CollationKeys::appendWeight32(uint32_t w, ByteSink &sink) {
-    if(w != 0) {
-        char buffer[4] = { (char)(w >> 24), (char)(w >> 16), (char)(w >> 8), (char)w };
-        sink.Append(buffer,
-                    (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : (buffer[3] == 0) ? 3 : 4);
-    }
+    U_ASSERT(w != 0);
+    char buffer[4] = { (char)(w >> 24), (char)(w >> 16), (char)(w >> 8), (char)w };
+    sink.Append(buffer,
+                (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : (buffer[3] == 0) ? 3 : 4);
 }
 
 void
 CollationKeys::appendWeight16(uint32_t w, CharString &level, UErrorCode &errorCode) {
-    if(w != 0) {
-        char buffer[2] = { (char)(w >> 8), (char)w };
-        level.append(buffer, (buffer[1] == 0) ? 1 : 2, errorCode);
-    }
+    U_ASSERT((w & 0xffff) != 0);
+    char buffer[2] = { (char)(w >> 8), (char)w };
+    level.append(buffer, (buffer[1] == 0) ? 1 : 2, errorCode);
 }
 
 void
 CollationKeys::appendWeight32(uint32_t w, CharString &level, UErrorCode &errorCode) {
-    if(w != 0) {
-        char buffer[4] = { (char)(w >> 24), (char)(w >> 16), (char)(w >> 8), (char)w };
-        level.append(buffer,
-                     (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : (buffer[3] == 0) ? 3 : 4,
-                     errorCode);
-    }
+    U_ASSERT(w != 0);
+    char buffer[4] = { (char)(w >> 24), (char)(w >> 16), (char)(w >> 8), (char)w };
+    level.append(buffer,
+                 (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : (buffer[3] == 0) ? 3 : 4,
+                 errorCode);
 }
 
 void
 CollationKeys::appendReverseWeight16(uint32_t w, CharString &level, UErrorCode &errorCode) {
-    if(w != 0) {
-        char buffer[2] = { (char)w, (char)(w >> 8) };
-        if(buffer[0] == 0) {
-            level.append(buffer + 1, 1, errorCode);
-        } else {
-            level.append(buffer, 2, errorCode);
-        }
+    U_ASSERT((w & 0xffff) != 0);
+    char buffer[2] = { (char)w, (char)(w >> 8) };
+    if(buffer[0] == 0) {
+        level.append(buffer + 1, 1, errorCode);
+    } else {
+        level.append(buffer, 2, errorCode);
     }
 }
 

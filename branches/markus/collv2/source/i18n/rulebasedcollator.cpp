@@ -15,6 +15,7 @@
 
 #include "unicode/coll.h"
 #include "unicode/locid.h"
+#include "unicode/sortkey.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/ucol.h"
@@ -30,6 +31,85 @@
 #include "utf16collationiterator.h"
 
 U_NAMESPACE_BEGIN
+
+// TODO: CollationKey should have
+// - internal buffer of some 32 bytes (make sizeof(CollationKey)=64)
+// - ensureCapacity() does not at all work as its name suggests
+//   - should return UBool and not changing anything if capacity suffices
+//   - should not memset(old capacity) to 0
+//   - should copy fCount bytes
+//   - should not set fCount=new capacity
+class CollationKeyByteSink : public ByteSink {
+public:
+    CollationKeyByteSink(CollationKey &k) : key(k) { key.reset(); }
+    virtual ~CollationKeyByteSink();
+    virtual void Append(const char *bytes, int32_t n);
+    virtual char* GetAppendBuffer(int32_t min_capacity,
+                                  int32_t desired_capacity_hint,
+                                  char *scratch, int32_t scratch_capacity,
+                                  int32_t *result_capacity);
+private:
+    CollationKey &key;
+    CollationKeyByteSink();  ///< default constructor not implemented 
+    CollationKeyByteSink(const CollationKeyByteSink &);  ///< copy constructor not implemented
+    CollationKeyByteSink &operator=(const CollationKeyByteSink &);  ///< assignment operator not implemented
+};
+
+CollationKeyByteSink::~CollationKeyByteSink() {}
+
+void
+CollationKeyByteSink::Append(const char *bytes, int32_t n) {
+    if(n <= 0 || key.fBogus) {
+        return;
+    }
+    int32_t newLength = key.fCount + n;
+    if(newLength > key.fCapacity) {
+        int32_t newCapacity = 2 * key.fCapacity;
+        if(newCapacity < 32) {
+            newCapacity = 32;
+        } else if(newCapacity < 200) {
+            newCapacity = 200;
+        }
+        if(newCapacity < newLength) {
+            newCapacity = key.fCount + 2 * n;
+        }
+        uint8_t *newBytes = static_cast<uint8_t *>(uprv_malloc(newCapacity));
+        if(newBytes == NULL) {
+            key.setToBogus();
+            return;
+        }
+        if(key.fCount != 0) {
+            uprv_memcpy(newBytes, key.fBytes, key.fCount);
+        }
+        uprv_free(key.fBytes);
+        key.fBytes = newBytes;
+        key.fCapacity = newCapacity;
+    }
+    if(n > 0 && bytes != (reinterpret_cast<char *>(key.fBytes) + key.fCount)) {
+        uprv_memcpy(key.fBytes + key.fCount, bytes, n);
+    }
+    key.fCount = newLength;
+}
+
+char *
+CollationKeyByteSink::GetAppendBuffer(int32_t min_capacity,
+                                      int32_t /*desired_capacity_hint*/,
+                                      char *scratch,
+                                      int32_t scratch_capacity,
+                                      int32_t *result_capacity) {
+    if(min_capacity < 1 || scratch_capacity < min_capacity) {
+        *result_capacity = 0;
+        return NULL;
+    }
+    int32_t available = key.fCapacity - key.fCount;
+    if(available >= min_capacity) {
+        *result_capacity = available;
+        return reinterpret_cast<char *>(key.fBytes) + key.fCount;
+    } else {
+        *result_capacity = scratch_capacity;
+        return scratch;
+    }
+}
 
 // TODO: Add UTRACE_... calls back in.
 
@@ -481,17 +561,29 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
 }
 
 CollationKey &
-RuleBasedCollator2::getCollationKey(const UnicodeString &source,
-                                    CollationKey &key,
+RuleBasedCollator2::getCollationKey(const UnicodeString &s, CollationKey &key,
                                     UErrorCode &errorCode) const {
-    return key;  // TODO
+    return getCollationKey(s.getBuffer(), s.length(), key, errorCode);
 }
 
 CollationKey &
-RuleBasedCollator2::getCollationKey(const UChar *source, int32_t sourceLength,
-                                    CollationKey& key,
+RuleBasedCollator2::getCollationKey(const UChar *s, int32_t length, CollationKey& key,
                                     UErrorCode &errorCode) const {
-    return key;  // TODO
+    if(U_FAILURE(errorCode)) { return key; }
+    if(s == NULL && length != 0) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return key;
+    }
+    CollationKeyByteSink sink(key);
+    writeSortKey(s, length, sink, errorCode);
+    if(U_SUCCESS(errorCode)) {
+        if(key.isBogus()) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+        }
+    } else {
+        key.setToBogus();
+    }
+    return key;
 }
 
 int32_t
