@@ -5,6 +5,8 @@
  **********************************************************************
  */
 #include <stdio.h>
+#include <string.h>
+
 #include "sieve.h"
 #include "unicode/utimer.h"
 #include "udbgutil.h"
@@ -33,6 +35,17 @@ int listmode = 0;
 const char *testName = NULL;
 const char *progname = NULL;
 int errflg = 0;
+int testhit = 0;
+
+int testMatch(const char *aName) {
+  if(testName==NULL) return 1;
+  int len = strlen(testName);
+  if(testName[len-1]=='*') {
+    return strncmp(testName,aName,len-1);
+  } else {
+    return strcmp(testName,aName);
+  }
+}
 
 int main(int argc, char * const * argv){
 #if U_DEBUG
@@ -174,12 +187,14 @@ public:
 void runTestOn(HowExpensiveTest &t) {
   if(U_FAILURE(setupStatus)) return; // silently
   const char *tn = t.getName();
-  if(testName!=NULL && strcmp(tn,testName)) return; // skipped.
+  if(testName!=NULL && testMatch(tn)) return; // skipped.
   if(listmode) {
     fprintf(stderr, "%s:%d:\t%s\n", t.fFile, t.fLine, t.getName());
+    testhit++;
     return;
   } else {
     fprintf(stderr, "%s:%d: Running: %s\n", t.fFile, t.fLine, t.getName());
+    testhit++;
   }
   double sieveTime = uprv_getSieveTime(NULL);
   double st;
@@ -730,5 +745,9 @@ void runTests() {
   {
     Test_ures_openroot t;
     runTestOn(t);
+  }
+
+  if(testhit==0) {
+    fprintf(stderr, "ERROR: no tests matched.\n");
   }
 }
