@@ -1008,9 +1008,10 @@ void DecimalFormat::handleChanged() {
 
   data.fFastpathStatus = kFastpathNO;
 
-  if (fGroupingSize!=0) {
-    debug("No fastpath: fGroupingSize!=0"); // TODO: revisit, should handle ex. up to 999 if groupingsize is 3.
-  } else if(fGroupingSize2!=0) {
+  if (fGroupingSize!=0 && isGroupingUsed()) {
+    debug("No fastpath: fGroupingSize!=0 and grouping is used");
+    printf("groupingsize=%d\n", fGroupingSize);
+  } else if(fGroupingSize2!=0 && isGroupingUsed()) {
     debug("No fastpath: fGroupingSize2!=0");
   } else if(fUseExponentialNotation) {
     debug("No fastpath: fUseExponentialNotation");
@@ -2084,7 +2085,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     DBGAPPD(posPrefix);
     DBGAPPD(posSuffix);
     debugout(s);
-    printf("currencyParsing=%d, fFormatWidth=%d, text.length=%d negPrefLen=%d\n", currencyParsing, fFormatWidth, text.length(),  negPrefix!=NULL?negPrefix->length():-1);
+    printf("currencyParsing=%d, fFormatWidth=%d, isParseIntegerOnly=%c text.length=%d negPrefLen=%d\n", currencyParsing, fFormatWidth, (isParseIntegerOnly())?'Y':'N', text.length(),  negPrefix!=NULL?negPrefix->length():-1);
 #endif
 
     UBool fastParseOk = false; /* TRUE iff fast parse is OK */
@@ -2101,7 +2102,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             fFormatWidth==0 &&
             //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
             text.length()>0 &&
-            text.length()<20 &&
+            text.length()<32 &&
             (posPrefix==NULL||posPrefix->isEmpty()) &&
             (posSuffix==NULL||posSuffix->isEmpty()) &&
             //            (negPrefix==NULL||negPrefix->isEmpty()) &&
@@ -2115,9 +2116,11 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       UChar32 ch = text.char32At(j);
       const UnicodeString *decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
       UChar32 decimalChar = 0;
+      UBool intOnly = FALSE;
       int32_t decimalCount = decimalString->countChar32(0,3);
       if(isParseIntegerOnly()) {
         decimalChar = 0; // not allowed
+        intOnly = TRUE;
       } else if(decimalCount==1) {
         decimalChar = decimalString->char32At(0);
       } else if(decimalCount==0) {
@@ -2149,6 +2152,8 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
           parsedNum.append((char)('.'), err);
           decimalChar=0; // no more decimals.
           fastParseHadDecimal=TRUE;
+        } else if(intOnly && !u_isdigit(ch)) {
+          break; // hit a non-integer. (fall through if integer, to slow parse)
         } else {
           digitCount=-1; // fail
           break;
@@ -2156,7 +2161,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         j+=U16_LENGTH(ch);
         ch = text.char32At(j); // for next  
       }
-      if(j==l && (digitCount>0)) {
+      if(
+         ((j==l)||intOnly)
+         && (digitCount>0)) {
 #ifdef FMT_DEBUG
         printf("PP -> %d, good = [%s]  digitcount=%d, fGroupingSize=%d fGroupingSize2=%d!\n", j, parsedNum.data(), digitCount, fGroupingSize, fGroupingSize2);
 #endif
@@ -2178,6 +2185,15 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 #endif
         parsedNum.clear();
       }
+    } else {
+#ifdef FMT_DEBUG
+      printf("Could not fastpath parse. ");
+      printf("fFormatWidth=%d ", fFormatWidth);
+      printf("text.length()=%d ", text.length());
+      printf("posPrefix=%p posSuffix=%p ", posPrefix, posSuffix);
+
+      printf("\n");
+#endif
     }
 
   if(!fastParseOk 
