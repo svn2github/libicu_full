@@ -12,6 +12,7 @@
 #include "udbgutil.h"
 #include "unicode/ustring.h"
 #include "unicode/decimfmt.h"
+#include "unicode/udat.h"
 
 #if U_PLATFORM_IMPLEMENTS_POSIX
 #include <unistd.h>
@@ -627,7 +628,31 @@ QuickTest(NumParseTest,{    static UChar pattern[] = { 0x23 };    NumParseTest_f
 QuickTest(NumParseTestdot,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;  double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strdot,1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
 QuickTest(NumParseTestspc,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;    double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strspc,1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
 QuickTest(NumParseTestgrp,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;    double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strgrp,-1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
+
 QuickTest(NumParseTestbeng,{    static UChar pattern[] = { 0x23 };    NumParseTest_fmt = unum_open(UNUM_PATTERN_DECIMAL,         pattern,                    1,                    "en_US",                    0,                    &setupStatus);  },{    int32_t i;    double val;    for(i=0;i<U_LOTS_OF_TIMES;i++) {      val=unum_parse(NumParseTest_fmt,strbeng,-1,NULL,&setupStatus);    }    return i;  },{unum_close(NumParseTest_fmt);})
+
+UDateFormat *DateFormatTest_fmt = NULL;
+UDate sometime = 100000000.0;
+UChar onekbuf[1024];
+const int32_t onekbuf_len = sizeof(onekbuf)/sizeof(onekbuf[0]);
+
+ 
+QuickTest(DateFormatTestBasic, \
+          { \
+            DateFormatTest_fmt = udat_open(UDAT_DEFAULT, UDAT_DEFAULT, NULL, NULL, -1, NULL, -1, &setupStatus); \
+          }, \
+          { \
+            int i; \
+            for(i=0;i<U_LOTS_OF_TIMES;i++)  \
+            { \
+              udat_format(DateFormatTest_fmt, sometime, onekbuf, onekbuf_len, NULL, &setupStatus); \
+            } \
+            return i; \
+          }, \
+          { \
+            udat_close(DateFormatTest_fmt); \
+          } \
+      )
 
 
 QuickTest(NullTest,{},{int j=U_LOTS_OF_TIMES;while(--j);return U_LOTS_OF_TIMES;},{})
@@ -662,6 +687,13 @@ void runTests() {
     NullTest t;
     runTestOn(t);
   }
+
+#ifndef SKIP_DATEFMT_TESTS
+  {
+    DateFormatTestBasic t;
+    runTestOn(t);
+  }
+#endif
 
 #ifndef SKIP_NUMPARSE_TESTS
   {
