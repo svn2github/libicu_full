@@ -54,10 +54,11 @@ U_NAMESPACE_USE
 
 #define ZERO_CC_LIMIT_            0xC0
 
-// This is static pointer to the NFC implementation instance.
-// it is always the same between calls to u_cleanup
+// These are static pointers to the NFC/NFD implementation instance.
+// Each of them is always the same between calls to u_cleanup
 // and therefore writing to it is not synchronized.
-// It is cleaned in ucol_cleanup
+// They are cleaned in ucol_cleanup
+static const Normalizer2 *g_nfd = NULL;
 static const Normalizer2Impl *g_nfcImpl = NULL;
 
 // These are values from UCA required for
@@ -72,6 +73,7 @@ U_CDECL_BEGIN
 static UBool U_CALLCONV
 ucol_cleanup(void)
 {
+    g_nfd = NULL;
     g_nfcImpl = NULL;
     return TRUE;
 }
@@ -82,6 +84,18 @@ _getFoldingOffset(uint32_t data) {
 }
 
 U_CDECL_END
+
+static inline
+UBool initializeNFD(UErrorCode *status) {
+    if (g_nfd != NULL) {
+        return TRUE;
+    } else {
+        // The result is constant, until the library is reloaded.
+        g_nfd = Normalizer2Factory::getNFDInstance(*status);
+        ucln_i18n_registerCleanup(UCLN_I18N_UCOL, ucol_cleanup);
+        return U_SUCCESS(*status);
+    }
+}
 
 // init FCD data
 static inline
@@ -122,7 +136,11 @@ inline void IInit_collIterate(const UCollator *collator, const UChar *sourceStri
     (s)->offsetReturn = (s)->offsetStore = NULL;
     (s)->offsetRepeatCount = (s)->offsetRepeatValue = 0;
     (s)->coll = (collator);
-    (s)->nfd = Normalizer2Factory::getNFDInstance(*status);
+    if (initializeNFD(status)) {
+        (s)->nfd = g_nfd;
+    } else {
+        return;
+    }
     (s)->fcdPosition = 0;
     if(collator->normalizationMode == UCOL_ON) {
         (s)->flags |= UCOL_ITER_NORM;
@@ -8077,7 +8095,7 @@ utf8ToUChar(const char *src, int32_t srcLen, UChar *tgt, int32_t *tgtLen, UError
 
 #define UCOL_CONV_STACK_SIZE 256
 
-static UCollationResult
+U_CAPI UCollationResult U_EXPORT2
 ucol_strcollRegularUTF8(
                     const UCollator *coll,
                     const char      *source,
@@ -8086,6 +8104,7 @@ ucol_strcollRegularUTF8(
                     int32_t         targetLength,
                     UErrorCode      *status)
 {
+#if 0
     UChar src16[UCOL_CONV_STACK_SIZE];
     UChar tgt16[UCOL_CONV_STACK_SIZE];
 
@@ -8112,6 +8131,45 @@ ucol_strcollRegularUTF8(
     }
 
     return res;
+#else
+    UCharIterator src;
+    UCharIterator tgt;
+
+    uiter_setUTF8(&src, source, sourceLength);
+    uiter_setUTF8(&tgt, target, targetLength);
+
+    // Preparing the context objects for iterating over strings
+    collIterate sColl, tColl;
+    IInit_collIterate(coll, NULL, -1, &sColl, status);
+    IInit_collIterate(coll, NULL, -1, &tColl, status);
+    if(U_FAILURE(*status)) {
+        UTRACE_EXIT_VALUE_STATUS(UCOL_EQUAL, *status)
+        return UCOL_EQUAL;
+    }
+    // The division for the array length may truncate the array size to
+    // a little less than UNORM_ITER_SIZE, but that size is dimensioned too high
+    // for all platforms anyway.
+    UAlignedMemory stackNormIter1[UNORM_ITER_SIZE/sizeof(UAlignedMemory)];
+    UAlignedMemory stackNormIter2[UNORM_ITER_SIZE/sizeof(UAlignedMemory)];
+    UNormIterator *sNormIter = NULL, *tNormIter = NULL;
+
+    sColl.iterator = &src;
+    sColl.flags |= UCOL_USE_ITERATOR;
+    tColl.flags |= UCOL_USE_ITERATOR;
+    tColl.iterator = &tgt;
+
+    if(ucol_getAttribute(coll, UCOL_NORMALIZATION_MODE, status) == UCOL_ON) {
+        sNormIter = unorm_openIter(stackNormIter1, sizeof(stackNormIter1), status);
+        sColl.iterator = unorm_setIter(sNormIter, &src, UNORM_FCD, status);
+        sColl.flags &= ~UCOL_ITER_NORM;
+
+        tNormIter = unorm_openIter(stackNormIter2, sizeof(stackNormIter2), status);
+        tColl.iterator = unorm_setIter(tNormIter, &tgt, UNORM_FCD, status);
+        tColl.flags &= ~UCOL_ITER_NORM;
+    }
+
+    return ucol_strcollRegular(&sColl, &tColl, status);
+#endif
 }
 
 static inline uint32_t
