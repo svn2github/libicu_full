@@ -231,25 +231,26 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         int32_t leftIndex = 0;
         int32_t rightIndex = 0;
         for(;;) {
-            uint32_t leftTertiary, rightTertiary;
+            uint32_t leftCase, leftLower32, rightCase;
             if(strength == UCOL_PRIMARY) {
                 // Primary+case: Ignore case level weights of primary ignorables.
                 // Otherwise we would get a-umlaut > a
                 // which is not desirable for accent-insensitive sorting.
-                // Check for tertiary == 0 as well because variable CEs are stored
+                // Check for (lower 32 bits) == 0 as well because variable CEs are stored
                 // with only primary weights.
                 int64_t ce;
                 do {
                     ce = leftBuffer[leftIndex++];
-                    leftTertiary = (uint32_t)ce;
-                } while((uint32_t)(ce >> 32) == 0 || leftTertiary == 0);
-                leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+                    leftCase = (uint32_t)ce;
+                } while((uint32_t)(ce >> 32) == 0 || leftCase == 0);
+                leftLower32 = leftCase;
+                leftCase &= 0xc000;
 
                 do {
                     ce = rightBuffer[rightIndex++];
-                    rightTertiary = (uint32_t)ce;
-                } while((uint32_t)(ce >> 32) == 0 || rightTertiary == 0);
-                rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+                    rightCase = (uint32_t)ce;
+                } while((uint32_t)(ce >> 32) == 0 || rightCase == 0);
+                rightCase &= 0xc000;
             } else {
                 // Secondary+case: By analogy with the above,
                 // ignore case level weights of secondary ignorables.
@@ -261,39 +262,28 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 // but it's simpler to always ignore case weights of secondary ignorables,
                 // turning 0.0.ct into 0.0.0.t.
                 do {
-                    leftTertiary = (uint32_t)leftBuffer[leftIndex++];
-                } while(leftTertiary <= 0xffff);
-                leftTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+                    leftCase = (uint32_t)leftBuffer[leftIndex++];
+                } while(leftCase <= 0xffff);
+                leftLower32 = leftCase;
+                leftCase &= 0xc000;
 
                 do {
-                    rightTertiary = (uint32_t)rightBuffer[rightIndex++];
-                } while(rightTertiary <= 0xffff);
-                rightTertiary &= Collation::CASE_AND_TERTIARY_MASK;
+                    rightCase = (uint32_t)rightBuffer[rightIndex++];
+                } while(rightCase <= 0xffff);
+                rightCase &= 0xc000;
             }
 
-            if(leftTertiary != rightTertiary) {
-                // Turn the two case bits into full weights so that we handle
-                // end-of-string and merge-sorting properly:
-                // Pass through NO_CE and MERGE_SEPARATOR
-                // and make real case bits larger than the MERGE_SEPARATOR.
-                uint32_t leftCase = leftTertiary;
-                if(leftTertiary > Collation::MERGE_SEPARATOR_WEIGHT16) {
-                    leftCase = (leftCase & 0xc000) | 0x10000;
-                }
-                uint32_t rightCase = rightTertiary;
-                if(rightTertiary > Collation::MERGE_SEPARATOR_WEIGHT16) {
-                    rightCase = (rightCase & 0xc000) | 0x10000;
-                }
-                if(leftCase != rightCase) {
-                    if((options & CollationData::UPPER_FIRST) != 0) {
-                        leftCase ^= 0x8000;
-                        rightCase ^= 0x8000;
-                    }
+            // No need to handle NO_CE and MERGE_SEPARATOR specially:
+            // There is one case weight for each previous-level weight,
+            // so level length differences were handled there.
+            if(leftCase != rightCase) {
+                if((options & CollationData::UPPER_FIRST) == 0) {
                     return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
+                } else {
+                    return (leftCase < rightCase) ? UCOL_GREATER : UCOL_LESS;
                 }
-            } else if(leftTertiary == Collation::NO_CE_WEIGHT16) {
-                break;
             }
+            if((leftLower32 >> 16) == Collation::NO_CE_WEIGHT16) { break; }
         }
     }
     if(CollationData::getStrength(options) <= UCOL_SECONDARY) { return UCOL_EQUAL; }
@@ -387,7 +377,6 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         } while(rightQuaternary == 0);
 
         if(leftQuaternary != rightQuaternary) {
-            // TODO: Script reordering?! v1 does not perform it for shifted primaries.
             // Return the difference, with script reordering.
             const uint8_t *reorderTable = left.getData()->reorderTable;
             if (reorderTable != NULL) {
