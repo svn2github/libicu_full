@@ -200,6 +200,7 @@ void CollationTest::TestImplicits() {
                         errorCode);
     UnicodeSet unassigned("[[:Cn:][:Cs:][:Co:]]", errorCode);
     unassigned.remove(0xfffe, 0xffff);
+    unassigned.remove(0xfff1, 0xfff2);  // TODO: remove hack "tailoring"
     if(errorCode.logIfFailureAndReset("UnicodeSet")) {
         return;
     }
@@ -1968,6 +1969,19 @@ makeBaseDataFromFractionalUCA(CollationBaseDataBuilder &builder, UErrorCode &err
 
     builder.initBase(errorCode);
     write_uca_table(path.data(), builder, &errorCode);
+    // TODO: remove artificial "tailoring", replace with real tailoring
+    // Set U+FFF1 to a tertiary CE.
+    // It must have uppercase bits.
+    // Its tertiary weight must be higher than that of any primary or secondary CE.
+    UnicodeString prefix;
+    UnicodeString s((UChar)0xfff1);
+    int64_t ce = 0x8000 | 0x3ff0;
+    builder.add(prefix, s, &ce, 1, errorCode);
+    // Set U+FFF2 to the next tertiary CE after a gap.
+    s.setTo((UChar)0xfff2);
+    ce += 2;
+    builder.add(prefix, s, &ce, 1, errorCode);
+    // end artificial tailoring
     CollationBaseData *cd = builder.buildBaseData(errorCode);
     printf("*** CLDR root collation part sizes ***\n");
     UErrorCode trieErrorCode = U_ZERO_ERROR;

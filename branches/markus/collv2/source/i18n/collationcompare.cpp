@@ -326,9 +326,10 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             if(CollationData::sortsTertiaryUpperCaseFirst(options)) {
                 // Pass through NO_CE and MERGE_SEPARATOR
                 // and keep real tertiary weights larger than the MERGE_SEPARATOR.
-                // Do not change the artificial uppercase weight of a secondary ignorable 0.0.ut,
-                // to keep tertiary weights well-formed.
-                // (They must be greater than tertiaries in primary and secondary CEs.)
+                // Do not change the artificial uppercase weight of a tertiary CE (0.0.ut),
+                // to keep tertiary CEs well-formed.
+                // Their case+tertiary weights must be greater than those of
+                // primary and secondary CEs.
                 if(leftTertiary > Collation::MERGE_SEPARATOR_WEIGHT16 && leftLower32 > 0xffff) {
                     leftTertiary ^= 0x8000;
                 }

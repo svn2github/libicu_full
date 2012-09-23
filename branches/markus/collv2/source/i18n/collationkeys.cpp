@@ -313,14 +313,30 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 appendWeight16(t, tertiaries, errorCode);
             } else {
                 // Tertiary weights with caseFirst=upperFirst.
-                // Lowercase     01..04 -> 81..84  (also uncased/separators)
-                // Common weight     05 -> 85..C5
+                // Do not change the artificial uppercase weight of a tertiary CE (0.0.ut),
+                // to keep tertiary CEs well-formed.
+                // Their case+tertiary weights must be greater than those of
+                // primary and secondary CEs.
+                //
+                // Separators    01..02 -> 01..02  (unchanged)
+                // Lowercase     03..04 -> 83..84  (includes uncased)
+                // Common weight     05 -> 85..C5  (common-weight compression range)
                 // Lowercase     06..3F -> C6..FF
                 // Mixed case    43..7F -> 43..7F
                 // Uppercase     83..BF -> 03..3F
-                t ^= 0xc000;
-                if(t < (TER_UPPER_FIRST_COMMON_HIGH << 8)) {
-                    t -= 0x4000;
+                // Tertiary CE   86..BF -> C6..FF
+                if(t <= Collation::MERGE_SEPARATOR_WEIGHT16) {
+                    // Keep separators unchanged.
+                } else if(lower32 > 0xffff) {
+                    // Invert case bits of primary & secondary CEs.
+                    t ^= 0xc000;
+                    if(t < (TER_UPPER_FIRST_COMMON_HIGH << 8)) {
+                        t -= 0x4000;
+                    }
+                } else {
+                    // Keep uppercase bits of tertiary CEs.
+                    U_ASSERT(0x8600 <= t && t <= 0xbfff);
+                    t += 0x4000;
                 }
                 // TODO: does v1 handle 03 & 04 tertiary weights properly? 02?
                 //       try &[before 3]a<<<x and U+FFFE with all case settings

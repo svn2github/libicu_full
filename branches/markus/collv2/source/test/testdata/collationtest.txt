@@ -304,6 +304,31 @@ a       27..
 <1 α
 <1 丂
 
+** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=lower
+@ root
+# TODO: replace hack with real tailoring of U+FFF1 & U+FFF2 (or other characters) to tertiary CEs
+% caseFirst=lower
+* compare
+<1 aa
+<3 aa\uFFF1
+<3 aa\uFFF2
+<3 aA
+<3 aA\uFFF1
+<3 a\uFFF1a
+<3 a\uFFF2a
+
+** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=upper
+% caseFirst=upper
+* compare
+<1 aA
+<3 aA\uFFF1
+<3 aa
+<3 aa\uFFF1
+<3 aa\uFFF2
+<3 a\uFFF1a
+<3 a\uFFF2a
+
+
 ** test: this is a description
 @ rawbase
 # string then list of CEs; empty leading weight=0, other empty=common
