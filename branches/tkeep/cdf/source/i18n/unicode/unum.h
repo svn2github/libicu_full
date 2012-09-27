@@ -251,6 +251,15 @@ typedef enum UNumberFormatPadPosition {
 } UNumberFormatPadPosition;
 
 /**
+ * Constants for specifying short or long format.
+ * @draft ICU 50
+ */
+typedef enum UNumberCompactStyle {
+  UNUM_SHORT,
+  UNUM_LONG
+} UNumberCompactStyle;
+
+/**
  * Constants for specifying currency spacing
  * @stable ICU 4.8
  */
