@@ -757,6 +757,20 @@ public:
                     UErrorCode& status);
 
 
+    /**
+     * Set an attribute on this DecimalFormat.
+     * May return U_UNSUPPORTED_ERROR if this instance does not support
+     * the specified attribute.
+     * @param attr the attribute to set
+     * @param newvalue new value
+     * @param status the error type
+     * @return *this - for chaining
+     */
+    virtual DecimalFormat& setAttribute( UNumberFormatAttribute attr,
+                                       int32_t newvalue,
+                                       UErrorCode &status);
+
+
 #if UCONFIG_HAVE_PARSEALLINPUT
     /**
      * @internal 

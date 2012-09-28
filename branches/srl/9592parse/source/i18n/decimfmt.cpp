@@ -5304,6 +5304,105 @@ DecimalFormat::copyHashForAffixPattern(const Hashtable* source,
     }
 }
 
+DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
+                                            int32_t newValue,
+                                            UErrorCode &status) {
+  if(U_FAILURE(status)) return *this;
+
+  switch(attr) {
+  case UNUM_LENIENT_PARSE:
+    setLenient(newValue!=0);
+    break;
+
+    case UNUM_PARSE_INT_ONLY:
+      setParseIntegerOnly(newValue!=0);
+      break;
+      
+    case UNUM_GROUPING_USED:
+      setGroupingUsed(newValue!=0);
+      break;
+        
+    case UNUM_DECIMAL_ALWAYS_SHOWN:
+      setDecimalSeparatorAlwaysShown(newValue!=0);
+        break;
+        
+    case UNUM_MAX_INTEGER_DIGITS:
+      setMaximumIntegerDigits(newValue);
+        break;
+        
+    case UNUM_MIN_INTEGER_DIGITS:
+      setMinimumIntegerDigits(newValue);
+        break;
+        
+    case UNUM_INTEGER_DIGITS:
+      setMinimumIntegerDigits(newValue);
+      setMaximumIntegerDigits(newValue);
+        break;
+        
+    case UNUM_MAX_FRACTION_DIGITS:
+      setMaximumFractionDigits(newValue);
+        break;
+        
+    case UNUM_MIN_FRACTION_DIGITS:
+      setMinimumFractionDigits(newValue);
+        break;
+        
+    case UNUM_FRACTION_DIGITS:
+      setMinimumFractionDigits(newValue);
+      setMaximumFractionDigits(newValue);
+      break;
+        
+    case UNUM_SIGNIFICANT_DIGITS_USED:
+      setSignificantDigitsUsed(newValue!=0);
+        break;
+
+    case UNUM_MAX_SIGNIFICANT_DIGITS:
+      setMaximumSignificantDigits(newValue);
+        break;
+        
+    case UNUM_MIN_SIGNIFICANT_DIGITS:
+      setMinimumSignificantDigits(newValue);
+        break;
+        
+    case UNUM_MULTIPLIER:
+      setMultiplier(newValue);    
+       break;
+        
+    case UNUM_GROUPING_SIZE:
+      setGroupingSize(newValue);    
+        break;
+        
+    case UNUM_ROUNDING_MODE:
+      setRoundingMode((DecimalFormat::ERoundingMode)newValue);
+        break;
+        
+    case UNUM_FORMAT_WIDTH:
+      setFormatWidth(newValue);
+        break;
+        
+    case UNUM_PADDING_POSITION:
+        /** The position at which padding will take place. */
+      setPadPosition((DecimalFormat::EPadPosition)newValue);
+        break;
+        
+    case UNUM_SECONDARY_GROUPING_SIZE:
+      setSecondaryGroupingSize(newValue);
+        break;
+
+#if UCONFIG_HAVE_PARSEALLINPUT
+    case UNUM_PARSE_ALL_INPUT:
+      setParseAllInput((UNumberFormatAttributeValue)newValue);
+        break;
+#endif
+
+    default:
+      status = U_UNSUPPORTED_ERROR;
+      break;
+  }
+    return *this;
+  }
+
+
 #if UCONFIG_HAVE_PARSEALLINPUT
 void DecimalFormat::setParseAllInput(UNumberFormatAttributeValue value) {
   fParseAllInput = value;

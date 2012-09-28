@@ -545,97 +545,14 @@ unum_setAttribute(    UNumberFormat*          fmt,
   NumberFormat* nf = reinterpret_cast<NumberFormat*>(fmt);
   if ( attr == UNUM_LENIENT_PARSE ) {
     // Supported for all subclasses
+    // keep this here as the class may not be a DecimalFormat
     return nf->setLenient(newValue != 0);
   }
   // The remaining attributea are only supported for DecimalFormat
   DecimalFormat* df = dynamic_cast<DecimalFormat*>(nf);
   if (df != NULL) {
-    switch(attr) {
-    case UNUM_PARSE_INT_ONLY:
-        df->setParseIntegerOnly(newValue!=0);
-        break;
-        
-    case UNUM_GROUPING_USED:
-        df->setGroupingUsed(newValue!=0);
-        break;
-        
-    case UNUM_DECIMAL_ALWAYS_SHOWN:
-        df->setDecimalSeparatorAlwaysShown(newValue!=0);
-        break;
-        
-    case UNUM_MAX_INTEGER_DIGITS:
-        df->setMaximumIntegerDigits(newValue);
-        break;
-        
-    case UNUM_MIN_INTEGER_DIGITS:
-        df->setMinimumIntegerDigits(newValue);
-        break;
-        
-    case UNUM_INTEGER_DIGITS:
-        df->setMinimumIntegerDigits(newValue);
-        df->setMaximumIntegerDigits(newValue);
-        break;
-        
-    case UNUM_MAX_FRACTION_DIGITS:
-        df->setMaximumFractionDigits(newValue);
-        break;
-        
-    case UNUM_MIN_FRACTION_DIGITS:
-        df->setMinimumFractionDigits(newValue);
-        break;
-        
-    case UNUM_FRACTION_DIGITS:
-        df->setMinimumFractionDigits(newValue);
-        df->setMaximumFractionDigits(newValue);
-        break;
-        
-    case UNUM_SIGNIFICANT_DIGITS_USED:
-        df->setSignificantDigitsUsed(newValue!=0);
-        break;
-
-    case UNUM_MAX_SIGNIFICANT_DIGITS:
-        df->setMaximumSignificantDigits(newValue);
-        break;
-        
-    case UNUM_MIN_SIGNIFICANT_DIGITS:
-        df->setMinimumSignificantDigits(newValue);
-        break;
-        
-    case UNUM_MULTIPLIER:
-        df->setMultiplier(newValue);    
-        break;
-        
-    case UNUM_GROUPING_SIZE:
-        df->setGroupingSize(newValue);    
-        break;
-        
-    case UNUM_ROUNDING_MODE:
-        df->setRoundingMode((DecimalFormat::ERoundingMode)newValue);
-        break;
-        
-    case UNUM_FORMAT_WIDTH:
-        df->setFormatWidth(newValue);
-        break;
-        
-    case UNUM_PADDING_POSITION:
-        /** The position at which padding will take place. */
-        df->setPadPosition((DecimalFormat::EPadPosition)newValue);
-        break;
-        
-    case UNUM_SECONDARY_GROUPING_SIZE:
-        df->setSecondaryGroupingSize(newValue);
-        break;
-
-#if UCONFIG_HAVE_PARSEALLINPUT
-    case UNUM_PARSE_ALL_INPUT:
-        df->setParseAllInput((UNumberFormatAttributeValue)newValue);
-        break;
-#endif
-
-    default:
-        /* Shouldn't get here anyway */
-        break;
-    }
+    UErrorCode ignoredStatus = U_ZERO_ERROR;
+    df->setAttribute(attr, newValue, ignoredStatus);
   }
 }
 

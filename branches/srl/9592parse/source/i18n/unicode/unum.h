@@ -107,7 +107,7 @@
  * formatters.
  * <P>
  * You can also control the display of numbers with such function as
- * unum_getAttribues() and unum_setAtributes(), which let you set the
+ * unum_getAttributes() and unum_setAttributes(), which let you set the
  * miminum fraction digits, grouping, etc.
  * @see UNumberFormatAttributes for more details
  * <P>
