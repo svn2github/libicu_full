@@ -758,18 +758,30 @@ public:
 
 
     /**
-     * Set an attribute on this DecimalFormat.
+     * Set an integer attribute on this DecimalFormat.
      * May return U_UNSUPPORTED_ERROR if this instance does not support
      * the specified attribute.
      * @param attr the attribute to set
      * @param newvalue new value
      * @param status the error type
      * @return *this - for chaining
+     * @internal ICU 50
      */
     virtual DecimalFormat& setAttribute( UNumberFormatAttribute attr,
                                        int32_t newvalue,
                                        UErrorCode &status);
 
+    /**
+     * Get an integer
+     * May return U_UNSUPPORTED_ERROR if this instance does not support
+     * the specified attribute.
+     * @param attr the attribute to set
+     * @param status the error type
+     * @return the attribute value. Undefined if there is an error.
+     * @internal ICU 50
+     */
+    virtual int32_t getAttribute( UNumberFormatAttribute attr,
+                                  UErrorCode &status) const;
 
 #if UCONFIG_HAVE_PARSEALLINPUT
     /**

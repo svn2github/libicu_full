@@ -5399,9 +5399,79 @@ DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
       status = U_UNSUPPORTED_ERROR;
       break;
   }
-    return *this;
+  return *this;
+}
+
+int32_t DecimalFormat::getAttribute( UNumberFormatAttribute attr, 
+                                     UErrorCode &status ) const {
+  if(U_FAILURE(status)) return -1;
+  switch(attr) {
+    case UNUM_LENIENT_PARSE: 
+        return isLenient();
+
+    case UNUM_PARSE_INT_ONLY:
+        return isParseIntegerOnly();
+        
+    case UNUM_GROUPING_USED:
+        return isGroupingUsed();
+        
+    case UNUM_DECIMAL_ALWAYS_SHOWN:
+        return isDecimalSeparatorAlwaysShown();    
+        
+    case UNUM_MAX_INTEGER_DIGITS:
+        return getMaximumIntegerDigits();
+        
+    case UNUM_MIN_INTEGER_DIGITS:
+        return getMinimumIntegerDigits();
+        
+    case UNUM_INTEGER_DIGITS:
+        // TBD: what should this return?
+        return getMinimumIntegerDigits();
+        
+    case UNUM_MAX_FRACTION_DIGITS:
+        return getMaximumFractionDigits();
+        
+    case UNUM_MIN_FRACTION_DIGITS:
+        return getMinimumFractionDigits();
+        
+    case UNUM_FRACTION_DIGITS:
+        // TBD: what should this return?
+        return getMinimumFractionDigits();
+        
+    case UNUM_SIGNIFICANT_DIGITS_USED:
+        return areSignificantDigitsUsed();
+        
+    case UNUM_MAX_SIGNIFICANT_DIGITS:
+        return getMaximumSignificantDigits();
+        
+    case UNUM_MIN_SIGNIFICANT_DIGITS:
+        return getMinimumSignificantDigits();
+        
+    case UNUM_MULTIPLIER:
+        return getMultiplier();    
+        
+    case UNUM_GROUPING_SIZE:
+        return getGroupingSize();    
+        
+    case UNUM_ROUNDING_MODE:
+        return getRoundingMode();
+        
+    case UNUM_FORMAT_WIDTH:
+        return getFormatWidth();
+        
+    case UNUM_PADDING_POSITION:
+        return getPadPosition();
+        
+    case UNUM_SECONDARY_GROUPING_SIZE:
+        return getSecondaryGroupingSize();
+
+    default:
+        status = U_UNSUPPORTED_ERROR;
+        break;
   }
 
+  return -1; /* undefined */
+}
 
 #if UCONFIG_HAVE_PARSEALLINPUT
 void DecimalFormat::setParseAllInput(UNumberFormatAttributeValue value) {

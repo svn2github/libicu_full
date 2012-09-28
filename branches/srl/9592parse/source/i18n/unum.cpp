@@ -468,70 +468,12 @@ unum_getAttribute(const UNumberFormat*          fmt,
     // Supported for all subclasses
     return nf->isLenient();
   }
+
   // The remaining attributea are only supported for DecimalFormat
   const DecimalFormat* df = dynamic_cast<const DecimalFormat*>(nf);
   if (df != NULL) {
-    switch(attr) {
-    case UNUM_PARSE_INT_ONLY:
-        return df->isParseIntegerOnly();
-        
-    case UNUM_GROUPING_USED:
-        return df->isGroupingUsed();
-        
-    case UNUM_DECIMAL_ALWAYS_SHOWN:
-        return df->isDecimalSeparatorAlwaysShown();    
-        
-    case UNUM_MAX_INTEGER_DIGITS:
-        return df->getMaximumIntegerDigits();
-        
-    case UNUM_MIN_INTEGER_DIGITS:
-        return df->getMinimumIntegerDigits();
-        
-    case UNUM_INTEGER_DIGITS:
-        // TBD: what should this return?
-        return df->getMinimumIntegerDigits();
-        
-    case UNUM_MAX_FRACTION_DIGITS:
-        return df->getMaximumFractionDigits();
-        
-    case UNUM_MIN_FRACTION_DIGITS:
-        return df->getMinimumFractionDigits();
-        
-    case UNUM_FRACTION_DIGITS:
-        // TBD: what should this return?
-        return df->getMinimumFractionDigits();
-        
-    case UNUM_SIGNIFICANT_DIGITS_USED:
-        return df->areSignificantDigitsUsed();
-        
-    case UNUM_MAX_SIGNIFICANT_DIGITS:
-        return df->getMaximumSignificantDigits();
-        
-    case UNUM_MIN_SIGNIFICANT_DIGITS:
-        return df->getMinimumSignificantDigits();
-        
-    case UNUM_MULTIPLIER:
-        return df->getMultiplier();    
-        
-    case UNUM_GROUPING_SIZE:
-        return df->getGroupingSize();    
-        
-    case UNUM_ROUNDING_MODE:
-        return df->getRoundingMode();
-        
-    case UNUM_FORMAT_WIDTH:
-        return df->getFormatWidth();
-        
-    case UNUM_PADDING_POSITION:
-        return df->getPadPosition();
-        
-    case UNUM_SECONDARY_GROUPING_SIZE:
-        return df->getSecondaryGroupingSize();
-
-    default:
-        /* enums out of sync? unsupported enum? */
-        break;
-    }
+    UErrorCode ignoredStatus = U_ZERO_ERROR;
+    return df->getAttribute( attr, ignoredStatus );
   }
 
   return -1;
