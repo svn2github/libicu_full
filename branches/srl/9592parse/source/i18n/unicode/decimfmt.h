@@ -2188,6 +2188,8 @@ private:
     int8_t                  fMinExponentDigits;
     UBool                   fExponentSignAlwaysShown;
 
+    UBool                   fParseNoExponent;
+
     DigitList*              fRoundingIncrement;  // NULL if no rounding increment specified.
     ERoundingMode           fRoundingMode;
 

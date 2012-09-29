@@ -350,6 +350,7 @@ DecimalFormat::init(UErrorCode &status) {
     fUseExponentialNotation = FALSE;
     fMinExponentDigits = 0;
     fExponentSignAlwaysShown = FALSE;
+    fParseNoExponent = FALSE;
     fRoundingIncrement = 0;
     fRoundingMode = kRoundHalfEven;
     fPad = 0;
@@ -737,6 +738,7 @@ DecimalFormat::operator=(const DecimalFormat& rhs)
         _copy_ptr(&fSymbols, rhs.fSymbols);
         fUseExponentialNotation = rhs.fUseExponentialNotation;
         fExponentSignAlwaysShown = rhs.fExponentSignAlwaysShown;
+        fParseNoExponent = rhs.fParseNoExponent;
         /*Bertrand A. D. Update 98.03.17*/
         fCurrencySignCount = rhs.fCurrencySignCount;
         /*end of Update*/
@@ -2435,8 +2437,11 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 // decimalSet is considered to consist of (ch,ch)
             }
             else {
+
+              if(!fParseNoExponent) {
                 const UnicodeString *tmp;
                 tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
+                // TODO: CASE
                 if (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT))    // error code is set below if !sawDigit 
                 {
                     // Parse sign, if present
@@ -2490,6 +2495,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                 else {
                     break;
                 }
+              } else { // not parsing exponent
+                break;
+              }
             }
         }
 
@@ -5395,6 +5403,16 @@ DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
         break;
 #endif
 
+  case UNUM_PARSE_NO_EXPONENT:
+    if(newValue==0) {
+      fParseNoExponent = FALSE;
+    } else if(newValue==1) {
+      fParseNoExponent = TRUE;
+    } else {
+      status = U_ILLEGAL_ARGUMENT_ERROR;
+    }
+    break;
+
     default:
       status = U_UNSUPPORTED_ERROR;
       break;
@@ -5464,6 +5482,9 @@ int32_t DecimalFormat::getAttribute( UNumberFormatAttribute attr,
         
     case UNUM_SECONDARY_GROUPING_SIZE:
         return getSecondaryGroupingSize();
+        
+    case UNUM_PARSE_NO_EXPONENT:
+        return fParseNoExponent?1:0;
 
     default:
         status = U_UNSUPPORTED_ERROR;

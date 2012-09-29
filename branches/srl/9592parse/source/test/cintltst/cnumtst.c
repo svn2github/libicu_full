@@ -40,8 +40,8 @@ static void TestTextAttributeCrash(void);
 static void TestNBSPInPattern(void);
 static void TestInt64Parse(void);
 static void TestParseCurrency(void);
-
 static void TestMaxInt(void);
+static void TestNoExponent(void);
 
 #define TESTCASE(x) addTest(root, &x, "tsformat/cnumtst/" #x)
 
@@ -63,6 +63,7 @@ void addNumForTest(TestNode** root)
     TESTCASE(TestParseCurrency);
     TESTCASE(TestCloneWithRBNF);
     TESTCASE(TestMaxInt);
+    TESTCASE(TestNoExponent);
 }
 
 /** copy src to dst with unicode-escapes for values < 0x20 and > 0x7e, null terminate if possible */
@@ -2030,6 +2031,59 @@ static void TestCloneWithRBNF(void) {
     if (u_strcmp(buffer,buffer_cloned)) {
         log_data_err("Result from cloned formatter not identical to the original. Original: %s Cloned: %s - (Are you missing data?)",u_austrcpy(temp1, buffer),u_austrcpy(temp2,buffer_cloned));
     }
+}
+
+static void TestNoExponent(void) {
+  UErrorCode status = U_ZERO_ERROR;
+  UChar str[100];
+  const char *cstr;
+  UNumberFormat *fmt;
+  int32_t pos;
+  int32_t expect = 0;
+  int32_t num;
+
+  fmt = unum_open(UNUM_DECIMAL, NULL, -1, "en_US", NULL, &status);
+
+  if(U_FAILURE(status) || fmt == NULL) {
+    log_data_err("%s:%d: unum_open failed with %s (Are you missing data?)\n", __FILE__, __LINE__, u_errorName(status));
+    return;
+  }
+
+  cstr = "10E6";
+  u_uastrcpy(str, cstr);
+  expect = 10000000;
+  pos = 0;
+  num = unum_parse(fmt, str, -1, &pos, &status);
+  if(U_FAILURE(status)) {
+    log_data_err("%s:%d: unum_parse failed with %s for %s (Are you missing data?)\n", __FILE__, __LINE__, u_errorName(status), cstr);
+  } else if(expect!=num) {
+    log_data_err("%s:%d: unum_parse failed, got %d expected %d for '%s'(Are you missing data?)\n", __FILE__, __LINE__, num, expect, cstr);
+  } else {
+    log_verbose("%s:%d: unum_parse returned %d for '%s'\n", __FILE__, __LINE__, num, cstr);
+  }
+
+  unum_setAttribute(fmt, UNUM_PARSE_NO_EXPONENT, 1); /* no error code */
+  log_verbose("set UNUM_PARSE_NO_EXPONENT\n");
+  
+
+  pos = 0;
+  expect=10;
+  num = unum_parse(fmt, str, -1, &pos, &status);
+  if(num==10000000) {
+    log_err("%s:%d: FAIL: unum_parse should have returned 10, not 10000000 on %s after UNUM_PARSE_NO_EXPONENT\n", __FILE__, __LINE__, cstr);
+  } else if(num==expect) {
+    log_verbose("%s:%d: unum_parse gave %d for %s - good.\n", __FILE__, __LINE__, num, cstr);
+  }
+
+  if(pos==2) {
+    log_verbose("And pos = %d\n", pos);
+  } else {
+    log_err("FAIL: pos=%d expected 2 on %s\n", pos, cstr);
+  }
+
+  status = U_ZERO_ERROR;
+
+  unum_close(fmt);
 }
 
 static void TestMaxInt(void) {

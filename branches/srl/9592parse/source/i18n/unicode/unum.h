@@ -775,15 +775,35 @@ typedef enum UNumberFormatAttribute {
   /** Lenient parse mode used by rule-based formats.
    * @stable ICU 3.0
    */
-  UNUM_LENIENT_PARSE
-
+  UNUM_LENIENT_PARSE,
+  /** If 1, specifies that if setting the "max integer digits" attribute would truncate a value, set U_FORMAT_TRUNCATE_ERROR rather than silently truncating.
+   * For example,  formatting the value 1234 with 4 max int digits would succeed, but formatting 12345 would fail. There is no effect on parsing.
+   * Default: 0 (not set)
+   * @draft ICU 50
+   */
+  UNUM_FORMAT_FAIL_IF_MAX_DIGITS,
+  /** If 1, specifies that any text is parsed in a case-sensitive way.Otherwise items, such as the exponent symbol, are parsed case-insensitive.
+   * Default: 0 (not set)
+   * @draft ICU 50
+   */
+  UNUM_PARSE_CASE_SENSITIVE,
+  /** 
+   * if this attribute is set to 1, specifies that, if the pattern doesn’t contain an exponent, the exponent will not be parsed. If the pattern does contain an exponent, this attribute has no effect.
+   * Has no effect on formatting.
+   * Default: 0 (unset)
+   * @draft ICU 50
+   */
+  UNUM_PARSE_NO_EXPONENT,
 #if UCONFIG_HAVE_PARSEALLINPUT
   /** Consume all input. (may use fastpath). Set to UNUM_YES (require fastpath), UNUM_NO (skip fastpath), or UNUM_MAYBE (heuristic).
+   * This is an internal ICU API. Do not use.
    * @internal
    */
-  ,UNUM_PARSE_ALL_INPUT
+  UNUM_PARSE_ALL_INPUT,
 #endif
-  
+  /** Count of attributes.
+   * @internal */
+  UNUM_NUMERIC_ATTRIBUTE_COUNT
 } UNumberFormatAttribute;
 
 /**
