@@ -2438,7 +2438,8 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             }
             else {
 
-              if(!fParseNoExponent) {
+              if(!fParseNoExponent || // don't parse if this is set unless..
+                 fUseExponentialNotation /* should be:  isScientificNotation() but it is not const (?!) see bug #9619 */) { // .. it's an exponent format - ignore setting and parse anyways
                 const UnicodeString *tmp;
                 tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
                 // TODO: CASE
