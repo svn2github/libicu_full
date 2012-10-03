@@ -601,6 +601,7 @@ typedef enum UErrorCode {
     U_DEFAULT_KEYWORD_MISSING,        /**< Missing DEFAULT rule in plural rules */
     U_DECIMAL_NUMBER_SYNTAX_ERROR,    /**< Decimal number syntax error */
     U_FORMAT_INEXACT_ERROR,           /**< Cannot format a number exactly and rounding mode is ROUND_UNNECESSARY @stable ICU 4.8 */
+    U_FORMAT_TRUNCATE_ERROR,          /**< Cannot format a number without truncating. @draft ICU 50 */
     U_FMT_PARSE_ERROR_LIMIT,          /**< The limit for format library errors */
 
     /*

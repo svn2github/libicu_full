@@ -187,8 +187,8 @@ unum_formatInt64(const UNumberFormat* fmt,
     if(pos != 0)
         fp.setField(pos->field);
     
-    ((const NumberFormat*)fmt)->format(number, res, fp);
-    
+    ((const NumberFormat*)fmt)->format(number, res, fp, *status);
+
     if(pos != 0) {
         pos->beginIndex = fp.getBeginIndex();
         pos->endIndex = fp.getEndIndex();
@@ -220,7 +220,7 @@ unum_formatDouble(    const    UNumberFormat*  fmt,
   if(pos != 0)
     fp.setField(pos->field);
   
-  ((const NumberFormat*)fmt)->format(number, res, fp);
+  ((const NumberFormat*)fmt)->format(number, res, fp, *status);
   
   if(pos != 0) {
     pos->beginIndex = fp.getBeginIndex();

@@ -776,6 +776,23 @@ typedef enum UNumberFormatAttribute {
    * @stable ICU 3.0
    */
   UNUM_LENIENT_PARSE,
+#if UCONFIG_HAVE_PARSEALLINPUT
+  /** Consume all input. (may use fastpath). Set to UNUM_YES (require fastpath), UNUM_NO (skip fastpath), or UNUM_MAYBE (heuristic).
+   * This is an internal ICU API. Do not use.
+   * @internal
+   */
+  UNUM_PARSE_ALL_INPUT,
+#endif
+
+  /** Count of "regular" numeric attributes.
+   * @internal */
+  UNUM_NUMERIC_ATTRIBUTE_COUNT,
+
+  /** One below the first bitfield-boolean item.
+   * All items after this one are stored in boolean form.
+   * @internal */
+  UNUM_MAX_NONBOOLEAN_ATTRIBUTE = 0x0FFF,
+
   /** If 1, specifies that if setting the "max integer digits" attribute would truncate a value, set U_FORMAT_TRUNCATE_ERROR rather than silently truncating.
    * For example,  formatting the value 1234 with 4 max int digits would succeed, but formatting 12345 would fail. There is no effect on parsing.
    * Default: 0 (not set)
@@ -794,16 +811,10 @@ typedef enum UNumberFormatAttribute {
    * @draft ICU 50
    */
   UNUM_PARSE_NO_EXPONENT,
-#if UCONFIG_HAVE_PARSEALLINPUT
-  /** Consume all input. (may use fastpath). Set to UNUM_YES (require fastpath), UNUM_NO (skip fastpath), or UNUM_MAYBE (heuristic).
-   * This is an internal ICU API. Do not use.
-   * @internal
-   */
-  UNUM_PARSE_ALL_INPUT,
-#endif
-  /** Count of attributes.
+
+  /** Limit of boolean attributes.
    * @internal */
-  UNUM_NUMERIC_ATTRIBUTE_COUNT
+  UNUM_LIMIT_BOOLEAN_ATTRIBUTE
 } UNumberFormatAttribute;
 
 /**

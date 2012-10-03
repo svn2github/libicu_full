@@ -2173,6 +2173,39 @@ static void TestMaxInt(void) {
     log_err("unum_formatDouble Expected %s but got %s status %s\n", austrdup(expect), austrdup(result2), u_errorName(status));
   }
 
+
+
+  /* test UNUM_FORMAT_FAIL_IF_MAX_DIGITS */
+  ASSERT_TRUE(unum_getAttribute(fmt, UNUM_FORMAT_FAIL_IF_MAX_DIGITS)==0);
+
+  unum_setAttribute(fmt, UNUM_FORMAT_FAIL_IF_MAX_DIGITS, 1);
+  /* test UNUM_FORMAT_FAIL_IF_MAX_DIGITS */
+  ASSERT_TRUE(unum_getAttribute(fmt, UNUM_FORMAT_FAIL_IF_MAX_DIGITS)==1);
+  
+  status = U_ZERO_ERROR;
+  /* max int digits still '2' */
+  len1 = unum_formatInt64(fmt, 1997, result1, 1024, NULL, &status);
+  ASSERT_TRUE(status==U_FORMAT_TRUNCATE_ERROR);
+  status = U_ZERO_ERROR;
+  
+  /* But, formatting 97->'97' works fine. */
+  
+  /* #1 */
+  len1 = unum_formatInt64(fmt, 97, result1, 1024, NULL, &status);
+  result1[len1]=0;
+  if(U_FAILURE(status) || u_strcmp(expect, result1)) {
+    log_err("unum_formatInt64 Expected %s but got %s status %s\n", austrdup(expect), austrdup(result1), u_errorName(status));
+  }
+
+  status = U_ZERO_ERROR;
+  /* #2 */
+  len2 = unum_formatDouble(fmt, 97.0, result2, 1024, NULL, &status);
+  result2[len2]=0;
+  if(U_FAILURE(status) || u_strcmp(expect, result2)) {
+    log_err("unum_formatDouble Expected %s but got %s status %s\n", austrdup(expect), austrdup(result2), u_errorName(status));
+  }
+  
+
   unum_close(fmt);
 
 }

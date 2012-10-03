@@ -73,6 +73,7 @@
 
 U_NAMESPACE_BEGIN
 
+
 /* == Fastpath calculation. ==
  */
 #if UCONFIG_FORMAT_FASTPATHS_49
@@ -350,7 +351,7 @@ DecimalFormat::init(UErrorCode &status) {
     fUseExponentialNotation = FALSE;
     fMinExponentDigits = 0;
     fExponentSignAlwaysShown = FALSE;
-    fParseNoExponent = FALSE;
+    fBoolFlags.clear();
     fRoundingIncrement = 0;
     fRoundingMode = kRoundHalfEven;
     fPad = 0;
@@ -738,7 +739,7 @@ DecimalFormat::operator=(const DecimalFormat& rhs)
         _copy_ptr(&fSymbols, rhs.fSymbols);
         fUseExponentialNotation = rhs.fUseExponentialNotation;
         fExponentSignAlwaysShown = rhs.fExponentSignAlwaysShown;
-        fParseNoExponent = rhs.fParseNoExponent;
+        fBoolFlags = rhs.fBoolFlags;
         /*Bertrand A. D. Update 98.03.17*/
         fCurrencySignCount = rhs.fCurrencySignCount;
         /*end of Update*/
@@ -995,6 +996,15 @@ DecimalFormat::format(int32_t number,
 UnicodeString&
 DecimalFormat::format(int32_t number,
                       UnicodeString& appendTo,
+                      FieldPosition& fieldPosition,
+                      UErrorCode& status) const
+{
+    return format((int64_t)number, appendTo, fieldPosition, status);
+}
+
+UnicodeString&
+DecimalFormat::format(int32_t number,
+                      UnicodeString& appendTo,
                       FieldPositionIterator* posIter,
                       UErrorCode& status) const
 {
@@ -1050,7 +1060,17 @@ DecimalFormat::format(int64_t number,
                       UnicodeString& appendTo,
                       FieldPosition& fieldPosition) const
 {
-    UErrorCode status = U_ZERO_ERROR;
+    UErrorCode status = U_ZERO_ERROR; /* ignored */
+    FieldPositionOnlyHandler handler(fieldPosition);
+    return _format(number, appendTo, handler, status);
+}
+
+UnicodeString&
+DecimalFormat::format(int64_t number,
+                      UnicodeString& appendTo,
+                      FieldPosition& fieldPosition,
+                      UErrorCode& status) const
+{
     FieldPositionOnlyHandler handler(fieldPosition);
     return _format(number, appendTo, handler, status);
 }
@@ -1117,6 +1137,10 @@ DecimalFormat::_format(int64_t number,
     int32_t maxIntDig = getMaximumIntegerDigits();
     int32_t destlength = length<=maxIntDig?length:maxIntDig; // dest length pinned to max int digits
 
+    if(length>maxIntDig && fBoolFlags.contains(UNUM_FORMAT_FAIL_IF_MAX_DIGITS)) {
+      status = U_FORMAT_TRUNCATE_ERROR;
+    }
+
     int32_t prependZero = getMinimumIntegerDigits() - destlength;
 
 #ifdef FMT_DEBUG
@@ -1160,7 +1184,17 @@ DecimalFormat::format(  double number,
                         UnicodeString& appendTo,
                         FieldPosition& fieldPosition) const
 {
-    UErrorCode status = U_ZERO_ERROR;
+    UErrorCode status = U_ZERO_ERROR; /* ignored */
+    FieldPositionOnlyHandler handler(fieldPosition);
+    return _format(number, appendTo, handler, status);
+}
+
+UnicodeString&
+DecimalFormat::format(  double number,
+                        UnicodeString& appendTo,
+                        FieldPosition& fieldPosition,
+                        UErrorCode& status) const
+{
     FieldPositionOnlyHandler handler(fieldPosition);
     return _format(number, appendTo, handler, status);
 }
@@ -1372,7 +1406,7 @@ DecimalFormat::_format(const DigitList &number,
         return appendTo;
     }
  
-    return subformat(appendTo, handler, adjustedNum, FALSE);
+    return subformat(appendTo, handler, adjustedNum, FALSE, status);
 }
 
 
@@ -1417,7 +1451,8 @@ UnicodeString&
 DecimalFormat::subformat(UnicodeString& appendTo,
                          FieldPositionHandler& handler,
                          DigitList&     digits,
-                         UBool          isInteger) const
+                         UBool          isInteger,
+                         UErrorCode& status) const
 {
     // char zero = '0'; 
     // DigitList returns digits as '0' thru '9', so we will need to 
@@ -1626,6 +1661,9 @@ DecimalFormat::subformat(UnicodeString& appendTo,
         if (count > maxIntDig && maxIntDig >= 0) {
             count = maxIntDig;
             digitIndex = digits.getDecimalAt() - count;
+            if(fBoolFlags.contains(UNUM_FORMAT_FAIL_IF_MAX_DIGITS)) {
+              status = U_FORMAT_TRUNCATE_ERROR;
+            }
         }
 
         int32_t sizeBeforeIntegerPart = appendTo.length();
@@ -2438,7 +2476,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             }
             else {
 
-              if(!fParseNoExponent || // don't parse if this is set unless..
+              if(!fBoolFlags.contains(UNUM_PARSE_NO_EXPONENT) || // don't parse if this is set unless..
                  fUseExponentialNotation /* should be:  isScientificNotation() but it is not const (?!) see bug #9619 */) { // .. it's an exponent format - ignore setting and parse anyways
                 const UnicodeString *tmp;
                 tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
@@ -5404,15 +5442,15 @@ DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
         break;
 #endif
 
-  case UNUM_PARSE_NO_EXPONENT:
-    if(newValue==0) {
-      fParseNoExponent = FALSE;
-    } else if(newValue==1) {
-      fParseNoExponent = TRUE;
-    } else {
-      status = U_ILLEGAL_ARGUMENT_ERROR;
-    }
-    break;
+    /* These are stored in fBoolFlags */
+    case UNUM_PARSE_NO_EXPONENT:
+    case UNUM_FORMAT_FAIL_IF_MAX_DIGITS:
+    case UNUM_PARSE_CASE_SENSITIVE:
+      fBoolFlags.set(attr, newValue); // always attempt to set, even if out of range (effectively 'pin' to 1/0
+      if(!fBoolFlags.isValidValue(newValue)) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+      }
+      break;
 
     default:
       status = U_UNSUPPORTED_ERROR;
@@ -5484,8 +5522,12 @@ int32_t DecimalFormat::getAttribute( UNumberFormatAttribute attr,
     case UNUM_SECONDARY_GROUPING_SIZE:
         return getSecondaryGroupingSize();
         
+    /* These are stored in fBoolFlags */
     case UNUM_PARSE_NO_EXPONENT:
-        return fParseNoExponent?1:0;
+    case UNUM_FORMAT_FAIL_IF_MAX_DIGITS:
+    case UNUM_PARSE_CASE_SENSITIVE:
+      return fBoolFlags.get(attr);
+      break;
 
     default:
         status = U_UNSUPPORTED_ERROR;
