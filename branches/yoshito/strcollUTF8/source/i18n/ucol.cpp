@@ -8019,82 +8019,6 @@ endOfSecLoop:
     return UCOL_EQUAL;
 }
 
-static inline UChar *
-utf8ToUChar(const char *src, int32_t srcLen, UChar *tgt, int32_t *tgtLen, UErrorCode *status)
-{
-    if (U_FAILURE(*status)) {
-        return tgt;
-    }
-
-    U_ASSERT(srcLen >= 0);
-
-    int32_t srcIdx = 0, tmpIdx;
-    UChar *pTgt = tgt;
-    UChar *pTgtEnd = tgt + *tgtLen;
-    UChar32 uc32;
-
-    while (srcIdx < srcLen && pTgt < pTgtEnd) {
-        tmpIdx = srcIdx;
-        U8_NEXT(src, tmpIdx, srcLen, uc32);
-        if (uc32 == -1) {
-            uc32 = 0xfffd;
-        }
-        if (uc32 & 0xFFFF0000) {
-            if (pTgt + 1 < pTgtEnd) {
-                *pTgt++ = U16_LEAD(uc32);
-                *pTgt++ = U16_TRAIL(uc32);
-            } else {
-                break;
-            }
-        } else {
-            *pTgt++ = (UChar)uc32;
-        }
-        srcIdx = tmpIdx;
-    }
-
-    if (srcIdx >= srcLen) {
-        *tgtLen = pTgt - tgt;
-        return tgt;
-    }
-
-    // given buffer was too small
-    int32_t len = *tgtLen;
-    tmpIdx = srcIdx;
-    while (tmpIdx < srcLen) {
-        U8_NEXT(src, tmpIdx, srcLen, uc32);
-        if (uc32 & 0xFFFF0000) {
-            len += 2;
-        } else {
-            len++;
-        }
-    }
-
-    UChar *pNewTgt = (UChar*)uprv_malloc(sizeof(UChar) * len);
-    if (pNewTgt == NULL) {
-        *status = U_MEMORY_ALLOCATION_ERROR;
-        return tgt;
-    }
-
-    uprv_memcpy(pNewTgt, tgt, (sizeof(UChar) * (*tgtLen)));
-    pTgt = pNewTgt + (*tgtLen);
-    while (srcIdx < srcLen) {
-        U8_NEXT(src, srcIdx, srcLen, uc32);
-        if (uc32 == -1) {
-            uc32 = 0xfffd;
-        }
-        if (uc32 & 0xFFFF0000) {
-            *pTgt++ = U16_LEAD(uc32);
-            *pTgt++ = U16_TRAIL(uc32);
-        } else {
-            *pTgt++ = (UChar)uc32;
-        }
-    }
-    *tgtLen = len;
-    return pNewTgt;
-}
-
-#define UCOL_CONV_STACK_SIZE 256
-
 U_CAPI UCollationResult U_EXPORT2
 ucol_strcollRegularUTF8(
                     const UCollator *coll,
@@ -8104,34 +8028,6 @@ ucol_strcollRegularUTF8(
                     int32_t         targetLength,
                     UErrorCode      *status)
 {
-#if 0
-    UChar src16[UCOL_CONV_STACK_SIZE];
-    UChar tgt16[UCOL_CONV_STACK_SIZE];
-
-    if (sourceLength < 0) {
-        sourceLength = uprv_strlen((char*)source);
-    }
-    if (targetLength < 0) {
-        targetLength = uprv_strlen((char*)target);
-    }
-
-    int32_t src16Len = sizeof(src16) / sizeof(UChar);
-    int32_t tgt16Len = sizeof(tgt16) / sizeof(UChar);
-
-    UChar *pSrc16 = utf8ToUChar(source, sourceLength, src16, &src16Len, status);
-    UChar *pTgt16 = utf8ToUChar(target, targetLength, tgt16, &tgt16Len, status);
-
-    UCollationResult res = ucol_strcollRegular(coll, pSrc16, src16Len, pTgt16, tgt16Len, status);
-
-    if (pSrc16 != src16) {
-        uprv_free(pSrc16);
-    }
-    if (pTgt16 != tgt16) {
-        uprv_free(pTgt16);
-    }
-
-    return res;
-#else
     UCharIterator src;
     UCharIterator tgt;
 
@@ -8169,7 +8065,6 @@ ucol_strcollRegularUTF8(
     }
 
     return ucol_strcollRegular(&sColl, &tColl, status);
-#endif
 }
 
 static inline uint32_t
