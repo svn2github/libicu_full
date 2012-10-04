@@ -21,6 +21,7 @@
 #include "unicode/ugender.h"
 #include "unicode/ures.h"
 
+#include "cstring.h"
 #include "mutex.h"
 #include "ucln_in.h"
 #include "umutex.h"
@@ -28,6 +29,9 @@
 
 static UHashtable* gGenderInfoCache = NULL;
 static UMTX gGenderMetaLock = NULL;
+static const char* gNeutralStr = "neutral";
+static const char* gMailTaintsStr = "maleTaints";
+static const char* gMixedNeutralStr = "mixedNeutral";
 
 enum GenderStyle {
   NEUTRAL,
@@ -55,7 +59,7 @@ GenderInfo* GenderInfo::_mixed = new GenderInfo(MIXED_NEUTRAL);
 GenderInfo* GenderInfo::_taints = new GenderInfo(MALE_TAINTS);
 
 
-GenderInfo::GenderInfo(int32_t style) : _style(style) {
+GenderInfo::GenderInfo(int32_t t) : _style(t) {
 }
 
 GenderInfo::~GenderInfo() {
@@ -117,21 +121,46 @@ const GenderInfo* GenderInfo::getInstance(const Locale& locale, UErrorCode& stat
 }
 
 GenderInfo* GenderInfo::loadInstance(const Locale& locale, UErrorCode& status) {
-  /*
-  ures_openDirect(NULL, "genderList", &status);
+  LocalUResourceBundlePointer rb(
+      ures_openDirect(NULL, "genderList", &status));
   if (U_FAILURE(status)) {
     return NULL;
   }
-  */
-  if (locale == Locale::getUS()) {
+  LocalUResourceBundlePointer locRes(ures_getByKey(rb.getAlias(), "genderList", NULL, &status));
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  int32_t resLen = 0;
+  const char* curLocaleName = locale.getName();
+  UErrorCode key_status = U_ZERO_ERROR;
+  const UChar* s = ures_getStringByKey(locRes.getAlias(), curLocaleName, &resLen, &key_status);
+  if (s == NULL) {
+    key_status = U_ZERO_ERROR;
+    char parentLocaleName[ULOC_FULLNAME_CAPACITY];
+    uprv_strcpy(parentLocaleName, curLocaleName);
+    while (s == NULL && uloc_getParent(parentLocaleName, parentLocaleName, ULOC_FULLNAME_CAPACITY, &key_status) > 0) {
+      key_status = U_ZERO_ERROR;
+      resLen = 0;
+      s = ures_getStringByKey(locRes.getAlias(), parentLocaleName, &resLen, &key_status);
+      key_status = U_ZERO_ERROR;
+    }
+  }
+  if (s == NULL) {
     return _neutral;
-  } else if (locale == Locale::getFrench()) {
-    return _taints;
-  } else {
+  }
+  char type_str[256];
+  u_UCharsToChars(s, type_str, resLen + 1);
+  if (!uprv_strcmp(type_str, gNeutralStr)) {
+    return _neutral;
+  }
+  if (!uprv_strcmp(type_str, gMixedNeutralStr)) {
     return _mixed;
   }
+  if (!uprv_strcmp(type_str, gMailTaintsStr)) {
+    return _taints;
+  }
+  return _neutral;
 }
-
 
 UGender GenderInfo::getListGender(const UGender* genders, int32_t length, UErrorCode& status) const {
   if (U_FAILURE(status)) {

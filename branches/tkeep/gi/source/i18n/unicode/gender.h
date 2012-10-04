@@ -30,6 +30,7 @@
 #include "unicode/ugender.h"
 #include "unicode/uobject.h"
 
+class GenderInfoTest;
 
 U_NAMESPACE_BEGIN
 
@@ -94,9 +95,10 @@ private:
       */
     GenderInfo& operator=(const GenderInfo&);
 
-    GenderInfo(int32_t style);
+    GenderInfo(int32_t);
 
     static GenderInfo* loadInstance(const Locale& locale, UErrorCode& status);
+    friend class ::GenderInfoTest;
 };
 
 U_NAMESPACE_END

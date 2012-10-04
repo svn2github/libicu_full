@@ -26,7 +26,8 @@ public:
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
-    void TestHelloWorld();
+    void TestGetListGender();
+    void TestFallback();
     void check(UGender expected_neutral, UGender expected_mixed, UGender expected_taints, const UGender* genderList, int32_t listSize);
     void checkLocale(const Locale& locale, UGender expected, const UGender* genderList, int32_t listSize);
 };
@@ -34,16 +35,22 @@ private:
 void GenderInfoTest::runIndexedTest(int32_t index, UBool exec, const char *&name, char *par) {
   switch(index) {
     case 0:
-      name = "TestHelloWorld";
+      name = "TestGetListGender";
       if (exec) {
-        TestHelloWorld();
+        TestGetListGender();
+      }
+      break;
+    case 1:
+      name = "TestFallback";
+      if (exec) {
+        TestFallback();
       }
       break;
     default: name = ""; break;
   }
 }
 
-void GenderInfoTest::TestHelloWorld() {
+void GenderInfoTest::TestGetListGender() {
     check(UGENDER_OTHER, UGENDER_OTHER, UGENDER_OTHER, NULL, 0);
     // JAVA version always returns OTHER if gender style is NEUTRAL. Is this
     // really correct?
@@ -59,6 +66,14 @@ void GenderInfoTest::TestHelloWorld() {
     check(UGENDER_OTHER, UGENDER_OTHER, UGENDER_MALE, kFemaleMale, LENGTHOF(kFemaleMale));
     check(UGENDER_OTHER, UGENDER_OTHER, UGENDER_MALE, kFemaleOther, LENGTHOF(kFemaleOther));
     check(UGENDER_OTHER, UGENDER_OTHER, UGENDER_MALE, kMaleOther, LENGTHOF(kMaleOther));
+}
+
+void GenderInfoTest::TestFallback() {
+  UErrorCode status = U_ZERO_ERROR;
+  const GenderInfo* actual = GenderInfo::getInstance(Locale::createFromName("xx"), status);
+  if (GenderInfo::_neutral != actual) {
+    errln("Expected %d got %d", GenderInfo::_neutral, actual);
+  }
 }
 
 void GenderInfoTest::check(
