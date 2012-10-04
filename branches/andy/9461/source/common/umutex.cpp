@@ -283,7 +283,7 @@ umtx_lock(UMutex *mutex) {
         usrMutexLock(mutex);
     } else {
         u_InitOnceExecuteOnce(&mutex->fInitOnce, winMutexInit, mutex, NULL);
-        EnterCriticalSection(&mutex->fCS);
+        EnterCriticalSection((CRITICAL_SECTION *)mutex->fCS);
     }
 }
 
@@ -296,7 +296,7 @@ umtx_unlock(UMutex* mutex)
     if (pMutexUnlockFn) {
         (*pMutexUnlockFn)(gMutexContext, &mutex->fUserMutex);
     } else {
-        LeaveCriticalSection(&mutex->fCS);
+        LeaveCriticalSection((CRITICAL_SECTION *)mutex->fCS);
     }
 }
 

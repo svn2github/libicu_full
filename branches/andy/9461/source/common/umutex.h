@@ -18,10 +18,6 @@
 #ifndef UMUTEX_H
 #define UMUTEX_H
 
-
-
-#include <Windows.h>
-
 #include "unicode/utypes.h"
 #include "unicode/uclean.h"
 #include "putilimp.h"
@@ -29,6 +25,20 @@
 #if defined(_MSC_VER) && _MSC_VER >= 1500
 /* # include <intrin.h>  */
 #endif
+
+#if U_PLATFORM_HAS_WIN32_API
+#if 0  
+/* TODO(andy): why doesn't windows.h work in all files? */
+# define WIN32_LEAN_AND_MEAN
+# define VC_EXTRALEAN
+# define NOUSER
+# define NOSERVICE
+# define NOIME
+# define NOMCX
+# include <windows.h>
+#endif  /* 0 */
+#define U_WINDOWS_CRIT_SEC_SIZE 100
+#endif  /* win32 */
 
 #if U_PLATFORM_IS_DARWIN_BASED
 #if defined(__STRICT_ANSI__)
@@ -148,7 +158,8 @@ typedef struct UMutex {
     U_INIT_ONCE       fInitOnce;
     UMTX              fUserMutex;
     UBool             fInitialized;  /* Applies to fUserMutex only. */
-    CRITICAL_SECTION  fCS;
+    /* CRITICAL_SECTION  fCS; */
+    char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
 } UMutex;
 
 /* Initializer for a static UMUTEX. Deliberately contains no value for the

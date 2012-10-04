@@ -54,7 +54,6 @@
 #include "ucnvmbcs.h"
 #include "ucnv_ext.h"
 #include "ucnv_cnv.h"
-#include "umutex.h"
 #include "cmemory.h"
 #include "cstring.h"
 

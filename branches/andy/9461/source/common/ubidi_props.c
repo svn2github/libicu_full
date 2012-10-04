@@ -21,7 +21,6 @@
 #include "unicode/udata.h" /* UDataInfo */
 #include "ucmndata.h" /* DataHeader */
 #include "udatamem.h"
-#include "umutex.h"
 #include "uassert.h"
 #include "cmemory.h"
 #include "utrie2.h"
