@@ -71,8 +71,22 @@ void GenderInfoTest::TestGetListGender() {
 void GenderInfoTest::TestFallback() {
   UErrorCode status = U_ZERO_ERROR;
   const GenderInfo* actual = GenderInfo::getInstance(Locale::createFromName("xx"), status);
-  if (GenderInfo::_neutral != actual) {
-    errln("Expected %d got %d", GenderInfo::_neutral, actual);
+  if (U_FAILURE(status)) {
+    errcheckln(status, "Fail to create GenderInfo - %s", u_errorName(status));
+    return;
+  }
+  const GenderInfo* expected = GenderInfo::getNeutralInstance();
+  if (expected != actual) {
+    errln("For Neutral, expected %d got %d", expected, actual);
+  }
+  actual = GenderInfo::getInstance(Locale::createFromName("fr_CA"), status);
+  if (U_FAILURE(status)) {
+    errcheckln(status, "Fail to create GenderInfo - %s", u_errorName(status));
+    return;
+  }
+  expected = GenderInfo::getMaleTaintsInstance();
+  if (expected != actual) {
+    errln("For Male Taints, Expected %d got %d", expected, actual);
   }
 }
 

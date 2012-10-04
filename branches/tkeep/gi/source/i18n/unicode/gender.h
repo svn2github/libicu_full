@@ -66,14 +66,17 @@ public:
      */
     UGender getListGender(const UGender* genders, int32_t length, UErrorCode& status) const;
 
+    /**
+     * Destructor.
+     *
+     * @draft ICU 50
+     * @internal
+     */
+    virtual ~GenderInfo();
+
 private:
     int32_t _style;
 
-    static GenderInfo* _neutral;
-    static GenderInfo* _mixed;
-    static GenderInfo* _taints;
-
-    virtual ~GenderInfo();
 
     /**
      * No "poor man's RTTI"
@@ -95,7 +98,13 @@ private:
       */
     GenderInfo& operator=(const GenderInfo&);
 
-    GenderInfo(int32_t);
+    GenderInfo();
+
+    static const GenderInfo* getNeutralInstance();
+
+    static const GenderInfo* getMixedNeutralInstance();
+
+    static const GenderInfo* getMaleTaintsInstance();
 
     static GenderInfo* loadInstance(const Locale& locale, UErrorCode& status);
     friend class ::GenderInfoTest;

@@ -32,11 +32,13 @@ static UMTX gGenderMetaLock = NULL;
 static const char* gNeutralStr = "neutral";
 static const char* gMailTaintsStr = "maleTaints";
 static const char* gMixedNeutralStr = "mixedNeutral";
+static icu::GenderInfo* gObjs = NULL;
 
 enum GenderStyle {
   NEUTRAL,
   MIXED_NEUTRAL,
-  MALE_TAINTS
+  MALE_TAINTS,
+  GENDER_STYLE_LENGTH
 };
 
 U_CDECL_BEGIN
@@ -47,6 +49,7 @@ static UBool U_CALLCONV gender_cleanup(void) {
     uhash_close(gGenderInfoCache);
     gGenderInfoCache = NULL;
   }
+  delete [] gObjs;
   return TRUE;
 }
 
@@ -54,12 +57,7 @@ U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
-GenderInfo* GenderInfo::_neutral = new GenderInfo(NEUTRAL);
-GenderInfo* GenderInfo::_mixed = new GenderInfo(MIXED_NEUTRAL);
-GenderInfo* GenderInfo::_taints = new GenderInfo(MALE_TAINTS);
-
-
-GenderInfo::GenderInfo(int32_t t) : _style(t) {
+GenderInfo::GenderInfo() {
 }
 
 GenderInfo::~GenderInfo() {
@@ -82,6 +80,10 @@ const GenderInfo* GenderInfo::getInstance(const Locale& locale, UErrorCode& stat
         gGenderInfoCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
         if (U_SUCCESS(status)) {
           ucln_i18n_registerCleanup(UCLN_I18N_GENDERINFO, gender_cleanup);
+        }
+        gObjs = new GenderInfo[GENDER_STYLE_LENGTH];
+        for (int i = 0; i < GENDER_STYLE_LENGTH; i++) {
+          gObjs[i]._style = i;
         }
       }
     }
@@ -146,20 +148,20 @@ GenderInfo* GenderInfo::loadInstance(const Locale& locale, UErrorCode& status) {
     }
   }
   if (s == NULL) {
-    return _neutral;
+    return &gObjs[NEUTRAL];
   }
   char type_str[256];
   u_UCharsToChars(s, type_str, resLen + 1);
   if (!uprv_strcmp(type_str, gNeutralStr)) {
-    return _neutral;
+    return &gObjs[NEUTRAL];
   }
   if (!uprv_strcmp(type_str, gMixedNeutralStr)) {
-    return _mixed;
+    return &gObjs[MIXED_NEUTRAL]; 
   }
   if (!uprv_strcmp(type_str, gMailTaintsStr)) {
-    return _taints;
+    return &gObjs[MALE_TAINTS];
   }
-  return _neutral;
+  return &gObjs[NEUTRAL];
 }
 
 UGender GenderInfo::getListGender(const UGender* genders, int32_t length, UErrorCode& status) const {
@@ -213,6 +215,17 @@ UGender GenderInfo::getListGender(const UGender* genders, int32_t length, UError
   }
 }
 
+const GenderInfo* GenderInfo::getNeutralInstance() {
+  return &gObjs[NEUTRAL];
+}
+
+const GenderInfo* GenderInfo::getMixedNeutralInstance() {
+  return &gObjs[MIXED_NEUTRAL];
+}
+
+const GenderInfo* GenderInfo::getMaleTaintsInstance() {
+  return &gObjs[MALE_TAINTS];
+}
 
 U_NAMESPACE_END
 
