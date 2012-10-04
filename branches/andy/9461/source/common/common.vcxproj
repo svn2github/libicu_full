@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -437,6 +437,7 @@
     <ClCompile Include="ustrtrns.cpp" />
     <ClCompile Include="utext.cpp" />
     <ClCompile Include="utf_impl.c" />
+    <ClCompile Include="listformatter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="unicode\ubidi.h">
@@ -453,6 +454,9 @@
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
+    <ClInclude Include="localsvc.h" />
+    <ClInclude Include="msvcres.h" />
+    <ClInclude Include="propname_data.h" />
     <ClInclude Include="ubidi_props.h" />
     <ClInclude Include="ubidiimp.h" />
     <CustomBuild Include="unicode\ushape.h">
@@ -535,7 +539,10 @@
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
+    <ClInclude Include="ubidi_props_data.h" />
     <ClInclude Include="ubrkimpl.h" />
+    <ClInclude Include="ucase_props_data.h" />
+    <ClInclude Include="uchar_props_data.h" />
     <ClInclude Include="ucol_data.h" />
     <ClInclude Include="ucol_swp.h" />
     <ClInclude Include="hash.h" />
@@ -577,6 +584,7 @@
     <ClInclude Include="utrie.h" />
     <ClInclude Include="utrie2.h" />
     <ClInclude Include="utrie2_impl.h" />
+    <ClInclude Include="utypeinfo.h" />
     <ClInclude Include="uvector.h" />
     <ClInclude Include="uvectr32.h" />
     <ClInclude Include="uvectr64.h" />
@@ -1659,6 +1667,20 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="unicode\utf_old.h">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy "%(FullPath)" ..\..\include\unicode
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy "%(FullPath)" ..\..\include\unicode
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy "%(FullPath)" ..\..\include\unicode
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy "%(FullPath)" ..\..\include\unicode
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="unicode\listformatter.h">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy "%(FullPath)" ..\..\include\unicode
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\include\unicode\%(Filename)%(Extension);%(Outputs)</Outputs>

@@ -86,9 +86,10 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
         TESTCASE(46,TestParsePosition);
         TESTCASE(47,TestMonthPatterns);
         TESTCASE(48,TestContext);
+        TESTCASE(49,TestNonGregoFmtParse);
         /*
-        TESTCASE(49,TestRelativeError);
-        TESTCASE(50,TestRelativeOther);
+        TESTCASE(50,TestRelativeError);
+        TESTCASE(51,TestRelativeOther);
         */
         default: name = ""; break;
     }
@@ -403,7 +404,7 @@ void DateFormatTest::TestFieldPosition() {
 
         "Anno Domini", "1997", "August", "0013", "0014", "0014", "0034", "0012", "5130",
         "Wednesday", "0225", "0002", "0033", "0003", "PM", "0002", "0002", "Pacific Daylight Time", "1997", "Wednesday", "1997", "2450674", "52452513", "GMT-07:00",
-        "Pacific Time",  "Wednesday", "August", "3rd quarter", "3rd quarter", "United States Time (Los Angeles)","1997"
+        "Pacific Time",  "Wednesday", "August", "3rd quarter", "3rd quarter", "Los Angeles Time","1997"
     };
 
     const int32_t EXPECTED_LENGTH = sizeof(EXPECTED)/sizeof(EXPECTED[0]);
@@ -809,7 +810,7 @@ DateFormatTest::TestBadInput135()
       dataerrln("could not create date time instance");
       return;
     }
-    UnicodeString expected("March 1, 2000 1:23:45 AM ");
+    UnicodeString expected("March 1, 2000 at 1:23:45 AM ");
     for (int32_t i = 0; i < strings_length;++i) {
         const char* text = strings[i];
         for (int32_t j = 0; j < looks_length;++j) {
@@ -1149,8 +1150,7 @@ DateFormatTest::TestLocaleDateFormat() // Bug 495
         DateFormat::FULL, Locale::getUS());
     UnicodeString expectedFRENCH ( "lundi 15 septembre 1997 00:00:00 heure avanc\\u00E9e du Pacifique", -1, US_INV );
     expectedFRENCH = expectedFRENCH.unescape();
-    //UnicodeString expectedUS ( "Monday, September 15, 1997 12:00:00 o'clock AM PDT" );
-    UnicodeString expectedUS ( "Monday, September 15, 1997 12:00:00 AM Pacific Daylight Time" );
+    UnicodeString expectedUS ( "Monday, September 15, 1997 at 12:00:00 AM Pacific Daylight Time" );
     logln((UnicodeString)"Date set to : " + dateToString(testDate));
     UnicodeString out;
     if (dfUS == NULL || dfFrench == NULL){
@@ -1417,7 +1417,7 @@ void DateFormatTest::TestStandAloneMonths()
 
         "yyyy LLLL dd H:mm:ss", "fp", "2004 04 10 16:36:31", "2004 duben 10 16:36:31", "2004 04 10 16:36:31",
         "yyyy MMMM dd H:mm:ss", "fp", "2004 04 10 16:36:31", "2004 dubna 10 16:36:31", "2004 04 10 16:36:31",
-        "yyyy LLL dd H:mm:ss",  "fp", "2004 04 10 16:36:31", "2004 4. 10 16:36:31",   "2004 04 10 16:36:31",
+        "yyyy LLL dd H:mm:ss",  "fp", "2004 04 10 16:36:31", "2004 dub 10 16:36:31",   "2004 04 10 16:36:31",
         "yyyy LLLL dd H:mm:ss", "F",  "2004 04 10 16:36:31", "2004 duben 10 16:36:31",
         "yyyy MMMM dd H:mm:ss", "F",  "2004 04 10 16:36:31", "2004 dubna 10 16:36:31",
         "yyyy LLLL dd H:mm:ss", "pf", "2004 duben 10 16:36:31", "2004 04 10 16:36:31", "2004 duben 10 16:36:31",
@@ -1436,18 +1436,18 @@ void DateFormatTest::TestStandAloneMonths()
         "LLLL", "fp", "1970 11 01 0:00:00", "listopad",            "1970 11 01 0:00:00",
         "LLLL", "fp", "1970 12 01 0:00:00", "prosinec",            "1970 12 01 0:00:00",
 
-        "LLL", "fp", "1970 01 01 0:00:00", "1.",  "1970 01 01 0:00:00",
-        "LLL", "fp", "1970 02 01 0:00:00", "2.",  "1970 02 01 0:00:00",
-        "LLL", "fp", "1970 03 01 0:00:00", "3.",  "1970 03 01 0:00:00",
-        "LLL", "fp", "1970 04 01 0:00:00", "4.",  "1970 04 01 0:00:00",
-        "LLL", "fp", "1970 05 01 0:00:00", "5.",  "1970 05 01 0:00:00",
-        "LLL", "fp", "1970 06 01 0:00:00", "6.",  "1970 06 01 0:00:00",
-        "LLL", "fp", "1970 07 01 0:00:00", "7.",  "1970 07 01 0:00:00",
-        "LLL", "fp", "1970 08 01 0:00:00", "8.",  "1970 08 01 0:00:00",
-        "LLL", "fp", "1970 09 01 0:00:00", "9.",  "1970 09 01 0:00:00",
-        "LLL", "fp", "1970 10 01 0:00:00", "10.", "1970 10 01 0:00:00",
-        "LLL", "fp", "1970 11 01 0:00:00", "11.", "1970 11 01 0:00:00",
-        "LLL", "fp", "1970 12 01 0:00:00", "12.", "1970 12 01 0:00:00",
+        "LLL", "fp", "1970 01 01 0:00:00", "led",  "1970 01 01 0:00:00",
+        "LLL", "fp", "1970 02 01 0:00:00", "\\u00FAno",  "1970 02 01 0:00:00",
+        "LLL", "fp", "1970 03 01 0:00:00", "b\\u0159e",  "1970 03 01 0:00:00",
+        "LLL", "fp", "1970 04 01 0:00:00", "dub",  "1970 04 01 0:00:00",
+        "LLL", "fp", "1970 05 01 0:00:00", "kv\\u011B",  "1970 05 01 0:00:00",
+        "LLL", "fp", "1970 06 01 0:00:00", "\\u010Dvn",  "1970 06 01 0:00:00",
+        "LLL", "fp", "1970 07 01 0:00:00", "\\u010Dvc",  "1970 07 01 0:00:00",
+        "LLL", "fp", "1970 08 01 0:00:00", "srp",  "1970 08 01 0:00:00",
+        "LLL", "fp", "1970 09 01 0:00:00", "z\\u00E1\\u0159",  "1970 09 01 0:00:00",
+        "LLL", "fp", "1970 10 01 0:00:00", "\\u0159\\u00EDj", "1970 10 01 0:00:00",
+        "LLL", "fp", "1970 11 01 0:00:00", "lis", "1970 11 01 0:00:00",
+        "LLL", "fp", "1970 12 01 0:00:00", "pro", "1970 12 01 0:00:00",
     };
 
     expect(EN_DATA, ARRAY_SIZE(EN_DATA), Locale("en", "", ""));
@@ -2302,8 +2302,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "en", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "Pacific Daylight Time", "America/Los_Angeles" },
         { "en", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "PT", "America/Los_Angeles" },
         { "en", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "Pacific Time", "America/Los_Angeles" },
-        { "en", "America/Los_Angeles", "2004-07-15T00:00:00Z", "VVVV", "United States Time (Los Angeles)", "America/Los_Angeles" },
-        { "en_GB", "America/Los_Angeles", "2004-01-15T12:00:00Z", "z", "PST", "America/Los_Angeles" },
+        { "en", "America/Los_Angeles", "2004-07-15T00:00:00Z", "VVVV", "Los Angeles Time", "America/Los_Angeles" },
+        { "en_GB", "America/Los_Angeles", "2004-01-15T12:00:00Z", "z", "GMT-08:00", "America/Los_Angeles" },
         { "en", "America/Phoenix", "2004-01-15T00:00:00Z", "Z", "-0700", "-7:00" },
         { "en", "America/Phoenix", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-07:00", "-7:00" },
         { "en", "America/Phoenix", "2004-01-15T00:00:00Z", "z", "MST", "America/Phoenix" },
@@ -2316,7 +2316,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "en", "America/Phoenix", "2004-07-15T00:00:00Z", "zzzz", "Mountain Standard Time", "America/Phoenix" },
         { "en", "America/Phoenix", "2004-07-15T00:00:00Z", "v", "MST", "America/Phoenix" },
         { "en", "America/Phoenix", "2004-07-15T00:00:00Z", "vvvv", "Mountain Standard Time", "America/Phoenix" },
-        { "en", "America/Phoenix", "2004-07-15T00:00:00Z", "VVVV", "United States Time (Phoenix)", "America/Phoenix" },
+        { "en", "America/Phoenix", "2004-07-15T00:00:00Z", "VVVV", "Phoenix Time", "America/Phoenix" },
 
         { "en", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "en", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2328,9 +2328,9 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "V", "GMT-03:00", "-3:00" },
         { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "Argentina Standard Time", "-3:00" },
-        { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Argentina Time (Buenos Aires)", "America/Buenos_Aires" },
+        { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Buenos Aires Time", "America/Buenos_Aires" },
         { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "Argentina Standard Time", "America/Buenos_Aires" },
-        { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "VVVV", "Argentina Time (Buenos Aires)", "America/Buenos_Aires" },
+        { "en", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "VVVV", "Buenos Aires Time", "America/Buenos_Aires" },
 
         { "en", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "en", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2342,9 +2342,9 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "V", "GMT-03:00", "-3:00" },
         { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "Argentina Standard Time", "-3:00" },
-        { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Argentina Time (Buenos Aires)", "America/Buenos_Aires" },
+        { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Buenos Aires Time", "America/Buenos_Aires" },
         { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "Argentina Standard Time", "America/Buenos_Aires" },
-        { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "VVVV", "Argentina Time (Buenos Aires)", "America/Buenos_Aires" },
+        { "en", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "VVVV", "Buenos Aires Time", "America/Buenos_Aires" },
 
         { "en", "America/Havana", "2004-01-15T00:00:00Z", "Z", "-0500", "-5:00" },
         { "en", "America/Havana", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-05:00", "-5:00" },
@@ -2370,9 +2370,9 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "V", "GMT+10:00", "+10:00" },
         { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "Australian Eastern Standard Time", "+10:00" },
-        { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "Australia Time (Sydney)", "Australia/Sydney" },
+        { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "Sydney Time", "Australia/Sydney" },
         { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "Eastern Australia Time", "Australia/Sydney" },
-        { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "VVVV", "Australia Time (Sydney)", "Australia/Sydney" },
+        { "en", "Australia/ACT", "2004-07-15T00:00:00Z", "VVVV", "Sydney Time", "Australia/Sydney" },
 
         { "en", "Australia/Sydney", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "en", "Australia/Sydney", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+11:00", "+11:00" },
@@ -2384,9 +2384,9 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "V", "GMT+10:00", "+10:00" },
         { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "Australian Eastern Standard Time", "+10:00" },
-        { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "Australia Time (Sydney)", "Australia/Sydney" },
+        { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "Sydney Time", "Australia/Sydney" },
         { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "Eastern Australia Time", "Australia/Sydney" },
-        { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "VVVV", "Australia Time (Sydney)", "Australia/Sydney" },
+        { "en", "Australia/Sydney", "2004-07-15T00:00:00Z", "VVVV", "Sydney Time", "Australia/Sydney" },
 
         { "en", "Europe/London", "2004-01-15T00:00:00Z", "Z", "+0000", "+0:00" },
         { "en", "Europe/London", "2004-01-15T00:00:00Z", "ZZZZ", "GMT", "+0:00" },
@@ -2433,49 +2433,49 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "de", "America/Los_Angeles", "2004-01-15T00:00:00Z", "Z", "-0800", "-8:00" },
         { "de", "America/Los_Angeles", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-08:00", "-8:00" },
         { "de", "America/Los_Angeles", "2004-01-15T00:00:00Z", "z", "GMT-08:00", "-8:00" },
-        { "de", "America/Los_Angeles", "2004-01-15T00:00:00Z", "zzzz", "Nordamerikanische Westk\\u00fcsten-Winterzeit", "-8:00" },
+        { "de", "America/Los_Angeles", "2004-01-15T00:00:00Z", "zzzz", "Nordamerikanische Westk\\u00fcsten-Normalzeit", "-8:00" },
         { "de", "America/Los_Angeles", "2004-07-15T00:00:00Z", "Z", "-0700", "-7:00" },
         { "de", "America/Los_Angeles", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-07:00", "-7:00" },
         { "de", "America/Los_Angeles", "2004-07-15T00:00:00Z", "z", "GMT-07:00", "-7:00" },
         { "de", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "Nordamerikanische Westk\\u00fcsten-Sommerzeit", "-7:00" },
-        { "de", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "Vereinigte Staaten Zeit (Los Angeles)", "America/Los_Angeles" },
+        { "de", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "Los Angeles Zeit", "America/Los_Angeles" },
         { "de", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "Nordamerikanische Westk\\u00fcstenzeit", "America/Los_Angeles" },
 
         { "de", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "de", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "de", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
-        { "de", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "Argentinische Winterzeit", "-3:00" },
+        { "de", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "Argentinische Normalzeit", "-3:00" },
         { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
-        { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "Argentinische Winterzeit", "-3:00" },
-        { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Argentinien Zeit (Buenos Aires)", "America/Buenos_Aires" },
-        { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "Argentinische Winterzeit", "America/Buenos_Aires" },
+        { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "Argentinische Normalzeit", "-3:00" },
+        { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Buenos Aires Zeit", "America/Buenos_Aires" },
+        { "de", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "Argentinische Normalzeit", "America/Buenos_Aires" },
 
         { "de", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "de", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "de", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
-        { "de", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "Argentinische Winterzeit", "-3:00" },
+        { "de", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "Argentinische Normalzeit", "-3:00" },
         { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
-        { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "Argentinische Winterzeit", "-3:00" },
-        { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Argentinien Zeit (Buenos Aires)", "America/Buenos_Aires" },
-        { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "Argentinische Winterzeit", "America/Buenos_Aires" },
+        { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "Argentinische Normalzeit", "-3:00" },
+        { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "Buenos Aires Zeit", "America/Buenos_Aires" },
+        { "de", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "Argentinische Normalzeit", "America/Buenos_Aires" },
 
         { "de", "America/Havana", "2004-01-15T00:00:00Z", "Z", "-0500", "-5:00" },
         { "de", "America/Havana", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-05:00", "-5:00" },
         { "de", "America/Havana", "2004-01-15T00:00:00Z", "z", "GMT-05:00", "-5:00" },
-        { "de", "America/Havana", "2004-01-15T00:00:00Z", "zzzz", "GMT-05:00", "-5:00" },
+        { "de", "America/Havana", "2004-01-15T00:00:00Z", "zzzz", "Kubanische Normalzeit", "-5:00" },
         { "de", "America/Havana", "2004-07-15T00:00:00Z", "Z", "-0400", "-4:00" },
         { "de", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-04:00", "-4:00" },
         { "de", "America/Havana", "2004-07-15T00:00:00Z", "z", "GMT-04:00", "-4:00" },
-        { "de", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "GMT-04:00", "-4:00" },
+        { "de", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "Kubanische Sommerzeit", "-4:00" },
         { "de", "America/Havana", "2004-07-15T00:00:00Z", "v", "Kuba Zeit", "America/Havana" },
-        { "de", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "Kuba Zeit", "America/Havana" },
+        { "de", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "Kubanische Zeit", "America/Havana" },
         // added to test proper fallback of country name
         { "de_CH", "America/Havana", "2004-07-15T00:00:00Z", "v", "Kuba Zeit", "America/Havana" },
-        { "de_CH", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "Kuba Zeit", "America/Havana" },
+        { "de_CH", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "Kubanische Zeit", "America/Havana" },
 
         { "de", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "de", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+11:00", "+11:00" },
@@ -2484,8 +2484,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "Z", "+1000", "+10:00" },
         { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+10:00", "+10:00" },
         { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
-        { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "Ostaustralische Winterzeit", "+10:00" },
-        { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "Australien Zeit (Sydney)", "Australia/Sydney" },
+        { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "Ostaustralische Normalzeit", "+10:00" },
+        { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "Sydney Zeit", "Australia/Sydney" },
         { "de", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "Ostaustralische Zeit", "Australia/Sydney" },
 
         { "de", "Australia/Sydney", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
@@ -2495,8 +2495,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "Z", "+1000", "+10:00" },
         { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+10:00", "+10:00" },
         { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
-        { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "Ostaustralische Winterzeit", "+10:00" },
-        { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "Australien Zeit (Sydney)", "Australia/Sydney" },
+        { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "Ostaustralische Normalzeit", "+10:00" },
+        { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "Sydney Zeit", "Australia/Sydney" },
         { "de", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "Ostaustralische Zeit", "Australia/Sydney" },
 
         { "de", "Europe/London", "2004-01-15T00:00:00Z", "Z", "+0000", "+0:00" },
@@ -2506,7 +2506,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "Z", "+0100", "+1:00" },
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+01:00", "+1:00" },
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+01:00", "+1:00" },
-        { "de", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "GMT+01:00", "+1:00" },
+        { "de", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "Britische Sommerzeit", "+1:00" },
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "v", "Vereinigtes K\\u00f6nigreich Zeit", "Europe/London" },
         { "de", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "Vereinigtes K\\u00f6nigreich Zeit", "Europe/London" },
 
@@ -2538,14 +2538,14 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "America/Los_Angeles", "2004-01-15T00:00:00Z", "Z", "-0800", "-8:00" },
         { "zh", "America/Los_Angeles", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-0800", "-8:00" },
         { "zh", "America/Los_Angeles", "2004-01-15T00:00:00Z", "z", "GMT-0800", "America/Los_Angeles" },
-        { "zh", "America/Los_Angeles", "2004-01-15T00:00:00Z", "zzzz", "\\u592a\\u5e73\\u6d0b\\u6807\\u51c6\\u65f6\\u95f4", "America/Los_Angeles" },
+        { "zh", "America/Los_Angeles", "2004-01-15T00:00:00Z", "zzzz", "\\u5317\\u7f8e\\u592a\\u5e73\\u6d0b\\u6807\\u51c6\\u65f6\\u95f4", "America/Los_Angeles" },
         { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "Z", "-0700", "-7:00" },
         { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-0700", "-7:00" },
         { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "z", "GMT-0700", "America/Los_Angeles" },
-        { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "\\u592a\\u5e73\\u6d0b\\u590f\\u4ee4\\u65f6\\u95f4", "America/Los_Angeles" },
+        { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "\\u5317\\u7f8e\\u592a\\u5e73\\u6d0b\\u590f\\u4ee4\\u65f6\\u95f4", "America/Los_Angeles" },
     // icu zh.txt has exemplar city for this time zone
-        { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u7f8e\\u56fd\\u65F6\\u95F4\\uff08\\u6d1b\\u6749\\u77f6\\uff09", "America/Los_Angeles" },
-        { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "\\u7f8e\\u56fd\\u592a\\u5e73\\u6d0b\\u65f6\\u95f4", "America/Los_Angeles" },
+        { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u6D1B\\u6749\\u77F6\\u65F6\\u95F4", "America/Los_Angeles" },
+        { "zh", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "\\u5317\\u7f8e\\u592a\\u5e73\\u6d0b\\u65f6\\u95f4", "America/Los_Angeles" },
 
         { "zh", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "zh", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-0300", "-3:00" },
@@ -2555,7 +2555,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-0300", "-3:00" },
         { "zh", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-0300", "-3:00" },
         { "zh", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u963f\\u6839\\u5ef7\\u6807\\u51c6\\u65f6\\u95f4", "-3:00" },
-        { "zh", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u963f\\u6839\\u5ef7\\u65F6\\u95F4\\uff08\\u5e03\\u5b9c\\u8bfa\\u65af\\u827e\\u5229\\u65af\\uff09", "America/Buenos_Aires" },
+        { "zh", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u5E03\\u5B9C\\u8BFA\\u65AF\\u827E\\u5229\\u65AF\\u65F6\\u95F4", "America/Buenos_Aires" },
         { "zh", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u963f\\u6839\\u5ef7\\u6807\\u51c6\\u65f6\\u95f4", "America/Buenos_Aires" },
 
         { "zh", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
@@ -2566,7 +2566,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-0300", "-3:00" },
         { "zh", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-0300", "-3:00" },
         { "zh", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u963f\\u6839\\u5ef7\\u6807\\u51c6\\u65f6\\u95f4", "-3:00" },
-        { "zh", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u963f\\u6839\\u5ef7\\u65F6\\u95F4\\uff08\\u5e03\\u5b9c\\u8bfa\\u65af\\u827e\\u5229\\u65af\\uff09", "America/Buenos_Aires" },
+        { "zh", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u5E03\\u5B9C\\u8BFA\\u65AF\\u827E\\u5229\\u65AF\\u65F6\\u95F4", "America/Buenos_Aires" },
         { "zh", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u963f\\u6839\\u5ef7\\u6807\\u51c6\\u65f6\\u95f4", "America/Buenos_Aires" },
 
         { "zh", "America/Havana", "2004-01-15T00:00:00Z", "Z", "-0500", "-5:00" },
@@ -2589,7 +2589,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "Australia/ACT", "2004-07-15T00:00:00Z", "z", "GMT+1000", "+10:00" },
         { "zh", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "\\u6fb3\\u5927\\u5229\\u4e9a\\u4e1c\\u90e8\\u6807\\u51c6\\u65f6\\u95f4", "+10:00" },
     // icu zh.txt does not have info for this time zone
-        { "zh", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u6fb3\\u5927\\u5229\\u4e9a\\u65F6\\u95F4\\uff08\\u6089\\u5c3c\\uff09", "Australia/Sydney" },
+        { "zh", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u6089\\u5C3C\\u65F6\\u95F4", "Australia/Sydney" },
         { "zh", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "\\u6fb3\\u5927\\u5229\\u4e9a\\u4e1c\\u90e8\\u65f6\\u95f4", "Australia/Sydney" },
 
         { "zh", "Australia/Sydney", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
@@ -2600,22 +2600,22 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "Australia/Sydney", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+1000", "+10:00" },
         { "zh", "Australia/Sydney", "2004-07-15T00:00:00Z", "z", "GMT+1000", "+10:00" },
         { "zh", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "\\u6fb3\\u5927\\u5229\\u4e9a\\u4e1c\\u90e8\\u6807\\u51c6\\u65f6\\u95f4", "+10:00" },
-        { "zh", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u6fb3\\u5927\\u5229\\u4e9a\\u65F6\\u95F4\\uff08\\u6089\\u5c3c\\uff09", "Australia/Sydney" },
+        { "zh", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u6089\\u5C3C\\u65F6\\u95F4", "Australia/Sydney" },
         { "zh", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "\\u6fb3\\u5927\\u5229\\u4e9a\\u4e1c\\u90e8\\u65f6\\u95f4", "Australia/Sydney" },
 
         { "zh", "Europe/London", "2004-01-15T00:00:00Z", "Z", "+0000", "+0:00" },
         { "zh", "Europe/London", "2004-01-15T00:00:00Z", "ZZZZ", "GMT", "+0:00" },
-        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "z", "\\u683C\\u6797\\u5C3C\\u6CBB\\u6807\\u51C6\\u65F6\\u95F4", "+0:00" },
-        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "V", "\\u683C\\u6797\\u5C3C\\u6CBB\\u6807\\u51C6\\u65F6\\u95F4", "+0:00" },
+        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "z", "GMT", "+0:00" },
+        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "V", "GMT", "+0:00" },
         { "zh", "Europe/London", "2004-01-15T00:00:00Z", "ZZZZ", "GMT", "+0:00" },
-        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "z", "\\u683C\\u6797\\u5C3C\\u6CBB\\u6807\\u51C6\\u65F6\\u95F4", "+0:00" },
-        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "V", "\\u683C\\u6797\\u5C3C\\u6CBB\\u6807\\u51C6\\u65F6\\u95F4", "+0:00" },
+        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "z", "GMT", "+0:00" },
+        { "zh", "Europe/London", "2004-01-15T00:00:00Z", "V", "GMT", "+0:00" },
         { "zh", "Europe/London", "2004-01-15T00:00:00Z", "zzzz", "\\u683C\\u6797\\u5C3C\\u6CBB\\u6807\\u51C6\\u65F6\\u95F4", "+0:00" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "Z", "+0100", "+1:00" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+0100", "+1:00" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+0100", "+1:00" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "V", "GMT+0100", "+1:00" },
-        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "GMT+0100", "+1:00" },
+        { "zh", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "\\u82f1\\u56fd\\u590f\\u4ee4\\u65f6\\u95f4", "+1:00" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "v", "\\u82f1\\u56fd\\u65f6\\u95f4", "Europe/London" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "\\u82f1\\u56fd\\u65f6\\u95f4", "Europe/London" },
         { "zh", "Europe/London", "2004-07-15T00:00:00Z", "VVVV", "\\u82f1\\u56fd\\u65f6\\u95f4", "Europe/London" },
@@ -2635,13 +2635,13 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "zh", "Asia/Calcutta", "2004-01-15T00:00:00Z", "Z", "+0530", "+5:30" },
         { "zh", "Asia/Calcutta", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+0530", "+5:30" },
         { "zh", "Asia/Calcutta", "2004-01-15T00:00:00Z", "z", "GMT+0530", "+5:30" },
-        { "zh", "Asia/Calcutta", "2004-01-15T00:00:00Z", "zzzz", "\\u5370\\u5ea6\\u6807\\u51c6\\u65f6\\u95f4", "+5:30" },
+        { "zh", "Asia/Calcutta", "2004-01-15T00:00:00Z", "zzzz", "\\u5370\\u5ea6\\u65f6\\u95f4", "+5:30" },
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "Z", "+0530", "+5:30" },
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+0530", "+5:30" },
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "GMT+0530", "+05:30" },
-        { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u5370\\u5ea6\\u6807\\u51c6\\u65f6\\u95f4", "+5:30" },
+        { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u5370\\u5ea6\\u65f6\\u95f4", "+5:30" },
         { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "\\u5370\\u5ea6\\u65f6\\u95f4", "Asia/Calcutta" },
-        { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u5370\\u5ea6\\u6807\\u51c6\\u65f6\\u95f4", "Asia/Calcutta" },
+        { "zh", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u5370\\u5ea6\\u65f6\\u95f4", "Asia/Calcutta" },
 
         // ==========
 
@@ -2653,7 +2653,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "hi", "America/Los_Angeles", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-07:00", "-7:00" },
         { "hi", "America/Los_Angeles", "2004-07-15T00:00:00Z", "z", "GMT-07:00", "-7:00" },
         { "hi", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "\\u092A\\u094D\\u0930\\u0936\\u093E\\u0902\\u0924 \\u0926\\u093F\\u0935\\u093E\\u0935\\u0932\\u094B\\u0915 \\u0938\\u092E\\u092F", "-7:00" },
-        { "hi", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u0938\\u0902\\u092f\\u0941\\u0915\\u094d\\u0924 \\u0930\\u093e\\u091c\\u094d\\u092f \\u0905\\u092e\\u0947\\u0930\\u093f\\u0915\\u093e \\u0938\\u092E\\u092F (\\u0932\\u094b\\u0938 \\u090f\\u0902\\u091c\\u093f\\u0932\\u0947\\u0938)", "America/Los_Angeles" },
+        { "hi", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u0932\\u094B\\u0938 \\u090F\\u0902\\u091C\\u093F\\u0932\\u0947\\u0938 \\u0938\\u092E\\u092F", "America/Los_Angeles" },
         { "hi", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "\\u092A\\u094D\\u0930\\u0936\\u093E\\u0902\\u0924 \\u0938\\u092E\\u092F", "America/Los_Angeles" },
 
         { "hi", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
@@ -2664,7 +2664,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "hi", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "hi", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "hi", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u0905\\u0930\\u094D\\u091C\\u0947\\u0902\\u091F\\u0940\\u0928\\u093E \\u092E\\u093E\\u0928\\u0915 \\u0938\\u092E\\u092F", "-3:00" },
-        { "hi", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u0905\\u0930\\u094d\\u091c\\u0947\\u0928\\u094d\\u091f\\u0940\\u0928\\u093e \\u0938\\u092E\\u092F (\\u092c\\u094d\\u092f\\u0942\\u0928\\u0938 \\u0906\\u092f\\u0930\\u0938)", "America/Buenos_Aires" },
+        { "hi", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u092C\\u094D\\u092F\\u0942\\u0928\\u0938 \\u0906\\u092F\\u0930\\u0938 \\u0938\\u092E\\u092F", "America/Buenos_Aires" },
         { "hi", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u0905\\u0930\\u094D\\u091C\\u0947\\u0902\\u091F\\u0940\\u0928\\u093E \\u092E\\u093E\\u0928\\u0915 \\u0938\\u092E\\u092F", "America/Buenos_Aires" },
 
         { "hi", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
@@ -2675,19 +2675,19 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "hi", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "hi", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "hi", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u0905\\u0930\\u094D\\u091C\\u0947\\u0902\\u091F\\u0940\\u0928\\u093E \\u092E\\u093E\\u0928\\u0915 \\u0938\\u092E\\u092F", "-3:00" },
-        { "hi", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u0905\\u0930\\u094d\\u091c\\u0947\\u0928\\u094d\\u091f\\u0940\\u0928\\u093e \\u0938\\u092E\\u092F (\\u092c\\u094d\\u092f\\u0942\\u0928\\u0938 \\u0906\\u092f\\u0930\\u0938)", "America/Buenos_Aires" },
+        { "hi", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u092C\\u094D\\u092F\\u0942\\u0928\\u0938 \\u0906\\u092F\\u0930\\u0938 \\u0938\\u092E\\u092F", "America/Buenos_Aires" },
         { "hi", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u0905\\u0930\\u094D\\u091C\\u0947\\u0902\\u091F\\u0940\\u0928\\u093E \\u092E\\u093E\\u0928\\u0915 \\u0938\\u092E\\u092F", "America/Buenos_Aires" },
 
         { "hi", "America/Havana", "2004-01-15T00:00:00Z", "Z", "-0500", "-5:00" },
         { "hi", "America/Havana", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-05:00", "-5:00" },
         { "hi", "America/Havana", "2004-01-15T00:00:00Z", "z", "GMT-05:00", "-5:00" },
-        { "hi", "America/Havana", "2004-01-15T00:00:00Z", "zzzz", "GMT-05:00", "-5:00" },
+        { "hi", "America/Havana", "2004-01-15T00:00:00Z", "zzzz", "\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e \\u0915\\u093e \\u092e\\u093e\\u0928\\u0915 \\u0938\\u092e\\u092f", "-5:00" },
         { "hi", "America/Havana", "2004-07-15T00:00:00Z", "Z", "-0400", "-4:00" },
         { "hi", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-04:00", "-4:00" },
         { "hi", "America/Havana", "2004-07-15T00:00:00Z", "z", "GMT-04:00", "-4:00" },
-        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "GMT-04:00", "-4:00" },
+        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e \\u0915\\u093e \\u0921\\u0947\\u0932\\u093e\\u0907\\u091f \\u091f\\u093e\\u0907\\u092e", "-4:00" },
         { "hi", "America/Havana", "2004-07-15T00:00:00Z", "v", "\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e \\u0938\\u092E\\u092F", "America/Havana" },
-        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e \\u0938\\u092E\\u092F", "America/Havana" },
+        { "hi", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "\\u0915\\u094d\\u092f\\u0942\\u092c\\u093e \\u0915\\u093e \\u0938\\u092E\\u092F", "America/Havana" },
 
         { "hi", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "hi", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+11:00", "+11:00" },
@@ -2697,7 +2697,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "hi", "Australia/ACT", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+10:00", "+10:00" },
         { "hi", "Australia/ACT", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "hi", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "\\u0911\\u0938\\u094D\\u200D\\u091F\\u094D\\u0930\\u0947\\u0932\\u093F\\u092F\\u093E\\u0908 \\u092A\\u0942\\u0930\\u094D\\u0935\\u0940 \\u092E\\u093E\\u0928\\u0915 \\u0938\\u092E\\u092F", "+10:00" },
-        { "hi", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u0911\\u0938\\u094d\\u091f\\u094d\\u0930\\u0947\\u0932\\u093f\\u092f\\u093e \\u0938\\u092E\\u092F (\\u0938\\u093f\\u0921\\u0928\\u0940)", "Australia/Sydney" },
+        { "hi", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u0938\\u093F\\u0921\\u0928\\u0940 \\u0938\\u092E\\u092F", "Australia/Sydney" },
         { "hi", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "\\u092A\\u0942\\u0930\\u094D\\u0935\\u0940 \\u0911\\u0938\\u094D\\u091F\\u094D\\u0930\\u0947\\u0932\\u093F\\u092F\\u093E\\u0908 \\u0938\\u092E\\u092F", "Australia/Sydney" },
 
         { "hi", "Australia/Sydney", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
@@ -2708,13 +2708,13 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "hi", "Australia/Sydney", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+10:00", "+10:00" },
         { "hi", "Australia/Sydney", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "hi", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "\\u0911\\u0938\\u094D\\u200D\\u091F\\u094D\\u0930\\u0947\\u0932\\u093F\\u092F\\u093E\\u0908 \\u092A\\u0942\\u0930\\u094D\\u0935\\u0940 \\u092E\\u093E\\u0928\\u0915 \\u0938\\u092E\\u092F", "+10:00" },
-        { "hi", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u0911\\u0938\\u094d\\u091f\\u094d\\u0930\\u0947\\u0932\\u093f\\u092f\\u093e \\u0938\\u092E\\u092F (\\u0938\\u093f\\u0921\\u0928\\u0940)", "Australia/Sydney" },
+        { "hi", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u0938\\u093F\\u0921\\u0928\\u0940 \\u0938\\u092E\\u092F", "Australia/Sydney" },
         { "hi", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "\\u092A\\u0942\\u0930\\u094D\\u0935\\u0940 \\u0911\\u0938\\u094D\\u091F\\u094D\\u0930\\u0947\\u0932\\u093F\\u092F\\u093E\\u0908 \\u0938\\u092E\\u092F", "Australia/Sydney" },
 
         { "hi", "Europe/London", "2004-01-15T00:00:00Z", "Z", "+0000", "+0:00" },
         { "hi", "Europe/London", "2004-01-15T00:00:00Z", "ZZZZ", "GMT", "+0:00" },
         { "hi", "Europe/London", "2004-01-15T00:00:00Z", "z", "GMT", "+0:00" },
-        { "hi", "Europe/London", "2004-01-15T00:00:00Z", "zzzz", "GMT", "+0:00" },
+        { "hi", "Europe/London", "2004-01-15T00:00:00Z", "zzzz", "\\u0917\\u094d\\u0930\\u0940\\u0928\\u0935\\u093f\\u091a \\u092e\\u0940\\u0928 \\u091f\\u093e\\u0907\\u092e", "+0:00" },
         { "hi", "Europe/London", "2004-07-15T00:00:00Z", "Z", "+0100", "+1:00" },
         { "hi", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+01:00", "+1:00" },
         { "hi", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+01:00", "+1:00" },
@@ -2757,43 +2757,43 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "bg", "America/Los_Angeles", "2004-07-15T00:00:00Z", "V", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0700", "America/Los_Angeles" },
         { "bg", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "\\u0422\\u0438\\u0445\\u043E\\u043E\\u043A\\u0435\\u0430\\u043D\\u0441\\u043A\\u0430 \\u043B\\u044F\\u0442\\u043D\\u0430 \\u0447\\u0430\\u0441\\u043E\\u0432\\u0430 \\u0437\\u043E\\u043D\\u0430", "America/Los_Angeles" },
     // icu bg.txt has exemplar city for this time zone
-        { "bg", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u0421\\u0410\\u0429 \\u0432\\u0440\\u0435\\u043C\\u0435 (\\u041b\\u043e\\u0441 \\u0410\\u043d\\u0436\\u0435\\u043b\\u0438\\u0441)", "America/Los_Angeles" },
+        { "bg", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u041B\\u043E\\u0441 \\u0410\\u043D\\u0436\\u0435\\u043B\\u0438\\u0441 \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Los_Angeles" },
         { "bg", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "\\u0422\\u0438\\u0445\\u043E\\u043E\\u043A\\u0435\\u0430\\u043D\\u0441\\u043A\\u043E \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Los_Angeles" },
-        { "bg", "America/Los_Angeles", "2004-07-15T00:00:00Z", "VVVV", "\\u0421\\u0410\\u0429 \\u0432\\u0440\\u0435\\u043C\\u0435 (\\u041b\\u043e\\u0441 \\u0410\\u043d\\u0436\\u0435\\u043b\\u0438\\u0441)", "America/Los_Angeles" },
+        { "bg", "America/Los_Angeles", "2004-07-15T00:00:00Z", "VVVV", "\\u041B\\u043E\\u0441 \\u0410\\u043D\\u0436\\u0435\\u043B\\u0438\\u0441 \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Los_Angeles" },
 
         { "bg", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "bg", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
         { "bg", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
-        { "bg", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430", "-3:00" },
+        { "bg", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430 \\u2013 \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "-3:00" },
         { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
         { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
-        { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430", "-3:00" },
-        { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u0410\\u0440\\u0436\\u0435\\u043d\\u0442\\u0438\\u043d\\u0430 \\u0432\\u0440\\u0435\\u043C\\u0435 (\\u0411\\u0443\\u0435\\u043D\\u043E\\u0441 \\u0410\\u0439\\u0440\\u0435\\u0441)", "America/Buenos_Aires" },
-        { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430", "America/Buenos_Aires" },
+        { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430 \\u2013 \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "-3:00" },
+        { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u0411\\u0443\\u0435\\u043D\\u043E\\u0441 \\u0410\\u0439\\u0440\\u0435\\u0441 \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Buenos_Aires" },
+        { "bg", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430 \\u2013 \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "America/Buenos_Aires" },
 
         { "bg", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "bg", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
         { "bg", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
-        { "bg", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430", "-3:00" },
+        { "bg", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430 \\u2013 \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "-3:00" },
         { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
         { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0300", "-3:00" },
-        { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430", "-3:00" },
+        { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430 \\u2013 \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "-3:00" },
     // icu bg.txt does not have info for this time zone
-        { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u0410\\u0440\\u0436\\u0435\\u043d\\u0442\\u0438\\u043d\\u0430 \\u0432\\u0440\\u0435\\u043C\\u0435 (\\u0411\\u0443\\u0435\\u043D\\u043E\\u0441 \\u0410\\u0439\\u0440\\u0435\\u0441)", "America/Buenos_Aires" },
-        { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430", "America/Buenos_Aires" },
+        { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u0411\\u0443\\u0435\\u043D\\u043E\\u0441 \\u0410\\u0439\\u0440\\u0435\\u0441 \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Buenos_Aires" },
+        { "bg", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u0410\\u0440\\u0436\\u0435\\u043D\\u0442\\u0438\\u043D\\u0430 \\u2013 \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "America/Buenos_Aires" },
 
         { "bg", "America/Havana", "2004-01-15T00:00:00Z", "Z", "-0500", "-5:00" },
         { "bg", "America/Havana", "2004-01-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0500", "-5:00" },
         { "bg", "America/Havana", "2004-01-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0500", "-5:00" },
-        { "bg", "America/Havana", "2004-01-15T00:00:00Z", "zzzz", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0500", "-5:00" },
+        { "bg", "America/Havana", "2004-01-15T00:00:00Z", "zzzz", "\\u041a\\u0443\\u0431\\u0438\\u043d\\u0441\\u043a\\u043e \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "-5:00" },
         { "bg", "America/Havana", "2004-07-15T00:00:00Z", "Z", "-0400", "-4:00" },
         { "bg", "America/Havana", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0400", "-4:00" },
         { "bg", "America/Havana", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0400", "-4:00" },
-        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447-0400", "-4:00" },
+        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "zzzz", "\\u041a\\u0443\\u0431\\u0438\\u043d\\u0441\\u043a\\u043e \\u043b\\u044f\\u0442\\u043d\\u043e \\u0447\\u0430\\u0441\\u043e\\u0432\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "-4:00" },
         { "bg", "America/Havana", "2004-07-15T00:00:00Z", "v", "\\u041a\\u0443\\u0431\\u0430 \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Havana" },
-        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "\\u041a\\u0443\\u0431\\u0430 \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Havana" },
+        { "bg", "America/Havana", "2004-07-15T00:00:00Z", "vvvv", "\\u041a\\u0443\\u0431\\u0438\\u043d\\u0441\\u043a\\u043e \\u0432\\u0440\\u0435\\u043C\\u0435", "America/Havana" },
 
         { "bg", "Australia/ACT", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "bg", "Australia/ACT", "2004-01-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+1100", "+11:00" },
@@ -2803,7 +2803,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "bg", "Australia/ACT", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+1000", "+10:00" },
         { "bg", "Australia/ACT", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+1000", "+10:00" },
         { "bg", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "\\u0410\\u0432\\u0441\\u0442\\u0440\\u0430\\u043B\\u0438\\u044F \\u2013 \\u0438\\u0437\\u0442\\u043E\\u0447\\u043D\\u043E \\u0441\\u0442\\u0430\\u043D\\u0434\\u0430\\u0440\\u0442\\u043D\\u043E \\u0432\\u0440\\u0435\\u043C\\u0435", "+10:00" },
-        { "bg", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u0410\\u0432\\u0441\\u0442\\u0440\\u0430\\u043b\\u0438\\u044f \\u0432\\u0440\\u0435\\u043C\\u0435 (\\u0421\\u0438\\u0434\\u043D\\u0438)", "Australia/Sydney" },
+        { "bg", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u0421\\u0438\\u0434\\u043D\\u0438 \\u0432\\u0440\\u0435\\u043C\\u0435", "Australia/Sydney" },
         { "bg", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "\\u0410\\u0432\\u0441\\u0442\\u0440\\u0430\\u043B\\u0438\\u044F \\u2013 \\u0438\\u0437\\u0442\\u043E\\u0447\\u043D\\u043E \\u0432\\u0440\\u0435\\u043C\\u0435", "Australia/Sydney" },
 
         { "bg", "Australia/Sydney", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
@@ -2814,7 +2814,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "bg", "Australia/Sydney", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+1000", "+10:00" },
         { "bg", "Australia/Sydney", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+1000", "+10:00" },
         { "bg", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "\\u0410\\u0432\\u0441\\u0442\\u0440\\u0430\\u043B\\u0438\\u044F \\u2013 \\u0438\\u0437\\u0442\\u043E\\u0447\\u043D\\u043E \\u0441\\u0442\\u0430\\u043D\\u0434\\u0430\\u0440\\u0442\\u043D\\u043E \\u0432\\u0440\\u0435\\u043C\\u0435", "+10:00" },
-        { "bg", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u0410\\u0432\\u0441\\u0442\\u0440\\u0430\\u043b\\u0438\\u044f \\u0432\\u0440\\u0435\\u043C\\u0435 (\\u0421\\u0438\\u0434\\u043D\\u0438)", "Australia/Sydney" },
+        { "bg", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u0421\\u0438\\u0434\\u043D\\u0438 \\u0432\\u0440\\u0435\\u043C\\u0435", "Australia/Sydney" },
         { "bg", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "\\u0410\\u0432\\u0441\\u0442\\u0440\\u0430\\u043B\\u0438\\u044F \\u2013 \\u0438\\u0437\\u0442\\u043E\\u0447\\u043D\\u043E \\u0432\\u0440\\u0435\\u043C\\u0435", "Australia/Sydney" },
 
         { "bg", "Europe/London", "2004-01-15T00:00:00Z", "Z", "+0000", "+0:00" },
@@ -2843,13 +2843,13 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "bg", "Asia/Calcutta", "2004-01-15T00:00:00Z", "Z", "+0530", "+5:30" },
         { "bg", "Asia/Calcutta", "2004-01-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+5:30" },
         { "bg", "Asia/Calcutta", "2004-01-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+5:30" },
-        { "bg", "Asia/Calcutta", "2004-01-15T00:00:00Z", "zzzz", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+5:30" },
+        { "bg", "Asia/Calcutta", "2004-01-15T00:00:00Z", "zzzz", "\\u0418\\u043d\\u0434\\u0438\\u0439\\u0441\\u043a\\u043e \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "+5:30" },
         { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "Z", "+0530", "+5:30" },
         { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+5:30" },
         { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+05:30" },
-        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u0413\\u0440\\u0438\\u0438\\u043D\\u0443\\u0438\\u0447+0530", "+5:30" },
+        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u0418\\u043d\\u0434\\u0438\\u0439\\u0441\\u043a\\u043e \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "+5:30" },
         { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "\\u0418\\u043D\\u0434\\u0438\\u044F \\u0432\\u0440\\u0435\\u043C\\u0435", "Asia/Calcutta" },
-        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u0418\\u043D\\u0434\\u0438\\u044F \\u0432\\u0440\\u0435\\u043C\\u0435", "Asia/Calcutta" },
+        { "bg", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u0418\\u043d\\u0434\\u0438\\u0439\\u0441\\u043a\\u043e \\u0441\\u0442\\u0430\\u043d\\u0434\\u0430\\u0440\\u0442\\u043d\\u043e \\u0432\\u0440\\u0435\\u043c\\u0435", "Asia/Calcutta" },
     // ==========
 
         { "ja", "America/Los_Angeles", "2004-01-15T00:00:00Z", "Z", "-0800", "-8:00" },
@@ -2863,9 +2863,9 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ja", "America/Los_Angeles", "2004-07-15T00:00:00Z", "V", "GMT-07:00", "America/Los_Angeles" },
         { "ja", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "\\u30a2\\u30e1\\u30ea\\u30ab\\u592a\\u5e73\\u6d0b\\u590f\\u6642\\u9593", "America/Los_Angeles" },
     // icu ja.txt has exemplar city for this time zone
-        { "ja", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u30A2\\u30E1\\u30EA\\u30AB\\u5408\\u8846\\u56FD\\u6642\\u9593\\uFF08\\u30ed\\u30b5\\u30f3\\u30bc\\u30eb\\u30b9\\uFF09", "America/Los_Angeles" },
+        { "ja", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "\\u30ED\\u30B5\\u30F3\\u30BC\\u30EB\\u30B9\\u6642\\u9593", "America/Los_Angeles" },
         { "ja", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "\\u30A2\\u30E1\\u30EA\\u30AB\\u592A\\u5e73\\u6D0B\\u6642\\u9593", "America/Los_Angeles" },
-        { "ja", "America/Los_Angeles", "2004-07-15T00:00:00Z", "VVVV", "\\u30A2\\u30E1\\u30EA\\u30AB\\u5408\\u8846\\u56FD\\u6642\\u9593\\uFF08\\u30ed\\u30b5\\u30f3\\u30bc\\u30eb\\u30b9\\uFF09", "America/Los_Angeles" },
+        { "ja", "America/Los_Angeles", "2004-07-15T00:00:00Z", "VVVV", "\\u30ED\\u30B5\\u30F3\\u30BC\\u30EB\\u30B9\\u6642\\u9593", "America/Los_Angeles" },
 
         { "ja", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "ja", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2876,7 +2876,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ja", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "ja", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u30A2\\u30EB\\u30BC\\u30F3\\u30C1\\u30F3\\u6A19\\u6E96\\u6642", "-3:00" },
     // icu ja.txt does not have info for this time zone
-        { "ja", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u30a2\\u30eb\\u30bc\\u30f3\\u30c1\\u30f3\\u6642\\u9593\\uFF08\\u30D6\\u30A8\\u30CE\\u30B9\\u30A2\\u30A4\\u30EC\\u30B9\\uFF09", "America/Buenos_Aires" },
+        { "ja", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u30D6\\u30A8\\u30CE\\u30B9\\u30A2\\u30A4\\u30EC\\u30B9\\u6642\\u9593", "America/Buenos_Aires" },
         { "ja", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u30A2\\u30EB\\u30BC\\u30F3\\u30C1\\u30F3\\u6A19\\u6E96\\u6642", "America/Buenos_Aires" },
 
         { "ja", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
@@ -2887,7 +2887,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ja", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "ja", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "ja", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "\\u30A2\\u30EB\\u30BC\\u30F3\\u30C1\\u30F3\\u6A19\\u6E96\\u6642", "-3:00" },
-        { "ja", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u30a2\\u30eb\\u30bc\\u30f3\\u30c1\\u30f3\\u6642\\u9593\\uFF08\\u30D6\\u30A8\\u30CE\\u30B9\\u30A2\\u30A4\\u30EC\\u30B9\\uFF09", "America/Buenos_Aires" },
+        { "ja", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "\\u30D6\\u30A8\\u30CE\\u30B9\\u30A2\\u30A4\\u30EC\\u30B9\\u6642\\u9593", "America/Buenos_Aires" },
         { "ja", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "\\u30A2\\u30EB\\u30BC\\u30F3\\u30C1\\u30F3\\u6A19\\u6E96\\u6642", "America/Buenos_Aires" },
 
         { "ja", "America/Havana", "2004-01-15T00:00:00Z", "Z", "-0500", "-5:00" },
@@ -2910,7 +2910,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ja", "Australia/ACT", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "ja", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "\\u30AA\\u30FC\\u30B9\\u30C8\\u30E9\\u30EA\\u30A2\\u6771\\u90E8\\u6A19\\u6E96\\u6642", "+10:00" },
     // icu ja.txt does not have info for this time zone
-        { "ja", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u30aa\\u30fc\\u30b9\\u30c8\\u30e9\\u30ea\\u30a2\\u6642\\u9593\\uFF08\\u30b7\\u30c9\\u30cb\\u30fc\\uFF09", "Australia/Sydney" },
+        { "ja", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "\\u30B7\\u30C9\\u30CB\\u30FC\\u6642\\u9593", "Australia/Sydney" },
         { "ja", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "\\u30AA\\u30FC\\u30B9\\u30C8\\u30E9\\u30EA\\u30A2\\u6771\\u90E8\\u6642\\u9593", "Australia/Sydney" },
 
         { "ja", "Australia/Sydney", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
@@ -2921,7 +2921,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ja", "Australia/Sydney", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+10:00", "+10:00" },
         { "ja", "Australia/Sydney", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "ja", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "\\u30AA\\u30FC\\u30B9\\u30C8\\u30E9\\u30EA\\u30A2\\u6771\\u90E8\\u6A19\\u6E96\\u6642", "+10:00" },
-        { "ja", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u30aa\\u30fc\\u30b9\\u30c8\\u30e9\\u30ea\\u30a2\\u6642\\u9593\\uFF08\\u30b7\\u30c9\\u30cb\\u30fc\\uFF09", "Australia/Sydney" },
+        { "ja", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "\\u30B7\\u30C9\\u30CB\\u30FC\\u6642\\u9593", "Australia/Sydney" },
         { "ja", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "\\u30AA\\u30FC\\u30B9\\u30C8\\u30E9\\u30EA\\u30A2\\u6771\\u90E8\\u6642\\u9593", "Australia/Sydney" },
 
         { "ja", "Europe/London", "2004-01-15T00:00:00Z", "Z", "+0000", "+0:00" },
@@ -2933,7 +2933,7 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ja", "Europe/London", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+01:00", "+1:00" },
         { "ja", "Europe/London", "2004-07-15T00:00:00Z", "z", "GMT+01:00", "+1:00" },
         { "ja", "Europe/London", "2004-07-15T00:00:00Z", "V", "GMT+01:00", "+1:00" },
-        { "ja", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "GMT+01:00", "+1:00" },
+        { "ja", "Europe/London", "2004-07-15T00:00:00Z", "zzzz", "\\u82f1\\u56fd\\u590f\\u6642\\u9593", "+1:00" },
         { "ja", "Europe/London", "2004-07-15T00:00:00Z", "v", "\\u30a4\\u30ae\\u30ea\\u30b9\\u6642\\u9593", "Europe/London" },
         { "ja", "Europe/London", "2004-07-15T00:00:00Z", "vvvv", "\\u30a4\\u30ae\\u30ea\\u30b9\\u6642\\u9593", "Europe/London" },
         { "ja", "Europe/London", "2004-07-15T00:00:00Z", "VVVV", "\\u30a4\\u30ae\\u30ea\\u30b9\\u6642\\u9593", "Europe/London" },
@@ -2953,13 +2953,13 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ja", "Asia/Calcutta", "2004-01-15T00:00:00Z", "Z", "+0530", "+5:30" },
         { "ja", "Asia/Calcutta", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+05:30", "+5:30" },
         { "ja", "Asia/Calcutta", "2004-01-15T00:00:00Z", "z", "GMT+05:30", "+5:30" },
-        { "ja", "Asia/Calcutta", "2004-01-15T00:00:00Z", "zzzz", "\\u30A4\\u30F3\\u30C9\\u6A19\\u6E96\\u6642", "+5:30" },
+        { "ja", "Asia/Calcutta", "2004-01-15T00:00:00Z", "zzzz", "\\u30A4\\u30F3\\u30C9\\u6642\\u9593", "+5:30" },
         { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "Z", "+0530", "+5:30" },
         { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+05:30", "+5:30" },
         { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "z", "GMT+05:30", "+05:30" },
-        { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u30A4\\u30F3\\u30C9\\u6A19\\u6E96\\u6642", "+5:30" },
+        { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "zzzz", "\\u30A4\\u30F3\\u30C9\\u6642\\u9593", "+5:30" },
         { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "v", "\\u30A4\\u30F3\\u30C9\\u6642\\u9593", "Asia/Calcutta" },
-        { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u30A4\\u30F3\\u30C9\\u6A19\\u6E96\\u6642", "Asia/Calcutta" },
+        { "ja", "Asia/Calcutta", "2004-07-15T00:00:00Z", "vvvv", "\\u30A4\\u30F3\\u30C9\\u6642\\u9593", "Asia/Calcutta" },
 
     // ==========
 
@@ -2971,8 +2971,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ti", "America/Los_Angeles", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-07:00", "-7:00" },
         { "ti", "America/Los_Angeles", "2004-07-15T00:00:00Z", "z", "GMT-07:00", "-7:00" },
         { "ti", "America/Los_Angeles", "2004-07-15T00:00:00Z", "zzzz", "GMT-07:00", "-7:00" },
-        { "ti", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "US (Los Angeles)", "America/Los_Angeles" },
-        { "ti", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "US (Los Angeles)", "America/Los_Angeles" },
+        { "ti", "America/Los_Angeles", "2004-07-15T00:00:00Z", "v", "(Los Angeles)", "America/Los_Angeles" },
+        { "ti", "America/Los_Angeles", "2004-07-15T00:00:00Z", "vvvv", "(Los Angeles)", "America/Los_Angeles" },
 
         { "ti", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "ti", "America/Argentina/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2982,8 +2982,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ti", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "ti", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "ti", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "GMT-03:00", "-3:00" },
-        { "ti", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "AR (Buenos Aires)", "America/Buenos_Aires" },
-        { "ti", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "AR (Buenos Aires)", "America/Buenos_Aires" },
+        { "ti", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "(Buenos Aires)", "America/Buenos_Aires" },
+        { "ti", "America/Argentina/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "(Buenos Aires)", "America/Buenos_Aires" },
 
         { "ti", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "Z", "-0300", "-3:00" },
         { "ti", "America/Buenos_Aires", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
@@ -2993,8 +2993,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ti", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "ZZZZ", "GMT-03:00", "-3:00" },
         { "ti", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "z", "GMT-03:00", "-3:00" },
         { "ti", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "zzzz", "GMT-03:00", "-3:00" },
-        { "ti", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "AR (Buenos Aires)", "America/Buenos_Aires" },
-        { "ti", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "AR (Buenos Aires)", "America/Buenos_Aires" },
+        { "ti", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "v", "(Buenos Aires)", "America/Buenos_Aires" },
+        { "ti", "America/Buenos_Aires", "2004-07-15T00:00:00Z", "vvvv", "(Buenos Aires)", "America/Buenos_Aires" },
 
         { "ti", "America/Havana", "2004-01-15T00:00:00Z", "Z", "-0500", "-5:00" },
         { "ti", "America/Havana", "2004-01-15T00:00:00Z", "ZZZZ", "GMT-05:00", "-5:00" },
@@ -3015,8 +3015,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ti", "Australia/ACT", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+10:00", "+10:00" },
         { "ti", "Australia/ACT", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "ti", "Australia/ACT", "2004-07-15T00:00:00Z", "zzzz", "GMT+10:00", "+10:00" },
-        { "ti", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "AU (Sydney)", "Australia/Sydney" },
-        { "ti", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "AU (Sydney)", "Australia/Sydney" },
+        { "ti", "Australia/ACT", "2004-07-15T00:00:00Z", "v", "(Sydney)", "Australia/Sydney" },
+        { "ti", "Australia/ACT", "2004-07-15T00:00:00Z", "vvvv", "(Sydney)", "Australia/Sydney" },
 
         { "ti", "Australia/Sydney", "2004-01-15T00:00:00Z", "Z", "+1100", "+11:00" },
         { "ti", "Australia/Sydney", "2004-01-15T00:00:00Z", "ZZZZ", "GMT+11:00", "+11:00" },
@@ -3026,8 +3026,8 @@ void DateFormatTest::TestTimeZoneDisplayName()
         { "ti", "Australia/Sydney", "2004-07-15T00:00:00Z", "ZZZZ", "GMT+10:00", "+10:00" },
         { "ti", "Australia/Sydney", "2004-07-15T00:00:00Z", "z", "GMT+10:00", "+10:00" },
         { "ti", "Australia/Sydney", "2004-07-15T00:00:00Z", "zzzz", "GMT+10:00", "+10:00" },
-        { "ti", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "AU (Sydney)", "Australia/Sydney" },
-        { "ti", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "AU (Sydney)", "Australia/Sydney" },
+        { "ti", "Australia/Sydney", "2004-07-15T00:00:00Z", "v", "(Sydney)", "Australia/Sydney" },
+        { "ti", "Australia/Sydney", "2004-07-15T00:00:00Z", "vvvv", "(Sydney)", "Australia/Sydney" },
 
         { "ti", "Europe/London", "2004-01-15T00:00:00Z", "Z", "+0000", "+0:00" },
         { "ti", "Europe/London", "2004-01-15T00:00:00Z", "ZZZZ", "GMT", "+0:00" },
@@ -3671,7 +3671,9 @@ void DateFormatTest::TestParsePosition() {
         {"y/M/d H:mm:ss z", "+123", "2011/7/1 12:34:00 PDT", " PST"},
         {"vvvv a h:mm:ss", "", "Pacific Time AM 10:21:45", ""},
         {"HH:mm v M/d", "111", "14:15 PT 8/10", " 12345"},
-        {"'time zone:' VVVV 'date:' yyyy-MM-dd", "xxxx", "time zone: United States Time (Los Angeles) date: 2010-02-25", "xxxx"},
+        {"'time zone:' VVVV 'date:' yyyy-MM-dd", "xxxx", "time zone: Los Angeles Time date: 2010-02-25", "xxxx"},
+        {"yG", "", "2012AD", ""},
+        {"yG", "", "2012", "x"},
         {0, 0, 0, 0},
     };
 
@@ -3893,6 +3895,86 @@ void DateFormatTest::TestContext()
     }
     if (cal) {
         delete cal;
+    }
+}
+
+// test item for a particular locale + calendar and date format
+typedef struct {
+    int32_t year;
+    int32_t month;
+    int32_t day;
+    int32_t hour;
+    int32_t minute;
+    UnicodeString formattedDate;
+} CalAndFmtTestItem;
+
+// test item giving locale + calendar, date format, and CalAndFmtTestItems
+typedef struct {
+    const char * locale; // with calendar
+    DateFormat::EStyle style;
+    const CalAndFmtTestItem *caftItems;
+} TestNonGregoItem;
+
+void DateFormatTest::TestNonGregoFmtParse()
+{
+    // test items for he@calendar=hebrew, long date format
+    const CalAndFmtTestItem cafti_he_hebrew_long[] = {
+        { 4999, 12, 29, 12, 0, CharsToUnicodeString("\\u05DB\\u05F4\\u05D8 \\u05D1\\u05D0\\u05DC\\u05D5\\u05DC \\u05D3\\u05F3\\u05EA\\u05EA\\u05E7\\u05E6\\u05F4\\u05D8") },
+        { 5100,  0,  1, 12, 0, CharsToUnicodeString("\\u05D0\\u05F3 \\u05D1\\u05EA\\u05E9\\u05E8\\u05D9 \\u05E7\\u05F3") },
+        { 5774,  5,  1, 12, 0, CharsToUnicodeString("\\u05D0\\u05F3 \\u05D1\\u05D0\\u05D3\\u05E8 \\u05D0\\u05F3 \\u05EA\\u05E9\\u05E2\\u05F4\\u05D3") },
+        { 5999, 12, 29, 12, 0, CharsToUnicodeString("\\u05DB\\u05F4\\u05D8 \\u05D1\\u05D0\\u05DC\\u05D5\\u05DC \\u05EA\\u05EA\\u05E7\\u05E6\\u05F4\\u05D8") },
+        { 6100,  0,  1, 12, 0, CharsToUnicodeString("\\u05D0\\u05F3 \\u05D1\\u05EA\\u05E9\\u05E8\\u05D9 \\u05D5\\u05F3\\u05E7\\u05F3") },
+        {    0,  0,  0,  0, 0, UnicodeString("") } // terminator
+    };
+    // overal test items
+    const TestNonGregoItem items[] = {
+        { "he@calendar=hebrew", DateFormat::kLong, cafti_he_hebrew_long },
+        { NULL, DateFormat::kNone, NULL } // terminator
+    };
+    const TestNonGregoItem * itemPtr;
+    for (itemPtr = items; itemPtr->locale != NULL; itemPtr++) {
+        Locale locale = Locale::createFromName(itemPtr->locale);
+        DateFormat * dfmt = DateFormat::createDateInstance(itemPtr->style, locale);
+        if (dfmt == NULL) {
+            dataerrln("DateFormat::createDateInstance fails for locale %s", itemPtr->locale);
+        } else {
+            Calendar * cal = (dfmt->getCalendar())->clone();
+            if (cal == NULL) {
+                dataerrln("(DateFormat::getCalendar)->clone() fails for locale %s", itemPtr->locale);
+            } else {
+                const CalAndFmtTestItem * caftItemPtr;
+                for (caftItemPtr = itemPtr->caftItems; caftItemPtr->year != 0; caftItemPtr++) {
+                    cal->clear();
+                    cal->set(UCAL_YEAR,   caftItemPtr->year);
+                    cal->set(UCAL_MONTH,  caftItemPtr->month);
+                    cal->set(UCAL_DATE,   caftItemPtr->day);
+                    cal->set(UCAL_HOUR_OF_DAY, caftItemPtr->hour);
+                    cal->set(UCAL_MINUTE, caftItemPtr->minute);
+                    UnicodeString result;
+                    FieldPosition fpos(0);
+                    dfmt->format(*cal, result, fpos);
+                    if ( result.compare(caftItemPtr->formattedDate) != 0 ) {
+                        errln( UnicodeString("FAIL: date format for locale ") + UnicodeString(itemPtr->locale) + ", style " + itemPtr->style +
+                                ", expected \"" + caftItemPtr->formattedDate + "\", got \"" + result + "\"");
+                    } else {
+                        // formatted OK, try parse
+                        ParsePosition ppos(0);
+                        dfmt->parse(result, *cal, ppos);
+                        UErrorCode status = U_ZERO_ERROR;
+                        int32_t year = cal->get(UCAL_YEAR, status);
+                        int32_t month = cal->get(UCAL_MONTH, status);
+                        int32_t day = cal->get(UCAL_DATE, status);
+                        if ( U_FAILURE(status) || ppos.getIndex() < result.length() || year != caftItemPtr->year || month != caftItemPtr->month || day != caftItemPtr->day ) {
+                            errln( UnicodeString("FAIL: date parse for locale ") + UnicodeString(itemPtr->locale) + ", style " + itemPtr->style +
+                                ", string \"" + result + "\", expected " + caftItemPtr->year +"-"+caftItemPtr->month+"-"+caftItemPtr->day + ", got pos " +
+                                ppos.getIndex() + " " + year +"-"+month+"-"+day + " status " + UnicodeString(u_errorName(status)) );
+                        }
+                    }
+                }
+                delete cal;
+            }
+            delete dfmt;
+        }
     }
 }
 

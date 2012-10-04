@@ -20,6 +20,7 @@
 #include "unicode/ucharstrie.h"
 #include "unicode/bytestrie.h"
 #include "unicode/ucnv.h"
+#include "unicode/utf16.h"
 
 #include "charstr.h"
 #include "dictionarydata.h"
@@ -34,6 +35,51 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "putilimp.h"
+UDate startTime = -1.0;
+
+static int elapsedTime() {
+  return (int)uprv_floor((uprv_getRawUTCtime()-startTime)/1000.0);
+}
+
+#if U_PLATFORM_IMPLEMENTS_POSIX && !U_PLATFORM_HAS_WIN32_API
+#include <signal.h>
+#include <unistd.h>
+
+const char *wToolname="gendict";
+const char *wOutname="(some file)";
+
+const int firstSeconds = 5; /* seconds between notices*/
+const int nextSeconds = 15; /* seconds between notices*/
+
+static void alarm_fn(int /*n*/) {
+  printf("%s: still writing\t%s (%ds)\t...\n",    wToolname, wOutname, elapsedTime());
+  
+  signal(SIGALRM, &alarm_fn);
+  alarm(nextSeconds); // reset the alarm
+}
+
+static void install_watchdog(const char *toolName, const char *outFileName) {
+  wToolname=toolName;
+  wOutname=outFileName;
+
+  if(startTime<0) { // uninitialized
+    startTime = uprv_getRawUTCtime();
+  }
+  signal(SIGALRM, &alarm_fn);
+
+  alarm(firstSeconds); // set the alarm
+}
+
+#else
+static void install_watchdog(const char*, const char*) {
+  // not implemented
+}
+#endif
+
+
+
 
 U_NAMESPACE_USE
 
@@ -96,6 +142,8 @@ static UDataInfo dataInfo = {
     { 1, 0, 0, 0 },                 /* format version */
     { 0, 0, 0, 0 }                  /* data version */
 };
+
+#if !UCONFIG_NO_BREAK_ITERATION
 
 // A wrapper for both BytesTrieBuilder and UCharsTrieBuilder.
 // may want to put this somewhere in ICU, as it could be useful outside
@@ -199,6 +247,7 @@ public:
         return (int32_t)(transformType | transformConstant); 
     }
 };
+#endif
 
 static const UChar LINEFEED_CHARACTER = 0x000A;
 static const UChar CARRIAGE_RETURN_CHARACTER = 0x000D;
@@ -252,6 +301,9 @@ int  main(int argc, char **argv) {
     const char *outFileName  = argv[2];
     const char *wordFileName = argv[1];
 
+    // set up the watchdog
+    install_watchdog(progName, outFileName);
+
     if (options[ARG_ICUDATADIR].doesOccur) {
         u_setDataDirectory(options[ARG_ICUDATADIR].value);
     }
@@ -274,19 +326,21 @@ int  main(int argc, char **argv) {
     IcuToolErrorCode status("gendict/main()");
 
 #if UCONFIG_NO_BREAK_ITERATION || UCONFIG_NO_FILE_IO
+    const char* outDir=NULL;
 
     UNewDataMemory *pData;
     char msg[1024];
+    UErrorCode tempstatus = U_ZERO_ERROR;
 
     /* write message with just the name */ // potential for a buffer overflow here...
     sprintf(msg, "gendict writes dummy %s because of UCONFIG_NO_BREAK_ITERATION and/or UCONFIG_NO_FILE_IO, see uconfig.h", outFileName);
     fprintf(stderr, "%s\n", msg);
 
     /* write the dummy data file */
-    pData = udata_create(outDir, NULL, outFileName, &dataInfo, NULL, &status);
+    pData = udata_create(outDir, NULL, outFileName, &dataInfo, NULL, &tempstatus);
     udata_writeBlock(pData, msg, strlen(msg));
-    udata_finish(pData, &status);
-    return (int)status;
+    udata_finish(pData, &tempstatus);
+    return (int)tempstatus;
 
 #else
     //  Read in the dictionary source file
@@ -419,7 +473,7 @@ int  main(int argc, char **argv) {
         exit(U_INTERNAL_PROGRAM_ERROR);
     }
 
-    puts("gendict: tool completed successfully.");
+    printf("%s: done writing\t%s (%ds).\n", progName, outFileName, elapsedTime());
 
 #ifdef TEST_GENDICT
     if (isBytesTrie) {

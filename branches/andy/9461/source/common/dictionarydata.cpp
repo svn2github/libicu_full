@@ -15,10 +15,17 @@
 #include "unicode/udata.h"
 #include "cmemory.h"
 
+#if !UCONFIG_NO_BREAK_ITERATION
+
 U_NAMESPACE_BEGIN
 
+#ifndef CYGWINMSVC /* On Cygwin/MSVC, the error redefinition of symbols occurs.*/
 const int32_t DictionaryData::TRIE_TYPE_BYTES;
 const int32_t DictionaryData::TRIE_TYPE_UCHARS;
+#endif
+
+DictionaryMatcher::~DictionaryMatcher() {
+}
 
 UCharsDictionaryMatcher::~UCharsDictionaryMatcher() {
     udata_close(file);
@@ -218,4 +225,4 @@ udict_swap(const UDataSwapper *ds, const void *inData, int32_t length,
     }
     return headerSize + size;
 }
-
+#endif

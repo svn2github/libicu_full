@@ -7,9 +7,9 @@
 // *
 // ***************************************************************************
 /**
- * validSubLocale of "bs"
+ * validSubLocale of "root"
  */
-bs_BA{
+nl_SR{
     /**
      * so genrb doesn't issue warnings
      */

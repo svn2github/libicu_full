@@ -140,7 +140,7 @@ static const Field names_UDateFormatStyle[] =
     /*
      *  negative enums.. leave out for now.
         FIELD_NAME_STR( LEN_UDAT, UDAT_NONE ),
-        FIELD_NAME_STR( LEN_UDAT, UDAT_IGNORE ),
+        FIELD_NAME_STR( LEN_UDAT, UDAT_PATTERN ),
      */
 };
 
@@ -343,6 +343,20 @@ U_CAPI const char *udbg_getPlatform(void)
     return "Windows";
 #elif U_PLATFORM == U_PF_UNKNOWN
     return "unknown";
+#elif U_PLATFORM == U_PF_DARWIN
+    return "Darwin";
+#elif U_PLATFORM == U_PF_QNX
+    return "QNX";
+#elif U_PLATFORM == U_PF_LINUX
+    return "Linux";
+#elif U_PLATFORM == U_PF_ANDROID
+    return "Android";
+#elif U_PLATFORM == U_PF_CLASSIC_MACOS
+    return "MacOS (Classic)";
+#elif U_PLATFORM == U_PF_OS390
+    return "IBM z";
+#elif U_PLATFORM == U_PF_OS400
+    return "IBM i";
 #else
     return "Other (POSIX-like)";
 #endif
@@ -510,7 +524,7 @@ static const USystemParams systemParams[] = {
 #if defined (CYGWINMSVC)
   { "build.cygwinmsvc", paramInteger, "b", 1},
 #endif
-  { "uconfig.internal_digitlist", paramInteger, "b", UCONFIG_INTERNAL_DIGITLIST},
+  { "uconfig.internal_digitlist", paramInteger, "b", 1}, /* always 1 */
   { "uconfig.have_parseallinput", paramInteger, "b", UCONFIG_HAVE_PARSEALLINPUT},
   { "uconfig.format_fastpaths_49",paramInteger, "b", UCONFIG_FORMAT_FASTPATHS_49},
 

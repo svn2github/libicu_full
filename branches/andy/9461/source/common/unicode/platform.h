@@ -36,7 +36,7 @@
  * and/or from other macros that are predefined by the compiler
  * or defined in standard (POSIX or platform or compiler) headers.
  *
- * As a temporary workaround, you can add an explicit #define for some macros
+ * As a temporary workaround, you can add an explicit <code>#define</code> for some macros
  * before it is first tested, or add an equivalent -D macro definition
  * to the compiler's command line.
  *
@@ -49,6 +49,19 @@
  * (You can provide an actual empty .c file rather than /dev/null.
  * <code>-x c++</code> is for C++.)
  */
+
+/**
+ * Define some things so that they can be documented.
+ * @internal
+ */
+#ifdef U_IN_DOXYGEN
+/*
+ * Problem: "platform.h:335: warning: documentation for unknown define U_HAVE_STD_STRING found." means that U_HAVE_STD_STRING is not documented.
+ * Solution: #define any defines for non @internal API here, so that they are visible in the docs.  If you just set PREDEFINED in Doxyfile.in,  they won't be documented.
+ */
+
+/* None for now. */
+#endif
 
 /**
  * \def U_PLATFORM
@@ -335,6 +348,22 @@
 /*===========================================================================*/
 /** @{ Compiler and environment features                                     */
 /*===========================================================================*/
+
+/**
+ * \def U_GCC_MAJOR_MINOR
+ * Indicates whether the compiler is gcc (test for != 0),
+ * and if so, contains its major (times 100) and minor version numbers.
+ * If the compiler is not gcc, then U_GCC_MAJOR_MINOR == 0.
+ *
+ * For example, for testing for whether we have gcc, and whether it's 4.6 or higher,
+ * use "#if U_GCC_MAJOR_MINOR >= 406".
+ * @internal
+ */
+#ifdef __GNUC__
+#   define U_GCC_MAJOR_MINOR (__GNUC__ * 100 + __GNUC_MINOR__)
+#else
+#   define U_GCC_MAJOR_MINOR 0
+#endif
 
 /**
  * \def U_IS_BIG_ENDIAN

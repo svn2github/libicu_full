@@ -337,7 +337,7 @@ public:
     * @param status the error code status.
     * @return the transformed key.
     * @see CollationKey
-    * @deprecated ICU 2.8 Use getSortKey(...) instead
+    * @stable ICU 2.0
     */
     virtual CollationKey& getCollationKey(const UnicodeString& source,
                                           CollationKey& key,
@@ -354,7 +354,7 @@ public:
     * @param status the error code status.
     * @return the transformed key.
     * @see CollationKey
-    * @deprecated ICU 2.8 Use getSortKey(...) instead
+    * @stable ICU 2.0
     */
     virtual CollationKey& getCollationKey(const UChar *source,
                                           int32_t sourceLength,
@@ -381,9 +381,8 @@ public:
     virtual Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
 
     /**
-     * Gets the table-based rules for the collation object.
-     * @return returns the collation rules that the table collation object was
-     *         created from.
+     * Gets the tailoring rules for this collator.
+     * @return the collation tailoring from which this collator was created
      * @stable ICU 2.0
      */
     const UnicodeString& getRules(void) const;
@@ -458,9 +457,13 @@ public:
     /**
      * Returns current rules. Delta defines whether full rules are returned or
      * just the tailoring.
+     *
+     * getRules(void) should normally be used instead.
+     * See http://userguide.icu-project.org/collation/customization#TOC-Building-on-Existing-Locales
      * @param delta one of UCOL_TAILORING_ONLY, UCOL_FULL_RULES.
      * @param buffer UnicodeString to store the result rules
      * @stable ICU 2.2
+     * @see UCOL_FULL_RULES
      */
     void getRules(UColRuleOption delta, UnicodeString &buffer);
 

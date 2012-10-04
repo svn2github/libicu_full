@@ -150,7 +150,7 @@ static void TestDateFormat()
     
     /*Testing udat_format()*/
     log_verbose("\nTesting the udat_format() function of date format\n");
-    u_uastrcpy(temp, "7/10/96 4:05 PM");
+    u_uastrcpy(temp, "7/10/96, 4:05 PM");
     /*format using def */
     resultlength=0;
     resultlengthneeded=udat_format(def, d, NULL, resultlength, NULL, &status);
@@ -214,7 +214,7 @@ static void TestDateFormat()
     
     /*Testing parsing using udat_parse()*/
     log_verbose("\nTesting parsing using udat_parse()\n");
-    u_uastrcpy(temp,"2/3/76 2:50 AM");
+    u_uastrcpy(temp,"2/3/76, 2:50 AM");
     parsepos=0;
     status=U_ZERO_ERROR;
     
@@ -250,7 +250,7 @@ static void TestDateFormat()
     status=U_ZERO_ERROR;
     log_verbose("\nTesting the udat_openPattern with a specified pattern\n");
     /*for french locale */
-    fr_pat=udat_open(UDAT_IGNORE, UDAT_IGNORE,"fr_FR",NULL,0,temp, u_strlen(temp), &status);
+    fr_pat=udat_open(UDAT_PATTERN, UDAT_PATTERN,"fr_FR",NULL,0,temp, u_strlen(temp), &status);
     if(U_FAILURE(status))
     {
         log_err("FAIL: Error in creating a date format using udat_openPattern \n %s\n", 

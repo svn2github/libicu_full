@@ -644,6 +644,7 @@ foundBest:
     return wordsFound;
 }
 
+#if !UCONFIG_NO_NORMALIZATION
 /*
  ******************************************************************
  * CjkBreakEngine
@@ -771,6 +772,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
     }
 
     UnicodeString inputString(charString.elems(), inputLength);
+    // TODO: Use Normalizer2.
     UNormalizationMode norm_mode = UNORM_NFKC;
     UBool isNormalized =
         Normalizer::quickCheck(inputString, norm_mode, status) == UNORM_YES ||
@@ -932,6 +934,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *text,
     utext_close(&normalizedText);
     return numBreaks;
 }
+#endif
 
 U_NAMESPACE_END
 

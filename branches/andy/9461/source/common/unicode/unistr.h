@@ -54,6 +54,11 @@ U_STABLE int32_t U_EXPORT2
 u_strlen(const UChar *s);
 #endif
 
+/**
+ * \def U_STRING_CASE_MAPPER_DEFINED
+ * @internal
+ */
+
 #ifndef U_STRING_CASE_MAPPER_DEFINED
 #define U_STRING_CASE_MAPPER_DEFINED
 
@@ -2688,10 +2693,12 @@ public:
 #endif
 
   /**
-   * Case-fold the characters in this string.
+   * Case-folds the characters in this string.
+   *
    * Case-folding is locale-independent and not context-sensitive,
    * but there is an option for whether to include or exclude mappings for dotted I
-   * and dotless i that are marked with 'I' in CaseFolding.txt.
+   * and dotless i that are marked with 'T' in CaseFolding.txt.
+   *
    * The result may be longer or shorter than the original.
    *
    * @param options Either U_FOLD_CASE_DEFAULT or U_FOLD_CASE_EXCLUDE_SPECIAL_I

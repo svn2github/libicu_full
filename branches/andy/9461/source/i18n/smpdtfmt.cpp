@@ -204,6 +204,11 @@ static const int32_t gFieldRangeBias[] = {
     -1,  // 'U' - UDAT_YEAR_NAME_FIELD
 };
 
+// When calendar uses hebr numbering (i.e. he@calendar=hebrew),
+// offset the years within the current millenium down to 1-999
+static const int32_t HEBREW_CAL_CUR_MILLENIUM_START_YEAR = 5000;
+static const int32_t HEBREW_CAL_CUR_MILLENIUM_END_YEAR = 6000;
+
 static UMutex LOCK = U_MUTEX_INITIALIZER;
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SimpleDateFormat)
@@ -1223,6 +1228,8 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     }
 
     currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
+    UnicodeString hebr("hebr", 4, US_INV);
+    
     switch (patternCharIndex) {
 
     // for any "G" symbol, write out the appropriate era string
@@ -1262,6 +1269,9 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 //AD 12345 12345     45   12345    12345     12345
     case UDAT_YEAR_FIELD:
     case UDAT_YEAR_WOY_FIELD:
+        if (fDateOverride.compare(hebr)==0 && value>HEBREW_CAL_CUR_MILLENIUM_START_YEAR && value<HEBREW_CAL_CUR_MILLENIUM_END_YEAR) {
+            value-=HEBREW_CAL_CUR_MILLENIUM_START_YEAR;
+        }
         if(count == 2)
             zeroPaddingNumber(currentNumberFormat, appendTo, value, 2, 2);
         else
@@ -1738,7 +1748,8 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
 
                 if (s == -pos-1) {
                     // era not present, in special cases allow this to continue
-                    s++;
+                    // from the position where the era was expected
+                    s = pos;
 
                     if (i+1 < fPattern.length()) {
                         // move to next pattern character
@@ -2343,6 +2354,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     patternCharIndex = (UDateFormatField)(patternCharPtr - DateFormatSymbols::getPatternUChars());
     currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
     UCalendarDateFields field = fgPatternIndexToCalendarField[patternCharIndex];
+    UnicodeString hebr("hebr", 4, US_INV);
 
     if (numericLeapMonthFormatter != NULL) {
         numericLeapMonthFormatter->setFormats((const Format **)&currentNumberFormat, 1);
@@ -2509,7 +2521,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         // we made adjustments to place the 2-digit year in the proper
         // century, for parsed strings from "00" to "99".  Any other string
         // is treated literally:  "2250", "-1", "1", "002".
-        if ((pos.getIndex() - start) == 2 && !isChineseCalendar
+        if (fDateOverride.compare(hebr)==0 && value < 1000) {
+            value += HEBREW_CAL_CUR_MILLENIUM_START_YEAR;
+        } else if ((pos.getIndex() - start) == 2 && !isChineseCalendar
             && u_isdigit(text.charAt(start))
             && u_isdigit(text.charAt(start+1)))
         {
@@ -2544,7 +2558,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     case UDAT_YEAR_WOY_FIELD:
         // Comment is the same as for UDAT_Year_FIELDs - look above
-        if ((pos.getIndex() - start) == 2
+        if (fDateOverride.compare(hebr)==0 && value < 1000) {
+            value += HEBREW_CAL_CUR_MILLENIUM_START_YEAR;
+        } else if ((pos.getIndex() - start) == 2
             && u_isdigit(text.charAt(start))
             && u_isdigit(text.charAt(start+1))
             && fHaveDefaultCentury )

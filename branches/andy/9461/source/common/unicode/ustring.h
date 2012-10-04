@@ -20,9 +20,14 @@
 #include "unicode/putil.h"
 #include "unicode/uiter.h"
 
-/** Simple declaration for u_strToTitle() to avoid including unicode/ubrk.h. @stable ICU 2.1*/
+/**
+ * \def UBRK_TYPEDEF_UBREAK_ITERATOR
+ * @internal 
+ */
+
 #ifndef UBRK_TYPEDEF_UBREAK_ITERATOR
 #   define UBRK_TYPEDEF_UBREAK_ITERATOR
+/** Simple declaration for u_strToTitle() to avoid including unicode/ubrk.h. @stable ICU 2.1*/
     typedef struct UBreakIterator UBreakIterator;
 #endif
 
@@ -918,7 +923,7 @@ u_memrchr32(const UChar *s, UChar32 c, int32_t count);
  *    }
  * </pre>
  * 
- * Note that the macros will NOT consistently work if their argument is another #define. 
+ * Note that the macros will NOT consistently work if their argument is another <code>#define</code>. 
  *  The following will not work on all platforms, don't use it.
  * 
  * <pre>
@@ -1154,10 +1159,12 @@ u_strToTitle(UChar *dest, int32_t destCapacity,
 #endif
 
 /**
- * Case-fold the characters in a string.
+ * Case-folds the characters in a string.
+ *
  * Case-folding is locale-independent and not context-sensitive,
  * but there is an option for whether to include or exclude mappings for dotted I
- * and dotless i that are marked with 'I' in CaseFolding.txt.
+ * and dotless i that are marked with 'T' in CaseFolding.txt.
+ *
  * The result may be longer or shorter than the original.
  * The source string and the destination buffer are allowed to overlap.
  *
