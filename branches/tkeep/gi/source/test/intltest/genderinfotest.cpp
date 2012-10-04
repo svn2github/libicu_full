@@ -28,6 +28,7 @@ public:
 private:
     void TestGetListGender();
     void TestFallback();
+    void TestCApi();
     void check(UGender expected_neutral, UGender expected_mixed, UGender expected_taints, const UGender* genderList, int32_t listSize);
     void checkLocale(const Locale& locale, UGender expected, const UGender* genderList, int32_t listSize);
 };
@@ -44,6 +45,12 @@ void GenderInfoTest::runIndexedTest(int32_t index, UBool exec, const char *&name
       name = "TestFallback";
       if (exec) {
         TestFallback();
+      }
+      break;
+    case 2:
+      name = "TestCApi";
+      if (exec) {
+        TestCApi();
       }
       break;
     default: name = ""; break;
@@ -87,6 +94,28 @@ void GenderInfoTest::TestFallback() {
   expected = GenderInfo::getMaleTaintsInstance();
   if (expected != actual) {
     errln("For Male Taints, Expected %d got %d", expected, actual);
+  }
+}
+
+void GenderInfoTest::TestCApi() {
+  UErrorCode status = U_ZERO_ERROR;
+  const UGenderInfo* actual_gi = ugender_getInstance("fr_CA", &status);
+  if (U_FAILURE(status)) {
+    errcheckln(status, "Fail to create UGenderInfo - %s", u_errorName(status));
+    return;
+  }
+  const UGenderInfo* expected_gi = (const UGenderInfo*) GenderInfo::getMaleTaintsInstance();
+  if (expected_gi != actual_gi) {
+    errln("Expected UGenderInfo %d got %d", expected_gi, actual_gi);
+    return;
+  }
+  UGender actual = ugender_getListGender(actual_gi, kAllFemale, LENGTHOF(kAllFemale), &status);
+  if (U_FAILURE(status)) {
+    errcheckln(status, "Fail to create UGenderInfo - %s", u_errorName(status));
+    return;
+  }
+  if (actual != UGENDER_FEMALE) {
+    errln("Expected UGENDER_FEMALE got %d", actual);
   }
 }
 

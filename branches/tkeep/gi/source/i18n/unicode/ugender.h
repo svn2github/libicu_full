@@ -54,6 +54,7 @@ ugender_getInstance(const char *locale, UErrorCode *status);
 
 /**
  * Given a list, returns the gender of the list as a whole.
+ * @param genderInfo pointer that ugender_getInstance returns.
  * @param genders the gender of each element in the list.
  * @param size the size of the list.
  * @param status A pointer to a UErrorCode to receive any errors.
@@ -61,7 +62,7 @@ ugender_getInstance(const char *locale, UErrorCode *status);
  * @draft ICU 50
  */
 U_DRAFT UGender U_EXPORT2
-ugender_getListGender(UGender *genders, int32_t size, UErrorCode *status);
+ugender_getListGender(const UGenderInfo* genderinfo, UGender *genders, int32_t size, UErrorCode *status);
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 

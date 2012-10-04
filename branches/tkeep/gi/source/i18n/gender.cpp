@@ -229,4 +229,14 @@ const GenderInfo* GenderInfo::getMaleTaintsInstance() {
 
 U_NAMESPACE_END
 
+U_DRAFT const UGenderInfo* U_EXPORT2
+ugender_getInstance(const char* locale, UErrorCode* status) {
+  return (UGenderInfo*) icu::GenderInfo::getInstance(Locale::createFromName(locale), *status);
+}
+
+U_DRAFT UGender U_EXPORT2
+ugender_getListGender(const UGenderInfo* genderInfo, UGender* genders, int32_t size, UErrorCode* status) {
+  return ((const icu::GenderInfo *)genderInfo)->getListGender(genders, size, *status);
+}
+
 #endif /* #if !UCONFIG_NO_FORMATTING */
