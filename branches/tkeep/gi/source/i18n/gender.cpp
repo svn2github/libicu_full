@@ -48,8 +48,8 @@ static UBool U_CALLCONV gender_cleanup(void) {
   if (gGenderInfoCache != NULL) {
     uhash_close(gGenderInfoCache);
     gGenderInfoCache = NULL;
+    delete [] gObjs;
   }
-  delete [] gObjs;
   return TRUE;
 }
 
@@ -74,21 +74,23 @@ const GenderInfo* GenderInfo::getInstance(const Locale& locale, UErrorCode& stat
   bool needed;
   UMTX_CHECK(&gGenderMetaLock, (gGenderInfoCache == NULL), needed);
   if (needed) {
-    {
-      Mutex lock(&gGenderMetaLock);
-      if (gGenderInfoCache == NULL) {
-        gGenderInfoCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
-        if (U_SUCCESS(status)) {
-          ucln_i18n_registerCleanup(UCLN_I18N_GENDERINFO, gender_cleanup);
-        }
-        gObjs = new GenderInfo[GENDER_STYLE_LENGTH];
-        for (int i = 0; i < GENDER_STYLE_LENGTH; i++) {
-          gObjs[i]._style = i;
-        }
+    Mutex lock(&gGenderMetaLock);
+    if (gGenderInfoCache == NULL) {
+      gGenderInfoCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
+      if (U_FAILURE(status)) {
+        return NULL;
       }
-    }
-    if (U_FAILURE(status)) {
-      return NULL;
+      gObjs = new GenderInfo[GENDER_STYLE_LENGTH];
+      if (gObjs == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        uhash_close(gGenderInfoCache);
+        gGenderInfoCache = NULL;
+        return NULL;
+      }
+      for (int i = 0; i < GENDER_STYLE_LENGTH; i++) {
+        gObjs[i]._style = i;
+      }
+      ucln_i18n_registerCleanup(UCLN_I18N_GENDERINFO, gender_cleanup);
     }
   }
 
