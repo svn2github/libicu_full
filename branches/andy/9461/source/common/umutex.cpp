@@ -23,7 +23,6 @@
 #include "unicode/utypes.h"
 #include "uassert.h"
 #include "ucln_cmn.h"
-#include "uvector.h"
 
 /*
  * ICU Mutex wrappers.  Wrap operating system mutexes, giving the rest of ICU a
@@ -41,7 +40,6 @@
 
 #if defined(POSIX)
 # include <pthread.h> /* must be first, so that we get the multithread versions of things. */
-
 #endif /* POSIX */
 
 #if U_PLATFORM_HAS_WIN32_API
@@ -57,14 +55,6 @@
 #include "umutex.h"
 #include "cmemory.h"
 
-/* On WIN32 mutexes are reentrant.  On POSIX platforms they are not, and a deadlock
- *  will occur if a thread attempts to acquire a mutex it already has locked.
- *  ICU mutexes (in debug builds) include checking code that will cause an assertion
- *  failure if a mutex is reentered.  If you are having deadlock problems
- *  on a POSIX machine, debugging may be easier on Windows.
- */
-
-
 #if U_PLATFORM_HAS_WIN32_API
 #define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
             InterlockedCompareExchangePointer(dest, newval, oldval)
@@ -79,19 +69,18 @@
 #endif
 
 #else   
-/* Unknown platform.  Note that user can still set mutex functions at run time. */
+// Unknown platform.  Note that user can still set mutex functions at run time.
 #define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
             mutexed_compare_and_swap(dest, newval, oldval)
-
 #endif
 
 static void *mutexed_compare_and_swap(void **dest, void *newval, void *oldval);
 
+// The ICU global mutex. Used when ICU implementation code passes NULL for the mutex pointer.
+static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 
-
-static UMutex   globalMutex = U_MUTEX_INITIALIZER;    // The ICU global mutex. Used when ICU implementation code
-                                // passes NULL for the mutex pointer.
-
+// Implementation mutex. Used for compare & swap when no intrinsic is available, and
+// for safe initialization of user defined mutexes.
 static UMutex   implMutex = U_MUTEX_INITIALIZER;      
 
 // List of all user mutexes that have been initialized.
@@ -99,7 +88,7 @@ static UMutex   implMutex = U_MUTEX_INITIALIZER;
 // Normal platform mutexes are not kept track of in this way - they survive until the process is shut down.
 // Normal platfrom mutexes don't allocate storage, so not cleaning them up won't trigger memory leak complaints.
 //
-// Note: putting this list in allocated memory would be hard to arrange, because memory allocations
+// Note: putting this list in allocated memory would be awkward to arrange, because memory allocations
 //       are used as a flag to indicate that ICU has been initialized, and setting other ICU 
 //       override functions will no longer work.
 //
@@ -267,7 +256,7 @@ UBool u_InitOnceExecuteOnce(
 
 static UBool winMutexInit(U_INIT_ONCE *initOnce, void *param, void **context) {
     UMutex *mutex = static_cast<UMutex *>(param);
-    InitializeCriticalSection(&mutex->fCS);
+    InitializeCriticalSection((CRITICAL_SECTION *)mutex->fCS);
     return TRUE;
 }
 
@@ -299,7 +288,6 @@ umtx_unlock(UMutex* mutex)
         LeaveCriticalSection((CRITICAL_SECTION *)mutex->fCS);
     }
 }
-
 
 #endif  // Windows Implementation
 
@@ -482,6 +470,4 @@ U_CFUNC UBool umtx_cleanup(void) {
     gIncDecMutex    = NULL;
 
     return TRUE;
-
 }
-

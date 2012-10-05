@@ -22,13 +22,20 @@
 #include "unicode/uclean.h"
 #include "putilimp.h"
 
+/* For _ReadWriteBarrier(). */
 #if defined(_MSC_VER) && _MSC_VER >= 1500
-/* # include <intrin.h>  */
+# include <intrin.h>
 #endif
 
+/* For CRITICAL_SECTION */
 #if U_PLATFORM_HAS_WIN32_API
 #if 0  
-/* TODO(andy): why doesn't windows.h work in all files? */
+/* TODO(andy): Why doesn't windows.h compile in all files? It does in some.
+ *             The intent was to inclulde windows.h here, and have struct UMutex
+ *             have an embedded CRITICAL_SECTION when building on Windows.
+ *             The workaround is to put some char[] storage in UMutex instead,
+ *             avoiding the need to include windows.h everwhere this header is included.
+ */
 # define WIN32_LEAN_AND_MEAN
 # define VC_EXTRALEAN
 # define NOUSER
@@ -133,23 +140,23 @@
 
 /*
  * UMutex - Mutexes for use by ICU implementation code.
- *          Must be declared as static or globals. Can not appear as members
+ *          Must be declared as static or globals. They cannot appear as members
  *          of other objects.
- *          Must be initialized.
+ *          UMutex strcts must be initialized.
  *          Example:
  *            static UMutex = U_MUTEX_INITIALIZER;
  *          The declaration of struct UMutex is platform dependent.
  */
 
+
 #if U_PLATFORM_HAS_WIN32_API
 
-
-/*  U_INIT_ONCE mimics the windows API INIT_ONCE.
- *  When ICU no longer needs to support Windows platforms (XP) that do not have
- * a native INIT_ONCE, switch ICU over to the native Windows APIs.
+/*  U_INIT_ONCE mimics the windows API INIT_ONCE. Exists on Windows Vista and newer.
+ *  When ICU no longer needs to support older Windows platforms (XP) that do not have
+ * a native INIT_ONCE, switch this implementation over to wrap the native Windows APIs.
  */
 typedef struct U_INIT_ONCE {
-	long               fState;
+    long               fState;
     void              *fContext;
 } U_INIT_ONCE;
 #define U_INIT_ONCE_STATIC_INIT {0, NULL}
@@ -158,7 +165,9 @@ typedef struct UMutex {
     U_INIT_ONCE       fInitOnce;
     UMTX              fUserMutex;
     UBool             fInitialized;  /* Applies to fUserMutex only. */
-    /* CRITICAL_SECTION  fCS; */
+    /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
+                                   * Windows.h, which would allow using CRITICAL_SECTION
+                                   * directly here. */
     char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
 } UMutex;
 
@@ -196,8 +205,7 @@ typedef struct UMutex UMutex;
  */
 U_CAPI void U_EXPORT2 umtx_lock(UMutex* mutex); 
 
-/* Unlock a mutex. Pass in NULL if you want the single global
-   mutex. 
+/* Unlock a mutex.
  * @param mutex The given mutex to be unlocked.  Pass NULL to specify
  *              the global ICU mutex.
  */
