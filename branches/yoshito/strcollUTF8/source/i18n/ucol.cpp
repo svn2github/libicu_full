@@ -8762,6 +8762,9 @@ ucol_strcollUTF8(
         UChar32 uc32 = -1;
 
         if (!bSrcLimit) {
+            if (sourceLength < 0) {
+                sourceLength = uprv_strlen(source);
+            }
             U8_GET((uint8_t*)source, 0, equalLength, sourceLength, uc32);
             if (uc32 == -1) {
                 uc32 = 0xfffd;
@@ -8774,6 +8777,9 @@ ucol_strcollUTF8(
             }
         }
         if (!bTargLimit) {
+            if (targetLength < 0) {
+                targetLength = uprv_strlen(target);
+            }
             U8_GET((uint8_t*)target, 0, equalLength, targetLength, uc32);
             if (uc32 == -1) {
                 uc32 = 0xfffd;
@@ -8821,9 +8827,6 @@ ucol_strcollUTF8(
     }
     UTRACE_EXIT_VALUE(returnVal);
     return returnVal;
-
-
-    return UCOL_EQUAL;
 }
 
 
