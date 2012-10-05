@@ -43,7 +43,7 @@ private:
     void TestEnglishShort();
     void CheckLocale(
         const Locale& locale, UNumberCompactStyle style,
-        const ExpectedResult* expectedResult, int32_t expectedResultSize);
+        const ExpectedResult* expectedResult, int32_t expectedResultLength);
     void CheckExpectedResult(
         const CompactDecimalFormat* cdf, const ExpectedResult* expectedResult,
         const char* description);
@@ -52,15 +52,12 @@ private:
 
 void CompactDecimalFormatTest::runIndexedTest(
     int32_t index, UBool exec, const char *&name, char *) {
-  switch(index) {
-    case 0:
-      name = "TestEnglishShort";
-      if (exec) {
-        TestEnglishShort();
-      }
-      break;
-    default: name = ""; break;
+  if (exec) {
+    logln("TestSuite CompactDecimalFormatTest: ");
   }
+  TESTCASE_AUTO_BEGIN;
+  TESTCASE_AUTO(TestEnglishShort);
+  TESTCASE_AUTO_END;
 }
 
 void CompactDecimalFormatTest::TestEnglishShort() {
@@ -72,18 +69,20 @@ void CompactDecimalFormatTest::TestEnglishShort() {
   CheckLocale(locale, UNUM_SHORT, kEnglishShort, LENGTHOF(kEnglishShort));
 }
 
-void CompactDecimalFormatTest::CheckLocale(const Locale& locale, UNumberCompactStyle style, const ExpectedResult* expectedResults, int32_t expectedResultSize) {
+void CompactDecimalFormatTest::CheckLocale(const Locale& locale, UNumberCompactStyle style, const ExpectedResult* expectedResults, int32_t expectedResultLength) {
   UErrorCode status = U_ZERO_ERROR;
   CompactDecimalFormat* cdf = CompactDecimalFormat::createInstance(locale, style, status);
   if (U_FAILURE(status)) {
     errln("Unable to create format object - %s", u_errorName(status));
+    return;
   }
   if (cdf == NULL) {
     errln("Got NULL pointer back for format object.");
+    return;
   }
   char description[256];
   sprintf(description,"%s - %s", locale.getName(), StyleStr(style));
-  for (int32_t i = 0; i < expectedResultSize; i++) {
+  for (int32_t i = 0; i < expectedResultLength; i++) {
     CheckExpectedResult(cdf, &expectedResults[i], description);
   }
   delete cdf;
