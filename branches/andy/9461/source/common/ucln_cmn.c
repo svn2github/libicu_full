@@ -3,7 +3,7 @@
 * Copyright (C) 2001-2012, International Business Machines
 *                Corporation and others. All Rights Reserved.
 ******************************************************************************
-*   file name:  ucln_cmn.cpp
+*   file name:  ucln_cmn.c
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4
@@ -24,8 +24,6 @@
 /**  Auto-client for UCLN_COMMON **/
 #define UCLN_TYPE_IS_COMMON
 #include "ucln_imp.h"
-
-U_NAMESPACE_BEGIN
 
 static UBool gICUInitialized = FALSE;
 static UMutex  gICUInitMutex = U_MUTEX_INITIALIZER;
@@ -104,11 +102,11 @@ ucln_registerCleanup(ECleanupLibraryType type,
 }
 
 U_CFUNC UBool ucln_lib_cleanup(void) {
-    int32_t libType = UCLN_START;
-    int32_t commonFunc = UCLN_COMMON_START;
+    ECleanupLibraryType libType = UCLN_START;
+    ECleanupCommonType commonFunc = UCLN_COMMON_START;
 
     for (libType++; libType<UCLN_COMMON; libType++) {
-        ucln_cleanupOne(static_cast<ECleanupLibraryType>(libType));
+        ucln_cleanupOne(libType);
     }
 
     for (commonFunc++; commonFunc<UCLN_COMMON_COUNT; commonFunc++) {
@@ -123,5 +121,3 @@ U_CFUNC UBool ucln_lib_cleanup(void) {
 #endif
     return TRUE;
 }
-
-U_NAMESPACE_END

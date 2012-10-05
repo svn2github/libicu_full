@@ -367,7 +367,7 @@ static UMtxAtomicFn  *pIncFn = NULL;
 static UMtxAtomicFn  *pDecFn = NULL;
 static const void *gIncDecContext  = NULL;
 
-static UMTX    gIncDecMutex = NULL;
+static UMutex   gIncDecMutex = U_MUTEX_INITIALIZER;
 
 U_CAPI int32_t U_EXPORT2
 umtx_atomic_inc(int32_t *p)  {
@@ -467,7 +467,6 @@ U_CFUNC UBool umtx_cleanup(void) {
     pIncFn          = NULL;
     pDecFn          = NULL;
     gIncDecContext  = NULL;
-    gIncDecMutex    = NULL;
 
     return TRUE;
 }
