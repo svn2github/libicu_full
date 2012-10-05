@@ -366,7 +366,9 @@ static UMtxAtomicFn  *pIncFn = NULL;
 static UMtxAtomicFn  *pDecFn = NULL;
 static const void *gIncDecContext  = NULL;
 
+#if defined (POSIX) && (U_HAVE_GCC_ATOMICS == 0)
 static UMutex   gIncDecMutex = U_MUTEX_INITIALIZER;
+#endif
 
 U_CAPI int32_t U_EXPORT2
 umtx_atomic_inc(int32_t *p)  {
