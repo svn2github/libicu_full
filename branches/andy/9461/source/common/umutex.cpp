@@ -175,8 +175,13 @@ umtx_lock(UMutex *mutex) {
     if (pMutexLockFn) {
         usrMutexLock(mutex);
     } else {
-        int sysErr = pthread_mutex_lock(&mutex->fMutex);
-        U_ASSERT(sysErr == 0);
+        #if U_DEBUG
+            // #if to avoid unused variable warnings in non-debug builds.
+            int sysErr = pthread_mutex_lock(&mutex->fMutex);
+            U_ASSERT(sysErr == 0);
+        #else
+            pthread_mutex_lock(&mutex->fMutex);
+        #endif
     }
 }
 
@@ -190,8 +195,13 @@ umtx_unlock(UMutex* mutex)
     if (pMutexUnlockFn) {
         (*pMutexUnlockFn)(gMutexContext, &mutex->fUserMutex);
     } else {
-        int sysErr = pthread_mutex_unlock(&mutex->fMutex);
-        U_ASSERT(sysErr == 0);
+        #if U_DEBUG
+            // #if to avoid unused variable warnings in non-debug builds.
+            int sysErr = pthread_mutex_unlock(&mutex->fMutex);
+            U_ASSERT(sysErr == 0);
+        #else
+            pthread_mutex_unlock(&mutex->fMutex);
+        #endif
     }
 }
 
