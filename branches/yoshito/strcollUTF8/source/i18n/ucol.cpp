@@ -8077,12 +8077,15 @@ ucol_getLatinOneContractionUTF8(const UCollator *coll, int32_t strength,
     UChar32 schar = 0, tchar = 0;
     int32_t tmpIdx = *index;
 
-    if (len == -1) {
+    if (len < 0) {
         len = uprv_strlen(s);
     }
 
     for(;;) {
         U8_NEXT(s, tmpIdx, len, schar);
+        if (schar == -1) {
+            schar = 0xfffd;
+        }
         if(tmpIdx >= len) {
             return(coll->latinOneCEs[strength*coll->latinOneTableLen+latinOneOffset]);
         }
@@ -8135,26 +8138,27 @@ ucol_strcollUseLatin1UTF8(
     UBool haveContractions = FALSE; // if we have contractions in our string
                                     // we cannot do French secondary
 
+    // U8_NEXT macro requires actual length
+    if (sLen < 0) {
+        sLen = uprv_strlen(source);
+    }
+    if (tLen < 0) {
+        tLen = uprv_strlen(target);
+    }
+
     // Do the primary level
     for(;;) {
         while(sOrder==0) { // this loop skips primary ignorables
             // sOrder=getNextlatinOneCE(source);
-            if(sLen==-1) {   // handling zero terminated strings
-                U8_NEXT(source, sIndex, sLen, sChar);
-                if(sChar==0) {
-                    endOfSource = TRUE;
-                    break;
-                } else if (sChar == -1) {
-                    sChar = 0xfffd;
-                }
-            } else {        // handling strings with known length
-                if(sIndex==sLen) {
-                    endOfSource = TRUE;
-                    break;
-                }
-                sChar=source[sIndex++];
+            if (sIndex == sLen) {
+                endOfSource = TRUE;
+                break;
             }
-            if(sChar&0xFF00) { // if we encounter non-latin-1, we bail out (sChar > 0xFF, but this is faster on win32)
+            U8_NEXT(source, sIndex, sLen, sChar);
+            if (sChar == -1) {
+                sChar = 0xfffd; // fallback for the bad code
+            }
+            if(sChar&0xFFFFFF00) { // if we encounter non-latin-1, we bail out (sChar > 0xFF, but this is faster on win32)
                 //fprintf(stderr, "R");
                 return ucol_strcollRegularUTF8(coll, source, sLen, target, tLen, status);
             }
@@ -8177,32 +8181,18 @@ ucol_strcollUseLatin1UTF8(
 
         while(tOrder==0) {  // this loop skips primary ignorables
             // tOrder=getNextlatinOneCE(target);
-            if(tLen==-1) {    // handling zero terminated strings
-                U8_NEXT(target, tIndex, tLen, tChar);
-                if(tChar==0) {
-                    if(endOfSource) { // this is different than source loop,
-                        // as we already know that source loop is done here,
-                        // so we can either finish the primary loop if both
-                        // strings are done or anounce the result if only
-                        // target is done. Same below.
-                        goto endOfPrimLoopU8;
-                    } else {
-                        return UCOL_GREATER;
-                    }
-                } else if (tChar == -1) {
-                    tChar = 0xfffd;
+            if (tIndex == tLen) {
+                if(endOfSource) {
+                    goto endOfPrimLoopU8;
+                } else {
+                    return UCOL_GREATER;
                 }
-            } else {          // handling strings with known length
-                if(tIndex==tLen) {
-                    if(endOfSource) {
-                        goto endOfPrimLoopU8;
-                    } else {
-                        return UCOL_GREATER;
-                    }
-                }
-                tChar=target[tIndex++];
             }
-            if(tChar&0xFF00) { // if we encounter non-latin-1, we bail out (sChar > 0xFF, but this is faster on win32)
+            U8_NEXT(target, tIndex, tLen, tChar);
+            if (tChar == -1) {
+                tChar = 0xfffd;
+            }
+            if(tChar&0xFFFFFF00) { // if we encounter non-latin-1, we bail out (sChar > 0xFF, but this is faster on win32)
                 //fprintf(stderr, "R");
                 return ucol_strcollRegularUTF8(coll, source, sLen, target, tLen, status);
             }
@@ -8267,7 +8257,7 @@ endOfPrimLoopU8:
                         break;
                     }
                     U8_NEXT(source, sIndex, sLen, sChar);
-                    U_ASSERT(sChar >= 0 && sChar < sizeof(elements)/sizeof(elements[0]));
+                    U_ASSERT(sChar >= 0 && sChar <= 0xFF);
                     sOrder = elements[sChar];
                     if(sOrder > UCOL_NOT_FOUND) {
                         sOrder = ucol_getLatinOneContractionUTF8(coll, UCOL_SECONDARY, sOrder, sChar, source, &sIndex, sLen);
@@ -8283,7 +8273,7 @@ endOfPrimLoopU8:
                         }
                     }
                     U8_NEXT(target, tIndex, tLen, tChar);
-                    U_ASSERT(sChar >= 0 && sChar < sizeof(elements)/sizeof(elements[0]));
+                    U_ASSERT(tChar >= 0 && tChar <= 0xFF);
                     tOrder = elements[tChar];
                     if(tOrder > UCOL_NOT_FOUND) {
                         tOrder = ucol_getLatinOneContractionUTF8(coll, UCOL_SECONDARY, tOrder, tChar, target, &tIndex, tLen);
@@ -8323,7 +8313,7 @@ endOfPrimLoopU8:
                         break;
                     }
                     U8_PREV(source, 0, sIndex, sChar);
-                    U_ASSERT(sChar >= 0 && sChar < sizeof(elements)/sizeof(elements[0]));
+                    U_ASSERT(sChar >= 0 && sChar <= 0xFF);
                     sOrder = elements[sChar];
                     // don't even look for contractions
                 }
@@ -8337,7 +8327,7 @@ endOfPrimLoopU8:
                         }
                     }
                     U8_PREV(target, 0, tIndex, tChar);
-                    U_ASSERT(tChar >= 0 && tChar < sizeof(elements)/sizeof(elements[0]));
+                    U_ASSERT(tChar >= 0 && tChar <= 0xFF);
                     tOrder = elements[tChar];
                     // don't even look for contractions
                 }
@@ -8377,7 +8367,7 @@ endOfSecLoopU8:
                     break;
                 }
                 U8_NEXT(source, sIndex, sLen, sChar);
-                U_ASSERT(sChar >= 0 && sChar < sizeof(elements)/sizeof(elements[0]));
+                U_ASSERT(sChar >= 0 && sChar <= 0xFF);
                 sOrder = elements[sChar];
                 if(sOrder > UCOL_NOT_FOUND) {
                     sOrder = ucol_getLatinOneContractionUTF8(coll, UCOL_TERTIARY, sOrder, sChar, source, &sIndex, sLen);
@@ -8392,7 +8382,7 @@ endOfSecLoopU8:
                     }
                 }
                 U8_NEXT(target, tIndex, tLen, tChar);
-                U_ASSERT(tChar >= 0 && tChar < sizeof(elements)/sizeof(elements[0]));
+                U_ASSERT(tChar >= 0 && tChar <= 0xFF);
                 tOrder = elements[tChar];
                 if(tOrder > UCOL_NOT_FOUND) {
                     tOrder = ucol_getLatinOneContractionUTF8(coll, UCOL_TERTIARY, tOrder, tChar, target, &tIndex, tLen);
@@ -8796,14 +8786,16 @@ ucol_strcollUTF8(
             }
         }
 
-        while (equalLength > 0) {
-            // We are stopped in the middle of a contraction.
-            // Scan backwards through the == part of the string looking for the start of the contraction.
-            //   It doesn't matter which string we scan, since they are the same in this region.
-            U8_PREV((uint8_t*)source, 0, equalLength, uc32);
-            bSawNonLatin1 |= (uc32 > 0xff);
-            if (uc32 < 0x10000 && ucol_unsafeCP((UChar)uc32, coll)) {
-                break;
+        if (bUnsafeCP) {
+            while (equalLength > 0) {
+                // We are stopped in the middle of a contraction.
+                // Scan backwards through the == part of the string looking for the start of the contraction.
+                //   It doesn't matter which string we scan, since they are the same in this region.
+                U8_PREV((uint8_t*)source, 0, equalLength, uc32);
+                bSawNonLatin1 |= (uc32 > 0xff);
+                if (uc32 < 0x10000 && ucol_unsafeCP((UChar)uc32, coll)) {
+                    break;
+                }
             }
         }
         source += equalLength;
