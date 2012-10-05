@@ -44,7 +44,7 @@
 # define NOMCX
 # include <windows.h>
 #endif  /* 0 */
-#define U_WINDOWS_CRIT_SEC_SIZE 100
+#define U_WINDOWS_CRIT_SEC_SIZE 64
 #endif  /* win32 */
 
 #if U_PLATFORM_IS_DARWIN_BASED

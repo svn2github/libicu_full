@@ -18,8 +18,6 @@
 ******************************************************************************
 */
 
-#include "stdio.h"   // TODO: remove, debug only.
-
 #include "unicode/utypes.h"
 #include "uassert.h"
 #include "ucln_cmn.h"
@@ -256,6 +254,7 @@ UBool u_InitOnceExecuteOnce(
 
 static UBool winMutexInit(U_INIT_ONCE *initOnce, void *param, void **context) {
     UMutex *mutex = static_cast<UMutex *>(param);
+    U_ASSERT(sizeof(CRITICAL_SECTION) <= sizeof(mutex->fCS));
     InitializeCriticalSection((CRITICAL_SECTION *)mutex->fCS);
     return TRUE;
 }
