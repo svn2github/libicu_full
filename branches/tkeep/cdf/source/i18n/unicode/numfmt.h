@@ -938,6 +938,11 @@ protected:
      */
     virtual void getEffectiveCurrency(UChar* result, UErrorCode& ec) const;
 
+    static NumberFormat* makeInstance(const Locale& desiredLocale,
+                                      UNumberFormatStyle style,
+                                      UErrorCode& errorCode,
+                                      bool mustBeDecimalFormat);
+
 private:
 
     static UBool isStyleSupported(UNumberFormatStyle style);

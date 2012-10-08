@@ -311,7 +311,7 @@ private:
 
     friend class NumberFormat; // To access private constructor
 
-    CompactDecimalFormat(); // default constructor not implemented
+    CompactDecimalFormat(const DecimalFormat &);
 
     UBool eqHelper(const CompactDecimalFormat& that) const;
 };

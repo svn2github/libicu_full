@@ -19,6 +19,8 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
 
+CompactDecimalFormat::CompactDecimalFormat(const DecimalFormat& decimalFormat) : DecimalFormat(decimalFormat) {
+}
 
 CompactDecimalFormat::CompactDecimalFormat(const CompactDecimalFormat& source)
     : DecimalFormat(source) {
@@ -28,8 +30,12 @@ CompactDecimalFormat::CompactDecimalFormat(const CompactDecimalFormat& source)
 CompactDecimalFormat* U_EXPORT2
 CompactDecimalFormat::createInstance(
     const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status) {
-  // TODO: Implement
-  return NULL;
+  NumberFormat* fmt = NumberFormat::makeInstance(inLocale, UNUM_DECIMAL, status, true);
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  LocalPointer<DecimalFormat> decfmt((DecimalFormat*) fmt);
+  return new CompactDecimalFormat(*decfmt);
 }
 
 CompactDecimalFormat&
