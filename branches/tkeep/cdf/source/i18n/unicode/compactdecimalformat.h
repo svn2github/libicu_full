@@ -21,7 +21,11 @@
 
 #include "unicode/decimfmt.h"
 
+struct UHashtable;
+
 U_NAMESPACE_BEGIN
+
+class PluralRules;
 
 /**
  * CompactDecimalFormat is a concrete subclass of DecimalFormat that formats
@@ -309,9 +313,11 @@ public:
 
 private:
 
-    friend class NumberFormat; // To access private constructor
+    const UHashtable* _unitsByVariant;
+    const double* _divisors;
+    PluralRules* _pluralRules;
 
-    CompactDecimalFormat(const DecimalFormat &);
+    CompactDecimalFormat(const DecimalFormat &, const UHashtable* unitsByVariant, const double* divisors, PluralRules* pluralRules);
 
     UBool eqHelper(const CompactDecimalFormat& that) const;
 };

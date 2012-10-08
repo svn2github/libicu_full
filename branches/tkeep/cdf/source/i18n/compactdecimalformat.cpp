@@ -14,17 +14,24 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/compactdecimalformat.h"
+#include "unicode/plurrule.h"
+#include "uhash.h"
 
 U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
 
-CompactDecimalFormat::CompactDecimalFormat(const DecimalFormat& decimalFormat) : DecimalFormat(decimalFormat) {
+CompactDecimalFormat::CompactDecimalFormat(
+    const DecimalFormat& decimalFormat,
+    const UHashtable* unitsByVariant,
+    const double* divisors,
+    PluralRules* pluralRules)
+  : DecimalFormat(decimalFormat), _unitsByVariant(unitsByVariant), _divisors(divisors), _pluralRules(pluralRules) {
 }
 
 CompactDecimalFormat::CompactDecimalFormat(const CompactDecimalFormat& source)
-    : DecimalFormat(source) {
-      // TODO: implement
+    : DecimalFormat(source), _unitsByVariant(source._unitsByVariant), _divisors(source._divisors) {
+      _pluralRules = source._pluralRules->clone();
 }
 
 CompactDecimalFormat* U_EXPORT2
@@ -35,20 +42,24 @@ CompactDecimalFormat::createInstance(
     return NULL;
   }
   LocalPointer<DecimalFormat> decfmt((DecimalFormat*) fmt);
-  return new CompactDecimalFormat(*decfmt);
+  // TODO: Implement
+  return new CompactDecimalFormat(*decfmt, NULL, NULL, NULL);
 }
 
 CompactDecimalFormat&
 CompactDecimalFormat::operator=(const CompactDecimalFormat& rhs) {
   if (this != &rhs) {
     DecimalFormat::operator=(rhs);
-    // TODO: implement
+    _unitsByVariant = rhs._unitsByVariant;
+    _divisors = rhs._divisors;
+    delete _pluralRules;
+    _pluralRules = rhs._pluralRules->clone();
   }
   return *this;
 }
 
 CompactDecimalFormat::~CompactDecimalFormat() {
-  // TODO: implement
+  delete _pluralRules;
 }
 
 
@@ -67,8 +78,7 @@ CompactDecimalFormat::operator==(const Format& that) const {
 
 UBool
 CompactDecimalFormat::eqHelper(const CompactDecimalFormat& that) const {
-  // TODO: implement
-  return TRUE;
+  return _unitsByVariant == that._unitsByVariant && _divisors == that._divisors && (*_pluralRules == *that._pluralRules);
 }
 
 UnicodeString&
@@ -76,6 +86,7 @@ CompactDecimalFormat::format(
     double number,
     UnicodeString& appendTo,
     FieldPosition& pos) const {
+  // TODO: implement
   return DecimalFormat::format(number, appendTo, pos);
 }
 
@@ -94,6 +105,7 @@ CompactDecimalFormat::format(
     int64_t number,
     UnicodeString& appendTo,
     FieldPosition& pos) const {
+  // TODO: implement
   return DecimalFormat::format(number, appendTo, pos);
 }
 
