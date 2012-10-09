@@ -317,6 +317,7 @@ private:
     const double* _divisors;
     PluralRules* _pluralRules;
 
+    // Default constructor not implemented.
     CompactDecimalFormat(const DecimalFormat &, const UHashtable* unitsByVariant, const double* divisors, PluralRules* pluralRules);
 
     UBool eqHelper(const CompactDecimalFormat& that) const;

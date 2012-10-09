@@ -938,10 +938,14 @@ protected:
      */
     virtual void getEffectiveCurrency(UChar* result, UErrorCode& ec) const;
 
+    /**
+     * Creates the specified decimal format style of the desired locale.
+     * @internal
+     */
     static NumberFormat* makeInstance(const Locale& desiredLocale,
                                       UNumberFormatStyle style,
-                                      UErrorCode& errorCode,
-                                      bool mustBeDecimalFormat);
+                                      UBool mustBeDecimalFormat,
+                                      UErrorCode& errorCode);
 
 private:
 

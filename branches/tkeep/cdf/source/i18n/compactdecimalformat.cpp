@@ -37,11 +37,10 @@ CompactDecimalFormat::CompactDecimalFormat(const CompactDecimalFormat& source)
 CompactDecimalFormat* U_EXPORT2
 CompactDecimalFormat::createInstance(
     const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status) {
-  NumberFormat* fmt = NumberFormat::makeInstance(inLocale, UNUM_DECIMAL, status, true);
+  LocalPointer<DecimalFormat> decfmt((DecimalFormat*) NumberFormat::makeInstance(inLocale, UNUM_DECIMAL, true, status));
   if (U_FAILURE(status)) {
     return NULL;
   }
-  LocalPointer<DecimalFormat> decfmt((DecimalFormat*) fmt);
   // TODO: Implement
   return new CompactDecimalFormat(*decfmt, NULL, NULL, NULL);
 }
