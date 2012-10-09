@@ -30,8 +30,7 @@ CompactDecimalFormat::CompactDecimalFormat(
 }
 
 CompactDecimalFormat::CompactDecimalFormat(const CompactDecimalFormat& source)
-    : DecimalFormat(source), _unitsByVariant(source._unitsByVariant), _divisors(source._divisors) {
-      _pluralRules = source._pluralRules->clone();
+    : DecimalFormat(source), _unitsByVariant(source._unitsByVariant), _divisors(source._divisors), _pluralRules(source._pluralRules->clone()) {
 }
 
 CompactDecimalFormat* U_EXPORT2
