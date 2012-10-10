@@ -940,6 +940,8 @@ protected:
 
     /**
      * Creates the specified decimal format style of the desired locale.
+     * If mustBeDecimalFormat is TRUE, then the returned pointer is
+     * either a DecimalFormat or it is NULL.
      * @internal
      */
     static NumberFormat* makeInstance(const Locale& desiredLocale,
