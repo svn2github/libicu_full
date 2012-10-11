@@ -21,6 +21,9 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
 
+static UBool divisors_equal(const double* lhs, const double* rhs);
+static const int32_t MAX_DIGITS = 15;
+
 CompactDecimalFormat::CompactDecimalFormat(
     const DecimalFormat& decimalFormat,
     const UHashtable* unitsByVariant,
@@ -76,7 +79,7 @@ CompactDecimalFormat::operator==(const Format& that) const {
 
 UBool
 CompactDecimalFormat::eqHelper(const CompactDecimalFormat& that) const {
-  return _unitsByVariant == that._unitsByVariant && _divisors == that._divisors && (*_pluralRules == *that._pluralRules);
+  return uhash_equals(_unitsByVariant, that._unitsByVariant) && divisors_equal(_divisors, that._divisors) && (*_pluralRules == *that._pluralRules);
 }
 
 UnicodeString&
@@ -166,6 +169,15 @@ CompactDecimalFormat::parseCurrency(
     const UnicodeString& text,
     ParsePosition& pos) const {
   return NULL;
+}
+
+static UBool divisors_equal(const double* lhs, const double* rhs) {
+  for (int32_t i = 0; i < MAX_DIGITS; i++) {
+    if (lhs[i] != rhs[i]) {
+      return FALSE;
+    }
+  }
+  return TRUE;
 }
 
 U_NAMESPACE_END
