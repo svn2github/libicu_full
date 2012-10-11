@@ -2480,9 +2480,15 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                  fUseExponentialNotation /* should be:  isScientificNotation() but it is not const (?!) see bug #9619 */) { // .. it's an exponent format - ignore setting and parse anyways
                 const UnicodeString *tmp;
                 tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
-                if((fBoolFlags.contains(UNUM_PARSE_EXPONENT_CASE_SENSITIVE)==0)?
-                   (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT)):    // ( case insensitive - DEFAULT) error code is set below if !sawDigit 
-                   (text.compare(position, tmp->length(), *tmp))) // (case sensitive)
+                if(
+#if UCONFIG_PARSE_EXPONENT_CASE_CONTROL                   
+                   (fBoolFlags.contains(UNUM_PARSE_EXPONENT_CASE_SENSITIVE)==0)?
+#endif
+                   (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT))    // ( case insensitive - DEFAULT) error code is set below if !sawDigit 
+#if UCONFIG_PARSE_EXPONENT_CASE_CONTROL
+                   :(text.compare(position, tmp->length(), *tmp)) // (case sensitive)
+#endif
+                   )
                 {
                     // Parse sign, if present
                     int32_t pos = position + tmp->length();
@@ -5446,7 +5452,9 @@ DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
     /* These are stored in fBoolFlags */
     case UNUM_PARSE_NO_EXPONENT:
     case UNUM_FORMAT_FAIL_IF_MAX_DIGITS:
+#if UCONFIG_PARSE_EXPONENT_CASE_CONTROL
     case UNUM_PARSE_EXPONENT_CASE_SENSITIVE:
+#endif
       fBoolFlags.set(attr, newValue); // always attempt to set, even if out of range (effectively 'pin' to 1/0
       if(!fBoolFlags.isValidValue(newValue)) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -5526,7 +5534,9 @@ int32_t DecimalFormat::getAttribute( UNumberFormatAttribute attr,
     /* These are stored in fBoolFlags */
     case UNUM_PARSE_NO_EXPONENT:
     case UNUM_FORMAT_FAIL_IF_MAX_DIGITS:
+#if UCONFIG_PARSE_EXPONENT_CASE_CONTROL
     case UNUM_PARSE_EXPONENT_CASE_SENSITIVE:
+#endif
       return fBoolFlags.get(attr);
       break;
 

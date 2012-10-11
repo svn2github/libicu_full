@@ -406,4 +406,17 @@
 #   define UCONFIG_FORMAT_FASTPATHS_49 1
 #endif
 
+
+/**
+ * \def UCONFIG_PARSE_EXPONENT_CASE_CONTROL
+ * This switch turns on exponent case control
+ *
+ * @internal
+ */
+#ifndef UCONFIG_PARSE_EXPONENT_CASE_CONTROL
+#   define UCONFIG_PARSE_EXPONENT_CASE_CONTROL 0
+#endif
+
+
+
 #endif

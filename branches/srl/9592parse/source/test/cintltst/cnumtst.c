@@ -2221,17 +2221,6 @@ static void TestCaseSensitivity(void) {
   int32_t expect;
   int32_t pos;
   int32_t i;
-  UNumberFormat *fmt = unum_open(
-                  UNUM_PATTERN_DECIMAL,      /* style         */
-                  &pattern_hash[0],          /* pattern       */
-                  u_strlen(pattern_hash),    /* patternLength */
-                  0,
-                  0,                         /* parseErr      */
-                  &status);
-  if(U_FAILURE(status) || fmt == NULL) {
-    log_data_err("%s:%d: %s: unum_open failed with %s (Are you missing data?)\n", __FILE__, __LINE__, "", u_errorName(status));
-    return;
-  }
 
   struct {
     int32_t line;
@@ -2242,7 +2231,11 @@ static void TestCaseSensitivity(void) {
   } cases[] = {
     /* == exponent. == */
     { __LINE__, "10E6", 10000000, 4, 0 },  /* default- case insensitive */
-    { __LINE__, "10E6", 10, 2, 1 },  /* default- case insensitive */
+#if UCONFIG_PARSE_EXPONENT_CASE_CONTROL
+    { __LINE__, "10E6", 10, 2, 1 },  /* case sensitive */
+#else
+    { __LINE__, "10E6", 10000000, 4, 1 },  /* still case sensitive */
+#endif
     { __LINE__, "10e6", 10000000, 4, 0 },  /* default- case insensitive */
     { __LINE__, "10e6", 10000000, 4, 1 },  /* default- case insensitive */
 
@@ -2257,11 +2250,27 @@ static void TestCaseSensitivity(void) {
     expect = cases[i].expect;
     pos = 0;
 
+    UNumberFormat *fmt = unum_open(
+                                   UNUM_PATTERN_DECIMAL,      /* style         */
+                                   &pattern_hash[0],          /* pattern       */
+                                   u_strlen(pattern_hash),    /* patternLength */
+                                   0,
+                                   0,                         /* parseErr      */
+                                   &status);
+    if(U_FAILURE(status) || fmt == NULL) {
+      log_data_err("%s:%d: %s: unum_open failed with %s (Are you missing data?)\n", __FILE__, line, "", u_errorName(status));
+      return;
+    }
+
+#if UCONFIG_PARSE_EXPONENT_CASE_CONTROL
     unum_setAttribute(fmt, UNUM_PARSE_EXPONENT_CASE_SENSITIVE, cases[i].sensVal);
     getSens = unum_getAttribute(fmt, UNUM_PARSE_EXPONENT_CASE_SENSITIVE);
     if(getSens!=cases[i].sensVal) {
       log_err("%s:%d: unum_setAttribute(UNUM_PARSE_EXPONENT_CASE_SENSITIVE,%d) but getAttribute returned %d\n", __FILE__, line, cases[i].sensVal, getSens);
     }
+#else
+    getSens = cases[i].sensVal;
+#endif
 
     num = unum_parse(fmt, str, -1, &pos, &status);
     if(U_FAILURE(status)) {
@@ -2273,9 +2282,9 @@ static void TestCaseSensitivity(void) {
     } else {
       log_verbose("%s:%d: unum_parse returned %d, pos %d for '%s'. UNUM_PARSE_EXPONENT_CASE_SENSITIVE=%d\n", __FILE__, line, num, pos, cstr, getSens);
     }
+    unum_close(fmt);
   }
 
-  unum_close(fmt);
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

@@ -799,11 +799,15 @@ typedef enum UNumberFormatAttribute {
    * @draft ICU 50
    */
   UNUM_FORMAT_FAIL_IF_MAX_DIGITS,
+
+#if UCONFIG_PARSE_EXPONENT_CASE_CONTROL
   /** If 1, specifies that any text is parsed in a case-sensitive way.Otherwise items, such as the exponent symbol, are parsed case-insensitive.
    * Default: 0 (not set)
    * @internal
    */
   UNUM_PARSE_EXPONENT_CASE_SENSITIVE,
+#endif
+
   /** 
    * if this attribute is set to 1, specifies that, if the pattern doesn’t contain an exponent, the exponent will not be parsed. If the pattern does contain an exponent, this attribute has no effect.
    * Has no effect on formatting.
