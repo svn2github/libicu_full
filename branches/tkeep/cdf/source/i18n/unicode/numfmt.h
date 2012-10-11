@@ -939,7 +939,7 @@ protected:
     virtual void getEffectiveCurrency(UChar* result, UErrorCode& ec) const;
 
     /**
-     * Creates the specified decimal format style of the desired locale.
+     * Creates the specified number format style of the desired locale.
      * If mustBeDecimalFormat is TRUE, then the returned pointer is
      * either a DecimalFormat or it is NULL.
      * @internal
