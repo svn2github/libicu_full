@@ -59,6 +59,7 @@
 #include "listformattertest.h"  // ListFormatterTest
 
 extern IntlTest *createCompactDecimalFormatTest();
+extern IntlTest *createGenderInfoTest();
 
 #define TESTCLASS(id, TestClass)          \
     case id:                              \
@@ -137,6 +138,15 @@ void IntlTestFormat::runIndexedTest( int32_t index, UBool exec, const char* &nam
 #endif
         TESTCLASS(42,ListFormatterTest);
         case 43:
+          name = "GenderInfoTest";
+          if (exec) {
+            logln("GenderInfoTest test---");
+            logln((UnicodeString)"");
+            LocalPointer<IntlTest> test(createGenderInfoTest());
+            callTest(*test, par);
+          }
+          break;
+        case 44:
           name = "CompactDecimalFormatTest";
           if (exec) {
             logln("CompactDecimalFormatTest test---");

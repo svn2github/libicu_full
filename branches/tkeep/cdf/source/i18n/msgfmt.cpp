@@ -851,7 +851,7 @@ MessageFormat::getFormatNames(UErrorCode& status) {
     fFormatNames->setDeleter(uprv_deleteUObject);
 
     for (int32_t partIndex = 0; (partIndex = nextTopLevelArgStart(partIndex)) >= 0;) {
-        fFormatNames->addElement(new UnicodeString(getArgName(partIndex)), status);
+        fFormatNames->addElement(new UnicodeString(getArgName(partIndex + 1)), status);
     }
 
     StringEnumeration* nameEnumerator = new FormatNameEnumeration(fFormatNames, status);
@@ -1490,6 +1490,7 @@ void MessageFormat::cacheExplicitFormats(UErrorCode& status) {
     }
     // Set all argTypes to kObject, as a "none" value, for lack of any better value.
     // We never use kObject for real arguments.
+    // We use it as "no argument yet" for the check for hasArgTypeConflicts.
     for (int32_t i = 0; i < argTypeCount; ++i) {
         argTypes[i] = Formattable::kObject;
     }

@@ -33,6 +33,7 @@
 void TestGregorianChange(void);
 void TestFieldDifference(void);
 void TestAddRollEra0AndEraBounds(void);
+void TestGetTZTransition(void);
 
 void addCalTest(TestNode** root);
 
@@ -52,6 +53,7 @@ void addCalTest(TestNode** root)
     addTest(root, &TestFieldDifference, "tsformat/ccaltst/TestFieldDifference");
     addTest(root, &TestAmbiguousWallTime, "tsformat/ccaltst/TestAmbiguousWallTime");
     addTest(root, &TestAddRollEra0AndEraBounds, "tsformat/ccaltst/TestAddRollEra0AndEraBounds");
+    addTest(root, &TestGetTZTransition, "tsformat/ccaltst/TestGetTZTransition");
 }
 
 /* "GMT" */
@@ -479,7 +481,7 @@ static void TestCalendar()
 
 static void TestGetSetDateAPI()
 {
-    UCalendar *caldef = 0, *caldef2 = 0;
+    UCalendar *caldef = 0, *caldef2 = 0, *caldef3 = 0;
     UChar tzID[4];
     UDate d1;
     int32_t hour;
@@ -488,12 +490,15 @@ static void TestGetSetDateAPI()
     UErrorCode status=U_ZERO_ERROR;
     UDate d2= 837039928046.0;
     UChar temp[30];
+	double testMillis;
+	int32_t dateBit;
 
     log_verbose("\nOpening the calendars()\n");
     u_strcpy(tzID, fgGMTID);
     /*open the calendars used */
     caldef=ucal_open(tzID, u_strlen(tzID), "en_US", UCAL_TRADITIONAL, &status);
     caldef2=ucal_open(tzID, u_strlen(tzID), "en_US", UCAL_TRADITIONAL, &status);
+    caldef3=ucal_open(tzID, u_strlen(tzID), "en_US", UCAL_TRADITIONAL, &status);
     /*open the dateformat */
     /* this is supposed to open default date format, but later on it treats it like it is "en_US" 
        - very bad if you try to run the tests on machine where default locale is NOT "en_US" */
@@ -526,6 +531,53 @@ static void TestGetSetDateAPI()
         log_err("error in setMillis or getMillis\n");
     /*-------------------*/
     
+    /*testing large negative millis*/
+	/*test a previously failed millis and beyond the lower bounds - ICU trac #9403 */
+	// -184303902611600000.0         - just beyond lower bounds (#9403 sets U_ILLEGAL_ARGUMENT_ERROR in strict mode)
+	// -46447814188001000.0	         - fixed by #9403
+
+    log_verbose("\nTesting very large valid millis & invalid setMillis values (in both strict & lienent modes) detected\n");
+
+	testMillis = -46447814188001000.0;	// point where floorDivide in handleComputeFields failed as per #9403
+	log_verbose("using value[%lf]\n", testMillis);
+    ucal_setAttribute(caldef3, UCAL_LENIENT, 0);
+    ucal_setMillis(caldef3, testMillis, &status);
+   	if(U_FAILURE(status)){
+   		log_err("Fail: setMillis incorrectly detected invalid value : for millis : %e : returned  : %s\n", testMillis, u_errorName(status));
+		status = U_ZERO_ERROR;
+	}
+
+    log_verbose("\nTesting invalid setMillis values detected\n");
+	testMillis = -184303902611600000.0;
+	log_verbose("using value[%lf]\n", testMillis);
+    ucal_setAttribute(caldef3, UCAL_LENIENT, 1);
+   	ucal_setMillis(caldef3, testMillis, &status);
+   	if(U_FAILURE(status)){
+   		log_err("Fail: setMillis incorrectly detected invalid value : for millis : %e : returned  : %s\n", testMillis, u_errorName(status));
+		status = U_ZERO_ERROR;
+   	} else {
+        dateBit = ucal_get(caldef2, UCAL_MILLISECOND, &status);
+        if(testMillis == dateBit)
+        {
+		    log_err("Fail: error in setMillis, allowed invalid value %e : returns millisecond : %d", testMillis, dateBit);
+        } else {
+            log_verbose("Pass: setMillis correctly pinned min, returned : %d", dateBit);
+        }
+	}
+
+    log_verbose("\nTesting invalid setMillis values detected\n");
+	testMillis = -184303902611600000.0;
+	log_verbose("using value[%lf]\n", testMillis);
+    ucal_setAttribute(caldef3, UCAL_LENIENT, 0);
+   	ucal_setMillis(caldef3, testMillis, &status);
+   	if(U_FAILURE(status)){
+   		log_verbose("Pass: Illegal argument error as expected : for millis : %e : returned  : %s\n", testMillis, u_errorName(status));
+		status = U_ZERO_ERROR;
+   	} else {
+		dateBit = ucal_get(caldef3, UCAL_DAY_OF_MONTH, &status);
+		log_err("Fail: error in setMillis, allowed invalid value %e : returns DayOfMonth : %d", testMillis, dateBit);
+	}
+	/*-------------------*/
     
     
     ctest_setTimeZone(NULL, &status);
@@ -2183,6 +2235,86 @@ void TestAddRollEra0AndEraBounds() {
         } else {
             log_data_err("FAIL: ucal_open fails for zone GMT, locale %s, UCAL_DEFAULT\n", eraTestItemPtr->locale);
         }
+    }
+}
+
+/**
+ * TestGetTZTransition, for #9606
+ */
+ 
+typedef struct {
+    const char *descrip;    /* test description */
+    const UChar * zoneName; /* pointer to zero-terminated zone name */
+    int32_t year;           /* starting point for test is gregorian calendar noon on day specified by y,M,d here */
+    int32_t month;
+    int32_t day;
+    UBool hasPrev;          /* does it have a previous transition from starting point? If so we test inclusive from that */
+    UBool hasNext;          /* does it have a next transition from starting point? If so we test inclusive from that */
+} TZTransitionItem;
+
+/* have zoneGMT above */
+static const UChar zoneUSPacific[] = { 0x55,0x53,0x2F,0x50,0x61,0x63,0x69,0x66,0x69,0x63,0 }; /* "US/Pacific" */
+static const UChar zoneCairo[]     = { 0x41,0x66,0x72,0x69,0x63,0x61,0x2F,0x43,0x61,0x69,0x72,0x6F,0 }; /* "Africa/Cairo", DST cancelled since 2011 */
+static const UChar zoneIceland[]   = { 0x41,0x74,0x6C,0x61,0x6E,0x74,0x69,0x63,0x2F,0x52,0x65,0x79,0x6B,0x6A,0x61,0x76,0x69,0x6B,0 }; /* "Atlantic/Reykjavik", always on DST (since when?) */
+
+static const TZTransitionItem tzTransitionItems[] = {
+    { "USPacific mid 2012", zoneUSPacific, 2012, UCAL_JULY, 1, TRUE , TRUE  },
+    { "USPacific mid  100", zoneUSPacific,  100, UCAL_JULY, 1, FALSE, TRUE  }, /* no transitions before 100 CE... */
+    { "Cairo     mid 2012", zoneCairo,     2012, UCAL_JULY, 1, TRUE , FALSE }, /* DST cancelled since 2011 */
+    { "Iceland   mid 2012", zoneIceland,   2012, UCAL_JULY, 1, TRUE , FALSE }, /* always on DST */
+    { NULL,                 NULL,             0,         0, 0, FALSE, FALSE } /* terminator */
+};
+
+void TestGetTZTransition() {
+    UErrorCode status = U_ZERO_ERROR;
+    UCalendar * ucal = ucal_open(zoneGMT, -1, "en", UCAL_GREGORIAN, &status);
+    if ( U_SUCCESS(status) ) {
+        const TZTransitionItem * itemPtr;
+        for (itemPtr = tzTransitionItems; itemPtr->descrip != NULL; itemPtr++) {
+            UDate curMillis;
+            ucal_setTimeZone(ucal, itemPtr->zoneName, -1, &status);
+            ucal_setDateTime(ucal, itemPtr->year, itemPtr->month, itemPtr->day, 12, 0, 0, &status);
+            curMillis = ucal_getMillis(ucal, &status);
+            if ( U_SUCCESS(status) ) {
+                UDate transition1, transition2;
+                UBool result;
+                
+                result = ucal_getTimeZoneTransitionDate(ucal, UCAL_TZ_TRANSITION_PREVIOUS, &transition1, &status);
+                if (U_FAILURE(status) || result != itemPtr->hasPrev) {
+                    log_err("FAIL: %s ucal_getTimeZoneTransitionDate prev status %s, expected result %d but got %d\n",
+                            itemPtr->descrip, u_errorName(status), itemPtr->hasPrev, result);
+                } else if (result) {
+                    ucal_setMillis(ucal, transition1, &status);
+                    result = ucal_getTimeZoneTransitionDate(ucal, UCAL_TZ_TRANSITION_PREVIOUS_INCLUSIVE, &transition2, &status);
+                    if (U_FAILURE(status) || !result || transition2 != transition1) {
+                        log_err("FAIL: %s ucal_getTimeZoneTransitionDate prev_inc status %s, result %d, expected date %.1f but got %.1f\n",
+                                itemPtr->descrip, u_errorName(status), result, transition1, transition2);
+                    }
+                }
+                status = U_ZERO_ERROR;
+
+                result = ucal_getTimeZoneTransitionDate(ucal, UCAL_TZ_TRANSITION_NEXT, &transition1, &status);
+                if (U_FAILURE(status) || result != itemPtr->hasNext) {
+                    log_err("FAIL: %s ucal_getTimeZoneTransitionDate next status %s, expected result %d but got %d\n",
+                            itemPtr->descrip, u_errorName(status), itemPtr->hasNext, result);
+                } else if (result) {
+                    ucal_setMillis(ucal, transition1, &status);
+                    result = ucal_getTimeZoneTransitionDate(ucal, UCAL_TZ_TRANSITION_NEXT_INCLUSIVE, &transition2, &status);
+                    if (U_FAILURE(status) || !result || transition2 != transition1) {
+                        log_err("FAIL: %s ucal_getTimeZoneTransitionDate next_inc status %s, result %d, expected date %.1f but got %.1f\n",
+                                itemPtr->descrip, u_errorName(status), result, transition1, transition2);
+                    }
+                }
+                status = U_ZERO_ERROR;
+            } else {
+                log_data_err("FAIL setup: can't setup calendar for %s, status %s\n",
+                            itemPtr->descrip, u_errorName(status));
+                status = U_ZERO_ERROR;
+            }
+        }
+        ucal_close(ucal);
+    } else {
+        log_data_err("FAIL setup: ucal_open status %s\n", u_errorName(status));
     }
 }
 
