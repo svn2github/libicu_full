@@ -2245,6 +2245,7 @@ static void TestCaseSensitivity(void) {
     { __LINE__, "10E6", 10, 2, 1 },  /* default- case insensitive */
     { __LINE__, "10e6", 10000000, 4, 0 },  /* default- case insensitive */
     { __LINE__, "10e6", 10000000, 4, 1 },  /* default- case insensitive */
+
   };
 
   for(i=0;i<sizeof(cases)/sizeof(cases[0]);i++) {
@@ -2256,10 +2257,10 @@ static void TestCaseSensitivity(void) {
     expect = cases[i].expect;
     pos = 0;
 
-    unum_setAttribute(fmt, UNUM_PARSE_CASE_SENSITIVE, cases[i].sensVal);
-    getSens = unum_getAttribute(fmt, UNUM_PARSE_CASE_SENSITIVE);
+    unum_setAttribute(fmt, UNUM_PARSE_EXPONENT_CASE_SENSITIVE, cases[i].sensVal);
+    getSens = unum_getAttribute(fmt, UNUM_PARSE_EXPONENT_CASE_SENSITIVE);
     if(getSens!=cases[i].sensVal) {
-      log_err("%s:%d: unum_setAttribute(UNUM_PARSE_CASE_SENSITIVE,%d) but getAttribute returned %d\n", __FILE__, line, cases[i].sensVal, getSens);
+      log_err("%s:%d: unum_setAttribute(UNUM_PARSE_EXPONENT_CASE_SENSITIVE,%d) but getAttribute returned %d\n", __FILE__, line, cases[i].sensVal, getSens);
     }
 
     num = unum_parse(fmt, str, -1, &pos, &status);
@@ -2270,7 +2271,7 @@ static void TestCaseSensitivity(void) {
     } else if(pos!=cases[i].expectPos) {
       log_err("%s:%d: unum_parse expected position %d but got %d for %s\n", __FILE__, line, pos, cases[i].expectPos, cstr);
     } else {
-      log_verbose("%s:%d: unum_parse returned %d, pos %d for '%s'. UNUM_PARSE_CASE_SENSITIVE=%d\n", __FILE__, line, num, pos, cstr, getSens);
+      log_verbose("%s:%d: unum_parse returned %d, pos %d for '%s'. UNUM_PARSE_EXPONENT_CASE_SENSITIVE=%d\n", __FILE__, line, num, pos, cstr, getSens);
     }
   }
 
