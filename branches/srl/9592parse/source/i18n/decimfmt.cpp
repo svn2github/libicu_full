@@ -2480,8 +2480,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
                  fUseExponentialNotation /* should be:  isScientificNotation() but it is not const (?!) see bug #9619 */) { // .. it's an exponent format - ignore setting and parse anyways
                 const UnicodeString *tmp;
                 tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
-                // TODO: CASE
-                if (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT))    // error code is set below if !sawDigit 
+                if((fBoolFlags.contains(UNUM_PARSE_CASE_SENSITIVE)==0)?
+                   (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT)):    // ( case insensitive - DEFAULT) error code is set below if !sawDigit 
+                   (text.compare(position, tmp->length(), *tmp))) // (case sensitive)
                 {
                     // Parse sign, if present
                     int32_t pos = position + tmp->length();

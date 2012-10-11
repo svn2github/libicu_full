@@ -50,6 +50,7 @@ static void TestNBSPInPattern(void);
 static void TestInt64Parse(void);
 static void TestParseCurrency(void);
 static void TestMaxInt(void);
+static void TestCaseSensitivity(void);
 static void TestNoExponent(void);
 
 #define TESTCASE(x) addTest(root, &x, "tsformat/cnumtst/" #x)
@@ -73,6 +74,7 @@ void addNumForTest(TestNode** root)
     TESTCASE(TestCloneWithRBNF);
     TESTCASE(TestMaxInt);
     TESTCASE(TestNoExponent);
+    TESTCASE(TestCaseSensitivity);
 }
 
 /** copy src to dst with unicode-escapes for values < 0x20 and > 0x7e, null terminate if possible */
@@ -2208,6 +2210,71 @@ static void TestMaxInt(void) {
 
   unum_close(fmt);
 
+}
+
+static void TestCaseSensitivity(void) {
+  UErrorCode status = U_ZERO_ERROR;
+  UChar pattern_hash[] = { 0x23, 0x00 }; /* "#" */
+  UChar str[1024] = { 0 };
+  const char *cstr = NULL;
+  int32_t num;
+  int32_t expect;
+  int32_t pos;
+  int32_t i;
+  UNumberFormat *fmt = unum_open(
+                  UNUM_PATTERN_DECIMAL,      /* style         */
+                  &pattern_hash[0],          /* pattern       */
+                  u_strlen(pattern_hash),    /* patternLength */
+                  0,
+                  0,                         /* parseErr      */
+                  &status);
+  if(U_FAILURE(status) || fmt == NULL) {
+    log_data_err("%s:%d: %s: unum_open failed with %s (Are you missing data?)\n", __FILE__, __LINE__, "", u_errorName(status));
+    return;
+  }
+
+  struct {
+    int32_t line;
+    const char *str;
+    int32_t expect;
+    int32_t expectPos;
+    int32_t sensVal;
+  } cases[] = {
+    /* == exponent. == */
+    { __LINE__, "10E6", 10000000, 4, 0 },  /* default- case insensitive */
+    { __LINE__, "10E6", 10, 2, 1 },  /* default- case insensitive */
+    { __LINE__, "10e6", 10000000, 4, 0 },  /* default- case insensitive */
+    { __LINE__, "10e6", 10000000, 4, 1 },  /* default- case insensitive */
+  };
+
+  for(i=0;i<sizeof(cases)/sizeof(cases[0]);i++) {
+    int32_t getSens;
+    int32_t line = cases[i].line;
+    status = U_ZERO_ERROR;
+    cstr = cases[i].str;
+    u_uastrcpy(str, cstr);
+    expect = cases[i].expect;
+    pos = 0;
+
+    unum_setAttribute(fmt, UNUM_PARSE_CASE_SENSITIVE, cases[i].sensVal);
+    getSens = unum_getAttribute(fmt, UNUM_PARSE_CASE_SENSITIVE);
+    if(getSens!=cases[i].sensVal) {
+      log_err("%s:%d: unum_setAttribute(UNUM_PARSE_CASE_SENSITIVE,%d) but getAttribute returned %d\n", __FILE__, line, cases[i].sensVal, getSens);
+    }
+
+    num = unum_parse(fmt, str, -1, &pos, &status);
+    if(U_FAILURE(status)) {
+      log_err("%s:%d: unum_parse failed with %s for %s\n", __FILE__, line, u_errorName(status), cstr);
+    } else if(expect!=num) {
+      log_err("%s:%d: unum_parse failed, got %d expected %d for '%s'\n", __FILE__, line, num, expect, cstr);
+    } else if(pos!=cases[i].expectPos) {
+      log_err("%s:%d: unum_parse expected position %d but got %d for %s\n", __FILE__, line, pos, cases[i].expectPos, cstr);
+    } else {
+      log_verbose("%s:%d: unum_parse returned %d, pos %d for '%s'. UNUM_PARSE_CASE_SENSITIVE=%d\n", __FILE__, line, num, pos, cstr, getSens);
+    }
+  }
+
+  unum_close(fmt);
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
