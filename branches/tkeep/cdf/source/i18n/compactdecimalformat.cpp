@@ -8,21 +8,35 @@
 *
 ********************************************************************************
 */
-
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "mutex.h"
 #include "unicode/compactdecimalformat.h"
 #include "unicode/plurrule.h"
 #include "uhash.h"
+#include "umutex.h"
 
 U_NAMESPACE_BEGIN
 
-UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
+static UMutex gCompactDecimalMetaLock = U_MUTEX_INITIALIZER;
 
 static UBool divisors_equal(const double* lhs, const double* rhs);
 static const int32_t MAX_DIGITS = 15;
+
+static UHashtable* gCompactDecimalData = NULL;
+
+struct CDFLocaleStyleData {
+  UHashtable* unitsByVariant;
+  double divisors[MAX_DIGITS];
+};
+
+static CDFLocaleStyleData DUMMY;
+
+static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status);
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
 
 CompactDecimalFormat::CompactDecimalFormat(
     const DecimalFormat& decimalFormat,
@@ -43,8 +57,15 @@ CompactDecimalFormat::createInstance(
   if (U_FAILURE(status)) {
     return NULL;
   }
-  // TODO: Implement
-  return new CompactDecimalFormat(*decfmt, NULL, NULL, NULL);
+  LocalPointer<PluralRules> pluralRules(PluralRules::forLocale(inLocale, status));
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  const CDFLocaleStyleData* data = getCDFLocaleStyleData(inLocale, style, status);
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  return new CompactDecimalFormat(*decfmt, data->unitsByVariant, data->divisors, pluralRules.orphan());
 }
 
 CompactDecimalFormat&
@@ -180,6 +201,25 @@ static UBool divisors_equal(const double* lhs, const double* rhs) {
   return TRUE;
 }
 
-U_NAMESPACE_END
+static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  // Make sure our cache exists.
+  UBool needed;
+  UMTX_CHECK(&gCompactDecimalMetaLock, (gCompactDecimalData == NULL), needed);
+  if (needed) {
+    Mutex lock(&gCompactDecimalMetaLock);
+    if (gCompactDecimalData == NULL) {
+      // Create the cache in here
+      
+      // Don't forget to register the cleanup!
+    }
+  }
+  // Cache exists, query it.
+  return &DUMMY;
+}
 
+
+U_NAMESPACE_END
 #endif
