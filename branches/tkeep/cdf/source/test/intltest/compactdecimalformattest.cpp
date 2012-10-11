@@ -200,23 +200,19 @@ void CompactDecimalFormatTest::runIndexedTest(
 }
 
 void CompactDecimalFormatTest::TestEnglishShort() {
-  Locale locale("en");
-  CheckLocale(locale, UNUM_SHORT, kEnglishShort, LENGTHOF(kEnglishShort));
+  CheckLocale("en", UNUM_SHORT, kEnglishShort, LENGTHOF(kEnglishShort));
 }
 
 void CompactDecimalFormatTest::TestSerbianShort() {
-  Locale locale("sr");
-  CheckLocale(locale, UNUM_SHORT, kSerbianShort, LENGTHOF(kSerbianShort));
+  CheckLocale("sr", UNUM_SHORT, kSerbianShort, LENGTHOF(kSerbianShort));
 }
 
 void CompactDecimalFormatTest::TestSerbianLong() {
-  Locale locale("sr");
-  CheckLocale(locale, UNUM_LONG, kSerbianLong, LENGTHOF(kSerbianLong));
+  CheckLocale("sr", UNUM_LONG, kSerbianLong, LENGTHOF(kSerbianLong));
 }
 
 void CompactDecimalFormatTest::TestSerbianLongNegative() {
-  Locale locale("sr");
-  CheckLocale(locale, UNUM_LONG, kSerbianLongNegative, LENGTHOF(kSerbianLongNegative));
+  CheckLocale("sr", UNUM_LONG, kSerbianLongNegative, LENGTHOF(kSerbianLongNegative));
 }
 
 void CompactDecimalFormatTest::TestJapaneseShort() {
@@ -224,13 +220,11 @@ void CompactDecimalFormatTest::TestJapaneseShort() {
 }
 
 void CompactDecimalFormatTest::TestSwahiliShort() {
-  Locale locale("sw");
-  CheckLocale(locale, UNUM_SHORT, kSwahiliShort, LENGTHOF(kSwahiliShort));
+  CheckLocale("sw", UNUM_SHORT, kSwahiliShort, LENGTHOF(kSwahiliShort));
 }
 
 void CompactDecimalFormatTest::TestCsShort() {
-  Locale locale("cs");
-  CheckLocale(locale, UNUM_SHORT, kCsShort, LENGTHOF(kCsShort));
+  CheckLocale("cs", UNUM_SHORT, kCsShort, LENGTHOF(kCsShort));
 }
 
 void CompactDecimalFormatTest::TestSkLong() {
@@ -239,18 +233,15 @@ void CompactDecimalFormatTest::TestSkLong() {
   //   few{"0"}
   //   one{"0"}
   //   other{"0"}
-  Locale locale("sk");
-  CheckLocale(locale, UNUM_LONG, kSkLong, LENGTHOF(kSkLong));
+  CheckLocale("sk", UNUM_LONG, kSkLong, LENGTHOF(kSkLong));
 }
 
 void CompactDecimalFormatTest::TestSwahiliShortNegative() {
-  Locale locale("sw");
-  CheckLocale(locale, UNUM_SHORT, kSwahiliShortNegative, LENGTHOF(kSwahiliShortNegative));
+  CheckLocale("sw", UNUM_SHORT, kSwahiliShortNegative, LENGTHOF(kSwahiliShortNegative));
 }
 
 void CompactDecimalFormatTest::TestArabicLong() {
-  Locale locale("ar");
-  CheckLocale(locale, UNUM_LONG, kArabicLong, LENGTHOF(kArabicLong));
+  CheckLocale("ar", UNUM_LONG, kArabicLong, LENGTHOF(kArabicLong));
 }
 
 void CompactDecimalFormatTest::CheckLocale(const Locale& locale, UNumberCompactStyle style, const ExpectedResult* expectedResults, int32_t expectedResultLength) {
