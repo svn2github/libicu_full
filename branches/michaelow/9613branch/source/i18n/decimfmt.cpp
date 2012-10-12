@@ -1662,7 +1662,7 @@ DecimalFormat::subformat(UnicodeString& appendTo,
             count = maxIntDig;
             digitIndex = digits.getDecimalAt() - count;
             if(fBoolFlags.contains(UNUM_FORMAT_FAIL_IF_MAX_DIGITS)) {
-              status = U_FORMAT_TRUNCATE_ERROR;
+                status = U_FORMAT_TRUNCATE_ERROR;
             }
         }
 
@@ -2476,66 +2476,65 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             }
             else {
 
-              if(!fBoolFlags.contains(UNUM_PARSE_NO_EXPONENT) || // don't parse if this is set unless..
-                 fUseExponentialNotation /* should be:  isScientificNotation() but it is not const (?!) see bug #9619 */) { // .. it's an exponent format - ignore setting and parse anyways
-                const UnicodeString *tmp;
-                tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
-                // TODO: CASE
-                if (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT))    // error code is set below if !sawDigit 
-                {
-                    // Parse sign, if present
-                    int32_t pos = position + tmp->length();
-                    char exponentSign = '+';
-
-                    if (pos < textLength)
+                if(!fBoolFlags.contains(UNUM_PARSE_NO_EXPONENT) || // don't parse if this is set unless..
+                    fUseExponentialNotation /* should be:  isScientificNotation() but it is not const (?!) see bug #9619 */) { // .. it's an exponent format - ignore setting and parse anyways
+                    const UnicodeString *tmp;
+                    tmp = &getConstSymbol(DecimalFormatSymbols::kExponentialSymbol);
+                    // TODO: CASE
+                    if (!text.caseCompare(position, tmp->length(), *tmp, U_FOLD_CASE_DEFAULT))    // error code is set below if !sawDigit 
                     {
-                        tmp = &getConstSymbol(DecimalFormatSymbols::kPlusSignSymbol);
-                        if (!text.compare(pos, tmp->length(), *tmp))
+                        // Parse sign, if present
+                        int32_t pos = position + tmp->length();
+                        char exponentSign = '+';
+
+                        if (pos < textLength)
                         {
-                            pos += tmp->length();
-                        }
-                        else {
-                            tmp = &getConstSymbol(DecimalFormatSymbols::kMinusSignSymbol);
+                            tmp = &getConstSymbol(DecimalFormatSymbols::kPlusSignSymbol);
                             if (!text.compare(pos, tmp->length(), *tmp))
                             {
-                                exponentSign = '-';
                                 pos += tmp->length();
                             }
-                        }
-                    }
-
-                    UBool sawExponentDigit = FALSE;
-                    while (pos < textLength) {
-                        ch = text[(int32_t)pos];
-                        digit = ch - zero;
-
-                        if (digit < 0 || digit > 9) {
-                            digit = u_charDigitValue(ch);
-                        }
-                        if (0 <= digit && digit <= 9) {
-                            if (!sawExponentDigit) {
-                                parsedNum.append('E', err);
-                                parsedNum.append(exponentSign, err);
-                                sawExponentDigit = TRUE;
+                            else {
+                                tmp = &getConstSymbol(DecimalFormatSymbols::kMinusSignSymbol);
+                                if (!text.compare(pos, tmp->length(), *tmp))
+                                {
+                                    exponentSign = '-';
+                                    pos += tmp->length();
+                                }
                             }
-                            ++pos;
-                            parsedNum.append((char)(digit + '0'), err);
-                        } else {
-                            break;
                         }
-                    }
 
-                    if (sawExponentDigit) {
-                        position = pos; // Advance past the exponent
-                    }
+                        UBool sawExponentDigit = FALSE;
+                        while (pos < textLength) {
+                            ch = text[(int32_t)pos];
+                            digit = ch - zero;
 
-                    break; // Whether we fail or succeed, we exit this loop
-                }
-                else {
+                            if (digit < 0 || digit > 9) {
+                                digit = u_charDigitValue(ch);
+                            }
+                            if (0 <= digit && digit <= 9) {
+                                if (!sawExponentDigit) {
+                                    parsedNum.append('E', err);
+                                    parsedNum.append(exponentSign, err);
+                                    sawExponentDigit = TRUE;
+                                }
+                                ++pos;
+                                parsedNum.append((char)(digit + '0'), err);
+                            } else {
+                                break;
+                            }
+                        }
+
+                        if (sawExponentDigit) {
+                            position = pos; // Advance past the exponent
+                        }
+
+                        break; // Whether we fail or succeed, we exit this loop
+                    } else {
+                        break;
+                    }
+                } else { // not parsing exponent
                     break;
-                }
-              } else { // not parsing exponent
-                break;
               }
             }
         }
@@ -5447,7 +5446,7 @@ DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
     case UNUM_FORMAT_FAIL_IF_MAX_DIGITS:
       fBoolFlags.set(attr, newValue); // always attempt to set, even if out of range (effectively 'pin' to 1/0
       if(!fBoolFlags.isValidValue(newValue)) {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
+          status = U_ILLEGAL_ARGUMENT_ERROR;
       }
       break;
 
@@ -5525,7 +5524,6 @@ int32_t DecimalFormat::getAttribute( UNumberFormatAttribute attr,
     case UNUM_PARSE_NO_EXPONENT:
     case UNUM_FORMAT_FAIL_IF_MAX_DIGITS:
       return fBoolFlags.get(attr);
-      break;
 
     default:
         status = U_UNSUPPORTED_ERROR;

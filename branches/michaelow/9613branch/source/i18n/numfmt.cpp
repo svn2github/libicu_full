@@ -369,11 +369,11 @@ NumberFormat::format(double number,
                      UnicodeString& appendTo,
                      FieldPosition& pos,
                      UErrorCode &status) const {
-  if(U_SUCCESS(status)) {
-    return format(number,appendTo,pos);
-  } else {
-    return appendTo;
-  }
+    if(U_SUCCESS(status)) {
+        return format(number,appendTo,pos);
+    } else {
+        return appendTo;
+    }
 }
 
 UnicodeString&
@@ -381,11 +381,11 @@ NumberFormat::format(int32_t number,
                      UnicodeString& appendTo,
                      FieldPosition& pos,
                      UErrorCode &status) const {
-  if(U_SUCCESS(status)) {
-    return format(number,appendTo,pos);
-  } else {
-    return appendTo;
-  }
+    if(U_SUCCESS(status)) {
+        return format(number,appendTo,pos);
+    } else {
+        return appendTo;
+    }
 }
 
 UnicodeString&
@@ -393,11 +393,11 @@ NumberFormat::format(int64_t number,
                      UnicodeString& appendTo,
                      FieldPosition& pos,
                      UErrorCode &status) const {
-  if(U_SUCCESS(status)) {
-    return format(number,appendTo,pos);
-  } else {
-    return appendTo;
-  }
+    if(U_SUCCESS(status)) {
+        return format(number,appendTo,pos);
+    } else {
+        return appendTo;
+    }
 }
 
 
