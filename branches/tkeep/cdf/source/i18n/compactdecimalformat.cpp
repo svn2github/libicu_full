@@ -62,8 +62,8 @@ static UBool U_CALLCONV cdf_cleanup(void) {
   return TRUE;
 }
 
-static void U_CALLCONV deleteCDFUnit(void* ptr) {
-  delete (icu::CDFUnit*) ptr;
+static void U_CALLCONV deleteCDFUnits(void* ptr) {
+  delete [] (icu::CDFUnit*) ptr;
 }
 
 static void U_CALLCONV deleteCDFLocaleData(void* ptr) {
@@ -152,7 +152,6 @@ CompactDecimalFormat::format(
     double number,
     UnicodeString& appendTo,
     FieldPosition& pos) const {
-  // TODO: implement
   return DecimalFormat::format(number, appendTo, pos);
 }
 
@@ -332,7 +331,7 @@ void CDFLocaleStyleData::Init(UErrorCode& status) {
     return;
   }
   uhash_setKeyDeleter(unitsByVariant, uprv_free);
-  uhash_setValueDeleter(unitsByVariant, deleteCDFUnit);
+  uhash_setValueDeleter(unitsByVariant, deleteCDFUnits);
 }
 
 CDFLocaleStyleData::~CDFLocaleStyleData() {
