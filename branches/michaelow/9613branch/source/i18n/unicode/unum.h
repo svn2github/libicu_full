@@ -793,7 +793,7 @@ typedef enum UNumberFormatAttribute {
    * @internal */
   UNUM_MAX_NONBOOLEAN_ATTRIBUTE = 0x0FFF,
 
-  /** If 1, specifies that if setting the "max integer digits" attribute would truncate a value, set U_FORMAT_TRUNCATE_ERROR rather than silently truncating.
+  /** If 1, specifies that if setting the "max integer digits" attribute would truncate a value, set an error status rather than silently truncating.
    * For example,  formatting the value 1234 with 4 max int digits would succeed, but formatting 12345 would fail. There is no effect on parsing.
    * Default: 0 (not set)
    * @draft ICU 50

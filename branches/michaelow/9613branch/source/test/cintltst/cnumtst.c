@@ -2185,7 +2185,7 @@ static void TestMaxInt(void) {
     status = U_ZERO_ERROR;
     /* max int digits still '2' */
     len1 = unum_formatInt64(fmt, 1997, result1, 1024, NULL, &status);
-    ASSERT_TRUE(status==U_FORMAT_TRUNCATE_ERROR);
+    ASSERT_TRUE(status==U_ILLEGAL_ARGUMENT_ERROR);
     status = U_ZERO_ERROR;
 
     /* But, formatting 97->'97' works fine. */
