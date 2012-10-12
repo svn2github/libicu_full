@@ -12,28 +12,72 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "cstring.h"
 #include "mutex.h"
 #include "unicode/compactdecimalformat.h"
 #include "unicode/plurrule.h"
+#include "ucln_in.h"
 #include "uhash.h"
 #include "umutex.h"
 
-U_NAMESPACE_BEGIN
-
+static UHashtable* gCompactDecimalData = NULL;
 static UMutex gCompactDecimalMetaLock = U_MUTEX_INITIALIZER;
 
-static UBool divisors_equal(const double* lhs, const double* rhs);
+U_NAMESPACE_BEGIN
+
 static const int32_t MAX_DIGITS = 15;
 
-static UHashtable* gCompactDecimalData = NULL;
-
-struct CDFLocaleStyleData {
-  UHashtable* unitsByVariant;
-  double divisors[MAX_DIGITS];
+struct CDFUnit {
+  UnicodeString prefix;
+  UnicodeString suffix;
 };
 
-static CDFLocaleStyleData DUMMY;
+class CDFLocaleStyleData {
+ public:
+  double divisors[MAX_DIGITS];
+  UHashtable* unitsByVariant;
+  CDFLocaleStyleData() {}
+  ~CDFLocaleStyleData();
+  void Init(UErrorCode& status);
+ private:
+  CDFLocaleStyleData(const CDFLocaleStyleData&);
+  CDFLocaleStyleData& operator=(const CDFLocaleStyleData&);
+};
 
+struct CDFLocaleData {
+  CDFLocaleStyleData shortData;
+  CDFLocaleStyleData longData;
+  void Init(UErrorCode& status);
+};
+
+U_NAMESPACE_END
+
+U_CDECL_BEGIN
+
+static UBool U_CALLCONV cdf_cleanup(void) {
+  if (gCompactDecimalData != NULL) {
+    uhash_close(gCompactDecimalData);
+    gCompactDecimalData = NULL;
+  }
+  return TRUE;
+}
+
+static void U_CALLCONV deleteCDFUnit(void* ptr) {
+  delete (icu::CDFUnit*) ptr;
+}
+
+static void U_CALLCONV deleteCDFLocaleData(void* ptr) {
+  delete (icu::CDFLocaleData*) ptr;
+}
+
+U_CDECL_END
+
+U_NAMESPACE_BEGIN
+
+static UBool divisors_equal(const double* lhs, const double* rhs);
+
+static const CDFLocaleStyleData* extractDataByStyleEnum(const CDFLocaleData& data, UNumberCompactStyle style, UErrorCode& status);
+static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& status);
 static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status);
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
@@ -211,15 +255,99 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
   if (needed) {
     Mutex lock(&gCompactDecimalMetaLock);
     if (gCompactDecimalData == NULL) {
-      // Create the cache in here
-      
-      // Don't forget to register the cleanup!
+      gCompactDecimalData = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
+      if (U_FAILURE(status)) {
+        return NULL;
+      }
+      uhash_setKeyDeleter(gCompactDecimalData, uprv_free);
+      uhash_setValueDeleter(gCompactDecimalData, deleteCDFLocaleData);
+      ucln_i18n_registerCleanup(UCLN_I18N_CDFINFO, cdf_cleanup);
     }
   }
-  // Cache exists, query it.
-  return &DUMMY;
+  CDFLocaleData* result = NULL;
+  const char* key = inLocale.getName();
+  {
+    Mutex lock(&gCompactDecimalMetaLock);
+    result = (CDFLocaleData*) uhash_get(gCompactDecimalData, key);
+  }
+  if (result) {
+    return extractDataByStyleEnum(*result, style, status);
+  }
+
+  result = loadCDFLocaleData(inLocale, status);
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+
+  {
+    Mutex lock(&gCompactDecimalMetaLock);
+    CDFLocaleData* temp = (CDFLocaleData*) uhash_get(gCompactDecimalData, key);
+    if (temp) {
+      delete result;
+      result = temp;
+    } else {
+      uhash_put(gCompactDecimalData, uprv_strdup(key), (void*) result, &status);
+      if (U_FAILURE(status)) {
+        return NULL;
+      }
+    }
+  }
+  return extractDataByStyleEnum(*result, style, status);
 }
 
+static const CDFLocaleStyleData* extractDataByStyleEnum(const CDFLocaleData& data, UNumberCompactStyle style, UErrorCode& status) {
+  switch (style) {
+    case UNUM_SHORT:
+      return &data.shortData;
+    case UNUM_LONG:
+      return &data.longData;
+    default:
+      status = U_ILLEGAL_ARGUMENT_ERROR;
+      return NULL;
+  }
+}
+
+static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  CDFLocaleData* result = new CDFLocaleData;
+  if (result == NULL) {
+    status = U_MEMORY_ALLOCATION_ERROR;
+    return NULL;
+  }
+  result->Init(status);
+  if (U_FAILURE(status)) {
+    delete result;
+    return NULL;
+  }
+
+  // TODO: Load the data from CLDR here.
+  return result;
+}
+
+void CDFLocaleStyleData::Init(UErrorCode& status) {
+  unitsByVariant = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
+  if (U_FAILURE(status)) {
+    return;
+  }
+  uhash_setKeyDeleter(unitsByVariant, uprv_free);
+  uhash_setValueDeleter(unitsByVariant, deleteCDFUnit);
+}
+
+CDFLocaleStyleData::~CDFLocaleStyleData() {
+  if (unitsByVariant != NULL) {
+    uhash_close(unitsByVariant);
+  }
+}
+
+void CDFLocaleData::Init(UErrorCode& status) {
+  shortData.Init(status);
+  if (U_FAILURE(status)) {
+    return;
+  }
+  longData.Init(status);
+}
 
 U_NAMESPACE_END
 #endif
