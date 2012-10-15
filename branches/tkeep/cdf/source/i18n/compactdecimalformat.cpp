@@ -13,6 +13,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "cstring.h"
+#include "digitlst.h"
 #include "mutex.h"
 #include "unicode/compactdecimalformat.h"
 #include "unicode/plurrule.h"
@@ -79,6 +80,11 @@ static UBool divisors_equal(const double* lhs, const double* rhs);
 static const CDFLocaleStyleData* extractDataByStyleEnum(const CDFLocaleData& data, UNumberCompactStyle style, UErrorCode& status);
 static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& status);
 static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status);
+static const CDFUnit* getCDFUnit(const UHashtable* table, const UnicodeString& variant, int32_t baseIdx);
+static int32_t computeBase(double x);
+
+// TODO: remove
+static void dumbInit(double*);
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
 
@@ -109,7 +115,10 @@ CompactDecimalFormat::createInstance(
   if (U_FAILURE(status)) {
     return NULL;
   }
-  return new CompactDecimalFormat(*decfmt, data->unitsByVariant, data->divisors, pluralRules.orphan());
+  CompactDecimalFormat* result =
+      new CompactDecimalFormat(*decfmt, data->unitsByVariant, data->divisors, pluralRules.orphan());
+  result->setMaximumSignificantDigits(2);
+  return result;
 }
 
 CompactDecimalFormat&
@@ -153,6 +162,31 @@ CompactDecimalFormat::format(
     UnicodeString& appendTo,
     FieldPosition& pos) const {
   return DecimalFormat::format(number, appendTo, pos);
+  /*
+  DigitList orig, rounded;
+  orig.set(number);
+  UBool isNegative;
+  UErrorCode status = U_ZERO_ERROR;
+  _round(orig, rounded, isNegative, status);
+  if (U_FAILURE(status)) {
+    return appendTo;
+  }
+  double roundedPositive = rounded.getDouble();
+  int32_t baseIdx = computeBase(roundedPositive);
+  double numberToFormat = roundedPositive / _divisors[baseIdx];
+  UnicodeString variant = _pluralRules->select(numberToFormat);
+  if (isNegative) {
+    numberToFormat = -numberToFormat;
+  }
+  const CDFUnit* unit = getCDFUnit(_unitsByVariant, variant, baseIdx);
+  appendTo += unit->prefix;
+  DecimalFormat::format(numberToFormat, appendTo, pos);
+  int32_t prefixLen = unit->prefix.length();
+  pos.setBeginIndex(pos.getBeginIndex() + prefixLen);
+  pos.setEndIndex(pos.getEndIndex() + prefixLen);
+  appendTo += unit->suffix;
+  return appendTo;
+  */
 }
 
 UnicodeString&
@@ -322,8 +356,31 @@ static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& stat
   }
 
   // TODO: Load the data from CLDR here.
+  dumbInit(result->shortData.divisors);
+  dumbInit(result->longData.divisors);
   return result;
 }
+
+// TODO: remove
+static void dumbInit(double* divisors) {
+  int ac = 0;
+  divisors[ac++] = 1.0;
+  divisors[ac++] = 1.0;
+  divisors[ac++] = 1.0;
+  divisors[ac++] = 1000.0;
+  divisors[ac++] = 1000.0;
+  divisors[ac++] = 1000.0;
+  divisors[ac++] = 1000000.0;
+  divisors[ac++] = 1000000.0;
+  divisors[ac++] = 1000000.0;
+  divisors[ac++] = 1000000000.0;
+  divisors[ac++] = 1000000000.0;
+  divisors[ac++] = 1000000000.0;
+  divisors[ac++] = 1000000000000.0;
+  divisors[ac++] = 1000000000000.0;
+  divisors[ac++] = 1000000000000.0;
+}
+
 
 void CDFLocaleStyleData::Init(UErrorCode& status) {
   unitsByVariant = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
@@ -346,6 +403,25 @@ void CDFLocaleData::Init(UErrorCode& status) {
     return;
   }
   longData.Init(status);
+}
+
+static int32_t computeBase(double x) {
+  int32_t result = 0;
+  while (x >= 10.0) {
+    x /= 10.0;
+    ++result;
+    if (result == MAX_DIGITS - 1) {
+      break;
+    }
+  }
+  return result;
+}
+
+static const CDFUnit* getCDFUnit(const UHashtable* table, const UnicodeString& variant, int32_t baseIdx) {
+  // TODO: Implement
+  CDFUnit* result = new(CDFUnit);
+  result->prefix = variant;
+  return result;
 }
 
 U_NAMESPACE_END
