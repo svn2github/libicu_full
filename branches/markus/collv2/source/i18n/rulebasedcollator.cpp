@@ -563,7 +563,8 @@ private:
 
 class FCDUIterNFDIterator : public NFDIterator {
 public:
-    FCDUIterNFDIterator(const CollationData *data, UCharIterator &it) : uici(data, it) {}
+    FCDUIterNFDIterator(const CollationData *data, UCharIterator &it, int32_t startIndex)
+            : uici(data, it, startIndex) {}
 protected:
     virtual UChar32 nextRawCodePoint() {
         UErrorCode errorCode = U_ZERO_ERROR;
@@ -728,8 +729,8 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
         UIterCollationIterator rightIter(data, right);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
     } else {
-        FCDUIterCollationIterator leftIter(data, left);
-        FCDUIterCollationIterator rightIter(data, right);
+        FCDUIterCollationIterator leftIter(data, left, equalPrefixLength);
+        FCDUIterCollationIterator rightIter(data, right, equalPrefixLength);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
     }
     if(result != UCOL_EQUAL || data->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
@@ -745,8 +746,8 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
         UIterNFDIterator rightIter(right);
         result = compareNFDIter(nfcImpl, leftIter, rightIter);
     } else {
-        FCDUIterNFDIterator leftIter(data, left);
-        FCDUIterNFDIterator rightIter(data, right);
+        FCDUIterNFDIterator leftIter(data, left, equalPrefixLength);
+        FCDUIterNFDIterator rightIter(data, right, equalPrefixLength);
         result = compareNFDIter(nfcImpl, leftIter, rightIter);
     }
     return result;

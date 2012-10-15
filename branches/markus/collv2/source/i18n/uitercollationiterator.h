@@ -60,14 +60,15 @@ protected:
     UCharIterator &iter;
 };
 
+// TODO: The following class only inherits the "iter" field from its parent. Keep this class hierarchy?
 /**
  * Incrementally checks the input text for FCD and normalizes where necessary.
  */
 class U_I18N_API FCDUIterCollationIterator : public UIterCollationIterator {
 public:
-    FCDUIterCollationIterator(const CollationData *data, UCharIterator &ui);
+    FCDUIterCollationIterator(const CollationData *data, UCharIterator &ui, int32_t startIndex);
 
-    virtual void resetToStart();
+    virtual void resetToStart();  // TODO: Do we really need *CollationIterator::resetToStart()?
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 
@@ -75,6 +76,8 @@ public:
 
 protected:
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
+
+    virtual UChar handleGetTrailSurrogate();
 
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
@@ -108,21 +111,6 @@ private:
      * @return TRUE if success, checkDir == 0 and pos != start
      */
     UBool previousSegment(UErrorCode &errorCode);
-
-    /**
-     * Tibetan composite vowel signs (U+0F73, U+0F75, U+0F81)
-     * must be decomposed before reaching the core collation code,
-     * or else some sequences including them, even ones passing the FCD check,
-     * do not yield canonically equivalent results.
-     *
-     * They have distinct lccc/tccc combinations: 129/130 or 129/132.
-     *
-     * @param fcd16 the FCD value (lccc/tccc combination) of a code point
-     * @return TRUE if fcd16 is from U+0F73, U+0F75 or U+0F81
-     */
-    static inline UBool isFCD16OfTibetanCompositeVowel(uint16_t fcd16) {
-        return fcd16 == 0x8182 || fcd16 == 0x8184;
-    }
 
     UBool normalize(const UnicodeString &s, UErrorCode &errorCode);
 
@@ -166,8 +154,6 @@ private:
 
     const Normalizer2Impl &nfcImpl;
     UnicodeString normalized;
-    // Direction of incremental FCD check. See comments before rawStart.
-    int8_t checkDir;
 };
 
 U_NAMESPACE_END

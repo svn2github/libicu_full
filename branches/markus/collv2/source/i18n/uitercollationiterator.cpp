@@ -77,9 +77,9 @@ UIterCollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorC
 // FCDUIterCollationIterator ----------------------------------------------- ***
 
 FCDUIterCollationIterator::FCDUIterCollationIterator(
-        const CollationData *data, UCharIterator &ui)
+        const CollationData *data, UCharIterator &ui, int32_t startIndex)
         : UIterCollationIterator(data, ui),
-          state(ITER_CHECK_FWD), start(iter.getIndex(&ui, UITER_CURRENT)),
+          state(ITER_CHECK_FWD), start(startIndex),
           nfcImpl(data->nfcImpl) {
 }
 
@@ -133,6 +133,20 @@ FCDUIterCollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
         }
     }
     return UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, c);
+}
+
+UChar
+FCDUIterCollationIterator::handleGetTrailSurrogate() {
+    if(state <= ITER_IN_FCD_SEGMENT) {
+        UChar32 trail = iter.next(&iter);
+        if(!U16_IS_TRAIL(trail) && trail >= 0) { iter.previous(&iter); }
+        return (UChar)trail;
+    } else {
+        if(pos == normalized.length()) { return 0; }
+        UChar trail;
+        if(U16_IS_TRAIL(trail = normalized[pos])) { ++pos; }
+        return trail;
+    }
 }
 
 UChar32
@@ -293,7 +307,7 @@ FCDUIterCollationIterator::nextSegment(UErrorCode &errorCode) {
     uint8_t leadCC = (uint8_t)(fcd16 >> 8);
     uint8_t prevCC = 0;
     for(;;) {
-        if(leadCC != 0 && (prevCC > leadCC || isFCD16OfTibetanCompositeVowel(fcd16))) {
+        if(leadCC != 0 && (prevCC > leadCC || CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the next FCD boundary and normalize.
             for(;;) {
                 c = uiter_next32(&iter);
@@ -377,7 +391,8 @@ FCDUIterCollationIterator::previousSegment(UErrorCode &errorCode) {
     uint8_t trailCC = (uint8_t)fcd16;
     uint8_t nextCC = 0;
     for(;;) {
-        if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) || isFCD16OfTibetanCompositeVowel(fcd16))) {
+        if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) ||
+                            CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
             for(;;) {
                 c = uiter_previous32(&iter);

@@ -312,7 +312,7 @@ FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
     uint8_t leadCC = (uint8_t)(fcd16 >> 8);
     uint8_t prevCC = 0;
     for(;;) {
-        if(leadCC != 0 && (prevCC > leadCC || isFCD16OfTibetanCompositeVowel(fcd16))) {
+        if(leadCC != 0 && (prevCC > leadCC || CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the next FCD boundary and normalize.
             const UChar *q;
             do {
@@ -379,7 +379,8 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
     uint8_t trailCC = (uint8_t)fcd16;
     uint8_t nextCC = 0;
     for(;;) {
-        if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) || isFCD16OfTibetanCompositeVowel(fcd16))) {
+        if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) ||
+                            CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
             while(p != rawStart && nfcImpl.previousFCD16(rawStart, p) > 0xff) {}
             if(!normalize(p, pos, errorCode)) { return FALSE; }

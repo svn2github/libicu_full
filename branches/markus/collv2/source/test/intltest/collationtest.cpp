@@ -388,7 +388,7 @@ void CollationTest::TestFCD() {
     cpi.resetToStart();
     UCharIterator iter;
     uiter_setString(&iter, s, LENGTHOF(s) - 1);  // -1: without the terminating NUL
-    FCDUIterCollationIterator uici(cd.getAlias(), iter);
+    FCDUIterCollationIterator uici(cd.getAlias(), iter, 0);
     if(errorCode.logIfFailureAndReset("FCDUIterCollationIterator constructor")) {
         return;
     }

@@ -118,21 +118,6 @@ private:
      */
     UBool previousSegment(UErrorCode &errorCode);
 
-    /**
-     * Tibetan composite vowel signs (U+0F73, U+0F75, U+0F81)
-     * must be decomposed before reaching the core collation code,
-     * or else some sequences including them, even ones passing the FCD check,
-     * do not yield canonically equivalent results.
-     *
-     * They have distinct lccc/tccc combinations: 129/130 or 129/132.
-     *
-     * @param fcd16 the FCD value (lccc/tccc combination) of a code point
-     * @return TRUE if fcd16 is from U+0F73, U+0F75 or U+0F81
-     */
-    static inline UBool isFCD16OfTibetanCompositeVowel(uint16_t fcd16) {
-        return fcd16 == 0x8182 || fcd16 == 0x8184;
-    }
-
     UBool normalize(const UChar *from, const UChar *to, UErrorCode &errorCode);
 
     // Text pointers: The input text is [rawStart, rawLimit[
