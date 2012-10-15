@@ -16,6 +16,7 @@
 #include "unicode/localpointer.h"
 #include "unicode/normalizer2.h"
 #include "unicode/sortkey.h"
+#include "unicode/uiter.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
@@ -32,6 +33,7 @@
 #include "rulebasedcollator.h"
 #include "ucbuf.h"
 #include "ucol_bld.h"  // TODO: for ucol_findReorderingEntry
+#include "uitercollationiterator.h"
 #include "utf16collationiterator.h"
 #include "uvectr32.h"
 #include "writesrc.h"
@@ -43,6 +45,8 @@ U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
 
 extern const CollationBaseData *getCollationBaseData(UErrorCode &errorCode);
 U_CAPI void U_EXPORT2 ucol_setCollationBaseData(const CollationBaseData *base);
+
+class CodePointIterator;
 
 class CollationTest : public IntlTest {
 public:
@@ -68,6 +72,8 @@ public:
     void TestDataDriven();
 
 private:
+    void checkFCD(const char *name, CollationIterator &ci, CodePointIterator &cpi);
+
     // Helpers & fields for data-driven test.
     static UBool isCROrLF(UChar c) { return c == 0xa || c == 0xd; }
     static UBool isSpace(UChar c) { return c == 9 || c == 0x20 || c == 0x3000; }
@@ -270,14 +276,68 @@ void CollationTest::TestNulTerminated() {
 class CodePointIterator {
 public:
     CodePointIterator(const UChar32 *cp, int32_t length) : cp(cp), length(length), pos(0) {}
+    void resetToStart() { pos = 0; }
     UChar32 next() { return (pos < length) ? cp[pos++] : U_SENTINEL; }
     UChar32 previous() { return (pos > 0) ? cp[--pos] : U_SENTINEL; }
+    int32_t getLength() const { return length; }
     int getIndex() const { return (int)pos; }
 private:
     const UChar32 *cp;
     int32_t length;
     int32_t pos;
 };
+
+void CollationTest::checkFCD(const char *name,
+                             CollationIterator &ci, CodePointIterator &cpi) {
+    IcuTestErrorCode errorCode(*this, "checkFCD");
+
+    // Iterate forward to the limit.
+    for(;;) {
+        UChar32 c1 = ci.nextCodePoint(errorCode);
+        UChar32 c2 = cpi.next();
+        if(c1 != c2) {
+            errln("%s.nextCodePoint(to limit, 1st pass) = U+%04lx != U+%04lx at %d",
+                  name, (long)c1, (long)c2, cpi.getIndex());
+            return;
+        }
+        if(c1 < 0) { break; }
+    }
+
+    // Iterate backward most of the way.
+    for(int32_t n = (cpi.getLength() * 2) / 3; n > 0; --n) {
+        UChar32 c1 = ci.previousCodePoint(errorCode);
+        UChar32 c2 = cpi.previous();
+        if(c1 != c2) {
+            errln("%s.previousCodePoint() = U+%04lx != U+%04lx at %d",
+                  name, (long)c1, (long)c2, cpi.getIndex());
+            return;
+        }
+    }
+
+    // Forward again.
+    for(;;) {
+        UChar32 c1 = ci.nextCodePoint(errorCode);
+        UChar32 c2 = cpi.next();
+        if(c1 != c2) {
+            errln("%s.nextCodePoint(to limit again) = U+%04lx != U+%04lx at %d",
+                  name, (long)c1, (long)c2, cpi.getIndex());
+            return;
+        }
+        if(c1 < 0) { break; }
+    }
+
+    // Iterate backward to the start.
+    for(;;) {
+        UChar32 c1 = ci.previousCodePoint(errorCode);
+        UChar32 c2 = cpi.previous();
+        if(c1 != c2) {
+            errln("%s.previousCodePoint(to start) = U+%04lx != U+%04lx at %d",
+                  name, (long)c1, (long)c2, cpi.getIndex());
+            return;
+        }
+        if(c1 < 0) { break; }
+    }
+}
 
 void CollationTest::TestFCD() {
     IcuTestErrorCode errorCode(*this, "TestFCD");
@@ -317,57 +377,22 @@ void CollationTest::TestFCD() {
         0x4e00, 0xf71, 0xf80
     };
 
-    FCDUTF16CollationIterator ci(cd.getAlias(), s, NULL, errorCode);
+    // Iterate forward to the NUL terminator.
+    FCDUTF16CollationIterator u16ci(cd.getAlias(), s, NULL);
     if(errorCode.logIfFailureAndReset("FCDUTF16CollationIterator constructor")) {
         return;
     }
     CodePointIterator cpi(cp, LENGTHOF(cp));
-    // Iterate forward to the NUL terminator.
-    for(;;) {
-        UChar32 c1 = ci.nextCodePoint(errorCode);
-        UChar32 c2 = cpi.next();
-        if(c1 != c2) {
-            errln("FCDUTF16CollationIterator.nextCodePoint(NUL-terminated) = U+%04lx != U+%04lx at %d",
-                  (long)c1, (long)c2, cpi.getIndex());
-            return;
-        }
-        if(c1 < 0) { break; }
-    }
+    checkFCD("FCDUTF16CollationIterator", u16ci, cpi);
 
-    // Iterate backward most of the way.
-    for(int32_t n = (LENGTHOF(cp) * 2) / 3; n > 0; --n) {
-        UChar32 c1 = ci.previousCodePoint(errorCode);
-        UChar32 c2 = cpi.previous();
-        if(c1 != c2) {
-            errln("FCDUTF16CollationIterator.previousCodePoint() = U+%04lx != U+%04lx at %d",
-                  (long)c1, (long)c2, cpi.getIndex());
-            return;
-        }
+    cpi.resetToStart();
+    UCharIterator iter;
+    uiter_setString(&iter, s, LENGTHOF(s) - 1);  // -1: without the terminating NUL
+    FCDUIterCollationIterator uici(cd.getAlias(), iter);
+    if(errorCode.logIfFailureAndReset("FCDUIterCollationIterator constructor")) {
+        return;
     }
-
-    // Forward again.
-    for(;;) {
-        UChar32 c1 = ci.nextCodePoint(errorCode);
-        UChar32 c2 = cpi.next();
-        if(c1 != c2) {
-            errln("FCDUTF16CollationIterator.nextCodePoint(to limit) = U+%04lx != U+%04lx at %d",
-                  (long)c1, (long)c2, cpi.getIndex());
-            return;
-        }
-        if(c1 < 0) { break; }
-    }
-
-    // Iterate backward to the start.
-    for(int32_t n = (LENGTHOF(cp) * 2) / 3; n > 0; --n) {
-        UChar32 c1 = ci.previousCodePoint(errorCode);
-        UChar32 c2 = cpi.previous();
-        if(c1 != c2) {
-            errln("FCDUTF16CollationIterator.previousCodePoint(to start) = U+%04lx != U+%04lx at %d",
-                  (long)c1, (long)c2, cpi.getIndex());
-            return;
-        }
-        if(c1 < 0) { break; }
-    }
+    checkFCD("FCDUIterCollationIterator", uici, cpi);
 }
 
 UBool CollationTest::readLine(UCHARBUF *f, IcuTestErrorCode &errorCode) {
@@ -819,11 +844,11 @@ UBool CollationTest::checkCEsFCD(const UnicodeString &s,
                                  int64_t ces[], int32_t cesLength,
                                  IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
-    FCDUTF16CollationIterator ci(collData, buffer, buffer + s.length(), errorCode);
+    FCDUTF16CollationIterator ci(collData, buffer, buffer + s.length());
     if(!checkCEs(ci, "FCD-UTF-16", ces, cesLength, errorCode)) { return FALSE; }
     // Test NUL-termination if s does not contain a NUL.
     if(s.indexOf((UChar)0) >= 0) { return TRUE; }
-    FCDUTF16CollationIterator ci0(collData, buffer, NULL, errorCode);
+    FCDUTF16CollationIterator ci0(collData, buffer, NULL);
     return checkCEs(ci0, "FCD-UTF-16-NUL", ces, cesLength, errorCode);
 }
 
@@ -928,6 +953,21 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
             errorCode.reset();
             return FALSE;
         }
+    }
+    UCharIterator leftIter;
+    UCharIterator rightIter;
+    uiter_setString(&leftIter, prevString.getBuffer(), prevString.length());
+    uiter_setString(&rightIter, s.getBuffer(), s.length());
+    order = coll->compare(leftIter, rightIter, errorCode);
+    if(order != expectedOrder || errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("line %d Collator(normalization=%s).compare(UCharIterator: previous, current) "
+              "wrong order: %d != %d (%s)",
+              (int)fileLineNumber, norm, order, expectedOrder, errorCode.errorName());
+        errln(prevFileLine);
+        errln(fileLine);
+        errorCode.reset();
+        return FALSE;
     }
     CollationKey prevKey;
     if(!getCollationKey(prevFileLine, prevString.getBuffer(), prevString.length(),

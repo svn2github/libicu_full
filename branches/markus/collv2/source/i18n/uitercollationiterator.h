@@ -1,21 +1,22 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2012, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
-* utf16collationiterator.h
+* uitercollationiterator.h
 *
-* created on: 2010oct27
+* created on: 2012sep23 (from utf16collationiterator.h)
 * created by: Markus W. Scherer
 */
 
-#ifndef __UTF16COLLATIONITERATOR_H__
-#define __UTF16COLLATIONITERATOR_H__
+#ifndef __UITERCOLLATIONITERATOR_H__
+#define __UITERCOLLATIONITERATOR_H__
 
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/uiter.h"
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
@@ -24,24 +25,22 @@
 U_NAMESPACE_BEGIN
 
 /**
- * UTF-16 collation element and character iterator.
- * Handles normalized UTF-16 text inline, with length or NUL-terminated.
+ * UCharIterator-based collation element and character iterator.
+ * Handles normalized text inline, with length or NUL-terminated.
  * Unnormalized text is handled by a subclass.
  */
-class U_I18N_API UTF16CollationIterator : public CollationIterator {
+class U_I18N_API UIterCollationIterator : public CollationIterator {
 public:
-    UTF16CollationIterator(const CollationData *d,
-                           const UChar *s, const UChar *lim)
-            : CollationIterator(d),
-              start(s), pos(s), limit(lim) {}
+    UIterCollationIterator(const CollationData *d, UCharIterator &ui)
+            : CollationIterator(d), iter(ui) {}
 
     virtual void resetToStart();
 
-    void setText(const UChar *s, const UChar *lim) {
+    /* TODO: void setText(const UChar *s, const UChar *lim) {
         reset();
         start = pos = s;
         limit = lim;
-    }
+    }*/
 
     // TODO: setText(start, pos, limit)  ?
 
@@ -54,25 +53,19 @@ protected:
 
     virtual UChar handleGetTrailSurrogate();
 
-    virtual UBool foundNULTerminator();
-
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
-    // UTF-16 string pointers.
-    // limit can be NULL for NUL-terminated strings.
-    const UChar *start, *pos, *limit;
-    // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
+    UCharIterator &iter;
 };
 
 /**
  * Incrementally checks the input text for FCD and normalizes where necessary.
  */
-class U_I18N_API FCDUTF16CollationIterator : public UTF16CollationIterator {
+class U_I18N_API FCDUIterCollationIterator : public UIterCollationIterator {
 public:
-    FCDUTF16CollationIterator(const CollationData *data,
-                              const UChar *s, const UChar *lim);
+    FCDUIterCollationIterator(const CollationData *data, UCharIterator &ui);
 
     virtual void resetToStart();
 
@@ -82,8 +75,6 @@ public:
 
 protected:
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
-
-    virtual UBool foundNULTerminator();
 
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
@@ -133,36 +124,45 @@ private:
         return fcd16 == 0x8182 || fcd16 == 0x8184;
     }
 
-    UBool normalize(const UChar *from, const UChar *to, UErrorCode &errorCode);
+    UBool normalize(const UnicodeString &s, UErrorCode &errorCode);
 
-    // Text pointers: The input text is [rawStart, rawLimit[
-    // where rawLimit can be NULL for NUL-terminated text.
-    //
-    // checkDir > 0:
-    //
-    // The input text [segmentStart..pos[ passes the FCD check.
-    // Moving forward checks incrementally.
-    // segmentLimit is undefined. limit == rawLimit.
-    //
-    // checkDir < 0:
-    // The input text [pos..segmentLimit[ passes the FCD check.
-    // Moving backward checks incrementally.
-    // segmentStart is undefined, start == rawStart.
-    //
-    // checkDir == 0:
-    //
-    // The input text [segmentStart..segmentLimit[ is being processed.
-    // These pointers are at FCD boundaries.
-    // Either this text segment already passes the FCD check
-    // and segmentStart==start<=pos<=limit==segmentLimit,
-    // or the current segment had to be normalized so that
-    // [segmentStart..segmentLimit[ turned into the normalized string,
-    // corresponding to normalized.getBuffer()==start<=pos<=limit==start+normalized.length().
-    const UChar *rawStart;
-    const UChar *segmentStart;
-    const UChar *segmentLimit;
-    // rawLimit==NULL for a NUL-terminated string.
-    const UChar *rawLimit;
+    enum State {
+        /**
+         * The input text [start..(iter index)[ passes the FCD check.
+         * Moving forward checks incrementally.
+         * pos & limit are undefined.
+         */
+        ITER_CHECK_FWD,
+        /**
+         * The input text [(iter index)..limit[ passes the FCD check.
+         * Moving backward checks incrementally.
+         * start & pos are undefined.
+         */
+        ITER_CHECK_BWD,
+        /**
+         * The input text [start..limit[ passes the FCD check.
+         * pos tracks the current text index.
+         */
+        ITER_IN_FCD_SEGMENT,
+        /**
+         * The input text [start..limit[ failed the FCD check and was normalized.
+         * pos tracks the current index in the normalized string.
+         * The text iterator is at the limit index.
+         */
+        IN_NORM_ITER_AT_LIMIT,
+        /**
+         * The input text [start..limit[ failed the FCD check and was normalized.
+         * pos tracks the current index in the normalized string.
+         * The text iterator is at the start index.
+         */
+        IN_NORM_ITER_AT_START
+    };
+
+    State state;
+
+    int32_t start;
+    int32_t pos;
+    int32_t limit;
 
     const Normalizer2Impl &nfcImpl;
     UnicodeString normalized;
@@ -173,4 +173,4 @@ private:
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION
-#endif  // __UTF16COLLATIONITERATOR_H__
+#endif  // __UITERCOLLATIONITERATOR_H__

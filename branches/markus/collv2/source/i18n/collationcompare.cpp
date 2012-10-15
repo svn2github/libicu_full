@@ -345,34 +345,32 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         uint32_t leftQuaternary;
         do {
             int64_t ce = leftBuffer[leftIndex++];
-            uint32_t low16 = (uint32_t)ce & 0xffff;
-            if(low16 == 0) {
+            leftQuaternary = (uint32_t)ce & 0xffff;
+            if(leftQuaternary == 0) {
                 // Variable primary or completely ignorable.
                 leftQuaternary = (uint32_t)(ce >> 32);
-            } else if(low16 <= Collation::MERGE_SEPARATOR_WEIGHT16) {
+            } else if(leftQuaternary <= Collation::MERGE_SEPARATOR_WEIGHT16) {
                 // Leave NO_CE or MERGE_SEPARATOR as is.
-                leftQuaternary = low16;
             } else {
                 // Regular CE, not tertiary ignorable.
                 // Preserve the quaternary weight in bits 7..6.
-                leftQuaternary = low16 | 0xffffff3f;
+                leftQuaternary |= 0xffffff3f;
             }
         } while(leftQuaternary == 0);
 
         uint32_t rightQuaternary;
         do {
             int64_t ce = rightBuffer[rightIndex++];
-            uint32_t low16 = (uint32_t)ce & 0xffff;
-            if(low16 == 0) {
+            rightQuaternary = (uint32_t)ce & 0xffff;
+            if(rightQuaternary == 0) {
                 // Variable primary or completely ignorable.
                 rightQuaternary = (uint32_t)(ce >> 32);
-            } else if(low16 <= Collation::MERGE_SEPARATOR_WEIGHT16) {
+            } else if(rightQuaternary <= Collation::MERGE_SEPARATOR_WEIGHT16) {
                 // Leave NO_CE or MERGE_SEPARATOR as is.
-                rightQuaternary = low16;
             } else {
                 // Regular CE, not tertiary ignorable.
                 // Preserve the quaternary weight in bits 7..6.
-                rightQuaternary = low16 | 0xffffff3f;
+                rightQuaternary |= 0xffffff3f;
             }
         } while(rightQuaternary == 0);
 

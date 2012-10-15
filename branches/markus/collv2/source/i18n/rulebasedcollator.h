@@ -18,6 +18,7 @@
 
 #include "unicode/coll.h"
 #include "unicode/locid.h"
+#include "unicode/uiter.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/ucol.h"
@@ -222,6 +223,21 @@ public:
     */
     virtual UCollationResult compare(const UChar* source, int32_t sourceLength,
                                      const UChar* target, int32_t targetLength,
+                                     UErrorCode &status) const;
+
+    /**
+     * Compares two strings using the Collator.
+     * Returns whether the first one compares less than/equal to/greater than
+     * the second one.
+     * This version takes UCharIterator input.
+     * @param sIter the first ("source") string iterator
+     * @param tIter the second ("target") string iterator
+     * @param status ICU status
+     * @return UCOL_LESS, UCOL_EQUAL or UCOL_GREATER
+     * @stable ICU 4.2
+     */
+    virtual UCollationResult compare(UCharIterator &sIter,
+                                     UCharIterator &tIter,
                                      UErrorCode &status) const;
 
     /**

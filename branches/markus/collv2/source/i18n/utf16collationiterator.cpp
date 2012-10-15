@@ -13,8 +13,6 @@
 
 #if !UCONFIG_NO_COLLATION
 
-#include "unicode/ucharstrie.h"
-#include "unicode/ustringtrie.h"
 #include "charstr.h"
 #include "cmemory.h"
 #include "collation.h"
@@ -127,8 +125,7 @@ UTF16CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorC
 
 FCDUTF16CollationIterator::FCDUTF16CollationIterator(
         const CollationData *data,
-        const UChar *s, const UChar *lim,
-        UErrorCode & /*errorCode*/)
+        const UChar *s, const UChar *lim)
         : UTF16CollationIterator(data, s, lim),
           rawStart(s), segmentStart(s), segmentLimit(NULL), rawLimit(lim),
           nfcImpl(data->nfcImpl),
@@ -320,7 +317,7 @@ FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
             const UChar *q;
             do {
                 q = p;
-            } while(p != rawLimit && (fcd16 = nfcImpl.nextFCD16(p, rawLimit)) > 0xff);
+            } while(p != rawLimit && nfcImpl.nextFCD16(p, rawLimit) > 0xff);
             if(!normalize(pos, q, errorCode)) { return FALSE; }
             pos = start;
             break;
@@ -384,7 +381,7 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
     for(;;) {
         if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) || isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
-            while(p != rawStart && (fcd16 = nfcImpl.previousFCD16(rawStart, p)) > 0xff) {}
+            while(p != rawStart && nfcImpl.previousFCD16(rawStart, p) > 0xff) {}
             if(!normalize(p, pos, errorCode)) { return FALSE; }
             pos = limit;
             break;

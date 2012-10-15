@@ -16,6 +16,7 @@
 #include "unicode/coll.h"
 #include "unicode/locid.h"
 #include "unicode/sortkey.h"
+#include "unicode/uiter.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/ucol.h"
@@ -28,6 +29,7 @@
 #include "collationkeys.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
+#include "uitercollationiterator.h"
 #include "utf16collationiterator.h"
 
 U_NAMESPACE_BEGIN
@@ -287,7 +289,7 @@ RuleBasedCollator2::setVariableTop(const UChar *varTop, int32_t len, UErrorCode 
         ce1 = ci.nextCE(errorCode);
         ce2 = ci.nextCE(errorCode);
     } else {
-        FCDUTF16CollationIterator ci(data, varTop, varTop + len, errorCode);
+        FCDUTF16CollationIterator ci(data, varTop, varTop + len);
         ce1 = ci.nextCE(errorCode);
         ce2 = ci.nextCE(errorCode);
     }
@@ -444,23 +446,165 @@ RuleBasedCollator2::compare(const UChar *left, int32_t leftLength,
     return doCompare(left, leftLength, right, rightLength, errorCode);
 }
 
-static int32_t
-findEndOrFFFE(const UChar *s, int32_t i, int32_t &length) {
-    if(length >= 0) {
-        while(i < length && s[i] != 0xfffe) { ++i; }
-    } else {
-        // s is NUL-terminated.
-        UChar c;
-        while((c = s[i]) != 0xfffe) {
-            if(c == 0) {
-                length = i;
-                break;
+namespace {
+
+/**
+ * Abstract iterator for identical-level string comparisons.
+ * Returns FCD code points and handles temporary switching to NFD.
+ */
+class NFDIterator {
+public:
+    NFDIterator() : index(-1), length(0) {}
+    virtual ~NFDIterator() {}
+    /**
+     * Returns the next code point from the internal normalization buffer,
+     * or else the next text code point.
+     * Returns -1 at the end of the text.
+     */
+    UChar32 nextCodePoint() {
+        if(index >= 0) {
+            if(index == length) {
+                index = -1;
+            } else {
+                UChar32 c;
+                U16_NEXT_UNSAFE(buffer, index, c);
+                return c;
             }
-            ++i;
+        }
+        return nextRawCodePoint();
+    }
+    /**
+     * @param nfcImpl
+     * @param c the last code point returned by nextCodePoint() or nextDecomposedCodePoint()
+     * @return the first code point in c's decomposition,
+     *         or c itself if it was decomposed already or if it does not decompose
+     */
+    UChar32 nextDecomposedCodePoint(const Normalizer2Impl &nfcImpl, UChar32 c) {
+        if(index >= 0) { return c; }
+        const UChar *s = nfcImpl.getDecomposition(c, buffer, length);
+        if(s == NULL) { return c; }
+        index = 0;
+        U16_NEXT_UNSAFE(buffer, index, c);
+        return c;
+    }
+protected:
+    /**
+     * Returns the next text code point in FCD order.
+     * Returns -1 at the end of the text.
+     */
+    virtual UChar32 nextRawCodePoint() = 0;
+private:
+    UChar buffer[4];
+    int32_t index;
+    int32_t length;
+};
+
+class UTF16NFDIterator : public NFDIterator {
+public:
+    UTF16NFDIterator(const UChar *text, const UChar *textLimit) : s(text), limit(textLimit) {}
+protected:
+    virtual UChar32 nextRawCodePoint() {
+        if(s == limit) { return U_SENTINEL; }
+        UChar32 c = *s++;
+        if(limit == NULL && c == 0) {
+            s = NULL;
+            return U_SENTINEL;
+        }
+        UChar trail;
+        if(U16_IS_LEAD(c) && s != limit && U16_IS_TRAIL(trail = *s)) {
+            ++s;
+            c = U16_GET_SUPPLEMENTARY(c, trail);
+        }
+        return c;
+    }
+
+    const UChar *s;
+    const UChar *limit;
+};
+
+class FCDUTF16NFDIterator : public UTF16NFDIterator {
+public:
+    FCDUTF16NFDIterator(const Normalizer2Impl &nfcImpl, const UChar *text, const UChar *textLimit)
+            : UTF16NFDIterator(NULL, NULL) {
+        UErrorCode errorCode = U_ZERO_ERROR;
+        const UChar *spanLimit = nfcImpl.makeFCD(text, textLimit, NULL, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        if(spanLimit == textLimit || (textLimit == NULL && *spanLimit == 0)) {
+            s = text;
+            limit = spanLimit;
+        } else {
+            str.setTo(text, (int32_t)(spanLimit - text));
+            {
+                ReorderingBuffer buffer(nfcImpl, str);
+                if(buffer.init(str.length(), errorCode)) {
+                    nfcImpl.makeFCD(spanLimit, textLimit, &buffer, errorCode);
+                }
+            }
+            if(U_SUCCESS(errorCode)) {
+                s = str.getBuffer();
+                limit = s + str.length();
+            }
         }
     }
-    return i;
+private:
+    UnicodeString str;
+};
+
+class UIterNFDIterator : public NFDIterator {
+public:
+    UIterNFDIterator(UCharIterator &it) : iter(it) {}
+protected:
+    virtual UChar32 nextRawCodePoint() {
+        return uiter_next32(&iter);
+    }
+private:
+    UCharIterator &iter;
+};
+
+class FCDUIterNFDIterator : public NFDIterator {
+public:
+    FCDUIterNFDIterator(const CollationData *data, UCharIterator &it) : uici(data, it) {}
+protected:
+    virtual UChar32 nextRawCodePoint() {
+        UErrorCode errorCode = U_ZERO_ERROR;
+        return uici.nextCodePoint(errorCode);
+    }
+private:
+    FCDUIterCollationIterator uici;
+};
+
+UCollationResult compareNFDIter(const Normalizer2Impl &nfcImpl,
+                                NFDIterator &left, NFDIterator &right) {
+    for(;;) {
+        // Fetch the next FCD code point from each string.
+        UChar32 leftCp = left.nextCodePoint();
+        UChar32 rightCp = right.nextCodePoint();
+        if(leftCp == rightCp) {
+            if(leftCp < 0) { break; }
+            continue;
+        }
+        // If they are different, then decompose each and compare again.
+        if(leftCp < 0) {
+            leftCp = -2;  // end of string
+        } else if(leftCp == 0xfffe) {
+            leftCp = -1;  // U+FFFE: merge separator
+        } else {
+            leftCp = left.nextDecomposedCodePoint(nfcImpl, leftCp);
+        }
+        if(rightCp < 0) {
+            rightCp = -2;  // end of string
+        } else if(rightCp == 0xfffe) {
+            rightCp = -1;  // U+FFFE: merge separator
+        } else {
+            rightCp = right.nextDecomposedCodePoint(nfcImpl, rightCp);
+        }
+        if(leftCp < rightCp) { return UCOL_LESS; }
+        if(leftCp > rightCp) { return UCOL_GREATER; }
+    }
+    return UCOL_EQUAL;
 }
+
+}  // namespace
 
 UCollationResult
 RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
@@ -471,9 +615,10 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
         return UCOL_EQUAL;
     }
 
+    // Identical-prefix test.
     const UChar *leftLimit;
     const UChar *rightLimit;
-    int32_t equalPrefixLength = 0;  // Identical-prefix test.
+    int32_t equalPrefixLength = 0;
     if(leftLength < 0) {
         leftLimit = NULL;
         rightLimit = NULL;
@@ -497,11 +642,15 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
         }
     }
 
-    // Identical prefix: Back up to the start of a contraction or reordering sequence.
     if(equalPrefixLength > 0) {
         if((equalPrefixLength != leftLength && data->isUnsafeBackward(left[equalPrefixLength])) ||
                 (equalPrefixLength != rightLength && data->isUnsafeBackward(right[equalPrefixLength]))) {
+            // Identical prefix: Back up to the start of a contraction or reordering sequence.
             while(--equalPrefixLength > 0 && data->isUnsafeBackward(left[equalPrefixLength])) {}
+        } else if(equalPrefixLength == leftLength) {
+            return UCOL_LESS;
+        } else if(equalPrefixLength == rightLength) {
+            return UCOL_GREATER;
         }
         left += equalPrefixLength;
         right += equalPrefixLength;
@@ -513,8 +662,8 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
         UTF16CollationIterator rightIter(data, right, rightLimit);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
     } else {
-        FCDUTF16CollationIterator leftIter(data, left, leftLimit, errorCode);
-        FCDUTF16CollationIterator rightIter(data, right, rightLimit, errorCode);
+        FCDUTF16CollationIterator leftIter(data, left, leftLimit);
+        FCDUTF16CollationIterator rightIter(data, right, rightLimit);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
     }
     if(result != UCOL_EQUAL || data->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
@@ -523,41 +672,84 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
 
     // TODO: If NUL-terminated, get actual limits from iterators?
 
-    if(leftLength > 0) {
-        leftLength -= equalPrefixLength;
-        rightLength -= equalPrefixLength;
+    // Compare identical level.
+    const Normalizer2Impl &nfcImpl = data->nfcImpl;
+    if((data->options & CollationData::CHECK_FCD) == 0) {
+        UTF16NFDIterator leftIter(left, leftLimit);
+        UTF16NFDIterator rightIter(right, rightLimit);
+        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+    } else {
+        FCDUTF16NFDIterator leftIter(nfcImpl, left, leftLimit);
+        FCDUTF16NFDIterator rightIter(nfcImpl, right, rightLimit);
+        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+    }
+    return result;
+}
+
+UCollationResult
+RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
+                            UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode) || &left == &right) { return UCOL_EQUAL; }
+
+    // Identical-prefix test.
+    int32_t equalPrefixLength = 0;
+    {
+        UChar32 leftUnit;
+        UChar32 rightUnit;
+        while((leftUnit = left.next(&left)) == (rightUnit = right.next(&right))) {
+            if(leftUnit < 0) { return UCOL_EQUAL; }
+            ++equalPrefixLength;
+        }
+
+        // Back out the code units that differed, for the real collation comparison.
+        if(leftUnit >= 0) { left.previous(&left); }
+        if(rightUnit >= 0) { right.previous(&right); }
+
+        if(equalPrefixLength > 0) {
+            if((leftUnit >= 0 && data->isUnsafeBackward(leftUnit)) ||
+                    (rightUnit >= 0 && data->isUnsafeBackward(rightUnit))) {
+                // Identical prefix: Back up to the start of a contraction or reordering sequence.
+                do {
+                    --equalPrefixLength;
+                    leftUnit = left.previous(&left);
+                    right.previous(&right);
+                } while(equalPrefixLength > 0 && data->isUnsafeBackward(leftUnit));
+            } else if(leftUnit < 0) {
+                return UCOL_LESS;
+            } else if(rightUnit < 0) {
+                return UCOL_GREATER;
+            }
+        }
     }
 
-    uint32_t options = U_COMPARE_CODE_POINT_ORDER;
+    UCollationResult result;
     if((data->options & CollationData::CHECK_FCD) == 0) {
-        options |= UNORM_INPUT_IS_FCD;
+        UIterCollationIterator leftIter(data, left);
+        UIterCollationIterator rightIter(data, right);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
+    } else {
+        FCDUIterCollationIterator leftIter(data, left);
+        FCDUIterCollationIterator rightIter(data, right);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
     }
-    // Treat U+FFFE as a merge separator.
-    // TODO: Test this comparing ab*cde vs. abc*d where *=U+FFFE, all others are ignorable, and c<U+FFFE.
-    // TODO: When generating sort keys, write MERGE_SEPARATOR_BYTE for U+FFFE.
-    int32_t leftStart = 0;
-    int32_t rightStart = 0;
-    for(;;) {
-        int32_t leftEnd = findEndOrFFFE(left, leftStart, leftLength);
-        int32_t rightEnd = findEndOrFFFE(right, rightStart, rightLength);
-        // Compare substrings between U+FFFEs.
-        int32_t intResult = unorm_compare(left + leftStart, leftEnd - leftStart,
-                                          right + rightStart, rightEnd - rightStart,
-                                          options, &errorCode);
-        if(intResult != 0) {
-            return (intResult < 0) ? UCOL_LESS : UCOL_GREATER;
-        }
-        // Did we reach the end of either string?
-        // Both strings have the same number of merge separators,
-        // or else there would have been a primary-level difference.
-        U_ASSERT((leftEnd == leftLength) == (rightEnd == rightLength));
-        if(leftEnd == leftLength) {
-            return UCOL_EQUAL;
-        }
-        // Skip both U+FFFEs and continue.
-        leftStart = leftEnd + 1;
-        rightStart = rightEnd + 1;
+    if(result != UCOL_EQUAL || data->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
+        return result;
     }
+
+    // Compare identical level.
+    left.move(&left, equalPrefixLength, UITER_ZERO);
+    right.move(&right, equalPrefixLength, UITER_ZERO);
+    const Normalizer2Impl &nfcImpl = data->nfcImpl;
+    if((data->options & CollationData::CHECK_FCD) == 0) {
+        UIterNFDIterator leftIter(left);
+        UIterNFDIterator rightIter(right);
+        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+    } else {
+        FCDUIterNFDIterator leftIter(data, left);
+        FCDUIterNFDIterator rightIter(data, right);
+        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+    }
+    return result;
 }
 
 CollationKey &
@@ -615,7 +807,7 @@ RuleBasedCollator2::writeSortKey(const UChar *s, int32_t length,
         CollationKeys::writeSortKeyUpToQuaternary(iter, sink, Collation::PRIMARY_LEVEL,
                                                   callback, errorCode);
     } else {
-        FCDUTF16CollationIterator iter(data, s, limit, errorCode);
+        FCDUTF16CollationIterator iter(data, s, limit);
         CollationKeys::writeSortKeyUpToQuaternary(iter, sink, Collation::PRIMARY_LEVEL,
                                                   callback, errorCode);
     }
