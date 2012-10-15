@@ -171,6 +171,7 @@ private:
     void TestSkLong();
     void TestSwahiliShortNegative();
     void TestArabicLong();
+    void TestFieldPosition();
     void CheckLocale(
         const Locale& locale, UNumberCompactStyle style,
         const ExpectedResult* expectedResult, int32_t expectedResultLength);
@@ -196,6 +197,7 @@ void CompactDecimalFormatTest::runIndexedTest(
   TESTCASE_AUTO(TestSkLong);
   TESTCASE_AUTO(TestSwahiliShortNegative);
   TESTCASE_AUTO(TestArabicLong);
+  TESTCASE_AUTO(TestFieldPosition);
   TESTCASE_AUTO_END;
 }
 
@@ -221,6 +223,23 @@ void CompactDecimalFormatTest::TestJapaneseShort() {
 
 void CompactDecimalFormatTest::TestSwahiliShort() {
   CheckLocale("sw", UNUM_SHORT, kSwahiliShort, LENGTHOF(kSwahiliShort));
+}
+
+void CompactDecimalFormatTest::TestFieldPosition() {
+  // Swahili uses prefixes which forces offsets in field position to change
+  UErrorCode status = U_ZERO_ERROR;
+  CompactDecimalFormat* cdf = CompactDecimalFormat::createInstance("sw", UNUM_SHORT, status);
+  if (U_FAILURE(status)) {
+    errln("Unable to create format object - %s", u_errorName(status));
+  }
+  FieldPosition fp(UNUM_INTEGER_FIELD);
+  UnicodeString result;
+  cdf->format(1234567.0, result, fp);
+  UnicodeString subString = result.tempSubString(fp.getBeginIndex(), fp.getEndIndex() - fp.getBeginIndex());
+  if (subString != UnicodeString("1", -1, US_INV)) {
+    errln(UnicodeString("Expected 1, got ") + subString);
+  }
+  delete cdf;
 }
 
 void CompactDecimalFormatTest::TestCsShort() {

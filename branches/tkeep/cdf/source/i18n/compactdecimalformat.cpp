@@ -118,6 +118,8 @@ CompactDecimalFormat::createInstance(
   CompactDecimalFormat* result =
       new CompactDecimalFormat(*decfmt, data->unitsByVariant, data->divisors, pluralRules.orphan());
   result->setMaximumSignificantDigits(2);
+  result->setSignificantDigitsUsed(TRUE);
+  result->setGroupingUsed(FALSE);
   return result;
 }
 
@@ -161,8 +163,6 @@ CompactDecimalFormat::format(
     double number,
     UnicodeString& appendTo,
     FieldPosition& pos) const {
-  return DecimalFormat::format(number, appendTo, pos);
-  /*
   DigitList orig, rounded;
   orig.set(number);
   UBool isNegative;
@@ -171,9 +171,12 @@ CompactDecimalFormat::format(
   if (U_FAILURE(status)) {
     return appendTo;
   }
-  double roundedPositive = rounded.getDouble();
-  int32_t baseIdx = computeBase(roundedPositive);
-  double numberToFormat = roundedPositive / _divisors[baseIdx];
+  double roundedDouble = rounded.getDouble();
+  if (isNegative) {
+    roundedDouble = -roundedDouble;
+  }
+  int32_t baseIdx = computeBase(roundedDouble);
+  double numberToFormat = roundedDouble / _divisors[baseIdx];
   UnicodeString variant = _pluralRules->select(numberToFormat);
   if (isNegative) {
     numberToFormat = -numberToFormat;
@@ -181,12 +184,8 @@ CompactDecimalFormat::format(
   const CDFUnit* unit = getCDFUnit(_unitsByVariant, variant, baseIdx);
   appendTo += unit->prefix;
   DecimalFormat::format(numberToFormat, appendTo, pos);
-  int32_t prefixLen = unit->prefix.length();
-  pos.setBeginIndex(pos.getBeginIndex() + prefixLen);
-  pos.setEndIndex(pos.getEndIndex() + prefixLen);
   appendTo += unit->suffix;
   return appendTo;
-  */
 }
 
 UnicodeString&
