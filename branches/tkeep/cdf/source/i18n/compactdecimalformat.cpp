@@ -35,7 +35,7 @@ U_NAMESPACE_BEGIN
 
 static const int32_t MAX_DIGITS = 15;
 static const char gOther[] = "other";
-static const char gLatnTag[] = "latin";
+static const char gLatnTag[] = "latn";
 static const char gNumberElementsTag[] = "NumberElements";
 static const char gDecimalFormatTag[] = "decimalFormat";
 static const char gPatternsShort[] = "patternsShort";
@@ -55,12 +55,10 @@ enum QuoteState {
 
 // CDFUnit represents a prefix-suffix pair for a particular variant
 // and log10 value.
-// TODO: In C++, can we assume that the default constructor of a class or
-// struct will initialize all fields with their default constructors or 0?
 struct CDFUnit {
   UnicodeString prefix;
   UnicodeString suffix;
-  inline CDFUnit() {
+  inline CDFUnit() : prefix(), suffix() {
     prefix.setToBogus();
   }
   inline ~CDFUnit() {}
@@ -74,14 +72,11 @@ struct CDFUnit {
 
 // CDFLocaleStyleData contains formatting data for a particular locale
 // and style.
-// TODO: Will default constructor guarantee that unitsByVariant == NULL.
 class CDFLocaleStyleData {
  public:
   // What to divide by for each log10 value when formatting. These values
   // will be powers of 10. For English, would be:
   // 1, 1, 1, 1000, 1000, 1000, 1000000, 1000000, 1000000, 1000000000 ...
-  // TODO: In C++, when this class is allocated, do all members of this array
-  // get pre-initalized to 0?
   double divisors[MAX_DIGITS];
   // Maps plural variants to CDFUnit[MAX_DIGITS] arrays.
   // To format a number x,
@@ -91,7 +86,7 @@ class CDFLocaleStyleData {
   // Compute cdfUnits = unitsByVariant[pluralVariant].
   // Prefix and suffix to use at cdfUnits[log10(x)]
   UHashtable* unitsByVariant;
-  inline CDFLocaleStyleData() {}
+  inline CDFLocaleStyleData() : unitsByVariant(NULL) {}
   ~CDFLocaleStyleData();
   // Init initializes this object.
   void Init(UErrorCode& status);
@@ -108,6 +103,8 @@ class CDFLocaleStyleData {
 struct CDFLocaleData {
   CDFLocaleStyleData shortData;
   CDFLocaleStyleData longData;
+  inline CDFLocaleData() : shortData(), longData() { }
+  inline ~CDFLocaleData() { }
   // Init initializes this object.
   void Init(UErrorCode& status);
 };
@@ -730,6 +727,7 @@ static void fillInMissing(CDFLocaleStyleData* result) {
       definedInCLDR[i] = FALSE;
     } else {
       lastDivisor = result->divisors[i];
+      definedInCLDR[i] = TRUE;
     }
   }
   // Iterate over each variant.
