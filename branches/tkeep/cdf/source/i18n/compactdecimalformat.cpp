@@ -274,8 +274,7 @@ CompactDecimalFormat::format(
     int64_t number,
     UnicodeString& appendTo,
     FieldPosition& pos) const {
-  // TODO: implement
-  return DecimalFormat::format(number, appendTo, pos);
+  return format((double) number, appendTo, pos);
 }
 
 UnicodeString&
