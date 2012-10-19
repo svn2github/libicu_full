@@ -139,7 +139,7 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
 static const CDFLocaleStyleData* extractDataByStyleEnum(const CDFLocaleData& data, UNumberCompactStyle style, UErrorCode& status);
 static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& status);
 static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UErrorCode& status);
-static UBool initCDFLocaleStyleData(const UResourceBundle* localeBundle, const char* numberingSystem, const char* style, CDFLocaleStyleData* result, UErrorCode& status);
+static void initCDFLocaleStyleData(const UResourceBundle* localeBundle, const char* numberingSystem, const char* style, CDFLocaleStyleData* result, UErrorCode& status);
 static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyleData* result, UErrorCode& status);
 static int32_t populatePrefixSuffix(const char* variant, int32_t log10Value, const UChar* formatStr, int32_t formatStrLen, UHashtable* result, UErrorCode& status);
 static UBool onlySpaces(UnicodeString u);
@@ -489,72 +489,69 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
     return;
   }
   const char* numberingSystemName = ns->getName();
-  LocalUResourceBundlePointer rb(ures_open(NULL, inLocale.getName(), &status));
+  UResourceBundle* rb = ures_open(NULL, inLocale.getName(), &status);
+  rb = ures_getByKeyWithFallback(rb, gNumberElementsTag, rb, &status);
+  if (U_FAILURE(status)) {
+    ures_close(rb);
+    return;
+  }
+  UErrorCode ec = U_ZERO_ERROR;
+  initCDFLocaleStyleData(
+      rb, numberingSystemName, gPatternsLong, &result->longData, ec);
+  if (U_FAILURE(ec)) {
+    result->longData.setToBogus();
+  }
+  initCDFLocaleStyleData(
+      rb, numberingSystemName, gPatternsShort, &result->shortData, status);
+  ures_close(rb);
   if (U_FAILURE(status)) {
     return;
   }
-  UBool shortDataInitialized = FALSE;
-  UBool longDataInitialized = FALSE;
-  if (uprv_strcmp(gLatnTag, numberingSystemName) != 0) {
-    UErrorCode ec = U_ZERO_ERROR;
-    shortDataInitialized = initCDFLocaleStyleData(
-        rb.getAlias(), numberingSystemName, gPatternsShort, &result->shortData, ec);
-    ec = U_ZERO_ERROR;
-    longDataInitialized = initCDFLocaleStyleData(
-        rb.getAlias(), numberingSystemName, gPatternsLong, &result->longData, ec);
-  }
-  if (!shortDataInitialized) {
-    if (!initCDFLocaleStyleData(
-        rb.getAlias(), gLatnTag, gPatternsShort, &result->shortData, status)) {
-      return;
-    }
-  }
-  if (!longDataInitialized) {
-    UErrorCode ec = U_ZERO_ERROR;
-    if (!initCDFLocaleStyleData(
-        rb.getAlias(), gLatnTag, gPatternsLong, &result->longData, ec)) {
-      // Fallback to short data
-      result->longData.setToBogus();
-    }
-  }
 }
 
-// initCDFLocaleStyleData loads formatting data for a particular locale and
-// style from CLDR. It returns TRUE if data loaded successfully or FALSE
-// otherwise.
+// initCDFLocaleStyleData loads formatting data for a numbering system
+// and style from CLDR.
 // bundle is the resouce for the locale; style is the style: gPatternsShort
 // or gPatternsLong. Loaded data stored in result.
-static UBool initCDFLocaleStyleData(const UResourceBundle* localeBundle, const char* numberingSystem, const char* style, CDFLocaleStyleData* result, UErrorCode& status) {
+static void initCDFLocaleStyleData(const UResourceBundle* numberElementsBundle, const char* numberingSystem, const char* style, CDFLocaleStyleData* result, UErrorCode& status) {
   if (U_FAILURE(status)) {
-    return FALSE;
+    return;
   }
-  CharString path;
-  // Resource path is: "NumberElements/<numberingSystem>/<style>/decimalFormat"
-  path.append(gNumberElementsTag, status).append('/', status)
-      .append(numberingSystem, status).append('/', status).append(style, status)
-      .append('/', status).append(gDecimalFormatTag, status);
-  LocalUResourceBundlePointer rb(ures_getByKeyWithFallback(localeBundle, path.data(), NULL, &status));
+  UErrorCode ec = U_ZERO_ERROR;
+  UResourceBundle* rb = ures_getByKeyWithFallback(numberElementsBundle, numberingSystem, NULL, &ec);
+  rb = ures_getByKeyWithFallback(rb, style, rb, &ec);
+  rb = ures_getByKeyWithFallback(rb, gDecimalFormatTag, rb, &ec);
+  if (ec == U_MISSING_RESOURCE_ERROR && uprv_strcmp(numberingSystem, gLatnTag) != 0) {
+    rb = ures_getByKeyWithFallback(numberElementsBundle, gLatnTag, rb, &status);
+    rb = ures_getByKeyWithFallback(rb, style, rb, &status);
+    rb = ures_getByKeyWithFallback(rb, gDecimalFormatTag, rb, &status);
+  } else {
+    status = ec;
+  }
   if (U_FAILURE(status)) {
-    return FALSE;
+    ures_close(rb);
+    return;
   }
   // Iterate through all the powers of 10.
-  int32_t size = ures_getSize(rb.getAlias());
+  int32_t size = ures_getSize(rb);
   UResourceBundle* power10 = NULL;
   for (int32_t i = 0; i < size; ++i) {
-    power10 = ures_getByIndex(rb.getAlias(), i, power10, &status);
+    power10 = ures_getByIndex(rb, i, power10, &status);
     if (U_FAILURE(status)) {
       ures_close(power10);
-      return FALSE;
+      ures_close(rb);
+      return;
     }
     populatePower10(power10, result, status);
     if (U_FAILURE(status)) {
       ures_close(power10);
-      return FALSE;
+      ures_close(rb);
+      return;
     }
   }
   ures_close(power10);
+  ures_close(rb);
   fillInMissing(result);
-  return TRUE;
 }
 
 // populatePower10 grabs data for a particular power of 10 from CLDR.
