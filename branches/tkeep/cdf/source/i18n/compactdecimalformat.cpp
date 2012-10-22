@@ -40,6 +40,7 @@ static const char gNumberElementsTag[] = "NumberElements";
 static const char gDecimalFormatTag[] = "decimalFormat";
 static const char gPatternsShort[] = "patternsShort";
 static const char gPatternsLong[] = "patternsLong";
+static const char gRoot[] = "root";
 
 static const UChar u_0 = 0x30;
 static const UChar u_sq = 0x27;
@@ -52,6 +53,17 @@ enum QuoteState {
   INSIDE_EMPTY,
   INSIDE_FULL
 };
+
+enum DataLocation {
+  LOCAL_LOC,
+  LATIN_LOC,
+  ROOT_LOC
+};
+
+static const int32_t ROOT = 1;
+static const int32_t NOT_ROOT = 2;
+static const int32_t ANY = 3;
+static const int32_t MUST = 1024;
 
 // CDFUnit represents a prefix-suffix pair for a particular variant
 // and log10 value.
@@ -139,7 +151,10 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
 static const CDFLocaleStyleData* extractDataByStyleEnum(const CDFLocaleData& data, UNumberCompactStyle style, UErrorCode& status);
 static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& status);
 static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UErrorCode& status);
-static void initCDFLocaleStyleData(const UResourceBundle* localeBundle, const char* numberingSystem, const char* style, CDFLocaleStyleData* result, UErrorCode& status);
+static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, int32_t flags, UErrorCode& status);
+static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const char* path, UResourceBundle** fillIn, int32_t flags, UErrorCode& status);
+static UBool assertRbLocale(const UResourceBundle* rb, int32_t flags, UErrorCode& status);
+static void initCDFLocaleStyleData(const UResourceBundle* decimalFormatBundle, CDFLocaleStyleData* result, UErrorCode& status);
 static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyleData* result, UErrorCode& status);
 static int32_t populatePrefixSuffix(const char* variant, int32_t log10Value, const UChar* formatStr, int32_t formatStrLen, UHashtable* result, UErrorCode& status);
 static UBool onlySpaces(UnicodeString u);
@@ -477,11 +492,15 @@ static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& stat
 
 // initCDFLocaleData initializes result with data from CLDR.
 // inLocale is the locale, the CLDR data is stored in result.
-// First it will try to load data using locale specific numbering system
-// for styles UNUM_SHORT and UNUM_LONG. If that fails for a particular style,
-// it falls back to the latn numbering system for that style. If UNUM_LONG
-// data cannot be loaded, it is marked bogus in result; if UNUM_SHORT
-// data cannot be loaded, that is a failure.
+// First we load the UNUM_SHORT data looking first in local numbering
+// system and not including root locale in fallback. Next we try in the latn
+// numbering system where we fallback all the way to root. So we find the
+// short data in one of 3 places: the local numbering system, the latn
+// numbering system non root, latn numbering system root locale.
+// Next we look for the UNUM_LONG data in the same way except that if we don't
+// find the UNUM_LONG data before we get to where we found the UNUM_SHORT data
+// we mark our UNUM_LONG data bogus so that it will fallback to what we have
+// for UNUM_SHORT.
 static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UErrorCode& status) {
   LocalPointer<NumberingSystem> ns(NumberingSystem::createInstance(inLocale, status));
   if (U_FAILURE(status)) {
@@ -494,62 +513,190 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
     ures_close(rb);
     return;
   }
-  UErrorCode ec = U_ZERO_ERROR;
-  initCDFLocaleStyleData(
-      rb, numberingSystemName, gPatternsLong, &result->longData, ec);
-  if (U_FAILURE(ec)) {
-    result->longData.setToBogus();
+  DataLocation shortLocation;
+  UResourceBundle* localResource = NULL;
+  UResourceBundle* latnResource = NULL;
+  UResourceBundle* dataFillIn = NULL;
+  UResourceBundle* data = NULL;
+  // Look in local numbering system first for UNUM_SHORT if it is not latn
+  if (uprv_strcmp(numberingSystemName, gLatnTag) != 0) {
+    localResource = tryGetByKeyWithFallback(rb, numberingSystemName, NULL, NOT_ROOT, status);
+    data = tryGetDecimalFallback(localResource, gPatternsShort, &dataFillIn, NOT_ROOT, status);
+    if (data) {
+      shortLocation = LOCAL_LOC;
+    }
   }
-  initCDFLocaleStyleData(
-      rb, numberingSystemName, gPatternsShort, &result->shortData, status);
-  ures_close(rb);
+  // If we haven't found UNUM_SHORT look in latn numbering system. We must
+  // succeed at finding UNUM_SHORT here.
+  if (!data) {
+    latnResource = tryGetByKeyWithFallback(rb, gLatnTag, NULL, ANY | MUST, status);
+    data = tryGetDecimalFallback(latnResource, gPatternsShort, &dataFillIn, ANY | MUST, status);
+    if (data) {
+      shortLocation = assertRbLocale(data, NOT_ROOT, status) ? LATIN_LOC : ROOT_LOC;
+    }
+  }
+  initCDFLocaleStyleData(data, &result->shortData, status);
   if (U_FAILURE(status)) {
-    return;
-  }
-}
-
-// initCDFLocaleStyleData loads formatting data for a numbering system
-// and style from CLDR.
-// bundle is the resouce for the locale; style is the style: gPatternsShort
-// or gPatternsLong. Loaded data stored in result.
-static void initCDFLocaleStyleData(const UResourceBundle* numberElementsBundle, const char* numberingSystem, const char* style, CDFLocaleStyleData* result, UErrorCode& status) {
-  if (U_FAILURE(status)) {
-    return;
-  }
-  UErrorCode ec = U_ZERO_ERROR;
-  UResourceBundle* rb = ures_getByKeyWithFallback(numberElementsBundle, numberingSystem, NULL, &ec);
-  rb = ures_getByKeyWithFallback(rb, style, rb, &ec);
-  rb = ures_getByKeyWithFallback(rb, gDecimalFormatTag, rb, &ec);
-  if (ec == U_MISSING_RESOURCE_ERROR && uprv_strcmp(numberingSystem, gLatnTag) != 0) {
-    rb = ures_getByKeyWithFallback(numberElementsBundle, gLatnTag, rb, &status);
-    rb = ures_getByKeyWithFallback(rb, style, rb, &status);
-    rb = ures_getByKeyWithFallback(rb, gDecimalFormatTag, rb, &status);
-  } else {
-    status = ec;
-  }
-  if (U_FAILURE(status)) {
+    ures_close(dataFillIn);
+    ures_close(latnResource);
+    ures_close(localResource);
     ures_close(rb);
     return;
   }
+  data = NULL;
+
+  // Look for UNUM_LONG data in local numbering system first.
+  data = tryGetDecimalFallback(localResource, gPatternsLong, &dataFillIn, NOT_ROOT, status);
+
+  // If we haven't found UNUM_LONG and we found the UNUM_SHORT data in the latn
+  // Numbering system, continue. If we find UNUM_LONG in the latin numbering
+  // system, we have to be sure that we didn't find it after where we found
+  // UNUM_SHORT.
+  if (data == NULL && shortLocation > LOCAL_LOC) {
+    data = tryGetDecimalFallback(latnResource, gPatternsLong, &dataFillIn, ANY, status);
+    if (data) {
+      if (shortLocation == LATIN_LOC && assertRbLocale(data, ROOT, status)) {
+        data = NULL;
+      }
+    }
+  }
+  if (data == NULL) {
+    result->longData.setToBogus();
+  } else {
+    initCDFLocaleStyleData(data, &result->longData, status);
+  }
+  ures_close(dataFillIn);
+  ures_close(latnResource);
+  ures_close(localResource);
+  ures_close(rb);
+}
+
+/**
+ * tryGetDecimalFallback attempts to fetch the "decimalFormat" resource bundle
+ * with a particular style. style is this style either "patternsShort" or
+ * "patternsLong" fillIn, flags, and status work in the same way as in
+ * tryGetByKeyWithFallback.
+ */
+static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, int32_t flags, UErrorCode& status) {
+  UResourceBundle* first = tryGetByKeyWithFallback(numberSystemResource, style, fillIn, flags, status);
+  UResourceBundle* second = tryGetByKeyWithFallback(first, gDecimalFormatTag, fillIn, flags, status);
+  if (fillIn == NULL) {
+    ures_close(first);
+  }
+  return second;
+}
+
+// tryGetByKeyWithFallback returns a sub-resource bundle that matches given
+// criteria or NULL if none found. rb is the resource bundle that we are
+// searching. If rb == NULL then this function behaves as if no sub-resource
+// is found; path is the key of the sub-resource,
+// (i.e "foo" but not "foo/bar"); If fillIn is NULL, caller must always call
+// ures_close() on returned resource. See below for example when fillIn is
+// not NULL. flags is any combination of ROOT, NOT_ROOT, ANY, MUST ored
+// together. The locale of the returned sub-resource will either match the
+// flags or the returned sub-resouce will be NULL. If MUST is included in
+// flags, and not suitable sub-resource is found then in addition to returning
+// NULL, this function also sets status to U_MISSING_RESOURCE_ERROR. If MUST
+// is not included in flags, then this function just returns NULL if no
+// such sub-resource is found and will never set status to
+// U_MISSING_RESOURCE_ERROR.
+//
+// Example: This code first searches for "foo/bar" sub-resource without falling
+// back to ROOT. Then searches for "baz" sub-resource as last resort.
+//
+// UResourcebundle* fillIn = NULL;
+// UResourceBundle* data = tryGetByKeyWithFallback(rb, "foo", &fillIn, NON_ROOT, status);
+// data = tryGetByKeyWithFallback(data, "bar", &fillIn, NON_ROOT, status);
+// if (!data) {
+//   data = tryGetbyKeyWithFallback(rb, "baz", &fillIn, ANY | MUST,  status);
+// }
+// if (U_FAILURE(status)) {
+//   ures_close(fillIn);
+//   return;
+// }
+// doStuffWithNonNullSubresource(data);
+//
+// /* Wrong! don't do the following as it can leak memory if fillIn gets set
+// to NULL. */
+// fillIn = tryGetByKeyWithFallback(rb, "wrong", &fillIn, ANY, status);
+//
+// ures_close(fillIn);
+// 
+static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const char* path, UResourceBundle** fillIn, int32_t flags, UErrorCode& status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  if (rb == NULL) {
+    if (flags & MUST) {
+      status = U_MISSING_RESOURCE_ERROR;
+    }
+    return NULL;
+  }
+  UResourceBundle* result = NULL;
+  UResourceBundle* ownedByUs = NULL;
+  if (fillIn == NULL) {
+    ownedByUs = ures_getByKeyWithFallback(rb, path, NULL, &status);
+    result = ownedByUs;
+  } else {
+    *fillIn = ures_getByKeyWithFallback(rb, path, *fillIn, &status);
+    result = *fillIn;
+  }
+  if (U_FAILURE(status)) {
+    ures_close(ownedByUs);
+    if (status == U_MISSING_RESOURCE_ERROR && !(flags & MUST)) {
+      status = U_ZERO_ERROR;
+    }
+    return NULL;
+  }
+  if (!assertRbLocale(result, flags, status)) {
+    ures_close(ownedByUs);
+    if (!U_FAILURE(status) && (flags & MUST)) {
+      status = U_MISSING_RESOURCE_ERROR;
+    }
+    return NULL;
+  }
+  return result;
+}
+
+
+// assertRbLocale returns TRUE if rb's locale matches flags. flags are ROOT,
+// NON_ROOT, or ANY.
+static UBool assertRbLocale(const UResourceBundle* rb, int32_t flags, UErrorCode& status) {
+  const char* locale = ures_getLocaleByType(rb, ULOC_ACTUAL_LOCALE, &status);
+  if (U_FAILURE(status)) {
+    return FALSE;
+  }
+  if (uprv_strcmp(locale, gRoot) == 0) {
+    return (ROOT & flags) != 0;
+  } else {
+    return (NOT_ROOT & flags) != 0;
+  }
+}
+
+
+// initCDFLocaleStyleData loads formatting data for a particular style.
+// decimalFormatBundle is the "decimalFormat" resource bundle in CLDR.
+// Loaded data stored in result.
+static void initCDFLocaleStyleData(const UResourceBundle* decimalFormatBundle, CDFLocaleStyleData* result, UErrorCode& status) {
+  if (U_FAILURE(status)) {
+    return;
+  }
   // Iterate through all the powers of 10.
-  int32_t size = ures_getSize(rb);
+  int32_t size = ures_getSize(decimalFormatBundle);
   UResourceBundle* power10 = NULL;
   for (int32_t i = 0; i < size; ++i) {
-    power10 = ures_getByIndex(rb, i, power10, &status);
+    power10 = ures_getByIndex(decimalFormatBundle, i, power10, &status);
     if (U_FAILURE(status)) {
       ures_close(power10);
-      ures_close(rb);
       return;
     }
     populatePower10(power10, result, status);
     if (U_FAILURE(status)) {
       ures_close(power10);
-      ures_close(rb);
       return;
     }
   }
   ures_close(power10);
-  ures_close(rb);
   fillInMissing(result);
 }
 
