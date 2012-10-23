@@ -60,10 +60,9 @@ enum DataLocation {
   ROOT_LOC
 };
 
-static const int32_t ROOT = 1;
+static const int32_t ANY = 0;
+static const int32_t MUST = 1;
 static const int32_t NOT_ROOT = 2;
-static const int32_t ANY = 3;
-static const int32_t MUST = 1024;
 
 // CDFUnit represents a prefix-suffix pair for a particular variant
 // and log10 value.
@@ -555,7 +554,7 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
   if (data == NULL && shortLocation > LOCAL_LOC) {
     data = tryGetDecimalFallback(latnResource, gPatternsLong, &dataFillIn, ANY, status);
     if (data) {
-      if (shortLocation == LATIN_LOC && assertRbLocale(data, ROOT, status)) {
+      if (shortLocation == LATIN_LOC && !assertRbLocale(data, NOT_ROOT, status)) {
         data = NULL;
       }
     }
@@ -592,7 +591,7 @@ static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSyste
 // is found; path is the key of the sub-resource,
 // (i.e "foo" but not "foo/bar"); If fillIn is NULL, caller must always call
 // ures_close() on returned resource. See below for example when fillIn is
-// not NULL. flags is any combination of ROOT, NOT_ROOT, ANY, MUST ored
+// not NULL. flags is any combination of NOT_ROOT, ANY, MUST ored
 // together. The locale of the returned sub-resource will either match the
 // flags or the returned sub-resouce will be NULL. If MUST is included in
 // flags, and not suitable sub-resource is found then in addition to returning
@@ -659,18 +658,17 @@ static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const
 }
 
 
-// assertRbLocale returns TRUE if rb's locale matches flags. flags are ROOT,
-// NON_ROOT, or ANY.
+// assertRbLocale returns TRUE if rb's locale matches flags. flags are
+// NON_ROOT or ANY.
 static UBool assertRbLocale(const UResourceBundle* rb, int32_t flags, UErrorCode& status) {
   const char* locale = ures_getLocaleByType(rb, ULOC_ACTUAL_LOCALE, &status);
   if (U_FAILURE(status)) {
     return FALSE;
   }
   if (uprv_strcmp(locale, gRoot) == 0) {
-    return (ROOT & flags) != 0;
-  } else {
-    return (NOT_ROOT & flags) != 0;
+    return (NOT_ROOT & flags) == 0;
   }
+  return TRUE;
 }
 
 
