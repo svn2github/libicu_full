@@ -63,6 +63,7 @@ enum DataLocation {
 static const int32_t ANY = 0;
 static const int32_t MUST = 1;
 static const int32_t NOT_ROOT = 2;
+// Next one will be 6.
 
 // CDFUnit represents a prefix-suffix pair for a particular variant
 // and log10 value.
@@ -528,8 +529,8 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
   // If we haven't found UNUM_SHORT look in latn numbering system. We must
   // succeed at finding UNUM_SHORT here.
   if (!data) {
-    latnResource = tryGetByKeyWithFallback(rb, gLatnTag, NULL, ANY | MUST, status);
-    data = tryGetDecimalFallback(latnResource, gPatternsShort, &dataFillIn, ANY | MUST, status);
+    latnResource = tryGetByKeyWithFallback(rb, gLatnTag, NULL, MUST, status);
+    data = tryGetDecimalFallback(latnResource, gPatternsShort, &dataFillIn, MUST, status);
     if (data) {
       shortLocation = assertRbLocale(data, NOT_ROOT, status) ? LATIN_LOC : ROOT_LOC;
     }
@@ -591,8 +592,9 @@ static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSyste
 // is found; path is the key of the sub-resource,
 // (i.e "foo" but not "foo/bar"); If fillIn is NULL, caller must always call
 // ures_close() on returned resource. See below for example when fillIn is
-// not NULL. flags is any combination of NOT_ROOT, ANY, MUST ored
-// together. The locale of the returned sub-resource will either match the
+// not NULL. flags is ANY or NOT_ROOT. Optionally, these values
+// can be ored with MUST. MUST by itself is the same as ANY | MUST.
+// The locale of the returned sub-resource will either match the
 // flags or the returned sub-resouce will be NULL. If MUST is included in
 // flags, and not suitable sub-resource is found then in addition to returning
 // NULL, this function also sets status to U_MISSING_RESOURCE_ERROR. If MUST
@@ -607,7 +609,7 @@ static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSyste
 // UResourceBundle* data = tryGetByKeyWithFallback(rb, "foo", &fillIn, NON_ROOT, status);
 // data = tryGetByKeyWithFallback(data, "bar", &fillIn, NON_ROOT, status);
 // if (!data) {
-//   data = tryGetbyKeyWithFallback(rb, "baz", &fillIn, ANY | MUST,  status);
+//   data = tryGetbyKeyWithFallback(rb, "baz", &fillIn, MUST,  status);
 // }
 // if (U_FAILURE(status)) {
 //   ures_close(fillIn);
@@ -661,14 +663,22 @@ static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const
 // assertRbLocale returns TRUE if rb's locale matches flags. flags are
 // NON_ROOT or ANY.
 static UBool assertRbLocale(const UResourceBundle* rb, int32_t flags, UErrorCode& status) {
-  const char* locale = ures_getLocaleByType(rb, ULOC_ACTUAL_LOCALE, &status);
-  if (U_FAILURE(status)) {
-    return FALSE;
+  const char* actualLocale;
+  // Clear MUST bit.
+  flags &= ~MUST;
+  switch (flags) {
+    case NOT_ROOT:
+      actualLocale = ures_getLocaleByType(rb, ULOC_ACTUAL_LOCALE, &status);
+      if (U_FAILURE(status)) {
+        return FALSE;
+      }
+      return uprv_strcmp(actualLocale, gRoot) != 0;
+    case ANY:
+      return TRUE;
+    default:
+      status = U_ILLEGAL_ARGUMENT_ERROR;
+      return FALSE;
   }
-  if (uprv_strcmp(locale, gRoot) == 0) {
-    return (NOT_ROOT & flags) == 0;
-  }
-  return TRUE;
 }
 
 
