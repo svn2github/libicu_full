@@ -445,7 +445,7 @@ void TestMessageFormat::TestTurkishCasing()
     }
 
     const UnicodeString expected(
-            "At 12:20:00 on 08.08.1997, there was a disturbance in the Force on planet 7.", "");
+            "At 12:20:00 on 8.08.1997, there was a disturbance in the Force on planet 7.", "");
     if (result != expected) {
         errln("TestTurkishCasing failed on test");
         errln( UnicodeString("     Result: ") + result );
@@ -1797,7 +1797,7 @@ void TestMessageFormat::testCoverage(void) {
 void TestMessageFormat::testGetFormatNames() {
     IcuTestErrorCode errorCode(*this, "testGetFormatNames");
     MessageFormat msgfmt("Hello, {alice,number} {oops,date,full}  {zip,spellout} World.", Locale::getRoot(), errorCode);
-    if(errorCode.logIfFailureAndReset("MessageFormat() failed")) {
+    if(errorCode.logDataIfFailureAndReset("MessageFormat() failed")) {
         return;
     }
     LocalPointer<StringEnumeration> names(msgfmt.getFormatNames(errorCode));
