@@ -68,6 +68,7 @@ isCurrencyPreEuro(const char* currencyKey){
     }
     return FALSE;
 }
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
 static void
 TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
                        UResourceBundle *currentBundle, const char *locale) {
@@ -441,7 +442,7 @@ TestKeyInRootRecursive(UResourceBundle *root, const char *rootName,
         ures_close(subBundle);
     }
 }
-
+#endif
 
 static void
 testLCID(UResourceBundle *currentBundle,
@@ -482,6 +483,7 @@ testLCID(UResourceBundle *currentBundle,
     }
 }
 
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
 static void
 TestLocaleStructure(void) {
     UResourceBundle *root, *currentLocale;
@@ -563,6 +565,7 @@ TestLocaleStructure(void) {
 
     ures_close(root);
 }
+#endif
 
 static void
 compareArrays(const char *keyName,
@@ -934,7 +937,7 @@ static void VerifyTranslation(void) {
             if (U_FAILURE(errorCode)) {
                 log_err("error uloc_getDisplayCountry returned %s\n", u_errorName(errorCode));
             }
-            else if (uprv_strstr(currLoc, "ti_") != currLoc || isICUVersionAtLeast(50, 1, 0)) { /* TODO: restore DisplayCountry test for ti_* when cldrbug 3058 is fixed) */
+            else if (uprv_strstr(currLoc, "ti_") != currLoc || isICUVersionAtLeast(51, 0, 0)) { /* TODO: restore DisplayCountry test for ti_* when cldrbug 3058 is fixed) */
               strIdx = findStringSetMismatch(currLoc, langBuffer, langSize, exemplarCharacters, exemplarLen, FALSE, &badChar);
                 if (strIdx >= 0) {
                     log_err("getDisplayCountry(%s) at index %d returned characters not in the exemplar characters: %04X.\n",
@@ -1269,6 +1272,7 @@ static void TestIndexChars(void) {
 
 
 
+#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
 static void TestCurrencyList(void){
 #if !UCONFIG_NO_FORMATTING
     UErrorCode errorCode = U_ZERO_ERROR;
@@ -1303,6 +1307,7 @@ static void TestCurrencyList(void){
     uenum_close(en);
 #endif
 }
+#endif
 
 static void TestAvailableIsoCodes(void){
 #if !UCONFIG_NO_FORMATTING

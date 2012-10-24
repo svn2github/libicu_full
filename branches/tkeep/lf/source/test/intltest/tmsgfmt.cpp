@@ -21,6 +21,7 @@
 
 #include "unicode/format.h"
 #include "unicode/decimfmt.h"
+#include "unicode/localpointer.h"
 #include "unicode/locid.h"
 #include "unicode/msgfmt.h"
 #include "unicode/numfmt.h"
@@ -63,6 +64,7 @@ TestMessageFormat::runIndexedTest(int32_t index, UBool exec,
     TESTCASE_AUTO(TestApostropheMode);
     TESTCASE_AUTO(TestCompatibleApostrophe);
     TESTCASE_AUTO(testCoverage);
+    TESTCASE_AUTO(testGetFormatNames);
     TESTCASE_AUTO(TestTrimArgumentName);
     TESTCASE_AUTO(TestSelectOrdinal);
     TESTCASE_AUTO_END;
@@ -443,7 +445,7 @@ void TestMessageFormat::TestTurkishCasing()
     }
 
     const UnicodeString expected(
-            "At 12:20:00 on 08.08.1997, there was a disturbance in the Force on planet 7.", "");
+            "At 12:20:00 on 8.08.1997, there was a disturbance in the Force on planet 7.", "");
     if (result != expected) {
         errln("TestTurkishCasing failed on test");
         errln( UnicodeString("     Result: ") + result );
@@ -1790,6 +1792,51 @@ void TestMessageFormat::testCoverage(void) {
 
     delete en;
     delete msgfmt;
+}
+
+void TestMessageFormat::testGetFormatNames() {
+    IcuTestErrorCode errorCode(*this, "testGetFormatNames");
+    MessageFormat msgfmt("Hello, {alice,number} {oops,date,full}  {zip,spellout} World.", Locale::getRoot(), errorCode);
+    if(errorCode.logDataIfFailureAndReset("MessageFormat() failed")) {
+        return;
+    }
+    LocalPointer<StringEnumeration> names(msgfmt.getFormatNames(errorCode));
+    if(errorCode.logIfFailureAndReset("msgfmt.getFormatNames() failed")) {
+        return;
+    }
+    const UnicodeString *name;
+    name = names->snext(errorCode);
+    if (name == NULL || errorCode.isFailure()) {
+        errln("msgfmt.getFormatNames()[0] failed: %s", errorCode.errorName());
+        errorCode.reset();
+        return;
+    }
+    if (!assertEquals("msgfmt.getFormatNames()[0]", UNICODE_STRING_SIMPLE("alice"), *name)) {
+        return;
+    }
+    name = names->snext(errorCode);
+    if (name == NULL || errorCode.isFailure()) {
+        errln("msgfmt.getFormatNames()[1] failed: %s", errorCode.errorName());
+        errorCode.reset();
+        return;
+    }
+    if (!assertEquals("msgfmt.getFormatNames()[1]", UNICODE_STRING_SIMPLE("oops"), *name)) {
+        return;
+    }
+    name = names->snext(errorCode);
+    if (name == NULL || errorCode.isFailure()) {
+        errln("msgfmt.getFormatNames()[2] failed: %s", errorCode.errorName());
+        errorCode.reset();
+        return;
+    }
+    if (!assertEquals("msgfmt.getFormatNames()[2]", UNICODE_STRING_SIMPLE("zip"), *name)) {
+        return;
+    }
+    name = names->snext(errorCode);
+    if (name != NULL) {
+        errln(UnicodeString("msgfmt.getFormatNames()[3] should be NULL but is: ") + *name);
+        return;
+    }
 }
 
 void TestMessageFormat::TestTrimArgumentName() {

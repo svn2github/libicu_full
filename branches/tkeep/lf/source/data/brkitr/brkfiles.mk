@@ -1,6 +1,6 @@
 # *   Copyright (C) 1998-2012, International Business Machines
 # *   Corporation and others.  All Rights Reserved.
-BRK_RES_CLDR_VERSION = 22.0
+BRK_RES_CLDR_VERSION = 22.1
 # A list of txt's to build
 # Note:
 #
@@ -43,5 +43,5 @@ BRK_SOURCE = char.txt line.txt line_fi.txt line_ja.txt sent.txt sent_el.txt titl
 
 # Ordinary resources
 BRK_RES_SOURCE = el.txt en.txt en_US.txt en_US_POSIX.txt\
- fi.txt
+ fi.txt ja.txt
 

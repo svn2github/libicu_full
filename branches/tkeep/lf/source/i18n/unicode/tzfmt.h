@@ -141,8 +141,6 @@ typedef enum UTimeZoneFormatParseOption {
 
 U_CDECL_END
 
-typedef void *UMTX;
-
 U_NAMESPACE_BEGIN
 
 class TimeZoneGenericNames;
@@ -377,6 +375,8 @@ public:
      */
     UnicodeString& formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const;
 
+    using Format::format;
+
     /**
      * Returns the display name of the time zone at the given date for the style.
      * @param style The style (e.g. <code>UTZFMT_STYLE_GENERIC_LONG</code>, <code>UTZFMT_STYLE_LOCALIZED_GMT</code>...)
@@ -528,9 +528,6 @@ protected:
     TimeZoneFormat(const Locale& locale, UErrorCode& status);
 
 private:
-    /* mutex */
-    UMTX fLock;
-
     /* Locale of this object */
     Locale fLocale;
 
