@@ -153,7 +153,7 @@ static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& stat
 static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UErrorCode& status);
 static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, int32_t flags, UErrorCode& status);
 static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const char* path, UResourceBundle** fillIn, int32_t flags, UErrorCode& status);
-static UBool assertRbLocale(const UResourceBundle* rb, int32_t flags, UErrorCode& status);
+static UBool isRoot(const UResourceBundle* rb, UErrorCode& status);
 static void initCDFLocaleStyleData(const UResourceBundle* decimalFormatBundle, CDFLocaleStyleData* result, UErrorCode& status);
 static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyleData* result, UErrorCode& status);
 static int32_t populatePrefixSuffix(const char* variant, int32_t log10Value, const UChar* formatStr, int32_t formatStrLen, UHashtable* result, UErrorCode& status);
@@ -513,27 +513,23 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
     ures_close(rb);
     return;
   }
-  DataLocation shortLocation;
   UResourceBundle* localResource = NULL;
   UResourceBundle* latnResource = NULL;
   UResourceBundle* dataFillIn = NULL;
   UResourceBundle* data = NULL;
+
   // Look in local numbering system first for UNUM_SHORT if it is not latn
+  DataLocation shortLocation = LOCAL_LOC;
   if (uprv_strcmp(numberingSystemName, gLatnTag) != 0) {
     localResource = tryGetByKeyWithFallback(rb, numberingSystemName, NULL, NOT_ROOT, status);
     data = tryGetDecimalFallback(localResource, gPatternsShort, &dataFillIn, NOT_ROOT, status);
-    if (data) {
-      shortLocation = LOCAL_LOC;
-    }
   }
   // If we haven't found UNUM_SHORT look in latn numbering system. We must
   // succeed at finding UNUM_SHORT here.
   if (!data) {
     latnResource = tryGetByKeyWithFallback(rb, gLatnTag, NULL, MUST, status);
     data = tryGetDecimalFallback(latnResource, gPatternsShort, &dataFillIn, MUST, status);
-    if (data) {
-      shortLocation = assertRbLocale(data, NOT_ROOT, status) ? LATIN_LOC : ROOT_LOC;
-    }
+    shortLocation = isRoot(data, status) ? ROOT_LOC : LATIN_LOC;
   }
   initCDFLocaleStyleData(data, &result->shortData, status);
   if (U_FAILURE(status)) {
@@ -552,10 +548,10 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
   // Numbering system, continue. If we find UNUM_LONG in the latin numbering
   // system, we have to be sure that we didn't find it after where we found
   // UNUM_SHORT.
-  if (data == NULL && shortLocation > LOCAL_LOC) {
+  if (data == NULL && shortLocation != LOCAL_LOC) {
     data = tryGetDecimalFallback(latnResource, gPatternsLong, &dataFillIn, ANY, status);
     if (data) {
-      if (shortLocation == LATIN_LOC && !assertRbLocale(data, NOT_ROOT, status)) {
+      if (shortLocation == LATIN_LOC && isRoot(data, status)) {
         data = NULL;
       }
     }
@@ -627,8 +623,9 @@ static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const
   if (U_FAILURE(status)) {
     return NULL;
   }
+  UBool must = (flags & MUST);
   if (rb == NULL) {
-    if (flags & MUST) {
+    if (must) {
       status = U_MISSING_RESOURCE_ERROR;
     }
     return NULL;
@@ -644,41 +641,41 @@ static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const
   }
   if (U_FAILURE(status)) {
     ures_close(ownedByUs);
-    if (status == U_MISSING_RESOURCE_ERROR && !(flags & MUST)) {
+    if (status == U_MISSING_RESOURCE_ERROR && !must) {
       status = U_ZERO_ERROR;
     }
     return NULL;
   }
-  if (!assertRbLocale(result, flags, status)) {
-    ures_close(ownedByUs);
-    if (!U_FAILURE(status) && (flags & MUST)) {
-      status = U_MISSING_RESOURCE_ERROR;
-    }
-    return NULL;
-  }
-  return result;
-}
-
-
-// assertRbLocale returns TRUE if rb's locale matches flags. flags are
-// NON_ROOT or ANY.
-static UBool assertRbLocale(const UResourceBundle* rb, int32_t flags, UErrorCode& status) {
-  const char* actualLocale;
-  // Clear MUST bit.
   flags &= ~MUST;
   switch (flags) {
     case NOT_ROOT:
-      actualLocale = ures_getLocaleByType(rb, ULOC_ACTUAL_LOCALE, &status);
-      if (U_FAILURE(status)) {
-        return FALSE;
+      {
+        UBool bRoot = isRoot(result, status);
+        if (bRoot || U_FAILURE(status)) {
+          ures_close(ownedByUs);
+          if (must && (status == U_ZERO_ERROR)) {
+            status = U_MISSING_RESOURCE_ERROR;
+          }
+          return NULL;
+        }
+        return result;
       }
-      return uprv_strcmp(actualLocale, gRoot) != 0;
     case ANY:
-      return TRUE;
+      return result;
     default:
+      ures_close(ownedByUs);
       status = U_ILLEGAL_ARGUMENT_ERROR;
-      return FALSE;
+      return NULL;
   }
+}
+
+static UBool isRoot(const UResourceBundle* rb, UErrorCode& status) {
+  const char* actualLocale = ures_getLocaleByType(
+      rb, ULOC_ACTUAL_LOCALE, &status);
+  if (U_FAILURE(status)) {
+    return FALSE;
+  }
+  return uprv_strcmp(actualLocale, gRoot) == 0;
 }
 
 
