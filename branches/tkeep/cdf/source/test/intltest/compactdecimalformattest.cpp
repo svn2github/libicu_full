@@ -132,9 +132,9 @@ static ExpectedResult kCsShort[] = {
   {127123456789012, "130\\u00a0bil."}};
 
 static ExpectedResult kSkLong[] = {
-  {1000, "1000"},
-  {1572, "1600"},
-  {5184, "5200"}};
+  {1000, "1 tis\\u00edc"},
+  {1572, "1,6 tis\\u00edc"},
+  {5184, "5,2 tis\\u00edc"}};
 
 static ExpectedResult kSwahiliShortNegative[] = {
   {-1234, "elfu\\u00a0-1.2"},
