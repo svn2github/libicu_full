@@ -57,6 +57,29 @@ void ListFormatterTest::CheckFourCases(const char* locale_string, UnicodeString 
     delete formatter;
 }
 
+UBool ListFormatterTest::RecordFourCases(const Locale& locale, UnicodeString one, UnicodeString two,
+        UnicodeString three, UnicodeString four, UnicodeString results[4])  {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    ListFormatter* formatter = ListFormatter::createInstance(locale, errorCode);
+    if (formatter == NULL ||  U_FAILURE(errorCode)) {
+        errln("Allocation problem in RecordFourCases\n");
+        return FALSE;
+    }
+    UnicodeString input1[] = {one};
+    formatter->format(input1, 1, results[0], errorCode);
+    UnicodeString input2[] = {one, two};
+    formatter->format(input2, 2, results[1], errorCode);
+    UnicodeString input3[] = {one, two, three};
+    formatter->format(input3, 3, results[2], errorCode);
+    UnicodeString input4[] = {one, two, three, four};
+    formatter->format(input4, 4, results[3], errorCode);
+    delete formatter;
+    if (U_FAILURE(errorCode)) {
+        errln("Got non-zero error code in RecordFourCases\n");
+        return FALSE;
+    }
+    return TRUE;
+}
 
 void ListFormatterTest::TestLocaleFallback() {
     const char* testData[][4] = {
@@ -97,14 +120,10 @@ void ListFormatterTest::TestRoot() {
 
 // Bogus locale should fallback to root.
 void ListFormatterTest::TestBogus() {
-    UnicodeString results[4] = {
-        one,
-        one + ", " + two,
-        one + ", " + two + ", " + three,
-        one + ", " + two + ", " + three + ", " + four
-    };
-
-    CheckFourCases("ex_PY", one, two, three, four, results);
+    UnicodeString results[4];
+    if (RecordFourCases(Locale::getDefault(), one, two, three, four, results)) {
+      CheckFourCases("ex_PY", one, two, three, four, results);
+    }
 }
 
 // Formatting in English.

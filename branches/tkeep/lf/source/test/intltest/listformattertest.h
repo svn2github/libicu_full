@@ -46,6 +46,13 @@ class ListFormatterTest : public IntlTest {
         UnicodeString three,
         UnicodeString four,
         UnicodeString results[4]);
+    UBool RecordFourCases(
+        const Locale& locale,
+        UnicodeString one,
+        UnicodeString two,
+        UnicodeString three,
+        UnicodeString four,
+        UnicodeString results[4]);
 
   private:
     // Reused test data.

@@ -63,30 +63,6 @@ void ListFormatter::initializeHash(UErrorCode& errorCode) {
 
 }
 
-void ListFormatter::addDataToHash(
-    const char* locale,
-    const char* two,
-    const char* start,
-    const char* middle,
-    const char* end,
-    UErrorCode& errorCode) {
-    if (U_FAILURE(errorCode)) {
-        return;
-    }
-    UnicodeString key(locale, -1, US_INV);
-    ListFormatData* value = new ListFormatData(
-        UnicodeString(two, -1, US_INV).unescape(),
-        UnicodeString(start, -1, US_INV).unescape(),
-        UnicodeString(middle, -1, US_INV).unescape(),
-        UnicodeString(end, -1, US_INV).unescape());
-
-    if (value == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    listPatternHash->put(key, value, errorCode);
-}
-
 const ListFormatData* ListFormatter::getListFormatData(
         const Locale& locale, UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
@@ -127,8 +103,6 @@ const ListFormatData* ListFormatter::getListFormatData(
     }
     return result;
 }
-
-#define ADD(locale, two, start, mid, end, err) if (uprv_strcmp(locale, name) == 0) return new ListFormatData(UnicodeString(two, -1, US_INV).unescape(), UnicodeString(start, -1, US_INV).unescape(), UnicodeString(mid, -1, US_INV).unescape(), UnicodeString(end, -1, US_INV).unescape())
 
 static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& errorCode) {
     UResourceBundle* rb = ures_open(NULL, locale.getName(), &errorCode);
@@ -175,30 +149,16 @@ ListFormatter* ListFormatter::createInstance(UErrorCode& errorCode) {
 
 ListFormatter* ListFormatter::createInstance(const Locale& locale, UErrorCode& errorCode) {
     Locale tempLocale = locale;
-    for (;;) {
-        const ListFormatData* listFormatData = getListFormatData(tempLocale, errorCode);
-        if (U_FAILURE(errorCode)) {
-            return NULL;
-        }
-        if (listFormatData != NULL) {
-            ListFormatter* p = new ListFormatter(*listFormatData);
-            if (p == NULL) {
-                errorCode = U_MEMORY_ALLOCATION_ERROR;
-                return NULL;
-            }
-            return p;
-        }
-        errorCode = U_ZERO_ERROR;
-        Locale correctLocale;
-        getFallbackLocale(tempLocale, correctLocale, errorCode);
-        if (U_FAILURE(errorCode)) {
-            return NULL;
-        }
-        if (correctLocale.isBogus()) {
-            return createInstance(Locale::getRoot(), errorCode);
-        }
-        tempLocale = correctLocale;
+    const ListFormatData* listFormatData = getListFormatData(tempLocale, errorCode);
+    if (U_FAILURE(errorCode)) {
+        return NULL;
     }
+    ListFormatter* p = new ListFormatter(*listFormatData);
+    if (p == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    return p;
 }
 
 ListFormatter::ListFormatter(const ListFormatData& listFormatterData) : data(listFormatterData) {

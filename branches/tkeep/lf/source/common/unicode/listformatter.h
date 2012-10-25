@@ -115,7 +115,6 @@ class U_COMMON_API ListFormatter : public UObject{
 
   private:
     static void initializeHash(UErrorCode& errorCode);
-    static void addDataToHash(const char* locale, const char* two, const char* start, const char* middle, const char* end, UErrorCode& errorCode);
     static const ListFormatData* getListFormatData(const Locale& locale, UErrorCode& errorCode);
 
     ListFormatter();
