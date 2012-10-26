@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1999-2011, International Business Machines
+*   Copyright (C) 1999-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -89,7 +89,7 @@
  *  This is used for GCC specific attributes
  * @internal
  */
-#if defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 2))
+#if U_GCC_MAJOR_MINOR >= 302
 #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
 /**
  * \def U_ATTRIBUTE_DEPRECATED
@@ -264,7 +264,7 @@ typedef int8_t UBool;
  * but allows direct string type compatibility with platforms with
  * 16-bit wchar_t types.
  *
- * @draft ICU 4.4
+ * @stable ICU 4.4
  */
 
 /* Define UChar to be compatible with char16_t or wchar_t if possible. */

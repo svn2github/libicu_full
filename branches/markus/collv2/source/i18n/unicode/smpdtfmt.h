@@ -34,6 +34,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/datefmt.h"
+#include "unicode/udisplaycontext.h"
 
 U_NAMESPACE_BEGIN
 
@@ -81,6 +82,7 @@ class TimeZoneFormat;
  * m        minute in hour          (Number)            30
  * s        second in minute        (Number)            55
  * S        fractional second       (Number)            978
+ *          (maximum resolution of SSS; truncated if shorter, zero-padded if longer)
  * E        day of week             (Text)              Tuesday
  * e        day of week (local 1~7) (Text & Number)     Tues & 2
  * D        day in year             (Number)            189
@@ -94,6 +96,7 @@ class TimeZoneFormat;
  * zzzz     time zone               (Text)              Pacific Standard Time
  * Z        time zone (RFC 822)     (Number)            -0800
  * ZZZZ     time zone (RFC 822)     (Text & Number)     GMT-08:00
+ * ZZZZZ    time zone (ISO 8601)    (Text & Number)     -08:00 & Z
  * v        time zone (generic)     (Text)              PT
  * vvvv     time zone (generic)     (Text)              Pacific Time
  * V        time zone (abreviation) (Text)              PST
@@ -187,8 +190,9 @@ class TimeZoneFormat;
  * <code>Unicode::isDigit()</code>, will be parsed into the default century.
  * Any other numeric string, such as a one digit string, a three or more digit
  * string, or a two digit string that isn't all digits (for example, "-1"), is
- * interpreted literally.  So "01/02/3" or "01/02/003" are parsed, using the
- * same pattern, as Jan 2, 3 AD.  Likewise, "01/02/-3" is parsed as Jan 2, 4 BC.
+ * interpreted literally.  So "01/02/3" or "01/02/003" are parsed (for the
+ * Gregorian calendar), using the same pattern, as Jan 2, 3 AD.  Likewise (but
+ * only in lenient parse mode, the default) "01/02/-3" is parsed as Jan 2, 4 BC.
  *
  * <p>
  * If the year pattern has more than two 'y' characters, the year is
@@ -548,7 +552,6 @@ public:
      * @param pos   On input, the position at which to start parsing; on
      *              output, the position at which parsing terminated, or the
      *              start position if the parse failed.
-     * @return      A valid UDate if the input could be parsed.
      * @stable ICU 2.1
      */
     virtual void parse( const UnicodeString& text,
@@ -772,6 +775,55 @@ public:
      */
     virtual void adoptCalendar(Calendar* calendarToAdopt);
 
+    /* Cannot use #ifndef U_HIDE_INTERNAL_API for the following draft method since it is virtual */
+    /**
+     * Set a particular UDisplayContext value in the formatter, such as
+     * UDISPCTX_CAPITALIZATION_FOR_STANDALONE.
+     * @param value The UDisplayContext value to set.
+     * @param status Input/output status. If at entry this indicates a failure
+     *               status, the function will do nothing; otherwise this will be
+     *               updated with any new status from the function. 
+     * @internal ICU 50 technology preview
+     */
+    virtual void setContext(UDisplayContext value, UErrorCode& status);
+
+    /* Cannot use #ifndef U_HIDE_INTERNAL_API for the following draft method since it is virtual */
+    /**
+     * Get the formatter's UDisplayContext value for the specified UDisplayContextType,
+     * such as UDISPCTX_TYPE_CAPITALIZATION.
+     * @param type The UDisplayContextType whose value to return
+     * @param status Input/output status. If at entry this indicates a failure
+     *               status, the function will do nothing; otherwise this will be
+     *               updated with any new status from the function. 
+     * @return The UDisplayContextValue for the specified type.
+     * @internal ICU 50 technology preview
+     */
+    virtual UDisplayContext getContext(UDisplayContextType type, UErrorCode& status) const;
+
+    /* Cannot use #ifndef U_HIDE_INTERNAL_API for the following methods since they are virtual */
+    /**
+     * Sets the TimeZoneFormat to be used by this date/time formatter.
+     * The caller should not delete the TimeZoneFormat object after
+     * it is adopted by this call.
+     * @param timeZoneFormatToAdopt The TimeZoneFormat object to be adopted.
+     * @internal ICU 49 technology preview
+     */
+    virtual void adoptTimeZoneFormat(TimeZoneFormat* timeZoneFormatToAdopt);
+
+    /**
+     * Sets the TimeZoneFormat to be used by this date/time formatter.
+     * @param newTimeZoneFormat The TimeZoneFormat object to copy.
+     * @internal ICU 49 technology preview
+     */
+    virtual void setTimeZoneFormat(const TimeZoneFormat& newTimeZoneFormat);
+
+    /**
+     * Gets the time zone format object associated with this date/time formatter.
+     * @return the time zone format associated with this date/time formatter.
+     * @internal ICU 49 technology preview
+     */
+    virtual const TimeZoneFormat* getTimeZoneFormat(void) const;
+
 #ifndef U_HIDE_INTERNAL_API
     /**
      * This is for ICU internal use only. Please do not use.
@@ -841,8 +893,7 @@ private:
     /**
      * Hook called by format(... FieldPosition& ...) and format(...FieldPositionIterator&...)
      */
-    UnicodeString& _format(Calendar& cal, UnicodeString& appendTo, FieldPositionHandler& handler,
-           UErrorCode& status) const;
+    UnicodeString& _format(Calendar& cal, UnicodeString& appendTo, FieldPositionHandler& handler, UErrorCode& status) const;
 
     /**
      * Called by format() to format a single field.
@@ -853,6 +904,8 @@ private:
      * @param count     Number of characters in the current pattern symbol (e.g.,
      *                  "yyyy" in the pattern would result in a call to this function
      *                  with ch equal to 'y' and count equal to 4)
+     * @param capitalizationContext Capitalization context for this date format.
+     * @param fieldNum  Zero-based numbering of current field within the overall format.
      * @param handler   Records information about field positions.
      * @param cal       Calendar to use
      * @param status    Receives a status code, which will be U_ZERO_ERROR if the operation
@@ -861,6 +914,8 @@ private:
     void subFormat(UnicodeString &appendTo,
                    UChar ch,
                    int32_t count,
+                   UDisplayContext capitalizationContext,
+                   int32_t fieldNum,
                    FieldPositionHandler& handler,
                    Calendar& cal,
                    UErrorCode& status) const; // in case of illegal argument
@@ -1065,22 +1120,6 @@ private:
     int32_t skipUWhiteSpace(const UnicodeString& text, int32_t pos) const;
 
     /**
-     * Private methods for formatting/parsing GMT string
-     */
-    void appendGMT(NumberFormat *currentNumberFormat,UnicodeString &appendTo, Calendar& cal, UErrorCode& status) const;
-    void formatGMTDefault(NumberFormat *currentNumberFormat,UnicodeString &appendTo, int32_t offset) const;
-    int32_t parseGMT(const UnicodeString &text, ParsePosition &pos) const;
-    int32_t parseGMTDefault(const UnicodeString &text, ParsePosition &pos) const;
-    UBool isDefaultGMTFormat() const;
-
-    void formatRFC822TZ(UnicodeString &appendTo, int32_t offset) const;
-
-    /**
-     * Initialize MessageFormat instances used for GMT formatting/parsing
-     */
-    void initGMTFormatters(UErrorCode &status);
-
-    /**
      * Initialize NumberFormat instances used for numbering system overrides.
      */
     void initNumberFormatters(const Locale &locale,UErrorCode &status);
@@ -1166,13 +1205,7 @@ private:
      */
     /*transient*/ int32_t   fDefaultCenturyStartYear;
 
-    enum ParsedTZType {
-        TZTYPE_UNK,
-        TZTYPE_STD,
-        TZTYPE_DST
-    };
-
-    ParsedTZType tztype; // here to avoid api change
+    int32_t tztype; // here to avoid api change
 
     typedef struct NSOverride {
         NumberFormat *nf;
@@ -1180,39 +1213,13 @@ private:
         NSOverride *next;
     } NSOverride;
 
-    /*
-     * MessageFormat instances used for localized GMT format
-     */
-    enum {
-        kGMTNegativeHMS = 0,
-        kGMTNegativeHM,
-        kGMTPositiveHMS,
-        kGMTPositiveHM,
-
-        kNumGMTFormatters
-    };
-    enum {
-        kGMTNegativeHMSMinLenIdx = 0,
-        kGMTPositiveHMSMinLenIdx,
-
-        kNumGMTFormatMinLengths
-    };
-
-    MessageFormat   **fGMTFormatters;
-    // If a GMT hour format has a second field, we need to make sure
-    // the length of input localized GMT string must match the expected
-    // length.  Otherwise, sub DateForamt handling offset format may
-    // unexpectedly success parsing input GMT string without second field.
-    // See #6880 about this issue.
-    // TODO: SimpleDateFormat should provide an option to invalidate
-    //
-    int32_t         fGMTFormatHmsMinLen[kNumGMTFormatMinLengths];
-
     NumberFormat    **fNumberFormatters;
 
     NSOverride      *fOverrideList;
 
     UBool fHaveDefaultCentury;
+
+    UDisplayContext fCapitalizationContext;
 };
 
 inline UDate

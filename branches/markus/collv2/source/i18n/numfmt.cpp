@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2011, International Business Machines Corporation and    *
+* Copyright (C) 1997-2012, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -35,6 +35,7 @@
 #include "unicode/curramt.h"
 #include "unicode/numsys.h"
 #include "unicode/rbnf.h"
+#include "unicode/localpointer.h"
 #include "charstr.h"
 #include "winnmfmt.h"
 #include "uresimp.h"
@@ -53,7 +54,7 @@
 
 #ifdef FMT_DEBUG
 #include <stdio.h>
-static void debugout(UnicodeString s) {
+static inline void debugout(UnicodeString s) {
     char buf[2000];
     s.extract((int32_t) 0, s.length(), buf);
     printf("%s", buf);
@@ -138,7 +139,7 @@ static const char *gFormatKeys[UNUM_FORMAT_STYLE_COUNT] = {
 // Static hashtable cache of NumberingSystem objects used by NumberFormat
 static UHashtable * NumberingSystem_cache = NULL;
 
-static UMTX nscacheMutex = NULL;
+static UMutex nscacheMutex = U_MUTEX_INITIALIZER;
 
 #if !UCONFIG_NO_SERVICE
 static icu::ICULocaleService* gService = NULL;
@@ -360,6 +361,46 @@ NumberFormat::format(int64_t /* unused number */,
     }
     return toAppendTo;
 }
+
+// ------------------------------------------
+// These functions add the status code, just fall back to the non-status versions
+UnicodeString&
+NumberFormat::format(double number,
+                     UnicodeString& appendTo,
+                     FieldPosition& pos,
+                     UErrorCode &status) const {
+    if(U_SUCCESS(status)) {
+        return format(number,appendTo,pos);
+    } else {
+        return appendTo;
+    }
+}
+
+UnicodeString&
+NumberFormat::format(int32_t number,
+                     UnicodeString& appendTo,
+                     FieldPosition& pos,
+                     UErrorCode &status) const {
+    if(U_SUCCESS(status)) {
+        return format(number,appendTo,pos);
+    } else {
+        return appendTo;
+    }
+}
+
+UnicodeString&
+NumberFormat::format(int64_t number,
+                     UnicodeString& appendTo,
+                     FieldPosition& pos,
+                     UErrorCode &status) const {
+    if(U_SUCCESS(status)) {
+        return format(number,appendTo,pos);
+    } else {
+        return appendTo;
+    }
+}
+
+
 
 // -------------------------------------
 // Decimal Number format() default implementation 
@@ -623,27 +664,26 @@ NumberFormat::parse(const UnicodeString& text,
     }
 }
 
-Formattable& NumberFormat::parseCurrency(const UnicodeString& text,
-                                         Formattable& result,
-                                         ParsePosition& pos) const {
+CurrencyAmount* NumberFormat::parseCurrency(const UnicodeString& text,
+                                            ParsePosition& pos) const {
     // Default implementation only -- subclasses should override
+    Formattable parseResult;
     int32_t start = pos.getIndex();
-    parse(text, result, pos);
+    parse(text, parseResult, pos);
     if (pos.getIndex() != start) {
         UChar curr[4];
         UErrorCode ec = U_ZERO_ERROR;
         getEffectiveCurrency(curr, ec);
         if (U_SUCCESS(ec)) {
-            Formattable n(result);
-            CurrencyAmount *tempCurAmnt = new CurrencyAmount(n, curr, ec);  // Use for null testing.
-            if (U_FAILURE(ec) || tempCurAmnt == NULL) {
+            LocalPointer<CurrencyAmount> currAmt(new CurrencyAmount(parseResult, curr, ec));
+            if (U_FAILURE(ec)) {
                 pos.setIndex(start); // indicate failure
             } else {
-            	result.adoptObject(tempCurAmnt);
+                return currAmt.orphan();
             }
         }
     }
-    return result;
+    return NULL;
 }
 
 // -------------------------------------

@@ -106,7 +106,7 @@ void    RegexCompile::compile(
                          UParseError &pp,            // Error position info
                          UErrorCode &e)              // Error Code
 {
-	fRXPat->fPatternString = new UnicodeString(pat);
+    fRXPat->fPatternString = new UnicodeString(pat);
     UText patternText = UTEXT_INITIALIZER;
     utext_openConstUnicodeString(&patternText, fRXPat->fPatternString, &e);
     
@@ -147,6 +147,12 @@ void    RegexCompile::compile(
     fPatternLength = utext_nativeLength(pat);
     uint16_t                state = 1;
     const RegexTableEl      *tableEl;
+
+    // UREGEX_LITERAL force entire pattern to be treated as a literal string.
+    if (fModeFlags & UREGEX_LITERAL) {
+        fQuoteMode = TRUE;
+    }
+
     nextChar(fC);                        // Fetch the first char from the pattern string.
 
     //
@@ -3300,10 +3306,31 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
             }
 
         case URX_STRING_I:
-            // TODO:  Is the case-folded string the longest?
-            //        If so we can optimize this the same as URX_STRING.
-            loc++;
-            currentLen = INT32_MAX;
+            // TODO:  This code assumes that any user string that matches will be no longer
+            //        than our compiled string, with case insensitive matching.
+            //        Our compiled string has been case-folded already.
+            //
+            //        Any matching user string will have no more code points than our
+            //        compiled (folded) string.  Folding may add code points, but
+            //        not remove them.
+            //
+            //        There is a potential problem if a supplemental code point 
+            //        case-folds to a BMP code point.  In this case our compiled string
+            //        could be shorter (in code units) than a matching user string.
+            //
+            //        At this time (Unicode 6.1) there are no such characters, and this case
+            //        is not being handled.  A test, intltest regex/Bug9283, will fail if
+            //        any problematic characters are added to Unicode.
+            //
+            //        If this happens, we can make a set of the BMP chars that the
+            //        troublesome supplementals fold to, scan our string, and bump the
+            //        currentLen one extra for each that is found.
+            //
+            {
+                loc++;
+                int32_t stringLenOp = (int32_t)fRXPat->fCompiledPat->elementAti(loc);
+                currentLen = safeIncrement(currentLen, URX_VAL(stringLenOp));
+            }
             break;
 
         case URX_CTR_INIT:
@@ -3568,10 +3595,10 @@ static const UChar      chDigit7    = 0x37;      // '9'
 static const UChar      chColon     = 0x3A;      // ':'
 static const UChar      chE         = 0x45;      // 'E'
 static const UChar      chQ         = 0x51;      // 'Q'
-static const UChar      chN         = 0x4E;      // 'N'
+//static const UChar      chN         = 0x4E;      // 'N'
 static const UChar      chP         = 0x50;      // 'P'
 static const UChar      chBackSlash = 0x5c;      // '\'  introduces a char escape
-static const UChar      chLBracket  = 0x5b;      // '['
+//static const UChar      chLBracket  = 0x5b;      // '['
 static const UChar      chRBracket  = 0x5d;      // ']'
 static const UChar      chUp        = 0x5e;      // '^'
 static const UChar      chLowerP    = 0x70;
@@ -3652,10 +3679,11 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
 
     if (fQuoteMode) {
         c.fQuoted = TRUE;
-        if ((c.fChar==chBackSlash && peekCharLL()==chE) || c.fChar == (UChar32)-1) {
+        if ((c.fChar==chBackSlash && peekCharLL()==chE && ((fModeFlags & UREGEX_LITERAL) == 0)) || 
+            c.fChar == (UChar32)-1) {
             fQuoteMode = FALSE;  //  Exit quote mode,
-            nextCharLL();       // discard the E
-            nextChar(c);        // recurse to get the real next char
+            nextCharLL();        // discard the E
+            nextChar(c);         // recurse to get the real next char
         }
     }
     else if (fInBackslashQuote) {

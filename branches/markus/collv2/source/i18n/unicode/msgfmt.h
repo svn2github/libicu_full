@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2007-2011, International Business Machines Corporation and
+* Copyright (C) 2007-2012, International Business Machines Corporation and
 * others. All Rights Reserved.
 ********************************************************************************
 *
@@ -104,13 +104,14 @@ class NumberFormat;
  * <pre>
  * message = messageText (argument messageText)*
  * argument = noneArg | simpleArg | complexArg
- * complexArg = choiceArg | pluralArg | selectArg
+ * complexArg = choiceArg | pluralArg | selectArg | selectordinalArg
  *
  * noneArg = '{' argNameOrNumber '}'
  * simpleArg = '{' argNameOrNumber ',' argType [',' argStyle] '}'
  * choiceArg = '{' argNameOrNumber ',' "choice" ',' choiceStyle '}'
  * pluralArg = '{' argNameOrNumber ',' "plural" ',' pluralStyle '}'
  * selectArg = '{' argNameOrNumber ',' "select" ',' selectStyle '}'
+ * selectordinalArg = '{' argNameOrNumber ',' "selectordinal" ',' pluralStyle '}'
  *
  * choiceStyle: see {@link ChoiceFormat}
  * pluralStyle: see {@link PluralFormat}
@@ -463,22 +464,20 @@ public:
      *                   Can be NULL.
      * @param status    Input/output error code.  If the
      *                  pattern cannot be parsed, set to failure code.
-     * @draft ICU 4.8
+     * @stable ICU 4.8
      */
     virtual void applyPattern(const UnicodeString& pattern,
                               UMessagePatternApostropheMode aposMode,
                               UParseError* parseError,
                               UErrorCode& status);
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * @return this instance's UMessagePatternApostropheMode.
-     * @draft ICU 4.8
+     * @stable ICU 4.8
      */
     UMessagePatternApostropheMode getApostropheMode() const {
         return msgPattern.getApostropheMode();
     }
-#endif  /* U_HIDE_DRAFT_API */
 
     /**
      * Returns a pattern that can be used to recreate this object.
@@ -894,7 +893,7 @@ private:
       */
     class U_I18N_API PluralSelectorProvider : public PluralFormat::PluralSelector {
     public:
-        PluralSelectorProvider(const Locale* loc);
+        PluralSelectorProvider(const Locale* loc, UPluralType type);
         virtual ~PluralSelectorProvider();
         virtual UnicodeString select(double number, UErrorCode& ec) const;
 
@@ -902,6 +901,7 @@ private:
     private:
         const Locale* locale;
         PluralRules* rules;
+        UPluralType type;
     };
 
     /**
@@ -940,6 +940,7 @@ private:
     UHashtable* customFormatArgStarts;
 
     PluralSelectorProvider pluralProvider;
+    PluralSelectorProvider ordinalProvider;
 
     /**
      * Method to retrieve default formats (or NULL on failure).
@@ -1072,9 +1073,16 @@ private:
     public:
         virtual UBool operator==(const Format&) const;
         virtual Format* clone() const;
+        virtual UnicodeString& format(const Formattable& obj,
+                              UnicodeString& appendTo,
+                              UErrorCode& status) const;
         virtual UnicodeString& format(const Formattable&,
                                       UnicodeString& appendTo,
                                       FieldPosition&,
+                                      UErrorCode& status) const;
+        virtual UnicodeString& format(const Formattable& obj,
+                                      UnicodeString& appendTo,
+                                      FieldPositionIterator* posIter,
                                       UErrorCode& status) const;
         virtual void parseObject(const UnicodeString&,
                                  Formattable&,

@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2011, International Business Machines
+*   Copyright (C) 1997-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -65,7 +65,8 @@
  *
  * Do not use ptrdiff_t since it is signed. size_t is unsigned.
  */
-#if !defined(__intptr_t_defined) && !defined(UINTPTR_MAX)
+/* TODO: This check fails on some z environments. Filed a ticket #9357 for this. */
+#if !defined(__intptr_t_defined) && !defined(UINTPTR_MAX) && (U_PLATFORM != U_PF_OS390)
 typedef size_t uintptr_t;
 #endif
 
@@ -112,10 +113,14 @@ typedef size_t uintptr_t;
 
 #ifdef U_TIMEZONE
     /* Use the predefined value. */
+#elif U_PLATFORM == U_PF_ANDROID
+#   define U_TIMEZONE timezone
 #elif U_PLATFORM_IS_LINUX_BASED
 #   define U_TIMEZONE __timezone
 #elif U_PLATFORM_USES_ONLY_WIN32_API
 #   define U_TIMEZONE _timezone
+#elif U_PLATFORM == U_PF_BSD && !defined(__NetBSD__)
+   /* not defined */
 #elif U_PLATFORM == U_PF_OS400
    /* not defined */
 #else
@@ -175,7 +180,7 @@ typedef size_t uintptr_t;
  */
 #ifdef U_HAVE_GCC_ATOMICS
     /* Use the predefined value. */
-#elif defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 401)
+#elif U_GCC_MAJOR_MINOR >= 404
 #   define U_HAVE_GCC_ATOMICS 1
 #else
 #   define U_HAVE_GCC_ATOMICS 0
@@ -513,11 +518,11 @@ U_INTERNAL void * U_EXPORT2 uprv_maximumPtr(void *base);
 #  endif
 #endif
 
-#if U_ENABLE_DYLOAD
 /*  Dynamic Library Functions */
 
 typedef void (UVoidFunction)(void);
 
+#if U_ENABLE_DYLOAD
 /**
  * Load a library
  * @internal (ICU 4.4)
@@ -543,6 +548,7 @@ U_INTERNAL UVoidFunction* U_EXPORT2 uprv_dlsym_func( void *lib, const char *symb
  */
 /* U_INTERNAL void * U_EXPORT2 uprv_dlsym_data( void *lib, const char *symbolName, UErrorCode *status); */
 
+#endif
 
 /**
  * Define malloc and related functions
@@ -560,7 +566,5 @@ U_INTERNAL UVoidFunction* U_EXPORT2 uprv_dlsym_func( void *lib, const char *symb
 # define uprv_default_free(x) free(x)
 #endif
 
-
-#endif
 
 #endif

@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2008-2011, International Business Machines Corporation and
+* Copyright (C) 2008-2012, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -26,15 +26,14 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/format.h"
+#include "unicode/upluralrules.h"
 
-#ifndef U_HIDE_DRAFT_API
 /**
  * Value returned by PluralRules::getUniqueKeywordValue() when there is no
  * unique value to return.
- * @draft ICU 4.8
+ * @stable ICU 4.8
  */
 #define UPLRULES_NO_UNIQUE_VALUE ((double)-0.00123456777)
-#endif  /* U_HIDE_DRAFT_API */
 
 U_NAMESPACE_BEGIN
 
@@ -185,8 +184,9 @@ public:
     static PluralRules* U_EXPORT2 createDefaultRules(UErrorCode& status);
 
     /**
-     * Provides access to the predefined <code>PluralRules</code> for a given
+     * Provides access to the predefined cardinal-number <code>PluralRules</code> for a given
      * locale.
+     * Same as forLocale(locale, UPLURAL_TYPE_CARDINAL, status).
      *
      * @param locale  The locale for which a <code>PluralRules</code> object is
      *                returned.
@@ -200,6 +200,24 @@ public:
      * @stable ICU 4.0
      */
     static PluralRules* U_EXPORT2 forLocale(const Locale& locale, UErrorCode& status);
+
+    /**
+     * Provides access to the predefined <code>PluralRules</code> for a given
+     * locale and the plural type.
+     *
+     * @param locale  The locale for which a <code>PluralRules</code> object is
+     *                returned.
+     * @param type    The plural type (e.g., cardinal or ordinal).
+     * @param status  Output param set to success/failure code on exit, which
+     *                must not indicate a failure before the function call.
+     * @return        The predefined <code>PluralRules</code> object pointer for
+     *                this locale. If there's no predefined rules for this locale,
+     *                the rules for the closest parent in the locale hierarchy
+     *                that has one will  be returned.  The final fallback always
+     *                returns the default 'other' rules.
+     * @draft ICU 50
+     */
+    static PluralRules* U_EXPORT2 forLocale(const Locale& locale, UPluralType type, UErrorCode& status);
 
     /**
      * Given a number, returns the keyword of the first rule that applies to
@@ -235,7 +253,6 @@ public:
      */
     StringEnumeration* getKeywords(UErrorCode& status) const;
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Returns a unique value for this keyword if it exists, else the constant
      * UPLRULES_NO_UNIQUE_VALUE.
@@ -244,7 +261,7 @@ public:
      * @return        The unique value that generates the keyword, or
      *                UPLRULES_NO_UNIQUE_VALUE if the keyword is undefined or there is no
      *                unique value that generates this keyword.
-     * @draft ICU 4.8
+     * @stable ICU 4.8
      */
     double getUniqueKeywordValue(const UnicodeString& keyword);
 
@@ -264,7 +281,7 @@ public:
      * @return             The count of values available, or -1.  This count
      *                     can be larger than destCapacity, but no more than
      *                     destCapacity values will be written.
-     * @draft ICU 4.8
+     * @stable ICU 4.8
      */
     int32_t getAllKeywordValues(const UnicodeString &keyword,
                                 double *dest, int32_t destCapacity,
@@ -286,12 +303,11 @@ public:
      *                     only destCapacity are written, and destCapacity is returned as the count,
      *                     rather than setting a U_BUFFER_OVERFLOW_ERROR.
      *                     (The actual number of keyword values could be unlimited.)
-     * @draft ICU 4.8
+     * @stable ICU 4.8
      */
     int32_t getSamples(const UnicodeString &keyword,
                        double *dest, int32_t destCapacity,
                        UErrorCode& status);
-#endif  /* U_HIDE_DRAFT_API */
 
     /**
      * Returns TRUE if the given keyword is defined in this
@@ -363,7 +379,7 @@ private:
     void getNextLocale(const UnicodeString& localeData, int32_t* curIndex, UnicodeString& localeName);
     void addRules(RuleChain& rules);
     int32_t getNumberValue(const UnicodeString& token) const;
-    UnicodeString getRuleFromResource(const Locale& locale, UErrorCode& status);
+    UnicodeString getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& status);
 
     static const int32_t MAX_SAMPLES = 3;
 

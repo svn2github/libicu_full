@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1996-2011, International Business Machines
+*   Copyright (C) 1996-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -40,6 +40,8 @@
  * \file
  * \brief C++ API: Locale ID object.
  */
+
+U_NAMESPACE_BEGIN
 
 /**
  * A <code>Locale</code> object represents a specific geographical, political,
@@ -177,7 +179,6 @@
  * @stable ICU 2.0
  * @see ResourceBundle
  */
-U_NAMESPACE_BEGIN
 class U_COMMON_API Locale : public UObject {
 public:
     /** Useful constant for the Root locale. @stable ICU 4.4 */
@@ -437,7 +438,7 @@ public:
     StringEnumeration * createKeywords(UErrorCode &status) const;
 
     /**
-     * Get the value for a keyword.
+     * Gets the value for a keyword.
      *
      * @param keywordName name of the keyword for which we want the value. Case insensitive.
      * @param buffer The buffer to receive the keyword value.
@@ -449,9 +450,9 @@ public:
      */
     int32_t getKeywordValue(const char* keywordName, char *buffer, int32_t bufferCapacity, UErrorCode &status) const;
 
-#ifndef U_HIDE_INTERNAL_API
+#ifndef U_HIDE_DRAFT_API
     /**
-     * Set the value for a keyword.
+     * Sets the value for a keyword.
      *
      * @param keywordName name of the keyword to be set. Case insensitive.
      * @param keywordValue value of the keyword to be set. If 0-length or
@@ -459,10 +460,10 @@ public:
      *  that keyword does not exist.
      * @param status Returns any error information while performing this operation.
      *
-     * @internal 
+     * @draft ICU 49
      */
     void setKeywordValue(const char* keywordName, const char* keywordValue, UErrorCode &status);
-#endif  /* U_HIDE_INTERNAL_API */
+#endif  /* U_HIDE_DRAFT_API */
 
     /**
      * returns the locale's three-letter language code, as specified

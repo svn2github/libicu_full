@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 1997-2011, International Business Machines Corporation and others.
+* Copyright (C) 1997-2012, International Business Machines Corporation and others.
 * All Rights Reserved.
 ********************************************************************************
 *
@@ -468,11 +468,16 @@ public:
      */
     static UClassID U_EXPORT2 getStaticClassID(void);
 
+/* Cannot use #ifndef U_HIDE_DRAFT_API for the following draft method since it is virtual */
     /**
-     * Get the calendar type, "gregorian", for use in DateFormatSymbols.
+     * Returns the calendar type name string for this Calendar object.
+     * The returned string is the legacy ICU calendar attribute value,
+     * for example, "gregorian" or "japanese".
      *
-     * @return calendar type
-     * @internal
+     * For more details see the Calendar::getType() documentation.
+     *
+     * @return legacy calendar type name string
+     * @draft ICU 49
      */
     virtual const char * getType() const;
 

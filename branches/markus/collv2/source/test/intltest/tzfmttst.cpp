@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2007-2011, International Business Machines Corporation and    *
+* Copyright (C) 2007-2012, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 */
@@ -20,7 +20,7 @@
 #include "unicode/basictz.h"
 #include "cstring.h"
 
-static const char* PATTERNS[] = {"z", "zzzz", "Z", "ZZZZ", "v", "vvvv", "V", "VVVV"};
+static const char* PATTERNS[] = {"z", "zzzz", "Z", "ZZZZ", "ZZZZZ", "v", "vvvv", "V", "VVVV"};
 static const int NUM_PATTERNS = sizeof(PATTERNS)/sizeof(const char*);
 
 void
@@ -109,6 +109,10 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
     for (int32_t locidx = 0; locidx < nLocales; locidx++) {
         UnicodeString localGMTString;
         SimpleDateFormat gmtFmt(UnicodeString("ZZZZ"), LOCALES[locidx], status);
+        if (U_FAILURE(status)) {
+            dataerrln("Error creating SimpleDateFormat - %s", u_errorName(status));
+            continue;
+        }
         gmtFmt.setTimeZone(*TimeZone::getGMT());
         gmtFmt.format(0.0, localGMTString);
 
@@ -202,13 +206,18 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
 
                     } else {
                         // Check if localized GMT format or RFC format is used.
-                        int32_t numDigits = 0;
-                        for (int n = 0; n < tzstr.length(); n++) {
-                            if (u_isdigit(tzstr.charAt(n))) {
-                                numDigits++;
+                        UBool isOffsetFormat = (*PATTERNS[patidx] == 'Z');
+                        if (!isOffsetFormat) {
+                            // Check if localized GMT format is used as a fallback of name styles
+                            int32_t numDigits = 0;
+                            for (int n = 0; n < tzstr.length(); n++) {
+                                if (u_isdigit(tzstr.charAt(n))) {
+                                    numDigits++;
+                                }
                             }
+                            isOffsetFormat = (numDigits >= 3);
                         }
-                        if (tzstr == localGMTString || numDigits >= 3) {
+                        if (isOffsetFormat || tzstr == localGMTString) {
                             // Localized GMT or RFC: total offset (raw + dst) must be preserved.
                             int32_t inOffset = inRaw + inDst;
                             int32_t outOffset = outRaw + outDst;
@@ -260,9 +269,9 @@ public:
         UBool REALLY_VERBOSE = FALSE;
 
         // Whether each pattern is ambiguous at DST->STD local time overlap
-        UBool AMBIGUOUS_DST_DECESSION[] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE };
+        UBool AMBIGUOUS_DST_DECESSION[] = { FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE };
         // Whether each pattern is ambiguous at STD->STD/DST->DST local time overlap
-        UBool AMBIGUOUS_NEGATIVE_SHIFT[] = { TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE };
+        UBool AMBIGUOUS_NEGATIVE_SHIFT[] = { TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE };
 
         // Workaround for #6338
         //UnicodeString BASEPATTERN("yyyy-MM-dd'T'HH:mm:ss.SSS");

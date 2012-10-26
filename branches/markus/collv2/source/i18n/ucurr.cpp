@@ -102,7 +102,7 @@ static const UChar EUR_STR[] = {0x0045,0x0055,0x0052,0};
 static UHashtable* gIsoCodes = NULL;
 static UBool gIsoCodesInitialized = FALSE;
 
-static UMTX gIsoCodesLock = NULL;
+static UMutex gIsoCodesLock = U_MUTEX_INITIALIZER;
 
 //------------------------------------------------------------
 // Code
@@ -113,10 +113,6 @@ static UMTX gIsoCodesLock = NULL;
 static UBool U_CALLCONV 
 isoCodes_cleanup(void)
 {
-    if (gIsoCodesLock != NULL) {
-        umtx_destroy(&gIsoCodesLock);
-    }
-
     if (gIsoCodes != NULL) {
         uhash_close(gIsoCodes);
         gIsoCodes = NULL;
@@ -223,8 +219,8 @@ idForLocale(const char* locale, char* countryAndVariant, int capacity, UErrorCod
     uloc_getCountry(locale, countryAndVariant, capacity, ec);
     uloc_getVariant(locale, variant, sizeof(variant), ec);
     if (variant[0] != 0) {
-        variantType = (0 == uprv_strcmp(variant, VAR_EURO))
-                   | ((0 == uprv_strcmp(variant, VAR_PRE_EURO)) << 1);
+        variantType = (uint32_t)(0 == uprv_strcmp(variant, VAR_EURO))
+                   | ((uint32_t)(0 == uprv_strcmp(variant, VAR_PRE_EURO)) << 1);
         if (variantType)
         {
             uprv_strcat(countryAndVariant, VAR_DELIM_STR);
@@ -249,7 +245,7 @@ U_CDECL_END
 #if !UCONFIG_NO_SERVICE
 struct CReg;
 
-static UMTX gCRegLock = 0;
+static UMutex gCRegLock = U_MUTEX_INITIALIZER;
 static CReg* gCRegHead = 0;
 
 struct CReg : public icu::UMemory {
@@ -334,7 +330,6 @@ struct CReg : public icu::UMemory {
             gCRegHead = gCRegHead->next;
             delete n;
         }
-        umtx_destroy(&gCRegLock);
     }
 };
 

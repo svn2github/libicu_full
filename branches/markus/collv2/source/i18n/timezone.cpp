@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2011, International Business Machines Corporation and    *
+* Copyright (C) 1997-2012, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -35,7 +35,7 @@
 *                           available IDs code.  Misc. cleanup.
 *********************************************************************************/
 
-#include <typeinfo>  // for 'typeid' to work
+#include "utypeinfo.h"  // for 'typeid' to work
 
 #include "unicode/utypes.h"
 #include "unicode/ustring.h"
@@ -68,10 +68,11 @@ static char gStrBuf[256];
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/simpletz.h"
-#include "unicode/smpdtfmt.h"
 #include "unicode/calendar.h"
 #include "unicode/gregocal.h"
 #include "unicode/ures.h"
+#include "unicode/tzfmt.h"
+#include "unicode/numfmt.h"
 #include "gregoimp.h"
 #include "uresimp.h" // struct UResourceBundle
 #include "olsontz.h"
@@ -105,19 +106,11 @@ static const UChar         WORLD[] = {0x30, 0x30, 0x31, 0x00}; /* "001" */
 
 static const UChar         GMT_ID[] = {0x47, 0x4D, 0x54, 0x00}; /* "GMT" */
 static const UChar         UNKNOWN_ZONE_ID[] = {0x45, 0x74, 0x63, 0x2F, 0x55, 0x6E, 0x6B, 0x6E, 0x6F, 0x77, 0x6E, 0x00}; /* "Etc/Unknown" */
-static const UChar         Z_STR[] = {0x7A, 0x00}; /* "z" */
-static const UChar         ZZZZ_STR[] = {0x7A, 0x7A, 0x7A, 0x7A, 0x00}; /* "zzzz" */
-static const UChar         Z_UC_STR[] = {0x5A, 0x00}; /* "Z" */
-static const UChar         ZZZZ_UC_STR[] = {0x5A, 0x5A, 0x5A, 0x5A, 0x00}; /* "ZZZZ" */
-static const UChar         V_STR[] = {0x76, 0x00}; /* "v" */
-static const UChar         VVVV_STR[] = {0x76, 0x76, 0x76, 0x76, 0x00}; /* "vvvv" */
-static const UChar         V_UC_STR[] = {0x56, 0x00}; /* "V" */
-static const UChar         VVVV_UC_STR[] = {0x56, 0x56, 0x56, 0x56, 0x00}; /* "VVVV" */
 static const int32_t       GMT_ID_LENGTH = 3;
 static const int32_t       UNKNOWN_ZONE_ID_LENGTH = 11;
 
-static UMTX LOCK;
-static UMTX TZSET_LOCK;
+static UMutex LOCK = U_MUTEX_INITIALIZER;
+static UMutex TZSET_LOCK = U_MUTEX_INITIALIZER;
 static icu::TimeZone* DEFAULT_ZONE = NULL;
 static icu::TimeZone* _GMT = NULL;
 static icu::TimeZone* _UNKNOWN_ZONE = NULL;
@@ -129,9 +122,9 @@ static int32_t* MAP_SYSTEM_ZONES = NULL;
 static int32_t* MAP_CANONICAL_SYSTEM_ZONES = NULL;
 static int32_t* MAP_CANONICAL_SYSTEM_LOCATION_ZONES = NULL;
 
-int32_t LEN_SYSTEM_ZONES = 0;
-int32_t LEN_CANONICAL_SYSTEM_ZONES = 0;
-int32_t LEN_CANONICAL_SYSTEM_LOCATION_ZONES = 0;
+static int32_t LEN_SYSTEM_ZONES = 0;
+static int32_t LEN_CANONICAL_SYSTEM_ZONES = 0;
+static int32_t LEN_CANONICAL_SYSTEM_LOCATION_ZONES = 0;
 
 U_CDECL_BEGIN
 static UBool U_CALLCONV timeZone_cleanup(void)
@@ -159,15 +152,6 @@ static UBool U_CALLCONV timeZone_cleanup(void)
     LEN_CANONICAL_SYSTEM_LOCATION_ZONES = 0;
     uprv_free(MAP_CANONICAL_SYSTEM_LOCATION_ZONES);
     MAP_CANONICAL_SYSTEM_LOCATION_ZONES = 0;
-
-    if (LOCK) {
-        umtx_destroy(&LOCK);
-        LOCK = NULL;
-    }
-    if (TZSET_LOCK) {
-        umtx_destroy(&TZSET_LOCK);
-        TZSET_LOCK = NULL;
-    }
 
     return TRUE;
 }
@@ -1238,127 +1222,87 @@ TimeZone::getDSTSavings()const {
 UnicodeString&
 TimeZone::getDisplayName(UBool daylight, EDisplayType style, const Locale& locale, UnicodeString& result) const
 {
-    // SRL TODO: cache the SDF, just like java.
     UErrorCode status = U_ZERO_ERROR;
-#ifdef U_DEBUG_TZ
-    char buf[128];
-    fID.extract(0, sizeof(buf)-1, buf, sizeof(buf), "");
-#endif
+    UDate date = Calendar::getNow();
+    UTimeZoneFormatTimeType timeType;
+    int32_t offset;
 
-    // select the proper format string
-    const UChar* patUChars;
-    switch(style){
-    case LONG:
-        patUChars = ZZZZ_STR;
-        break;
-    case SHORT_GENERIC:
-        patUChars = V_STR;
-        break;
-    case LONG_GENERIC:
-        patUChars = VVVV_STR;
-        break;
-    case SHORT_GMT:
-        patUChars = Z_UC_STR;
-        break;
-    case LONG_GMT:
-        patUChars = ZZZZ_UC_STR;
-        break;
-    case SHORT_COMMONLY_USED:
-        //patUChars = V_UC_STR;
-        patUChars = Z_STR;
-        break;
-    case GENERIC_LOCATION:
-        patUChars = VVVV_UC_STR;
-        break;
-    default: // SHORT
-        //patUChars = Z_STR;
-        patUChars = V_UC_STR;
-        break;
-    }
-    UnicodeString pat(TRUE, patUChars, -1);
-
-    SimpleDateFormat format(pat, locale, status);
-    U_DEBUG_TZ_MSG(("getDisplayName(%s)\n", buf));
-    if(!U_SUCCESS(status))
-    {
-#ifdef U_DEBUG_TZ
-      char buf2[128];
-      result.extract(0, sizeof(buf2)-1, buf2, sizeof(buf2), "");
-      U_DEBUG_TZ_MSG(("getDisplayName(%s) -> %s\n", buf, buf2));
-#endif
-      return result.remove();
-    }
-
-    UDate d = Calendar::getNow();
-    int32_t  rawOffset;
-    int32_t  dstOffset;
-    this->getOffset(d, FALSE, rawOffset, dstOffset, status);
-    if (U_FAILURE(status)) {
-        return result.remove();
-    }
-
-    if ((daylight && dstOffset != 0) || 
-        (!daylight && dstOffset == 0) ||
-        (style == SHORT_GENERIC) ||
-        (style == LONG_GENERIC)
-       ) {
-        // Current time and the request (daylight / not daylight) agree.
-        format.setTimeZone(*this);
-        return format.format(d, result);
-    }
-
-    // Create a new SimpleTimeZone as a stand-in for this zone; the
-    // stand-in will have no DST, or DST during July, but the same ID and offset,
-    // and hence the same display name.
-    // We don't cache these because they're small and cheap to create.
-    UnicodeString tempID;
-    getID(tempID);
-    SimpleTimeZone *tz = NULL;
-    if(daylight && useDaylightTime()){
-        // The display name for daylight saving time was requested, but currently not in DST
-        // Set a fixed date (July 1) in this Gregorian year
-        GregorianCalendar cal(*this, status);
+    if (style == GENERIC_LOCATION || style == LONG_GENERIC || style == SHORT_GENERIC) {
+        LocalPointer<TimeZoneFormat> tzfmt(TimeZoneFormat::createInstance(locale, status));
         if (U_FAILURE(status)) {
-            return result.remove();
+            result.remove();
+            return result;
         }
-        cal.set(UCAL_MONTH, UCAL_JULY);
-        cal.set(UCAL_DATE, 1);
-
-        // Get July 1 date
-        d = cal.getTime(status);
-
-        // Check if it is in DST
-        if (cal.get(UCAL_DST_OFFSET, status) == 0) {
-            // We need to create a fake time zone
-            tz = new SimpleTimeZone(rawOffset, tempID,
-                                UCAL_JUNE, 1, 0, 0,
-                                UCAL_AUGUST, 1, 0, 0,
-                                getDSTSavings(), status);
-            if (U_FAILURE(status) || tz == NULL) {
-                if (U_SUCCESS(status)) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                }
-                return result.remove();
-            }
-            format.adoptTimeZone(tz);
-        } else {
-            format.setTimeZone(*this);
+        // Generic format
+        switch (style) {
+        case GENERIC_LOCATION:
+            tzfmt->format(UTZFMT_STYLE_GENERIC_LOCATION, *this, date, result, &timeType);
+            break;
+        case LONG_GENERIC:
+            tzfmt->format(UTZFMT_STYLE_GENERIC_LONG, *this, date, result, &timeType);
+            break;
+        case SHORT_GENERIC:
+            tzfmt->format(UTZFMT_STYLE_GENERIC_SHORT, *this, date, result, &timeType);
+            break;
+        default:
+            U_ASSERT(FALSE);
         }
+        // Generic format many use Localized GMT as the final fallback.
+        // When Localized GMT format is used, the result might not be
+        // appropriate for the requested daylight value.
+        if ((daylight && timeType == UTZFMT_TIME_TYPE_STANDARD) || (!daylight && timeType == UTZFMT_TIME_TYPE_DAYLIGHT)) {
+            offset = daylight ? getRawOffset() + getDSTSavings() : getRawOffset();
+            tzfmt->formatOffsetLocalizedGMT(offset, result, status);
+        }
+    } else if (style == LONG_GMT || style == SHORT_GMT) {
+        LocalPointer<TimeZoneFormat> tzfmt(TimeZoneFormat::createInstance(locale, status));
+        if (U_FAILURE(status)) {
+            result.remove();
+            return result;
+        }
+        offset = daylight && useDaylightTime() ? getRawOffset() + getDSTSavings() : getRawOffset();
+        switch (style) {
+        case LONG_GMT:
+            tzfmt->formatOffsetLocalizedGMT(offset, result, status);
+            break;
+        case SHORT_GMT:
+            tzfmt->formatOffsetRFC822(offset, result, status);
+            break;
+        default:
+            U_ASSERT(FALSE);
+        }
+
     } else {
-        // The display name for standard time was requested, but currently in DST
-        // or display name for daylight saving time was requested, but this zone no longer
-        // observes DST.
-        tz = new SimpleTimeZone(rawOffset, tempID);
-        if (U_FAILURE(status) || tz == NULL) {
-            if (U_SUCCESS(status)) {
-                status = U_MEMORY_ALLOCATION_ERROR;
-            }
-            return result.remove();
+        U_ASSERT(style == LONG || style == SHORT || style == SHORT_COMMONLY_USED);
+        UTimeZoneNameType nameType = UTZNM_UNKNOWN;
+        switch (style) {
+        case LONG:
+            nameType = daylight ? UTZNM_LONG_DAYLIGHT : UTZNM_LONG_STANDARD;
+            break;
+        case SHORT:
+        case SHORT_COMMONLY_USED:
+            nameType = daylight ? UTZNM_SHORT_DAYLIGHT : UTZNM_SHORT_STANDARD;
+            break;
+        default:
+            U_ASSERT(FALSE);
         }
-        format.adoptTimeZone(tz);
+        LocalPointer<TimeZoneNames> tznames(TimeZoneNames::createInstance(locale, status));
+        if (U_FAILURE(status)) {
+            result.remove();
+            return result;
+        }
+        UnicodeString canonicalID(ZoneMeta::getCanonicalCLDRID(*this));
+        tznames->getDisplayName(canonicalID, nameType, date, result);
+        if (result.isEmpty()) {
+            // Fallback to localized GMT
+            LocalPointer<TimeZoneFormat> tzfmt(TimeZoneFormat::createInstance(locale, status));
+            offset = daylight && useDaylightTime() ? getRawOffset() + getDSTSavings() : getRawOffset();
+            tzfmt->formatOffsetLocalizedGMT(offset, result, status);
+        }
     }
-
-    format.format(d, result, status);
+    if (U_FAILURE(status)) {
+        result.remove();
+    }
     return  result;
 }
 

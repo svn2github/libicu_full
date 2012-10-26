@@ -2,8 +2,8 @@
 // *
 // * Copyright (C) 2012 International Business Machines
 // * Corporation and others.  All Rights Reserved.
-// * Tool: com.ibm.icu.dev.tool.cldr.LDML2ICUConverter.java
-// * Source File:<path>/common/main/pa.xml
+// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
+// * Source File: <path>/common/main/pa.xml
 // *
 // ***************************************************************************
 /**
@@ -29,8 +29,9 @@ pa{
                 percentFormat{"#,##,##0%"}
             }
         }
+        native{"guru"}
     }
-    Version{"2.0.65.46"}
+    Version{"2.0.77.46"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -57,7 +58,7 @@ pa{
                 Md{"d/M"}
                 mmss{"mm:ss"}
                 yyMMM{"MMM yy"}
-                yyQ{"Q yy"}
+                yyQQQ{"QQQ yy"}
             }
             dayNames{
                 format{
@@ -112,10 +113,8 @@ pa{
                     dn{"ਦਿਨ"}
                     relative{
                         "-1"{"ਲੰਘਿਆਂ ਕੱਲ"}
-                        "-2"{"ਪਰਸੋਂ"}
                         "0"{"ਅੱਜ"}
                         "1"{"ਭਲਕੇ"}
-                        "2"{"ਪਰਸੋਂ"}
                     }
                 }
                 era{
@@ -148,20 +147,6 @@ pa{
             }
             monthNames{
                 format{
-                    abbreviated{
-                        "ਜਨਵਰੀ",
-                        "ਫ਼ਰਵਰੀ",
-                        "ਮਾਰਚ",
-                        "ਅਪ੍ਰੈਲ",
-                        "ਮਈ",
-                        "ਜੂਨ",
-                        "ਜੁਲਾਈ",
-                        "ਅਗਸਤ",
-                        "ਸਤੰਬਰ",
-                        "ਅਕਤੂਬਰ",
-                        "ਨਵੰਬਰ",
-                        "ਦਸੰਬਰ",
-                    }
                     wide{
                         "ਜਨਵਰੀ",
                         "ਫ਼ਰਵਰੀ",
@@ -178,20 +163,6 @@ pa{
                     }
                 }
                 stand-alone{
-                    abbreviated{
-                        "ਜਨਵਰੀ",
-                        "ਫ਼ਰਵਰੀ",
-                        "ਮਾਰਚ",
-                        "ਅਪ੍ਰੈਲ",
-                        "ਮਈ",
-                        "ਜੂਨ",
-                        "ਜੁਲਾਈ",
-                        "ਅਗਸਤ",
-                        "ਸਤੰਬਰ",
-                        "ਅਕਤੂਬਰ",
-                        "ਨਵੰਬਰ",
-                        "ਦਸੰਬਰ",
-                    }
                     narrow{
                         "ਜ",
                         "ਫ",

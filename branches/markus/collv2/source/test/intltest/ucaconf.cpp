@@ -32,7 +32,7 @@ status(U_ZERO_ERROR)
 {
     UCA = (RuleBasedCollator *)Collator::createInstance(Locale::getRoot(), status);
     if(U_FAILURE(status)) {
-        errln("ERROR - UCAConformanceTest: Unable to open UCA collator!");
+        dataerrln("Error - UCAConformanceTest: Unable to open UCA collator! - %s", u_errorName(status));
     }
 
     getCollationBaseData(status);
@@ -79,11 +79,16 @@ void UCAConformanceTest::runIndexedTest( int32_t index, UBool exec, const char* 
 void UCAConformanceTest::initRbUCA() 
 {
     if(!rbUCA) {
-        UnicodeString ucarules;
-        UCA->getRules(UCOL_FULL_RULES, ucarules);
-        rbUCA = new RuleBasedCollator(ucarules, status);
-        if (U_FAILURE(status)) {
-            errln("Failure creating UCA rule-based collator: %s", u_errorName(status));
+        if (UCA) {
+            UnicodeString ucarules;
+            UCA->getRules(UCOL_FULL_RULES, ucarules);
+            rbUCA = new RuleBasedCollator(ucarules, status);
+            if (U_FAILURE(status)) {
+                dataerrln("Failure creating UCA rule-based collator: %s", u_errorName(status));
+                return;
+            }
+        } else {
+            dataerrln("Failure creating UCA rule-based collator: %s", u_errorName(status));
             return;
         }
     }
@@ -153,6 +158,30 @@ void UCAConformanceTest::openTestFile(const char *type)
     }
 }
 
+static const uint32_t IS_SHIFTED = 1;
+static const uint32_t FROM_RULES = 2;
+
+static UBool
+skipLineBecauseOfBug(const UChar *s, int32_t length, uint32_t flags) {
+    // TODO: Fix ICU ticket #8052
+    if(length >= 3 &&
+            (s[0] == 0xfb2 || s[0] == 0xfb3) &&
+            s[1] == 0x334 &&
+            (s[2] == 0xf73 || s[2] == 0xf75 || s[2] == 0xf81)) {
+        return TRUE;
+    }
+    // TODO: Fix ICU ticket #9361
+    if((flags & IS_SHIFTED) != 0 && length >= 2 && s[0] == 0xfffe) {
+        return TRUE;
+    }
+    // TODO: Fix tailoring builder, ICU ticket #9593.
+    UChar c;
+    if((flags & FROM_RULES) != 0 && length >= 2 && ((c = s[1]) == 0xedc || c == 0xedd)) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static UCollationResult
 normalizeResult(int32_t result) {
     return result<0 ? UCOL_LESS : result==0 ? UCOL_EQUAL : UCOL_GREATER;
@@ -162,6 +191,13 @@ void UCAConformanceTest::testConformance(const Collator *coll)
 {
     if(testFile == 0) {
         return;
+    }
+    uint32_t skipFlags = 0;
+    if(coll->getAttribute(UCOL_ALTERNATE_HANDLING, status) == UCOL_SHIFTED) {
+        skipFlags |= IS_SHIFTED;
+    }
+    if(coll == rbUCA) {
+        skipFlags |= FROM_RULES;
     }
 
     int32_t line = 0;
@@ -195,6 +231,11 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         }
         buffer[buflen] = 0;
 
+        if(skipLineBecauseOfBug(buffer, buflen, skipFlags)) {
+            logln("Skipping line %i because of a known bug", line);
+            continue;
+        }
+
         int32_t resLen = coll->getSortKey(buffer, buflen, newSk, 1024);
 
         if(oldSk != NULL) {
@@ -209,7 +250,7 @@ void UCAConformanceTest::testConformance(const Collator *coll)
             // TODO: Compare with normalization turned off if the input passes the FCD test.
 
             if(cmpres != normalizeResult(skres)) {
-                errln("Difference between ucol_strcoll (%d) and sortkey compare (%d) on line %i",
+                errln("Difference between coll->compare (%d) and sortkey compare (%d) on line %i",
                       cmpres, skres, line);
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
@@ -255,12 +296,20 @@ void UCAConformanceTest::testConformance(const Collator *coll)
 }
 
 void UCAConformanceTest::TestTableNonIgnorable(/* par */) {
+    if (U_FAILURE(status)) {
+        dataerrln("Error running UCA Conformance Test: %s", u_errorName(status));
+        return;
+    }
     setCollNonIgnorable(UCA);
     openTestFile("NON_IGNORABLE");
     testConformance(UCA);
 }
 
 void UCAConformanceTest::TestTableShifted(/* par */) {
+    if (U_FAILURE(status)) {
+        dataerrln("Error running UCA Conformance Test: %s", u_errorName(status));
+        return;
+    }
     setCollShifted(UCA);
     openTestFile("SHIFTED");
     testConformance(UCA);

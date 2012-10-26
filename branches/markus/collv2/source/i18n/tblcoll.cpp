@@ -1,6 +1,6 @@
 /*
  ******************************************************************************
- * Copyright (C) 1996-2011, International Business Machines Corporation and
+ * Copyright (C) 1996-2012, International Business Machines Corporation and
  * others. All Rights Reserved.
  ******************************************************************************
  */
@@ -53,6 +53,8 @@
  *                          to implementation file.
  * 01/29/01     synwee      Modified into a C++ wrapper calling C APIs (ucol.h)
  */
+
+#include "utypeinfo.h"  // for 'typeid' to work
 
 #include "unicode/utypes.h"
 
@@ -427,29 +429,11 @@ CollationKey& RuleBasedCollator::getCollationKey(const UChar* source,
         return sortkey.reset();
     }
 
-    uint8_t *result;
-    int32_t resultCapacity;
-    if (sortkey.fCapacity >= (sourceLen * 3)) {
-        // Try to reuse the CollationKey.fBytes.
-        result = sortkey.fBytes;
-        resultCapacity = sortkey.fCapacity;
-    } else {
-        result = NULL;
-        resultCapacity = 0;
-    }
-    int32_t resultLen = ucol_getSortKeyWithAllocation(ucollator, source, sourceLen,
-                                                      result, resultCapacity, &status);
+    int32_t resultLen = ucol_getCollationKey(ucollator, source, sourceLen, sortkey, status);
 
     if (U_SUCCESS(status)) {
-        if (result == sortkey.fBytes) {
-            sortkey.setLength(resultLen);
-        } else {
-            sortkey.adopt(result, resultCapacity, resultLen);
-        }
+        sortkey.setLength(resultLen);
     } else {
-        if (result != sortkey.fBytes) {
-            uprv_free(result);
-        }
         sortkey.setToBogus();
     }
     return sortkey;
@@ -680,6 +664,16 @@ RuleBasedCollator::checkOwned() {
         isWriteThroughAlias = FALSE;
     }
 }
+
+
+int32_t RuleBasedCollator::internalGetShortDefinitionString(const char *locale,
+                                                                      char *buffer,
+                                                                      int32_t capacity,
+                                                                      UErrorCode &status) const {
+  /* simply delegate */
+  return ucol_getShortDefinitionString(ucollator, locale, buffer, capacity, &status);
+}
+
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedCollator)
 

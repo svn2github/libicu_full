@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-* Copyright (C) 1996-2011, International Business Machines Corporation and
+* Copyright (C) 1996-2012, International Business Machines Corporation and
 * others. All Rights Reserved.
 ******************************************************************************
 */
@@ -337,7 +337,7 @@ public:
     * @param status the error code status.
     * @return the transformed key.
     * @see CollationKey
-    * @deprecated ICU 2.8 Use getSortKey(...) instead
+    * @stable ICU 2.0
     */
     virtual CollationKey& getCollationKey(const UnicodeString& source,
                                           CollationKey& key,
@@ -354,7 +354,7 @@ public:
     * @param status the error code status.
     * @return the transformed key.
     * @see CollationKey
-    * @deprecated ICU 2.8 Use getSortKey(...) instead
+    * @stable ICU 2.0
     */
     virtual CollationKey& getCollationKey(const UChar *source,
                                           int32_t sourceLength,
@@ -381,9 +381,8 @@ public:
     virtual Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
 
     /**
-     * Gets the table-based rules for the collation object.
-     * @return returns the collation rules that the table collation object was
-     *         created from.
+     * Gets the tailoring rules for this collator.
+     * @return the collation tailoring from which this collator was created
      * @stable ICU 2.0
      */
     const UnicodeString& getRules(void) const;
@@ -458,9 +457,13 @@ public:
     /**
      * Returns current rules. Delta defines whether full rules are returned or
      * just the tailoring.
+     *
+     * getRules(void) should normally be used instead.
+     * See http://userguide.icu-project.org/collation/customization#TOC-Building-on-Existing-Locales
      * @param delta one of UCOL_TAILORING_ONLY, UCOL_FULL_RULES.
      * @param buffer UnicodeString to store the result rules
      * @stable ICU 2.2
+     * @see UCOL_FULL_RULES
      */
     void getRules(UColRuleOption delta, UnicodeString &buffer);
 
@@ -574,7 +577,7 @@ public:
      * @see ucol_setReorderCodes
      * @see Collator#getEquivalentReorderCodes
      * @see Collator#setReorderCodes
-     * @draft ICU 4.8 
+     * @stable ICU 4.8 
      */
      virtual int32_t getReorderCodes(int32_t *dest,
                                      int32_t destCapacity,
@@ -588,13 +591,12 @@ public:
      * @param status error code
      * @see Collator#getReorderCodes
      * @see Collator#getEquivalentReorderCodes
-     * @draft ICU 4.8 
+     * @stable ICU 4.8 
      */
      virtual void setReorderCodes(const int32_t* reorderCodes,
                                   int32_t reorderCodesLength,
                                   UErrorCode& status) ;
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Retrieves the reorder codes that are grouped with the given reorder code. Some reorder
      * codes will be grouped and must reorder together.
@@ -609,13 +611,12 @@ public:
      * @see ucol_setReorderCodes
      * @see Collator#getReorderCodes
      * @see Collator#setReorderCodes
-     * @draft ICU 4.8 
+     * @stable ICU 4.8 
      */
     static int32_t U_EXPORT2 getEquivalentReorderCodes(int32_t reorderCode,
                                 int32_t* dest,
                                 int32_t destCapacity,
                                 UErrorCode& status);
-#endif  /* U_HIDE_DRAFT_API */
 
 private:
 
@@ -782,6 +783,34 @@ private:
 
     // utility to init rule string used by checkOwned and construct
     void setRuleStringFromCollator();
+ public:
+    /** Get the short definition string for a collator. This internal API harvests the collator's
+     *  locale and the attribute set and produces a string that can be used for opening 
+     *  a collator with the same properties using the ucol_openFromShortString API.
+     *  This string will be normalized.
+     *  The structure and the syntax of the string is defined in the "Naming collators"
+     *  section of the users guide: 
+     *  http://icu-project.org/userguide/Collate_Concepts.html#Naming_Collators
+     *  This function supports preflighting.
+     * 
+     *  This is internal, and intended to be used with delegate converters.
+     *
+     *  @param locale a locale that will appear as a collators locale in the resulting
+     *                short string definition. If NULL, the locale will be harvested 
+     *                from the collator.
+     *  @param buffer space to hold the resulting string
+     *  @param capacity capacity of the buffer
+     *  @param status for returning errors. All the preflighting errors are featured
+     *  @return length of the resulting string
+     *  @see ucol_openFromShortString
+     *  @see ucol_normalizeShortDefinitionString
+     *  @see ucol_getShortDefinitionString
+     *  @internal
+     */
+    virtual int32_t internalGetShortDefinitionString(const char *locale,
+                                                     char *buffer,
+                                                     int32_t capacity,
+                                                     UErrorCode &status) const;
 };
 
 // inline method implementation ---------------------------------------------

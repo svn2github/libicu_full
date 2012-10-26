@@ -26,6 +26,7 @@
 #include "unicode/regex.h"
 #include "unicode/uchar.h"
 #include "unicode/ucnv.h"
+#include "unicode/uniset.h"
 #include "unicode/ustring.h"
 #include "regextst.h"
 #include "uvector.h"
@@ -126,6 +127,9 @@ void RegexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, ch
             break;
         case 20: name = "CheckInvBufSize";
             if (exec) CheckInvBufSize();
+            break;
+        case 21: name = "Bug 9283";
+            if (exec) Bug9283();
             break;
 
         default: name = "";
@@ -305,7 +309,7 @@ void RegexTest::assertUTextInvariant(const char *expected, UText *actual, const 
 
 #define INV_BUFSIZ 2048 /* increase this if too small */
 
-static int32_t inv_next=0;
+static int64_t inv_next=0;
 
 #if U_CHARSET_FAMILY!=U_ASCII_FAMILY
 static char inv_buf[INV_BUFSIZ];
@@ -573,9 +577,9 @@ void RegexTest::Basic() {
         UParseError pe;
         UErrorCode  status = U_ZERO_ERROR;
         RegexPattern *pattern;
-        pattern = RegexPattern::compile("aßx", UREGEX_CASE_INSENSITIVE, pe, status);
+        pattern = RegexPattern::compile(UNICODE_STRING_SIMPLE("a\\u00dfx").unescape(), UREGEX_CASE_INSENSITIVE, pe, status);
         RegexPatternDump(pattern);
-        RegexMatcher *m = pattern->matcher("aßxzzz", status);
+        RegexMatcher *m = pattern->matcher(UNICODE_STRING_SIMPLE("a\\u00dfxzzz").unescape(), status);
         UBool result = m->find();
         printf("result = %d\n", result);
         // REGEX_FIND("", "<0>ab<1>cc</1><2>ccc</2></0>ddd");
@@ -3119,7 +3123,7 @@ void RegexTest::Extended() {
 
     RegexMatcher    quotedStuffMat(UNICODE_STRING_SIMPLE("\\s*([\\'\\\"/])(.*?)\\1"), 0, status);
     RegexMatcher    commentMat    (UNICODE_STRING_SIMPLE("\\s*(#.*)?$"), 0, status);
-    RegexMatcher    flagsMat      (UNICODE_STRING_SIMPLE("\\s*([ixsmdteDEGLMvabtyYzZ2-9]*)([:letter:]*)"), 0, status);
+    RegexMatcher    flagsMat      (UNICODE_STRING_SIMPLE("\\s*([ixsmdteDEGLMQvabtyYzZ2-9]*)([:letter:]*)"), 0, status);
 
     RegexMatcher    lineMat(UNICODE_STRING_SIMPLE("(.*?)\\r?\\n"), testString, 0, status);
     UnicodeString   testPattern;   // The pattern for test from the test file.
@@ -3328,6 +3332,9 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     }
     if (flags.indexOf((UChar)0x44) >= 0) { // 'D' flag
         bflags |= UREGEX_UNIX_LINES;
+    }
+    if (flags.indexOf((UChar)0x51) >= 0) { // 'Q' flag
+        bflags |= UREGEX_LITERAL;
     }
 
 
@@ -5180,6 +5187,34 @@ void RegexTest::Bug7029() {
     REGEX_ASSERT(numFields == 8);
     delete pMatcher;
 }
+
+// Bug 9283
+//   This test is checking for the existance of any supplemental characters that case-fold
+//   to a bmp character.  
+//
+//   At the time of this writing there are none. If any should appear in a subsequent release 
+//   of Unicode, the code in regular expressions compilation that determines the longest 
+//   posssible match for a literal string  will need to be enhanced.  
+//
+//   See file regexcmp.cpp, case URX_STRING_I in RegexCompile::maxMatchLength()
+//   for details on what to do in case of a failure of this test.
+//
+void RegexTest::Bug9283() {
+    UErrorCode status = U_ZERO_ERROR;
+    UnicodeSet supplementalsWithCaseFolding("[[:CWCF:]&[\\U00010000-\\U0010FFFF]]", status);
+    REGEX_CHECK_STATUS;
+    int32_t index;
+    UChar32 c;
+    for (index=0; ; index++) {
+        c = supplementalsWithCaseFolding.charAt(index);
+        if (c == -1) {
+            break;
+        }
+        UnicodeString cf = UnicodeString(c).foldCase();
+        REGEX_ASSERT(cf.length() >= 2);
+    }
+}
+
 
 void RegexTest::CheckInvBufSize() {
   if(inv_next>=INV_BUFSIZ) {

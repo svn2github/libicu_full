@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2011, International Business Machines Corporation
+ * Copyright (c) 1997-2012, International Business Machines Corporation
  * and others. All Rights Reserved.
  ********************************************************************/
  
@@ -16,6 +16,7 @@
 #include "unicode/strenum.h"
 #include "cmemory.h"
 #include "caltest.h"
+#include "unicode/localpointer.h"
 
 #include <float.h>
 
@@ -85,6 +86,8 @@ CalendarRegressionTest::runIndexedTest( int32_t index, UBool exec, const char* &
         CASE(46,TestT6745);
         CASE(47,TestT8057);
         CASE(48,TestT8596);
+        CASE(49,Test9019);
+        CASE(50,TestT9452);
     default: name = ""; break;
     }
 }
@@ -192,6 +195,37 @@ CalendarRegressionTest::test4028518()
     printdate(cal2, "cal2 should be unmodified:") ;
     delete cal1;
     delete cal2;
+}
+
+
+void
+CalendarRegressionTest::Test9019()
+{
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<GregorianCalendar> cal1(new GregorianCalendar(status));
+    LocalPointer<GregorianCalendar> cal2(new GregorianCalendar(status));
+    cal1->set(UCAL_HOUR, 1);
+    cal2->set(UCAL_HOUR,2);
+    cal1->clear();
+    cal2->clear();
+    if(U_FAILURE(status)) {
+      dataerrln("Error creating Calendar: %s", u_errorName(status));
+      return;
+    }
+    failure(status, "new GregorianCalendar");
+    cal1->set(2011,UCAL_MAY,06);
+    cal2->set(2012,UCAL_JANUARY,06);
+    printdate(cal1.getAlias(), "cal1: ") ;
+    cal1->setLenient(FALSE);
+    cal1->add(UCAL_MONTH,8,status);
+    failure(status, "->add(UCAL_MONTH,8)");
+    printdate(cal1.getAlias(), "cal1 (lenient) after adding 8 months:") ;
+    printdate(cal2.getAlias(), "cal2 (expected date):") ;
+    
+    if(!cal1->equals(*cal2,status)) {
+      errln("Error: cal1 != cal2.\n");
+    }
+    failure(status, "equals");
 }
 
 void 
@@ -2863,6 +2897,50 @@ void CalendarRegressionTest::TestT8596(void) {
     }
 
     delete gc;
+}
+
+// Test case for ticket 9452
+// Calendar addition fall onto the missing date - 2011-12-30 in Samoa
+void CalendarRegressionTest::TestT9452(void) {
+    UErrorCode status = U_ZERO_ERROR;
+    GregorianCalendar cal(TimeZone::createTimeZone("Pacific/Apia"), status);
+    failure(status, "initializing GregorianCalendar");
+
+    SimpleDateFormat sdf(UnicodeString("y-MM-dd'T'HH:mm:ssZZZZZ"), status);
+    failure(status, "initializing SimpleDateFormat");
+    sdf.setCalendar(cal);
+
+    UnicodeString dstr;
+
+    // Set date to 2011-12-29 00:00
+    cal.clear();
+    cal.set(2011, UCAL_DECEMBER, 29, 0, 0, 0);
+
+    UDate d = cal.getTime(status);
+    if (!failure(status, "getTime for initial date")) {
+        sdf.format(d, dstr);
+        logln(UnicodeString("Initial date: ") + dstr);
+
+        // Add 1 day
+        cal.add(UCAL_DATE, 1, status);
+        failure(status, "add 1 day");
+        d = cal.getTime(status);
+        failure(status, "getTime after +1 day");
+        dstr.remove();
+        sdf.format(d, dstr);
+        logln(UnicodeString("+1 day: ") + dstr);
+        assertEquals("Add 1 day", UnicodeString("2011-12-31T00:00:00+14:00"), dstr);
+
+        // Subtract 1 day
+        cal.add(UCAL_DATE, -1, status);
+        failure(status, "subtract 1 day");
+        d = cal.getTime(status);
+        failure(status, "getTime after -1 day");
+        dstr.remove();
+        sdf.format(d, dstr);
+        logln(UnicodeString("-1 day: ") + dstr);
+        assertEquals("Subtract 1 day", UnicodeString("2011-12-29T00:00:00-10:00"), dstr);
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

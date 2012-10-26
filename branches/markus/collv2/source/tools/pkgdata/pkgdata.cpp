@@ -105,7 +105,8 @@ enum {
     FORCE_PREFIX,
     LIBNAME,
     QUIET,
-    WITHOUT_ASSEMBLY
+    WITHOUT_ASSEMBLY,
+    PDS_BUILD
 };
 
 /* This sets the modes that are available */
@@ -146,7 +147,8 @@ static UOption options[]={
     /*17*/    UOPTION_DEF( "force-prefix", 'f', UOPT_NO_ARG),
     /*18*/    UOPTION_DEF( "libname", 'L', UOPT_REQUIRES_ARG),
     /*19*/    UOPTION_DEF( "quiet", 'q', UOPT_NO_ARG),
-    /*20*/    UOPTION_DEF( "without-assembly", 'w', UOPT_NO_ARG)
+    /*20*/    UOPTION_DEF( "without-assembly", 'w', UOPT_NO_ARG),
+    /*21*/    UOPTION_DEF( "zos-pds-build", 'z', UOPT_NO_ARG)
 };
 
 /* This enum and the following char array should be kept in sync. */
@@ -199,6 +201,8 @@ enum {
 #if U_PLATFORM == U_PF_CYGWIN
     LIB_FILE_CYGWIN,
     LIB_FILE_CYGWIN_VERSION,
+#elif U_PLATFORM == U_PF_MINGW
+    LIB_FILE_MINGW,
 #endif
     LIB_FILENAMES_SIZE
 };
@@ -367,6 +371,12 @@ main(int argc, char* argv[]) {
       o.quiet = TRUE;
     } else {
       o.quiet = FALSE;
+    }
+
+    if(options[PDS_BUILD].doesOccur) {
+      o.pdsbuild = TRUE;
+    } else {
+      o.pdsbuild = FALSE;
     }
 
     o.verbose   = options[VERBOSE].doesOccur;
@@ -742,7 +752,13 @@ static int32_t pkg_executeOptions(UPKGOptions *o) {
 #if U_PLATFORM != U_PF_OS400
                 if (!noVersion) {
                     /* Create symbolic links for the final library file. */
+#if U_PLATFORM == U_PF_OS390
+                    if (!o->pdsbuild) {
+                        result = pkg_createSymLinks(targetDir, noVersion);
+                    }
+#else
                     result = pkg_createSymLinks(targetDir, noVersion);
+#endif
                     if (result != 0) {
                         fprintf(stderr, "Error creating symbolic links of the data library file.\n");
                         return result;
@@ -840,15 +856,28 @@ static int32_t initializePkgDataFlags(UPKGOptions *o) {
  * Depending on the configuration, the library name may either end with version number or shared object suffix.
  */
 static void createFileNames(UPKGOptions *o, const char mode, const char *version_major, const char *version, const char *libName, UBool reverseExt, UBool noVersion) {
+#if U_PLATFORM == U_PF_MINGW
+        /* MinGW does not need the library prefix when building in dll mode. */
+        if (IN_DLL_MODE(mode)) {
+            sprintf(libFileNames[LIB_FILE], "%s", libName);
+        } else {
+            sprintf(libFileNames[LIB_FILE], "%s%s",
+                    pkgDataFlags[LIBPREFIX],
+                    libName);
+        }
+#else
         sprintf(libFileNames[LIB_FILE], "%s%s",
                 pkgDataFlags[LIBPREFIX],
                 libName);
+#endif
 
         if(o->verbose) {
           fprintf(stdout, "# libFileName[LIB_FILE] = %s\n", libFileNames[LIB_FILE]);
         }
 
-#if U_PLATFORM == U_PF_CYGWIN
+#if U_PLATFORM == U_PF_MINGW
+        sprintf(libFileNames[LIB_FILE_MINGW], "%s%s.lib", pkgDataFlags[LIBPREFIX], libName);
+#elif U_PLATFORM == U_PF_CYGWIN
         sprintf(libFileNames[LIB_FILE_CYGWIN], "cyg%s.%s",
                 libName,
                 pkgDataFlags[SO_EXT]);
@@ -859,11 +888,23 @@ static void createFileNames(UPKGOptions *o, const char mode, const char *version
 
         uprv_strcat(pkgDataFlags[SO_EXT], ".");
         uprv_strcat(pkgDataFlags[SO_EXT], pkgDataFlags[A_EXT]);
-
 #elif U_PLATFORM == U_PF_OS400 || defined(_AIX)
         sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s.%s",
                 libFileNames[LIB_FILE],
                 pkgDataFlags[SOBJ_EXT]);
+#elif U_PLATFROM == U_PF_OS390
+            if (o->pdsbuild) {
+                sprintf(libFileNames[LIB_FILE], "%s",
+                    libName);
+                sprintf(libFileNames[LIB_FILE_VERSION_TMP], "\"%s\"",
+                        libFileNames[LIB_FILE]);
+            } else {
+                sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s%s%s.%s",
+                        libFileNames[LIB_FILE],
+                        pkgDataFlags[LIB_EXT_ORDER][0] == '.' ? "." : "",
+                        reverseExt ? version : pkgDataFlags[SOBJ_EXT],
+                        reverseExt ? pkgDataFlags[SOBJ_EXT] : version);
+            }
 #else
         if (noVersion && !reverseExt) {
             sprintf(libFileNames[LIB_FILE_VERSION_TMP], "%s%s%s",
@@ -1076,13 +1117,17 @@ static int32_t pkg_installFileMode(const char *installDir, const char *srcDir, c
     }
 #ifndef U_WINDOWS_WITH_MSVC
     char buffer[SMALL_BUFFER_MAX_SIZE] = "";
+    int32_t bufferLength = 0;
 
     FileStream *f = T_FileStream_open(fileListName, "r");
     if (f != NULL) {
         for(;;) {
             if (T_FileStream_readLine(f, buffer, SMALL_BUFFER_MAX_SIZE) != NULL) {
+                bufferLength = uprv_strlen(buffer);
                 /* Remove new line character. */
-                buffer[uprv_strlen(buffer)-1] = 0;
+                if (bufferLength > 0) {
+                    buffer[bufferLength-1] = 0;
+                }
 
                 sprintf(cmd, "%s %s%s%s %s%s%s",
                         pkgDataFlags[INSTALL_CMD],
@@ -1232,6 +1277,8 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
                      uprv_strlen(pkgDataFlags[RPATH_FLAGS]) + uprv_strlen(pkgDataFlags[BIR_FLAGS]) + BUFFER_PADDING_SIZE;
 #if U_PLATFORM == U_PF_CYGWIN
             length += uprv_strlen(targetDir) + uprv_strlen(libFileNames[LIB_FILE_CYGWIN_VERSION]);
+#elif U_PLATFORM == U_PF_MINGW
+            length += uprv_strlen(targetDir) + uprv_strlen(libFileNames[LIB_FILE_MINGW]);
 #endif
             if ((cmd = (char *)uprv_malloc(sizeof(char) * length)) == NULL) {
                 fprintf(stderr, "Unable to allocate memory for command.\n");
@@ -1239,13 +1286,22 @@ static int32_t pkg_generateLibraryFile(const char *targetDir, const char mode, c
             }
             freeCmd = TRUE;
         }
-#if U_PLATFORM == U_PF_CYGWIN
+#if U_PLATFORM == U_PF_MINGW
+        sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
+                pkgDataFlags[GENLIB],
+                targetDir,
+                libFileNames[LIB_FILE_MINGW],
+                pkgDataFlags[LDICUDTFLAGS],
+                targetDir,
+                libFileNames[LIB_FILE_VERSION_TMP],
+#elif U_PLATFORM == U_PF_CYGWIN
         sprintf(cmd, "%s%s%s %s -o %s%s %s %s%s %s %s",
                 pkgDataFlags[GENLIB],
                 targetDir,
                 libFileNames[LIB_FILE_VERSION_TMP],
                 pkgDataFlags[LDICUDTFLAGS],
-                targetDir, libFileNames[LIB_FILE_CYGWIN_VERSION],
+                targetDir,
+                libFileNames[LIB_FILE_CYGWIN_VERSION],
 #elif U_PLATFORM == U_PF_AIX
         sprintf(cmd, "%s %s%s;%s %s -o %s%s %s %s%s %s %s",
                 RM_CMD,
@@ -1518,7 +1574,15 @@ static int32_t pkg_createWithoutAssemblyCode(UPKGOptions *o, const char *targetD
 
     if (result == 0) {
         /* Generate the library file. */
-        result = pkg_generateLibraryFile(targetDir, mode, buffer, cmd);
+#if U_PLATFORM == U_PF_OS390
+        if (o->pdsbuild && IN_DLL_MODE(mode)) {
+            result = pkg_generateLibraryFile("",mode, buffer, cmd);
+        } else {
+            result = pkg_generateLibraryFile(targetDir,mode, buffer, cmd);
+        }
+#else
+        result = pkg_generateLibraryFile(targetDir,mode, buffer, cmd);
+#endif
     }
 
     uprv_free(buffer);
@@ -1542,11 +1606,21 @@ static int32_t pkg_createWindowsDLL(const char mode, const char *gencFilePath, U
     if (IN_STATIC_MODE(mode)) {
         char staticLibFilePath[SMALL_BUFFER_MAX_SIZE] = "";
 
-        uprv_strcpy(staticLibFilePath, o->tmpDir);
-        uprv_strcat(staticLibFilePath, PKGDATA_FILE_SEP_STRING);
-
-        uprv_strcat(staticLibFilePath, o->entryName);
-        uprv_strcat(staticLibFilePath, LIB_EXT);
+#ifdef CYGWINMSVC
+        sprintf(staticLibFilePath, "%s%s%s%s%s",
+                o->targetDir,
+                PKGDATA_FILE_SEP_STRING,
+                pkgDataFlags[LIBPREFIX],
+                o->libName,
+                LIB_EXT);
+#else
+        sprintf(staticLibFilePath, "%s%s%s%s%s",
+                o->targetDir,
+                PKGDATA_FILE_SEP_STRING,
+                (strstr(o->libName, "icudt") ? "s" : ""),
+                o->libName,
+                LIB_EXT);
+#endif
 
         sprintf(cmd, "%s\"%s\" \"%s\"",
                 LIB_CMD,
@@ -1718,7 +1792,7 @@ static UPKGOptions *pkg_checkFlag(UPKGOptions *o) {
             T_FileStream_close(f);
         }
     }
-#elif U_PLATFORM == U_PF_CYGWIN
+#elif U_PLATFORM == U_PF_CYGWIN || U_PLATFORM == U_PF_MINGW
     /* Cygwin needs to change flag options. */
     char *flag = NULL;
     int32_t length = 0;
@@ -1891,28 +1965,20 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
       p = popen(cmdBuf, "r");
     }
 
-    if(p == NULL) {
+    if(p == NULL || (n = fread(buf, 1, 511, p)) <= 0) {
       if(verbose) {
         fprintf(stdout, "# Calling icu-config: %s\n", cmd);
       }
-      p = popen(cmd, "r");      
-    }
+      pclose(p);
 
-    if(p == NULL)
-    {
-        fprintf(stderr, "%s: icu-config: No icu-config found. (fix PATH or use -O option)\n", progname);
-        return -1;
+      p = popen(cmd, "r");
+      if(p == NULL || (n = fread(buf, 1, 511, p)) <= 0) {
+          fprintf(stderr, "%s: icu-config: No icu-config found. (fix PATH or use -O option)\n", progname);
+          return -1;
+      }
     }
-
-    n = fread(buf, 1, 511, p);
 
     pclose(p);
-
-    if(n<=0)
-    {
-        fprintf(stderr,"%s: icu-config: Could not read from icu-config. (fix PATH or use -O option)\n", progname);
-        return -1;
-    }
 
     for (int32_t length = strlen(buf) - 1; length >= 0; length--) {
         if (buf[length] == '\n' || buf[length] == ' ') {
@@ -1941,6 +2007,7 @@ static void loadLists(UPKGOptions *o, UErrorCode *status)
     option->doesOccur = TRUE;
 
     return 0;
-#endif
+#else
     return -1;
+#endif
 }

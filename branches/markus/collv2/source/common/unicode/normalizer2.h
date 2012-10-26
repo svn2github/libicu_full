@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2009-2011, International Business Machines
+*   Copyright (C) 2009-2012, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -83,6 +83,7 @@ public:
      */
     ~Normalizer2();
 
+#ifndef U_HIDE_DRAFT_API
     /**
      * Returns a Normalizer2 instance for Unicode NFC normalization.
      * Same as getInstance(NULL, "nfc", UNORM2_COMPOSE, errorCode).
@@ -152,6 +153,7 @@ public:
      */
     static const Normalizer2 *
     getNFKCCasefoldInstance(UErrorCode &errorCode);
+#endif  /* U_HIDE_DRAFT_API */
 
     /**
      * Returns a Normalizer2 instance which uses the specified data file
@@ -261,7 +263,7 @@ public:
      * @param decomposition String object which will be set to c's
      *                      decomposition mapping, if there is one.
      * @return TRUE if c has a decomposition, otherwise FALSE
-     * @draft ICU 4.6
+     * @stable ICU 4.6
      */
     virtual UBool
     getDecomposition(UChar32 c, UnicodeString &decomposition) const = 0;
@@ -528,7 +530,7 @@ public:
      * @param decomposition String object which will be set to c's
      *                      decomposition mapping, if there is one.
      * @return TRUE if c has a decomposition, otherwise FALSE
-     * @draft ICU 4.6
+     * @stable ICU 4.6
      */
     virtual UBool
     getDecomposition(UChar32 c, UnicodeString &decomposition) const;

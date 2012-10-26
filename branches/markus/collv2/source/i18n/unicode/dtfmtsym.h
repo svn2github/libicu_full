@@ -493,6 +493,31 @@ public:
      */
     Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
 
+#ifndef U_HIDE_INTERNAL_API
+    /**
+     * Constants for capitalization context usage types.
+     * @internal
+     */
+    enum ECapitalizationContextUsageType
+    {
+        kCapContextUsageOther,
+        kCapContextUsageMonthFormat,     /* except narrow */
+        kCapContextUsageMonthStandalone, /* except narrow */
+        kCapContextUsageMonthNarrow,
+        kCapContextUsageDayFormat,     /* except narrow */
+        kCapContextUsageDayStandalone, /* except narrow */
+        kCapContextUsageDayNarrow,
+        kCapContextUsageEraWide,
+        kCapContextUsageEraAbbrev,
+        kCapContextUsageEraNarrow,
+        kCapContextUsageZoneLong,
+        kCapContextUsageZoneShort,
+        kCapContextUsageMetazoneLong,
+        kCapContextUsageMetazoneShort,
+        kCapContextUsageTypeCount
+    };
+#endif  /* U_HIDE_INTERNAL_API */
+
     /**
      * ICU "poor man's RTTI", returns a UClassID for the actual class.
      *
@@ -689,33 +714,19 @@ private:
     Locale                  fZSFLocale;         // Locale used for getting ZoneStringFormat
 
     /**
-     * String used for localized GMT. For example, "GMT"
-     */
-    UnicodeString fGmtZero;
-
-    /**
-     * Pattern string used for localized time zone GMT format.  For example, "GMT{0}"
-     */
-    UnicodeString   fGmtFormat;
-
-    /**
-     * Pattern strings used for formatting zone offset in a localized time zone GMT string.
-     */
-    UnicodeString  *fGmtHourFormats;
-    int32_t         fGmtHourFormatsCount; 
-
-    enum GMTHourType {
-        GMT_NEGATIVE_HMS = 0,
-        GMT_NEGATIVE_HM,
-        GMT_POSITIVE_HMS,
-        GMT_POSITIVE_HM,
-        GMT_HOUR_COUNT
-    };
-
-    /**
      * Localized date-time pattern characters. For example: use 'u' as 'y'.
      */
     UnicodeString   fLocalPatternChars;
+
+#ifndef U_HIDE_INTERNAL_API
+    /**
+     * Capitalization transforms. For each usage type, the first array element indicates
+     * whether to titlecase for uiListOrMenu context, the second indicates whether to
+     * titlecase for stand-alone context.
+     */
+     UBool fCapitalization[kCapContextUsageTypeCount][2];
+#endif
+
 
 private:
     /** valid/actual locale information 
