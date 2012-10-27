@@ -16,16 +16,54 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/bytestream.h"
 #include "unicode/ucol.h"
 #include "charstr.h"
 #include "collation.h"
 
 U_NAMESPACE_BEGIN
 
-class ByteSink;
 class CollationIterator;
 
-// TODO: CollationRadixKeys
+class SortKeyByteSink2 : public ByteSink {
+public:
+    SortKeyByteSink2(char *dest, int32_t destCapacity)
+            : buffer_(dest), capacity_(destCapacity),
+              appended_(0) {}
+    virtual ~SortKeyByteSink2();
+
+    virtual void Append(const char *bytes, int32_t n);
+    void Append(uint32_t b) {
+        if (appended_ < capacity_ || Resize(1, appended_)) {
+            buffer_[appended_] = (char)b;
+        }
+        ++appended_;
+    }
+    virtual char *GetAppendBuffer(int32_t min_capacity,
+                                  int32_t desired_capacity_hint,
+                                  char *scratch, int32_t scratch_capacity,
+                                  int32_t *result_capacity);
+    int32_t NumberOfBytesAppended() const { return appended_; }
+    /** @return FALSE if memory allocation failed */
+    UBool IsOk() const { return buffer_ != NULL; }
+
+protected:
+    virtual void AppendBeyondCapacity(const char *bytes, int32_t n, int32_t length) = 0;
+    virtual UBool Resize(int32_t appendCapacity, int32_t length) = 0;
+
+    void SetNotOk() {
+        buffer_ = NULL;
+        capacity_ = 0;
+    }
+
+    char *buffer_;
+    int32_t capacity_;
+    int32_t appended_;
+
+private:
+    SortKeyByteSink2(const SortKeyByteSink2 &); // copy constructor not implemented
+    SortKeyByteSink2 &operator=(const SortKeyByteSink2 &); // assignment operator not implemented
+};
 
 class U_I18N_API CollationKeys /* not : public UObject because all methods are static */ {
 public:
@@ -47,7 +85,7 @@ public:
      * Separates levels with the LEVEL_SEPARATOR_BYTE
      * but does not write a TERMINATOR_BYTE.
      */
-    static void writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sink,
+    static void writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSink2 &sink,
                                            Collation::Level minLevel, LevelCallback &callback,
                                            UErrorCode &errorCode);
 private:
@@ -96,18 +134,6 @@ private:
     // Primary weights shifted to quaternary level must be encoded with
     // a lead byte below the common-weight compression range.
     static const uint32_t QUAT_SHIFTED_LIMIT_BYTE = QUAT_COMMON_LOW - 1;  // 0x1b
-
-    static void appendByte(uint32_t b, ByteSink &sink);
-    static void appendWeight16(uint32_t w, ByteSink &sink);
-    static void appendWeight32(uint32_t w, ByteSink &sink);
-
-    static void appendByte(uint32_t b, CharString &level, UErrorCode &errorCode) {
-        level.append((char)b, errorCode);
-    }
-    static void appendWeight16(uint32_t w, CharString &level, UErrorCode &errorCode);
-    static void appendWeight32(uint32_t w, CharString &level, UErrorCode &errorCode);
-
-    static void appendReverseWeight16(uint32_t w, CharString &level, UErrorCode &errorCode);
 };
 
 // TODO: class PartLevelCallback : public LevelCallback {

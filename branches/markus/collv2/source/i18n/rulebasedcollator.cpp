@@ -34,83 +34,84 @@
 
 U_NAMESPACE_BEGIN
 
-// TODO: CollationKey should have
-// - internal buffer of some 32 bytes (make sizeof(CollationKey)=64)
-// - ensureCapacity() does not at all work as its name suggests
-//   - should return UBool and not changing anything if capacity suffices
-//   - should not memset(old capacity) to 0
-//   - should copy fCount bytes
-//   - should not set fCount=new capacity
-class CollationKeyByteSink : public ByteSink {
+namespace {
+
+class FixedSortKeyByteSink : public SortKeyByteSink2 {
 public:
-    CollationKeyByteSink(CollationKey &k) : key(k) { key.reset(); }
-    virtual ~CollationKeyByteSink();
-    virtual void Append(const char *bytes, int32_t n);
-    virtual char* GetAppendBuffer(int32_t min_capacity,
-                                  int32_t desired_capacity_hint,
-                                  char *scratch, int32_t scratch_capacity,
-                                  int32_t *result_capacity);
+    FixedSortKeyByteSink(char *dest, int32_t destCapacity)
+            : SortKeyByteSink2(dest, destCapacity) {}
+    virtual ~FixedSortKeyByteSink();
+
 private:
-    CollationKey &key;
-    CollationKeyByteSink();  ///< default constructor not implemented 
-    CollationKeyByteSink(const CollationKeyByteSink &);  ///< copy constructor not implemented
-    CollationKeyByteSink &operator=(const CollationKeyByteSink &);  ///< assignment operator not implemented
+    virtual void AppendBeyondCapacity(const char *bytes, int32_t n, int32_t length);
+    virtual UBool Resize(int32_t appendCapacity, int32_t length);
 };
 
-CollationKeyByteSink::~CollationKeyByteSink() {}
+FixedSortKeyByteSink::~FixedSortKeyByteSink() {}
 
 void
-CollationKeyByteSink::Append(const char *bytes, int32_t n) {
-    if(n <= 0 || key.fBogus) {
-        return;
+FixedSortKeyByteSink::AppendBeyondCapacity(const char *bytes, int32_t /*n*/, int32_t length) {
+    // buffer_ != NULL && bytes != NULL && n > 0 && appended_ > capacity_
+    // Fill the buffer completely.
+    int32_t available = capacity_ - length;
+    if (available > 0) {
+        uprv_memcpy(buffer_ + length, bytes, available);
     }
-    int32_t newLength = key.fCount + n;
-    if(newLength > key.fCapacity) {
-        int32_t newCapacity = 2 * key.fCapacity;
-        if(newCapacity < 32) {
-            newCapacity = 32;
-        } else if(newCapacity < 200) {
-            newCapacity = 200;
-        }
-        if(newCapacity < newLength) {
-            newCapacity = key.fCount + 2 * n;
-        }
-        uint8_t *newBytes = static_cast<uint8_t *>(uprv_malloc(newCapacity));
-        if(newBytes == NULL) {
-            key.setToBogus();
-            return;
-        }
-        if(key.fCount != 0) {
-            uprv_memcpy(newBytes, key.fBytes, key.fCount);
-        }
-        uprv_free(key.fBytes);
-        key.fBytes = newBytes;
-        key.fCapacity = newCapacity;
-    }
-    if(n > 0 && bytes != (reinterpret_cast<char *>(key.fBytes) + key.fCount)) {
-        uprv_memcpy(key.fBytes + key.fCount, bytes, n);
-    }
-    key.fCount = newLength;
 }
 
-char *
-CollationKeyByteSink::GetAppendBuffer(int32_t min_capacity,
-                                      int32_t /*desired_capacity_hint*/,
-                                      char *scratch,
-                                      int32_t scratch_capacity,
-                                      int32_t *result_capacity) {
-    if(min_capacity < 1 || scratch_capacity < min_capacity) {
-        *result_capacity = 0;
-        return NULL;
+UBool
+FixedSortKeyByteSink::Resize(int32_t /*appendCapacity*/, int32_t /*length*/) {
+    return FALSE;
+}
+
+}  // namespace
+
+// Not in an anonymous namespace, so that it can be a friend of CollationKey.
+class CollationKeyByteSink2 : public SortKeyByteSink2 {
+public:
+    CollationKeyByteSink2(CollationKey &key)
+            : SortKeyByteSink2(reinterpret_cast<char *>(key.getBytes()), key.getCapacity()),
+              key_(key) {}
+    virtual ~CollationKeyByteSink2();
+
+private:
+    virtual void AppendBeyondCapacity(const char *bytes, int32_t n, int32_t length);
+    virtual UBool Resize(int32_t appendCapacity, int32_t length);
+
+    CollationKey &key_;
+};
+
+CollationKeyByteSink2::~CollationKeyByteSink2() {}
+
+void
+CollationKeyByteSink2::AppendBeyondCapacity(const char *bytes, int32_t n, int32_t length) {
+    // buffer_ != NULL && bytes != NULL && n > 0 && appended_ > capacity_
+    if (Resize(n, length)) {
+        uprv_memcpy(buffer_ + length, bytes, n);
     }
-    int32_t available = key.fCapacity - key.fCount;
-    if(available >= min_capacity) {
-        *result_capacity = available;
-        return reinterpret_cast<char *>(key.fBytes) + key.fCount;
-    } else {
-        *result_capacity = scratch_capacity;
-        return scratch;
+}
+
+UBool
+CollationKeyByteSink2::Resize(int32_t appendCapacity, int32_t length) {
+    if (buffer_ == NULL) {
+        return FALSE;  // allocation failed before already
     }
+    int32_t newCapacity = 2 * capacity_;
+    int32_t altCapacity = length + 2 * appendCapacity;
+    if (newCapacity < altCapacity) {
+        newCapacity = altCapacity;
+    }
+    if (newCapacity < 200) {
+        newCapacity = 200;
+    }
+    uint8_t *newBuffer = key_.reallocate(newCapacity, length);
+    if (newBuffer == NULL) {
+        SetNotOk();
+        return FALSE;
+    }
+    buffer_ = reinterpret_cast<char *>(newBuffer);
+    capacity_ = newCapacity;
+    return TRUE;
 }
 
 // TODO: Add UTRACE_... calls back in.
@@ -767,14 +768,14 @@ RuleBasedCollator2::getCollationKey(const UChar *s, int32_t length, CollationKey
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return key;
     }
-    CollationKeyByteSink sink(key);
+    CollationKeyByteSink2 sink(key);
     writeSortKey(s, length, sink, errorCode);
-    if(U_SUCCESS(errorCode)) {
-        if(key.isBogus()) {
-            errorCode = U_MEMORY_ALLOCATION_ERROR;
-        }
-    } else {
+    if(U_FAILURE(errorCode)) {
         key.setToBogus();
+    } else if(key.isBogus()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+    } else {
+        key.setLength(sink.NumberOfBytesAppended());
     }
     return key;
 }
@@ -791,7 +792,13 @@ RuleBasedCollator2::getSortKey(const UChar *s, int32_t length,
     if((s == NULL && length != 0) || capacity < 0 || (dest == NULL && capacity > 0)) {
         return 0;
     }
-    CheckedArrayByteSink sink(reinterpret_cast<char *>(dest), capacity);
+    uint8_t noDest[1] = { 0 };
+    if(dest == NULL) {
+        // Distinguish pure preflighting from an allocation error.
+        dest = noDest;
+        capacity = 0;
+    }
+    FixedSortKeyByteSink sink(reinterpret_cast<char *>(dest), capacity);
     UErrorCode errorCode = U_ZERO_ERROR;
     writeSortKey(s, length, sink, errorCode);
     return U_SUCCESS(errorCode) ? sink.NumberOfBytesAppended() : 0;
@@ -799,7 +806,7 @@ RuleBasedCollator2::getSortKey(const UChar *s, int32_t length,
 
 void
 RuleBasedCollator2::writeSortKey(const UChar *s, int32_t length,
-                                 ByteSink &sink, UErrorCode &errorCode) const {
+                                 SortKeyByteSink2 &sink, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return; }
     const UChar *limit = (length >= 0) ? s + length : NULL;
     CollationKeys::LevelCallback callback;

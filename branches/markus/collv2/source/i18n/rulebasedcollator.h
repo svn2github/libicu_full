@@ -27,6 +27,7 @@ U_NAMESPACE_BEGIN
 
 class CollationData;
 class CollationElementIterator;
+class SortKeyByteSink2;
 
 class U_I18N_API RuleBasedCollator2 : public Collator {
 public:
@@ -557,7 +558,7 @@ private:
                                UErrorCode &errorCode) const;
 
     void writeSortKey(const UChar *s, int32_t length,
-                      ByteSink &sink, UErrorCode &errorCode) const;
+                      SortKeyByteSink2 &sink, UErrorCode &errorCode) const;
 
     UBool ensureOwnedData(UErrorCode &errorCode);
 

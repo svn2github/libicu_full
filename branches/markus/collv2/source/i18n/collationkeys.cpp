@@ -14,7 +14,6 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/bytestream.h"
-#include "charstr.h"
 #include "collation.h"
 #include "collationdata.h"
 #include "collationiterator.h"
@@ -22,6 +21,166 @@
 #include "uassert.h"
 
 U_NAMESPACE_BEGIN
+
+SortKeyByteSink2::~SortKeyByteSink2() {}
+
+void
+SortKeyByteSink2::Append(const char *bytes, int32_t n) {
+    if (n <= 0 || bytes == NULL) {
+        return;
+    }
+    int32_t length = appended_;
+    appended_ += n;
+    if ((buffer_ + length) == bytes) {
+        return;  // the caller used GetAppendBuffer() and wrote the bytes already
+    }
+    int32_t available = capacity_ - length;
+    if (n <= available) {
+        uprv_memcpy(buffer_ + length, bytes, n);
+    } else {
+        AppendBeyondCapacity(bytes, n, length);
+    }
+}
+
+char *
+SortKeyByteSink2::GetAppendBuffer(int32_t min_capacity,
+                                 int32_t desired_capacity_hint,
+                                 char *scratch,
+                                 int32_t scratch_capacity,
+                                 int32_t *result_capacity) {
+    if (min_capacity < 1 || scratch_capacity < min_capacity) {
+        *result_capacity = 0;
+        return NULL;
+    }
+    int32_t available = capacity_ - appended_;
+    if (available >= min_capacity) {
+        *result_capacity = available;
+        return buffer_ + appended_;
+    } else if (Resize(desired_capacity_hint, appended_)) {
+        *result_capacity = capacity_ - appended_;
+        return buffer_ + appended_;
+    } else {
+        *result_capacity = scratch_capacity;
+        return scratch;
+    }
+}
+
+namespace {
+
+/**
+ * uint8_t byte buffer, similar to CharString but simpler.
+ */
+class SortKeyLevel : public UMemory {
+public:
+    SortKeyLevel() : len(0), ok(TRUE) {}
+    ~SortKeyLevel() {}
+
+    /** @return FALSE if memory allocation failed */
+    UBool isOk() const { return ok; }
+    UBool isEmpty() const { return len == 0; }
+    int32_t length() const { return len; }
+    const uint8_t *data() const { return buffer.getAlias(); }
+    uint8_t operator[](int32_t index) const { return buffer[index]; }
+
+    uint8_t *data() { return buffer.getAlias(); }
+
+    void appendByte(uint32_t b);
+    void appendWeight16(uint32_t w);
+    void appendWeight32(uint32_t w);
+    void appendReverseWeight16(uint32_t w);
+
+    /** Appends all but the last byte to the sink. The last byte should be the 01 terminator. */
+    void appendTo(ByteSink &sink) const {
+        U_ASSERT(len > 0 && buffer[len - 1] == 1);
+        sink.Append(reinterpret_cast<const char *>(buffer.getAlias()), len - 1);
+    }
+
+private:
+    MaybeStackArray<uint8_t, 40> buffer;
+    int32_t len;
+    UBool ok;
+
+    UBool ensureCapacity(int32_t appendCapacity);
+
+    SortKeyLevel(const SortKeyLevel &other); // forbid copying of this class
+    SortKeyLevel &operator=(const SortKeyLevel &other); // forbid copying of this class
+};
+
+void SortKeyLevel::appendByte(uint32_t b) {
+    if(len < buffer.getCapacity() || ensureCapacity(1)) {
+        buffer[len++] = (uint8_t)b;
+    }
+}
+
+void
+SortKeyLevel::appendWeight16(uint32_t w) {
+    U_ASSERT((w & 0xffff) != 0);
+    uint8_t b0 = (uint8_t)(w >> 8);
+    uint8_t b1 = (uint8_t)w;
+    int32_t appendLength = (b1 == 0) ? 1 : 2;
+    if((len + appendLength) <= buffer.getCapacity() || ensureCapacity(appendLength)) {
+        buffer[len++] = b0;
+        if(b1 != 0) {
+            buffer[len++] = b1;
+        }
+    }
+}
+
+void
+SortKeyLevel::appendWeight32(uint32_t w) {
+    U_ASSERT(w != 0);
+    uint8_t bytes[4] = { (uint8_t)(w >> 24), (uint8_t)(w >> 16), (uint8_t)(w >> 8), (uint8_t)w };
+    int32_t appendLength = (bytes[1] == 0) ? 1 : (bytes[2] == 0) ? 2 : (bytes[3] == 0) ? 3 : 4;
+    if((len + appendLength) <= buffer.getCapacity() || ensureCapacity(appendLength)) {
+        buffer[len++] = bytes[0];
+        if(bytes[1] != 0) {
+            buffer[len++] = bytes[1];
+            if(bytes[2] != 0) {
+                buffer[len++] = bytes[2];
+                if(bytes[3] != 0) {
+                    buffer[len++] = bytes[3];
+                }
+            }
+        }
+    }
+}
+
+void
+SortKeyLevel::appendReverseWeight16(uint32_t w) {
+    U_ASSERT((w & 0xffff) != 0);
+    uint8_t b0 = (uint8_t)(w >> 8);
+    uint8_t b1 = (uint8_t)w;
+    int32_t appendLength = (b1 == 0) ? 1 : 2;
+    if((len + appendLength) <= buffer.getCapacity() || ensureCapacity(appendLength)) {
+        if(b1 == 0) {
+            buffer[len++] = b0;
+        } else {
+            buffer[len] = b1;
+            buffer[len + 1] = b0;
+            len += 2;
+        }
+    }
+}
+
+UBool SortKeyLevel::ensureCapacity(int32_t appendCapacity) {
+    if(!ok) {
+        return FALSE;
+    }
+    int32_t newCapacity = 2 * buffer.getCapacity();
+    int32_t altCapacity = len + 2 * appendCapacity;
+    if (newCapacity < altCapacity) {
+        newCapacity = altCapacity;
+    }
+    if (newCapacity < 200) {
+        newCapacity = 200;
+    }
+    if(buffer.resize(newCapacity, len)==NULL) {
+        return ok = FALSE;
+    }
+    return TRUE;
+}
+
+}  // namespace
 
 CollationKeys::LevelCallback::~LevelCallback() {}
 
@@ -46,7 +205,7 @@ static const uint32_t levelMasks[UCOL_STRENGTH_LIMIT] = {
 };
 
 void
-CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sink,
+CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSink2 &sink,
                                           Collation::Level minLevel, LevelCallback &callback,
                                           UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
@@ -73,10 +232,10 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
 
     uint32_t tertiaryMask = CollationData::getTertiaryMask(options);
 
-    CharString cases;
-    CharString secondaries;
-    CharString tertiaries;
-    CharString quaternaries;
+    SortKeyLevel cases;
+    SortKeyLevel secondaries;
+    SortKeyLevel tertiaries;
+    SortKeyLevel quaternaries;
 
     uint32_t compressedP1 = 0;
     int32_t commonCases = 0;
@@ -98,11 +257,11 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
             if(commonQuaternaries != 0) {
                 --commonQuaternaries;
                 while(commonQuaternaries >= QUAT_COMMON_MAX_COUNT) {
-                    appendByte(QUAT_COMMON_MIDDLE, quaternaries, errorCode);
+                    quaternaries.appendByte(QUAT_COMMON_MIDDLE);
                     commonQuaternaries -= QUAT_COMMON_MAX_COUNT;
                 }
                 // Shifted primary weights are lower than the common weight.
-                appendByte(QUAT_COMMON_LOW + commonQuaternaries, quaternaries, errorCode);
+                quaternaries.appendByte(QUAT_COMMON_LOW + commonQuaternaries);
                 commonQuaternaries = 0;
             }
             do {
@@ -110,9 +269,9 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     if(p1 >= QUAT_SHIFTED_LIMIT_BYTE) {
                         // Prevent shifted primary lead bytes from
                         // overlapping with the common compression range.
-                        appendByte(QUAT_SHIFTED_LIMIT_BYTE, quaternaries, errorCode);
+                        quaternaries.appendByte(QUAT_SHIFTED_LIMIT_BYTE);
                     }
-                    appendWeight32((p1 << 24) | (p & 0xffffff), quaternaries, errorCode);
+                    quaternaries.appendWeight32((p1 << 24) | (p & 0xffffff));
                 }
                 do {
                     ce = iter.nextCE(errorCode);
@@ -133,13 +292,13 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                         // No primary compression terminator
                         // at the end of the level or merged segment.
                         if(p1 > Collation::MERGE_SEPARATOR_BYTE) {
-                            appendByte(Collation::PRIMARY_COMPRESSION_LOW_BYTE, sink);
+                            sink.Append(Collation::PRIMARY_COMPRESSION_LOW_BYTE);
                         }
                     } else {
-                        appendByte(Collation::PRIMARY_COMPRESSION_HIGH_BYTE, sink);
+                        sink.Append(Collation::PRIMARY_COMPRESSION_HIGH_BYTE);
                     }
                 }
-                appendByte(p1, sink);
+                sink.Append(p1);
                 if(data->isCompressibleLeadByte(p1)) {
                     compressedP1 = p1;
                 } else {
@@ -164,7 +323,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 if(commonSecondaries != 0) {
                     --commonSecondaries;
                     while(commonSecondaries >= SEC_COMMON_MAX_COUNT) {
-                        appendByte(SEC_COMMON_MIDDLE, secondaries, errorCode);
+                        secondaries.appendByte(SEC_COMMON_MIDDLE);
                         commonSecondaries -= SEC_COMMON_MAX_COUNT;
                     }
                     uint32_t b;
@@ -173,10 +332,10 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     } else {
                         b = SEC_COMMON_HIGH - commonSecondaries;
                     }
-                    appendByte(b, secondaries, errorCode);
+                    secondaries.appendByte(b);
                     commonSecondaries = 0;
                 }
-                appendWeight16(s, secondaries, errorCode);
+                secondaries.appendWeight16(s);
             } else {
                 if(commonSecondaries != 0) {
                     --commonSecondaries;
@@ -188,11 +347,11 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     } else {
                         b = SEC_COMMON_HIGH - remainder;
                     }
-                    appendByte(b, secondaries, errorCode);
+                    secondaries.appendByte(b);
                     commonSecondaries -= remainder;
                     // commonSecondaries is now a multiple of SEC_COMMON_MAX_COUNT.
                     while(commonSecondaries > 0) {  // same as >= SEC_COMMON_MAX_COUNT
-                        appendByte(SEC_COMMON_MIDDLE, secondaries, errorCode);
+                        secondaries.appendByte(SEC_COMMON_MIDDLE);
                         commonSecondaries -= SEC_COMMON_MAX_COUNT;
                     }
                     // commonSecondaries == 0
@@ -202,9 +361,9 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     if(s == Collation::MERGE_SEPARATOR_WEIGHT16) {
                         anyMergeSeparators = TRUE;
                     }
-                    appendByte((s >> 8) - 1, secondaries, errorCode);
+                    secondaries.appendByte((s >> 8) - 1);
                 } else {
-                    appendReverseWeight16(s, secondaries, errorCode);
+                    secondaries.appendReverseWeight16(s);
                 }
                 prevSecondary = s;
             }
@@ -228,7 +387,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     if(commonCases != 0) {
                         --commonCases;
                         while(commonCases >= CASE_LOWER_FIRST_COMMON_MAX_COUNT) {
-                            appendByte(CASE_LOWER_FIRST_COMMON_MIDDLE << 4, cases, errorCode);
+                            cases.appendByte(CASE_LOWER_FIRST_COMMON_MIDDLE << 4);
                             commonCases -= CASE_LOWER_FIRST_COMMON_MAX_COUNT;
                         }
                         uint32_t b;
@@ -237,7 +396,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                         } else {
                             b = CASE_LOWER_FIRST_COMMON_HIGH - commonCases;
                         }
-                        appendByte(b << 4, cases, errorCode);
+                        cases.appendByte(b << 4);
                         commonCases = 0;
                     }
                     if(c > Collation::MERGE_SEPARATOR_BYTE) {
@@ -250,10 +409,10 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     if(commonCases != 0) {
                         --commonCases;
                         while(commonCases >= CASE_UPPER_FIRST_COMMON_MAX_COUNT) {
-                            appendByte(CASE_UPPER_FIRST_COMMON_LOW << 4, cases, errorCode);
+                            cases.appendByte(CASE_UPPER_FIRST_COMMON_LOW << 4);
                             commonCases -= CASE_UPPER_FIRST_COMMON_MAX_COUNT;
                         }
-                        appendByte((CASE_UPPER_FIRST_COMMON_HIGH - commonCases) << 4, cases, errorCode);
+                        cases.appendByte((CASE_UPPER_FIRST_COMMON_HIGH - commonCases) << 4);
                         commonCases = 0;
                     }
                     if(c > Collation::MERGE_SEPARATOR_BYTE) {
@@ -262,7 +421,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 }
                 // c is a separator byte 01 or 02,
                 // or a left-shifted nibble 0x10, 0x20, ... 0xf0.
-                appendByte(c, cases, errorCode);
+                cases.appendByte(c);
             }
         }
 
@@ -277,7 +436,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 if(commonTertiaries != 0) {
                     --commonTertiaries;
                     while(commonTertiaries >= TER_ONLY_COMMON_MAX_COUNT) {
-                        appendByte(TER_ONLY_COMMON_MIDDLE, tertiaries, errorCode);
+                        tertiaries.appendByte(TER_ONLY_COMMON_MIDDLE);
                         commonTertiaries -= TER_ONLY_COMMON_MAX_COUNT;
                     }
                     uint32_t b;
@@ -286,18 +445,18 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     } else {
                         b = TER_ONLY_COMMON_HIGH - commonTertiaries;
                     }
-                    appendByte(b, tertiaries, errorCode);
+                    tertiaries.appendByte(b);
                     commonTertiaries = 0;
                 }
                 if(t > Collation::COMMON_WEIGHT16) { t += 0xc000; }
-                appendWeight16(t, tertiaries, errorCode);
+                tertiaries.appendWeight16(t);
             } else if((options & CollationData::UPPER_FIRST) == 0) {
                 // Tertiary weights with caseFirst=lowerFirst.
                 // Move lead bytes 06..BF to 46..FF for the common-weight range.
                 if(commonTertiaries != 0) {
                     --commonTertiaries;
                     while(commonTertiaries >= TER_LOWER_FIRST_COMMON_MAX_COUNT) {
-                        appendByte(TER_LOWER_FIRST_COMMON_MIDDLE, tertiaries, errorCode);
+                        tertiaries.appendByte(TER_LOWER_FIRST_COMMON_MIDDLE);
                         commonTertiaries -= TER_LOWER_FIRST_COMMON_MAX_COUNT;
                     }
                     uint32_t b;
@@ -306,11 +465,11 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     } else {
                         b = TER_LOWER_FIRST_COMMON_HIGH - commonTertiaries;
                     }
-                    appendByte(b, tertiaries, errorCode);
+                    tertiaries.appendByte(b);
                     commonTertiaries = 0;
                 }
                 if(t > Collation::COMMON_WEIGHT16) { t += 0x4000; }
-                appendWeight16(t, tertiaries, errorCode);
+                tertiaries.appendWeight16(t);
             } else {
                 // Tertiary weights with caseFirst=upperFirst.
                 // Do not change the artificial uppercase weight of a tertiary CE (0.0.ut),
@@ -343,7 +502,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 if(commonTertiaries != 0) {
                     --commonTertiaries;
                     while(commonTertiaries >= TER_UPPER_FIRST_COMMON_MAX_COUNT) {
-                        appendByte(TER_UPPER_FIRST_COMMON_MIDDLE, tertiaries, errorCode);
+                        tertiaries.appendByte(TER_UPPER_FIRST_COMMON_MIDDLE);
                         commonTertiaries -= TER_UPPER_FIRST_COMMON_MAX_COUNT;
                     }
                     uint32_t b;
@@ -352,10 +511,10 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     } else {
                         b = TER_UPPER_FIRST_COMMON_HIGH - commonTertiaries;
                     }
-                    appendByte(b, tertiaries, errorCode);
+                    tertiaries.appendByte(b);
                     commonTertiaries = 0;
                 }
-                appendWeight16(t, tertiaries, errorCode);
+                tertiaries.appendWeight16(t);
             }
         }
 
@@ -375,7 +534,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 // There are also exactly as many quaternary weights as tertiary weights,
                 // so level length differences are handled already on tertiary level.
                 // Any above-common quaternary weight will compare greater regardless.
-                appendByte(q >> 8, quaternaries, errorCode);
+                quaternaries.appendByte(q >> 8);
             } else {
                 if(q <= Collation::MERGE_SEPARATOR_WEIGHT16) {
                     q >>= 8;
@@ -385,7 +544,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 if(commonQuaternaries != 0) {
                     --commonQuaternaries;
                     while(commonQuaternaries >= QUAT_COMMON_MAX_COUNT) {
-                        appendByte(QUAT_COMMON_MIDDLE, quaternaries, errorCode);
+                        quaternaries.appendByte(QUAT_COMMON_MIDDLE);
                         commonQuaternaries -= QUAT_COMMON_MAX_COUNT;
                     }
                     uint32_t b;
@@ -394,21 +553,25 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                     } else {
                         b = QUAT_COMMON_HIGH - commonQuaternaries;
                     }
-                    appendByte(b, quaternaries, errorCode);
+                    quaternaries.appendByte(b);
                     commonQuaternaries = 0;
                 }
-                appendByte(q, quaternaries, errorCode);
+                quaternaries.appendByte(q);
             }
         }
 
         if((lower32 >> 24) == Collation::LEVEL_SEPARATOR_BYTE) { break; }  // ce == NO_CE
     }
 
+    if(U_FAILURE(errorCode)) { return; }
+
     // Append the beyond-primary levels.
+    UBool ok = TRUE;
     if((levels & Collation::SECONDARY_LEVEL_FLAG) != 0) {
         if(!callback.needToWrite(Collation::SECONDARY_LEVEL)) { return; }
-        appendByte(Collation::LEVEL_SEPARATOR_BYTE, sink);
-        char *secs = secondaries.data();
+        ok &= secondaries.isOk();
+        sink.Append(Collation::LEVEL_SEPARATOR_BYTE);
+        uint8_t *secs = secondaries.data();
         int32_t length = secondaries.length() - 1;  // Ignore the trailing NO_CE.
         if((options & CollationData::BACKWARD_SECONDARY) != 0) {
             // The backwards secondary level compares secondary weights backwards
@@ -421,16 +584,16 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 int32_t limit;
                 if(anyMergeSeparators) {
                     limit = start;
-                    while((uint8_t)secs[limit] > 1) { ++limit; }
+                    while(secs[limit] > 1) { ++limit; }
                 } else {
                     limit = length;
                 }
                 // Reverse this segment.
                 if(start < limit) {
-                    char *p = secs + start;
-                    char *q = secs + limit - 1;
+                    uint8_t *p = secs + start;
+                    uint8_t *q = secs + limit - 1;
                     while(p < q) {
-                        char s = *p;
+                        uint8_t s = *p;
                         *p++ = *q;
                         *q-- = s;
                     }
@@ -443,12 +606,13 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
                 start = limit + 1;
             }
         }
-        sink.Append(secs, length);
+        sink.Append(reinterpret_cast<char *>(secs), length);
     }
 
     if((levels & Collation::CASE_LEVEL_FLAG) != 0) {
         if(!callback.needToWrite(Collation::CASE_LEVEL)) { return; }
-        appendByte(Collation::LEVEL_SEPARATOR_BYTE, sink);
+        ok &= cases.isOk();
+        sink.Append(Collation::LEVEL_SEPARATOR_BYTE);
         // Write pairs of nibbles as bytes, except separator bytes as themselves.
         int32_t length = cases.length() - 1;  // Ignore the trailing NO_CE.
         uint8_t b = 0;
@@ -456,82 +620,40 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, ByteSink &sin
             uint8_t c = (uint8_t)cases[i];
             if(c <= Collation::MERGE_SEPARATOR_BYTE) {
                 if(b != 0) {
-                    appendByte(b, sink);
+                    sink.Append(b);
                     b = 0;
                 }
-                appendByte(c, sink);
+                sink.Append(c);
             } else {
                 if(b == 0) {
                     b = c;
                 } else {
-                    appendByte(b | (c >> 4), sink);
+                    sink.Append(b | (c >> 4));
                     b = 0;
                 }
             }
         }
         if(b != 0) {
-            appendByte(b, sink);
+            sink.Append(b);
         }
     }
 
     if((levels & Collation::TERTIARY_LEVEL_FLAG) != 0) {
         if(!callback.needToWrite(Collation::TERTIARY_LEVEL)) { return; }
-        appendByte(Collation::LEVEL_SEPARATOR_BYTE, sink);
-        sink.Append(tertiaries.data(), tertiaries.length() - 1);
+        ok &= tertiaries.isOk();
+        sink.Append(Collation::LEVEL_SEPARATOR_BYTE);
+        tertiaries.appendTo(sink);
     }
 
     if((levels & Collation::QUATERNARY_LEVEL_FLAG) != 0) {
         if(!callback.needToWrite(Collation::QUATERNARY_LEVEL)) { return; }
-        appendByte(Collation::LEVEL_SEPARATOR_BYTE, sink);
-        sink.Append(quaternaries.data(), quaternaries.length() - 1);
+        ok &= quaternaries.isOk();
+        sink.Append(Collation::LEVEL_SEPARATOR_BYTE);
+        quaternaries.appendTo(sink);
     }
-}
 
-void
-CollationKeys::appendByte(uint32_t b, ByteSink &sink) {
-    char buffer[1] = { (char)b };
-    sink.Append(buffer, 1);
-}
-
-void
-CollationKeys::appendWeight16(uint32_t w, ByteSink &sink) {
-    U_ASSERT((w & 0xffff) != 0);
-    char buffer[2] = { (char)(w >> 8), (char)w };
-    sink.Append(buffer, (buffer[1] == 0) ? 1 : 2);
-}
-
-void
-CollationKeys::appendWeight32(uint32_t w, ByteSink &sink) {
-    U_ASSERT(w != 0);
-    char buffer[4] = { (char)(w >> 24), (char)(w >> 16), (char)(w >> 8), (char)w };
-    sink.Append(buffer,
-                (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : (buffer[3] == 0) ? 3 : 4);
-}
-
-void
-CollationKeys::appendWeight16(uint32_t w, CharString &level, UErrorCode &errorCode) {
-    U_ASSERT((w & 0xffff) != 0);
-    char buffer[2] = { (char)(w >> 8), (char)w };
-    level.append(buffer, (buffer[1] == 0) ? 1 : 2, errorCode);
-}
-
-void
-CollationKeys::appendWeight32(uint32_t w, CharString &level, UErrorCode &errorCode) {
-    U_ASSERT(w != 0);
-    char buffer[4] = { (char)(w >> 24), (char)(w >> 16), (char)(w >> 8), (char)w };
-    level.append(buffer,
-                 (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : (buffer[3] == 0) ? 3 : 4,
-                 errorCode);
-}
-
-void
-CollationKeys::appendReverseWeight16(uint32_t w, CharString &level, UErrorCode &errorCode) {
-    U_ASSERT((w & 0xffff) != 0);
-    char buffer[2] = { (char)w, (char)(w >> 8) };
-    if(buffer[0] == 0) {
-        level.append(buffer + 1, 1, errorCode);
-    } else {
-        level.append(buffer, 2, errorCode);
+    if(!ok || !sink.IsOk()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
     }
 }
 

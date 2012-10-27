@@ -74,6 +74,9 @@ public:
 private:
     void checkFCD(const char *name, CollationIterator &ci, CodePointIterator &cpi);
 
+    static UnicodeString printSortKey(const uint8_t *p, int32_t length);
+    static UnicodeString printCollationKey(const CollationKey &key);
+
     // Helpers & fields for data-driven test.
     static UBool isCROrLF(UChar c) { return c == 0xa || c == 0xd; }
     static UBool isSpace(UChar c) { return c == 9 || c == 0x20 || c == 0x3000; }
@@ -393,6 +396,27 @@ void CollationTest::TestFCD() {
         return;
     }
     checkFCD("FCDUIterCollationIterator", uici, cpi);
+}
+
+UnicodeString CollationTest::printSortKey(const uint8_t *p, int32_t length) {
+    UnicodeString s;
+    for(int32_t i = 0; i < length; ++i) {
+        if(i > 0) { s.append((UChar)0x20); }
+        uint8_t b = p[i];
+        if(b == 0) {
+            s.append((UChar)0x2e);  // period
+        } else if(b == 1) {
+            s.append((UChar)0x7c);  // vertical bar
+        } else {
+            appendHex(b, 2, s);
+        }
+    }
+    return s;
+}
+
+UnicodeString CollationTest::printCollationKey(const CollationKey &key) {
+    int32_t length;
+    return printSortKey(key.getByteArray(length), length);
 }
 
 UBool CollationTest::readLine(UCHARBUF *f, IcuTestErrorCode &errorCode) {
@@ -983,6 +1007,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
               (int)fileLineNumber, norm, order, expectedOrder, errorCode.errorName());
         errln(prevFileLine);
         errln(fileLine);
+        errln(printCollationKey(prevKey));
+        errln(printCollationKey(key));
         errorCode.reset();
         return FALSE;
     }
@@ -1009,6 +1035,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                   (int)fileLineNumber, norm, order, level, expectedLevel);
             errln(prevFileLine);
             errln(fileLine);
+            errln(printCollationKey(prevKey));
+            errln(printCollationKey(key));
             return FALSE;
         }
     }

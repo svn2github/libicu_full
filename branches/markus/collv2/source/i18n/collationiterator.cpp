@@ -833,10 +833,9 @@ CollationIterator::previousCE(CEArray &backwardCEs, UErrorCode &errorCode) {
     uint32_t ce32 = data->getCE32(c);
     // Simple, safe-backwards iteration:
     // Get a CE going backwards, handle prefixes but no contractions.
-    int64_t ce;
     if(ce32 < Collation::MIN_SPECIAL_CE32) {  // Forced-inline of isSpecialCE32(ce32).
         // Normal CE from the main data.
-        ce = Collation::ceFromCE32(ce32);
+        return Collation::ceFromCE32(ce32);
     }
     const CollationData *d;
     if(ce32 == Collation::MIN_SPECIAL_CE32) {

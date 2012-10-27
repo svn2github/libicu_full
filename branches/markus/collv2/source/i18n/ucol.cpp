@@ -4291,6 +4291,7 @@ ucol_mergeSortkeys(const uint8_t *src1, int32_t src1Length,
 
 U_NAMESPACE_BEGIN
 
+// Not in an anonymous namespace, so that it can be declared in ucol_imp.h.
 class SortKeyByteSink : public ByteSink {
 public:
     SortKeyByteSink(char *dest, int32_t destCapacity)
@@ -4391,6 +4392,8 @@ SortKeyByteSink::GetAppendBuffer(int32_t min_capacity,
     }
 }
 
+namespace {
+
 class FixedSortKeyByteSink : public SortKeyByteSink {
 public:
     FixedSortKeyByteSink(char *dest, int32_t destCapacity)
@@ -4419,6 +4422,9 @@ FixedSortKeyByteSink::Resize(int32_t /*appendCapacity*/, int32_t /*length*/) {
     return FALSE;
 }
 
+}  // namespace
+
+// Not in an anonymous namespace, so that it can be a friend of CollationKey.
 class CollationKeyByteSink : public SortKeyByteSink {
 public:
     CollationKeyByteSink(CollationKey &key)
@@ -4465,6 +4471,8 @@ CollationKeyByteSink::Resize(int32_t appendCapacity, int32_t length) {
     capacity_ = newCapacity;
     return TRUE;
 }
+
+namespace {
 
 /**
  * uint8_t byte buffer, similar to CharString but simpler.
@@ -4534,6 +4542,8 @@ UBool SortKeyLevel::ensureCapacity(int32_t appendCapacity) {
     }
     return TRUE;
 }
+
+}  // namespace
 
 U_NAMESPACE_END
 

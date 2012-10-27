@@ -28,11 +28,11 @@
 #include "uvectr64.h"
 #include "uvector.h"
 
+U_NAMESPACE_BEGIN
+
 // TODO: Move to utrie2.h.
 // TODO: Used here?
 U_DEFINE_LOCAL_OPEN_POINTER(LocalUTrie2Pointer, UTrie2, utrie2_close);
-
-U_NAMESPACE_BEGIN
 
 /**
  * Build-time context and CE32 for a code point.
