@@ -468,7 +468,7 @@ public:
                 index = -1;
             } else {
                 UChar32 c;
-                U16_NEXT_UNSAFE(buffer, index, c);
+                U16_NEXT_UNSAFE(decomp, index, c);
                 return c;
             }
         }
@@ -482,10 +482,10 @@ public:
      */
     UChar32 nextDecomposedCodePoint(const Normalizer2Impl &nfcImpl, UChar32 c) {
         if(index >= 0) { return c; }
-        const UChar *s = nfcImpl.getDecomposition(c, buffer, length);
-        if(s == NULL) { return c; }
+        decomp = nfcImpl.getDecomposition(c, buffer, length);
+        if(decomp == NULL) { return c; }
         index = 0;
-        U16_NEXT_UNSAFE(buffer, index, c);
+        U16_NEXT_UNSAFE(decomp, index, c);
         return c;
     }
 protected:
@@ -495,6 +495,7 @@ protected:
      */
     virtual UChar32 nextRawCodePoint() = 0;
 private:
+    const UChar *decomp;
     UChar buffer[4];
     int32_t index;
     int32_t length;

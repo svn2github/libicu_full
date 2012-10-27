@@ -21,6 +21,7 @@
 #include "uparse.h"
 
 #include "collationdata.h"  // TODO: Temporarily for getCollationBaseData().
+#include "rulebasedcollator.h"  // TODO: Temporarily for v2 testing
 
 extern const CollationBaseData *
 getCollationBaseData(UErrorCode &errorCode);
@@ -231,7 +232,7 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         }
         buffer[buflen] = 0;
 
-        if(skipLineBecauseOfBug(buffer, buflen, skipFlags)) {
+        if(skipLineBecauseOfBug(buffer, buflen, skipFlags) && dynamic_cast<const RuleBasedCollator2 *>(coll) == NULL /* TODO: remove */) {
             logln("Skipping line %i because of a known bug", line);
             continue;
         }
@@ -239,12 +240,16 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         int32_t resLen = coll->getSortKey(buffer, buflen, newSk, 1024);
 
         if(oldSk != NULL) {
+            UBool ok=TRUE;
             int32_t skres = strcmp((char *)oldSk, (char *)newSk);
             int32_t cmpres = coll->compare(oldB, oldBlen, buffer, buflen, status);
             int32_t cmpres2 = coll->compare(buffer, buflen, oldB, oldBlen, status);
 
             if(cmpres != -cmpres2) {
-                errln("Compare result not symmetrical on line %i", line);
+                errln("Compare result not symmetrical on line %i: "
+                      "previous vs. current (%d) / current vs. previous (%d)",
+                      line, cmpres, cmpres2);
+                ok = FALSE;
             }
 
             // TODO: Compare with normalization turned off if the input passes the FCD test.
@@ -252,8 +257,7 @@ void UCAConformanceTest::testConformance(const Collator *coll)
             if(cmpres != normalizeResult(skres)) {
                 errln("Difference between coll->compare (%d) and sortkey compare (%d) on line %i",
                       cmpres, skres, line);
-                errln("  Previous data line %s", oldLineB);
-                errln("  Current data line  %s", lineB);
+                ok = FALSE;
             }
 
             int32_t res = cmpres;
@@ -267,6 +271,10 @@ void UCAConformanceTest::testConformance(const Collator *coll)
             }
             if(res > 0) {
                 errln("Line %i is not greater or equal than previous line", line);
+                ok = FALSE;
+            }
+
+            if(!ok) {
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
                 UnicodeString oldS, newS;
@@ -338,8 +346,6 @@ void UCAConformanceTest::TestRulesShifted(/* par */) {
         testConformance(rbUCA);
     }
 }
-
-#include "rulebasedcollator.h"
 
 void UCAConformanceTest::TestTable2NonIgnorable() {
     RuleBasedCollator2 coll(getCollationBaseData(status));
