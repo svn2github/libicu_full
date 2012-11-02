@@ -29,21 +29,38 @@ class SortKeyByteSink2 : public ByteSink {
 public:
     SortKeyByteSink2(char *dest, int32_t destCapacity)
             : buffer_(dest), capacity_(destCapacity),
-              appended_(0) {}
+              appended_(0), ignore_(0) {}
     virtual ~SortKeyByteSink2();
+
+    void IgnoreBytes(int32_t numIgnore) { ignore_ = numIgnore; }
 
     virtual void Append(const char *bytes, int32_t n);
     void Append(uint32_t b) {
-        if (appended_ < capacity_ || Resize(1, appended_)) {
-            buffer_[appended_] = (char)b;
+        if (ignore_ > 0) {
+            --ignore_;
+        } else {
+            if (appended_ < capacity_ || Resize(1, appended_)) {
+                buffer_[appended_] = (char)b;
+            }
+            ++appended_;
         }
-        ++appended_;
     }
     virtual char *GetAppendBuffer(int32_t min_capacity,
                                   int32_t desired_capacity_hint,
                                   char *scratch, int32_t scratch_capacity,
                                   int32_t *result_capacity);
     int32_t NumberOfBytesAppended() const { return appended_; }
+
+    /**
+     * @return how many bytes can be appended (including ignored ones)
+     *         without reallocation
+     */
+    int32_t GetRemainingCapacity() const {
+        // Either ignore_ or appended_ should be 0.
+        return ignore_ + capacity_ - appended_;
+    }
+
+    UBool Overflowed() const { return appended_ > capacity_; }
     /** @return FALSE if memory allocation failed */
     UBool IsOk() const { return buffer_ != NULL; }
 
@@ -59,6 +76,7 @@ protected:
     char *buffer_;
     int32_t capacity_;
     int32_t appended_;
+    int32_t ignore_;
 
 private:
     SortKeyByteSink2(const SortKeyByteSink2 &); // copy constructor not implemented

@@ -436,15 +436,7 @@ UBool
 FCDUIterCollationIterator::normalize(const UnicodeString &s, UErrorCode &errorCode) {
     // NFD without argument checking.
     U_ASSERT(U_SUCCESS(errorCode));
-    normalized.remove();
-    {
-        ReorderingBuffer buffer(nfcImpl, normalized);
-        int32_t length = s.length();
-        if(!buffer.init(length, errorCode)) { return FALSE; }
-        const UChar *p = s.getBuffer();
-        nfcImpl.decompose(p, p + length, &buffer, errorCode);
-        // The ReorderingBuffer destructor releases the "normalized" string.
-    }
+    nfcImpl.decompose(s, normalized, errorCode);
     return U_SUCCESS(errorCode);
 }
 

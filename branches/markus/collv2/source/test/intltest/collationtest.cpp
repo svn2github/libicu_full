@@ -115,6 +115,9 @@ private:
                       IcuTestErrorCode &errorCode);
     void checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode);
 
+    UBool getSortKeyParts(const UChar *s, int32_t length,
+                          CharString &dest, int32_t partSize,
+                          IcuTestErrorCode &errorCode);
     UBool getCollationKey(const UnicodeString &line,
                           const UChar *s, int32_t length,
                           CollationKey &key, IcuTestErrorCode &errorCode);
@@ -416,7 +419,8 @@ UnicodeString CollationTest::printSortKey(const uint8_t *p, int32_t length) {
 
 UnicodeString CollationTest::printCollationKey(const CollationKey &key) {
     int32_t length;
-    return printSortKey(key.getByteArray(length), length);
+    const uint8_t *p = key.getByteArray(length);
+    return printSortKey(p, length);
 }
 
 UBool CollationTest::readLine(UCHARBUF *f, IcuTestErrorCode &errorCode) {
@@ -901,6 +905,29 @@ void CollationTest::checkCEs(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     }
 }
 
+UBool CollationTest::getSortKeyParts(const UChar *s, int32_t length,
+                                     CharString &dest, int32_t partSize,
+                                     IcuTestErrorCode &errorCode) {
+    if(errorCode.isFailure()) { return FALSE; }
+    uint8_t part[32];
+    U_ASSERT(partSize <= LENGTHOF(part));
+    UCharIterator iter;
+    uint32_t state[2] = { 0, 0 };
+    for(;;) {
+        uiter_setString(&iter, s, length);
+        int32_t partLength = coll->nextSortKeyPart(&iter, state, part, partSize, errorCode);
+        UBool done = partLength < partSize;
+        if(done) {
+            // At the end, append the next byte as well which should be 00.
+            ++partLength;
+        }
+        dest.append(reinterpret_cast<char *>(part), partLength, errorCode);
+        if(done) {
+            return errorCode.isSuccess();
+        }
+    }
+}
+
 UBool CollationTest::getCollationKey(const UnicodeString &line,
                                      const UChar *s, int32_t length,
                                      CollationKey &key, IcuTestErrorCode &errorCode) {
@@ -917,8 +944,98 @@ UBool CollationTest::getCollationKey(const UnicodeString &line,
         errorCode.reset();
         return FALSE;
     }
-    // TODO: if s contains U+FFFE, check that merged segments make the same key
-    // TODO: check that nextSortKeyPart() makes the same key, with increments of 1, 3, max
+    int32_t keyLength;
+    const uint8_t *keyBytes = key.getByteArray(keyLength);
+
+    // If s contains U+FFFE, check that merged segments make the same key.
+    LocalMemory<uint8_t> mergedKey;
+    int32_t mergedKeyLength = 0;
+    int32_t mergedKeyCapacity = 0;
+    int32_t sLength = (length >= 0) ? length : u_strlen(s);
+    int32_t segmentStart = 0;
+    for(int32_t i = 0;;) {
+        if(i == sLength) {
+            if(segmentStart == 0) {
+                // s does not contain any U+FFFE.
+                break;
+            }
+        } else if(s[i] != 0xfffe) {
+            ++i;
+            continue;
+        }
+        // Get the sort key for another segment and merge it into mergedKey.
+        CollationKey key1(mergedKey.getAlias(), mergedKeyLength);  // copies the bytes
+        CollationKey key2;
+        coll->getCollationKey(s + segmentStart, i - segmentStart, key2, errorCode);
+        int32_t key1Length, key2Length;
+        const uint8_t *key1Bytes = key1.getByteArray(key1Length);
+        const uint8_t *key2Bytes = key2.getByteArray(key2Length);
+        uint8_t *dest;
+        int32_t minCapacity = key1Length + key2Length;
+        if(key1Length > 0) { --minCapacity; }
+        if(minCapacity <= mergedKeyCapacity) {
+            dest = mergedKey.getAlias();
+        } else {
+            if(minCapacity <= 200) {
+                mergedKeyCapacity = 200;
+            } else if(minCapacity <= 2 * mergedKeyCapacity) {
+                mergedKeyCapacity *= 2;
+            } else {
+                mergedKeyCapacity = minCapacity;
+            }
+            dest = mergedKey.allocateInsteadAndReset(mergedKeyCapacity);
+        }
+        U_ASSERT(dest != NULL);
+        if(key1Length == 0) {
+            // key2 is the sort key for the first segment.
+            uprv_memcpy(dest, key2Bytes, key2Length);
+            mergedKeyLength = key2Length;
+        } else {
+            mergedKeyLength =
+                ucol_mergeSortkeys(key1Bytes, key1Length, key2Bytes, key2Length,
+                                   dest, mergedKeyCapacity);
+        }
+        if(i == sLength) { break; }
+        segmentStart = ++i;
+    }
+    if(segmentStart != 0 &&
+            (mergedKeyLength != keyLength ||
+            uprv_memcmp(mergedKey.getAlias(), keyBytes, keyLength) != 0)) {
+        errln(fileTestName);
+        errln("Collator(normalization=%s).getCollationKey(with U+FFFE) != "
+              "ucol_mergeSortkeys(segments)",
+              norm);
+        errln(line);
+        errln(printCollationKey(key));
+        errln(printSortKey(mergedKey.getAlias(), mergedKeyLength));
+        errorCode.reset();
+        return FALSE;
+    }
+
+    // Check that nextSortKeyPart() makes the same key, with several part sizes.
+    static const int32_t partSizes[] = { 32, 3, 1 };
+    for(int32_t psi = 0; psi < LENGTHOF(partSizes); ++psi) {
+        int32_t partSize = partSizes[psi];
+        CharString parts;
+        if(!getSortKeyParts(s, length, parts, 32, errorCode)) {
+            errln(fileTestName);
+            errln("Collator(normalization=%s).nextSortKeyPart(%d) failed: %s",
+                  norm, (int)partSize, errorCode.errorName());
+            errln(line);
+            errorCode.reset();  // TODO: no need to reset except in IcuTestErrorCode-owning caller?
+            return FALSE;
+        }
+        if(keyLength != parts.length() || uprv_memcmp(keyBytes, parts.data(), keyLength) != 0) {
+            errln(fileTestName);
+            errln("Collator(normalization=%s).getCollationKey() != nextSortKeyPart(%d)",
+                  norm, (int)partSize);
+            errln(line);
+            errln(printCollationKey(key));
+            errln(printSortKey(reinterpret_cast<uint8_t *>(parts.data()), parts.length()));
+            errorCode.reset();
+            return FALSE;
+        }
+    }
     return TRUE;
 }
 

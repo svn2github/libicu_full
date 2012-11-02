@@ -416,6 +416,18 @@ public:
 
     // higher-level functionality ------------------------------------------ ***
 
+    // NFD without an NFD Normalizer2 instance.
+    UnicodeString &decompose(const UnicodeString &src, UnicodeString &dest,
+                             UErrorCode &errorCode) const;
+    /**
+     * Decomposes [src, limit[ and writes the result to dest.
+     * limit can be NULL if src is NUL-terminated.
+     * destLengthEstimate is the initial dest buffer capacity and can be -1.
+     */
+    void decompose(const UChar *src, const UChar *limit,
+                   UnicodeString &dest, int32_t destLengthEstimate,
+                   UErrorCode &errorCode) const;
+
     const UChar *decompose(const UChar *src, const UChar *limit,
                            ReorderingBuffer *buffer, UErrorCode &errorCode) const;
     void decomposeAndAppend(const UChar *src, const UChar *limit,

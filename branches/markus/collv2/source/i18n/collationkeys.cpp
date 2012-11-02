@@ -29,6 +29,17 @@ SortKeyByteSink2::Append(const char *bytes, int32_t n) {
     if (n <= 0 || bytes == NULL) {
         return;
     }
+    if (ignore_ > 0) {
+        int32_t ignoreRest = ignore_ - n;
+        if (ignoreRest >= 0) {
+            ignore_ = ignoreRest;
+            return;
+        } else {
+            bytes += ignore_;
+            n = -ignoreRest;
+            ignore_ = 0;
+        }
+    }
     int32_t length = appended_;
     appended_ += n;
     if ((buffer_ + length) == bytes) {
@@ -51,6 +62,11 @@ SortKeyByteSink2::GetAppendBuffer(int32_t min_capacity,
     if (min_capacity < 1 || scratch_capacity < min_capacity) {
         *result_capacity = 0;
         return NULL;
+    }
+    if (ignore_ > 0) {
+        // Do not write ignored bytes right at the end of the buffer.
+        *result_capacity = scratch_capacity;
+        return scratch;
     }
     int32_t available = capacity_ - appended_;
     if (available >= min_capacity) {

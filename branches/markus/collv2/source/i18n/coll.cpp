@@ -919,6 +919,15 @@ Collator::internalGetShortDefinitionString(const char * /*locale*/,
   return 0;
 }
 
+int32_t
+Collator::nextSortKeyPart(UCharIterator * /*iter*/, uint32_t /*state*/[2],
+                          uint8_t * /*dest*/, int32_t /*count*/, UErrorCode &errorCode) const {
+    if (U_SUCCESS(errorCode)) {
+        errorCode = U_UNSUPPORTED_ERROR;
+    }
+    return 0;
+}
+
 // UCollator private data members ----------------------------------------
 
 /* This is useless information */

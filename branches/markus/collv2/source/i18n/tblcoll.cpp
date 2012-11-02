@@ -674,6 +674,11 @@ int32_t RuleBasedCollator::internalGetShortDefinitionString(const char *locale,
   return ucol_getShortDefinitionString(ucollator, locale, buffer, capacity, &status);
 }
 
+int32_t
+RuleBasedCollator::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
+                                   uint8_t *dest, int32_t count, UErrorCode &errorCode) const {
+    return ucol_nextSortKeyPart(ucollator, iter, state, dest, count, &errorCode);
+}
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedCollator)
 

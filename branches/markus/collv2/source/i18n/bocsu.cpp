@@ -24,7 +24,7 @@
 #include "bocsu.h"
 
 /*
- * encode one difference value -0x10ffff..+0x10ffff in 1..3 bytes,
+ * encode one difference value -0x10ffff..+0x10ffff in 1..4 bytes,
  * preserving lexical order
  */
 U_CFUNC uint8_t *

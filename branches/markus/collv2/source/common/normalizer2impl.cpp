@@ -420,6 +420,38 @@ Normalizer2Impl::copyLowPrefixFromNulTerminated(const UChar *src,
     return src;
 }
 
+UnicodeString &
+Normalizer2Impl::decompose(const UnicodeString &src, UnicodeString &dest,
+                           UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        dest.setToBogus();
+        return dest;
+    }
+    const UChar *sArray=src.getBuffer();
+    if(&dest==&src || sArray==NULL) {
+        errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+        dest.setToBogus();
+        return dest;
+    }
+    decompose(sArray, sArray+src.length(), dest, src.length(), errorCode);
+    return dest;
+}
+
+void
+Normalizer2Impl::decompose(const UChar *src, const UChar *limit,
+                           UnicodeString &dest,
+                           int32_t destLengthEstimate,
+                           UErrorCode &errorCode) const {
+    if(destLengthEstimate<0 && limit!=NULL) {
+        destLengthEstimate=(int32_t)(limit-src);
+    }
+    dest.remove();
+    ReorderingBuffer buffer(*this, dest);
+    if(buffer.init(destLengthEstimate, errorCode)) {
+        decompose(src, limit, &buffer, errorCode);
+    }
+}
+
 // Dual functionality:
 // buffer!=NULL: normalize
 // buffer==NULL: isNormalized/spanQuickCheckYes

@@ -25,7 +25,7 @@
 
 U_NAMESPACE_BEGIN
 
-class CollationData;
+struct CollationData;
 class CollationElementIterator;
 class SortKeyByteSink2;
 
@@ -531,6 +531,14 @@ public:
             UErrorCode& status);
 #endif  /* U_HIDE_DRAFT_API */
 
+    /**
+     * Implements ucol_nextSortKeyPart().
+     * @internal
+     */
+    virtual int32_t
+    nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
+                    uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
+
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationData *d)
             : data(d), defaultData(d), ownedData(NULL),
@@ -559,6 +567,9 @@ private:
 
     void writeSortKey(const UChar *s, int32_t length,
                       SortKeyByteSink2 &sink, UErrorCode &errorCode) const;
+
+    void writeIdenticalLevel(const UChar *s, const UChar *limit,
+                             SortKeyByteSink2 &sink, UErrorCode &errorCode) const;
 
     UBool ensureOwnedData(UErrorCode &errorCode);
 

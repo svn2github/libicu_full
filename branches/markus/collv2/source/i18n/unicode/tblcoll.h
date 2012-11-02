@@ -811,6 +811,14 @@ private:
                                                      char *buffer,
                                                      int32_t capacity,
                                                      UErrorCode &status) const;
+
+    /**
+     * Implements ucol_nextSortKeyPart().
+     * @internal
+     */
+    virtual int32_t
+    nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
+                    uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 };
 
 // inline method implementation ---------------------------------------------

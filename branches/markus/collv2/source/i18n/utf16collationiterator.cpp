@@ -412,13 +412,7 @@ UBool
 FCDUTF16CollationIterator::normalize(const UChar *from, const UChar *to, UErrorCode &errorCode) {
     // NFD without argument checking.
     U_ASSERT(U_SUCCESS(errorCode));
-    normalized.remove();
-    {
-        ReorderingBuffer buffer(nfcImpl, normalized);
-        if(!buffer.init((int32_t)(to - from), errorCode)) { return FALSE; }
-        nfcImpl.decompose(from, to, &buffer, errorCode);
-        // The ReorderingBuffer destructor releases the "normalized" string.
-    }
+    nfcImpl.decompose(from, to, normalized, (int32_t)(to - from), errorCode);
     if(U_FAILURE(errorCode)) { return FALSE; }
     // Switch collation processing into the FCD buffer
     // with the result of normalizing [segmentStart, segmentLimit[.

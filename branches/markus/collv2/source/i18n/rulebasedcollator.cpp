@@ -821,25 +821,144 @@ RuleBasedCollator2::writeSortKey(const UChar *s, int32_t length,
                                                   callback, errorCode);
     }
     if(data->getStrength() == UCOL_IDENTICAL) {
-        const Normalizer2 *norm2 = Normalizer2Factory::getNFDInstance(errorCode);
-        if(U_FAILURE(errorCode)) { return; }
-        UnicodeString source((UBool)(length < 0), s, length);
-        int32_t qcYesLength = norm2->spanQuickCheckYes(source, errorCode);
-        static const char separator = 1;  // LEVEL_SEPARATOR_BYTE
-        sink.Append(&separator, 1);
-        UChar32 prev = 0;
-        if(qcYesLength > 0) {
-            prev = u_writeIdenticalLevelRun(prev, s, qcYesLength, sink);
-        }
-        if(qcYesLength < source.length()) {
-            UnicodeString rest(FALSE, s + qcYesLength, source.length() - qcYesLength);
-            UnicodeString nfd;
-            norm2->normalize(rest, nfd, errorCode);
-            u_writeIdenticalLevelRun(prev, nfd.getBuffer(), nfd.length(), sink);
-        }
+        writeIdenticalLevel(s, limit, sink, errorCode);
     }
     static const char terminator = 0;  // TERMINATOR_BYTE
     sink.Append(&terminator, 1);
+}
+
+void
+RuleBasedCollator2::writeIdenticalLevel(const UChar *s, const UChar *limit,
+                                        SortKeyByteSink2 &sink, UErrorCode &errorCode) const {
+    // NFD quick check
+    const UChar *nfdQCYesLimit = data->nfcImpl.decompose(s, limit, NULL, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+    sink.Append(Collation::LEVEL_SEPARATOR_BYTE);
+    UChar32 prev = 0;
+    if(nfdQCYesLimit != s) {
+        prev = u_writeIdenticalLevelRun(prev, s, (int32_t)(nfdQCYesLimit - s), sink);
+    }
+    // Is there non-NFD text?
+    int32_t destLengthEstimate;
+    if(limit != NULL) {
+        if(nfdQCYesLimit == limit) { return; }
+        destLengthEstimate = (int32_t)(limit - nfdQCYesLimit);
+    } else {
+        // s is NUL-terminated
+        if(*nfdQCYesLimit == 0) { return; }
+        destLengthEstimate = -1;
+    }
+    UnicodeString nfd;
+    data->nfcImpl.decompose(nfdQCYesLimit, limit, nfd, -1, errorCode);
+    u_writeIdenticalLevelRun(prev, nfd.getBuffer(), nfd.length(), sink);
+}
+
+namespace {
+
+/**
+ * nextSortKeyPart() calls CollationKeys::writeSortKeyUpToQuaternary()
+ * with an instance of this callback class.
+ * When another level is about to be written, the callback
+ * records the level and the number of bytes that will be written until
+ * the sink (which is actually a FixedSortKeyByteSink) fills up.
+ *
+ * When nextSortKeyPart() is called again, it restarts with the last level
+ * and ignores as many bytes as were written previously for that level.
+ */
+class PartLevelCallback : public CollationKeys::LevelCallback {
+public:
+    PartLevelCallback(const SortKeyByteSink2 &s)
+            : sink(s), level(Collation::PRIMARY_LEVEL) {
+        levelCapacity = sink.GetRemainingCapacity();
+    }
+    virtual ~PartLevelCallback() {}
+    virtual UBool needToWrite(Collation::Level l) {
+        if(!sink.Overflowed()) {
+            // Remember a level that will be at least partially written.
+            level = l;
+            levelCapacity = sink.GetRemainingCapacity();
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+    }
+    Collation::Level getLevel() const { return level; }
+    int32_t getLevelCapacity() const { return levelCapacity; }
+
+private:
+    const SortKeyByteSink2 &sink;
+    Collation::Level level;
+    int32_t levelCapacity;
+};
+
+}  // namespace
+
+int32_t
+RuleBasedCollator2::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
+                                    uint8_t *dest, int32_t count, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(iter == NULL || state == NULL || count < 0 || (count > 0 && dest == NULL)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    if(count == 0) { return 0; }
+
+    // We currently assume that iter is at its start.
+
+    FixedSortKeyByteSink sink(reinterpret_cast<char *>(dest), count);
+    sink.IgnoreBytes((int32_t)state[1]);
+
+    Collation::Level level = (Collation::Level)state[0];
+    if(level <= Collation::QUATERNARY_LEVEL) {
+        PartLevelCallback callback(sink);
+        if((data->options & CollationData::CHECK_FCD) == 0) {
+            UIterCollationIterator ci(data, *iter);
+            CollationKeys::writeSortKeyUpToQuaternary(ci, sink, level, callback, errorCode);
+        } else {
+            FCDUIterCollationIterator ci(data, *iter, 0);
+            CollationKeys::writeSortKeyUpToQuaternary(ci, sink, level, callback, errorCode);
+        }
+        if(U_FAILURE(errorCode)) { return 0; }
+        if(sink.NumberOfBytesAppended() > count) {
+            state[0] = (uint32_t)callback.getLevel();
+            state[1] = (uint32_t)callback.getLevelCapacity();
+            return count;
+        }
+        // All of the normal levels are done.
+        if(data->getStrength() == UCOL_IDENTICAL) {
+            level = Collation::IDENTICAL_LEVEL;
+            iter->move(iter, 0, UITER_START);
+        }
+        // else fall through to setting ZERO_LEVEL
+    }
+
+    if(level == Collation::IDENTICAL_LEVEL) {
+        // TODO: Remove u_writeIdenticalLevelRunTwoChars() since this v2 implementation
+        // does not need it. If it remains, fix its U+FFFE handling.
+        int32_t levelCapacity = sink.GetRemainingCapacity();
+        UnicodeString s;
+        for(;;) {
+            UChar32 c = iter->next(iter);
+            if(c < 0) { break; }
+            s.append((UChar)c);
+        }
+        const UChar *sArray = s.getBuffer();
+        writeIdenticalLevel(sArray, sArray + s.length(), sink, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        if(sink.NumberOfBytesAppended() > count) {
+            state[0] = (uint32_t)level;
+            state[1] = (uint32_t)levelCapacity;
+            return count;
+        }
+    }
+
+    // ZERO_LEVEL: Fill the remainder of dest with 00 bytes.
+    state[0] = (uint32_t)Collation::ZERO_LEVEL;
+    state[1] = 0;
+    int32_t length = sink.NumberOfBytesAppended();
+    int32_t i = length;
+    while(i < count) { dest[i++] = 0; }
+    return length;
 }
 
 CollationElementIterator *
