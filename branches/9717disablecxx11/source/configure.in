@@ -4,7 +4,7 @@ AC_COPYRIGHT([ Copyright (c) 1999-2012, International Business Machines Corporat
 # Stephen F. Booth, heavily modified by Yves and others
 
 # Check for autoconf version
-AC_PREREQ(2.68)
+AC_PREREQ(2.69)
 
 # Process this file with autoconf to produce a configure script
 AC_INIT([ICU])
@@ -898,6 +898,22 @@ if test $U_SIZEOF_WCHAR_T = 0; then
     fi
 fi
 
+# Check whether to build static libraries
+AC_MSG_CHECKING([whether to use C++11])
+enabled=yes
+ENABLE_CXX11=YES
+AC_ARG_ENABLE(c++11,
+    [  --enable-c++11         attempt to use C++11 [default=yes]],
+    [ case "${enableval}" in
+	     yes|"") enabled=yes; ENABLE_CXX11=YES ;;
+	     no) enabled=no; ENABLE_CXX11=NO;;
+	     *) ;;
+    esac],
+)
+AC_MSG_RESULT($enabled)
+AC_SUBST(ENABLE_CXX11)
+
+
 AC_MSG_CHECKING([for UTF-16 string literal support])
 U_CHECK_UTF16_STRING=1
 CHECK_UTF16_STRING_RESULT="unknown"
@@ -972,7 +988,9 @@ static const char16_t test[] = u"This is a UTF16 literal string.";
     if test "$GXX" = yes; then
         OLD_CXXFLAGS="${CXXFLAGS}"
         # -Wno-return-type-c-linkage is desired so that stable ICU API is not warned about.
-        CXXFLAGS="${CXXFLAGS} -std=c++11"
+        if test "$ENABLE_CXX11" = YES; then
+                CXXFLAGS="${CXXFLAGS} -std=c++11"
+        fi
         AC_LANG_PUSH([C++])
         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 static const char16_t test[] = u"This is a UTF16 literal string.";
