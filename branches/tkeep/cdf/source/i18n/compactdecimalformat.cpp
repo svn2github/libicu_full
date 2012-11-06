@@ -201,7 +201,7 @@ CompactDecimalFormat::createInstance(
     return NULL;
   }
   pluralRules.orphan();
-  result->setMaximumSignificantDigits(2);
+  result->setMaximumSignificantDigits(3);
   result->setSignificantDigitsUsed(TRUE);
   result->setGroupingUsed(FALSE);
   return result;
