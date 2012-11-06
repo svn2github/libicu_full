@@ -231,7 +231,7 @@ void CompactDecimalFormatTest::TestSwahiliShort() {
 void CompactDecimalFormatTest::TestFieldPosition() {
   // Swahili uses prefixes which forces offsets in field position to change
   UErrorCode status = U_ZERO_ERROR;
-  CompactDecimalFormat* cdf = createCDFInstance("sw", UNUM_SHORT, status);
+  LocalPointer<CompactDecimalFormat> cdf(createCDFInstance("sw", UNUM_SHORT, status));
   if (U_FAILURE(status)) {
     errln("Unable to create format object - %s", u_errorName(status));
   }
@@ -242,7 +242,6 @@ void CompactDecimalFormatTest::TestFieldPosition() {
   if (subString != UnicodeString("1", -1, US_INV)) {
     errln(UnicodeString("Expected 1, got ") + subString);
   }
-  delete cdf;
 }
 
 void CompactDecimalFormatTest::TestCsShort() {
@@ -268,7 +267,7 @@ void CompactDecimalFormatTest::TestArabicLong() {
 
 void CompactDecimalFormatTest::TestSignificantDigits() {
   UErrorCode status = U_ZERO_ERROR;
-  CompactDecimalFormat* cdf = CompactDecimalFormat::createInstance("en", UNUM_SHORT, status);
+  LocalPointer<CompactDecimalFormat> cdf(CompactDecimalFormat::createInstance("en", UNUM_SHORT, status));
   if (U_FAILURE(status)) {
     errln("Unable to create format object - %s", u_errorName(status));
     return;
@@ -277,16 +276,14 @@ void CompactDecimalFormatTest::TestSignificantDigits() {
   cdf->format(123456.0, actual);
   // We expect 3 significant digits by default
   UnicodeString expected("123K", -1, US_INV);
-  expected = expected.unescape();
   if (actual != expected) {
     errln(UnicodeString("Fail: Expected: ") + expected + UnicodeString(" Got: ") + actual);
   }
-  delete cdf;
 }
 
 void CompactDecimalFormatTest::CheckLocale(const Locale& locale, UNumberCompactStyle style, const ExpectedResult* expectedResults, int32_t expectedResultLength) {
   UErrorCode status = U_ZERO_ERROR;
-  CompactDecimalFormat* cdf = createCDFInstance(locale, style, status);
+  LocalPointer<CompactDecimalFormat> cdf(createCDFInstance(locale, style, status));
   if (U_FAILURE(status)) {
     errln("Unable to create format object - %s", u_errorName(status));
     return;
@@ -294,9 +291,8 @@ void CompactDecimalFormatTest::CheckLocale(const Locale& locale, UNumberCompactS
   char description[256];
   sprintf(description,"%s - %s", locale.getName(), StyleStr(style));
   for (int32_t i = 0; i < expectedResultLength; i++) {
-    CheckExpectedResult(cdf, &expectedResults[i], description);
+    CheckExpectedResult(cdf.getAlias(), &expectedResults[i], description);
   }
-  delete cdf;
 }
 
 void CompactDecimalFormatTest::CheckExpectedResult(
@@ -318,7 +314,7 @@ CompactDecimalFormatTest::createCDFInstance(const Locale& locale, UNumberCompact
   if (U_FAILURE(status)) {
     return NULL;
   }
-  // Are tests are written for two significant digits, so we explicitly set here
+  // All tests are written for two significant digits, so we explicitly set here
   // in case default significant digits change.
   result->setMaximumSignificantDigits(2);
   return result;
