@@ -37,31 +37,29 @@ void ListFormatterTest::CheckFormatting(const ListFormatter* formatter, UnicodeS
 void ListFormatterTest::CheckFourCases(const char* locale_string, UnicodeString one, UnicodeString two,
         UnicodeString three, UnicodeString four, UnicodeString results[4]) {
     UErrorCode errorCode = U_ZERO_ERROR;
-    ListFormatter* formatter = ListFormatter::createInstance(Locale(locale_string), errorCode);
-    if (formatter == NULL ||  U_FAILURE(errorCode)) {
+    LocalPointer<ListFormatter> formatter(ListFormatter::createInstance(Locale(locale_string), errorCode));
+    if (U_FAILURE(errorCode)) {
         errln("Allocation problem\n");
         return;
     }
     UnicodeString input1[] = {one};
-    CheckFormatting(formatter, input1, 1, results[0]);
+    CheckFormatting(formatter.getAlias(), input1, 1, results[0]);
 
     UnicodeString input2[] = {one, two};
-    CheckFormatting(formatter, input2, 2, results[1]);
+    CheckFormatting(formatter.getAlias(), input2, 2, results[1]);
 
     UnicodeString input3[] = {one, two, three};
-    CheckFormatting(formatter, input3, 3, results[2]);
+    CheckFormatting(formatter.getAlias(), input3, 3, results[2]);
 
     UnicodeString input4[] = {one, two, three, four};
-    CheckFormatting(formatter, input4, 4, results[3]);
-
-    delete formatter;
+    CheckFormatting(formatter.getAlias(), input4, 4, results[3]);
 }
 
 UBool ListFormatterTest::RecordFourCases(const Locale& locale, UnicodeString one, UnicodeString two,
         UnicodeString three, UnicodeString four, UnicodeString results[4])  {
     UErrorCode errorCode = U_ZERO_ERROR;
-    ListFormatter* formatter = ListFormatter::createInstance(locale, errorCode);
-    if (formatter == NULL ||  U_FAILURE(errorCode)) {
+    LocalPointer<ListFormatter> formatter(ListFormatter::createInstance(locale, errorCode));
+    if (U_FAILURE(errorCode)) {
         errln("Allocation problem in RecordFourCases\n");
         return FALSE;
     }
@@ -73,9 +71,8 @@ UBool ListFormatterTest::RecordFourCases(const Locale& locale, UnicodeString one
     formatter->format(input3, 3, results[2], errorCode);
     UnicodeString input4[] = {one, two, three, four};
     formatter->format(input4, 4, results[3], errorCode);
-    delete formatter;
     if (U_FAILURE(errorCode)) {
-        errln("Got non-zero error code in RecordFourCases\n");
+        errln("RecordFourCases failed: %s", u_errorName(errorCode));
         return FALSE;
     }
     return TRUE;

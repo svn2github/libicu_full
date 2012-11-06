@@ -45,7 +45,7 @@ uprv_deleteListFormatData(void *obj) {
 U_CDECL_END
 
 static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& errorCode);
-static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString* result, UErrorCode& errorCode);
+static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString& result, UErrorCode& errorCode);
 
 void ListFormatter::initializeHash(UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
@@ -80,7 +80,7 @@ const ListFormatData* ListFormatter::getListFormatData(
         }
         result = static_cast<ListFormatData*>(listPatternHash->get(key));
     }
-    if (result) {
+    if (result != NULL) {
         return result;
     }
     result = loadListFormatData(locale, errorCode);
@@ -91,7 +91,7 @@ const ListFormatData* ListFormatter::getListFormatData(
     {
         Mutex m(&listFormatterMutex);
         ListFormatData* temp = static_cast<ListFormatData*>(listPatternHash->get(key));
-        if (temp) {
+        if (temp != NULL) {
             delete result;
             result = temp;
         } else {
@@ -117,10 +117,10 @@ static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& erro
         return NULL;
     }
     UnicodeString two, start, middle, end;
-    getStringByKey(rb, "2", &two, errorCode);
-    getStringByKey(rb, "start", &start, errorCode);
-    getStringByKey(rb, "middle", &middle, errorCode);
-    getStringByKey(rb, "end", &end, errorCode);
+    getStringByKey(rb, "2", two, errorCode);
+    getStringByKey(rb, "start", start, errorCode);
+    getStringByKey(rb, "middle", middle, errorCode);
+    getStringByKey(rb, "end", end, errorCode);
     ures_close(rb);
     if (U_FAILURE(errorCode)) {
         return NULL;
@@ -133,13 +133,13 @@ static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& erro
     return result;
 }
 
-static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString* result, UErrorCode& errorCode) {
+static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString& result, UErrorCode& errorCode) {
     int32_t len;
     const UChar* ustr = ures_getStringByKeyWithFallback(rb, key, &len, &errorCode);
     if (U_FAILURE(errorCode)) {
       return;
     }
-    result->setTo(ustr, len);
+    result.setTo(ustr, len);
 }
 
 ListFormatter* ListFormatter::createInstance(UErrorCode& errorCode) {
