@@ -4,7 +4,7 @@
 #   Corporation and others.  All Rights Reserved.
 #
 #******************************************************************************
-## Makefile.in for ICU - layout
+## Makefile.in for ICU - layoutex
 
 ## Source directory information
 srcdir = @srcdir@
@@ -39,7 +39,7 @@ endif
 
 ifeq ($(OS390BATCH),1)
 BATCH_TARGET = $(BATCH_LAYOUTEX_TARGET)
-BATCH_LIBS = $(BATCH_LIBICUUC) $(BATCH_LIBICULE) -lm
+BATCH_LIBS = $(BATCH_LIBICUUC)  -lm
 endif   # OS390BATCH
 
 endif   # ENABLE_SHARED
@@ -52,10 +52,13 @@ DYNAMICCXXFLAGS = $(SHAREDLIBCXXFLAGS)
 CFLAGS += $(LIBCFLAGS)
 CXXFLAGS += $(LIBCXXFLAGS)
 
-CPPFLAGS += -I$(srcdir) -I$(srcdir)/unicode -I$(srcdir)/.. -I$(top_srcdir)/common $(LIBCPPFLAGS)
+PKG_CPPFLAGS=$(shell pkg-config --cflags icu-le)
+PKG_LIBS=$(shell pkg-config --libs icu-le)
+
+CPPFLAGS += $(PKG_CPPFLAGS) -I$(srcdir) -I$(srcdir)/unicode -I$(srcdir)/.. -I$(top_srcdir)/common $(LIBCPPFLAGS)
 DEFS += -DU_LAYOUTEX_IMPLEMENTATION
 LDFLAGS += $(LDFLAGSICULX)
-LIBS = $(LIBICUUC) $(LIBICULE) $(DEFAULT_LIBS)
+LIBS = $(PKG_LIBS) $(LIBICUUC) $(DEFAULT_LIBS)
 
 OBJECTS =  ParagraphLayout.o \
 RunArrays.o \

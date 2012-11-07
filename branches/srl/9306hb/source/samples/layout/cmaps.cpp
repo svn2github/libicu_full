@@ -11,7 +11,7 @@
  *   created by: Eric R. Mader
  */
 
-#include "layout/LETypes.h"
+#include <layout/LETypes.h>
 #include "layout/LESwaps.h"
 
 #include "sfnt.h"

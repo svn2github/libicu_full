@@ -1,7 +1,7 @@
 /*
  ****************************************************************************** *
  *
- *   Copyright (C) 1999-2001, International Business Machines
+ *   Copyright (C) 1999-2012, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *
  ****************************************************************************** *
@@ -14,7 +14,7 @@
 #ifndef __SFNT_H
 #define __SFNT_H
 
-#include "LETypes.h"
+#include "layout/LETypes.h"
 
 
 #ifndef ANY_NUMBER

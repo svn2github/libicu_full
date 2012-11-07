@@ -618,6 +618,7 @@ ICULIBSUFFIX
 DATA_PACKAGING_MODE
 thepkgicudatadir
 pkgicudatadir
+LAYOUTX_TRUE
 LAYOUT_TRUE
 ICUIO_TRUE
 EXTRAS_TRUE
@@ -751,6 +752,7 @@ enable_weak_threads
 enable_extras
 enable_icuio
 enable_layout
+enable_layoutx
 with_data_packaging
 with_library_suffix
 enable_tests
@@ -1397,6 +1399,7 @@ Optional Features:
   --enable-extras         build ICU extras default=yes
   --enable-icuio          build ICU's icuio library default=yes
   --enable-layout         build ICU's layout library default=yes
+  --enable-layoutx         build ICU's paragraph layout library default=yes
   --enable-tests          build ICU tests default=yes
   --enable-samples        build ICU samples default=yes
 
@@ -7104,6 +7107,25 @@ if test "$layout" = true; then
   LAYOUT_TRUE=
 else
   LAYOUT_TRUE='#'
+fi
+
+# Enable/disable layout
+# Check whether --enable-layoutx was given.
+if test "${enable_layoutx+set}" = set; then :
+  enableval=$enable_layoutx; case "${enableval}" in
+		yes) layoutx=true ;;
+		no)  layoutx=false ;;
+		*) as_fn_error $? "bad value ${enableval} for --enable-layoutx" "$LINENO" 5 ;;
+		esac
+else
+  layoutx=true
+fi
+
+
+if test "$layoutx" = true; then
+  LAYOUTX_TRUE=
+else
+  LAYOUTX_TRUE='#'
 fi
 
 
