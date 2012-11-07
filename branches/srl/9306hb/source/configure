@@ -622,6 +622,7 @@ LAYOUTX_TRUE
 LAYOUT_TRUE
 ICUIO_TRUE
 EXTRAS_TRUE
+ENABLE_CXX11
 U_HAVE_WCSCPY
 U_HAVE_WCHAR_H
 U_TIMEZONE
@@ -749,6 +750,7 @@ enable_tracing
 enable_dyload
 enable_rpath
 enable_weak_threads
+enable_c__11
 enable_extras
 enable_icuio
 enable_layout
@@ -1396,6 +1398,7 @@ Optional Features:
   --disable-dyload        disable dynamic loading default=no
   --enable-rpath          use rpath when linking default is only if necessary
   --enable-weak-threads   weakly reference the threading library default=no
+  --enable-c++11         attempt to use C++11 default=yes
   --enable-extras         build ICU extras default=yes
   --enable-icuio          build ICU's icuio library default=yes
   --enable-layout         build ICU's layout library default=yes
@@ -6885,6 +6888,25 @@ if test $U_SIZEOF_WCHAR_T = 0; then
     fi
 fi
 
+# Check whether to build static libraries
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use C++11" >&5
+$as_echo_n "checking whether to use C++11... " >&6; }
+enabled=yes
+ENABLE_CXX11=YES
+# Check whether --enable-c++11 was given.
+if test "${enable_c__11+set}" = set; then :
+  enableval=$enable_c__11;  case "${enableval}" in
+	     yes|"") enabled=yes; ENABLE_CXX11=YES ;;
+	     no) enabled=no; ENABLE_CXX11=NO;;
+	     *) ;;
+    esac
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $enabled" >&5
+$as_echo "$enabled" >&6; }
+
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for UTF-16 string literal support" >&5
 $as_echo_n "checking for UTF-16 string literal support... " >&6; }
 U_CHECK_UTF16_STRING=1
@@ -7008,7 +7030,9 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     if test "$GXX" = yes; then
         OLD_CXXFLAGS="${CXXFLAGS}"
         # -Wno-return-type-c-linkage is desired so that stable ICU API is not warned about.
-        CXXFLAGS="${CXXFLAGS} -std=c++11"
+        if test "$ENABLE_CXX11" = YES; then
+                CXXFLAGS="${CXXFLAGS} -std=c++11"
+        fi
         ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
