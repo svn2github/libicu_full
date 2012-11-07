@@ -71,11 +71,9 @@ class StringEnumeration;
  *    cout << " Example 1: " << myString << endl;
  * \endcode
  * </pre>
- * <pre>
  * Note that there are additional factory methods within subclasses of
  * NumberFormat.
- * </pre>
- * <pre>
+ * <P>
  * If you are formatting multiple numbers, it is more efficient to get
  * the format and use it multiple times so that the system doesn't
  * have to fetch the information about the local language and country

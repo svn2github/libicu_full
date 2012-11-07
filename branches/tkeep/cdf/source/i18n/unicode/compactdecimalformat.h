@@ -28,34 +28,50 @@ U_NAMESPACE_BEGIN
 class PluralRules;
 
 /**
- * CompactDecimalFormat is a concrete subclass of DecimalFormat that formats
- * compactly, e.g 4.2K.
- * TODO(rocketman): Copy the comments from the JAVA version making necessary
- * changes for C++.
+ * The CompactDecimalFormat produces abbreviated numbers, suitable for display in
+ * environments will limited real estate. For example, 'Hits: 1.2B' instead of
+ * 'Hits: 1,200,000,000'. The format will be appropriate for the given language,
+ * such as "1,2 Mrd." for German.
+ * <p>
+ * For numbers under 1000 trillion (under 10^15, such as 123,456,789,012,345),
+ * the result will be short for supported languages. However, the result may
+ * sometimes exceed 7 characters, such as when there are combining marks or thin
+ * characters. In such cases, the visual width in fonts should still be short.
+ * <p>
+ * By default, there are 3 significant digits. After creation, if more than
+ * three significant digits are set (with setMaximumSignificantDigits), or if a
+ * fixed number of digits are set (with setMaximumIntegerDigits or
+ * setMaximumFractionDigits), then result may be wider.
+ * <p>
+ * At this time, parsing is not supported, and will produce a U_UNSUPPORTED_ERROR.
+ * Resetting the pattern prefixes or suffixes is not supported; the method calls
+ * are ignored.
+ * <p>
  */
 class U_I18N_API CompactDecimalFormat : public DecimalFormat {
 public:
 
      /**
-      * Returns compact decimal instance for specified locale.
+      * Returns a compact decimal instance for specified locale.
       * @param inLocale the given locale.
       * @param style whether to use short or long style.
-      * @draft ICU 50
+      * @param status error code returned  here.
+      * @draft ICU 51
       */
      static CompactDecimalFormat* U_EXPORT2 createInstance(
-          const Locale& inLocale, UNumberCompactStyle style, UErrorCode&);
- 
+          const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status);
+
     /**
      * Copy constructor.
      *
      * @param source    the DecimalFormat object to be copied from.
-     * @draft ICU 50  -- TODO: consistent
+     * @draft ICU 51
       */
     CompactDecimalFormat(const CompactDecimalFormat& source);
 
     /**
      * Destructor.
-     * @stable ICU 2.0
+     * @draft ICU 51
      */
     virtual ~CompactDecimalFormat();
 
@@ -63,7 +79,7 @@ public:
      * Assignment operator.
      *
      * @param rhs    the DecimalFormat object to be copied.
-     * @stable ICU 2.0
+     * @draft ICU 51
      */
     CompactDecimalFormat& operator=(const CompactDecimalFormat& rhs);
 
@@ -72,17 +88,17 @@ public:
      * result and should delete it when done.
      *
      * @return    a polymorphic copy of this CompactDecimalFormat.
-     * @stable ICU 2.0
+     * @draft ICU 51
      */
-    virtual Format* clone(void) const;
+    virtual Format* clone() const;
 
     /**
-     * Return true if the given Format objects are semantically equal.
+     * Return TRUE if the given Format objects are semantically equal.
      * Objects of different subclasses are considered unequal.
      *
      * @param other    the object to be compared with.
-     * @return         true if the given Format objects are semantically equal.
-     * @stable ICU 2.0
+     * @return         TRUE if the given Format objects are semantically equal.
+     * @draft ICU 51
      */
     virtual UBool operator==(const Format& other) const;
 
@@ -98,7 +114,7 @@ public:
      * @param pos       On input: an alignment field, if desired.
      *                  On output: the offsets of the alignment field.
      * @return          Reference to 'appendTo' parameter.
-     * @stable ICU 2.0
+     * @draft ICU 51
      */
     virtual UnicodeString& format(double number,
                                   UnicodeString& appendTo,
@@ -117,7 +133,6 @@ public:
      * @param status    Output param filled with success/failure status.
      * @return          Reference to 'appendTo' parameter.
      * @internal
-     * @stable 4.4
      */
     virtual UnicodeString& format(double number,
                                   UnicodeString& appendTo,
@@ -133,7 +148,7 @@ public:
      * @param pos       On input: an alignment field, if desired.
      *                  On output: the offsets of the alignment field.
      * @return          Reference to 'appendTo' parameter.
-     * @stable ICU 2.8
+     * @draft ICU 51
      */
     virtual UnicodeString& format(int64_t number,
                                   UnicodeString& appendTo,
@@ -152,7 +167,6 @@ public:
      * @param status    Output param filled with success/failure status.
      * @return          Reference to 'appendTo' parameter.
      * @internal
-     * @stable 4.4
      */
     virtual UnicodeString& format(int64_t number,
                                   UnicodeString& appendTo,
@@ -174,7 +188,6 @@ public:
      * @param status    Output param filled with success/failure status.
      * @return          Reference to 'appendTo' parameter.
      * @internal
-     * @stable 4.4
      */
     virtual UnicodeString& format(const StringPiece &number,
                                   UnicodeString& appendTo,
@@ -240,7 +253,7 @@ public:
     *                       On output, moved to after the last successfully
     *                       parse character. On parse failure, does not change.
     * @see Formattable
-    * @draft ICU 50
+    * @draft ICU 51
     */
     virtual void parse(const UnicodeString& text,
                        Formattable& result,
@@ -254,7 +267,7 @@ public:
      * @param text           The text to be parsed.
      * @param result         Formattable to be set to the parse result.
      * @param status    Output parameter filled in with success or failure status.
-     * @draft ICU 50
+     * @draft ICU 51
      */
     virtual void parse(const UnicodeString& text,
                        Formattable& result,
@@ -279,7 +292,6 @@ public:
      * @return     if parse succeeds, a pointer to a newly-created CurrencyAmount
      *             object (owned by the caller) containing information about
      *             the parsed currency; if parse fails, this is NULL.
-     * @draft ICU 49
      * @internal
      */
     virtual CurrencyAmount* parseCurrency(const UnicodeString& text,
@@ -294,9 +306,9 @@ public:
      * .          Derived::getStaticClassID()) ...
      * </pre>
      * @return          The class ID for all objects of this class.
-     * @stable ICU 2.0
+     * @draft ICU 51
      */
-    static UClassID U_EXPORT2 getStaticClassID(void);
+    static UClassID U_EXPORT2 getStaticClassID();
 
     /**
      * Returns a unique class ID POLYMORPHICALLY.  Pure virtual override.
@@ -307,9 +319,9 @@ public:
      * @return          The class ID for this object. All objects of a
      *                  given class have the same class ID.  Objects of
      *                  other classes have different class IDs.
-     * @stable ICU 2.0
+     * @draft ICU 51
      */
-    virtual UClassID getDynamicClassID(void) const;
+    virtual UClassID getDynamicClassID() const;
 
 private:
 

@@ -23,6 +23,7 @@
 #include "ucln_in.h"
 #include "uhash.h"
 #include "umutex.h"
+#include "unicode/ures.h"
 #include "uresimp.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
@@ -43,7 +44,7 @@ static const char gPatternsLong[] = "patternsLong";
 static const char gRoot[] = "root";
 
 static const UChar u_0 = 0x30;
-static const UChar u_sq = 0x27;
+static const UChar u_apos = 0x27;
 
 static const UChar kZero[] = {u_0};
 
@@ -63,7 +64,7 @@ enum DataLocation {
 static const int32_t ANY = 0;
 static const int32_t MUST = 1;
 static const int32_t NOT_ROOT = 2;
-// Next one will be 6.
+// Next one will be 4 then 6 etc.
 
 // CDFUnit represents a prefix-suffix pair for a particular variant
 // and log10 value.
@@ -156,14 +157,13 @@ static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const
 static UBool isRoot(const UResourceBundle* rb, UErrorCode& status);
 static void initCDFLocaleStyleData(const UResourceBundle* decimalFormatBundle, CDFLocaleStyleData* result, UErrorCode& status);
 static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyleData* result, UErrorCode& status);
-static int32_t populatePrefixSuffix(const char* variant, int32_t log10Value, const UChar* formatStr, int32_t formatStrLen, UHashtable* result, UErrorCode& status);
+static int32_t populatePrefixSuffix(const char* variant, int32_t log10Value, const UnicodeString& formatStr, UHashtable* result, UErrorCode& status);
 static UBool onlySpaces(UnicodeString u);
-static void fixQuotes(const UChar* start, int32_t len, UnicodeString* result);
+static void fixQuotes(UnicodeString& s);
 static void fillInMissing(CDFLocaleStyleData* result);
 static int32_t computeLog10(double x, UBool inRange);
 static CDFUnit* createCDFUnit(const char* variant, int32_t log10Value, UHashtable* table, UErrorCode& status);
 static const CDFUnit* getCDFUnitFallback(const UHashtable* table, const UnicodeString& variant, int32_t log10Value);
-static int32_t unicodeToCString(const UnicodeString& src, char* buffer, int32_t bufferLen);
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CompactDecimalFormat)
 
@@ -182,7 +182,7 @@ CompactDecimalFormat::CompactDecimalFormat(const CompactDecimalFormat& source)
 CompactDecimalFormat* U_EXPORT2
 CompactDecimalFormat::createInstance(
     const Locale& inLocale, UNumberCompactStyle style, UErrorCode& status) {
-  LocalPointer<DecimalFormat> decfmt((DecimalFormat*) NumberFormat::makeInstance(inLocale, UNUM_DECIMAL, true, status));
+  LocalPointer<DecimalFormat> decfmt((DecimalFormat*) NumberFormat::makeInstance(inLocale, UNUM_DECIMAL, TRUE, status));
   if (U_FAILURE(status)) {
     return NULL;
   }
@@ -207,8 +207,6 @@ CompactDecimalFormat::createInstance(
   return result;
 }
 
-// TODO: _pluralRules will be NULL on out of memory error.
-// Should rest of this class gracefully handle _pluralRules being NULL?
 CompactDecimalFormat&
 CompactDecimalFormat::operator=(const CompactDecimalFormat& rhs) {
   if (this != &rhs) {
@@ -425,7 +423,7 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
     Mutex lock(&gCompactDecimalMetaLock);
     result = (CDFLocaleData*) uhash_get(gCompactDecimalData, key);
   }
-  if (result) {
+  if (result != NULL) {
     return extractDataByStyleEnum(*result, style, status);
   }
 
@@ -437,7 +435,7 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
   {
     Mutex lock(&gCompactDecimalMetaLock);
     CDFLocaleData* temp = (CDFLocaleData*) uhash_get(gCompactDecimalData, key);
-    if (temp) {
+    if (temp != NULL) {
       delete result;
       result = temp;
     } else {
@@ -513,44 +511,42 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
     ures_close(rb);
     return;
   }
-  UResourceBundle* localResource = NULL;
-  UResourceBundle* latnResource = NULL;
+  LocalUResourceBundlePointer localResource;
+  LocalUResourceBundlePointer latnResource;
   UResourceBundle* dataFillIn = NULL;
   UResourceBundle* data = NULL;
 
   // Look in local numbering system first for UNUM_SHORT if it is not latn
   DataLocation shortLocation = LOCAL_LOC;
   if (uprv_strcmp(numberingSystemName, gLatnTag) != 0) {
-    localResource = tryGetByKeyWithFallback(rb, numberingSystemName, NULL, NOT_ROOT, status);
-    data = tryGetDecimalFallback(localResource, gPatternsShort, &dataFillIn, NOT_ROOT, status);
+    localResource.adoptInstead(tryGetByKeyWithFallback(rb, numberingSystemName, NULL, NOT_ROOT, status));
+    data = tryGetDecimalFallback(localResource.getAlias(), gPatternsShort, &dataFillIn, NOT_ROOT, status);
   }
   // If we haven't found UNUM_SHORT look in latn numbering system. We must
   // succeed at finding UNUM_SHORT here.
-  if (!data) {
-    latnResource = tryGetByKeyWithFallback(rb, gLatnTag, NULL, MUST, status);
-    data = tryGetDecimalFallback(latnResource, gPatternsShort, &dataFillIn, MUST, status);
+  if (data == NULL) {
+    latnResource.adoptInstead(tryGetByKeyWithFallback(rb, gLatnTag, NULL, MUST, status));
+    data = tryGetDecimalFallback(latnResource.getAlias(), gPatternsShort, &dataFillIn, MUST, status);
     shortLocation = isRoot(data, status) ? ROOT_LOC : LATIN_LOC;
   }
   initCDFLocaleStyleData(data, &result->shortData, status);
   if (U_FAILURE(status)) {
     ures_close(dataFillIn);
-    ures_close(latnResource);
-    ures_close(localResource);
     ures_close(rb);
     return;
   }
   data = NULL;
 
   // Look for UNUM_LONG data in local numbering system first.
-  data = tryGetDecimalFallback(localResource, gPatternsLong, &dataFillIn, NOT_ROOT, status);
+  data = tryGetDecimalFallback(localResource.getAlias(), gPatternsLong, &dataFillIn, NOT_ROOT, status);
 
   // If we haven't found UNUM_LONG and we found the UNUM_SHORT data in the latn
   // Numbering system, continue. If we find UNUM_LONG in the latin numbering
   // system, we have to be sure that we didn't find it after where we found
   // UNUM_SHORT.
   if (data == NULL && shortLocation != LOCAL_LOC) {
-    data = tryGetDecimalFallback(latnResource, gPatternsLong, &dataFillIn, ANY, status);
-    if (data) {
+    data = tryGetDecimalFallback(latnResource.getAlias(), gPatternsLong, &dataFillIn, ANY, status);
+    if (data != NULL) {
       if (shortLocation == LATIN_LOC && isRoot(data, status)) {
         data = NULL;
       }
@@ -562,16 +558,13 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
     initCDFLocaleStyleData(data, &result->longData, status);
   }
   ures_close(dataFillIn);
-  ures_close(latnResource);
-  ures_close(localResource);
   ures_close(rb);
 }
 
 /**
  * tryGetDecimalFallback attempts to fetch the "decimalFormat" resource bundle
- * with a particular style. style is this style either "patternsShort" or
- * "patternsLong" fillIn, flags, and status work in the same way as in
- * tryGetByKeyWithFallback.
+ * with a particular style. style is either "patternsShort" or "patternsLong."
+ * FillIn, flags, and status work in the same way as in tryGetByKeyWithFallback.
  */
 static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, int32_t flags, UErrorCode& status) {
   UResourceBundle* first = tryGetByKeyWithFallback(numberSystemResource, style, fillIn, flags, status);
@@ -711,7 +704,12 @@ static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyle
   if (U_FAILURE(status)) {
     return;
   }
-  double power10 = uprv_strtod(ures_getKey(power10Bundle), NULL);
+  char* endPtr = NULL;
+  double power10 = uprv_strtod(ures_getKey(power10Bundle), &endPtr);
+  if (*endPtr != 0) {
+    status = U_INTERNAL_PROGRAM_ERROR;
+    return;
+  }
   int32_t log10Value = computeLog10(power10, FALSE);
   // Silently ignore divisors that are too big.
   if (log10Value == MAX_DIGITS) {
@@ -730,16 +728,17 @@ static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyle
     }
     const char* variant = ures_getKey(variantBundle);
     int32_t resLen;
-    const UChar* formatStr = ures_getString(variantBundle, &resLen, &status);
+    const UChar* formatStrP = ures_getString(variantBundle, &resLen, &status);
     if (U_FAILURE(status)) {
       ures_close(variantBundle);
       return;
     }
+    UnicodeString formatStr(false, formatStrP, resLen);
     if (uprv_strcmp(variant, gOther) == 0) {
       otherVariantDefined = TRUE;
     }
     int nz = populatePrefixSuffix(
-        variant, log10Value, formatStr, resLen, result->unitsByVariant, status);
+        variant, log10Value, formatStr, result->unitsByVariant, status);
     if (U_FAILURE(status)) {
       ures_close(variantBundle);
       return;
@@ -778,25 +777,27 @@ static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyle
 // In the special case that formatStr contains only spaces for prefix
 // and suffix, populatePrefixSuffix returns log10Value + 1.
 static int32_t populatePrefixSuffix(
-    const char* variant, int32_t log10Value, const UChar* formatStr, int32_t formatStrLen, UHashtable* result, UErrorCode& status) {
+    const char* variant, int32_t log10Value, const UnicodeString& formatStr, UHashtable* result, UErrorCode& status) {
   if (U_FAILURE(status)) {
     return 0;
   }
-  const UChar* firstIdx = u_strFindFirst(formatStr, formatStrLen, kZero, LENGTHOF(kZero));
+  int32_t firstIdx = formatStr.indexOf(kZero, LENGTHOF(kZero), 0);
   // We must have 0's in format string.
-  if (firstIdx == NULL) {
+  if (firstIdx == -1) {
     status = U_INTERNAL_PROGRAM_ERROR;
     return 0;
   }
-  const UChar* lastIdx = u_strFindLast(firstIdx, formatStrLen - (firstIdx - formatStr), kZero, LENGTHOF(kZero));
+  int32_t lastIdx = formatStr.lastIndexOf(kZero, LENGTHOF(kZero), firstIdx);
   CDFUnit* unit = createCDFUnit(variant, log10Value, result, status);
   if (U_FAILURE(status)) {
     return 0;
   }
   // Everything up to first 0 is the prefix
-  fixQuotes(formatStr, firstIdx - formatStr, &unit->prefix);
+  unit->prefix = formatStr.tempSubString(0, firstIdx);
+  fixQuotes(unit->prefix);
   // Everything beyond the last 0 is the suffix
-  fixQuotes(lastIdx + 1, formatStrLen - (lastIdx - formatStr) - 1, &unit->suffix);
+  unit->suffix = formatStr.tempSubString(lastIdx + 1);
+  fixQuotes(unit->suffix);
 
   // If there is effectively no prefix or suffix, ignore the actual number of
   // 0's and act as if the number of 0's matches the size of the number.
@@ -805,46 +806,49 @@ static int32_t populatePrefixSuffix(
   }
 
   // Calculate number of zeros before decimal point
-  const UChar* i = firstIdx + 1;
-  while (i <= lastIdx && *i == u_0) {
-    ++i;
+  int32_t idx = firstIdx + 1;
+  while (idx <= lastIdx && formatStr.charAt(idx) == u_0) {
+    ++idx;
   }
-  return (i - firstIdx);
+  return (idx - firstIdx);
 }
 
 static UBool onlySpaces(UnicodeString u) {
   return u.trim().length() == 0;
 }
 
-// fixQuotes appends a UChar array to a UnicodeString unescaping single
-// quotes as it goes. Don''t -> Don't. Letter 'j' -> Letter j.
-// start is the beginning of the UChar array. len is the length of the
-// array. UChar array appended to result.
-static void fixQuotes(const UChar* start, int32_t len, UnicodeString* result) {
-  const UChar* end = start + len;
+// fixQuotes unescapes single quotes. Don''t -> Don't. Letter 'j' -> Letter j.
+// Modifies s in place.
+static void fixQuotes(UnicodeString& s) {
   QuoteState state = OUTSIDE;
-  for (const UChar* ptr = start; ptr < end; ++ptr) {
-    if (*ptr == u_sq) {
+  int32_t len = s.length();
+  int32_t dest = 0;
+  for (int i = 0; i < len; ++i) {
+    UChar ch = s.charAt(i);
+    if (ch == u_apos) {
       if (state == INSIDE_EMPTY) {
-        result->append(*ptr);
+        s.setCharAt(dest, ch);
+        ++dest;
       }
     } else {
-      result->append(*ptr);
+      s.setCharAt(dest, ch);
+      ++dest;
     }
 
     // Update state
     switch (state) {
       case OUTSIDE:
-        state = *ptr == u_sq ? INSIDE_EMPTY : OUTSIDE;
+        state = ch == u_apos ? INSIDE_EMPTY : OUTSIDE;
         break;
       case INSIDE_EMPTY:
       case INSIDE_FULL:
-        state = *ptr == u_sq ? OUTSIDE : INSIDE_FULL;
+        state = ch == u_apos ? OUTSIDE : INSIDE_FULL;
         break;
       default:
         break;
     }
   }
+  s.truncate(dest);
 }
 
 // fillInMissing ensures that the data in result is complete.
@@ -945,25 +949,17 @@ static CDFUnit* createCDFUnit(const char* variant, int32_t log10Value, UHashtabl
 // falls back to the OTHER variant. Therefore, this method will always return
 // some non-NULL value.
 static const CDFUnit* getCDFUnitFallback(const UHashtable* table, const UnicodeString& variant, int32_t log10Value) {
-  char cvariant[80];
-  unicodeToCString(variant, cvariant, LENGTHOF(cvariant));
-  const CDFUnit *cdfUnit = (const CDFUnit*) uhash_get(table, cvariant);
+  CharString cvariant;
+  UErrorCode status = U_ZERO_ERROR;
+  const CDFUnit *cdfUnit = NULL;
+  cvariant.appendInvariantChars(variant, status);
+  if (!U_FAILURE(status)) {
+    cdfUnit = (const CDFUnit*) uhash_get(table, cvariant.data());
+  }
   if (cdfUnit == NULL) {
     cdfUnit = (const CDFUnit*) uhash_get(table, gOther);
   }
   return &cdfUnit[log10Value];
-}
-
-// unicodeToCString converts a UnicodeString to a null terminated char* and returns
-// the length. Note that this function cannot return more than bufferLen - 1.
-static int32_t unicodeToCString(const UnicodeString& src, char* buffer, int32_t bufferLen) {
-  int32_t len = src.length();
-  if (len > bufferLen - 1) {
-    len = bufferLen - 1;
-  }
-  u_UCharsToChars(src.getBuffer(), buffer, len);
-  buffer[len] = 0;
-  return len;
 }
 
 U_NAMESPACE_END
