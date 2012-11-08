@@ -166,41 +166,6 @@ ListFormatter::ListFormatter(const ListFormatData& listFormatterData) : data(lis
 
 ListFormatter::~ListFormatter() {}
 
-void ListFormatter::getFallbackLocale(const Locale& in, Locale& out, UErrorCode& errorCode) {
-    if (uprv_strcmp(in.getName(), "zh_TW") == 0) {
-        out = Locale::getTraditionalChinese();
-    } else {
-        const char* localeString = in.getName();
-        const char* extStart = locale_getKeywordsStart(localeString);
-        if (extStart == NULL) {
-            extStart = uprv_strchr(localeString, 0);
-        }
-        const char* last = extStart;
-
-        // TODO: Check whether uloc_getParent() will work here.
-        while (last > localeString && *(last - 1) != '_') {
-            --last;
-        }
-
-        // Truncate empty segment.
-        while (last > localeString) {
-            if (*(last-1) != '_') {
-                break;
-            }
-            --last;
-        }
-
-        size_t localePortionLen = last - localeString;
-        CharString fullLocale;
-        fullLocale.append(localeString, localePortionLen, errorCode).append(extStart, errorCode);
-
-        if (U_FAILURE(errorCode)) {
-            return;
-        }
-        out = Locale(fullLocale.data());
-    }
-}
-
 UnicodeString& ListFormatter::format(const UnicodeString items[], int32_t nItems,
                       UnicodeString& appendTo, UErrorCode& errorCode) const {
     if (U_FAILURE(errorCode)) {

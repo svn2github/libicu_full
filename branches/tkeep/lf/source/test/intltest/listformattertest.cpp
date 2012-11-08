@@ -78,32 +78,6 @@ UBool ListFormatterTest::RecordFourCases(const Locale& locale, UnicodeString one
     return TRUE;
 }
 
-void ListFormatterTest::TestLocaleFallback() {
-    const char* testData[][4] = {
-        {"en_US", "en", "", ""},    // ULocale.getFallback("") should return ""
-        {"EN_us_Var", "en_US", "en", ""},   // Case is always normalized
-        {"de_DE@collation=phonebook", "de@collation=phonebook", "@collation=phonebook", "@collation=phonebook"},    // Keyword is preserved
-        {"en__POSIX", "en", "", ""},    // Trailing empty segment should be truncated
-        {"_US_POSIX", "_US", "", ""},   // Same as above
-        {"root", "", "", ""},               // No canonicalization
-    };
-    for (int i = 0; i < 6; ++i) {
-        for(int j = 1; j < 4; ++j) {
-            Locale in(testData[i][j-1]);
-            Locale out;
-            UErrorCode errorCode = U_ZERO_ERROR;
-            ListFormatter::getFallbackLocale(in, out, errorCode);
-            if (U_FAILURE(errorCode)) {
-                errln("Error in getLocaleFallback: %s", u_errorName(errorCode));
-            }
-
-            if (::strcmp(testData[i][j], out.getName())) {
-                errln("Expected: |%s|, Actual: |%s|\n", testData[i][j], out.getName());
-            }
-        }
-    }
-}
-
 void ListFormatterTest::TestRoot() {
     UnicodeString results[4] = {
         one,
@@ -199,7 +173,6 @@ void ListFormatterTest::TestOutOfOrderPatterns() {
         four + " in the last after " + three + " after " + two + " after the first " + one
     };
 
-    UErrorCode errorCode = U_ZERO_ERROR;
     ListFormatData data("{1} after {0}", "{1} after the first {0}",
                         "{1} after {0}", "{1} in the last after {0}");
     ListFormatter formatter(data);
@@ -227,8 +200,7 @@ void ListFormatterTest::runIndexedTest(int32_t index, UBool exec,
         case 4: name = "TestRussian"; if (exec) TestRussian(); break;
         case 5: name = "TestMalayalam"; if (exec) TestMalayalam(); break;
         case 6: name = "TestZulu"; if (exec) TestZulu(); break;
-        case 7: name = "TestLocaleFallback"; if (exec) TestLocaleFallback(); break;
-        case 8: name = "TestOutOfOrderPatterns"; if (exec) TestLocaleFallback(); break;
+        case 7: name = "TestOutOfOrderPatterns"; if (exec) TestOutOfOrderPatterns(); break;
 
         default: name = ""; break;
     }

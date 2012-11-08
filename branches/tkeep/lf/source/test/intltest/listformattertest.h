@@ -27,7 +27,6 @@ class ListFormatterTest : public IntlTest {
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 
-    void TestLocaleFallback();
     void TestRoot();
     void TestBogus();
     void TestEnglish();
