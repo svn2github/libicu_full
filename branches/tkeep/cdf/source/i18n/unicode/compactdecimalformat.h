@@ -235,23 +235,11 @@ public:
                                   UErrorCode& status) const;
 
    /**
-    * Parse the given string using this object's choices. The method
-    * does string comparisons to try to find an optimal match.
-    * If no object can be parsed, index is unchanged, and NULL is
-    * returned.  The result is returned as the most parsimonious
-    * type of Formattable that will accomodate all of the
-    * necessary precision.  For example, if the result is exactly 12,
-    * it will be returned as a long.  However, if it is 1.5, it will
-    * be returned as a double.
-    *
-    * This implementation always fails and will leave parsePosition unchanged.
-    *
-    * @param text           The text to be parsed.
-    * @param result         Formattable to be set to the parse result.
-    *                       If parse fails, return contents are undefined.
-    * @param parsePosition  The position to start parsing at on input.
-    *                       On output, moved to after the last successfully
-    *                       parse character. On parse failure, does not change.
+    * CompactDecimalFormat does not support parsing. This implementation
+    * does nothing.
+    * @param text           Unused.
+    * @param result         Does not change.
+    * @param parsePosition  Does not change.
     * @see Formattable
     * @draft ICU 51
     */
@@ -259,14 +247,13 @@ public:
                        Formattable& result,
                        ParsePosition& parsePosition) const;
 
-    // Declare here again to get rid of function hiding problems.
     /**
-     * Parse the given string using this object's choices. This implementation
+     * CompactDecimalFormat does not support parsing. This implementation
      * sets status to U_UNSUPPORTED_ERROR
      *
-     * @param text           The text to be parsed.
-     * @param result         Formattable to be set to the parse result.
-     * @param status    Output parameter filled in with success or failure status.
+     * @param text      Unused. 
+     * @param result    Does not change.
+     * @param status    Always set to U_UNSUPPORTED_ERROR.
      * @draft ICU 51
      */
     virtual void parse(const UnicodeString& text,

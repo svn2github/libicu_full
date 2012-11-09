@@ -61,14 +61,17 @@ enum DataLocation {
   ROOT_LOC
 };
 
-static const int32_t ANY = 0;
-static const int32_t MUST = 1;
-static const int32_t NOT_ROOT = 2;
-// Next one will be 4 then 6 etc.
+enum FallbackFlags {
+  ANY = 0,
+  MUST = 1,
+  NOT_ROOT = 2
+  // Next one will be 4 then 6 etc.
+};
+
 
 // CDFUnit represents a prefix-suffix pair for a particular variant
 // and log10 value.
-struct CDFUnit {
+struct CDFUnit : public UMemory {
   UnicodeString prefix;
   UnicodeString suffix;
   inline CDFUnit() : prefix(), suffix() {
@@ -85,7 +88,7 @@ struct CDFUnit {
 
 // CDFLocaleStyleData contains formatting data for a particular locale
 // and style.
-class CDFLocaleStyleData {
+class CDFLocaleStyleData : public UMemory {
  public:
   // What to divide by for each log10 value when formatting. These values
   // will be powers of 10. For English, would be:
@@ -113,7 +116,7 @@ class CDFLocaleStyleData {
 };
 
 // CDFLocaleData contains formatting data for a particular locale.
-struct CDFLocaleData {
+struct CDFLocaleData : public UMemory {
   CDFLocaleStyleData shortData;
   CDFLocaleStyleData longData;
   inline CDFLocaleData() : shortData(), longData() { }
@@ -152,8 +155,8 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
 static const CDFLocaleStyleData* extractDataByStyleEnum(const CDFLocaleData& data, UNumberCompactStyle style, UErrorCode& status);
 static CDFLocaleData* loadCDFLocaleData(const Locale& inLocale, UErrorCode& status);
 static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UErrorCode& status);
-static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, int32_t flags, UErrorCode& status);
-static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const char* path, UResourceBundle** fillIn, int32_t flags, UErrorCode& status);
+static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, FallbackFlags flags, UErrorCode& status);
+static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const char* path, UResourceBundle** fillIn, FallbackFlags flags, UErrorCode& status);
 static UBool isRoot(const UResourceBundle* rb, UErrorCode& status);
 static void initCDFLocaleStyleData(const UResourceBundle* decimalFormatBundle, CDFLocaleStyleData* result, UErrorCode& status);
 static void populatePower10(const UResourceBundle* power10Bundle, CDFLocaleStyleData* result, UErrorCode& status);
@@ -402,10 +405,9 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
   if (U_FAILURE(status)) {
     return NULL;
   }
-  // Make sure our cache exists.
-  UBool needed;
-  UMTX_CHECK(&gCompactDecimalMetaLock, (gCompactDecimalData == NULL), needed);
-  if (needed) {
+  CDFLocaleData* result = NULL;
+  const char* key = inLocale.getName();
+  {
     Mutex lock(&gCompactDecimalMetaLock);
     if (gCompactDecimalData == NULL) {
       gCompactDecimalData = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
@@ -415,13 +417,9 @@ static const CDFLocaleStyleData* getCDFLocaleStyleData(const Locale& inLocale, U
       uhash_setKeyDeleter(gCompactDecimalData, uprv_free);
       uhash_setValueDeleter(gCompactDecimalData, deleteCDFLocaleData);
       ucln_i18n_registerCleanup(UCLN_I18N_CDFINFO, cdf_cleanup);
+    } else {
+      result = (CDFLocaleData*) uhash_get(gCompactDecimalData, key);
     }
-  }
-  CDFLocaleData* result = NULL;
-  const char* key = inLocale.getName();
-  {
-    Mutex lock(&gCompactDecimalMetaLock);
-    result = (CDFLocaleData*) uhash_get(gCompactDecimalData, key);
   }
   if (result != NULL) {
     return extractDataByStyleEnum(*result, style, status);
@@ -566,7 +564,7 @@ static void initCDFLocaleData(const Locale& inLocale, CDFLocaleData* result, UEr
  * with a particular style. style is either "patternsShort" or "patternsLong."
  * FillIn, flags, and status work in the same way as in tryGetByKeyWithFallback.
  */
-static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, int32_t flags, UErrorCode& status) {
+static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSystemResource, const char* style, UResourceBundle** fillIn, FallbackFlags flags, UErrorCode& status) {
   UResourceBundle* first = tryGetByKeyWithFallback(numberSystemResource, style, fillIn, flags, status);
   UResourceBundle* second = tryGetByKeyWithFallback(first, gDecimalFormatTag, fillIn, flags, status);
   if (fillIn == NULL) {
@@ -612,7 +610,7 @@ static UResourceBundle* tryGetDecimalFallback(const UResourceBundle* numberSyste
 //
 // ures_close(fillIn);
 // 
-static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const char* path, UResourceBundle** fillIn, int32_t flags, UErrorCode& status) {
+static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const char* path, UResourceBundle** fillIn, FallbackFlags flags, UErrorCode& status) {
   if (U_FAILURE(status)) {
     return NULL;
   }
@@ -639,7 +637,7 @@ static UResourceBundle* tryGetByKeyWithFallback(const UResourceBundle* rb, const
     }
     return NULL;
   }
-  flags &= ~MUST;
+  flags = (FallbackFlags) (flags & ~MUST);
   switch (flags) {
     case NOT_ROOT:
       {
