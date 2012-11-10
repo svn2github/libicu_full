@@ -270,7 +270,6 @@ void TestProperty()
     UChar *disName;
     int32_t len = 0;
     UChar source[12], target[12];
-    char sourceU8[36], targetU8[36];
     int32_t tempLength;
     UErrorCode status = U_ZERO_ERROR;
     /*
@@ -1949,7 +1948,7 @@ void TestMergeSortKeys(void) {
        uint32_t reqLen = 0;
        log_verbose("testing buffer overflow\n");
        reqLen = ucol_mergeSortkeys(prefixKey, prefixKeyLen, suffixKey, suffixKeyLen, smallBuf, 3);
-       if(reqLen != (prefixKeyLen+suffixKeyLen-1)) {
+       if(reqLen != (prefixKeyLen+suffixKeyLen)) {
          log_err("Wrong preflight size for merged sortkey\n");
        }
      }
