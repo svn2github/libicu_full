@@ -16,6 +16,7 @@
 
 #include "sfnt.h"
 #include "cmaps.h"
+#include <stdio.h>
 
 #define SWAPU16(code) ((LEUnicode16) SWAPW(code))
 #define SWAPU32(code) ((LEUnicode32) SWAPL(code))
@@ -75,7 +76,12 @@ CMAPMapper *CMAPMapper::createUnicodeMapper(const CMAPTable *cmap)
             case 10:
                 offset10 = SWAPL(esh->encodingOffset);
                 break;
+
+            default:
+              printf("%s:%d: platform specific ID %d for subtable %d/%d\n", __FILE__, __LINE__, (SWAPW(esh->platformSpecificID)), i, nSubtables);
             }
+        } else {
+              printf("%s:%d: platform  ID %d for subtable %d/%d\n", __FILE__, __LINE__, (SWAPW(esh->platformID)), i, nSubtables);
         }
     }
 
@@ -86,6 +92,7 @@ CMAPMapper *CMAPMapper::createUnicodeMapper(const CMAPTable *cmap)
     } else if (offset1 != 0) {
         subtable = (const CMAPEncodingSubtable *) ((const char *) cmap + offset1);
     } else {
+      printf("%s:%d: could not find subtable.\n", __FILE__, __LINE__);
         return NULL;
     }
 
@@ -104,6 +111,7 @@ CMAPMapper *CMAPMapper::createUnicodeMapper(const CMAPTable *cmap)
         break;
     }
 
+    printf("%s:%d: Unknown format %x.\n", __FILE__, __LINE__, (SWAPW(subtable->format)));
     return NULL;
 }
 
