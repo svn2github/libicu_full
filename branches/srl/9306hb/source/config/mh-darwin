@@ -22,6 +22,8 @@ ARFLAGS += -c
 ## Commands to compile
 COMPILE.c=	$(CC) $(DEFS) $(CPPFLAGS) $(CFLAGS) -fno-common -c
 COMPILE.cc=	$(CXX) $(DEFS) $(CPPFLAGS) $(CXXFLAGS) -fno-common -c
+COMPILE.mm=	$(CXX) $(DEFS) $(CPPFLAGS) $(CXXFLAGS) $(MFLAGS) -fno-common -c
+COMPILE.m=	$(CC) $(DEFS) $(CPPFLAGS) $(CFLAGS) $(MFLAGS) -fno-common -c
 
 ## Commands to make a shared library
 SHLIB.c=	$(CC) -dynamiclib -dynamic $(CFLAGS) $(LDFLAGS) $(LD_SOOPTIONS)
@@ -62,6 +64,12 @@ MIDDLE_SO_TARGET= $(basename $(SO_TARGET)).$(SO_TARGET_VERSION_MAJOR).$(SO)
 	$(call SILENT_COMPILE,$(strip $(COMPILE.cc) $(STATICCPPFLAGS) $(STATICCXXFLAGS)) -MMD -MT "$*.d $*.o $*.$(STATIC_O)" -o $@ $<)
 %.o: $(srcdir)/%.cpp
 	$(call SILENT_COMPILE,$(strip $(COMPILE.cc) $(DYNAMICCPPFLAGS) $(DYNAMICCXXFLAGS)) -MMD -MT "$*.d $*.o $*.$(STATIC_O)" -o $@ $<)
+
+%.o: $(srcdir)/%.mm
+	$(call SILENT_COMPILE,$(strip $(COMPILE.mm) $(DYNAMICCPPFLAGS) $(DYNAMICCXXFLAGS)) -MMD -MT "$*.d $*.o $*.$(STATIC_O)" -o $@ $<)
+
+%.o: $(srcdir)/%.m
+	$(call SILENT_COMPILE,$(strip $(COMPILE.m) $(DYNAMICCPPFLAGS) $(DYNAMICCXXFLAGS)) -MMD -MT "$*.d $*.o $*.$(STATIC_O)" -o $@ $<)
 
 ## Versioned libraries rules
 
