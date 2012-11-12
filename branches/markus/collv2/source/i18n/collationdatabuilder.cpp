@@ -774,8 +774,6 @@ CollationDataBuilder::serializeUnsafeBackwardSet(uint16_t *data, int32_t capacit
     return unsafeBackwardSet.serialize(data, capacity, errorCode);
 }
 
-UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(CollationDataBuilder)
-
 // TODO: In CollationWeights allocator,
 // try to treat secondary & tertiary weights as 3/4-byte weights with bytes 1 & 2 == 0.
 // Natural secondary limit of 0x10000.

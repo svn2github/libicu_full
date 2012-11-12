@@ -283,9 +283,6 @@ private:
      */
     void setCE32s(const CollationData *d, int32_t expIndex, int32_t length);
 
-    // No ICU "poor man's RTTI" for this class nor its subclasses.
-    virtual UClassID getDynamicClassID() const;
-
     // List of CEs.
     int32_t cesIndex, cesMaxIndex;
     const int64_t *ces;

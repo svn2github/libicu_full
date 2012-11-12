@@ -159,10 +159,6 @@ protected:
     // Serialized UCharsTrie structures for finalized contexts.
     UnicodeString contexts;
     UnicodeSet unsafeBackwardSet;
-
-private:
-    // No ICU "poor man's RTTI" for this class nor its subclasses.
-    virtual UClassID getDynamicClassID() const;
 };
 
 #if 0

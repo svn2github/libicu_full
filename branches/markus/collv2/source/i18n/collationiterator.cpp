@@ -1014,8 +1014,6 @@ CollationIterator::previousCEUnsafe(CEArray &backwardCEs, UChar32 c, UErrorCode 
     // for string search? Is this equivalent to how v1 behaves?
 }
 
-UOBJECT_DEFINE_NO_RTTI_IMPLEMENTATION(CollationIterator)
-
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION
