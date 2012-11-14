@@ -1013,13 +1013,10 @@
       your platform) to compile the libraries and all the data files. The proper
       name of the GNU make command is printed at the end of the configuration
       run, as in "You must use gmake to compile ICU".
-      <br/>
+        <br/>
       Note that the compilation command output may be simplified on your platform.  If this is the case, you will see just:
-      <blockquote><p style='background-color: #ddd; font-family: monospace; font-size: small'>gcc ... stubdata.c</p></blockquote>
-      rather than
-      <blockquote><p style='background-color: #ddd; font-family: monospace; font-size: small'>gcc  -DU_NO_DEFAULT_INCLUDE_UTF_HEADERS=1 -D_REENTRANT -I../common -DU_ATTRIBUTE_DEPRECATED= -O2 -Wall -std=c99 -pedantic -Wshadow -Wpointer-arith -Wmissing-prototypes -Wwrite-strings -c -DPIC -fPIC -o stubdata.o stubdata.c</p></blockquote>
-      .<br/>
-      If you need to see the whole compilation line,  use <span style='font-family: monospace;'>"gmake VERBOSE=1"</span>. The full compilation line will print if an error occurs.
+      <blockquote><tt style='background-color: #ddd; font-size: small'>gcc ... stubdata.c</tt></blockquote> rather than <blockquote><tt style='background-color: #ddd; font-size: small'>gcc  -DU_NO_DEFAULT_INCLUDE_UTF_HEADERS=1 -D_REENTRANT -I../common -DU_ATTRIBUTE_DEPRECATED= -O2 -Wall -std=c99 -pedantic -Wshadow -Wpointer-arith -Wmissing-prototypes -Wwrite-strings -c -DPIC -fPIC -o stubdata.o stubdata.c</tt></blockquote>.  <br/>
+      If you need to see the whole compilation line,  use <tt>"gmake VERBOSE=1"</tt>.  The full compilation line will print if an error occurs.<p>
       </li>
 
       <li>Optionally, type <span style='font-family: monospace;'>"gmake check"</span> to run the test suite, which
