@@ -72,7 +72,11 @@ protected:
 class U_I18N_API FCDUTF16CollationIterator : public UTF16CollationIterator {
 public:
     FCDUTF16CollationIterator(const CollationData *data,
-                              const UChar *s, const UChar *lim);
+                              const UChar *s, const UChar *lim)
+            : UTF16CollationIterator(data, s, lim),
+              rawStart(s), segmentStart(s), segmentLimit(NULL), rawLimit(lim),
+              nfcImpl(data->nfcImpl),
+              checkDir(1) {}
 
     virtual void resetToStart();
 

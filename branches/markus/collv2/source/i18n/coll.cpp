@@ -919,6 +919,16 @@ Collator::internalGetShortDefinitionString(const char * /*locale*/,
   return 0;
 }
 
+UCollationResult
+Collator::compareUTF8(const char *left, int32_t leftLength,
+                      const char *right, int32_t rightLength,
+                      UErrorCode &errorCode) const {
+    if (U_SUCCESS(errorCode)) {
+        errorCode = U_UNSUPPORTED_ERROR;
+    }
+    return UCOL_EQUAL;
+}
+
 int32_t
 Collator::nextSortKeyPart(UCharIterator * /*iter*/, uint32_t /*state*/[2],
                           uint8_t * /*dest*/, int32_t /*count*/, UErrorCode &errorCode) const {

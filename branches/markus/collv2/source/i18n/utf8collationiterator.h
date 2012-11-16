@@ -3,20 +3,19 @@
 * Copyright (C) 2012, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
-* uitercollationiterator.h
+* utf8collationiterator.h
 *
-* created on: 2012sep23 (from utf16collationiterator.h)
+* created on: 2012nov12 (from utf16collationiterator.h & uitercollationiterator.h)
 * created by: Markus W. Scherer
 */
 
-#ifndef __UITERCOLLATIONITERATOR_H__
-#define __UITERCOLLATIONITERATOR_H__
+#ifndef __UTF8COLLATIONITERATOR_H__
+#define __UTF8COLLATIONITERATOR_H__
 
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_COLLATION
 
-#include "unicode/uiter.h"
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
@@ -25,14 +24,16 @@
 U_NAMESPACE_BEGIN
 
 /**
- * UCharIterator-based collation element and character iterator.
- * Handles normalized text inline, with length or NUL-terminated.
+ * UTF-8 collation element and character iterator.
+ * Handles normalized UTF-8 text inline, with length or NUL-terminated.
  * Unnormalized text is handled by a subclass.
  */
-class U_I18N_API UIterCollationIterator : public CollationIterator {
+class U_I18N_API UTF8CollationIterator : public CollationIterator {
 public:
-    UIterCollationIterator(const CollationData *d, UCharIterator &ui)
-            : CollationIterator(d), iter(ui) {}
+    UTF8CollationIterator(const CollationData *d,
+                          const uint8_t *s, int32_t len)
+            : CollationIterator(d),
+              u8(s), pos(0), length(len) {}
 
     virtual void resetToStart();
 
@@ -49,29 +50,44 @@ public:
     virtual UChar32 previousCodePoint(UErrorCode &errorCode);
 
 protected:
+    /**
+     * For byte sequences that are illegal in UTF-8, an error value may be returned
+     * together with a bogus code point. The caller will ignore that code point.
+     *
+     * Special values may be returned for surrogate code points, which are also illegal in UTF-8,
+     * but the caller will treat them like U+FFFD because forbidSurrogateCodePoints() returns TRUE.
+     *
+     * Valid lead surrogates are returned from inside a normalized text segment,
+     * where handleGetTrailSurrogate() will return the matching trail surrogate.
+     */
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
-    virtual UChar handleGetTrailSurrogate();
+    virtual UBool foundNULTerminator();
+
+    virtual UBool forbidSurrogateCodePoints() const;
 
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
-    UCharIterator &iter;
+    const uint8_t *u8;
+    int32_t pos;
+    int32_t length;  // <0 for NUL-terminated strings
+    // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
 };
 
-// TODO: The following class only inherits the "iter" field from its parent. Keep this class hierarchy?
 /**
  * Incrementally checks the input text for FCD and normalizes where necessary.
  */
-class U_I18N_API FCDUIterCollationIterator : public UIterCollationIterator {
+class U_I18N_API FCDUTF8CollationIterator : public UTF8CollationIterator {
 public:
-    FCDUIterCollationIterator(const CollationData *data, UCharIterator &ui, int32_t startIndex)
-            : UIterCollationIterator(data, ui),
-              state(ITER_CHECK_FWD), start(startIndex),
+    FCDUTF8CollationIterator(const CollationData *data,
+                             const uint8_t *s, int32_t len)
+            : UTF8CollationIterator(data, s, len),
+              state(CHECK_FWD), start(0),
               nfcImpl(data->nfcImpl) {}
 
-    virtual void resetToStart();  // TODO: Do we really need *CollationIterator::resetToStart()?
+    virtual void resetToStart();
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 
@@ -82,11 +98,16 @@ protected:
 
     virtual UChar handleGetTrailSurrogate();
 
+    virtual UBool foundNULTerminator();
+
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode);
 
 private:
+    UBool nextHasLccc() const;
+    UBool previousHasTccc() const;
+
     /**
      * Switches to forward checking if possible.
      */
@@ -113,40 +134,32 @@ private:
 
     enum State {
         /**
-         * The input text [start..(iter index)[ passes the FCD check.
+         * The input text [start..pos[ passes the FCD check.
          * Moving forward checks incrementally.
-         * pos & limit are undefined.
+         * limit is undefined.
          */
-        ITER_CHECK_FWD,
+        CHECK_FWD,
         /**
-         * The input text [(iter index)..limit[ passes the FCD check.
+         * The input text [pos..limit[ passes the FCD check.
          * Moving backward checks incrementally.
-         * start & pos are undefined.
+         * start is undefined.
          */
-        ITER_CHECK_BWD,
+        CHECK_BWD,
         /**
          * The input text [start..limit[ passes the FCD check.
          * pos tracks the current text index.
          */
-        ITER_IN_FCD_SEGMENT,
+        IN_FCD_SEGMENT,
         /**
          * The input text [start..limit[ failed the FCD check and was normalized.
          * pos tracks the current index in the normalized string.
-         * The text iterator is at the limit index.
          */
-        IN_NORM_ITER_AT_LIMIT,
-        /**
-         * The input text [start..limit[ failed the FCD check and was normalized.
-         * pos tracks the current index in the normalized string.
-         * The text iterator is at the start index.
-         */
-        IN_NORM_ITER_AT_START
+        IN_NORMALIZED
     };
 
     State state;
 
     int32_t start;
-    int32_t pos;
     int32_t limit;
 
     const Normalizer2Impl &nfcImpl;
@@ -156,4 +169,4 @@ private:
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION
-#endif  // __UITERCOLLATIONITERATOR_H__
+#endif  // __UTF8COLLATIONITERATOR_H__

@@ -16,6 +16,7 @@
 #include "unicode/localpointer.h"
 #include "unicode/normalizer2.h"
 #include "unicode/sortkey.h"
+#include "unicode/std_string.h"
 #include "unicode/uiter.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
@@ -35,6 +36,7 @@
 #include "ucol_bld.h"  // TODO: for ucol_findReorderingEntry
 #include "uitercollationiterator.h"
 #include "utf16collationiterator.h"
+#include "utf8collationiterator.h"
 #include "uvectr32.h"
 #include "writesrc.h"
 
@@ -68,6 +70,7 @@ public:
     void TestMinMax();
     void TestImplicits();
     void TestNulTerminated();
+    void TestIllegalUTF8();
     void TestFCD();
     void TestDataDriven();
 
@@ -149,6 +152,7 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestMinMax);
     TESTCASE_AUTO(TestImplicits);
     TESTCASE_AUTO(TestNulTerminated);
+    TESTCASE_AUTO(TestIllegalUTF8);
     TESTCASE_AUTO(TestFCD);
     TESTCASE_AUTO(TestDataDriven);
     TESTCASE_AUTO_END;
@@ -279,6 +283,41 @@ void CollationTest::TestNulTerminated() {
     }
 }
 
+void CollationTest::TestIllegalUTF8() {
+    IcuTestErrorCode errorCode(*this, "TestIllegalUTF8");
+
+    // Set the root collator.
+    collData = getCollationBaseData(errorCode);
+    replaceCollator(errorCode);
+    if(errorCode.logIfFailureAndReset("setting the root collator")) {
+        return;
+    }
+    coll->setAttribute(UCOL_STRENGTH, UCOL_IDENTICAL, errorCode);
+
+    static const char *strings[] = {
+        // U+FFFD
+        "a\xef\xbf\xbdz",
+        // illegal byte sequences
+        "a\x80z",  // trail byte
+        "a\xc1\x81z",  // non-shortest form
+        "a\xe0\x82\x83z",  // non-shortest form
+        "a\xed\xa0\x80z",  // lead surrogate: would be U+D800
+        "a\xed\xbf\xbfz",  // trail surrogate: would be U+DFFF
+        "a\xf0\x8f\xbf\xbfz",  // non-shortest form
+        "a\xf4\x90\x80\x80z"  // out of range: would be U+110000
+    };
+
+    StringPiece fffd(strings[0]);
+    for(int32_t i = 1; i < LENGTHOF(strings); ++i) {
+        StringPiece illegal(strings[i]);
+        UCollationResult order = coll->compareUTF8(fffd, illegal, errorCode);
+        if(order != UCOL_EQUAL) {
+            errln("compareUTF8(U+FFFD, string %d with illegal UTF-8)=%d != UCOL_EQUAL",
+                  (int)i, order);
+        }
+    }
+}
+
 class CodePointIterator {
 public:
     CodePointIterator(const UChar32 *cp, int32_t length) : cp(cp), length(length), pos(0) {}
@@ -383,13 +422,23 @@ void CollationTest::TestFCD() {
         0x4e00, 0xf71, 0xf80
     };
 
-    // Iterate forward to the NUL terminator.
     FCDUTF16CollationIterator u16ci(cd.getAlias(), s, NULL);
     if(errorCode.logIfFailureAndReset("FCDUTF16CollationIterator constructor")) {
         return;
     }
     CodePointIterator cpi(cp, LENGTHOF(cp));
     checkFCD("FCDUTF16CollationIterator", u16ci, cpi);
+
+#if U_HAVE_STD_STRING
+    cpi.resetToStart();
+    std::string utf8;
+    UnicodeString(s).toUTF8String(utf8);
+    FCDUTF8CollationIterator u8ci(cd.getAlias(), reinterpret_cast<const uint8_t *>(utf8.c_str()), -1);
+    if(errorCode.logIfFailureAndReset("FCDUTF8CollationIterator constructor")) {
+        return;
+    }
+    checkFCD("FCDUTF8CollationIterator", u8ci, cpi);
+#endif
 
     cpi.resetToStart();
     UCharIterator iter;
@@ -1039,6 +1088,35 @@ UBool CollationTest::getCollationKey(const UnicodeString &line,
     return TRUE;
 }
 
+namespace {
+
+/**
+ * Replaces unpaired surrogates with U+FFFD.
+ * Returns s if no replacement was made, otherwise buffer.
+ */
+const UnicodeString &surrogatesToFFFD(const UnicodeString &s, UnicodeString &buffer) {
+    int32_t i = 0;
+    while(i < s.length()) {
+        UChar32 c = s.char32At(i);
+        if(U_IS_SURROGATE(c)) {
+            if(buffer.length() < i) {
+                buffer.append(s, buffer.length(), i - buffer.length());
+            }
+            buffer.append((UChar)0xfffd);
+        }
+        i += U16_LENGTH(c);
+    }
+    if(buffer.isEmpty()) {
+        return s;
+    }
+    if(buffer.length() < i) {
+        buffer.append(s, buffer.length(), i - buffer.length());
+    }
+    return buffer;
+}
+
+}
+
 UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                                      const UnicodeString &prevString, const UnicodeString &s,
                                      UCollationResult expectedOrder, Collation::Level expectedLevel,
@@ -1073,7 +1151,7 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
     UBool containNUL = prevString.indexOf((UChar)0) >= 0 || s.indexOf((UChar)0) >= 0;
     if(!containNUL) {
 // TODO: remove -- printf("line %d coll(%s).compare(prev-NUL, s-NUL)\n", fileLineNumber, norm);
-        UCollationResult order = coll->compare(prevString.getBuffer(), -1, s.getBuffer(), -1, errorCode);
+        order = coll->compare(prevString.getBuffer(), -1, s.getBuffer(), -1, errorCode);
         if(order != expectedOrder || errorCode.isFailure()) {
             errln(fileTestName);
             errln("line %d Collator(normalization=%s).compare(previous-NUL, current-NUL) wrong order: %d != %d (%s)",
@@ -1095,6 +1173,70 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
             return FALSE;
         }
     }
+
+#if U_HAVE_STD_STRING
+    // compare(UTF-16) treats unpaired surrogates like unassigned code points.
+    // Unpaired surrogates cannot be converted to UTF-8.
+    // Create valid UTF-16 strings if necessary, and use those for
+    // both the expected compare() result and for the input to compare(UTF-8).
+    UnicodeString prevBuffer, sBuffer;
+    const UnicodeString &prevValid = surrogatesToFFFD(prevString, prevBuffer);
+    const UnicodeString &sValid = surrogatesToFFFD(s, sBuffer);
+    std::string prevUTF8, sUTF8;
+    UnicodeString(prevValid).toUTF8String(prevUTF8);
+    UnicodeString(sValid).toUTF8String(sUTF8);
+    UCollationResult expectedUTF8Order;
+    if(&prevValid == &prevString && &sValid == &s) {
+        expectedUTF8Order = expectedOrder;
+    } else {
+        expectedUTF8Order = coll->compare(prevValid, sValid, errorCode);
+    }
+
+    order = coll->compareUTF8(prevUTF8, sUTF8, errorCode);
+    if(order != expectedUTF8Order || errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("line %d Collator(normalization=%s).compareUTF8(previous, current) wrong order: %d != %d (%s)",
+              (int)fileLineNumber, norm, order, expectedUTF8Order, errorCode.errorName());
+        errln(prevFileLine);
+        errln(fileLine);
+        errorCode.reset();
+        return FALSE;
+    }
+    order = coll->compareUTF8(sUTF8, prevUTF8, errorCode);
+    if(order != -expectedUTF8Order || errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("line %d Collator(normalization=%s).compareUTF8(current, previous) wrong order: %d != %d (%s)",
+              (int)fileLineNumber, norm, order, -expectedUTF8Order, errorCode.errorName());
+        errln(prevFileLine);
+        errln(fileLine);
+        errorCode.reset();
+        return FALSE;
+    }
+    // Test NUL-termination if the strings do not contain NUL characters.
+    if(!containNUL) {
+        order = coll->compareUTF8(prevUTF8.c_str(), -1, sUTF8.c_str(), -1, errorCode);
+        if(order != expectedUTF8Order || errorCode.isFailure()) {
+            errln(fileTestName);
+            errln("line %d Collator(normalization=%s).compareUTF8(previous-NUL, current-NUL) wrong order: %d != %d (%s)",
+                  (int)fileLineNumber, norm, order, expectedUTF8Order, errorCode.errorName());
+            errln(prevFileLine);
+            errln(fileLine);
+            errorCode.reset();
+            return FALSE;
+        }
+        order = coll->compareUTF8(sUTF8.c_str(), -1, prevUTF8.c_str(), -1, errorCode);
+        if(order != -expectedUTF8Order || errorCode.isFailure()) {
+            errln(fileTestName);
+            errln("line %d Collator(normalization=%s).compareUTF8(current-NUL, previous-NUL) wrong order: %d != %d (%s)",
+                  (int)fileLineNumber, norm, order, -expectedUTF8Order, errorCode.errorName());
+            errln(prevFileLine);
+            errln(fileLine);
+            errorCode.reset();
+            return FALSE;
+        }
+    }
+#endif
+
     UCharIterator leftIter;
     UCharIterator rightIter;
     uiter_setString(&leftIter, prevString.getBuffer(), prevString.length());
@@ -1110,6 +1252,7 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
         errorCode.reset();
         return FALSE;
     }
+
     CollationKey prevKey;
     if(!getCollationKey(prevFileLine, prevString.getBuffer(), prevString.length(),
                         prevKey, errorCode)) {
@@ -1923,17 +2066,20 @@ write_uca_table(const char *filename,
             }
 #endif
             if(!((int32_t)element->cSize > 1 && element->cPoints[0] == 0xFDD0)) {
-                // TODO: We ignore the maximum CE for U+FFFF which has [EF FE, 05, 05] in v1.
-                // CollationBaseDataBuilder::initBase() sets a different (higher) CE.
-                uint32_t p = (uint32_t)(ces[0] >> 32);
-                if(p == 0xeffe0000) { continue; }
                 UnicodeString prefix(FALSE, element->prefixChars, (int32_t)element->prefixSize);
                 UnicodeString s(FALSE, element->cPoints, (int32_t)element->cSize);
-                builder.add(prefix, s, ces, cesLength, *status);
 
                 UChar32 c = s.char32At(0);
                 if(c > maxCodePoint) { maxCodePoint = c; }
 
+                // We ignore the CEs for U+FFFD..U+FFFF.
+                // CollationBaseDataBuilder::initBase() maps them to special CEs.
+                // (U+FFFD & U+FFFF have higher primaries in v2 than in FractionalUCA.txt.)
+                if(0xfffd <= c && c <= 0xffff) { continue; }
+
+                builder.add(prefix, s, ces, cesLength, *status);
+
+                uint32_t p = (uint32_t)(ces[0] >> 32);
                 if(cesLength >= 2 && p != 0) {
                     int64_t prevCE = ces[0];
                     for(int32_t i = 1; i < cesLength; ++i) {

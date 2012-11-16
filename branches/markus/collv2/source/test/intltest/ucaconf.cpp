@@ -232,6 +232,11 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         }
         buffer[buflen] = 0;
 
+        // TODO: Update conformance test files for UCA 6.3
+        // where U+FFFD has the third-highest primary weight.
+        if(buflen != 0 && buffer[0] == 0xfffd) {
+            continue;
+        }
         if(skipLineBecauseOfBug(buffer, buflen, skipFlags) && dynamic_cast<const RuleBasedCollator2 *>(coll) == NULL /* TODO: remove */) {
             logln("Skipping line %i because of a known bug", line);
             continue;

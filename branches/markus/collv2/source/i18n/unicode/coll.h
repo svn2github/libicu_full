@@ -1110,6 +1110,14 @@ public:
                                                      UErrorCode &status) const;
 
     /**
+     * Implements ucol_strcollUTF8().
+     * @internal
+     */
+    virtual UCollationResult compareUTF8(const char *left, int32_t leftLength,
+                                         const char *right, int32_t rightLength,
+                                         UErrorCode &errorCode) const;
+
+    /**
      * Implements ucol_nextSortKeyPart().
      * @internal
      */

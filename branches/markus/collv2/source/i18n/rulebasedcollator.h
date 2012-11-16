@@ -242,6 +242,23 @@ public:
                                      UErrorCode &status) const;
 
     /**
+     * Compares two UTF-8 strings using the Collator.
+     * Returns whether the first one compares less than/equal to/greater than
+     * the second one.
+     * This version takes UTF-8 input.
+     * Note that a StringPiece can be implicitly constructed
+     * from a std::string or a NUL-terminated const char * string.
+     * @param source the first UTF-8 string
+     * @param target the second UTF-8 string
+     * @param status ICU status
+     * @return UCOL_LESS, UCOL_EQUAL or UCOL_GREATER
+     * @draft ICU 51
+     */
+    virtual UCollationResult compareUTF8(const StringPiece &source,
+                                         const StringPiece &target,
+                                         UErrorCode &status) const;
+
+    /**
     * Transforms a specified region of the string into a series of characters
     * that can be compared with CollationKey.compare. Use a CollationKey when
     * you need to do repeated comparisions on the same string. For a single
@@ -532,6 +549,14 @@ public:
 #endif  /* U_HIDE_DRAFT_API */
 
     /**
+     * Implements ucol_strcollUTF8().
+     * @internal
+     */
+    virtual UCollationResult compareUTF8(const char *left, int32_t leftLength,
+                                         const char *right, int32_t rightLength,
+                                         UErrorCode &errorCode) const;
+
+    /**
      * Implements ucol_nextSortKeyPart().
      * @internal
      */
@@ -563,6 +588,9 @@ private:
     // Both lengths must be <0 or else both must be >=0.
     UCollationResult doCompare(const UChar *left, int32_t leftLength,
                                const UChar *right, int32_t rightLength,
+                               UErrorCode &errorCode) const;
+    UCollationResult doCompare(const uint8_t *left, int32_t leftLength,
+                               const uint8_t *right, int32_t rightLength,
                                UErrorCode &errorCode) const;
 
     void writeSortKey(const UChar *s, int32_t length,

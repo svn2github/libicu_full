@@ -123,15 +123,6 @@ UTF16CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorC
 
 // FCDUTF16CollationIterator ----------------------------------------------- ***
 
-FCDUTF16CollationIterator::FCDUTF16CollationIterator(
-        const CollationData *data,
-        const UChar *s, const UChar *lim)
-        : UTF16CollationIterator(data, s, lim),
-          rawStart(s), segmentStart(s), segmentLimit(NULL), rawLimit(lim),
-          nfcImpl(data->nfcImpl),
-          checkDir(1) {
-}
-
 void
 FCDUTF16CollationIterator::resetToStart() {
     if(checkDir < 0 || segmentStart != rawStart) {
@@ -296,6 +287,10 @@ FCDUTF16CollationIterator::switchToForward() {
             // The input text segment needed to be normalized.
             // Switch to checking forward from it.
             pos = start = segmentStart = segmentLimit;
+            // Note: If this segment is at the end of the input text,
+            // then it might help to return FALSE to indicate that, so that
+            // we do not have to re-check and normalize when we turn around and go backwards.
+            // However, that would complicate the call sites for an optimization of an unusual case.
         }
         limit = rawLimit;
         checkDir = 1;
@@ -308,13 +303,19 @@ FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
     U_ASSERT(checkDir > 0 && pos != limit);
     // The input text [segmentStart..pos[ passes the FCD check.
     const UChar *p = pos;
-    uint16_t fcd16 = nfcImpl.nextFCD16(p, rawLimit);
-    uint8_t leadCC = (uint8_t)(fcd16 >> 8);
     uint8_t prevCC = 0;
     for(;;) {
+        // Fetch the next character's fcd16 value.
+        const UChar *q = p;
+        uint16_t fcd16 = nfcImpl.nextFCD16(p, rawLimit);
+        uint8_t leadCC = (uint8_t)(fcd16 >> 8);
+        if(leadCC == 0 && q != pos) {
+            // FCD boundary before the [q, p[ character.
+            limit = segmentLimit = q;
+            break;
+        }
         if(leadCC != 0 && (prevCC > leadCC || CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the next FCD boundary and normalize.
-            const UChar *q;
             do {
                 q = p;
             } while(p != rawLimit && nfcImpl.nextFCD16(p, rawLimit) > 0xff);
@@ -326,15 +327,6 @@ FCDUTF16CollationIterator::nextSegment(UErrorCode &errorCode) {
         if(p == rawLimit || prevCC == 0) {
             // FCD boundary after the last character.
             limit = segmentLimit = p;
-            break;
-        }
-        // Fetch the next character's fcd16 value.
-        const UChar *q = p;
-        fcd16 = nfcImpl.nextFCD16(p, rawLimit);
-        leadCC = (uint8_t)(fcd16 >> 8);
-        if(leadCC == 0) {
-            // FCD boundary before the [q, p[ character.
-            limit = segmentLimit = q;
             break;
         }
     }
@@ -375,10 +367,17 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
     U_ASSERT(checkDir < 0 && pos != start);
     // The input text [pos..segmentLimit[ passes the FCD check.
     const UChar *p = pos;
-    uint16_t fcd16 = nfcImpl.previousFCD16(rawStart, p);
-    uint8_t trailCC = (uint8_t)fcd16;
     uint8_t nextCC = 0;
     for(;;) {
+        // Fetch the previous character's fcd16 value.
+        const UChar *q = p;
+        uint16_t fcd16 = nfcImpl.previousFCD16(rawStart, p);
+        uint8_t trailCC = (uint8_t)fcd16;
+        if(trailCC == 0 && q != pos) {
+            // FCD boundary after the [p, q[ character.
+            start = segmentStart = q;
+            break;
+        }
         if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) ||
                             CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
@@ -391,15 +390,6 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
         if(p == rawStart || nextCC == 0) {
             // FCD boundary before the following character.
             start = segmentStart = p;
-            break;
-        }
-        // Fetch the previous character's fcd16 value.
-        const UChar *q = p;
-        fcd16 = nfcImpl.previousFCD16(rawStart, p);
-        trailCC = (uint8_t)fcd16;
-        if(trailCC == 0) {
-            // FCD boundary after the [p, q[ character.
-            start = segmentStart = q;
             break;
         }
     }

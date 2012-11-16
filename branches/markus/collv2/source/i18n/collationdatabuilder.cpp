@@ -101,7 +101,7 @@ CollationDataBuilder::initTailoring(const CollationData *b, UErrorCode &errorCod
     base = b;
 
     // For a tailoring, the default is to fall back to the base.
-    trie = utrie2_open(Collation::MIN_SPECIAL_CE32, 0, &errorCode);
+    trie = utrie2_open(Collation::MIN_SPECIAL_CE32, Collation::FFFD_CE32, &errorCode);
 
     unsafeBackwardSet = *b->unsafeBackwardSet;
 
@@ -313,8 +313,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
     // TODO: Validate prefix/c/suffix.
     // Valid UTF-16: No unpaired surrogates in either prefix or s.
     // Prefix must be FCD. s must be FCD. (Or make them.)
-    // No FFFE
-    // No FFFF
+    // No FFFD..FFFF
     // If prefix: cc(prefix[0])==cc(c)==0
     // Max lengths?
     // Forbid syllable-forming Jamos with/in expansions/contractions/prefixes, see design doc.

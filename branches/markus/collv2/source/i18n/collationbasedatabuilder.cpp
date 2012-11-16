@@ -58,8 +58,9 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
     // For a base, the default is to compute an unassigned-character implicit CE.
     // This includes surrogate code points; see the last option in
     // UCA section 7.1.1 Handling Ill-Formed Code Unit Sequences.
-    trie = utrie2_open(Collation::UNASSIGNED_CE32, 0, &errorCode);
+    trie = utrie2_open(Collation::UNASSIGNED_CE32, Collation::FFFD_CE32, &errorCode);
 
+    utrie2_set32(trie, 0xfffd, Collation::FFFD_CE32, &errorCode);
     utrie2_set32(trie, 0xfffe, Collation::MERGE_SEPARATOR_CE32, &errorCode);
     utrie2_set32(trie, 0xffff, Collation::MAX_REGULAR_CE32, &errorCode);
 
@@ -67,9 +68,8 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
     utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
 
     // Initialize the unsafe-backwards set:
-    // All combining marks and trail surrogates.
+    // All non-zero combining marks and trail surrogates.
     unsafeBackwardSet.applyPattern(UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
-    // TODO
 }
 
 void

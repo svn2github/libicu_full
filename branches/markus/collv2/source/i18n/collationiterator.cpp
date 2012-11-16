@@ -161,11 +161,16 @@ CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
 
 UChar
 CollationIterator::handleGetTrailSurrogate() {
-    return 0;  // Must not be called.
+    return 0;
 }
 
 UBool
 CollationIterator::foundNULTerminator() {
+    return FALSE;
+}
+
+UBool
+CollationIterator::forbidSurrogateCodePoints() const {
     return FALSE;
 }
 
@@ -303,6 +308,9 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                     ce32 = d->ce32s[0];
                     break;
                 }
+            } else if(U_IS_SURROGATE(c) && forbidSurrogateCodePoints()) {
+                ce32 = Collation::FFFD_CE32;
+                break;
             } else {
                 return Collation::unassignedCEFromCodePoint(c);
             }
@@ -632,6 +640,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             break;
         } else if(tag == Collation::IMPLICIT_TAG) {
             U_ASSERT((ce32 & 1) != 0);
+            U_ASSERT(!U_IS_SURROGATE(c));
             ce = Collation::unassignedCEFromCodePoint(c);
             break;
         } else {
@@ -942,6 +951,9 @@ CollationIterator::previousCEFromSpecialCE32(
                 U_ASSERT(c == 0);
                 // Fetch the normal ce32 for U+0000 and continue.
                 ce32 = d->ce32s[0];
+                break;
+            } else if(U_IS_SURROGATE(c) && forbidSurrogateCodePoints()) {
+                ce32 = Collation::FFFD_CE32;
                 break;
             } else {
                 return Collation::unassignedCEFromCodePoint(c);

@@ -284,6 +284,22 @@ a       27..
 <i \u0000\uFFFE\u0000
 <i \u0000\u0000\uFFFE
 
+** test: Hani < surrogates < U+FFFD
+# Note: compareUTF8() treats unpaired surrogates like U+FFFD,
+# so with that the strings with surrogates will compare equal to each other
+# and equal to the string with U+FFFD.
+@ root
+% strength=identical
+* compare
+<1 abz
+<1 a\u4e00z
+<1 a\U00020000z
+<1 a\ud800z
+<1 a\udbffz
+<1 a\udc00z
+<1 a\udfffz
+<1 a\ufffdz
+
 ** test: script reordering
 @ root
 % reorder Hani Zzzz digit

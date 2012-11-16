@@ -159,6 +159,9 @@ protected:
      * Returns the next code point and its local CE32 value.
      * Returns Collation::MIN_SPECIAL_CE32 at the end of the text (c<0)
      * or when c's CE32 value is to be looked up in the base data (fallback).
+     *
+     * The code point is used for fallbacks, context and implicit weights.
+     * It is ignored when the returned CE32 is not special (e.g., FFFD_CE32).
      */
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
@@ -175,6 +178,13 @@ protected:
      * (Not needed in Java.)
      */
     virtual UBool foundNULTerminator();
+
+    /**
+     * @return FALSE if surrogate code points U+D800..U+DFFF
+     *         map to their own implicit primary weights (for UTF-16),
+     *         or TRUE if they map to CE(U+FFFD) (for UTF-8)
+     */
+    virtual UBool forbidSurrogateCodePoints() const;
 
     virtual void forwardNumCodePoints(int32_t num, UErrorCode &errorCode) = 0;
 
