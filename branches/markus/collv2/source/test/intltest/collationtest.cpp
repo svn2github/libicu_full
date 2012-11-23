@@ -17,6 +17,7 @@
 #include "unicode/normalizer2.h"
 #include "unicode/sortkey.h"
 #include "unicode/std_string.h"
+#include "unicode/tblcoll.h"
 #include "unicode/uiter.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"

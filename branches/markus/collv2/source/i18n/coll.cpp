@@ -920,8 +920,8 @@ Collator::internalGetShortDefinitionString(const char * /*locale*/,
 }
 
 UCollationResult
-Collator::compareUTF8(const char *left, int32_t leftLength,
-                      const char *right, int32_t rightLength,
+Collator::compareUTF8(const char * /*left*/, int32_t /*leftLength*/,
+                      const char * /*right*/, int32_t /*rightLength*/,
                       UErrorCode &errorCode) const {
     if (U_SUCCESS(errorCode)) {
         errorCode = U_UNSUPPORTED_ERROR;
