@@ -24,9 +24,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="bms.cpp">
-      <Filter>collation</Filter>
-    </ClCompile>
     <ClCompile Include="bmsearch.cpp">
       <Filter>collation</Filter>
     </ClCompile>
@@ -796,9 +793,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="unicode\bms.h">
-      <Filter>collation</Filter>
-    </CustomBuild>
     <CustomBuild Include="unicode\bmsearch.h">
       <Filter>collation</Filter>
     </CustomBuild>

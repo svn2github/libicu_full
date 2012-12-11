@@ -40,11 +40,6 @@ public:
     virtual void goodSuffixTest();
     virtual void searchTime();
     
-    virtual void bmsTest();
-    virtual void bmSearchTest();
-
-    virtual void udhrTest();
-
     virtual void stringListTest();
 private:
     virtual const char   *getPath(char buffer[2048], const char *filename);
