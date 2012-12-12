@@ -33,7 +33,6 @@
 #include "ssearch.h"
 
 #include "unicode/colldata.h"
-#include "unicode/bmsearch.h"
 
 #include "xmlparser.h"
 
@@ -901,10 +900,7 @@ void SSearchTest::sharpSTest()
     int32_t start = -1, end = -1;
 
     coll = ucol_openFromShortString("LEN_S1", FALSE, NULL, &status);
-    if (U_FAILURE(status)) {
-        errcheckln(status, "Could not open collator. - %s", u_errorName(status));
-        return;
-    }
+    TEST_ASSERT_SUCCESS(status);
 
     UnicodeString lpUnescaped = lp.unescape();
     UnicodeString spUnescaped = sp.unescape();
@@ -924,24 +920,27 @@ void SSearchTest::sharpSTest()
 
     for (uint32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
         int32_t start, end;
+        UBool bFound;
         UnicodeString target = targets[t].unescape();
 
-        start = end = 0;
+        start = end = -1;
         usearch_setText(ussLong.getAlias(), target.getBuffer(), target.length(), &status);
-        if (usearch_search(ussLong.getAlias(), 0, &start, &end, &status)) {
+        bFound = usearch_search(ussLong.getAlias(), 0, &start, &end, &status);
+        TEST_ASSERT_SUCCESS(status);
+        if (bFound) {
             logln("Test %d: found long pattern at [%d, %d].", t, start, end);
         } else {
             errln("Test %d: did not find long pattern.", t);
         }
-        TEST_ASSERT_SUCCESS(status);
 
         usearch_setText(ussShort.getAlias(), target.getBuffer(), target.length(), &status);
-        if (usearch_search(ussShort.getAlias(), 0, &start, &end, &status)) {
+        bFound = usearch_search(ussShort.getAlias(), 0, &start, &end, &status);
+        TEST_ASSERT_SUCCESS(status);
+        if (bFound) {
             logln("Test %d: found long pattern at [%d, %d].", t, start, end);
         } else {
             errln("Test %d: did not find long pattern.", t);
         }
-        TEST_ASSERT_SUCCESS(status);
     }
 
     ucol_close(coll);
@@ -951,41 +950,29 @@ void SSearchTest::goodSuffixTest()
 {
     UErrorCode status = U_ZERO_ERROR;
     UCollator *coll = NULL;
-    CollData *data = NULL;
     UnicodeString pat = /*"gcagagag"*/ "fxeld";
     UnicodeString target = /*"gcatcgcagagagtatacagtacg"*/ "cloveldfxeld";
-    BoyerMooreSearch *pattern = NULL;
     int32_t start = -1, end = -1;
+    UBool bFound;
 
     coll = ucol_open(NULL, &status);
-    if (U_FAILURE(status)) {
-        errcheckln(status, "Couldn't open collator. - %s", u_errorName(status));
-        return;
-    }
+    TEST_ASSERT_SUCCESS(status);
 
-    data = CollData::open(coll, status);
-    if (U_FAILURE(status)) {
-        errln("Couldn't open CollData object.");
-        goto close_data;
-    }
+    LocalUStringSearchPointer ss(usearch_openFromCollator(pat.getBuffer(), pat.length(),
+                                                          target.getBuffer(), target.length(),
+                                                          coll,
+                                                          NULL,     // the break iterator
+                                                          &status));
+    TEST_ASSERT_SUCCESS(status);
 
-    pattern = new BoyerMooreSearch(data, pat, &target, status);
-    if (U_FAILURE(status)) {
-        errln("Couldn't open pattern object.");
-        goto close_pattern;
-    }
-
-    if (pattern->search(0, start, end)) {
+    bFound = usearch_search(ss.getAlias(), 0, &start, &end, &status);
+    TEST_ASSERT_SUCCESS(status);
+    if (bFound) {
         logln("Found pattern at [%d, %d].", start, end);
     } else {
         errln("Did not find pattern.");
     }
 
-close_pattern:
-    delete pattern;
-
-close_data:
-    CollData::close(data);
     ucol_close(coll);
 }
 

@@ -11,7 +11,6 @@
 #include "unicode/utypes.h"
 #include "unicode/unistr.h"
 #include "unicode/ucol.h"
-#include "unicode/bmsearch.h"
 
 #include "intltest.h"
 
