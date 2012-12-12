@@ -5,40 +5,25 @@
  **********************************************************************
  */
 
-
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_COLLATION
 
-#include "unicode/unistr.h"
-#include "unicode/putil.h"
-#include "unicode/usearch.h"
-
 #include "cmemory.h"
-#include "unicode/coll.h"
-#include "unicode/tblcoll.h"
-#include "unicode/coleitr.h"
-#include "unicode/ucoleitr.h"
-
-#include "unicode/regex.h"        // TODO: make conditional on regexp being built.
-
-#include "unicode/uniset.h"
-#include "unicode/uset.h"
-#include "unicode/ustring.h"
-#include "hash.h"
-#include "uhash.h"
 #include "ucol_imp.h"
 
-#include "intltest.h"
-#include "ssearch.h"
+#include "unicode/coll.h"
+#include "unicode/tblcoll.h"
+#include "unicode/usearch.h"
+#include "unicode/uset.h"
+#include "unicode/ustring.h"
 
 #include "unicode/colldata.h"
+#include "unicode/coleitr.h"
+#include "unicode/regex.h"        // TODO: make conditional on regexp being built.
 
+#include "ssearch.h"
 #include "xmlparser.h"
-
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 char testId[100];
 
@@ -738,154 +723,6 @@ static UnicodeString &escape(const UnicodeString &string, UnicodeString &buffer)
 }
 #endif
 
-#if 1
-
-struct PCE
-{
-    uint64_t ce;
-    int32_t  lowOffset;
-    int32_t  highOffset;
-};
-
-class PCEList
-{
-public:
-    PCEList(UCollator *coll, const UnicodeString &string);
-    ~PCEList();
-
-    int32_t size() const;
-
-    const PCE *get(int32_t index) const;
-
-    int32_t getLowOffset(int32_t index) const;
-    int32_t getHighOffset(int32_t index) const;
-    uint64_t getOrder(int32_t index) const;
-
-    UBool matchesAt(int32_t offset, const PCEList &other) const;
-
-    uint64_t operator[](int32_t index) const;
-
-private:
-    void add(uint64_t ce, int32_t low, int32_t high);
-
-    PCE *list;
-    int32_t listMax;
-    int32_t listSize;
-};
-
-PCEList::PCEList(UCollator *coll, const UnicodeString &string)
-{
-    UErrorCode status = U_ZERO_ERROR;
-    UCollationElements *elems = ucol_openElements(coll, string.getBuffer(), string.length(), &status);
-    uint64_t order;
-    int32_t low, high;
-
-    list = new PCE[listMax];
-
-    ucol_setOffset(elems, 0, &status);
-
-    do {
-        order = ucol_nextProcessed(elems, &low, &high, &status);
-        add(order, low, high);
-    } while (order != UCOL_PROCESSED_NULLORDER);
-
-    ucol_closeElements(elems);
-}
-
-PCEList::~PCEList()
-{
-    delete[] list;
-}
-
-void PCEList::add(uint64_t order, int32_t low, int32_t high)
-{
-    if (listSize >= listMax) {
-        listMax *= 2;
-
-        PCE *newList = new PCE[listMax];
-
-        uprv_memcpy(newList, list, listSize * sizeof(Order));
-        delete[] list;
-        list = newList;
-    }
-
-    list[listSize].ce         = order;
-    list[listSize].lowOffset  = low;
-    list[listSize].highOffset = high;
-
-    listSize += 1;
-}
-
-const PCE *PCEList::get(int32_t index) const
-{
-    if (index >= listSize) {
-        return NULL;
-    }
-
-    return &list[index];
-}
-
-int32_t PCEList::getLowOffset(int32_t index) const
-{
-    const PCE *pce = get(index);
-
-    if (pce != NULL) {
-        return pce->lowOffset;
-    }
-
-    return -1;
-}
-
-int32_t PCEList::getHighOffset(int32_t index) const
-{
-    const PCE *pce = get(index);
-
-    if (pce != NULL) {
-        return pce->highOffset;
-    }
-
-    return -1;
-}
-
-uint64_t PCEList::getOrder(int32_t index) const
-{
-    const PCE *pce = get(index);
-
-    if (pce != NULL) {
-        return pce->ce;
-    }
-
-    return UCOL_PROCESSED_NULLORDER;
-}
-
-int32_t PCEList::size() const
-{
-    return listSize;
-}
-
-UBool PCEList::matchesAt(int32_t offset, const PCEList &other) const
-{
-    // NOTE: sizes include the NULLORDER, which we don't want to compare.
-    int32_t otherSize = other.size() - 1;
-
-    if (listSize - 1 - offset < otherSize) {
-        return FALSE;
-    }
-
-    for (int32_t i = offset, j = 0; j < otherSize; i += 1, j += 1) {
-        if (getOrder(i) != other.getOrder(j)) {
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
-
-uint64_t PCEList::operator[](int32_t index) const
-{
-    return getOrder(index);
-}
-
 void SSearchTest::sharpSTest()
 {
     UErrorCode status = U_ZERO_ERROR;
@@ -1139,7 +976,6 @@ const char *cPattern = "maketh houndes ete hem";
 
     //printf("%ld, %d\n", pm-longishText, j);
 }
-#endif
 
 //----------------------------------------------------------------------------------------
 //
