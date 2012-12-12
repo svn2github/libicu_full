@@ -10,6 +10,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "cmemory.h"
+#include "cstring.h"
 #include "ucol_imp.h"
 
 #include "unicode/coll.h"
@@ -24,6 +25,8 @@
 
 #include "ssearch.h"
 #include "xmlparser.h"
+
+#include <stdio.h>  // for sprintf
 
 char testId[100];
 
@@ -727,8 +730,6 @@ void SSearchTest::sharpSTest()
 {
     UErrorCode status = U_ZERO_ERROR;
     UCollator *coll = NULL;
-    const CEList* ce = NULL;
-    const CEList* ce1 = NULL;
     UnicodeString lp  = "fuss";
     UnicodeString sp = "fu\\u00DF";
     UnicodeString targets[]  = {"fu\\u00DF", "fu\\u00DFball", "1fu\\u00DFball", "12fu\\u00DFball", "123fu\\u00DFball", "1234fu\\u00DFball",
@@ -756,7 +757,6 @@ void SSearchTest::sharpSTest()
     TEST_ASSERT_SUCCESS(status);
 
     for (uint32_t t = 0; t < (sizeof(targets)/sizeof(targets[0])); t += 1) {
-        int32_t start, end;
         UBool bFound;
         UnicodeString target = targets[t].unescape();
 
@@ -1296,7 +1296,7 @@ static int32_t  getIntParam(UnicodeString name, UnicodeString &params, int32_t d
         }
 
         params.extract(m.start(1, status), paramLength, valString, sizeof(valString));
-        val = strtol(valString,  NULL, 10);
+        val = uprv_strtol(valString,  NULL, 10);
 
         // Delete this parameter from the params string.
         m.reset();
