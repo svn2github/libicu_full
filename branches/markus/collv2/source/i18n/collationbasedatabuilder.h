@@ -59,8 +59,9 @@ public:
 
     void setCompressibleLeadByte(uint32_t b);
 
-    void addFirstPrimary(int32_t script, UBool firstInGroup, uint32_t primary,
-                         UErrorCode &errorCode);
+    void addReorderingGroup(uint32_t firstByte, uint32_t lastByte,
+                            const UnicodeString &groupScripts,
+                            UErrorCode &errorCode);
 
     CollationBaseData *buildBaseData(UErrorCode &errorCode);
 
@@ -68,11 +69,9 @@ public:
     virtual CollationData *buildTailoring(UErrorCode &errorCode);
 
 private:
-    void finishPreviousReorderingGroup(uint32_t lastByte);
-
     // Flags for which primary-weight lead bytes are compressible.
     UBool compressibleBytes[256];
-    UVector32 scripts;
+    UnicodeString scripts;
 };
 
 U_NAMESPACE_END

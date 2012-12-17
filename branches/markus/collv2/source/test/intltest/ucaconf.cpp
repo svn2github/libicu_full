@@ -23,8 +23,9 @@
 #include "collationdata.h"  // TODO: Temporarily for getCollationBaseData().
 #include "rulebasedcollator.h"  // TODO: Temporarily for v2 testing
 
-extern const CollationBaseData *
-getCollationBaseData(UErrorCode &errorCode);
+// TODO extern const CollationBaseData *
+//      getCollationBaseData(UErrorCode &errorCode);
+static const CollationBaseData *getCollationBaseData(UErrorCode & /*errorCode*/) { return NULL; }  // TODO
 
 UCAConformanceTest::UCAConformanceTest() :
 rbUCA(NULL),

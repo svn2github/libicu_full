@@ -109,30 +109,15 @@ CollationData::setAlternateHandling(UColAttributeValue value,
 
 int32_t
 CollationBaseData::findScript(int32_t script) const {
-    int32_t b = scriptByteFromInt(script);
-    if(b < 0) { return -1; }
+    if(script < 0 || 0xffff < script) { return -1; }
     for(int32_t i = 0; i < scriptsLength;) {
-        int32_t limit = i + 1 + (scripts[i] & 0xff);
-        for(int32_t j = i + 1; j < limit; ++j) {
-            if(b == ((int32_t)scripts[j] & 0xff)) { return i; }
+        int32_t limit = i + 2 + scripts[i + 1];
+        for(int32_t j = i + 2; j < limit; ++j) {
+            if(script == scripts[j]) { return i; }
         }
         i = limit;
     }
     return -1;
-}
-
-uint32_t
-CollationBaseData::getLowestPrimaryForScript(int32_t script) const {
-    int32_t b = scriptByteFromInt(script);
-    if(b < 0) { return 0; }
-    for(int32_t i = 0; i < scriptsLength;) {
-        int32_t limit = i + 1 + (scripts[i] & 0xff);
-        for(int32_t j = i + 1; j < limit; ++j) {
-            if(b == ((int32_t)scripts[j] & 0xff)) { return scripts[j] & ~0xff; }
-        }
-        i = limit;
-    }
-    return 0;
 }
 
 int32_t
@@ -142,15 +127,16 @@ CollationBaseData::getEquivalentScripts(int32_t script,
     if(U_FAILURE(errorCode)) { return 0; }
     int32_t i = findScript(script);
     if(i < 0) { return 0; }
-    int32_t length = scripts[i++] & 0xff;
+    int32_t length = scripts[i + 1];
     U_ASSERT(length != 0);
     if(length > capacity) {
         errorCode = U_BUFFER_OVERFLOW_ERROR;
         return length;
     }
-    dest[0] = scriptIntFromByte((int32_t)scripts[i++] & 0xff);
+    i += 2;
+    dest[0] = scripts[i++];
     for(int32_t j = 1; j < length; ++j) {
-        script = scriptIntFromByte((int32_t)scripts[i++] & 0xff);
+        script = scripts[i++];
         // Sorted insertion.
         for(int32_t k = j;; --k) {
             // Invariant: dest[k] is free to receive either script or dest[k - 1].
@@ -201,14 +187,14 @@ CollationBaseData::makeReorderTable(const int32_t *reorder, int32_t length,
     }
 
     // Start the reordering with the special low reorder codes that do not occur in the input.
-    for(int32_t i = 0;; i += 2) {
-        uint32_t head = scripts[i];
-        if((head & 0xff) != 1) { break; }  // Went beyond special single-code reorder codes.
-        int32_t reorderCode = ((int32_t)scripts[i + 1] & 0xff) - SCRIPT_BYTE_LIMIT;
+    for(int32_t i = 0;; i += 3) {
+        if(scripts[i + 1] != 1) { break; }  // Went beyond special single-code reorder codes.
+        int32_t reorderCode = (int32_t)scripts[i + 2] - UCOL_REORDER_CODE_FIRST;
         if(reorderCode < 0) { break; }  // Went beyond special reorder codes.
         if((specials & ((uint32_t)1 << reorderCode)) == 0) {
-            int32_t firstByte = (int32_t)(head >> 24);
-            int32_t lastByte = (int32_t)(head >> 16) & 0xff;
+            int32_t head = scripts[i];
+            int32_t firstByte = head >> 8;
+            int32_t lastByte = head & 0xff;
             do { table[firstByte++] = lowByte++; } while(firstByte <= lastByte);
         }
     }
@@ -227,9 +213,9 @@ CollationBaseData::makeReorderTable(const int32_t *reorder, int32_t length,
                 }
                 int32_t index = findScript(script);
                 if(index < 0) { continue; }
-                uint32_t head = scripts[index];
-                int32_t firstByte = (int32_t)(head >> 24);
-                int32_t lastByte = (int32_t)(head >> 16) & 0xff;
+                int32_t head = scripts[index];
+                int32_t firstByte = head >> 8;
+                int32_t lastByte = head & 0xff;
                 if(table[firstByte] != 0) {  // Duplicate or equivalent script.
                     errorCode = U_ILLEGAL_ARGUMENT_ERROR;
                     return;
@@ -246,9 +232,9 @@ CollationBaseData::makeReorderTable(const int32_t *reorder, int32_t length,
         }
         int32_t index = findScript(script);
         if(index < 0) { continue; }
-        uint32_t head = scripts[index];
-        int32_t firstByte = (int32_t)(head >> 24);
-        int32_t lastByte = (int32_t)(head >> 16) & 0xff;
+        int32_t head = scripts[index];
+        int32_t firstByte = head >> 8;
+        int32_t lastByte = head & 0xff;
         if(table[firstByte] != 0) {  // Duplicate or equivalent script.
             errorCode = U_ILLEGAL_ARGUMENT_ERROR;
             return;

@@ -48,45 +48,60 @@ struct U_I18N_API CollationData : public UMemory {
      */
     static const int32_t ALTERNATE_MASK = 0xc;
     /**
-     * Options bit 4: Sort uppercase first if caseLevel or caseFirst is on.
+     * Options bits 7..4: The 4-bit maxVariable value bit field is shifted by this value.
      */
-    static const int32_t UPPER_FIRST = 0x10;
+    static const int32_t MAX_VARIABLE_SHIFT = 4;
+    /** maxVariable options bit mask before shifting. */
+    static const int32_t MAX_VARIABLE_MASK = 0xf0;
     /**
-     * Options bit 5: Keep the case bits in the tertiary weight (they trump other tertiary values)
+     * Options bit 8: Sort uppercase first if caseLevel or caseFirst is on.
+     */
+    static const int32_t UPPER_FIRST = 0x100;
+    /**
+     * Options bit 9: Keep the case bits in the tertiary weight (they trump other tertiary values)
      * unless case level is on (when they are *moved* into the separate case level).
      * By default, the case bits are removed from the tertiary weight (ignored).
      *
      * When CASE_FIRST is off, UPPER_FIRST must be off too, corresponding to
      * the tri-value UCOL_CASE_FIRST attribute: UCOL_OFF vs. UCOL_LOWER_FIRST vs. UCOL_UPPER_FIRST.
      */
-    static const int32_t CASE_FIRST = 0x20;
+    static const int32_t CASE_FIRST = 0x200;
     /**
      * Options bit mask for caseFirst and upperFirst, before shifting.
      * Same value as caseFirst==upperFirst.
      */
     static const int32_t CASE_FIRST_AND_UPPER_MASK = CASE_FIRST | UPPER_FIRST;
     /**
-     * Options bit 6: Insert the case level between the secondary and tertiary levels.
+     * Options bit 10: Insert the case level between the secondary and tertiary levels.
      */
-    static const int32_t CASE_LEVEL = 0x40;
+    static const int32_t CASE_LEVEL = 0x400;
     /**
-     * Options bit 7: Compare secondary weights backwards. ("French secondary")
+     * Options bit 11: Compare secondary weights backwards. ("French secondary")
      */
-    static const int32_t BACKWARD_SECONDARY = 0x80;
+    static const int32_t BACKWARD_SECONDARY = 0x800;
     /**
-     * Options bits 11..8: The 4-bit strength value bit field is shifted by this value.
+     * Options bits 15..12: The 4-bit strength value bit field is shifted by this value.
      * It is the top used bit field in the options. (No need to mask after shifting.)
      */
-    static const int32_t STRENGTH_SHIFT = 8;
+    static const int32_t STRENGTH_SHIFT = 12;
     /** Strength options bit mask before shifting. */
-    static const int32_t STRENGTH_MASK = 0xf00;
+    static const int32_t STRENGTH_MASK = 0xf000;
+
+    /** maxVariable values */
+    enum MaxVariable {
+        MAX_VAR_SPACE,
+        MAX_VAR_PUNCT,
+        MAX_VAR_SYMBOL,
+        MAX_VAR_CURRENCY
+    };
 
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL),
               ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
               jamoCEs(NULL),
               nfcImpl(nfc),
-              options(UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT),
+              options((UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT) |
+                      (MAX_VAR_PUNCT << MAX_VARIABLE_SHIFT)),
               variableTop(0), zeroPrimary(0x12000000),
               compressibleBytes(NULL), reorderTable(NULL),
               reorderCodes(NULL), reorderCodesLength(0),
@@ -178,12 +193,62 @@ struct U_I18N_API CollationData : public UMemory {
         return nfcImpl.getFCD16(c);
     }
 
+    enum {
+        // Byte offsets from the start of the data, after the generic header.
+        // The indexes[] are at byte offset 0, other data follows.
+        // The data items should be in descending order of unit size,
+        // to minimize the need for padding.
+        /** Byte offset to the collation trie. Its length is a multiple of 8 bytes. */
+        IX_TRIE_OFFSET,
+        IX_RESERVED1_OFFSET,
+        /** Byte offset to int64_t ces[] */
+        IX_CES_OFFSET,
+        IX_RESERVED3_OFFSET,
+
+        /** Byte offset to uint32_t ce32s[] */
+        IX_CE32S_OFFSET,
+        IX_RESERVED5_OFFSET,
+        /** Byte offset to int32_t reorderCodes[] */
+        IX_REORDER_CODES_OFFSET,
+        IX_RESERVED7_OFFSET,
+
+        /** Byte offset to UChar *contexts[] */
+        IX_CONTEXTS_OFFSET,
+        /** Byte offset to uint16_t [] with serialized unsafeBackwardSet. */
+        IX_UNSAFE_BWD_OFFSET,
+        /** Byte offset to uint16_t scripts[] */
+        IX_SCRIPTS_OFFSET,
+        IX_RESERVED11_OFFSET,
+
+        /** Byte offset to UBool compressibleBytes[] */
+        IX_COMPRESSIBLE_BYTES_OFFSET,
+        /** Byte offset to uint8_t reorderTable[] */
+        IX_REORDER_TABLE_OFFSET,
+        IX_RESERVED14_OFFSET,
+        IX_TOTAL_SIZE,
+
+        /** Array offset to Jamo CEs in ces[], or <0 if none. */
+        IX_JAMO_CES_START,
+        IX_RESERVED17,
+        IX_RESERVED18,
+        /** uint32_t zeroPrimary: The single-byte primary weight (xx000000) for '0' (U+0030). */
+        IX_ZERO_PRIMARY,
+
+        /** int32_t options bit set. */
+        IX_OPTIONS,
+        IX_RESERVED21,
+        IX_RESERVED22,
+        IX_RESERVED23,
+
+        IX_COUNT
+    };
+
     /** Main lookup trie. */
     const UTrie2 *trie;
     /**
      * Array of CE32 values.
      * At index 0 there must be CE32(U+0000)
-     * which has a special-tag for NUL-termination handling.
+     * to support U+0000's special-tag for NUL-termination handling.
      */
     const uint32_t *ce32s;
     /** Array of CE values for expansions and OFFSET_TAG. */
@@ -230,12 +295,6 @@ public:
             : CollationData(nfc),
               scripts(NULL), scriptsLength(0) {}
 
-    /**
-     * @return the lowest primary weight for the script,
-     *         or 0 if the script does not occur in the data
-     */
-    uint32_t getLowestPrimaryForScript(int32_t script) const;
-
     int32_t getEquivalentScripts(int32_t script,
                                  int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;
 
@@ -258,50 +317,27 @@ public:
      * each pair contains a script/reorder code and the lowest primary weight for that script.
      *
      * Data structure:
-     * - Each reordering group is encoded in n+1 integers.
+     * - Each reordering group is encoded in n+2 16-bit integers.
      *   - First integer:
-     *     Bits 31..24: First byte of the reordering group's range.
-     *     Bits 23..16: Last byte of the reordering group's range.
-     *     Bits  7.. 0: Length n of the list of primary/script pairs.
-     *   - Each pair is an integer with the at-most-three-byte lowest primary weight for the script,
-     *     and the script/reorder code in the low byte, encoded by scriptByteFromInt().
+     *     Bits 15..8: First byte of the reordering group's range.
+     *     Bits  7..0: Last byte of the reordering group's range.
+     *   - Second integer:
+     *     Length n of the list of script/reordering codes.
+     *   - Each further integer is a script or reordering code.
      */
-    const uint32_t *scripts;
+    const uint16_t *scripts;
     int32_t scriptsLength;
-
-    /**
-     * Maps a script or reorder code to a byte value.
-     * When we need to represent script codes 248 and higher,
-     * or reorder codes 0x1008 and higher,
-     * then we need to make an incompatible change to this mapping and
-     * thus to the CollationBaseData data structure.
-     */
-    static int32_t scriptByteFromInt(int32_t script) {
-        if(script < SCRIPT_BYTE_LIMIT) { return script; }
-        script -= UCOL_REORDER_CODE_FIRST;
-        if(0 <= script && script <= (0xff - SCRIPT_BYTE_LIMIT)) {
-            return SCRIPT_BYTE_LIMIT + script;
-        }
-        return USCRIPT_INVALID_CODE;  // -1
-    }
-    /** Inverse of scriptByteFromInt(). */
-    static int32_t scriptIntFromByte(int32_t b) {
-        // assert 0 <= b <= 0xff
-        return b < SCRIPT_BYTE_LIMIT ? b : UCOL_REORDER_CODE_FIRST + b - SCRIPT_BYTE_LIMIT;
-    }
 
 private:
     int32_t findScript(int32_t script) const;
-
-    /**
-     * Constant for scriptByteFromInt() and scriptIntFromByte().
-     * Codes for scripts encoded in Unicode (e.g., USCRIPT_GREEK) must be below this limit.
-     * Reorder codes (e.g., UCOL_REORDER_CODE_PUNCTUATION) are offset to start from here,
-     * so that UCOL_REORDER_CODE_FIRST maps to this value.
-     * Changing this value changes the collation base data format.
-     */
-    static const int32_t SCRIPT_BYTE_LIMIT = 0xf8;
 };
+
+/**
+ * Format of collation data (ucadata.icu, binary data in coll/ *.res files).
+ * Format version 4.0.
+ *
+ * TODO: document format, see normalizer2impl.h
+ */
 
 U_NAMESPACE_END
 

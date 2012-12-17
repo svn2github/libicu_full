@@ -28,6 +28,8 @@
 #include "uvectr64.h"
 #include "uvector.h"
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 U_NAMESPACE_BEGIN
 
 // TODO: Move to utrie2.h.
@@ -602,6 +604,14 @@ CollationDataBuilder::buildMappings(CollationData &cd, UErrorCode &errorCode) {
     buildContexts(errorCode);
 
     UBool anyJamoAssigned = setJamoCEs(errorCode);
+    int32_t jamoIndex = -1;
+    if(anyJamoAssigned || base == NULL) {
+        jamoIndex = ce64s.size();
+        for(int32_t i = 0; i < LENGTHOF(jamoCEs); ++i) {
+            ce64s.addElement(jamoCEs[i], errorCode);
+        }
+    }
+
     setLeadSurrogates(errorCode);
 
     // For U+0000, move its normal ce32 into CE32s[0] and set IMPLICIT_TAG with 0 data bits.
@@ -626,11 +636,12 @@ CollationDataBuilder::buildMappings(CollationData &cd, UErrorCode &errorCode) {
     cd.ces = ce64s.getBuffer();
     cd.contexts = contexts.getBuffer();
     cd.base = base;
-    if(anyJamoAssigned || base == NULL) {
-        cd.jamoCEs = jamoCEs;
+    if(jamoIndex >= 0) {
+        cd.jamoCEs = cd.ces + jamoIndex;
     } else {
         cd.jamoCEs = base->jamoCEs;
     }
+    // TODO: set cd.zeroPrimary
     cd.unsafeBackwardSet = &unsafeBackwardSet;
 }
 

@@ -181,6 +181,21 @@ static int32_t hex2num(char hex) {
     }
 }
 
+static const struct {
+    const char *name;
+    int32_t code;
+} specialReorderTokens[] = {
+    { "TERMINATOR", -2 },  // -2 means "ignore"
+    { "LEVEL-SEPARATOR", -2 },
+    { "FIELD-SEPARATOR", -2 },
+    { "COMPRESS", -3 },
+    // The standard name is "PUNCT" but FractionalUCA.txt uses the long form.
+    { "PUNCTUATION", UCOL_REORDER_CODE_PUNCTUATION },
+    { "IMPLICIT", USCRIPT_HAN },  // Implicit weights are usually for Han characters. Han & unassigned share a lead byte.
+    { "TRAILING", -2 },  // We do not reorder trailing weights (those after implicits).
+    { "SPECIAL", -2 }  // We must never reorder internal, special CE lead bytes.
+};
+
 int32_t getReorderCode(const char* name) {
     int32_t code = ucol_findReorderingEntry(name);
     if (code >= 0) {
@@ -190,12 +205,15 @@ int32_t getReorderCode(const char* name) {
     if (code >= 0) {
         return code;
     }
-    // Exception: The standard name is "PUNCT" but FractionalUCA.txt uses the long form.
-    if (0 == uprv_strcmp(name, "PUNCTUATION")) {
-        return UCOL_REORDER_CODE_PUNCTUATION;
+    for (int32_t i = 0; i < LENGTHOF(specialReorderTokens); ++i) {
+        if (0 == strcmp(name, specialReorderTokens[i].name)) {
+            return specialReorderTokens[i].code;
+        }
     }
     return -1;  // Same as UCHAR_INVALID_CODE or USCRIPT_INVALID_CODE.
 }
+
+static UnicodeString *leadByteScripts = NULL;
 
 UCAElements *readAnElement(FILE *data,
                            CollationBaseDataBuilder &builder,
@@ -239,7 +257,7 @@ UCAElements *readAnElement(FILE *data,
     enum ActionType {
       READCE,
       READPRIMARY,
-      READFIRSTPRIMARY,
+      READFIRSTPRIMARY,  // TODO: remove
       READUNIFIEDIDEOGRAPH,
       READUCAVERSION,
       READLEADBYTETOSCRIPTS,
@@ -269,7 +287,7 @@ UCAElements *readAnElement(FILE *data,
                   {"[last trailing",             consts->UCA_LAST_TRAILING,             READCE},
 
                   {"[Unified_Ideograph",            NULL, READUNIFIEDIDEOGRAPH},
-                  {"[first_primary",                NULL, READFIRSTPRIMARY},
+                  {"[first_primary",                NULL, IGNORE},  // TODO: remove
 
                   {"[fixed top",                    NULL, IGNORE},
                   {"[fixed first implicit byte",    NULL, IGNORE},
@@ -304,6 +322,7 @@ UCAElements *readAnElement(FILE *data,
                   fprintf(stderr, "Value of \"%s\" is not a primary weight\n", buffer);
                   return NULL;
               }
+#if 0  // TODO: remove
             } else if(what_to_do == READFIRSTPRIMARY) {
                 pointer = buffer+vtLen;
                 skipWhiteSpace(&pointer, status);
@@ -344,6 +363,7 @@ UCAElements *readAnElement(FILE *data,
                             buffer, u_errorName(*status));
                     return NULL;
                 }
+#endif
             } else if(what_to_do == READUNIFIEDIDEOGRAPH) {
                 pointer = buffer+vtLen;
                 UVector32 unihan(*status);
@@ -444,8 +464,34 @@ UCAElements *readAnElement(FILE *data,
                 leadByte += hex2num(*pointer++);
                 //printf("~~~~ processing lead byte = %02x\n", leadByte);
                 skipWhiteSpace(&pointer, status);
-                if (uprv_strstr(pointer, "COMPRESS") != NULL) {
-                    builder.setCompressibleLeadByte(leadByte);
+
+                UnicodeString scripts;
+                char scriptName[100];
+                int32_t elementLength = 0;
+                while ((elementLength = readElement(&pointer, scriptName, ' ', status)) > 0) {
+                    if (scriptName[0] == ']') {
+                        break;
+                    }
+                    int32_t reorderCode = getReorderCode(scriptName);
+                    if (reorderCode == -3) {  // COMPRESS
+                        builder.setCompressibleLeadByte(leadByte);
+                        continue;
+                    }
+                    if (reorderCode == -2) {
+                        continue;  // Ignore "TERMINATOR" etc.
+                    }
+                    if (reorderCode < 0 || 0xffff < reorderCode) {
+                        printf("Syntax error: unable to parse reorder code from '%s'\n", scriptName);
+                        *status = U_INVALID_FORMAT_ERROR;
+                        return NULL;
+                    }
+                    scripts.append((UChar)reorderCode);
+                }
+                if(!scripts.isEmpty()) {
+                    if(leadByteScripts == NULL) {
+                        leadByteScripts = new UnicodeString[256];
+                    }
+                    leadByteScripts[leadByte] = scripts;
                 }
             }
             return NULL;
@@ -966,6 +1012,47 @@ static void
 buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                       const char *path, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
+
+    if(leadByteScripts != NULL) {
+        uint32_t firstLead = Collation::MERGE_SEPARATOR_BYTE + 1;
+        do {
+            // Find the range of lead bytes with this set of scripts.
+            const UnicodeString &firstScripts = leadByteScripts[firstLead];
+            if(firstScripts.isEmpty()) {
+                fprintf(stderr, "[top_byte 0x%02X] has no reorderable scripts\n", (int)firstLead);
+                errorCode = U_INVALID_FORMAT_ERROR;
+                return;
+            }
+            uint32_t lead = firstLead;
+            for(;;) {
+                ++lead;
+                const UnicodeString &scripts = leadByteScripts[lead];
+                // The scripts should either be the same or disjoint.
+                // We do not test if all reordering groups have disjoint sets of scripts.
+                if(scripts.isEmpty() || firstScripts.indexOf(scripts[0]) < 0) { break; }
+                if(scripts != firstScripts) {
+                    fprintf(stderr,
+                            "[top_byte 0x%02X] includes script %d from [top_byte 0x%02X] "
+                            "but not all scripts match\n",
+                            (int)firstLead, scripts[0], (int)lead);
+                    errorCode = U_INVALID_FORMAT_ERROR;
+                    return;
+                }
+            }
+            // lead is one greater than the last lead byte with the same set of scripts as firstLead.
+            if(firstScripts.indexOf(USCRIPT_HAN) >= 0) {
+                // Extend the Hani range to the end of what this implementation uses.
+                // FractionalUCA.txt assumes a different algorithm for implicit primary weights,
+                // and different high-lead byte ranges.
+                lead = Collation::UNASSIGNED_IMPLICIT_BYTE;
+            }
+            builder.addReorderingGroup(firstLead, lead - 1, firstScripts, errorCode);
+            if(U_FAILURE(errorCode)) { return; }
+            firstLead = lead;
+        } while(firstLead < Collation::UNASSIGNED_IMPLICIT_BYTE);
+        delete[] leadByteScripts;
+    }
+
     LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "builder.buildBaseData() failed: %s\n",
@@ -974,7 +1061,9 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     }
     cd->variableTop = gVariableTop;  // TODO
 
-    int32_t indexes[16]={  // TODO: constant for length
+    int32_t indexes[CollationData::IX_COUNT]={
+        CollationData::IX_COUNT, 0, 0, 0,
+        0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
@@ -984,6 +1073,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("*** CLDR root collation part sizes ***\n");
     int32_t totalSize = (int32_t)sizeof(indexes);
 
+    indexes[CollationData::IX_TRIE_OFFSET] = totalSize;
     int32_t trieSize = builder.serializeTrie(trieBytes, LENGTHOF(trieBytes), errorCode);
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "builder.serializeTrie()=%ld failed: %s\n",
@@ -993,37 +1083,32 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("  trie size:                    %6ld\n", (long)trieSize);
     totalSize += trieSize;
 
-    int32_t length = builder.lengthOfCE32s();
-    printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
-    totalSize += length * 4;
-
+    // cePadding should be 0 due to the way compactIndex2(UNewTrie2 *trie)
+    // currently works (trieSize should be a multiple of 8 bytes).
     int32_t cePadding = (totalSize & 7) == 0 ? 0 : 4;
     totalSize += cePadding;
 
-    length = builder.lengthOfCEs();
+    indexes[CollationData::IX_RESERVED1_OFFSET] = totalSize;
+    indexes[CollationData::IX_CES_OFFSET] = totalSize;
+    int32_t length = builder.lengthOfCEs();
     printf("  CEs:              %6ld *8 = %6ld\n", (long)length, (long)length * 8);
     totalSize += length * 8;
 
+    indexes[CollationData::IX_RESERVED3_OFFSET] = totalSize;
+    indexes[CollationData::IX_CE32S_OFFSET] = totalSize;
+    length = builder.lengthOfCE32s();
+    printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
+    totalSize += length * 4;
+
+    indexes[CollationData::IX_RESERVED5_OFFSET] = totalSize;
+    indexes[CollationData::IX_REORDER_CODES_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED7_OFFSET] = totalSize;
+    indexes[CollationData::IX_CONTEXTS_OFFSET] = totalSize;
     length = builder.lengthOfContexts();
     printf("  contexts:         %6ld *2 = %6ld\n", (long)length, (long)length * 2);
     totalSize += length * 2;
 
-    // TODO: Allocate Jamo CEs inside the array of CEs?! Then we just need to store an offset. -1 if from base.
-    length = 19+21+27;
-    printf("  Jamo CEs:         %6ld *8 = %6ld\n", (long)length, (long)length * 8);
-    totalSize += length * 8;
-
-    // TODO: Combine compressibleBytes with reordering group data.
-    printf("  compressibleBytes:               256\n");
-    totalSize += 256;
-
-    int32_t scriptPadding = (totalSize & 3) == 0 ? 0 : 2;
-    totalSize += scriptPadding;
-
-    length = cd->scriptsLength;
-    printf("  scripts data:     %6ld *4 = %6ld\n", (long)length, (long)length * 4);
-    totalSize += length * 4;
-
+    indexes[CollationData::IX_UNSAFE_BWD_OFFSET] = totalSize;
     int32_t unsafeBwdSetLength = builder.serializeUnsafeBackwardSet(
         unsafeBwdSetWords, LENGTHOF(unsafeBwdSetWords), errorCode);
     if(U_FAILURE(errorCode)) {
@@ -1034,6 +1119,19 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)unsafeBwdSetLength, (long)unsafeBwdSetLength * 2);
     totalSize += unsafeBwdSetLength * 2;
 
+    indexes[CollationData::IX_SCRIPTS_OFFSET] = totalSize;
+    length = cd->scriptsLength;
+    printf("  scripts data:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
+    totalSize += length * 2;
+
+    indexes[CollationData::IX_RESERVED11_OFFSET] = totalSize;
+    indexes[CollationData::IX_COMPRESSIBLE_BYTES_OFFSET] = totalSize;
+    printf("  compressibleBytes:               256\n");
+    totalSize += 256;
+
+    indexes[CollationData::IX_REORDER_TABLE_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED14_OFFSET] = totalSize;
+    indexes[CollationData::IX_TOTAL_SIZE] = totalSize;
     printf("*** CLDR root collation size:   %6ld\n", (long)totalSize);
 
     UNewDataMemory *pData=udata_create(path, "icu", "ucadata2", &ucaDataInfo,
@@ -1044,17 +1142,19 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         return;
     }
 
-    // TODO: fill indexes[]
+    indexes[CollationData::IX_JAMO_CES_START] = cd->jamoCEs - cd->ces;
+    indexes[CollationData::IX_ZERO_PRIMARY] = cd->zeroPrimary;
+    indexes[CollationData::IX_OPTIONS] = cd->options;
 
     udata_writeBlock(pData, indexes, sizeof(indexes));
     udata_writeBlock(pData, trieBytes, trieSize);
-    udata_writeBlock(pData, cd->ce32s, builder.lengthOfCE32s() * 4);
     udata_writePadding(pData, cePadding);
     udata_writeBlock(pData, cd->ces, builder.lengthOfCEs() * 8);
+    udata_writeBlock(pData, cd->ce32s, builder.lengthOfCE32s() * 4);
     udata_writeBlock(pData, cd->contexts, builder.lengthOfContexts() * 2);
-    udata_writeBlock(pData, cd->compressibleBytes, 256);
-    udata_writePadding(pData, scriptPadding);
     udata_writeBlock(pData, unsafeBwdSetWords, unsafeBwdSetLength * 2);
+    udata_writeBlock(pData, cd->scripts, cd->scriptsLength * 2);
+    udata_writeBlock(pData, cd->compressibleBytes, 256);
 
     long dataLength = udata_finish(pData, &errorCode);
     if(U_FAILURE(errorCode)) {
@@ -1155,7 +1255,7 @@ buildAndWriteFCDData(const char *path, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
 
     FILE *f=usrc_create(path, "collationfcd.cpp",
-                        "icu/tools/unicode/c/genuca/genuca.cpp");  // TODO: generator .cpp
+                        "icu/tools/unicode/c/genuca/genuca.cpp");
     if(f==NULL) {
         errorCode=U_FILE_ACCESS_ERROR;
         return;
@@ -1163,6 +1263,7 @@ buildAndWriteFCDData(const char *path, UErrorCode &errorCode) {
     fputs("#include \"unicode/utypes.h\"\n\n", f);
     fputs("#if !UCONFIG_NO_COLLATION\n\n", f);
     fputs("#include \"collationfcd.h\"\n\n", f);
+    fputs("U_NAMESPACE_BEGIN\n\n", f);
     usrc_writeArray(f,
         "const uint8_t CollationFCD::lcccIndex[%ld]={\n",
         lcccIndex, 8, 0x800,
@@ -1179,6 +1280,7 @@ buildAndWriteFCDData(const char *path, UErrorCode &errorCode) {
         "const uint32_t CollationFCD::tcccBits[%ld]={\n",
         tcccBits, 32, tcccBitsLength,
         "\n};\n\n");
+    fputs("U_NAMESPACE_END\n\n", f);
     fputs("#endif  // !UCONFIG_NO_COLLATION\n", f);
     fclose(f);
 }
@@ -1210,7 +1312,7 @@ parseAndWriteCollationRootData(
     buildAndWriteFCDData(sourceCodePath, errorCode);
 }
 
-/* -------------------------------------------------------------------------- */
+// ------------------------------------------------------------------------- ***
 
 enum {
     HELP_H,
