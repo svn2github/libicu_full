@@ -19,10 +19,10 @@
 #include "unicode/uset.h"
 #include "unicode/ustring.h"
 
-#include "unicode/colldata.h"
 #include "unicode/coleitr.h"
 #include "unicode/regex.h"        // TODO: make conditional on regexp being built.
 
+#include "colldata.h"
 #include "ssearch.h"
 #include "xmlparser.h"
 
@@ -922,11 +922,6 @@ const char *cPattern = "maketh houndes ete hem";
 
 
     LocalUCollatorPointer collator(ucol_open("en", &status));
-    CollData *data = CollData::open(collator.getAlias(), status);
-    if (U_FAILURE(status) || collator.isNull() || data == NULL) {
-        errcheckln(status, "Unable to open UCollator or CollData. - %s", u_errorName(status));
-        return;
-    } 
     //ucol_setStrength(collator.getAlias(), collatorStrength);
     //ucol_setAttribute(collator.getAlias(), UCOL_NORMALIZATION_MODE, normalize, &status);
     UnicodeString uPattern = cPattern;
@@ -1371,7 +1366,7 @@ void SSearchTest::monkeyTest(char *params)
         return;
     }
 
-    CollData  *monkeyData = CollData::open(coll, status);
+    CollData  *monkeyData = new CollData(coll, status);
 
     USet *expansions   = uset_openEmpty();
     USet *contractions = uset_openEmpty();
@@ -1491,8 +1486,7 @@ void SSearchTest::monkeyTest(char *params)
     uset_close(contractions);
     uset_close(expansions);
     uset_close(letters);
-
-    CollData::close(monkeyData);
+    delete monkeyData;
 
     ucol_close(coll);
 }

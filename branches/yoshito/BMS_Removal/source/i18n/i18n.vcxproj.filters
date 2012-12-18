@@ -30,9 +30,6 @@
     <ClCompile Include="coll.cpp">
       <Filter>collation</Filter>
     </ClCompile>
-    <ClCompile Include="colldata.cpp">
-      <Filter>collation</Filter>
-    </ClCompile>
     <ClCompile Include="search.cpp">
       <Filter>collation</Filter>
     </ClCompile>
@@ -794,9 +791,6 @@
       <Filter>collation</Filter>
     </CustomBuild>
     <CustomBuild Include="unicode\coll.h">
-      <Filter>collation</Filter>
-    </CustomBuild>
-    <CustomBuild Include="unicode\colldata.h">
       <Filter>collation</Filter>
     </CustomBuild>
     <CustomBuild Include="unicode\search.h">
