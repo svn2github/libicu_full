@@ -34,11 +34,9 @@ public:
     virtual void offsetTest();
     virtual void monkeyTest(char *params);
     virtual void sharpSTest();
-
     virtual void goodSuffixTest();
     virtual void searchTime();
-    
-    virtual void stringListTest();
+
 private:
     virtual const char   *getPath(char buffer[2048], const char *filename);
     virtual       int32_t monkeyTestCase(UCollator *coll, const UnicodeString &testCase, const UnicodeString &pattern, const UnicodeString &altPattern,
