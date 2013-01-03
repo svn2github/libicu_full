@@ -188,11 +188,27 @@ typedef enum USpoofChecks {
         Any Case Confusable.   */
     USPOOF_ANY_CASE                 =   8,
 
+    /**
+      * Check that an identifier is no looser than the specified RestrictionLevel.
+      * The default if uspoof_setRestrctionLevel() is not called is HIGHLY_RESTRICTIVE.
+      *
+      * If USPOOF_AUX_INFO is enabled the actual restriction level of the
+      * identifier being tested will also be returned by uspoof_check().
+      *
+      * @see URestrictionLevel
+      * @see uspoof_setRestrictionLevel
+      * @see USPOOF_AUX_INFO
+      *
+      * @stable ICU 51
+      */
+    USPOOF_RESTRICTION_LEVEL        = 16;
+
     /** Check that an identifier contains only characters from a
       * single script (plus chars from the common and inherited scripts.)
       * Applies to checks of a single identifier check only.
+      * @deprecated ICU 51  Use RESTRICTION_LEVEL instead.
       */
-    USPOOF_SINGLE_SCRIPT            =  16,
+    USPOOF_SINGLE_SCRIPT            =  USPOOF_RESTRICTION_LEVEL,
     
     /** Check an identifier for the presence of invisible characters,
       * such as zero-width spaces, or character sequences that are
@@ -208,10 +224,79 @@ typedef enum USpoofChecks {
       */
     USPOOF_CHAR_LIMIT               =  64,
 
-    USPOOF_ALL_CHECKS               = 0x7f
+   /**
+     * Check that an identifier does not include decimal digits from
+     * more than one numbering system.
+     * 
+     * @draft ICU 51
+     */
+    USPOOF_MIXED_NUMBERS            = 128;
+
+   /**
+     * Enable all spoof checks.
+     * 
+     * @stable ICU 4.6
+     */
+    USPOOF_ALL_CHECKS               = 0xFFFF;
+
+    /**
+      * Enable the return of auxillary (non-error) information in the
+      * upper bits of the check results value. 
+      *
+      * If this "check" is not enabled, the results of uspoof_check() will be zero when an
+      * identifier passes all of the enabled checks.
+      *
+      * If this "check" is enabled, (uspoof_check() & USPOOF_ALL_CHECKS) will be zero
+      * when an identifier passes all checks.
+      *
+      * @draft ICU 51
+      */
+    USPOOF_AUX_INFO                  = 0x80000000;
+
     } USpoofChecks;
     
     
+    /**
+     * Constants from UAX 39 for use in setRestrictionLevel(), and
+     * for returned identifier restirction levels in check results.
+     * @draft ICU 51
+     */
+    typedef enum URestrictionLevel {
+        /**
+         * Only ASCII characters: U+0000..U+007F
+         * 
+         * @draft ICU 51
+         */
+        USPOOF_ASCII = 0x20000000,
+        /**
+         * All characters in each identifier must be from a single script, or from the combinations: Latin + Han +
+         * Hiragana + Katakana; Latin + Han + Bopomofo; or Latin + Han + Hangul. Note that this level will satisfy the
+         * vast majority of Latin-script users; also that TR36 has ASCII instead of Latin.
+         * 
+         * @draft ICU 51
+         */
+        USPOOF_HIGHLY_RESTRICTIVE = 0x40000000,
+        /**
+         * Allow Latin with other scripts except Cyrillic, Greek, Cherokee Otherwise, the same as Highly Restrictive
+         * 
+         * @draft ICU 51
+         */
+        USPOOF_MODERATELY_RESTRICTIVE = 0x60000000,
+        /**
+         * Allow arbitrary mixtures of scripts, such as Ωmega, Teχ, HλLF-LIFE, Toys-Я-Us. Otherwise, the same as
+         * Moderately Restrictive
+         * 
+         * @draft ICU 51
+         */
+        USPOOF_MINIMALLY_RESTRICTIVE = 0x80000000,
+        /**
+         * Any valid identifiers, including characters outside of the Identifier Profile, such as I♥NY.org
+         * 
+         * @draft ICU 51
+         */
+        USPOOF_UNRESTRICTIVE = 0xA0000000
+    } URestrictionLevel;
+
 /**
  *  Create a Unicode Spoof Checker, configured to perform all 
  *  checks except for USPOOF_LOCALE_LIMIT and USPOOF_CHAR_LIMIT.
@@ -358,6 +443,28 @@ U_STABLE int32_t U_EXPORT2
 uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status);
 
 /**
+  * Set the loosest restriction level allowed. The default if this function 
+  * is not called is HIGHLY_RESTRICTIVE.
+  * Calling this function also enables the RESTRICTION_LEVEL check.
+  * @param restrictionLevel The loosest restriction level allowed.
+  * @see URestrictionLevel
+  * @draft ICU 51
+  */
+U_DRAFT void U_EXPORT2
+uspoof_setRestrictionLevel(USpoofChecker *sc, int32_t restrictionLevel);
+
+
+/**
+    * Get the Restriction Level that will be tested if the checks include RESTRICTION_LEVEL.
+    *
+    * @return The restriction level
+    * @see URestrictionLevel
+    * @draft ICU 51
+    */
+U_DRAFT int32_t U_EXPORT2
+uspoof_getRestrictionLevel();
+
+/**
  * Limit characters that are acceptable in identifiers being checked to those 
  * normally used with the languages associated with the specified locales.
  * Any previously specified list of locales is replaced by the new settings.
@@ -488,7 +595,7 @@ uspoof_getAllowedChars(const USpoofChecker *sc, UErrorCode *status);
  *                 characters that are permitted.  Ownership of the set
  *                 remains with the caller.  The incoming set is cloned by
  *                 this function, so there are no restrictions on modifying
- *                 or deleting the USet after calling this function.
+ *                 or deleting the UnicodeSet after calling this function.
  * @param status   The error code, set if this function encounters a problem.
  * @stable ICU 4.2
  */
@@ -532,21 +639,20 @@ uspoof_getAllowedUnicodeSet(const USpoofChecker *sc, UErrorCode *status);
  * @param length  the length of the string to be checked, expressed in
  *                16 bit UTF-16 code units, or -1 if the string is 
  *                zero terminated.
- * @param position      An out parameter that receives the index of the
- *                first string position that fails the allowed character
- *                limitation checks.
- *                This parameter may be null if the position information
- *                is not needed.
- *                If the string passes the requested checks the
- *                parameter value will not be set.
+ * @param position      An out parameter.
+ *                Originally, the index of the first string position that failed a check.
+ *                Now, always returns zero.
+ *                This parameter may be null.
+ *                @deprecated ICU 51
  * @param status  The error code, set if an error occurred while attempting to
  *                perform the check.
  *                Spoofing or security issues detected with the input string are
  *                not reported here, but through the function's return value.
  * @return        An integer value with bits set for any potential security
  *                or spoofing issues detected.  The bits are defined by
- *                enum USpoofChecks.  Zero is returned if no issues
- *                are found with the input string.
+ *                enum USpoofChecks.  (returned_value & USPOOF_ALL_CHECKS)
+ *                will be zero if the input string passes all of the
+ *                enabled checks.
  * @stable ICU 4.2
  */
 U_STABLE int32_t U_EXPORT2
@@ -565,13 +671,11 @@ uspoof_check(const USpoofChecker *sc,
  * @param text    A UTF-8 string to be checked for possible security issues.
  * @param length  the length of the string to be checked, or -1 if the string is 
  *                zero terminated.
- * @param position      An out parameter that receives the index of the
- *                first string position that fails the allowed character
- *                limitation checks.
- *                This parameter may be null if the position information
- *                is not needed.
- *                If the string passes the requested checks the
- *                parameter value will not be set.
+ * @param position      An out parameter.
+ *                Originally, the index of the first string position that failed a check.
+ *                Now, always returns zero.
+ *                This parameter may be null.
+ *                @deprecated ICU 51
  * @param status  The error code, set if an error occurred while attempting to
  *                perform the check.
  *                Spoofing or security issues detected with the input string are
@@ -580,8 +684,9 @@ uspoof_check(const USpoofChecker *sc,
  *                a status of U_INVALID_CHAR_FOUND will be returned.
  * @return        An integer value with bits set for any potential security
  *                or spoofing issues detected.  The bits are defined by
- *                enum USpoofChecks.  Zero is returned if no issues
- *                are found with the input string.
+ *                enum USpoofChecks.  (returned_value & USPOOF_ALL_CHECKS)
+ *                will be zero if the input string passes all of the
+ *                enabled checks.
  * @stable ICU 4.2
  */
 U_STABLE int32_t U_EXPORT2
@@ -599,22 +704,20 @@ uspoof_checkUTF8(const USpoofChecker *sc,
  * 
  * @param sc      The USpoofChecker 
  * @param text    A UnicodeString to be checked for possible security issues.
- * @param position      An out parameter that receives the index of the
- *                first string position that fails the allowed character
- *                limitation checks.
- *                This parameter may be null if the position information
- *                is not needed.
- *                If the string passes the requested checks the
- *                parameter value will not be set.
+ * @param position      An out parameter.
+ *                Originally, the index of the first string position that failed a check.
+ *                Now, always returns zero.
+ *                This parameter may be null.
+ *                @deprecated ICU 51
  * @param status  The error code, set if an error occurred while attempting to
  *                perform the check.
  *                Spoofing or security issues detected with the input string are
  *                not reported here, but through the function's return value.
-
  * @return        An integer value with bits set for any potential security
  *                or spoofing issues detected.  The bits are defined by
- *                enum USpoofChecks.  Zero is returned if no issues
- *                are found with the input string.
+ *                enum USpoofChecks.  (returned_value & USPOOF_ALL_CHECKS)
+ *                will be zero if the input string passes all of the
+ *                enabled checks.
  * @stable ICU 4.2
  */
 U_STABLE int32_t U_EXPORT2
@@ -853,10 +956,17 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
 #endif   /* U_SHOW_CPLUSPLUS_API */
 
 
+U_DRAFT const USet * U_EXPORT2
+uspoof_getInclusionSet(UErrorCode *status);
+
 /**
  * Serialize the data for a spoof detector into a chunk of memory.
  * The flattened spoof detection tables can later be used to efficiently
  * instantiate a new Spoof Detector.
+ *
+ * The serialized spoof checker includes only the data compiled from the
+ * Unicode data tables by uspoof_openFromSource(); it does not include 
+ * include any other state or configuration that may have been set.
  *
  * @param sc   the Spoof Detector whose data is to be serialized.
  * @param data a pointer to 32-bit-aligned memory to be filled with the data,
