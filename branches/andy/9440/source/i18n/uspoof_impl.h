@@ -179,38 +179,6 @@ struct SpoofStringLengthsElement {
 };
 
 
-//-------------------------------------------------------------------------------
-//
-//  ScriptSet - Wrapper class for the Script code bit sets that are part of the
-//              whole script confusable data.
-//
-//              This class is used both at data build and at run time.
-//              The constructor is only used at build time.
-//              At run time, just point at the prebuilt data and go.
-//  
-//-------------------------------------------------------------------------------
-class ScriptSet: public UMemory {
-  public:
-    ScriptSet();
-    ~ScriptSet();
-
-    UBool operator == (const ScriptSet &other);
-    ScriptSet & operator = (const ScriptSet &other);
-
-    void Union(const ScriptSet &other);
-    void Union(UScriptCode script);
-    void intersect(const ScriptSet &other);
-    void intersect(UScriptCode script);
-    void setAll();
-    void resetAll();
-    int32_t countMembers();
-
-  private:
-    uint32_t  bits[6];
-};
-
-
-
 
 //-------------------------------------------------------------------------------
 //

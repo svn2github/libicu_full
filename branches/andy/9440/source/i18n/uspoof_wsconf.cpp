@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 2008-2012, International Business Machines
+*   Copyright (C) 2008-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -29,6 +29,7 @@
 #include "unicode/uregex.h"
 #include "unicode/ustring.h"
 #include "cmemory.h"
+#include "scriptset.h"
 #include "uspoof_impl.h"
 #include "uhash.h"
 #include "uvector.h"

@@ -1,6 +1,6 @@
 /*
 ***************************************************************************
-* Copyright (C) 2008-2012, International Business Machines Corporation
+* Copyright (C) 2008-2013, International Business Machines Corporation
 * and others. All Rights Reserved.
 ***************************************************************************
 *   file name:  uspoof.cpp
@@ -19,6 +19,7 @@
 #include "unicode/ustring.h"
 #include "unicode/utf16.h"
 #include "cmemory.h"
+#include "scriptset.h"
 #include "uspoof_impl.h"
 #include "uassert.h"
 

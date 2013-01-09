@@ -188,11 +188,11 @@ typedef enum USpoofChecks {
         Any Case Confusable.   */
     USPOOF_ANY_CASE                 =   8,
 
-    /**
-      * Check that an identifier is no looser than the specified RestrictionLevel.
-      * The default if uspoof_setRestrctionLevel() is not called is HIGHLY_RESTRICTIVE.
+    /**
+      * Check that an identifier is no looser than the specified RestrictionLevel.
+      * The default if uspoof_setRestrctionLevel() is not called is HIGHLY_RESTRICTIVE.
       *
-      * If USPOOF_AUX_INFO is enabled the actual restriction level of the
+      * If USPOOF_AUX_INFO is enabled the actual restriction level of the
       * identifier being tested will also be returned by uspoof_check().
       *
       * @see URestrictionLevel
@@ -200,8 +200,8 @@ typedef enum USpoofChecks {
       * @see USPOOF_AUX_INFO
       *
       * @stable ICU 51
-      */
-    USPOOF_RESTRICTION_LEVEL        = 16;
+      */
+    USPOOF_RESTRICTION_LEVEL        = 16,
 
     /** Check that an identifier contains only characters from a
       * single script (plus chars from the common and inherited scripts.)
@@ -230,14 +230,14 @@ typedef enum USpoofChecks {
      * 
      * @draft ICU 51
      */
-    USPOOF_MIXED_NUMBERS            = 128;
+    USPOOF_MIXED_NUMBERS            = 128,
 
    /**
      * Enable all spoof checks.
      * 
      * @stable ICU 4.6
      */
-    USPOOF_ALL_CHECKS               = 0xFFFF;
+    USPOOF_ALL_CHECKS               = 0xFFFF,
 
     /**
       * Enable the return of auxillary (non-error) information in the
@@ -251,7 +251,7 @@ typedef enum USpoofChecks {
       *
       * @draft ICU 51
       */
-    USPOOF_AUX_INFO                  = 0x80000000;
+    USPOOF_AUX_INFO                  = 0x40000000
 
     } USpoofChecks;
     
@@ -267,7 +267,7 @@ typedef enum USpoofChecks {
          * 
          * @draft ICU 51
          */
-        USPOOF_ASCII = 0x20000000,
+        USPOOF_ASCII = 0x10000000,
         /**
          * All characters in each identifier must be from a single script, or from the combinations: Latin + Han +
          * Hiragana + Katakana; Latin + Han + Bopomofo; or Latin + Han + Hangul. Note that this level will satisfy the
@@ -275,26 +275,25 @@ typedef enum USpoofChecks {
          * 
          * @draft ICU 51
          */
-        USPOOF_HIGHLY_RESTRICTIVE = 0x40000000,
+        USPOOF_HIGHLY_RESTRICTIVE = 0x20000000,
         /**
          * Allow Latin with other scripts except Cyrillic, Greek, Cherokee Otherwise, the same as Highly Restrictive
          * 
          * @draft ICU 51
          */
-        USPOOF_MODERATELY_RESTRICTIVE = 0x60000000,
+        USPOOF_MODERATELY_RESTRICTIVE = 0x30000000,
         /**
-         * Allow arbitrary mixtures of scripts, such as Ωmega, Teχ, HλLF-LIFE, Toys-Я-Us. Otherwise, the same as
-         * Moderately Restrictive
+         * Allow arbitrary mixtures of scripts. Otherwise, the same as Moderately Restrictive.
          * 
          * @draft ICU 51
          */
-        USPOOF_MINIMALLY_RESTRICTIVE = 0x80000000,
+        USPOOF_MINIMALLY_RESTRICTIVE = 0x40000000,
         /**
-         * Any valid identifiers, including characters outside of the Identifier Profile, such as I♥NY.org
+         * Any valid identifiers, including characters outside of the Identifier Profile.
          * 
          * @draft ICU 51
          */
-        USPOOF_UNRESTRICTIVE = 0xA0000000
+        USPOOF_UNRESTRICTIVE = 0x50000000
     } URestrictionLevel;
 
 /**
@@ -446,21 +445,21 @@ uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status);
   * Set the loosest restriction level allowed. The default if this function 
   * is not called is HIGHLY_RESTRICTIVE.
   * Calling this function also enables the RESTRICTION_LEVEL check.
-  * @param restrictionLevel The loosest restriction level allowed.
+  * @param restrictionLevel The loosest restriction level allowed.
   * @see URestrictionLevel
-  * @draft ICU 51
+  * @draft ICU 51
   */
 U_DRAFT void U_EXPORT2
 uspoof_setRestrictionLevel(USpoofChecker *sc, int32_t restrictionLevel);
 
 
 /**
-    * Get the Restriction Level that will be tested if the checks include RESTRICTION_LEVEL.
-    *
-    * @return The restriction level
-    * @see URestrictionLevel
-    * @draft ICU 51
-    */
+  * Get the Restriction Level that will be tested if the checks include RESTRICTION_LEVEL.
+  *
+  * @return The restriction level
+  * @see URestrictionLevel
+  * @draft ICU 51
+  */
 U_DRAFT int32_t U_EXPORT2
 uspoof_getRestrictionLevel();
 
@@ -643,7 +642,6 @@ uspoof_getAllowedUnicodeSet(const USpoofChecker *sc, UErrorCode *status);
  *                Originally, the index of the first string position that failed a check.
  *                Now, always returns zero.
  *                This parameter may be null.
- *                @deprecated ICU 51
  * @param status  The error code, set if an error occurred while attempting to
  *                perform the check.
  *                Spoofing or security issues detected with the input string are
@@ -956,8 +954,67 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
 #endif   /* U_SHOW_CPLUSPLUS_API */
 
 
+/**
+  * Get the set of Candidate Characters for Inclusion in Identifiers, as defined
+  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
+  *
+  * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
+  * be deleted by the caller.
+  *
+  * @param status The error code, set if a problem occurs while creating the set.
+  *
+  * @draft ICU 51
+  */
 U_DRAFT const USet * U_EXPORT2
 uspoof_getInclusionSet(UErrorCode *status);
+
+/**
+  * Get the set of characters from Recommended Scripts for Inclusion in Identifiers, as defined
+  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Recommended_Scripts
+  *
+  * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
+  * be deleted by the caller.
+  *
+  * @param status The error code, set if a problem occurs while creating the set.
+  *
+  * @draft ICU 51
+  */
+U_DRAFT const USet * U_EXPORT2
+uspoof_getRecommendedSet(UErrorCode *status);
+
+
+
+#if U_SHOW_CPLUSPLUS_API
+
+/**
+  * Get the set of Candidate Characters for Inclusion in Identifiers, as defined
+  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
+  *
+  * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
+  * be deleted by the caller.
+  *
+  * @param status The error code, set if a problem occurs while creating the set.
+  *
+  * @draft ICU 51
+  */
+U_DRAFT const UnicodeSet * U_EXPORT2
+uspoof_getInclusionUnicodeSet(UErrorCode *status);
+
+/**
+  * Get the set of characters from Recommended Scripts for Inclusion in Identifiers, as defined
+  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Recommended_Scripts
+  *
+  * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
+  * be deleted by the caller.
+  *
+  * @param status The error code, set if a problem occurs while creating the set.
+  *
+  * @draft ICU 51
+  */
+U_DRAFT const USet * U_EXPORT2
+uspoof_getRecommendedUnicodeSet(UErrorCode *status);
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 /**
  * Serialize the data for a spoof detector into a chunk of memory.
