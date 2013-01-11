@@ -39,10 +39,12 @@ IdentifierInfo::IdentifierInfo(UErrorCode &status):
                 status = U_MEMORY_ALLOCATION_ERROR;
                 return;
             }
-            JAPANESE->set(USCRIPT_LATIN).set(USCRIPT_HAN).set(USCRIPT_HIRAGANA).set(USCRIPT_KATAKANA);
-            CHINESE->set(USCRIPT_LATIN).set(USCRIPT_HAN).set(USCRIPT_BOPOMOFO);
-            KOREAN->set(USCRIPT_LATIN).set(USCRIPT_HAN).set(USCRIPT_HANGUL);
-            CONFUSABLE_WITH_LATIN->set(USCRIPT_CYRILLIC).set(USCRIPT_GREEK).set(USCRIPT_CHEROKEE);
+            JAPANESE->set(USCRIPT_LATIN, status).set(USCRIPT_HAN, status).set(USCRIPT_HIRAGANA, status)
+                     .set(USCRIPT_KATAKANA, status);
+            CHINESE->set(USCRIPT_LATIN, status).set(USCRIPT_HAN, status).set(USCRIPT_BOPOMOFO, status);
+            KOREAN->set(USCRIPT_LATIN, status).set(USCRIPT_HAN, status).set(USCRIPT_HANGUL, status);
+            CONFUSABLE_WITH_LATIN->set(USCRIPT_CYRILLIC, status).set(USCRIPT_GREEK, status)
+                      .set(USCRIPT_CHEROKEE, status);
             gStaticsAreInitialized = TRUE;
         }
     }
@@ -92,7 +94,7 @@ const UnicodeSet &IdentifierInfo::getIdentifierProfile() const {
 
 IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, UErrorCode &status) {
     if (U_FAILURE(status)) {
-        return;
+        return *this;
     }
     *fIdentifier = identifier;
     clear();
@@ -103,12 +105,12 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
         // Store a representative character for each kind of decimal digit
         if (u_charType(cp) == U_DECIMAL_DIGIT_NUMBER) {
             // Just store the zero character as a representative for comparison. Unicode guarantees it is cp - value
-            numerics.add(cp - u_getNumericValue(cp));
+            fNumerics->add(cp - u_getNumericValue(cp));
         }
         UScriptCode extensions[500];
-        int32_t extensionsCount = uscript_getScriptExtensions(c, extensions, LENGTHOF(buf), status);
+        int32_t extensionsCount = uscript_getScriptExtensions(cp, extensions, LENGTHOF(extensions), &status);
         if (U_FAILURE(status)) {
-            return;
+            return *this;
         }
         temp->resetAll();
         for (int32_t j=0; j<extensionsCount; j++) {
@@ -116,23 +118,19 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
         }
         temp->reset(USCRIPT_COMMON, status);
         temp->reset(USCRIPT_INHERITED, status);
-        //            if (temp.cardinality() == 0) {
-        //                // HACK for older version of ICU
-        //                requiredScripts.set(UScript.getScript(cp));
-        //            } else 
         switch (temp->countMembers()) {
         case 0: break;
         case 1:
             // Single script, record it.
-            fRequiredScripts->Union(temp);
+            fRequiredScripts->Union(*temp);
             break;
         default:
-            if (!fRequiredScripts.intersects(temp) 
+            if (!fRequiredScripts->intersects(*temp) 
                     && !uhash_geti(fScriptSetSet, temp)) {
                 // If the set hasn't been added already, add it and create new temporary for the next pass,
                 // so we don't rewrite what's already in the set.
-                uhash_puti(fScriptSetSet, temp, 1, status);  // Takes ownership of temp.
-                temp = new BitSet();
+                uhash_puti(fScriptSetSet, temp, 1, &status);  // Takes ownership of temp.
+                temp = new ScriptSet();
             }
             break;
         }
@@ -141,40 +139,46 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
     // [Kana], [Kana Hira] => [Kana]
     // This is relatively infrequent, so doesn't have to be optimized.
     // We also compute any commonalities among the alternates.
-    if (scriptSetSet->countMembers() == 0) {
-        commonAmongAlternates->resetAll();
+    if (uhash_count(fScriptSetSet) == 0) {
+        fCommonAmongAlternates->resetAll();
     } else {
-        commonAmongAlternates->setAll();
+        fCommonAmongAlternates->setAll();
         // for (Iterator<BitSet> it = scriptSetSet.iterator(); it.hasNext();) {
-        int32_t pos = -1;
+        int32_t it = -1;
         for (;;) {
-            UHashElement hashEl = uhash_nextElement(scriptSetSet, &pos);
-            nextSS = static_cast<ScriptSet *>(hashEl->value.pointer);
-            if (nextSS == NULL) {
+            const UHashElement *hashEl = uhash_nextElement(fScriptSetSet, &it);
+            if (hashEl == NULL) {
                 break;
             }
+            ScriptSet *next = static_cast<ScriptSet *>(hashEl->value.pointer);
             // final BitSet next = it.next();
-            if (fRequiredScripts->intersects(*nextSS)) {
-                uhash_removeElement(scriptSetSet, hashEl);
+            if (fRequiredScripts->intersects(*next)) {
+                uhash_removeElement(fScriptSetSet, hashEl);
             } else {
                 // [[Arab Syrc Thaa]; [Arab Syrc]] => [[Arab Syrc]]
-                for (BitSet other : scriptSetSet) {
-                    if (next != other && contains(next, other)) {
-                        it.remove();
+                int32_t otherIt = -1;
+                for (;;) {
+                    const UHashElement *otherHashEl = uhash_nextElement(fScriptSetSet, &otherIt);
+                    if (otherHashEl == NULL) {
+                        break;
+                    }
+                    ScriptSet *other = static_cast<ScriptSet *>(otherHashEl->value.pointer);
+                    if (next != other && next->contains(*other)) {
+                        uhash_removeElement(fScriptSetSet, hashEl);
                         break;
                     }
                 }
-                commonAmongAlternates.and(next); // get the intersection.
+                fCommonAmongAlternates->intersect(*next);
             }
         }
-        if (scriptSetSet.size() == 0) {
-            commonAmongAlternates.clear();
+        if (uhash_count(fScriptSetSet) == 0) {
+            fCommonAmongAlternates->resetAll();
         }
     }
     // Note that the above code doesn't minimize alternatives. That is, it does not collapse
     // [[Arab Syrc Thaa]; [Arab Syrc]] to [[Arab Syrc]]
     // That would be a possible optimization, but is probably not worth the extra processing
-    return this;
+    return *this;
 }
 
 ScriptSet *IdentifierInfo::JAPANESE;

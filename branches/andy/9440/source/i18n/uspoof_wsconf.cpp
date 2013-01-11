@@ -245,8 +245,8 @@ void buildWSConfusableData(SpoofImpl *spImpl, const char * confusablesWS,
                 scriptSets->addElement(bsset, status);
                 utrie2_set32(table, cp, setIndex, &status);
             }
-            bsset->sset->set(targScript);
-            bsset->sset->set(srcScript);
+            bsset->sset->set(targScript, status);
+            bsset->sset->set(srcScript, status);
 
             if (U_FAILURE(status)) {
                 goto cleanup;

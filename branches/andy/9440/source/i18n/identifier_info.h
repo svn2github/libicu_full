@@ -81,10 +81,11 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * Set an identifier to analyze. Afterwards, call methods like getScripts()
      * 
      * @param identifier the identifier to analyze
+     * @param status Errorcode, set if errors occur. 
      * @return this
      * @internal
      */
-    IdentifierInfo &setIdentifier(const UnicodeString &identifier);
+    IdentifierInfo &setIdentifier(const UnicodeString &identifier, UErrorCode &status);
 
 
     /**

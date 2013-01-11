@@ -34,6 +34,7 @@ U_NAMESPACE_BEGIN
 class U_I18N_API ScriptSet: public UMemory {
   public:
     ScriptSet();
+    ScriptSet(const ScriptSet &other);
     ~ScriptSet();
 
     UBool operator == (const ScriptSet &other) const;
@@ -42,9 +43,10 @@ class U_I18N_API ScriptSet: public UMemory {
     ScriptSet &Union(const ScriptSet &other);
     ScriptSet &set(UScriptCode script, UErrorCode &status);
     ScriptSet &reset(UScriptCode script, UErrorCode &status);
-    ScriptSet &intersect(const ScriptSet &other); // TODO: remove this one.
-    ScriptSet &intersect(UScriptCode script);
+    ScriptSet &intersect(const ScriptSet &other);
+    ScriptSet &intersect(UScriptCode script, UErrorCode &status);
     UBool      intersects(const ScriptSet &other) const;
+    UBool      contains(const ScriptSet &other) const;
     ScriptSet &setAll();
     ScriptSet &resetAll();
     int32_t countMembers() const;

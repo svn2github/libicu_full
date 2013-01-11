@@ -32,8 +32,21 @@ ScriptSet::ScriptSet() {
 ScriptSet::~ScriptSet() {
 }
 
+ScriptSet::ScriptSet(const ScriptSet &other) {
+    *this = other;
+}
+    
+
+ScriptSet & ScriptSet::operator =(const ScriptSet &other) {
+    for (uint32_t i=0; i<LENGTHOF(bits); i++) {
+        bits[i] = other.bits[i];
+    }
+    return *this;
+}
+
+
 UBool ScriptSet::operator == (const ScriptSet &other) const {
-    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+    for (uint32_t i=0; i<LENGTHOF(bits); i++) {
         if (bits[i] != other.bits[i]) {
             return FALSE;
         }
@@ -43,11 +56,11 @@ UBool ScriptSet::operator == (const ScriptSet &other) const {
 
 ScriptSet &ScriptSet::set(UScriptCode script, UErrorCode &status) {
     if (U_FAILURE(status)) {
-        return;
+        return *this;
     }
-    if (script < 0 || script >= sizeof(bits) * 8) {
+    if (script < 0 || script >= (int32_t)sizeof(bits) * 8) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
-        return;
+        return *this;
     }
     uint32_t index = script / 32;
     uint32_t bit   = 1 << (script & 31);
@@ -57,11 +70,11 @@ ScriptSet &ScriptSet::set(UScriptCode script, UErrorCode &status) {
 
 ScriptSet &ScriptSet::reset(UScriptCode script, UErrorCode &status) {
     if (U_FAILURE(status)) {
-        return;
+        return *this;
     }
-    if (script < 0 || script >= sizeof(bits) * 8) {
+    if (script < 0 || script >= (int32_t)sizeof(bits) * 8) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
-        return;
+        return *this;
     }
     uint32_t index = script / 32;
     uint32_t bit   = 1 << (script & 31);
@@ -72,34 +85,28 @@ ScriptSet &ScriptSet::reset(UScriptCode script, UErrorCode &status) {
 
 
 ScriptSet &ScriptSet::Union(const ScriptSet &other) {
-    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+    for (uint32_t i=0; i<LENGTHOF(bits); i++) {
         bits[i] |= other.bits[i];
     }
     return *this;
 }
 
 ScriptSet &ScriptSet::intersect(const ScriptSet &other) {
-    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+    for (uint32_t i=0; i<LENGTHOF(bits); i++) {
         bits[i] &= other.bits[i];
     }
     return *this;
 }
 
-ScriptSet &ScriptSet::intersect(UScriptCode script) {
-    uint32_t index = script / 32;
-    uint32_t bit   = 1 << (script & 31);
-    U_ASSERT(index < sizeof(bits)*4);
-    uint32_t i;
-    for (i=0; i<index; i++) {
-        bits[i] = 0;
-    }
-    bits[index] &= bit;
-    for (i=index+1; i<sizeof(bits)/sizeof(uint32_t); i++) {
-        bits[i] = 0;
+ScriptSet &ScriptSet::intersect(UScriptCode script, UErrorCode &status) {
+    ScriptSet t;
+    t.set(script, status);
+    if (U_SUCCESS(status)) {
+        this->intersect(t);
     }
     return *this;
 }
-
+    
 UBool ScriptSet::intersects(const ScriptSet &other) const {
     for (uint32_t i=0; i<LENGTHOF(bits); i++) {
         if ((bits[i] & other.bits[i]) != 0) {
@@ -109,16 +116,15 @@ UBool ScriptSet::intersects(const ScriptSet &other) const {
     return false;
 }
 
-ScriptSet & ScriptSet::operator =(const ScriptSet &other) {
-    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
-        bits[i] = other.bits[i];
-    }
-    return *this;
+UBool ScriptSet::contains(const ScriptSet &other) const {
+    ScriptSet t(*this);
+    t.intersect(other);
+    return (t == other);
 }
 
 
 ScriptSet &ScriptSet::setAll() {
-    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+    for (uint32_t i=0; i<LENGTHOF(bits); i++) {
         bits[i] = 0xffffffffu;
     }
     return *this;
@@ -126,7 +132,7 @@ ScriptSet &ScriptSet::setAll() {
 
 
 ScriptSet &ScriptSet::resetAll() {
-    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+    for (uint32_t i=0; i<LENGTHOF(bits); i++) {
         bits[i] = 0;
     }
     return *this;
@@ -136,7 +142,7 @@ int32_t ScriptSet::countMembers() const {
     // This bit counter is good for sparse numbers of '1's, which is
     //  very much the case that we will usually have.
     int32_t count = 0;
-    for (uint32_t i=0; i<sizeof(bits)/sizeof(uint32_t); i++) {
+    for (uint32_t i=0; i<LENGTHOF(bits); i++) {
         uint32_t x = bits[i];
         while (x > 0) {
             count++;
@@ -163,8 +169,14 @@ uhash_compareScriptSet(const UElement key1, const UElement key2) {
     return (*s1 == *s2);
 }
 
+U_CAPI int32_t U_EXPORT2
+uhash_hashScriptSet(const UElement key) {
+    icu::ScriptSet *s = static_cast<icu::ScriptSet *>(key.pointer);
+    return s->hashCode();
+}
+
 U_CAPI void U_EXPORT2
 uhash_deleteScriptSet(void *obj) {
-    icu::ScriptSet s = static_cast<icu::ScriptSet *>(obj);
+    icu::ScriptSet *s = static_cast<icu::ScriptSet *>(obj);
     delete s;
 }

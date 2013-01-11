@@ -250,7 +250,7 @@ void SpoofImpl::wholeScriptCheck(
             //        Until then, grab the script from the char and intersect it with the set.
             UScriptCode cpScript = uscript_getScript(c, &status);
             U_ASSERT(cpScript > USCRIPT_INHERITED);
-            result->intersect(cpScript);
+            result->intersect(cpScript, status);
         } else if (index == 1) {
             // Script == Common or Inherited.  Nothing to do.
         } else {
