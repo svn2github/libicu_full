@@ -17,6 +17,7 @@
 
 #include "unicode/uniset.h"
 #include "unicode/uspoof.h"
+#include "uhash.h"
 
 U_NAMESPACE_BEGIN
 
@@ -45,7 +46,18 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * Create an identifier info object. Subsequently, call setIdentifier(), etc.
      * @internal
      */
-    IdentifierInfo();
+    IdentifierInfo(UErrorCode &status);
+
+    /**
+      * Destructor
+      */
+    virtual ~IdentifierInfo();
+
+  private:
+    /* Disallow copying for now. Can be added if there's a need. */
+    IdentifierInfo(const IdentifierInfo &other);
+
+  public:
      
     /**
      * Set the identifier profile: the characters that are to be allowed in the identifier.
@@ -137,6 +149,24 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * @internal
      */
     static UnicodeString displayAlternates(UVector alternates);
+
+  private:
+
+    IdentifierInfo & clear();
+
+    UnicodeString    *fIdentifier;
+    ScriptSet        *fRequiredScripts;
+    UHashtable       *fScriptSetSet;
+    ScriptSet        *fCommonAmongAlternates;
+    UnicodeSet       *fNumerics;
+    UnicodeSet       *fIdentifierProfile;
+
+    static ScriptSet *JAPANESE;
+    static ScriptSet *CHINESE;
+    static ScriptSet *KOREAN;
+    static ScriptSet *CONFUSABLE_WITH_LATIN;
+
+
 
 };
 

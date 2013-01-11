@@ -17,6 +17,8 @@
 #include "unicode/uobject.h"
 #include "unicode/uscript.h"
 
+#include "uelement.h"
+
 U_NAMESPACE_BEGIN
 
 //-------------------------------------------------------------------------------
@@ -34,21 +36,33 @@ class U_I18N_API ScriptSet: public UMemory {
     ScriptSet();
     ~ScriptSet();
 
-    UBool operator == (const ScriptSet &other);
+    UBool operator == (const ScriptSet &other) const;
     ScriptSet & operator = (const ScriptSet &other);
 
-    void Union(const ScriptSet &other);
-    void Union(UScriptCode script);
-    void intersect(const ScriptSet &other);
-    void intersect(UScriptCode script);
-    void setAll();
-    void resetAll();
-    int32_t countMembers();
+    ScriptSet &Union(const ScriptSet &other);
+    ScriptSet &set(UScriptCode script, UErrorCode &status);
+    ScriptSet &reset(UScriptCode script, UErrorCode &status);
+    ScriptSet &intersect(const ScriptSet &other); // TODO: remove this one.
+    ScriptSet &intersect(UScriptCode script);
+    UBool      intersects(const ScriptSet &other) const;
+    ScriptSet &setAll();
+    ScriptSet &resetAll();
+    int32_t countMembers() const;
+    int32_t hashCode() const;
 
   private:
     uint32_t  bits[6];
 };
 
 U_NAMESPACE_END
+
+U_CAPI UBool U_EXPORT2
+uhash_compareScriptSet(const UElement key1, const UElement key2);
+
+U_CAPI int32_t U_EXPORT2
+uhash_hashScriptSet(const UElement key);
+
+U_CAPI void U_EXPORT2
+uhash_deleteScriptSet(void *obj);
 
 #endif // __SCRIPTSET_H__
