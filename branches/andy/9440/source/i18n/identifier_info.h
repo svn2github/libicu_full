@@ -103,18 +103,20 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * @return the set of explicit scripts.
      * @internal
      */
-    const ScriptSet &getScripts() const;
+    const ScriptSet *getScripts() const;
 
     /**
      * Get the set of alternate scripts found in the identifiers. That is, when a character can be in two scripts, then
      * the set consisting of those scripts will be returned.
      * 
-     * @return a vector, with each element being of type (ScriptSet *). 
-     *         Ownership remains with the IndetifierInfo object, and remains valid
-     *         until a new identifer is set or until the object is deleted.
+     * @return a uhash, with each key being of type (ScriptSet *). 
+     *         This is a set, not a map, so the value stored in the uhash is not relevant.
+     *         (It is, in fact, 1).
+     *         Ownership of the uhash and its contents remains with the IndetifierInfo object, 
+     *         and remains valid until a new identifer is set or until the object is deleted.
      * @internal
      */
-    const UVector &getAlternates() const;
+    const UHashtable *getAlternates() const;
 
     /**
      * Get the representative characters (zeros) for the numerics found in the identifier.
@@ -122,7 +124,7 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * @return the set of explicit scripts.
      * @internal
      */
-    const UnicodeSet &getNumerics() const;
+    const UnicodeSet *getNumerics() const;
 
     /**
      * Find out which scripts are in common among the alternates.
@@ -130,7 +132,7 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * @return the set of scripts that are in common among the alternates.
      * @internal
      */
-    const ScriptSet &getCommonAmongAlternates() const;
+    const ScriptSet *getCommonAmongAlternates() const;
 
     /**
      * Find the "tightest" restriction level that the identifier satisfies.

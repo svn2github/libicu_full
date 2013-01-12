@@ -181,6 +181,19 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
     return *this;
 }
 
+
+const UnicodeString &IdentifierInfo::getIdentifier const {
+    return *fIdentifier;
+}
+
+const ScriptSet *IdentifierInfo::getScripts const {
+    return *fRequiredScripts;
+}
+
+const UHashtable *IdentifierInfo::getAlternates const {
+    return fScriptSetSet;
+}
+
 ScriptSet *IdentifierInfo::JAPANESE;
 ScriptSet *IdentifierInfo::CHINESE;
 ScriptSet *IdentifierInfo::KOREAN;
