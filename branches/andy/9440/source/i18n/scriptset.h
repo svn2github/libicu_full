@@ -40,17 +40,20 @@ class U_I18N_API ScriptSet: public UMemory {
     UBool operator == (const ScriptSet &other) const;
     ScriptSet & operator = (const ScriptSet &other);
 
+    UBool      test(UScriptCode script, UErrorCode &status) const;
     ScriptSet &Union(const ScriptSet &other);
     ScriptSet &set(UScriptCode script, UErrorCode &status);
     ScriptSet &reset(UScriptCode script, UErrorCode &status);
     ScriptSet &intersect(const ScriptSet &other);
     ScriptSet &intersect(UScriptCode script, UErrorCode &status);
-    UBool      intersects(const ScriptSet &other) const;
-    UBool      contains(const ScriptSet &other) const;
+    UBool      intersects(const ScriptSet &other) const;  // Sets contain at least one script in commmon.
+    UBool      contains(const ScriptSet &other) const;    // All set bits in other are also set in this.
+
     ScriptSet &setAll();
     ScriptSet &resetAll();
     int32_t countMembers() const;
     int32_t hashCode() const;
+    int32_t nextSetBit(int32_t script) const;
 
   private:
     uint32_t  bits[6];

@@ -94,7 +94,7 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * @return the identifier that was analyzed.
      * @internal
      */
-    const UnicodeString &getIdentifier() const;
+    const UnicodeString *getIdentifier() const;
     
 
     /**
@@ -140,7 +140,7 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * @return the restriction level.
      * @internal
      */
-    URestrictionLevel getRestrictionLevel() const;
+    URestrictionLevel getRestrictionLevel(UErrorCode &status) const;
 
     UnicodeString toString() const;
 
@@ -155,19 +155,21 @@ class U_I18N_API IdentifierInfo : public UMemory {
 
   private:
 
-    IdentifierInfo & clear();
+    IdentifierInfo  & clear();
+    UBool             containsWithAlternates(const ScriptSet &container, const ScriptSet &containee) const;
 
-    UnicodeString    *fIdentifier;
-    ScriptSet        *fRequiredScripts;
-    UHashtable       *fScriptSetSet;
-    ScriptSet        *fCommonAmongAlternates;
-    UnicodeSet       *fNumerics;
-    UnicodeSet       *fIdentifierProfile;
+    UnicodeString     *fIdentifier;
+    ScriptSet         *fRequiredScripts;
+    UHashtable        *fScriptSetSet;
+    ScriptSet         *fCommonAmongAlternates;
+    UnicodeSet        *fNumerics;
+    UnicodeSet        *fIdentifierProfile;
 
-    static ScriptSet *JAPANESE;
-    static ScriptSet *CHINESE;
-    static ScriptSet *KOREAN;
-    static ScriptSet *CONFUSABLE_WITH_LATIN;
+    static UnicodeSet *ASCII;
+    static ScriptSet  *JAPANESE;
+    static ScriptSet  *CHINESE;
+    static ScriptSet  *KOREAN;
+    static ScriptSet  *CONFUSABLE_WITH_LATIN;
 
 
 

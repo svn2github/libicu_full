@@ -36,6 +36,10 @@ public:
 
     void testBug8654();
 
+    void testIdentifierInfo();
+
+    void testScriptSet();
+
     // Internal function to run a single skeleton test case.
     void  checkSkeleton(const USpoofChecker *sc, uint32_t flags, 
                         const char *input, const char *expected, int32_t lineNum);

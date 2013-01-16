@@ -54,6 +54,20 @@ UBool ScriptSet::operator == (const ScriptSet &other) const {
     return TRUE;
 }
 
+UBool ScriptSet::test(UScriptCode script, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
+    if (script < 0 || script >= (int32_t)sizeof(bits) * 8) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return FALSE;
+    }
+    uint32_t index = script / 32;
+    uint32_t bit   = 1 << (script & 31);
+    return ((bits[index] & bit) != 0);
+}
+
+
 ScriptSet &ScriptSet::set(UScriptCode script, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return *this;
@@ -159,6 +173,22 @@ int32_t ScriptSet::hashCode() const {
     }
     return hash;
 }
+
+int32_t ScriptSet::nextSetBit(int32_t fromIndex) const {
+    // TODO: Wants a better implementation.
+    if (fromIndex < 0) {
+        return -1;
+    }
+    UErrorCode status = U_ZERO_ERROR;
+    for (int32_t scriptIndex = fromIndex; scriptIndex < (int32_t)sizeof(bits)*8; scriptIndex++) {
+        if (test((UScriptCode)scriptIndex, status)) {
+            return scriptIndex;
+        }
+    }
+    return -1;
+}
+
+
 
 U_NAMESPACE_END
 

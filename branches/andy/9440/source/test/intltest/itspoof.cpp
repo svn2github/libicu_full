@@ -13,11 +13,16 @@
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_NORMALIZATION && !UCONFIG_NO_FILE_IO
 
 #include "itspoof.h"
-#include "unicode/uspoof.h"
-#include "unicode/unistr.h"
-#include "unicode/regex.h"
+
 #include "unicode/normlzr.h"
+#include "unicode/regex.h"
+#include "unicode/unistr.h"
+#include "unicode/uscript.h"
+#include "unicode/uspoof.h"
+
 #include "cstring.h"
+#include "scriptset.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -67,37 +72,49 @@ void IntlTestSpoof::runIndexedTest( int32_t index, UBool exec, const char* &name
                 testSpoofAPI();
             }
             break;
-         case 1:
+        case 1:
             name = "TestSkeleton"; 
             if (exec) {
                 testSkeleton();
             }
             break;
-         case 2:
+        case 2:
             name = "TestAreConfusable";
             if (exec) {
                 testAreConfusable();
             }
             break;
-          case 3:
+        case 3:
             name = "TestInvisible";
             if (exec) {
                 testInvisible();
             }
             break;
-          case 4:
+        case 4:
             name = "testConfData";
             if (exec) {
                 testConfData();
             }
             break;
-          case 5:
+        case 5:
             name = "testBug8654";
             if (exec) {
                 testBug8654();
             }
             break;
-         default: name=""; break;
+        case 6:
+            name = "testIdentifierInfo";
+            if (exec) {
+                testIdentifierInfo();
+            }
+            break;
+        case 7:
+            name = "testScriptSet";
+            if (exec) {
+                testScriptSet();
+            }
+            break;
+        default: name=""; break;
     }
 }
 
@@ -413,4 +430,88 @@ void IntlTestSpoof::testConfData() {
     }
 }
 #endif // UCONFIG_NO_REGULAR_EXPRESSIONS
+
+// testIdentifierInfo. Note that IdentifierInfo is not public ICU API at this time
+void IntlTestSpoof::testIdentifierInfo() {
+}
+
+void IntlTestSpoof::testScriptSet() {
+    ScriptSet s1;
+    ScriptSet s2;
+    UErrorCode status = U_ZERO_ERROR;
+
+    TEST_ASSERT(s1 == s2);
+    s1.set(USCRIPT_ARABIC,status);
+    TEST_ASSERT_SUCCESS(status);
+    TEST_ASSERT(!(s1 == s2));
+    TEST_ASSERT(s1.test(USCRIPT_ARABIC, status));
+    TEST_ASSERT(s1.test(USCRIPT_GREEK, status) == FALSE);
+
+    status = U_ZERO_ERROR;
+    s1.reset(USCRIPT_ARABIC, status);
+    TEST_ASSERT(s1 == s2);
+
+    status = U_ZERO_ERROR;
+    s1.setAll();
+    TEST_ASSERT(s1.test(USCRIPT_COMMON, status));
+    TEST_ASSERT(s1.test(USCRIPT_ETHIOPIC, status));
+    TEST_ASSERT(s1.test(USCRIPT_CODE_LIMIT, status));
+    s1.resetAll();
+    TEST_ASSERT(!s1.test(USCRIPT_COMMON, status));
+    TEST_ASSERT(!s1.test(USCRIPT_ETHIOPIC, status));
+    TEST_ASSERT(!s1.test(USCRIPT_CODE_LIMIT, status));
+
+    status = U_ZERO_ERROR;
+    s1.set(USCRIPT_TAKRI, status);
+    s1.set(USCRIPT_BLISSYMBOLS, status);
+    s2.setAll();
+    TEST_ASSERT(s2.contains(s1));
+    TEST_ASSERT(!s1.contains(s2));
+    TEST_ASSERT(s2.intersects(s1));
+    TEST_ASSERT(s1.intersects(s2));
+    s2.reset(USCRIPT_TAKRI, status);
+    TEST_ASSERT(!s2.contains(s1));
+    TEST_ASSERT(!s1.contains(s2));
+    TEST_ASSERT(s1.intersects(s2));
+    TEST_ASSERT(s2.intersects(s1));
+    TEST_ASSERT_SUCCESS(status);
+
+    status = U_ZERO_ERROR;
+    s1.resetAll();
+    s1.set(USCRIPT_NKO, status);
+    s1.set(USCRIPT_COMMON, status);
+    s2 = s1;
+    TEST_ASSERT(s2 == s1);
+    TEST_ASSERT_EQ(2, s2.countMembers());
+    s2.intersect(s1);
+    TEST_ASSERT(s2 == s1);
+    s2.setAll();
+    TEST_ASSERT(!(s2 == s1));
+    TEST_ASSERT(s2.countMembers() >= USCRIPT_CODE_LIMIT);
+    s2.intersect(s1);
+    TEST_ASSERT(s2 == s1);
+    
+    s2.setAll();
+    s2.reset(USCRIPT_COMMON, status);
+    s2.intersect(s1);
+    TEST_ASSERT(s2.countMembers() == 1);
+
+    s1.resetAll();
+    s1.set(USCRIPT_AFAKA, status);
+    s1.set(USCRIPT_VAI, status);
+    s1.set(USCRIPT_INHERITED, status);
+    int32_t n = -1;
+    for (int32_t i=0; i<4; i++) {
+        n = s1.nextSetBit(n+1);
+        switch (i) {
+          case 0: TEST_ASSERT_EQ(USCRIPT_INHERITED, n); break;
+          case 1: TEST_ASSERT_EQ(USCRIPT_VAI, n); break;
+          case 2: TEST_ASSERT_EQ(USCRIPT_AFAKA, n); break;
+          case 3: TEST_ASSERT_EQ(-1, (int32_t)n); break;
+          default: TEST_ASSERT(FALSE);
+        }
+    }
+    TEST_ASSERT_SUCCESS(status);
+
+}
 

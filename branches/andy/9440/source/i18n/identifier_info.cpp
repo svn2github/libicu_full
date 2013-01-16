@@ -31,14 +31,17 @@ IdentifierInfo::IdentifierInfo(UErrorCode &status):
     {
         Mutex lock(&gInitMutex);
         if (!gStaticsAreInitialized) {
+            ASCII    = new UnicodeSet(0, 0x7f);
             JAPANESE = new ScriptSet();
             CHINESE  = new ScriptSet();
             KOREAN   = new ScriptSet();
             CONFUSABLE_WITH_LATIN = new ScriptSet();
-            if (JAPANESE == NULL || CHINESE == NULL || KOREAN == NULL || CONFUSABLE_WITH_LATIN == NULL) {
+            if (ASCII == NULL || JAPANESE == NULL || CHINESE == NULL || KOREAN == NULL 
+                    || CONFUSABLE_WITH_LATIN == NULL) {
                 status = U_MEMORY_ALLOCATION_ERROR;
                 return;
             }
+            ASCII->freeze();
             JAPANESE->set(USCRIPT_LATIN, status).set(USCRIPT_HAN, status).set(USCRIPT_HIRAGANA, status)
                      .set(USCRIPT_KATAKANA, status);
             CHINESE->set(USCRIPT_LATIN, status).set(USCRIPT_HAN, status).set(USCRIPT_BOPOMOFO, status);
@@ -143,7 +146,6 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
         fCommonAmongAlternates->resetAll();
     } else {
         fCommonAmongAlternates->setAll();
-        // for (Iterator<BitSet> it = scriptSetSet.iterator(); it.hasNext();) {
         int32_t it = -1;
         for (;;) {
             const UHashElement *hashEl = uhash_nextElement(fScriptSetSet, &it);
@@ -182,18 +184,77 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
 }
 
 
-const UnicodeString &IdentifierInfo::getIdentifier const {
-    return *fIdentifier;
+const UnicodeString *IdentifierInfo::getIdentifier() const {
+    return fIdentifier;
 }
 
-const ScriptSet *IdentifierInfo::getScripts const {
-    return *fRequiredScripts;
+const ScriptSet *IdentifierInfo::getScripts() const {
+    return fRequiredScripts;
 }
 
-const UHashtable *IdentifierInfo::getAlternates const {
+const UHashtable *IdentifierInfo::getAlternates() const {
     return fScriptSetSet;
 }
 
+
+const UnicodeSet *IdentifierInfo::getNumerics() const {
+    return fNumerics;
+}
+
+const ScriptSet *IdentifierInfo::getCommonAmongAlternates() const {
+    return fCommonAmongAlternates;
+}
+
+URestrictionLevel IdentifierInfo::getRestrictionLevel(UErrorCode &status) const {
+    if (!fIdentifierProfile->containsAll(*fIdentifier) || getNumerics()->size() > 1) {
+        return USPOOF_UNRESTRICTIVE;
+    }
+    if (ASCII->containsAll(*fIdentifier)) {
+        return USPOOF_ASCII;
+    }
+    ScriptSet temp;
+    temp.Union(*fRequiredScripts);
+    temp.reset(USCRIPT_COMMON, status);
+    temp.reset(USCRIPT_INHERITED, status);
+    // This is a bit tricky. We look at a number of factors.
+    // The number of scripts in the text.
+    // Plus 1 if there is some commonality among the alternates (eg [Arab Thaa]; [Arab Syrc])
+    // Plus number of alternates otherwise (this only works because we only test cardinality up to 2.)
+    int32_t cardinalityPlus = temp.countMembers() + 
+            (fCommonAmongAlternates->countMembers() == 0 ? uhash_count(fScriptSetSet) : 1);
+    if (cardinalityPlus < 2) {
+        return USPOOF_HIGHLY_RESTRICTIVE;
+    }
+    if (containsWithAlternates(*JAPANESE, temp) || containsWithAlternates(*CHINESE, temp)
+            || containsWithAlternates(*KOREAN, temp)) {
+        return USPOOF_HIGHLY_RESTRICTIVE;
+    }
+    if (cardinalityPlus == 2 && temp.test(USCRIPT_LATIN, status) && !temp.intersects(*CONFUSABLE_WITH_LATIN)) {
+        return USPOOF_MODERATELY_RESTRICTIVE;
+    }
+    return USPOOF_MINIMALLY_RESTRICTIVE;
+}
+
+
+UBool IdentifierInfo::containsWithAlternates(const ScriptSet &container, const ScriptSet &containee) const {
+    if (!container.contains(containee)) {
+        return FALSE;
+    }
+    for (int32_t iter = -1; ;) {
+        const UHashElement *hashEl = uhash_nextElement(fScriptSetSet, &iter);
+        if (hashEl == NULL) {
+            break;
+        }
+        ScriptSet *alternatives = static_cast<ScriptSet *>(hashEl->value.pointer);
+        if (!container.intersects(*alternatives)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+UnicodeSet *IdentifierInfo::ASCII;
 ScriptSet *IdentifierInfo::JAPANESE;
 ScriptSet *IdentifierInfo::CHINESE;
 ScriptSet *IdentifierInfo::KOREAN;
@@ -204,3 +265,21 @@ ScriptSet *IdentifierInfo::CONFUSABLE_WITH_LATIN;
 U_NAMESPACE_END
 
 
+/**
+ * Order BitSets, first by shortest, then by items.
+ * Conforms to UElementComparator from uelement.h
+ * @internal
+ */
+U_CAPI int8_t U_CALLCONV IdentifierInfoScriptSetCompare(UElement e0, UElement e1) {
+    icu::ScriptSet *s0 = static_cast<icu::ScriptSet *>(e0.pointer);
+    icu::ScriptSet *s1 = static_cast<icu::ScriptSet *>(e1.pointer);
+    int32_t diff = s0->countMembers() - s1->countMembers();
+    if (diff != 0) return diff;
+    int32_t i0 = s0->nextSetBit(0);
+    int32_t i1 = s1->nextSetBit(0);
+    while ((diff = i0-i1) == 0 && i0 > 0) {
+        i0 = s0->nextSetBit((i0+1));
+        i1 = s1->nextSetBit((i1+1));
+    }
+    return diff;    
+}
