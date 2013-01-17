@@ -433,6 +433,24 @@ void IntlTestSpoof::testConfData() {
 
 // testIdentifierInfo. Note that IdentifierInfo is not public ICU API at this time
 void IntlTestSpoof::testIdentifierInfo() {
+    UErrorCode status = U_ZERO_ERROR;
+    ScriptSet bitset12; bitset12.set(USCRIPT_LATIN, status).set(USCRIPT_HANGUL, status);
+    ScriptSet bitset2;  bitset2.set(USCRIPT_HANGUL, status);
+    TEST_ASSERT(bitset12.contains(bitset2));
+    TEST_ASSERT(bitset12.contains(bitset12));
+    TEST_ASSERT(!bitset2.contains(bitset12));
+
+    ScriptSet arabSet;  arabSet.set(USCRIPT_ARABIC, status);
+    ScriptSet latinSet; latinSet.set(USCRIPT_LATIN, status);
+    UElement arabEl;  arabEl.pointer = &arabSet;
+    UElement latinEl; latinEl.pointer = &latinSet;
+    TEST_ASSERT(uhash_compareScriptSet(arabEl, latinEl) < 0);
+    TEST_ASSERT(uhash_compareScriptSet(latinEl, arabEl) > 0);
+
+    UnicodeString scriptString;
+    bitset12.displayScripts(scriptString);
+    TEST_ASSERT(UNICODE_STRING_SIMPLE("Hang Latn") == scriptString);
+
 }
 
 void IntlTestSpoof::testScriptSet() {

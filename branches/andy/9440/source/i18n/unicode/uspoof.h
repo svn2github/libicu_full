@@ -257,8 +257,8 @@ typedef enum USpoofChecks {
     
     
     /**
-     * Constants from UAX 39 for use in setRestrictionLevel(), and
-     * for returned identifier restirction levels in check results.
+     * Constants from UAX #39 for use in setRestrictionLevel(), and
+     * for returned identifier restriction levels in check results.
      * @draft ICU 51
      */
     typedef enum URestrictionLevel {
@@ -339,7 +339,7 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
   * Open a Spoof Checker from the source form of the spoof data.
   * The Three inputs correspond to the Unicode data files confusables.txt
   * confusablesWholeScript.txt and xidmdifications.txt as described in
-  * Unicode UAX 39.  The syntax of the source data is as described in UAX 39 for
+  * Unicode UAX #39.  The syntax of the source data is as described in UAX #39 for
   * these files, and the content of these files is acceptable input.
   *
   * The character encoding of the (char *) input text is UTF-8.
@@ -842,7 +842,7 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
   *  Get the "skeleton" for an identifier string.
   *  Skeletons are a transformation of the input string;
   *  Two strings are confusable if their skeletons are identical.
-  *  See Unicode UAX 39 for additional information.
+  *  See Unicode UAX #39 for additional information.
   *
   *  Using skeletons directly makes it possible to quickly check
   *  whether an identifier is confusable with any of some large
@@ -881,7 +881,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
   *  Get the "skeleton" for an identifier string.
   *  Skeletons are a transformation of the input string;
   *  Two strings are confusable if their skeletons are identical.
-  *  See Unicode UAX 39 for additional information.
+  *  See Unicode UAX #39 for additional information.
   *
   *  Using skeletons directly makes it possible to quickly check
   *  whether an identifier is confusable with any of some large
@@ -924,7 +924,7 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
   *  Get the "skeleton" for an identifier string.
   *  Skeletons are a transformation of the input string;
   *  Two strings are confusable if their skeletons are identical.
-  *  See Unicode UAX 39 for additional information.
+  *  See Unicode UAX #39 for additional information.
   *
   *  Using skeletons directly makes it possible to quickly check
   *  whether an identifier is confusable with any of some large
@@ -956,7 +956,7 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
 
 /**
   * Get the set of Candidate Characters for Inclusion in Identifiers, as defined
-  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
+  * in Unicode UAX #31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
   *
   * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
   * be deleted by the caller.
@@ -970,7 +970,7 @@ uspoof_getInclusionSet(UErrorCode *status);
 
 /**
   * Get the set of characters from Recommended Scripts for Inclusion in Identifiers, as defined
-  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Recommended_Scripts
+  * in Unicode UAX #31, http://www.unicode.org/reports/tr31/#Table_Recommended_Scripts
   *
   * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
   * be deleted by the caller.
@@ -988,7 +988,7 @@ uspoof_getRecommendedSet(UErrorCode *status);
 
 /**
   * Get the set of Candidate Characters for Inclusion in Identifiers, as defined
-  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
+  * in Unicode UAX #31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
   *
   * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
   * be deleted by the caller.
@@ -1002,7 +1002,7 @@ uspoof_getInclusionUnicodeSet(UErrorCode *status);
 
 /**
   * Get the set of characters from Recommended Scripts for Inclusion in Identifiers, as defined
-  * in Unicode UAX 31, http://www.unicode.org/reports/tr31/#Table_Recommended_Scripts
+  * in Unicode UAX #31, http://www.unicode.org/reports/tr31/#Table_Recommended_Scripts
   *
   * The returned set is frozen. Ownership of the set remains with the ICU library; it must not
   * be deleted by the caller.
@@ -1011,7 +1011,7 @@ uspoof_getInclusionUnicodeSet(UErrorCode *status);
   *
   * @draft ICU 51
   */
-U_DRAFT const USet * U_EXPORT2
+U_DRAFT const UnicodeSet * U_EXPORT2
 uspoof_getRecommendedUnicodeSet(UErrorCode *status);
 
 #endif /* U_SHOW_CPLUSPLUS_API */

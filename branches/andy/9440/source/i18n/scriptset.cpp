@@ -11,6 +11,7 @@
 */
 
 #include "unicode/utypes.h"
+#include "unicode/unistr.h"
 #include "scriptset.h"
 #include "uassert.h"
 
@@ -188,15 +189,41 @@ int32_t ScriptSet::nextSetBit(int32_t fromIndex) const {
     return -1;
 }
 
+UnicodeString &ScriptSet::displayScripts(UnicodeString &dest) const {
+    dest.truncate(0);
+    for (int32_t i = nextSetBit(0); i >= 0; i = nextSetBit(i + 1)) {
+        if (dest.length() != 0) {
+            dest.append(0x20);
+        }
+        const char *scriptName = uscript_getShortName((UScriptCode(i)));
+        dest.append(UnicodeString(scriptName, -1, US_INV));
+    }
+    return dest;
+}
 
 
 U_NAMESPACE_END
 
 U_CAPI UBool U_EXPORT2
-uhash_compareScriptSet(const UElement key1, const UElement key2) {
+uhash_equalsScriptSet(const UElement key1, const UElement key2) {
     icu::ScriptSet *s1 = static_cast<icu::ScriptSet *>(key1.pointer);
     icu::ScriptSet *s2 = static_cast<icu::ScriptSet *>(key2.pointer);
     return (*s1 == *s2);
+}
+
+U_CAPI int8_t U_EXPORT2
+uhash_compareScriptSet(UElement key0, UElement key1) {
+    icu::ScriptSet *s0 = static_cast<icu::ScriptSet *>(key0.pointer);
+    icu::ScriptSet *s1 = static_cast<icu::ScriptSet *>(key1.pointer);
+    int32_t diff = s0->countMembers() - s1->countMembers();
+    if (diff != 0) return diff;
+    int32_t i0 = s0->nextSetBit(0);
+    int32_t i1 = s1->nextSetBit(0);
+    while ((diff = i0-i1) == 0 && i0 > 0) {
+        i0 = s0->nextSetBit(i0+1);
+        i1 = s1->nextSetBit(i1+1);
+    }
+    return (int8_t)diff;
 }
 
 U_CAPI int32_t U_EXPORT2
