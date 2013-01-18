@@ -13,6 +13,7 @@
 #include "identifier_info.h"
 #include "mutex.h"
 #include "scriptset.h"
+#include "uvector.h"
 
 
 U_NAMESPACE_BEGIN
@@ -253,6 +254,30 @@ UBool IdentifierInfo::containsWithAlternates(const ScriptSet &container, const S
     return true;
 }
 
+UnicodeString &IdentifierInfo::displayAlternates(UnicodeString &dest, UHashtable *alternates, UErrorCode &status) {
+    UVector sorted(status);
+    if (U_FAILURE(status)) {
+        return dest;
+    }
+    for (int32_t pos = -1; ;) {
+        const UHashElement *el = uhash_nextElement(alternates, &pos);
+        if (el == NULL) {
+            break;
+        }
+        ScriptSet *ss = static_cast<ScriptSet *>(el->key.pointer);
+        sorted.addElement(ss, status);
+    }
+    sorted.sort(uhash_compareScriptSet, status);
+    UnicodeString separator = UNICODE_STRING_SIMPLE("; ");
+    for (int32_t i=0; i<sorted.size(); i++) {
+        if (i>0) {
+            dest.append(separator);
+        }
+        ScriptSet *ss = static_cast<ScriptSet *>(sorted.elementAt(i));
+        ss->displayScripts(dest);
+    }
+    return dest;
+}
 
 UnicodeSet *IdentifierInfo::ASCII;
 ScriptSet *IdentifierInfo::JAPANESE;
@@ -260,26 +285,5 @@ ScriptSet *IdentifierInfo::CHINESE;
 ScriptSet *IdentifierInfo::KOREAN;
 ScriptSet *IdentifierInfo::CONFUSABLE_WITH_LATIN;
 
-
-
 U_NAMESPACE_END
 
-
-/**
- * Order BitSets, first by shortest, then by items.
- * Conforms to UElementComparator from uelement.h
- * @internal
- */
-U_CAPI int8_t U_CALLCONV IdentifierInfoScriptSetCompare(UElement e0, UElement e1) {
-    icu::ScriptSet *s0 = static_cast<icu::ScriptSet *>(e0.pointer);
-    icu::ScriptSet *s1 = static_cast<icu::ScriptSet *>(e1.pointer);
-    int32_t diff = s0->countMembers() - s1->countMembers();
-    if (diff != 0) return diff;
-    int32_t i0 = s0->nextSetBit(0);
-    int32_t i1 = s1->nextSetBit(0);
-    while ((diff = i0-i1) == 0 && i0 > 0) {
-        i0 = s0->nextSetBit((i0+1));
-        i1 = s1->nextSetBit((i1+1));
-    }
-    return diff;    
-}

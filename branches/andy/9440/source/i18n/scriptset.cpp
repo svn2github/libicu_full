@@ -11,7 +11,10 @@
 */
 
 #include "unicode/utypes.h"
+
+#include "unicode/uchar.h"
 #include "unicode/unistr.h"
+
 #include "scriptset.h"
 #include "uassert.h"
 
@@ -190,7 +193,6 @@ int32_t ScriptSet::nextSetBit(int32_t fromIndex) const {
 }
 
 UnicodeString &ScriptSet::displayScripts(UnicodeString &dest) const {
-    dest.truncate(0);
     for (int32_t i = nextSetBit(0); i >= 0; i = nextSetBit(i + 1)) {
         if (dest.length() != 0) {
             dest.append(0x20);
@@ -201,6 +203,37 @@ UnicodeString &ScriptSet::displayScripts(UnicodeString &dest) const {
     return dest;
 }
 
+ScriptSet &ScriptSet::parseScripts(const UnicodeString &scriptString, UErrorCode &status) {
+    resetAll();
+    if (U_FAILURE(status)) {
+        return *this;
+    }
+    UnicodeString oneScriptName;
+    for (int32_t i=0; i<scriptString.length();) {
+        UChar32 c = scriptString.char32At(i);
+        i = scriptString.moveIndex32(i, 1);
+        if (!u_isUWhiteSpace(c)) {
+            oneScriptName.append(c);
+            continue;
+        }
+        if (oneScriptName.length() > 0) {
+            char buf[40];
+            oneScriptName.extract(0, oneScriptName.length(), buf, sizeof(buf)-1, US_INV);
+            buf[sizeof(buf)-1] = 0;
+            int32_t sc = u_getPropertyValueEnum(UCHAR_SCRIPT, buf);
+            if (sc == UCHAR_INVALID_CODE) {
+                status = U_ILLEGAL_ARGUMENT_ERROR;
+            } else {
+                this->set((UScriptCode)sc, status);
+            }
+            if (U_FAILURE(status)) {
+                return *this;
+            }
+            oneScriptName.remove();
+        }
+    }
+    return *this;
+}
 
 U_NAMESPACE_END
 

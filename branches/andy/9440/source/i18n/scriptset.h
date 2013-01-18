@@ -55,7 +55,8 @@ class U_I18N_API ScriptSet: public UMemory {
     int32_t hashCode() const;
     int32_t nextSetBit(int32_t script) const;
 
-    UnicodeString &displayScripts(UnicodeString &dest) const; // fill in dest string with script names.
+    UnicodeString &displayScripts(UnicodeString &dest) const; // append script names to dest string.
+    ScriptSet & parseScripts(const UnicodeString &scriptsString, UErrorCode &status);  // Replaces ScriptSet contents.
 
   private:
     uint32_t  bits[6];

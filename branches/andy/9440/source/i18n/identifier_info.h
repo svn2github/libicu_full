@@ -147,11 +147,12 @@ class U_I18N_API IdentifierInfo : public UMemory {
     /**
      * Produce a readable string of alternates.
      * 
-     * @param alternates a vector of UScriptSets.
+     * @param alternates a UHashtable of UScriptSets.
+     *        Keys only, no meaningful values in the UHash.
      * @return display form
      * @internal
      */
-    static UnicodeString displayAlternates(UVector alternates);
+    static UnicodeString &displayAlternates(UnicodeString &dest, UHashtable *alternates, UErrorCode &status);
 
   private:
 
