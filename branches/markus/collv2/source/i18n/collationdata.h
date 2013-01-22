@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2010-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationdata.h
@@ -22,10 +22,13 @@
 #include "normalizer2impl.h"
 #include "utrie2.h"
 
+struct UDataMemory;
+
 U_NAMESPACE_BEGIN
 
 /**
  * Collation data container.
+ * Includes data for the collation base (root/default), aliased if this is not the base.
  */
 struct U_I18N_API CollationData : public UMemory {
     /**
@@ -33,11 +36,13 @@ struct U_I18N_API CollationData : public UMemory {
      */
     static const int32_t CHECK_FCD = 1;
     /**
-     * Options bit 1: COllate Digits As Numbers.
+     * Options bit 1: Numeric collation.
+     * Also known as CODAN = COllate Digits As Numbers.
+     *
      * Treat digit sequences as numbers with CE sequences in numeric order,
      * rather than returning a normal CE for each digit.
      */
-    static const int32_t CODAN = 2;
+    static const int32_t NUMERIC = 2;
     /**
      * "Shifted" alternate handling, see ALTERNATE_MASK.
      */
@@ -102,10 +107,17 @@ struct U_I18N_API CollationData : public UMemory {
               nfcImpl(nfc),
               options((UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT) |
                       (MAX_VAR_PUNCT << MAX_VARIABLE_SHIFT)),
-              variableTop(0), zeroPrimary(0x12000000),
+              variableTop(0), numericPrimary(0x12000000),
               compressibleBytes(NULL), reorderTable(NULL),
               reorderCodes(NULL), reorderCodesLength(0),
-              unsafeBackwardSet(NULL) {}
+              unsafeBackwardSet(NULL),
+              scripts(NULL), scriptsLength(0),
+              memory(NULL),
+              ownedTrie(NULL), ownedUnsafeBackwardSet(NULL) {}
+
+    CollationData *clone() const;
+
+    ~CollationData();
 
     void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
 
@@ -193,24 +205,50 @@ struct U_I18N_API CollationData : public UMemory {
         return nfcImpl.getFCD16(c);
     }
 
+    int32_t getEquivalentScripts(int32_t script,
+                                 int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;
+
+    /**
+     * Writes the permutation table for the given reordering of scripts and groups,
+     * mapping from default-order primary-weight lead bytes to reordered lead bytes.
+     * The caller checks for illegal arguments and
+     * takes care of [DEFAULT] and memory allocation.
+     */
+    void makeReorderTable(const int32_t *reorder, int32_t length,
+                          uint8_t table[256], UErrorCode &errorCode) const;
+
     enum {
+        /**
+         * Number of int32_t indexes.
+         * Must be a multiple of 2 for padding,
+         * should be a multiple of 4 for optimal alignment.
+         */
+        IX_INDEXES_LENGTH,
+        /**
+         * Bits 31..24: numericPrimary, for numeric collation
+         *      23.. 0: options bit set
+         */
+        IX_OPTIONS,
+        IX_RESERVED2,
+        IX_RESERVED3,
+
         // Byte offsets from the start of the data, after the generic header.
         // The indexes[] are at byte offset 0, other data follows.
         // The data items should be in descending order of unit size,
         // to minimize the need for padding.
         /** Byte offset to the collation trie. Its length is a multiple of 8 bytes. */
         IX_TRIE_OFFSET,
-        IX_RESERVED1_OFFSET,
+        IX_RESERVED5_OFFSET,
         /** Byte offset to int64_t ces[] */
         IX_CES_OFFSET,
-        IX_RESERVED3_OFFSET,
+        IX_RESERVED7_OFFSET,
 
         /** Byte offset to uint32_t ce32s[] */
         IX_CE32S_OFFSET,
-        IX_RESERVED5_OFFSET,
+        IX_RESERVED9_OFFSET,
         /** Byte offset to int32_t reorderCodes[] */
         IX_REORDER_CODES_OFFSET,
-        IX_RESERVED7_OFFSET,
+        IX_RESERVED11_OFFSET,
 
         /** Byte offset to UChar *contexts[] */
         IX_CONTEXTS_OFFSET,
@@ -218,30 +256,28 @@ struct U_I18N_API CollationData : public UMemory {
         IX_UNSAFE_BWD_OFFSET,
         /** Byte offset to uint16_t scripts[] */
         IX_SCRIPTS_OFFSET,
-        IX_RESERVED11_OFFSET,
+        IX_RESERVED15_OFFSET,
 
         /** Byte offset to UBool compressibleBytes[] */
         IX_COMPRESSIBLE_BYTES_OFFSET,
         /** Byte offset to uint8_t reorderTable[] */
         IX_REORDER_TABLE_OFFSET,
-        IX_RESERVED14_OFFSET,
+        IX_RESERVED18_OFFSET,
         IX_TOTAL_SIZE,
 
         /** Array offset to Jamo CEs in ces[], or <0 if none. */
         IX_JAMO_CES_START,
-        IX_RESERVED17,
-        IX_RESERVED18,
-        /** uint32_t zeroPrimary: The single-byte primary weight (xx000000) for '0' (U+0030). */
-        IX_ZERO_PRIMARY,
-
-        /** int32_t options bit set. */
-        IX_OPTIONS,
         IX_RESERVED21,
         IX_RESERVED22,
         IX_RESERVED23,
 
         IX_COUNT
     };
+
+    void setData(const CollationData *baseData, const uint8_t *inBytes, UErrorCode &errorCode);
+
+    static UBool U_CALLCONV
+    isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
 
     /** Main lookup trie. */
     const UTrie2 *trie;
@@ -271,7 +307,7 @@ struct U_I18N_API CollationData : public UMemory {
     /** Variable-top primary weight. 0 if "shifted" mode is off. */
     uint32_t variableTop;
     /** The single-byte primary weight (xx000000) for '0' (U+0030). */
-    uint32_t zeroPrimary;
+    uint32_t numericPrimary;
     /** 256 flags for which primary-weight lead bytes are compressible. */
     const UBool *compressibleBytes;
     /** 256-byte table for reordering permutation of primary lead bytes; NULL if no reordering. */
@@ -284,28 +320,6 @@ struct U_I18N_API CollationData : public UMemory {
      * or in backwards CE iteration.
      */
     const UnicodeSet *unsafeBackwardSet;
-};
-
-/**
- * Collation data container with additional data for the collation base (root/default).
- */
-struct U_I18N_API CollationBaseData : public CollationData {
-public:
-    CollationBaseData(const Normalizer2Impl &nfc)
-            : CollationData(nfc),
-              scripts(NULL), scriptsLength(0) {}
-
-    int32_t getEquivalentScripts(int32_t script,
-                                 int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;
-
-    /**
-     * Writes the permutation table for the given reordering of scripts and groups,
-     * mapping from default-order primary-weight lead bytes to reordered lead bytes.
-     * The caller checks for illegal arguments and
-     * takes care of [DEFAULT] and memory allocation.
-     */
-    void makeReorderTable(const int32_t *reorder, int32_t length,
-                          uint8_t table[256], UErrorCode &errorCode) const;
 
     /**
      * Data for scripts and reordering groups.
@@ -328,8 +342,19 @@ public:
     const uint16_t *scripts;
     int32_t scriptsLength;
 
+    UDataMemory *memory;
+    /** Same as trie if this data object owns it, otherwise NULL. */
+    UTrie2 *ownedTrie;
+    /** Same as unsafeBackwardSet if this data object owns it, otherwise NULL. */
+    UnicodeSet *ownedUnsafeBackwardSet;
+
 private:
     int32_t findScript(int32_t script) const;
+    /**
+     * Finds the variable top primary weight for the maximum variable reordering group.
+     * Returns 0 if the maxVariable is not valid.
+     */
+    uint32_t getVariableTopForMaxVariable(MaxVariable maxVariable) const;
 };
 
 /**

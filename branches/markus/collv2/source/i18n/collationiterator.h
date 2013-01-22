@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2010-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationiterator.h
@@ -256,19 +256,18 @@ private:
     /**
      * Turns a string of digits (bytes 0..9)
      * into a sequence of CEs that will sort in numeric order.
-     * CODAN = COllate Digits As Numbers.
      *
      * Sets ces and cesMaxIndex.
      *
      * The digits string must not be empty and must not have leading zeros.
      */
-    void setCodanCEs(const char *digits, int32_t length, UErrorCode &errorCode);
+    void setNumericCEs(const char *digits, int32_t length, UErrorCode &errorCode);
 
     /**
      * Turns 1..254 digits into a sequence of CEs.
-     * Called by setCodanCEs() for each segment of at most 254 digits.
+     * Called by setNumericCEs() for each segment of at most 254 digits.
      */
-    void setCodanSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode);
+    void setNumericSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode);
 
     /**
      * Sets 2 or 3 buffered CEs from a Hangul syllable,
@@ -300,7 +299,7 @@ private:
     SkippedState *skipped;
 
     // 64-bit-CE buffer for forward and safe-backward iteration
-    // (computed expansions and CODAN CEs).
+    // (computed expansions and numeric-collation CEs).
     CEArray forwardCEs;
 
     // Number of code points to read forward, or -1.

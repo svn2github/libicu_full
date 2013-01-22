@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2010-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collation.h
@@ -170,7 +170,7 @@ public:
 #endif
         /**
          * Decimal digit.
-         * Bits 19..4: Index into uint32_t table for non-CODAN CE32.
+         * Bits 19..4: Index into uint32_t table for non-numeric-collation CE32.
          * Bits  3..0: Digit value 0..9.
          */
         DIGIT_TAG = 10,

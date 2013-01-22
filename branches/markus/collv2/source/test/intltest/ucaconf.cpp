@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 2002-2012, International Business Machines Corporation and
+ * Copyright (c) 2002-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -20,12 +20,8 @@
 #include "cstring.h"
 #include "uparse.h"
 
-#include "collationdata.h"  // TODO: Temporarily for getCollationBaseData().
+#include "collationroot.h"  // TODO: Temporarily for v2 testing
 #include "rulebasedcollator.h"  // TODO: Temporarily for v2 testing
-
-// TODO extern const CollationBaseData *
-//      getCollationBaseData(UErrorCode &errorCode);
-static const CollationBaseData *getCollationBaseData(UErrorCode & /*errorCode*/) { return NULL; }  // TODO
 
 UCAConformanceTest::UCAConformanceTest() :
 rbUCA(NULL),
@@ -37,7 +33,7 @@ status(U_ZERO_ERROR)
         dataerrln("Error - UCAConformanceTest: Unable to open UCA collator! - %s", u_errorName(status));
     }
 
-    getCollationBaseData(status);
+    CollationRoot::getBaseData(status);
     if(U_FAILURE(status)) {
         errln("ERROR - UCAConformanceTest: Unable to open CLDR root collator!");
     }
@@ -354,17 +350,17 @@ void UCAConformanceTest::TestRulesShifted(/* par */) {
 }
 
 void UCAConformanceTest::TestTable2NonIgnorable() {
-    RuleBasedCollator2 coll(getCollationBaseData(status));
-    setCollNonIgnorable(&coll);
+    LocalPointer<Collator> coll(CollationRoot::createCollator(status));
+    setCollNonIgnorable(coll.getAlias());
     openTestFile("NON_IGNORABLE");
-    testConformance(&coll);
+    testConformance(coll.getAlias());
 }
 
 void UCAConformanceTest::TestTable2Shifted() {
-    RuleBasedCollator2 coll(getCollationBaseData(status));
-    setCollShifted(&coll);
+    LocalPointer<Collator> coll(CollationRoot::createCollator(status));
+    setCollShifted(coll.getAlias());
     openTestFile("SHIFTED");
-    testConformance(&coll);
+    testConformance(coll.getAlias());
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

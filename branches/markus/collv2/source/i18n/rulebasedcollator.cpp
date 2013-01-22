@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1996-2012, International Business Machines
+* Copyright (C) 1996-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * rulebasedcollator.cpp
@@ -28,6 +28,7 @@
 #include "collationdata.h"
 #include "collationiterator.h"
 #include "collationkeys.h"
+#include "collationroot.h"
 #include "cstring.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
@@ -171,7 +172,7 @@ UBool
 RuleBasedCollator2::ensureOwnedData(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return FALSE; }
     if(ownedData != NULL) { return TRUE; }
-    ownedData = new CollationData(*defaultData);
+    ownedData = defaultData->clone();
     if(ownedData == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return FALSE;
@@ -204,7 +205,7 @@ RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) cons
         // Deprecated attribute, unsettable.
         return UCOL_OFF;
     case UCOL_NUMERIC_COLLATION:
-        option = CollationData::CODAN;
+        option = CollationData::NUMERIC;
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -256,7 +257,7 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
         }
         break;
     case UCOL_NUMERIC_COLLATION:
-        ownedData->setFlag(CollationData::CODAN, value, defaultData->options, errorCode);
+        ownedData->setFlag(CollationData::NUMERIC, value, defaultData->options, errorCode);
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -322,15 +323,6 @@ RuleBasedCollator2::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
     }
 }
 
-// TODO: hack for prototyping, remove
-static const CollationBaseData *gBaseData = NULL;
-
-U_CAPI void U_EXPORT2 ucol_setCollationBaseData(const CollationBaseData *base) {
-    gBaseData = base;
-}
-
-static const CollationBaseData *ucol_getCollationBaseData(UErrorCode & /*errorCode*/) { return gBaseData; }  // TODO
-
 int32_t
 RuleBasedCollator2::getReorderCodes(int32_t *dest, int32_t capacity,
                                     UErrorCode &errorCode) const {
@@ -373,7 +365,8 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
             return;
         }
     }
-    const CollationBaseData *baseData = ucol_getCollationBaseData(errorCode);
+    const CollationData *baseData = CollationRoot::getBaseData(errorCode);
+    if(U_FAILURE(errorCode)) { return; }
     baseData->makeReorderTable(reorderCodes, length, ownedReorderTable, errorCode);
     if(U_FAILURE(errorCode)) { return; }
     if(length > ownedReorderCodesCapacity) {
@@ -402,7 +395,7 @@ RuleBasedCollator2::getEquivalentReorderCodes(int32_t reorderCode,
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    const CollationBaseData *baseData = ucol_getCollationBaseData(errorCode);
+    const CollationData *baseData = CollationRoot::getBaseData(errorCode);
     if(U_FAILURE(errorCode)) { return 0; }
     return baseData->getEquivalentScripts(reorderCode, dest, capacity, errorCode);
 }

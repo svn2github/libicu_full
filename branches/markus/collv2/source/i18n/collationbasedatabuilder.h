@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationbasedatabuilder.h
@@ -30,7 +30,7 @@
 U_NAMESPACE_BEGIN
 
 /**
- * Low-level CollationBaseData builder.
+ * Low-level base CollationData builder.
  */
 class U_I18N_API CollationBaseDataBuilder : public CollationDataBuilder {
 public:
@@ -63,7 +63,7 @@ public:
                             const UnicodeString &groupScripts,
                             UErrorCode &errorCode);
 
-    CollationBaseData *buildBaseData(UErrorCode &errorCode);
+    CollationData *buildBaseData(UErrorCode &errorCode);
 
     /** Non-functional in this subclass. */
     virtual CollationData *buildTailoring(UErrorCode &errorCode);

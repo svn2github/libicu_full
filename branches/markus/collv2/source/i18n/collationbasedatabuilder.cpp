@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationbasedatabuilder.cpp
@@ -66,10 +66,6 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
 
     uint32_t hangulCE32 = makeSpecialCE32(Collation::HANGUL_TAG, 0u);
     utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
-
-    // Initialize the unsafe-backwards set:
-    // All non-zero combining marks and trail surrogates.
-    unsafeBackwardSet.applyPattern(UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
 }
 
 void
@@ -154,12 +150,12 @@ CollationBaseDataBuilder::buildTailoring(UErrorCode &errorCode) {
     return NULL;
 }
 
-CollationBaseData *
+CollationData *
 CollationBaseDataBuilder::buildBaseData(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return NULL; }
 
-    // Create a CollationBaseData container of aliases to this builder's finalized data.
-    LocalPointer<CollationBaseData> cd(new CollationBaseData(nfcImpl));
+    // Create a CollationData container of aliases to this builder's finalized data.
+    LocalPointer<CollationData> cd(new CollationData(nfcImpl));
     if(cd.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;

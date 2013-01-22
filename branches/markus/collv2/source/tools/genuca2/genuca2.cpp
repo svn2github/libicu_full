@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2000-2012, International Business Machines
+*   Copyright (C) 2000-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -345,8 +345,8 @@ UCAElements *readAnElement(FILE *data,
                     *status = U_INVALID_FORMAT_ERROR;
                     return NULL;
                 }
-                if (CollationBaseData::scriptByteFromInt(reorderCode) < 0) {
-                    fprintf(stderr, "reorder code %d for \"%s\" cannot be encoded by CollationBaseData::scriptByteFromInt(reorderCode)\n",
+                if (CollationData::scriptByteFromInt(reorderCode) < 0) {
+                    fprintf(stderr, "reorder code %d for \"%s\" cannot be encoded by CollationData::scriptByteFromInt(reorderCode)\n",
                             reorderCode, scriptName);
                     *status = U_INTERNAL_PROGRAM_ERROR;
                     return NULL;
@@ -1053,7 +1053,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         delete[] leadByteScripts;
     }
 
-    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "builder.buildBaseData() failed: %s\n",
                 u_errorName(errorCode));
@@ -1062,13 +1062,16 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     cd->variableTop = gVariableTop;  // TODO
 
     int32_t indexes[CollationData::IX_COUNT]={
-        CollationData::IX_COUNT, 0, 0, 0,
+        0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0
     };
+
+    indexes[CollationData::IX_INDEXES_LENGTH] = CollationData::IX_COUNT;
+    indexes[CollationData::IX_OPTIONS] = cd->numericPrimary | cd->options;
 
     printf("*** CLDR root collation part sizes ***\n");
     int32_t totalSize = (int32_t)sizeof(indexes);
@@ -1088,21 +1091,21 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     int32_t cePadding = (totalSize & 7) == 0 ? 0 : 4;
     totalSize += cePadding;
 
-    indexes[CollationData::IX_RESERVED1_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED5_OFFSET] = totalSize;
     indexes[CollationData::IX_CES_OFFSET] = totalSize;
     int32_t length = builder.lengthOfCEs();
     printf("  CEs:              %6ld *8 = %6ld\n", (long)length, (long)length * 8);
     totalSize += length * 8;
 
-    indexes[CollationData::IX_RESERVED3_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED7_OFFSET] = totalSize;
     indexes[CollationData::IX_CE32S_OFFSET] = totalSize;
     length = builder.lengthOfCE32s();
     printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
     totalSize += length * 4;
 
-    indexes[CollationData::IX_RESERVED5_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED9_OFFSET] = totalSize;
     indexes[CollationData::IX_REORDER_CODES_OFFSET] = totalSize;
-    indexes[CollationData::IX_RESERVED7_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED11_OFFSET] = totalSize;
     indexes[CollationData::IX_CONTEXTS_OFFSET] = totalSize;
     length = builder.lengthOfContexts();
     printf("  contexts:         %6ld *2 = %6ld\n", (long)length, (long)length * 2);
@@ -1124,13 +1127,13 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("  scripts data:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
     totalSize += length * 2;
 
-    indexes[CollationData::IX_RESERVED11_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED15_OFFSET] = totalSize;
     indexes[CollationData::IX_COMPRESSIBLE_BYTES_OFFSET] = totalSize;
     printf("  compressibleBytes:               256\n");
     totalSize += 256;
 
     indexes[CollationData::IX_REORDER_TABLE_OFFSET] = totalSize;
-    indexes[CollationData::IX_RESERVED14_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED18_OFFSET] = totalSize;
     indexes[CollationData::IX_TOTAL_SIZE] = totalSize;
     printf("*** CLDR root collation size:   %6ld\n", (long)totalSize);
 
@@ -1143,8 +1146,6 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     }
 
     indexes[CollationData::IX_JAMO_CES_START] = cd->jamoCEs - cd->ces;
-    indexes[CollationData::IX_ZERO_PRIMARY] = cd->zeroPrimary;
-    indexes[CollationData::IX_OPTIONS] = cd->options;
 
     udata_writeBlock(pData, indexes, sizeof(indexes));
     udata_writeBlock(pData, trieBytes, trieSize);
@@ -1229,6 +1230,7 @@ makeBMPFoldedBitSet(const UnicodeSet &set, uint8_t index[0x800], uint32_t bits[2
 
 // TODO: Make preparseucd.py write fcd_data.h mapping code point ranges to FCD16 values,
 // use that rather than properties APIs.
+// Then consider moving related logic for the unsafeBwdSet back from the loader into this builder.
 
 /**
  * Builds data for the FCD check fast path.

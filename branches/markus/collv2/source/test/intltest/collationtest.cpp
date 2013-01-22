@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationtest.cpp
@@ -29,6 +29,7 @@
 #include "collationdata.h"
 #include "collationdatabuilder.h"
 #include "collationiterator.h"
+#include "collationroot.h"
 #include "cstring.h"
 #include "intltest.h"
 #include "normalizer2impl.h"
@@ -45,11 +46,6 @@
 
 // TODO: Move to ucbuf.h
 U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
-
-// TODO
-// TODO extern const CollationBaseData *getCollationBaseData(UErrorCode &errorCode);
-U_CAPI void U_EXPORT2 ucol_setCollationBaseData(const CollationBaseData *base);
-static const CollationBaseData *getCollationBaseData(UErrorCode & /*errorCode*/) { return NULL; }  // TODO
 
 class CodePointIterator;
 
@@ -107,6 +103,7 @@ private:
     void parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &errorCode);
     void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
     void replaceCollator(IcuTestErrorCode &errorCode);
+    void setRootCollator(IcuTestErrorCode &errorCode);
 
     UBool needsNormalization(const UnicodeString &s, UErrorCode &errorCode) const;
 
@@ -138,7 +135,7 @@ private:
     int32_t fileLineNumber;
     UnicodeString fileTestName;
     CollationBaseDataBuilder *baseBuilder;
-    CollationBaseData *baseData;
+    CollationData *baseData;
     const CollationData *collData;
     Collator *coll;
 };
@@ -166,7 +163,7 @@ void CollationTest::TestMinMax() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
         return;
     }
@@ -199,8 +196,8 @@ void CollationTest::TestMinMax() {
 void CollationTest::TestImplicits() {
     IcuTestErrorCode errorCode(*this, "TestImplicits");
 
-    const CollationBaseData *cd = getCollationBaseData(errorCode);
-    if(errorCode.logIfFailureAndReset("getCollationBaseData()")) {
+    const CollationData *cd = CollationRoot::getBaseData(errorCode);
+    if(errorCode.logIfFailureAndReset("CollationRoot::getBaseData()")) {
         return;
     }
 
@@ -263,7 +260,7 @@ void CollationTest::TestNulTerminated() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
         return;
     }
@@ -290,8 +287,7 @@ void CollationTest::TestIllegalUTF8() {
     IcuTestErrorCode errorCode(*this, "TestIllegalUTF8");
 
     // Set the root collator.
-    collData = getCollationBaseData(errorCode);
-    replaceCollator(errorCode);
+    setRootCollator(errorCode);
     if(errorCode.logIfFailureAndReset("setting the root collator")) {
         return;
     }
@@ -392,7 +388,7 @@ void CollationTest::TestFCD() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationBaseData> cd(builder.buildBaseData(errorCode));
+    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
         return;
     }
@@ -863,6 +859,18 @@ void CollationTest::replaceCollator(IcuTestErrorCode &errorCode) {
         return;
     }
     delete coll;
+    coll = newColl;
+}
+
+void CollationTest::setRootCollator(IcuTestErrorCode &errorCode) {
+    if(errorCode.isFailure()) { return; }
+    Collator *newColl = CollationRoot::createCollator(errorCode);
+    if(errorCode.isFailure()) {
+        errln("unable to create a root collator");
+        return;
+    }
+    delete coll;
+    collData = NULL;
     coll = newColl;
 }
 
@@ -1369,8 +1377,7 @@ void CollationTest::TestDataDriven() {
             logln(fileLine);
             fileLine.remove();
         } else if(fileLine == UNICODE_STRING("@ root", 6)) {
-            collData = getCollationBaseData(errorCode);
-            replaceCollator(errorCode);
+            setRootCollator(errorCode);
             fileLine.remove();
         } else if(fileLine == UNICODE_STRING("@ rawbase", 9)) {
             buildBase(f.getAlias(), errorCode);
@@ -1388,31 +1395,3 @@ void CollationTest::TestDataDriven() {
         }
     }
 }
-
-#if 0  // TODO: move to the i18n library
-
-extern const CollationBaseData *
-getCollationBaseData(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return NULL; }
-    static CollationBaseDataBuilder *gBaseDataBuilder = NULL;
-    static CollationBaseData *gBaseData = NULL;
-    {
-        Mutex lock;
-        if(gBaseData != NULL) { return gBaseData; }
-    }
-    buildFCDData(errorCode);
-    LocalPointer<CollationBaseDataBuilder> builder(new CollationBaseDataBuilder(errorCode));
-    LocalPointer<CollationBaseData> baseData(makeBaseDataFromFractionalUCA(*builder, errorCode));
-    baseData->variableTop = gVariableTop;
-    if(U_SUCCESS(errorCode)) {
-        Mutex lock;
-        if(gBaseData == NULL) {
-            gBaseDataBuilder = builder.orphan();
-            gBaseData = baseData.orphan();
-            ucol_setCollationBaseData(gBaseData);
-        }
-    }
-    return gBaseData;
-}
-
-#endif

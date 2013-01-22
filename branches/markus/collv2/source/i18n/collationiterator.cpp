@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2010-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationiterator.cpp
@@ -240,7 +240,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             break;
 #endif
         case Collation::DIGIT_TAG:
-            if(data->options & CollationData::CODAN) {
+            if(data->options & CollationData::NUMERIC) {
                 // Collect digits.
                 CharString digits;
                 for(;;) {
@@ -261,11 +261,11 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                     }
                     if(numCpFwd > 0) { --numCpFwd; }
                 }
-                setCodanCEs(digits.data(), digits.length(), errorCode);
+                setNumericCEs(digits.data(), digits.length(), errorCode);
                 cesIndex = (cesMaxIndex > 0) ? 1 : -1;
                 return ces[0];
             } else {
-                // Fetch the non-CODAN CE32 and continue.
+                // Fetch the non-numeric-collation CE32 and continue.
                 ce32 = d->ce32s[(ce32 >> 4) & 0xffff];
                 break;
             }
@@ -658,7 +658,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
 }
 
 void
-CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &errorCode) {
+CollationIterator::setNumericCEs(const char *digits, int32_t length, UErrorCode &errorCode) {
     cesMaxIndex = 0;
     if(U_FAILURE(errorCode)) {
         forwardCEs[0] = 0;
@@ -672,16 +672,16 @@ CollationIterator::setCodanCEs(const char *digits, int32_t length, UErrorCode &e
         // Write a sequence of CEs for at most 254 digits at a time.
         int32_t segmentLength = length - pos;
         if(segmentLength > 254) { segmentLength = 254; }
-        setCodanSegmentCEs(digits + pos, segmentLength, errorCode);
+        setNumericSegmentCEs(digits + pos, segmentLength, errorCode);
         pos += segmentLength;
     } while(U_SUCCESS(errorCode) && pos < length);
 }
 
 void
-CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode) {
+CollationIterator::setNumericSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode) {
     U_ASSERT(1 <= length && length <= 254);
     U_ASSERT(length == 1 || digits[0] != 0);
-    uint32_t zeroPrimary = data->zeroPrimary;
+    uint32_t numericPrimary = data->numericPrimary;
     // Note: We use primary byte values 2..255: digits are not compressible.
     if(length <= 7) {
         // Very dense encoding for small numbers.
@@ -698,7 +698,7 @@ CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UError
         int32_t numBytes = 74;
         if(value < numBytes) {
             // Two-byte primary for 0..73, good for day & month numbers etc.
-            uint32_t primary = zeroPrimary | ((firstByte + value) << 16);
+            uint32_t primary = numericPrimary | ((firstByte + value) << 16);
             forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
             return;
         }
@@ -707,7 +707,7 @@ CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UError
         numBytes = 40;
         if(value < numBytes * 254) {
             // Three-byte primary for 74..10233=74+40*254-1, good for year numbers and more.
-            uint32_t primary = zeroPrimary |
+            uint32_t primary = numericPrimary |
                 ((firstByte + value / 254) << 16) | ((2 + value % 254) << 8);
             forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
             return;
@@ -717,7 +717,7 @@ CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UError
         numBytes = 16;
         if(value < numBytes * 254 * 254) {
             // Four-byte primary for 10234..1042489=10234+16*254*254-1.
-            uint32_t primary = zeroPrimary | (2 + value % 254);
+            uint32_t primary = numericPrimary | (2 + value % 254);
             value /= 254;
             primary |= (2 + value % 254) << 8;
             value /= 254;
@@ -736,7 +736,7 @@ CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UError
 
     // Set the exponent. 4 pairs->132, 5 pairs->133, ..., 127 pairs->255.
     int32_t numPairs = (length + 1) / 2;
-    uint32_t primary = zeroPrimary | ((132 - 4 + numPairs) << 16);
+    uint32_t primary = numericPrimary | ((132 - 4 + numPairs) << 16);
     // Find the length without trailing 00 pairs.
     while(digits[length - 1] == 0 && digits[length - 2] == 0) {
         length -= 2;
@@ -763,7 +763,7 @@ CollationIterator::setCodanSegmentCEs(const char *digits, int32_t length, UError
             primary |= pair;
             cesLength = forwardCEs.append(cesLength,
                 ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE, errorCode);
-            primary = zeroPrimary;
+            primary = numericPrimary;
             shift = 16;
         } else {
             primary |= pair << shift;
@@ -898,7 +898,7 @@ CollationIterator::previousCEFromSpecialCE32(
             return 0;
 #endif
         case Collation::DIGIT_TAG:
-            if(data->options & CollationData::CODAN) {
+            if(data->options & CollationData::NUMERIC) {
                 // Collect digits.
                 CharString digits;
                 for(;;) {
@@ -925,11 +925,11 @@ CollationIterator::previousCEFromSpecialCE32(
                     *p++ = *q;
                     *q-- = digit;
                 }
-                setCodanCEs(digits.data(), digits.length(), errorCode);
+                setNumericCEs(digits.data(), digits.length(), errorCode);
                 cesIndex = cesMaxIndex;
                 return ces[cesMaxIndex];
             } else {
-                // Fetch the non-CODAN CE32 and continue.
+                // Fetch the non-numeric-collation CE32 and continue.
                 ce32 = d->ce32s[(ce32 >> 4) & 0xffff];
                 break;
             }

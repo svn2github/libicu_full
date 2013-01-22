@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationdatabuilder.cpp
@@ -235,7 +235,7 @@ CollationDataBuilder::getSingleCE(UChar32 c, UErrorCode &errorCode) const {
             errorCode = U_UNSUPPORTED_ERROR;
             return 0;
         case Collation::DIGIT_TAG:
-            // Fetch the non-CODAN CE32 and continue.
+            // Fetch the non-numeric-collation CE32 and continue.
             ce32 = ce32s.elementAti((ce32 >> 4) & 0xffff);
             break;
         case Collation::RESERVED_TAG_11:
@@ -641,7 +641,7 @@ CollationDataBuilder::buildMappings(CollationData &cd, UErrorCode &errorCode) {
     } else {
         cd.jamoCEs = base->jamoCEs;
     }
-    // TODO: set cd.zeroPrimary
+    // TODO: set cd.numericPrimary
     cd.unsafeBackwardSet = &unsafeBackwardSet;
 }
 
