@@ -15,6 +15,7 @@
 #include "scriptset.h"
 #include "uvector.h"
 
+#include "stdio.h"    // TODO: debugging, remove.
 
 U_NAMESPACE_BEGIN
 
@@ -153,7 +154,7 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
             if (hashEl == NULL) {
                 break;
             }
-            ScriptSet *next = static_cast<ScriptSet *>(hashEl->value.pointer);
+            ScriptSet *next = static_cast<ScriptSet *>(hashEl->key.pointer);
             // final BitSet next = it.next();
             if (fRequiredScripts->intersects(*next)) {
                 uhash_removeElement(fScriptSetSet, hashEl);
@@ -165,7 +166,7 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
                     if (otherHashEl == NULL) {
                         break;
                     }
-                    ScriptSet *other = static_cast<ScriptSet *>(otherHashEl->value.pointer);
+                    ScriptSet *other = static_cast<ScriptSet *>(otherHashEl->key.pointer);
                     if (next != other && next->contains(*other)) {
                         uhash_removeElement(fScriptSetSet, hashEl);
                         break;
@@ -246,7 +247,7 @@ UBool IdentifierInfo::containsWithAlternates(const ScriptSet &container, const S
         if (hashEl == NULL) {
             break;
         }
-        ScriptSet *alternatives = static_cast<ScriptSet *>(hashEl->value.pointer);
+        ScriptSet *alternatives = static_cast<ScriptSet *>(hashEl->key.pointer);
         if (!container.intersects(*alternatives)) {
             return false;
         }

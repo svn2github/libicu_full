@@ -193,10 +193,12 @@ int32_t ScriptSet::nextSetBit(int32_t fromIndex) const {
 }
 
 UnicodeString &ScriptSet::displayScripts(UnicodeString &dest) const {
+    UBool firstTime = TRUE;
     for (int32_t i = nextSetBit(0); i >= 0; i = nextSetBit(i + 1)) {
-        if (dest.length() != 0) {
+        if (!firstTime) {
             dest.append(0x20);
         }
+        firstTime = FALSE;
         const char *scriptName = uscript_getShortName((UScriptCode(i)));
         dest.append(UnicodeString(scriptName, -1, US_INV));
     }
@@ -214,7 +216,9 @@ ScriptSet &ScriptSet::parseScripts(const UnicodeString &scriptString, UErrorCode
         i = scriptString.moveIndex32(i, 1);
         if (!u_isUWhiteSpace(c)) {
             oneScriptName.append(c);
-            continue;
+            if (i < scriptString.length()) {
+                continue;
+            }
         }
         if (oneScriptName.length() > 0) {
             char buf[40];

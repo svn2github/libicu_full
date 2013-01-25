@@ -81,7 +81,7 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * Set an identifier to analyze. Afterwards, call methods like getScripts()
      * 
      * @param identifier the identifier to analyze
-     * @param status Errorcode, set if errors occur. 
+     * @param status Errorcode, set if errors occur.
      * @return this
      * @internal
      */
@@ -89,7 +89,8 @@ class U_I18N_API IdentifierInfo : public UMemory {
 
 
     /**
-     * Get the identifier that was analyzed.
+     * Get the identifier that was analyzed. The returned string is owned by the ICU library,
+     * and must not be deleted by the caller.
      * 
      * @return the identifier that was analyzed.
      * @internal
