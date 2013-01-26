@@ -255,7 +255,7 @@ UBool IdentifierInfo::containsWithAlternates(const ScriptSet &container, const S
     return true;
 }
 
-UnicodeString &IdentifierInfo::displayAlternates(UnicodeString &dest, UHashtable *alternates, UErrorCode &status) {
+UnicodeString &IdentifierInfo::displayAlternates(UnicodeString &dest, const UHashtable *alternates, UErrorCode &status) {
     UVector sorted(status);
     if (U_FAILURE(status)) {
         return dest;

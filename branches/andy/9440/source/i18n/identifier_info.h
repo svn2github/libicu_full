@@ -23,6 +23,8 @@ U_NAMESPACE_BEGIN
 
 class ScriptSet;
 
+// TODO(andy): review consistency of reference vs pointer arguments to the funcions.
+
 /**
  * This class analyzes a possible identifier for script and identifier status. Use it by calling setIdentifierProfile
  * then setIdentifier. Available methods include:
@@ -153,7 +155,7 @@ class U_I18N_API IdentifierInfo : public UMemory {
      * @return display form
      * @internal
      */
-    static UnicodeString &displayAlternates(UnicodeString &dest, UHashtable *alternates, UErrorCode &status);
+    static UnicodeString &displayAlternates(UnicodeString &dest, const UHashtable *alternates, UErrorCode &status);
 
   private:
 
