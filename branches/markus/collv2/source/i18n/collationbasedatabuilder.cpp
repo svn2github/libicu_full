@@ -32,7 +32,7 @@ U_NAMESPACE_BEGIN
 
 CollationBaseDataBuilder::CollationBaseDataBuilder(UErrorCode &errorCode)
         : CollationDataBuilder(errorCode),
-          scripts(errorCode) {
+          scripts() {
 }
 
 CollationBaseDataBuilder::~CollationBaseDataBuilder() {

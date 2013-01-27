@@ -306,9 +306,11 @@ CollationData::makeReorderTable(const int32_t *reorder, int32_t length,
 }
 
 namespace {
-    int32_t getIndex(const int32_t *indexes, int32_t length, int32_t i) {
-        return (i < length) ? indexes[i] : -1;
-    }
+
+int32_t getIndex(const int32_t *indexes, int32_t length, int32_t i) {
+    return (i < length) ? indexes[i] : 0;
+}
+
 };  // namespace
 
 void
@@ -317,7 +319,7 @@ CollationData::setData(const CollationData *baseData, const uint8_t *inBytes,
     if(U_FAILURE(errorCode)) { return; }
     const int32_t *inIndexes = reinterpret_cast<const int32_t *>(inBytes);
     int32_t indexesLength = inIndexes[IX_INDEXES_LENGTH];
-    if(indexesLength < 4) {
+    if(indexesLength < 2) {
         errorCode = U_INVALID_FORMAT_ERROR;  // Not enough indexes.
         return;
     }
@@ -333,6 +335,29 @@ CollationData::setData(const CollationData *baseData, const uint8_t *inBytes,
     int32_t index;  // one of the indexes[] slots
     int32_t offset;  // byte offset for the index part
     int32_t length;  // number of bytes in the index part
+
+    index = IX_REORDER_CODES_OFFSET;
+    offset = getIndex(inIndexes, indexesLength, index);
+    length = getIndex(inIndexes, indexesLength, index + 1) - offset;
+    if(length >= 4) {
+        reorderCodes = reinterpret_cast<const int32_t *>(inBytes + offset);
+        reorderCodesLength = length / 4;
+    } else {
+        reorderCodes = NULL;
+        reorderCodesLength = 0;
+    }
+
+    // There should be a reorder table only if there are reorder codes.
+    // However, when there are reorder codes the reorder table may be omitted to reduce
+    // the data size, and then the caller needs to allocate and build the reorder table.
+    index = IX_REORDER_TABLE_OFFSET;
+    offset = getIndex(inIndexes, indexesLength, index);
+    length = getIndex(inIndexes, indexesLength, index + 1) - offset;
+    if(length >= 256) {
+        reorderTable = inBytes + offset;
+    } else {
+        reorderTable = NULL;
+    }
 
     index = IX_TRIE_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
@@ -352,7 +377,7 @@ CollationData::setData(const CollationData *baseData, const uint8_t *inBytes,
     index = IX_CES_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
+    if(length >= 8) {
         ces = reinterpret_cast<const int64_t *>(inBytes + offset);
     } else {
         ces = NULL;
@@ -375,27 +400,16 @@ CollationData::setData(const CollationData *baseData, const uint8_t *inBytes,
     index = IX_CE32S_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
+    if(length >= 4) {
         ce32s = reinterpret_cast<const uint32_t *>(inBytes + offset);
     } else {
         ce32s = NULL;
     }
 
-    index = IX_REORDER_CODES_OFFSET;
-    offset = getIndex(inIndexes, indexesLength, index);
-    length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
-        reorderCodes = reinterpret_cast<const int32_t *>(inBytes + offset);
-        reorderCodesLength = length / 4;
-    } else {
-        reorderCodes = NULL;
-        reorderCodesLength = 0;
-    }
-
     index = IX_CONTEXTS_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
+    if(length >= 2) {
         contexts = reinterpret_cast<const UChar *>(inBytes + offset);
     } else {
         contexts = NULL;
@@ -404,7 +418,7 @@ CollationData::setData(const CollationData *baseData, const uint8_t *inBytes,
     index = IX_UNSAFE_BWD_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
+    if(length >= 2) {
         if(base == NULL) {
             // Create the unsafe-backward set for the root collator.
             // Include all non-zero combining marks and trail surrogates.
@@ -459,7 +473,7 @@ CollationData::setData(const CollationData *baseData, const uint8_t *inBytes,
     index = IX_SCRIPTS_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
+    if(length >= 2) {
         scripts = reinterpret_cast<const uint16_t *>(inBytes + offset);
         scriptsLength = length / 2;
     } else if(base != NULL) {
@@ -473,22 +487,13 @@ CollationData::setData(const CollationData *baseData, const uint8_t *inBytes,
     index = IX_COMPRESSIBLE_BYTES_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
+    if(length >= 256) {
         compressibleBytes = reinterpret_cast<const UBool *>(inBytes + offset);
     } else if(base != NULL) {
         compressibleBytes = base->compressibleBytes;
     } else {
         errorCode = U_INVALID_FORMAT_ERROR;  // No compressibleBytes[].
         return;
-    }
-
-    index = IX_REORDER_TABLE_OFFSET;
-    offset = getIndex(inIndexes, indexesLength, index);
-    length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length > 0) {
-        reorderTable = inBytes + offset;
-    } else {
-        reorderTable = NULL;
     }
 
     // Set variableTop from options & ALTERNATE_MASK + MAX_VARIABLE_MASK and scripts data.

@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2012 International Business Machines
+﻿# Copyright (c) 2012-2013 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 # This file should be in UTF-8 with a signature byte sequence ("BOM").
@@ -181,14 +181,8 @@ a\u0331\u0331\u0331\u030a\u0301\u0358\u0358\u0358  5a14.. .d01e. .d01e. .d01e. .
 # a+dot below & stem+augmentation dot, followed by contiguous d+z+acute
 a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 
-** test: rudimentary, hardcoded CLDR root collation test
-@ root
-* CEs
-a       27..
-ä       27.. .9d.
-\u0430  5c0a..
-
 ** test: some simple string comparisons
+@ root
 * compare
 # first string compares against ""
 = \u0000

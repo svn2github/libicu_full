@@ -49,7 +49,8 @@ CollationRoot::load(UErrorCode &errorCode) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    cd->memory = udata_openChoice(NULL, "icu", "ucadata2",
+    cd->memory = udata_openChoice(U_ICUDATA_NAME U_TREE_SEPARATOR_STRING "coll",
+                                  "icu", "ucadata2",
                                   CollationData::isAcceptable, NULL, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     const uint8_t *inBytes = reinterpret_cast<const uint8_t *>(udata_getMemory(cd->memory));

@@ -220,10 +220,12 @@ struct U_I18N_API CollationData : public UMemory {
     enum {
         /**
          * Number of int32_t indexes.
-         * Must be a multiple of 2 for padding,
-         * should be a multiple of 4 for optimal alignment.
+         *
+         * Can be 2 if there are only options.
+         * Can be 7 or 8 if there are only options and a script reordering.
+         * The loader treats any index>=indexes[IX_INDEXES_LENGTH] as 0.
          */
-        IX_INDEXES_LENGTH,
+        IX_INDEXES_LENGTH,  // 0
         /**
          * Bits 31..24: numericPrimary, for numeric collation
          *      23.. 0: options bit set
@@ -232,46 +234,51 @@ struct U_I18N_API CollationData : public UMemory {
         IX_RESERVED2,
         IX_RESERVED3,
 
+        /** Array offset to Jamo CEs in ces[], or <0 if none. */
+        IX_JAMO_CES_START,  // 4
+
         // Byte offsets from the start of the data, after the generic header.
         // The indexes[] are at byte offset 0, other data follows.
+        // Each data item is aligned properly.
         // The data items should be in descending order of unit size,
         // to minimize the need for padding.
+        // Each item's byte length is given by the difference between its offset and
+        // the next index/offset value.
+        /** Byte offset to int32_t reorderCodes[]. */
+        IX_REORDER_CODES_OFFSET,
+        /**
+         * Byte offset to uint8_t reorderTable[].
+         * Empty table if <256 bytes (padding only).
+         * Otherwise 256 bytes or more (with padding).
+         */
+        IX_REORDER_TABLE_OFFSET,
         /** Byte offset to the collation trie. Its length is a multiple of 8 bytes. */
         IX_TRIE_OFFSET,
-        IX_RESERVED5_OFFSET,
-        /** Byte offset to int64_t ces[] */
+
+        IX_RESERVED8_OFFSET,  // 8
+        /** Byte offset to int64_t ces[]. */
         IX_CES_OFFSET,
-        IX_RESERVED7_OFFSET,
-
-        /** Byte offset to uint32_t ce32s[] */
+        IX_RESERVED10_OFFSET,
+        /** Byte offset to uint32_t ce32s[]. */
         IX_CE32S_OFFSET,
-        IX_RESERVED9_OFFSET,
-        /** Byte offset to int32_t reorderCodes[] */
-        IX_REORDER_CODES_OFFSET,
-        IX_RESERVED11_OFFSET,
 
-        /** Byte offset to UChar *contexts[] */
+        IX_RESERVED12_OFFSET,  // 12
+        /** Byte offset to UChar *contexts[]. */
         IX_CONTEXTS_OFFSET,
         /** Byte offset to uint16_t [] with serialized unsafeBackwardSet. */
         IX_UNSAFE_BWD_OFFSET,
-        /** Byte offset to uint16_t scripts[] */
-        IX_SCRIPTS_OFFSET,
         IX_RESERVED15_OFFSET,
 
-        /** Byte offset to UBool compressibleBytes[] */
+        /** Byte offset to uint16_t scripts[]. */
+        IX_SCRIPTS_OFFSET,  // 16
+        /**
+         * Byte offset to UBool compressibleBytes[].
+         * Empty table if <256 bytes (padding only).
+         * Otherwise 256 bytes or more (with padding).
+         */
         IX_COMPRESSIBLE_BYTES_OFFSET,
-        /** Byte offset to uint8_t reorderTable[] */
-        IX_REORDER_TABLE_OFFSET,
         IX_RESERVED18_OFFSET,
-        IX_TOTAL_SIZE,
-
-        /** Array offset to Jamo CEs in ces[], or <0 if none. */
-        IX_JAMO_CES_START,
-        IX_RESERVED21,
-        IX_RESERVED22,
-        IX_RESERVED23,
-
-        IX_COUNT
+        IX_TOTAL_SIZE
     };
 
     void setData(const CollationData *baseData, const uint8_t *inBytes, UErrorCode &errorCode);

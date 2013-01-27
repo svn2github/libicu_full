@@ -1061,8 +1061,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     }
     cd->variableTop = gVariableTop;  // TODO
 
-    int32_t indexes[CollationData::IX_COUNT]={
-        0, 0, 0, 0,
+    int32_t indexes[CollationData::IX_TOTAL_SIZE + 1]={
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
@@ -1070,12 +1069,18 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         0, 0, 0, 0
     };
 
-    indexes[CollationData::IX_INDEXES_LENGTH] = CollationData::IX_COUNT;
+    // For the root collator, we write an even number of indexes
+    // so that we start with an 8-aligned offset.
+    indexes[CollationData::IX_INDEXES_LENGTH] = CollationData::IX_TOTAL_SIZE + 1;
     indexes[CollationData::IX_OPTIONS] = cd->numericPrimary | cd->options;
+
+    indexes[CollationData::IX_JAMO_CES_START] = cd->jamoCEs - cd->ces;
 
     printf("*** CLDR root collation part sizes ***\n");
     int32_t totalSize = (int32_t)sizeof(indexes);
 
+    indexes[CollationData::IX_REORDER_CODES_OFFSET] = totalSize;
+    indexes[CollationData::IX_REORDER_TABLE_OFFSET] = totalSize;
     indexes[CollationData::IX_TRIE_OFFSET] = totalSize;
     int32_t trieSize = builder.serializeTrie(trieBytes, LENGTHOF(trieBytes), errorCode);
     if(U_FAILURE(errorCode)) {
@@ -1091,21 +1096,19 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     int32_t cePadding = (totalSize & 7) == 0 ? 0 : 4;
     totalSize += cePadding;
 
-    indexes[CollationData::IX_RESERVED5_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED8_OFFSET] = totalSize;
     indexes[CollationData::IX_CES_OFFSET] = totalSize;
     int32_t length = builder.lengthOfCEs();
     printf("  CEs:              %6ld *8 = %6ld\n", (long)length, (long)length * 8);
     totalSize += length * 8;
 
-    indexes[CollationData::IX_RESERVED7_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED10_OFFSET] = totalSize;
     indexes[CollationData::IX_CE32S_OFFSET] = totalSize;
     length = builder.lengthOfCE32s();
     printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
     totalSize += length * 4;
 
-    indexes[CollationData::IX_RESERVED9_OFFSET] = totalSize;
-    indexes[CollationData::IX_REORDER_CODES_OFFSET] = totalSize;
-    indexes[CollationData::IX_RESERVED11_OFFSET] = totalSize;
+    indexes[CollationData::IX_RESERVED12_OFFSET] = totalSize;
     indexes[CollationData::IX_CONTEXTS_OFFSET] = totalSize;
     length = builder.lengthOfContexts();
     printf("  contexts:         %6ld *2 = %6ld\n", (long)length, (long)length * 2);
@@ -1122,17 +1125,16 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)unsafeBwdSetLength, (long)unsafeBwdSetLength * 2);
     totalSize += unsafeBwdSetLength * 2;
 
+    indexes[CollationData::IX_RESERVED15_OFFSET] = totalSize;
     indexes[CollationData::IX_SCRIPTS_OFFSET] = totalSize;
     length = cd->scriptsLength;
     printf("  scripts data:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
     totalSize += length * 2;
 
-    indexes[CollationData::IX_RESERVED15_OFFSET] = totalSize;
     indexes[CollationData::IX_COMPRESSIBLE_BYTES_OFFSET] = totalSize;
     printf("  compressibleBytes:               256\n");
     totalSize += 256;
 
-    indexes[CollationData::IX_REORDER_TABLE_OFFSET] = totalSize;
     indexes[CollationData::IX_RESERVED18_OFFSET] = totalSize;
     indexes[CollationData::IX_TOTAL_SIZE] = totalSize;
     printf("*** CLDR root collation size:   %6ld\n", (long)totalSize);
@@ -1144,8 +1146,6 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                 path, u_errorName(errorCode));
         return;
     }
-
-    indexes[CollationData::IX_JAMO_CES_START] = cd->jamoCEs - cd->ces;
 
     udata_writeBlock(pData, indexes, sizeof(indexes));
     udata_writeBlock(pData, trieBytes, trieSize);
