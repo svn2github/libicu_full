@@ -148,40 +148,35 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
         fCommonAmongAlternates->resetAll();
     } else {
         fCommonAmongAlternates->setAll();
-        int32_t it = -1;
-        for (;;) {
-            const UHashElement *hashEl = uhash_nextElement(fScriptSetSet, &it);
-            if (hashEl == NULL) {
+        for (int32_t it = -1;;) {
+            const UHashElement *nextHashEl = uhash_nextElement(fScriptSetSet, &it);
+            if (nextHashEl == NULL) {
                 break;
             }
-            ScriptSet *next = static_cast<ScriptSet *>(hashEl->key.pointer);
-            // final BitSet next = it.next();
+            ScriptSet *next = static_cast<ScriptSet *>(nextHashEl->key.pointer);
+            // [Kana], [Kana Hira] => [Kana]
             if (fRequiredScripts->intersects(*next)) {
-                uhash_removeElement(fScriptSetSet, hashEl);
+                uhash_removeElement(fScriptSetSet, nextHashEl);
             } else {
                 // [[Arab Syrc Thaa]; [Arab Syrc]] => [[Arab Syrc]]
-                int32_t otherIt = -1;
-                for (;;) {
+                fCommonAmongAlternates->intersect(*next);
+                for (int32_t otherIt = -1;;) {
                     const UHashElement *otherHashEl = uhash_nextElement(fScriptSetSet, &otherIt);
                     if (otherHashEl == NULL) {
                         break;
                     }
                     ScriptSet *other = static_cast<ScriptSet *>(otherHashEl->key.pointer);
                     if (next != other && next->contains(*other)) {
-                        uhash_removeElement(fScriptSetSet, hashEl);
+                        uhash_removeElement(fScriptSetSet, nextHashEl);
                         break;
                     }
                 }
-                fCommonAmongAlternates->intersect(*next);
             }
         }
         if (uhash_count(fScriptSetSet) == 0) {
             fCommonAmongAlternates->resetAll();
         }
     }
-    // Note that the above code doesn't minimize alternatives. That is, it does not collapse
-    // [[Arab Syrc Thaa]; [Arab Syrc]] to [[Arab Syrc]]
-    // That would be a possible optimization, but is probably not worth the extra processing
     return *this;
 }
 

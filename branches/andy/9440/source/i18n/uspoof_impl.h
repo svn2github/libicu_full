@@ -89,13 +89,11 @@ public:
      * Ignore characters with script=Common and scirpt=Inherited.
      * @param    text     The UChar text to be scanned
      * @param    length   The length of the input text, -1 for nul termintated.
-     * @param    pos      An out parameter, set to the first input postion at which
-     *                    a second script was encountered, ignoring Common and Inherited.
      * @param    status   For errors.
      * @return            the number of (non-common,inherited) scripts encountered,
      *                    clipped to a max of two.
      */
-    int32_t scriptScan(const UChar *text, int32_t length, int32_t &pos, UErrorCode &status) const;
+    int32_t scriptScan(const UChar *text, int32_t length, UErrorCode &status) const;
 
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;

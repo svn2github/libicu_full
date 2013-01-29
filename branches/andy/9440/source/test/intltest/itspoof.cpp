@@ -525,6 +525,10 @@ void IntlTestSpoof::testIdentifierInfo() {
         UnicodeString alternatesStr;
         IdentifierInfo::displayAlternates(alternatesStr, idInfo.getAlternates(), status);
         TEST_ASSERT_MSG(UnicodeString(test.fAlternates) == alternatesStr, testNumStr);
+
+        ScriptSet commonAlternates;
+        commonAlternates.parseScripts(UnicodeString(test.fCommonAlternates), status);
+        TEST_ASSERT_MSG(commonAlternates == *idInfo.getCommonAmongAlternates(), testNumStr);
     }
 
 }

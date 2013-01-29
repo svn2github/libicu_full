@@ -207,7 +207,6 @@ uspoof_check(const USpoofChecker *sc,
     }
 
     int32_t result = 0;
-    int32_t failPos = 0x7fffffff;   // TODO: do we have a #define for max int32?
 
     // A count of the number of non-Common or inherited scripts.
     // Needed for both the SINGLE_SCRIPT and the WHOLE/MIXED_SCIRPT_CONFUSABLE tests.
@@ -216,7 +215,7 @@ uspoof_check(const USpoofChecker *sc,
     int32_t scriptCount = -1;
 
     if ((This->fChecks) & USPOOF_SINGLE_SCRIPT) {
-        scriptCount = This->scriptScan(text, length, failPos, *status);
+        scriptCount = This->scriptScan(text, length, *status);
         // printf("scriptCount (clipped to 2) = %d\n", scriptCount);
         if ( scriptCount >= 2) {
             // Note: scriptCount == 2 covers all cases of the number of scripts >= 2
@@ -231,9 +230,6 @@ uspoof_check(const USpoofChecker *sc,
             U16_NEXT(text, i, length, c);
             if (!This->fAllowedCharsSet->contains(c)) {
                 result |= USPOOF_CHAR_LIMIT;
-                if (i < failPos) {
-                    failPos = i;
-                }
                 break;
             }
         }
@@ -278,12 +274,6 @@ uspoof_check(const USpoofChecker *sc,
                     // report the error, and stop scanning.
                     // No need to find more than the first failure.
                     result |= USPOOF_INVISIBLE;
-                    failPos = i;
-                    // TODO: Bug 8655: failPos is the position in the NFD buffer, but what we want
-                    //       to give back to our caller is a position in the original input string.
-                    if (failPos > length) {
-                        failPos = length;
-                    }
                     break;
                 }
                 marksSeenSoFar.add(c);
@@ -327,8 +317,8 @@ uspoof_check(const USpoofChecker *sc,
             }
         }
     }
-    if (position != NULL && failPos != 0x7fffffff) {
-        *position = failPos;
+    if ((position != NULL) && ((result & USPOOF_ALL_CHECKS) != 0)) {
+        *position = 0;
     }
     return result;
 }
@@ -361,23 +351,9 @@ uspoof_checkUTF8(const USpoofChecker *sc,
         u_strFromUTF8(text16, len16+1, NULL, text, length, status);
     }
 
-    int32_t position16 = -1;
-    int32_t result = uspoof_check(sc, text16, len16, &position16, status);
+    int32_t result = uspoof_check(sc, text16, len16, position, status);
     if (U_FAILURE(*status)) {
         return 0;
-    }
-
-    if (position16 > 0) {
-        // Translate a UTF-16 based error position back to a UTF-8 offset.
-        // u_strToUTF8() in preflight mode is an easy way to do it.
-        U_ASSERT(position16 <= len16);
-        u_strToUTF8(NULL, 0, position, text16, position16, status);
-        if (position != NULL && *position > 0) {
-            // position is the required buffer length from u_strToUTF8, which includes
-            // space for a terminating NULL, which we don't want, hence the -1.
-            *position -= 1;
-        }
-        *status = U_ZERO_ERROR;   // u_strToUTF8, above sets BUFFER_OVERFLOW_ERROR.
     }
 
     if (text16 != stackBuf) {

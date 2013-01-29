@@ -373,7 +373,7 @@ void SpoofImpl::addScriptChars(const char *locale, UnicodeSet *allowedChars, UEr
 
 
 int32_t SpoofImpl::scriptScan
-        (const UChar *text, int32_t length, int32_t &pos, UErrorCode &status) const {
+        (const UChar *text, int32_t length, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return 0;
     }
@@ -405,9 +405,6 @@ int32_t SpoofImpl::scriptScan
            scriptCount++;
            lastScript = sc;
         }
-    }
-    if (scriptCount == 2) {
-        pos = inputIdx;
     }
     return scriptCount;
 }
