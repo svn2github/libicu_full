@@ -450,7 +450,7 @@ uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status);
   * @draft ICU 51
   */
 U_DRAFT void U_EXPORT2
-uspoof_setRestrictionLevel(USpoofChecker *sc, int32_t restrictionLevel);
+uspoof_setRestrictionLevel(USpoofChecker *sc, URestrictionLevel restrictionLevel);
 
 
 /**
@@ -460,8 +460,8 @@ uspoof_setRestrictionLevel(USpoofChecker *sc, int32_t restrictionLevel);
   * @see URestrictionLevel
   * @draft ICU 51
   */
-U_DRAFT int32_t U_EXPORT2
-uspoof_getRestrictionLevel();
+U_DRAFT URestrictionLevel U_EXPORT2
+uspoof_getRestrictionLevel(const USpoofChecker *sc);
 
 /**
  * Limit characters that are acceptable in identifiers being checked to those 

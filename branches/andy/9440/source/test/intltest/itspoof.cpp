@@ -21,7 +21,7 @@
 #include "unicode/uspoof.h"
 
 #include "cstring.h"
-#include "identifier_info.cpp"
+#include "identifier_info.h"
 #include "scriptset.h"
 #include "uhash.h"
 
@@ -44,6 +44,8 @@
 #define TEST_ASSERT_NE(a, b) { if ((a) == (b)) { \
     errln("Test Failure at file %s, line %d: \"%s\" (%d) == \"%s\" (%d) \n", \
              __FILE__, __LINE__, #a, (a), #b, (b)); }}
+
+#define LENGTHOF(array) ((int32_t)(sizeof(array)/sizeof((array)[0])))
 
 /*
  *   TEST_SETUP and TEST_TEARDOWN
@@ -119,6 +121,20 @@ void IntlTestSpoof::runIndexedTest( int32_t index, UBool exec, const char* &name
                 testScriptSet();
             }
             break;
+        case 8:
+            name = "testRestrictionLevel";
+            if (exec) {
+                testRestrictionLevel();
+            }
+            break;
+       case 9:
+            name = "testMixedNumbers";
+            if (exec) {
+                testMixedNumbers();
+            }
+            break;
+
+
         default: name=""; break;
     }
 }
@@ -277,7 +293,7 @@ void IntlTestSpoof::testInvisible() {
         UnicodeString  s2 = UnicodeString("abcd\\u0301\\u0302\\u0301ef").unescape();
         TEST_ASSERT_EQ(USPOOF_INVISIBLE, uspoof_checkUnicodeString(sc, s2, &position, &status));
         TEST_ASSERT_SUCCESS(status);
-        TEST_ASSERT_EQ(7, position);
+        TEST_ASSERT_EQ(0, position);
 
         // Two acute accents, one from the composed a with acute accent, \u00e1,
         // and one separate.
@@ -285,7 +301,7 @@ void IntlTestSpoof::testInvisible() {
         UnicodeString  s3 = UnicodeString("abcd\\u00e1\\u0301xyz").unescape();
         TEST_ASSERT_EQ(USPOOF_INVISIBLE, uspoof_checkUnicodeString(sc, s3, &position, &status));
         TEST_ASSERT_SUCCESS(status);
-        TEST_ASSERT_EQ(7, position);
+        TEST_ASSERT_EQ(0, position);
     TEST_TEARDOWN;
 }
 
@@ -295,7 +311,7 @@ void IntlTestSpoof::testBug8654() {
         int32_t position = -42;
         TEST_ASSERT_EQ(USPOOF_INVISIBLE, uspoof_checkUnicodeString(sc, s, &position, &status) & USPOOF_INVISIBLE );
         TEST_ASSERT_SUCCESS(status);
-        TEST_ASSERT_EQ(3, position);
+        TEST_ASSERT_EQ(0, position);
     TEST_TEARDOWN;
 }
 
@@ -610,6 +626,88 @@ void IntlTestSpoof::testScriptSet() {
         }
     }
     TEST_ASSERT_SUCCESS(status);
-
 }
 
+
+void IntlTestSpoof::testRestrictionLevel() {
+    struct Test {
+        const char         *fId;
+        URestrictionLevel   fExpectedRestrictionLevel;
+    } tests[] = {
+        {"\\u0061\\u03B3\\u2665", USPOOF_UNRESTRICTIVE},
+        {"a",                     USPOOF_ASCII},
+        {"\\u03B3",               USPOOF_HIGHLY_RESTRICTIVE},
+        {"\\u0061\\u30A2\\u30FC", USPOOF_HIGHLY_RESTRICTIVE},
+        {"\\u0061\\u0904",        USPOOF_MODERATELY_RESTRICTIVE},
+        {"\\u0061\\u03B3",        USPOOF_MINIMALLY_RESTRICTIVE}
+    };
+    char msgBuffer[100];
+
+    URestrictionLevel restrictionLevels[] = { USPOOF_ASCII, USPOOF_HIGHLY_RESTRICTIVE, 
+         USPOOF_MODERATELY_RESTRICTIVE, USPOOF_MINIMALLY_RESTRICTIVE, USPOOF_UNRESTRICTIVE};
+    
+    UErrorCode status = U_ZERO_ERROR;
+    IdentifierInfo idInfo(status);
+    TEST_ASSERT_SUCCESS(status);
+    idInfo.setIdentifierProfile(*uspoof_getRecommendedUnicodeSet(&status));
+    TEST_ASSERT_SUCCESS(status);
+    for (int32_t testNum=0; testNum < LENGTHOF(tests); testNum++) {
+        status = U_ZERO_ERROR;
+        const Test &test = tests[testNum];
+        UnicodeString testString = UnicodeString(test.fId).unescape();
+        URestrictionLevel expectedLevel = test.fExpectedRestrictionLevel;
+        idInfo.setIdentifier(testString, status);
+        sprintf(msgBuffer, "testNum = %d ", testNum);
+        TEST_ASSERT_SUCCESS(status);
+        TEST_ASSERT_MSG(expectedLevel == idInfo.getRestrictionLevel(status), msgBuffer);
+        for (int levelIndex=0; levelIndex<LENGTHOF(restrictionLevels); levelIndex++) {
+            status = U_ZERO_ERROR;
+            URestrictionLevel levelSetInSpoofChecker = restrictionLevels[levelIndex];
+            USpoofChecker *sc = uspoof_open(&status);
+            uspoof_setChecks(sc, USPOOF_RESTRICTION_LEVEL, &status);
+            uspoof_setAllowedChars(sc, uspoof_getRecommendedSet(&status), &status);
+            uspoof_setRestrictionLevel(sc, levelSetInSpoofChecker);
+            UBool actualValue = uspoof_checkUnicodeString(sc, testString, NULL, &status) != 0;
+
+            // we want to fail if the text is (say) MODERATE and the testLevel is ASCII
+            UBool expectedFailure = expectedLevel > levelSetInSpoofChecker ||
+                                    !uspoof_getRecommendedUnicodeSet(&status)->containsAll(testString);
+            sprintf(msgBuffer, "testNum = %d, levelIndex = %d", testNum, levelIndex);
+            TEST_ASSERT_MSG(expectedFailure == actualValue, msgBuffer);
+            TEST_ASSERT_SUCCESS(status);
+        }
+    }
+}
+
+
+void IntlTestSpoof::testMixedNumbers() {
+    struct Test {
+        const char *fTestString;
+        const char *fExpectedSet;
+    } tests[] = {
+        {"1",              "[0]"},
+        {"\\u0967",        "[\\u0966]"},
+        {"1\\u0967",       "[0\\u0966]"},
+        {"\\u0661\\u06F1", "[\\u0660\\u06F0]"}
+    };
+        UErrorCode status = U_ZERO_ERROR;
+        IdentifierInfo idInfo(status);
+        for (int32_t testNum=0; testNum < LENGTHOF(tests); testNum++) {
+            status = U_ZERO_ERROR;
+            Test &test = tests[testNum];
+            UnicodeString testString = UnicodeString(test.fTestString).unescape();
+            UnicodeSet expected(UnicodeString(test.fExpectedSet).unescape(), status);
+            idInfo.setIdentifier(testString, status);
+            TEST_ASSERT_SUCCESS(status);
+            TEST_ASSERT_MSG(expected == *idInfo.getNumerics());
+
+            status = U_ZERO_ERROR;
+            USpoofChecker *sc = uspoof_open(&status);
+            uspoof_setChecks(sc, USPOOF_MIXED_NUMBERS, &status); // only check this
+            int32_t result = uspoof_checkUnicodeString(sc, testString, NULL, status);
+            UBool actualValue = (result != 0);
+
+            TEST_ASSERT_MSG(
+            boolean t = assertEquals("Testing spoof mixed numbers for '" + testString + "', ", expected.size() > 1, actualValue);
+        }
+    }

@@ -111,6 +111,7 @@ public:
                                           //   for this Spoof Checker.  Defaults to all chars. 
 
     const char       *fAllowedLocales;    // The list of allowed locales.
+    URestrictionLevel fRestrictionLevel;  // The maximum restriction level for an acceptable identifier.
 };
 
 

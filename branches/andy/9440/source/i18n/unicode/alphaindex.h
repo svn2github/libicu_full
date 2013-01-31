@@ -194,7 +194,7 @@ class U_I18N_API AlphabeticIndex: public UObject {
      *               operation fails.
      * @draft ICU 51
      */
-    public AlphabeticIndex(RuleBasedCollator *collator, UErrorCode &status);
+    AlphabeticIndex(RuleBasedCollator *collator, UErrorCode &status);
 
 
     /**

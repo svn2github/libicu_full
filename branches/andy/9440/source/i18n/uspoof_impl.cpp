@@ -29,7 +29,7 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
 SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
-    fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) , fAllowedLocales(uprv_strdup("")) {
+        fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) , fAllowedLocales(uprv_strdup("")) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -43,6 +43,7 @@ SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
     }
     allowedCharsSet->freeze();
     fAllowedCharsSet = allowedCharsSet;
+    fRestrictionLevel = USPOOF_HIGHLY_RESTRICTIVE;
 }
 
 
@@ -54,6 +55,7 @@ SpoofImpl::SpoofImpl() {
     allowedCharsSet->freeze();
     fAllowedCharsSet = allowedCharsSet;
     fAllowedLocales  = uprv_strdup("");
+    fRestrictionLevel = USPOOF_HIGHLY_RESTRICTIVE;
 }
 
 
@@ -73,6 +75,7 @@ SpoofImpl::SpoofImpl(const SpoofImpl &src, UErrorCode &status)  :
         status = U_MEMORY_ALLOCATION_ERROR;
     }
     fAllowedLocales = uprv_strdup(src.fAllowedLocales);
+    fRestrictionLevel = src.fRestrictionLevel;
 }
 
 SpoofImpl::~SpoofImpl() {

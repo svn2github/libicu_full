@@ -19,6 +19,7 @@
 #include "unicode/ustring.h"
 #include "unicode/utf16.h"
 #include "cmemory.h"
+#include "identifier_info.h"
 #include "mutex.h"
 #include "scriptset.h"
 #include "uassert.h"
@@ -123,6 +124,25 @@ uspoof_getChecks(const USpoofChecker *sc, UErrorCode *status) {
 }
 
 U_CAPI void U_EXPORT2
+uspoof_setRestrictionLevel(USpoofChecker *sc, URestrictionLevel restrictionLevel) {
+    UErrorCode status = U_ZERO_ERROR;
+    SpoofImpl *This = SpoofImpl::validateThis(sc, status);
+    if (This != NULL) {
+        This->fRestrictionLevel = restrictionLevel;
+    }
+}
+
+U_CAPI URestrictionLevel U_EXPORT2
+uspoof_getRestrictionLevel(const USpoofChecker *sc) {
+    UErrorCode status = U_ZERO_ERROR;
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, status);
+    if (This == NULL) {
+        return USPOOF_UNRESTRICTIVE;
+    }
+    return This->fRestrictionLevel;
+}
+
+U_CAPI void U_EXPORT2
 uspoof_setAllowedLocales(USpoofChecker *sc, const char *localesList, UErrorCode *status) {
     SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
     if (This == NULL) {
@@ -214,14 +234,42 @@ uspoof_check(const USpoofChecker *sc,
     // done it yet.
     int32_t scriptCount = -1;
 
-    if ((This->fChecks) & USPOOF_SINGLE_SCRIPT) {
-        scriptCount = This->scriptScan(text, length, *status);
-        // printf("scriptCount (clipped to 2) = %d\n", scriptCount);
-        if ( scriptCount >= 2) {
-            // Note: scriptCount == 2 covers all cases of the number of scripts >= 2
-            result |= USPOOF_SINGLE_SCRIPT;
+    // Allocate an identifier info if needed.
+    // Note: we may want to allocate one per SpoofChecker and synchronize
+    IdentifierInfo *identifierInfo = NULL;
+    if ((This->fChecks) & (USPOOF_RESTRICTION_LEVEL | USPOOF_MIXED_NUMBERS)) {
+        identifierInfo = new IdentifierInfo(*status);
+        if (U_FAILURE(*status)) {
+            return 0;
+        }
+        identifierInfo->setIdentifier(UnicodeString(FALSE, text, length), *status);
+        identifierInfo->setIdentifierProfile(*This->fAllowedCharsSet);
+    }
+
+
+    if ((This->fChecks) & USPOOF_RESTRICTION_LEVEL) {
+        URestrictionLevel textRestrictionLevel = identifierInfo->getRestrictionLevel(*status);
+        if (textRestrictionLevel > This->fRestrictionLevel) {
+            result |= USPOOF_RESTRICTION_LEVEL;
+        }
+        if (This->fChecks & USPOOF_AUX_INFO) {
+            result |= textRestrictionLevel;
         }
     }
+
+    if ((This->fChecks) & USPOOF_MIXED_NUMBERS) {
+        const UnicodeSet *numerics = identifierInfo->getNumerics();
+        if (numerics->size() > 1) {
+            result |= USPOOF_MIXED_NUMBERS;
+        }
+
+        // TODO: ICU4J returns the UnicodeSet of the numerics found in the identifier.
+        //       We have no easy way to do the same in C.
+        // if (checkResult != null) {
+        //     checkResult.numerics = numerics;
+        // }
+    }
+
 
     if (This->fChecks & USPOOF_CHAR_LIMIT) {
         int32_t i;
@@ -285,18 +333,19 @@ uspoof_check(const USpoofChecker *sc,
             // The basic test is the same for both whole and mixed script confusables.
             // Compute the set of scripts that every input character has a confusable in.
             // For this computation an input character is always considered to be
-            //    confusable with itself in its own script.
+            // confusable with itself in its own script.
+            //
             // If the number of such scripts is two or more, and the input consisted of
-            //   characters all from a single script, we have a whole script confusable.
-            //   (The two scripts will be the original script and the one that is confusable)
+            // characters all from a single script, we have a whole script confusable.
+            // (The two scripts will be the original script and the one that is confusable)
+            //
             // If the number of such scripts >= one, and the original input contained characters from
-            //   more than one script, we have a mixed script confusable.  (We can transform
-            //   some of the characters, and end up with a visually similar string all in
-            //   one script.)
+            // more than one script, we have a mixed script confusable.  (We can transform
+            // some of the characters, and end up with a visually similar string all in
+            // one script.)
 
             if (scriptCount == -1) {
-                int32_t t;
-                scriptCount = This->scriptScan(text, length, t, *status);
+                scriptCount = This->scriptScan(text, length, *status);
             }
             
             ScriptSet scripts;
@@ -421,9 +470,8 @@ uspoof_areConfusable(const USpoofChecker *sc,
     int32_t  s2SkeletonLength = 0;
 
     int32_t  result = 0;
-    int32_t  t;
-    int32_t  s1ScriptCount = This->scriptScan(s1, length1, t, *status);
-    int32_t  s2ScriptCount = This->scriptScan(s2, length2, t, *status);
+    int32_t  s1ScriptCount = This->scriptScan(s1, length1, *status);
+    int32_t  s2ScriptCount = This->scriptScan(s2, length2, *status);
 
     if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
         // Do the Single Script compare.
