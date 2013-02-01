@@ -103,7 +103,7 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
     }
     *fIdentifier = identifier;
     clear();
-    ScriptSet *temp = new ScriptSet(); // Will reuse this.
+    ScriptSet temp;
     UChar32 cp;
     for (int32_t i = 0; i < identifier.length(); i += U16_LENGTH(cp)) {
         cp = identifier.char32At(i);
@@ -117,25 +117,24 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
         if (U_FAILURE(status)) {
             return *this;
         }
-        temp->resetAll();
+        temp.resetAll();
         for (int32_t j=0; j<extensionsCount; j++) {
-            temp->set(extensions[j], status);
+            temp.set(extensions[j], status);
         }
-        temp->reset(USCRIPT_COMMON, status);
-        temp->reset(USCRIPT_INHERITED, status);
-        switch (temp->countMembers()) {
+        temp.reset(USCRIPT_COMMON, status);
+        temp.reset(USCRIPT_INHERITED, status);
+        switch (temp.countMembers()) {
         case 0: break;
         case 1:
             // Single script, record it.
-            fRequiredScripts->Union(*temp);
+            fRequiredScripts->Union(temp);
             break;
         default:
-            if (!fRequiredScripts->intersects(*temp) 
-                    && !uhash_geti(fScriptSetSet, temp)) {
-                // If the set hasn't been added already, add it and create new temporary for the next pass,
-                // so we don't rewrite what's already in the set.
-                uhash_puti(fScriptSetSet, temp, 1, &status);  // Takes ownership of temp.
-                temp = new ScriptSet();
+            if (!fRequiredScripts->intersects(temp) 
+                    && !uhash_geti(fScriptSetSet, &temp)) {
+                // If the set hasn't been added already, add it
+                //    (Add a copy, fScriptSetSet takes ownership of the copy.)
+                uhash_puti(fScriptSetSet, new ScriptSet(temp), 1, &status);
             }
             break;
         }
@@ -158,8 +157,8 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
             if (fRequiredScripts->intersects(*next)) {
                 uhash_removeElement(fScriptSetSet, nextHashEl);
             } else {
-                // [[Arab Syrc Thaa]; [Arab Syrc]] => [[Arab Syrc]]
                 fCommonAmongAlternates->intersect(*next);
+                // [[Arab Syrc Thaa]; [Arab Syrc]] => [[Arab Syrc]]
                 for (int32_t otherIt = -1;;) {
                     const UHashElement *otherHashEl = uhash_nextElement(fScriptSetSet, &otherIt);
                     if (otherHashEl == NULL) {
@@ -231,6 +230,14 @@ URestrictionLevel IdentifierInfo::getRestrictionLevel(UErrorCode &status) const 
     }
     return USPOOF_MINIMALLY_RESTRICTIVE;
 }
+
+int32_t IdentifierInfo::getScriptCount() const {
+    // Note: Common and Inherited scripts were removed by setIdentifier(), and do not appear in fRequiredScripts.
+    int32_t count = fRequiredScripts->countMembers() +
+            (fCommonAmongAlternates->countMembers() == 0 ? uhash_count(fScriptSetSet) : 1);
+    return count;
+}
+    
 
 
 UBool IdentifierInfo::containsWithAlternates(const ScriptSet &container, const ScriptSet &containee) const {

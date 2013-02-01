@@ -205,6 +205,41 @@ uspoof_setAllowedUnicodeSet(USpoofChecker *sc, const UnicodeSet *chars, UErrorCo
     This->fChecks |= USPOOF_CHAR_LIMIT;
 }
 
+// IdentifierInfo Cache. IdentifierInfo objects are somewhat expensive to create.
+//                       Maintain a one-element cache, which is sufficient to avoid
+//                       creating new ones unless we get multi-thread concurrency in spoof
+//                       check operations, which should be statistically uncommon.
+static IdentifierInfo *gCachedIdentifierInfo = NULL;
+static IdentifierInfo *getIdentifierInfo(UErrorCode &status) {
+    IdentifierInfo *returnIdInfo = NULL;
+    {
+        Mutex m;
+        returnIdInfo = gCachedIdentifierInfo;
+        gCachedIdentifierInfo = NULL;
+    }
+    if (returnIdInfo == NULL) {
+        returnIdInfo = new IdentifierInfo(status);
+        if (U_SUCCESS(status) && returnIdInfo == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+    }
+    return returnIdInfo;
+}
+
+static void releaseIdentifierInfo(IdentifierInfo *idInfo) {
+    if (idInfo != NULL) {
+        {
+            Mutex m;
+            if (gCachedIdentifierInfo == NULL) {
+                gCachedIdentifierInfo = idInfo;
+                idInfo = NULL;
+            }
+        }
+        delete idInfo;
+    }
+}
+
+
 
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
@@ -228,17 +263,11 @@ uspoof_check(const USpoofChecker *sc,
 
     int32_t result = 0;
 
-    // A count of the number of non-Common or inherited scripts.
-    // Needed for both the SINGLE_SCRIPT and the WHOLE/MIXED_SCIRPT_CONFUSABLE tests.
-    // Share the computation when possible.  scriptCount == -1 means that we haven't
-    // done it yet.
-    int32_t scriptCount = -1;
-
     // Allocate an identifier info if needed.
     // Note: we may want to allocate one per SpoofChecker and synchronize
     IdentifierInfo *identifierInfo = NULL;
     if ((This->fChecks) & (USPOOF_RESTRICTION_LEVEL | USPOOF_MIXED_NUMBERS)) {
-        identifierInfo = new IdentifierInfo(*status);
+        identifierInfo = getIdentifierInfo(*status);
         if (U_FAILURE(*status)) {
             return 0;
         }
@@ -366,7 +395,8 @@ uspoof_check(const USpoofChecker *sc,
             }
         }
     }
-    if ((position != NULL) && ((result & USPOOF_ALL_CHECKS) != 0)) {
+    releaseIdentifierInfo(identifierInfo);
+    if (position != NULL) {
         *position = 0;
     }
     return result;

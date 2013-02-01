@@ -148,7 +148,7 @@ void IntlTestSpoof::testSpoofAPI() {
         int32_t checkResults = uspoof_checkUnicodeString(sc, s, &position, &status);
         TEST_ASSERT_SUCCESS(status);
         TEST_ASSERT_EQ(0, checkResults);
-        TEST_ASSERT_EQ(666, position);
+        TEST_ASSERT_EQ(0, position);
     TEST_TEARDOWN;
     
     TEST_SETUP
@@ -288,7 +288,7 @@ void IntlTestSpoof::testInvisible() {
         int32_t position = -42;
         TEST_ASSERT_EQ(0, uspoof_checkUnicodeString(sc, s, &position, &status));
         TEST_ASSERT_SUCCESS(status);
-        TEST_ASSERT(position == -42);
+        TEST_ASSERT(0 == position);
 
         UnicodeString  s2 = UnicodeString("abcd\\u0301\\u0302\\u0301ef").unescape();
         TEST_ASSERT_EQ(USPOOF_INVISIBLE, uspoof_checkUnicodeString(sc, s2, &position, &status));
@@ -508,12 +508,11 @@ void IntlTestSpoof::testIdentifierInfo() {
             {"\\u0661\\u30FC\\u3006\\u0061\\u30A2\\u0031\\u0967\\u06F1",  USPOOF_UNRESTRICTIVE, 
                   "[\\u0030\\u0660\\u06F0\\u0966]", "Latn Kana Arab Deva", "", ""},
             {"\\u0061\\u30A2\\u30FC\\u3006\\u0031\\u0967\\u0661\\u06F1",  USPOOF_UNRESTRICTIVE, 
-                  "[\\u0030\\u0660\\u06F0\\u0966]", "Latn Kana Arab Deva", "", ""},
-            {NULL,                            USPOOF_ASCII,              NULL, NULL, NULL, NULL}
-
+                  "[\\u0030\\u0660\\u06F0\\u0966]", "Latn Kana Arab Deva", "", ""}
     };
 
-    for (int testNum = 0; tests[testNum].fTestString != NULL; testNum++) {
+    int testNum;
+    for (testNum = 0; testNum < LENGTHOF(tests); testNum++) {
         char testNumStr[40];
         sprintf(testNumStr, "testNum = %d", testNum);
         Test &test = tests[testNum];
@@ -547,6 +546,47 @@ void IntlTestSpoof::testIdentifierInfo() {
         TEST_ASSERT_MSG(commonAlternates == *idInfo.getCommonAmongAlternates(), testNumStr);
     }
 
+    // Test of getScriptCount()
+    //   Script and or Script Extension for chars used in the tests
+    //     \\u3013  ; Bopo Hang Hani Hira Kana # So       GETA MARK
+    //     \\uA838  ; Deva Gujr Guru Kthi Takr # Sc       NORTH INDIC RUPEE MARK
+    //     \\u0951  ; Deva Latn                # Mn       DEVANAGARI STRESS SIGN UDATTA
+    //
+    //     \\u0370  ; Greek                    # L        GREEK CAPITAL LETTER HETA
+    //     \\u0481  ; Cyrillic                 # L&       CYRILLIC SMALL LETTER KOPPA
+    //     \\u0904  ; Devanagari               # Lo       DEVANAGARI LETTER SHORT A
+    //     \\u3041  ; Hiragana                 # Lo       HIRAGANA LETTER SMALL A
+    //     1234     ; Common                   #          ascii digits
+    //     \\u0300  ; Inherited                # Mn       COMBINING GRAVE ACCENT
+    
+    struct ScriptTest {
+        const char *fTestString;
+        int32_t     fScriptCount;
+    } scriptTests[] = {
+        {"Hello", 1},
+        {"Hello\\u0370", 2},
+        {"1234", 0},
+        {"Hello1234\\u0300", 1},   // Common and Inherited are ignored.
+        {"\\u0030", 0},
+        {"abc\\u0951", 1},
+        {"abc\\u3013", 2},
+        {"\\uA838\\u0951", 1},     // Triggers commonAmongAlternates path.
+        {"\\u3013\\uA838", 2}
+    };
+
+    status = U_ZERO_ERROR;
+    IdentifierInfo identifierInfo(status);
+    for (testNum=0; testNum<LENGTHOF(scriptTests); testNum++) {
+        ScriptTest &test = scriptTests[testNum];
+        char msgBuf[100];
+        sprintf(msgBuf, "testNum = %d ", testNum);
+        UnicodeString testString = UnicodeString(test.fTestString).unescape();
+        
+        status = U_ZERO_ERROR;
+        identifierInfo.setIdentifier(testString, status);
+        int32_t scriptCount = identifierInfo.getScriptCount();
+        TEST_ASSERT_MSG(test.fScriptCount == scriptCount, msgBuf);
+    }
 }
 
 void IntlTestSpoof::testScriptSet() {
@@ -690,24 +730,25 @@ void IntlTestSpoof::testMixedNumbers() {
         {"1\\u0967",       "[0\\u0966]"},
         {"\\u0661\\u06F1", "[\\u0660\\u06F0]"}
     };
-        UErrorCode status = U_ZERO_ERROR;
-        IdentifierInfo idInfo(status);
-        for (int32_t testNum=0; testNum < LENGTHOF(tests); testNum++) {
-            status = U_ZERO_ERROR;
-            Test &test = tests[testNum];
-            UnicodeString testString = UnicodeString(test.fTestString).unescape();
-            UnicodeSet expected(UnicodeString(test.fExpectedSet).unescape(), status);
-            idInfo.setIdentifier(testString, status);
-            TEST_ASSERT_SUCCESS(status);
-            TEST_ASSERT_MSG(expected == *idInfo.getNumerics());
+    UErrorCode status = U_ZERO_ERROR;
+    IdentifierInfo idInfo(status);
+    for (int32_t testNum=0; testNum < LENGTHOF(tests); testNum++) {
+        char msgBuf[100];
+        sprintf(msgBuf, "testNum = %d ", testNum);
+        Test &test = tests[testNum];
 
-            status = U_ZERO_ERROR;
-            USpoofChecker *sc = uspoof_open(&status);
-            uspoof_setChecks(sc, USPOOF_MIXED_NUMBERS, &status); // only check this
-            int32_t result = uspoof_checkUnicodeString(sc, testString, NULL, status);
-            UBool actualValue = (result != 0);
+        status = U_ZERO_ERROR;
+        UnicodeString testString = UnicodeString(test.fTestString).unescape();
+        UnicodeSet expectedSet(UnicodeString(test.fExpectedSet).unescape(), status);
+        idInfo.setIdentifier(testString, status);
+        TEST_ASSERT_SUCCESS(status);
+        TEST_ASSERT_MSG(expectedSet == *idInfo.getNumerics(), msgBuf);
 
-            TEST_ASSERT_MSG(
-            boolean t = assertEquals("Testing spoof mixed numbers for '" + testString + "', ", expected.size() > 1, actualValue);
-        }
+        status = U_ZERO_ERROR;
+        USpoofChecker *sc = uspoof_open(&status);
+        uspoof_setChecks(sc, USPOOF_MIXED_NUMBERS, &status); // only check this
+        int32_t result = uspoof_checkUnicodeString(sc, testString, NULL, &status);
+        UBool mixedNumberFailure = ((result & USPOOF_MIXED_NUMBERS) != 0);
+        TEST_ASSERT_MSG((expectedSet.size() > 1) == mixedNumberFailure, msgBuf);
     }
+}

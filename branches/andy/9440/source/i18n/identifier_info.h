@@ -138,6 +138,16 @@ class U_I18N_API IdentifierInfo : public UMemory {
     const ScriptSet *getCommonAmongAlternates() const;
 
     /**
+      * Get the number of scripts appearing in the identifier.
+      *   Note: Common and Inherited scripts are omitted from the count.
+      *   Note: Result may be high when the identifier contains characters
+      *         with alternate scripts. The distinction between
+      *         0, 1 and > 1 will remain valid, however.
+      * @return the number of scripts.
+      */
+    int32_t getScriptCount() const;
+
+    /**
      * Find the "tightest" restriction level that the identifier satisfies.
      * 
      * @return the restriction level.
