@@ -13,6 +13,7 @@
 #include "identifier_info.h"
 #include "mutex.h"
 #include "scriptset.h"
+#include "ucln_in.h"
 #include "uvector.h"
 
 #include "stdio.h"    // TODO: debugging, remove.
@@ -23,6 +24,35 @@ U_NAMESPACE_BEGIN
 
 static UMutex gInitMutex = U_MUTEX_INITIALIZER;
 static UBool gStaticsAreInitialized = FALSE;
+
+UnicodeSet *IdentifierInfo::ASCII;
+ScriptSet *IdentifierInfo::JAPANESE;
+ScriptSet *IdentifierInfo::CHINESE;
+ScriptSet *IdentifierInfo::KOREAN;
+ScriptSet *IdentifierInfo::CONFUSABLE_WITH_LATIN;
+
+UBool IdentifierInfo::cleanup() {
+    delete ASCII;
+    ASCII = NULL;
+    delete JAPANESE;
+    JAPANESE = NULL;
+    delete CHINESE;
+    CHINESE = NULL;
+    delete KOREAN;
+    KOREAN = NULL;
+    delete CONFUSABLE_WITH_LATIN;
+    CONFUSABLE_WITH_LATIN = NULL;
+    gStaticsAreInitialized = FALSE;
+    return TRUE;
+}
+
+U_CDECL_BEGIN
+static UBool U_CALLCONV
+IdentifierInfo_cleanup(void) {
+    return IdentifierInfo::cleanup();
+}
+U_CDECL_END
+
 
 IdentifierInfo::IdentifierInfo(UErrorCode &status):
          fIdentifier(NULL), fRequiredScripts(NULL), fScriptSetSet(NULL), 
@@ -50,6 +80,7 @@ IdentifierInfo::IdentifierInfo(UErrorCode &status):
             KOREAN->set(USCRIPT_LATIN, status).set(USCRIPT_HAN, status).set(USCRIPT_HANGUL, status);
             CONFUSABLE_WITH_LATIN->set(USCRIPT_CYRILLIC, status).set(USCRIPT_GREEK, status)
                       .set(USCRIPT_CHEROKEE, status);
+            ucln_i18n_registerCleanup(UCLN_I18N_IDENTIFIER_INFO, IdentifierInfo_cleanup);
             gStaticsAreInitialized = TRUE;
         }
     }
@@ -103,7 +134,7 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
     }
     *fIdentifier = identifier;
     clear();
-    ScriptSet temp;
+    ScriptSet scriptsForCP;
     UChar32 cp;
     for (int32_t i = 0; i < identifier.length(); i += U16_LENGTH(cp)) {
         cp = identifier.char32At(i);
@@ -117,35 +148,33 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
         if (U_FAILURE(status)) {
             return *this;
         }
-        temp.resetAll();
+        scriptsForCP.resetAll();
         for (int32_t j=0; j<extensionsCount; j++) {
-            temp.set(extensions[j], status);
+            scriptsForCP.set(extensions[j], status);
         }
-        temp.reset(USCRIPT_COMMON, status);
-        temp.reset(USCRIPT_INHERITED, status);
-        switch (temp.countMembers()) {
-        case 0: break;
-        case 1:
+        scriptsForCP.reset(USCRIPT_COMMON, status);
+        scriptsForCP.reset(USCRIPT_INHERITED, status);
+        switch (scriptsForCP.countMembers()) {
+          case 0: break;
+          case 1:
             // Single script, record it.
-            fRequiredScripts->Union(temp);
+            fRequiredScripts->Union(scriptsForCP);
             break;
-        default:
-            if (!fRequiredScripts->intersects(temp) 
-                    && !uhash_geti(fScriptSetSet, &temp)) {
+          default:
+            if (!fRequiredScripts->intersects(scriptsForCP) 
+                    && !uhash_geti(fScriptSetSet, &scriptsForCP)) {
                 // If the set hasn't been added already, add it
                 //    (Add a copy, fScriptSetSet takes ownership of the copy.)
-                uhash_puti(fScriptSetSet, new ScriptSet(temp), 1, &status);
+                uhash_puti(fScriptSetSet, new ScriptSet(scriptsForCP), 1, &status);
             }
             break;
         }
     }
-    // Now make a final pass through to remove alternates that came before singles.
+    // Now make a final pass through ScriptSetSet to remove alternates that came before singles.
     // [Kana], [Kana Hira] => [Kana]
     // This is relatively infrequent, so doesn't have to be optimized.
     // We also compute any commonalities among the alternates.
-    if (uhash_count(fScriptSetSet) == 0) {
-        fCommonAmongAlternates->resetAll();
-    } else {
+    if (uhash_count(fScriptSetSet) > 0) {
         fCommonAmongAlternates->setAll();
         for (int32_t it = -1;;) {
             const UHashElement *nextHashEl = uhash_nextElement(fScriptSetSet, &it);
@@ -172,9 +201,9 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
                 }
             }
         }
-        if (uhash_count(fScriptSetSet) == 0) {
-            fCommonAmongAlternates->resetAll();
-        }
+    }
+    if (uhash_count(fScriptSetSet) == 0) {
+        fCommonAmongAlternates->resetAll();
     }
     return *this;
 }
@@ -208,24 +237,25 @@ URestrictionLevel IdentifierInfo::getRestrictionLevel(UErrorCode &status) const 
     if (ASCII->containsAll(*fIdentifier)) {
         return USPOOF_ASCII;
     }
-    ScriptSet temp;
-    temp.Union(*fRequiredScripts);
-    temp.reset(USCRIPT_COMMON, status);
-    temp.reset(USCRIPT_INHERITED, status);
     // This is a bit tricky. We look at a number of factors.
     // The number of scripts in the text.
     // Plus 1 if there is some commonality among the alternates (eg [Arab Thaa]; [Arab Syrc])
     // Plus number of alternates otherwise (this only works because we only test cardinality up to 2.)
-    int32_t cardinalityPlus = temp.countMembers() + 
+
+    // Note: the requiredScripts set omits COMMON and INHERITED; they are taken out at the
+    //       time it is created, in setIdentifier().
+    int32_t cardinalityPlus = fRequiredScripts->countMembers() + 
             (fCommonAmongAlternates->countMembers() == 0 ? uhash_count(fScriptSetSet) : 1);
     if (cardinalityPlus < 2) {
         return USPOOF_HIGHLY_RESTRICTIVE;
     }
-    if (containsWithAlternates(*JAPANESE, temp) || containsWithAlternates(*CHINESE, temp)
-            || containsWithAlternates(*KOREAN, temp)) {
+    if (containsWithAlternates(*JAPANESE, *fRequiredScripts) || containsWithAlternates(*CHINESE, *fRequiredScripts)
+            || containsWithAlternates(*KOREAN, *fRequiredScripts)) {
         return USPOOF_HIGHLY_RESTRICTIVE;
     }
-    if (cardinalityPlus == 2 && temp.test(USCRIPT_LATIN, status) && !temp.intersects(*CONFUSABLE_WITH_LATIN)) {
+    if (cardinalityPlus == 2 && 
+            fRequiredScripts->test(USCRIPT_LATIN, status) && 
+            !fRequiredScripts->intersects(*CONFUSABLE_WITH_LATIN)) {
         return USPOOF_MODERATELY_RESTRICTIVE;
     }
     return USPOOF_MINIMALLY_RESTRICTIVE;
@@ -281,12 +311,6 @@ UnicodeString &IdentifierInfo::displayAlternates(UnicodeString &dest, const UHas
     }
     return dest;
 }
-
-UnicodeSet *IdentifierInfo::ASCII;
-ScriptSet *IdentifierInfo::JAPANESE;
-ScriptSet *IdentifierInfo::CHINESE;
-ScriptSet *IdentifierInfo::KOREAN;
-ScriptSet *IdentifierInfo::CONFUSABLE_WITH_LATIN;
 
 U_NAMESPACE_END
 

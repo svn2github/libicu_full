@@ -375,44 +375,6 @@ void SpoofImpl::addScriptChars(const char *locale, UnicodeSet *allowedChars, UEr
 }
 
 
-int32_t SpoofImpl::scriptScan
-        (const UChar *text, int32_t length, UErrorCode &status) const {
-    if (U_FAILURE(status)) {
-        return 0;
-    }
-    int32_t       inputIdx = 0;
-    UChar32       c;
-    int32_t       scriptCount = 0;
-    UScriptCode   lastScript = USCRIPT_INVALID_CODE;
-    UScriptCode   sc = USCRIPT_INVALID_CODE;
-    while ((inputIdx < length || length == -1) && scriptCount < 2) {
-        U16_NEXT(text, inputIdx, length, c);
-        if (c == 0 && length == -1) {
-            break;
-        }
-        sc = uscript_getScript(c, &status);
-        if (sc == USCRIPT_COMMON || sc == USCRIPT_INHERITED || sc == USCRIPT_UNKNOWN) {
-            continue;
-        }
-
-        // Temporary fix: fold Japanese Hiragana and Katakana into Han.
-        //   Names are allowed to mix these scripts.
-        //   A more general solution will follow later for characters that are
-        //   used with multiple scripts.
-
-        if (sc == USCRIPT_HIRAGANA || sc == USCRIPT_KATAKANA || sc == USCRIPT_HANGUL) {
-            sc = USCRIPT_HAN;
-        }
-
-        if (sc != lastScript) {
-           scriptCount++;
-           lastScript = sc;
-        }
-    }
-    return scriptCount;
-}
-
-
 // Convert a text format hex number.  Utility function used by builder code.  Static.
 // Input: UChar *string text.  Output: a UChar32
 // Input has been pre-checked, and will have no non-hex chars.

@@ -23,6 +23,7 @@
 #include "mutex.h"
 #include "scriptset.h"
 #include "uassert.h"
+#include "ucln_in.h"
 #include "uspoof_impl.h"
 #include "umutex.h"
 
@@ -30,6 +31,62 @@
 #if !UCONFIG_NO_NORMALIZATION
 
 U_NAMESPACE_USE
+
+
+//
+// Static Objects used by the spoof impl, their thread safe initialization and their cleanup.
+//
+static UnicodeSet *gInclusionSet = NULL;
+static UnicodeSet *gRecommendedSet = NULL;
+static IdentifierInfo *gCachedIdentifierInfo = NULL;
+static UMutex gInitMutex = U_MUTEX_INITIALIZER;
+
+static UBool U_CALLCONV
+uspoof_cleanup(void) {
+    delete gCachedIdentifierInfo;
+    gCachedIdentifierInfo = NULL;
+    delete gInclusionSet;
+    gInclusionSet = NULL;
+    delete gRecommendedSet;
+    gRecommendedSet = NULL;
+    return TRUE;
+}
+
+static void initializeStatics() {
+    Mutex m(&gInitMutex);
+    UErrorCode status = U_ZERO_ERROR;
+    if (gInclusionSet == NULL) {
+        gInclusionSet = new UnicodeSet(UnicodeString("["
+            "\\-.\\u00B7\\u05F3\\u05F4\\u0F0B\\u200C\\u200D\\u2019]"), status);
+        gRecommendedSet = new UnicodeSet(UnicodeString("["
+            "[0-z\\u00C0-\\u017E\\u01A0\\u01A1\\u01AF\\u01B0\\u01CD-"
+            "\\u01DC\\u01DE-\\u01E3\\u01E6-\\u01F5\\u01F8-\\u021B\\u021E"
+            "\\u021F\\u0226-\\u0233\\u02BB\\u02BC\\u02EC\\u0300-\\u0304"
+            "\\u0306-\\u030C\\u030F-\\u0311\\u0313\\u0314\\u031B\\u0323-"
+            "\\u0328\\u032D\\u032E\\u0330\\u0331\\u0335\\u0338\\u0339"
+            "\\u0342-\\u0345\\u037B-\\u03CE\\u03FC-\\u045F\\u048A-\\u0525"
+            "\\u0531-\\u0586\\u05D0-\\u05F2\\u0621-\\u063F\\u0641-\\u0655"
+            "\\u0660-\\u0669\\u0670-\\u068D\\u068F-\\u06D5\\u06E5\\u06E6"
+            "\\u06EE-\\u06FF\\u0750-\\u07B1\\u0901-\\u0939\\u093C-\\u094D"
+            "\\u0950\\u0960-\\u0972\\u0979-\\u0A4D\\u0A5C-\\u0A74\\u0A81-"
+            "\\u0B43\\u0B47-\\u0B61\\u0B66-\\u0C56\\u0C60\\u0C61\\u0C66-"
+            "\\u0CD6\\u0CE0-\\u0CEF\\u0D02-\\u0D28\\u0D2A-\\u0D39\\u0D3D-"
+            "\\u0D43\\u0D46-\\u0D4D\\u0D57-\\u0D61\\u0D66-\\u0D8E\\u0D91-"
+            "\\u0DA5\\u0DA7-\\u0DDE\\u0DF2\\u0E01-\\u0ED9\\u0F00\\u0F20-"
+            "\\u0F8B\\u0F90-\\u109D\\u10D0-\\u10F0\\u10F7-\\u10FA\\u1200-"
+            "\\u135A\\u135F\\u1380-\\u138F\\u1401-\\u167F\\u1780-\\u17A2"
+            "\\u17A5-\\u17A7\\u17A9-\\u17B3\\u17B6-\\u17CA\\u17D2\\u17D7-"
+            "\\u17DC\\u17E0-\\u17E9\\u1810-\\u18A8\\u18AA-\\u18F5\\u1E00-"
+            "\\u1E99\\u1F00-\\u1FFC\\u2D30-\\u2D65\\u2D80-\\u2DDE\\u3005-"
+            "\\u3007\\u3041-\\u31B7\\u3400-\\u9FCB\\uA000-\\uA48C\\uA67F"
+            "\\uA717-\\uA71F\\uA788\\uAA60-\\uAA7B\\uAC00-\\uD7A3\\uFA0E-"
+            "\\uFA29\\U00020000-"
+            "\\U0002B734]-[[:Cn:][:nfkcqc=n:][:XIDC=n:]]]"), status);
+    }
+    ucln_i18n_registerCleanup(UCLN_I18N_SPOOF, uspoof_cleanup);
+    U_ASSERT(U_SUCCESS(status));   // TODO: remove after testing.
+    return;
+}
 
 
 U_CAPI USpoofChecker * U_EXPORT2
@@ -206,12 +263,15 @@ uspoof_setAllowedUnicodeSet(USpoofChecker *sc, const UnicodeSet *chars, UErrorCo
 }
 
 // IdentifierInfo Cache. IdentifierInfo objects are somewhat expensive to create.
-//                       Maintain a one-element cache, which is sufficient to avoid
+//                       Maintain a one-element cache, which is sufficient to avoid repeatedly
 //                       creating new ones unless we get multi-thread concurrency in spoof
 //                       check operations, which should be statistically uncommon.
-static IdentifierInfo *gCachedIdentifierInfo = NULL;
+
 static IdentifierInfo *getIdentifierInfo(UErrorCode &status) {
     IdentifierInfo *returnIdInfo = NULL;
+    if (U_FAILURE(status)) {
+        return returnIdInfo;
+    }
     {
         Mutex m;
         returnIdInfo = gCachedIdentifierInfo;
@@ -222,9 +282,14 @@ static IdentifierInfo *getIdentifierInfo(UErrorCode &status) {
         if (U_SUCCESS(status) && returnIdInfo == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
         }
+        if (U_FAILURE(status) && returnIdInfo != NULL) {
+            delete returnIdInfo;
+            returnIdInfo = NULL;
+        }
     }
     return returnIdInfo;
 }
+
 
 static void releaseIdentifierInfo(IdentifierInfo *idInfo) {
     if (idInfo != NULL) {
@@ -237,9 +302,7 @@ static void releaseIdentifierInfo(IdentifierInfo *idInfo) {
         }
         delete idInfo;
     }
-}
-
-
+};
 
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
@@ -263,13 +326,11 @@ uspoof_check(const USpoofChecker *sc,
 
     int32_t result = 0;
 
-    // Allocate an identifier info if needed.
-    // Note: we may want to allocate one per SpoofChecker and synchronize
     IdentifierInfo *identifierInfo = NULL;
     if ((This->fChecks) & (USPOOF_RESTRICTION_LEVEL | USPOOF_MIXED_NUMBERS)) {
         identifierInfo = getIdentifierInfo(*status);
         if (U_FAILURE(*status)) {
-            return 0;
+            goto cleanupAndReturn;
         }
         identifierInfo->setIdentifier(UnicodeString(FALSE, text, length), *status);
         identifierInfo->setIdentifierProfile(*This->fAllowedCharsSet);
@@ -373,9 +434,15 @@ uspoof_check(const USpoofChecker *sc,
             // some of the characters, and end up with a visually similar string all in
             // one script.)
 
-            if (scriptCount == -1) {
-                scriptCount = This->scriptScan(text, length, *status);
+            if (identifierInfo == NULL) {
+                identifierInfo = getIdentifierInfo(*status);
+                if (U_FAILURE(*status)) {
+                    goto cleanupAndReturn;
+                }
+                identifierInfo->setIdentifier(UnicodeString(FALSE, text, length), *status);
             }
+
+            int32_t scriptCount = identifierInfo->getScriptCount();
             
             ScriptSet scripts;
             This->wholeScriptCheck(nfdText, nfdLength, &scripts, *status);
@@ -395,6 +462,8 @@ uspoof_check(const USpoofChecker *sc,
             }
         }
     }
+
+cleanupAndReturn:
     releaseIdentifierInfo(identifierInfo);
     if (position != NULL) {
         *position = 0;
@@ -500,9 +569,18 @@ uspoof_areConfusable(const USpoofChecker *sc,
     int32_t  s2SkeletonLength = 0;
 
     int32_t  result = 0;
-    int32_t  s1ScriptCount = This->scriptScan(s1, length1, *status);
-    int32_t  s2ScriptCount = This->scriptScan(s2, length2, *status);
+    IdentifierInfo *identifierInfo = getIdentifierInfo(*status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    identifierInfo->setIdentifier(UnicodeString(FALSE, s1, length1), *status);
+    int32_t s1ScriptCount = identifierInfo->getScriptCount();
+    identifierInfo->setIdentifier(UnicodeString(FALSE, s2, length2), *status);
+    int32_t s2ScriptCount = identifierInfo->getScriptCount();
+    releaseIdentifierInfo(identifierInfo);
+    identifierInfo = NULL;
 
+    // TODO: Switch the skeleton over to UnicodeString for easier memory management.
     if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
         // Do the Single Script compare.
         if (s1ScriptCount <= 1 && s2ScriptCount <= 1) {
@@ -882,45 +960,6 @@ uspoof_serialize(USpoofChecker *sc,void *buf, int32_t capacity, UErrorCode *stat
     }
     uprv_memcpy(buf, This->fSpoofData->fRawData, dataSize);
     return dataSize;
-}
-
-static UnicodeSet *gInclusionSet = NULL;
-static UnicodeSet *gRecommendedSet = NULL;
-static UMutex gInitMutex = U_MUTEX_INITIALIZER;
-
-static void initializeStatics() {
-    Mutex m(&gInitMutex);
-    UErrorCode status = U_ZERO_ERROR;
-    if (gInclusionSet == NULL) {
-        gInclusionSet = new UnicodeSet(UnicodeString("["
-            "\\-.\\u00B7\\u05F3\\u05F4\\u0F0B\\u200C\\u200D\\u2019]"), status);
-        gRecommendedSet = new UnicodeSet(UnicodeString("["
-            "[0-z\\u00C0-\\u017E\\u01A0\\u01A1\\u01AF\\u01B0\\u01CD-"
-            "\\u01DC\\u01DE-\\u01E3\\u01E6-\\u01F5\\u01F8-\\u021B\\u021E"
-            "\\u021F\\u0226-\\u0233\\u02BB\\u02BC\\u02EC\\u0300-\\u0304"
-            "\\u0306-\\u030C\\u030F-\\u0311\\u0313\\u0314\\u031B\\u0323-"
-            "\\u0328\\u032D\\u032E\\u0330\\u0331\\u0335\\u0338\\u0339"
-            "\\u0342-\\u0345\\u037B-\\u03CE\\u03FC-\\u045F\\u048A-\\u0525"
-            "\\u0531-\\u0586\\u05D0-\\u05F2\\u0621-\\u063F\\u0641-\\u0655"
-            "\\u0660-\\u0669\\u0670-\\u068D\\u068F-\\u06D5\\u06E5\\u06E6"
-            "\\u06EE-\\u06FF\\u0750-\\u07B1\\u0901-\\u0939\\u093C-\\u094D"
-            "\\u0950\\u0960-\\u0972\\u0979-\\u0A4D\\u0A5C-\\u0A74\\u0A81-"
-            "\\u0B43\\u0B47-\\u0B61\\u0B66-\\u0C56\\u0C60\\u0C61\\u0C66-"
-            "\\u0CD6\\u0CE0-\\u0CEF\\u0D02-\\u0D28\\u0D2A-\\u0D39\\u0D3D-"
-            "\\u0D43\\u0D46-\\u0D4D\\u0D57-\\u0D61\\u0D66-\\u0D8E\\u0D91-"
-            "\\u0DA5\\u0DA7-\\u0DDE\\u0DF2\\u0E01-\\u0ED9\\u0F00\\u0F20-"
-            "\\u0F8B\\u0F90-\\u109D\\u10D0-\\u10F0\\u10F7-\\u10FA\\u1200-"
-            "\\u135A\\u135F\\u1380-\\u138F\\u1401-\\u167F\\u1780-\\u17A2"
-            "\\u17A5-\\u17A7\\u17A9-\\u17B3\\u17B6-\\u17CA\\u17D2\\u17D7-"
-            "\\u17DC\\u17E0-\\u17E9\\u1810-\\u18A8\\u18AA-\\u18F5\\u1E00-"
-            "\\u1E99\\u1F00-\\u1FFC\\u2D30-\\u2D65\\u2D80-\\u2DDE\\u3005-"
-            "\\u3007\\u3041-\\u31B7\\u3400-\\u9FCB\\uA000-\\uA48C\\uA67F"
-            "\\uA717-\\uA71F\\uA788\\uAA60-\\uAA7B\\uAC00-\\uD7A3\\uFA0E-"
-            "\\uFA29\\U00020000-"
-            "\\U0002B734]-[[:Cn:][:nfkcqc=n:][:XIDC=n:]]]"), status);
-    }
-    U_ASSERT(U_SUCCESS(status));   // TODO: remove after testing.
-    return;
 }
 
 U_CAPI const USet * U_EXPORT2

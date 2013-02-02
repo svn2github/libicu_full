@@ -167,6 +167,11 @@ class U_I18N_API IdentifierInfo : public UMemory {
      */
     static UnicodeString &displayAlternates(UnicodeString &dest, const UHashtable *alternates, UErrorCode &status);
 
+    /**
+     * Static memory cleanup function.
+     * @internal
+     */
+    static UBool      cleanup();
   private:
 
     IdentifierInfo  & clear();

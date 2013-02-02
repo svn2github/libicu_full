@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *                                                                            *
-* Copyright (C) 2001-2012, International Business Machines                   *
+* Copyright (C) 2001-2013, International Business Machines                   *
 *                Corporation and others. All Rights Reserved.                *
 *                                                                            *
 ******************************************************************************
@@ -26,6 +26,8 @@ as the functions are suppose to be called.
 It's usually best to have child dependencies called first. */
 typedef enum ECleanupI18NType {
     UCLN_I18N_START = -1,
+    UCLN_I18N_IDENTIFIER_INFO,
+    UCLN_I18N_SPOOF,
     UCLN_I18N_TRANSLITERATOR,
     UCLN_I18N_REGEX,
     UCLN_I18N_ISLAMIC_CALENDAR,

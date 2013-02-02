@@ -715,6 +715,7 @@ void IntlTestSpoof::testRestrictionLevel() {
             sprintf(msgBuffer, "testNum = %d, levelIndex = %d", testNum, levelIndex);
             TEST_ASSERT_MSG(expectedFailure == actualValue, msgBuffer);
             TEST_ASSERT_SUCCESS(status);
+            uspoof_close(sc);
         }
     }
 }
@@ -750,5 +751,6 @@ void IntlTestSpoof::testMixedNumbers() {
         int32_t result = uspoof_checkUnicodeString(sc, testString, NULL, &status);
         UBool mixedNumberFailure = ((result & USPOOF_MIXED_NUMBERS) != 0);
         TEST_ASSERT_MSG((expectedSet.size() > 1) == mixedNumberFailure, msgBuf);
+        uspoof_close(sc);
     }
 }
