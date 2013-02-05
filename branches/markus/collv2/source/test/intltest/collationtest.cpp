@@ -217,6 +217,7 @@ void CollationTest::TestImplicits() {
     UnicodeSet unassigned("[[:Cn:][:Cs:][:Co:]]", errorCode);
     unassigned.remove(0xfffe, 0xffff);
     unassigned.remove(0xfff1, 0xfff2);  // TODO: remove hack "tailoring"
+    unassigned.remove(0x2066, 0x2069);  // TODO: remove this when UCD 6.3 is integrated
     if(errorCode.logIfFailureAndReset("UnicodeSet")) {
         return;
     }

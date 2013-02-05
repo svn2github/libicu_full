@@ -61,6 +61,11 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
     // UCA section 7.1.1 Handling Ill-Formed Code Unit Sequences.
     trie = utrie2_open(Collation::UNASSIGNED_CE32, Collation::FFFD_CE32, &errorCode);
 
+    // Preallocate trie blocks for Latin in the hope that proximity helps with CPU caches.
+    for(UChar32 c = 0; c < 0x180; ++c) {
+        utrie2_set32(trie, c, Collation::UNASSIGNED_CE32, &errorCode);
+    }
+
     utrie2_set32(trie, 0xfffd, Collation::FFFD_CE32, &errorCode);
     utrie2_set32(trie, 0xfffe, Collation::MERGE_SEPARATOR_CE32, &errorCode);
     utrie2_set32(trie, 0xffff, Collation::MAX_REGULAR_CE32, &errorCode);

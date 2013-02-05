@@ -314,7 +314,7 @@ static UCAElements *readAnOption(
                     return NULL;
                 }
             } else if(what_to_do == READBYTE) {
-                vt[cnt].value = parseWeight(pointer, "]", 1, *status);
+                vt[cnt].value = parseWeight(pointer, "]", 1, *status) >> 24;
                 if(U_FAILURE(*status)) {
                     fprintf(stderr, "Value of \"%s\" is not a valid byte\n", buffer);
                     return NULL;
