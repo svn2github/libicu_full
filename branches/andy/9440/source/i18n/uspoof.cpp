@@ -14,11 +14,12 @@
 *   Unicode Spoof Detection
 */
 #include "unicode/utypes.h"
+#include "unicode/normalizer2.h"
 #include "unicode/uspoof.h"
-#include "unicode/unorm.h"
 #include "unicode/ustring.h"
 #include "unicode/utf16.h"
 #include "cmemory.h"
+#include "cstring.h"
 #include "identifier_info.h"
 #include "mutex.h"
 #include "scriptset.h"
@@ -306,7 +307,7 @@ static void releaseIdentifierInfo(IdentifierInfo *idInfo) {
 
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
-             const UChar *text, int32_t length,
+             const UChar *id, int32_t length,
              int32_t *position,
              UErrorCode *status) {
              
@@ -318,12 +319,163 @@ uspoof_check(const USpoofChecker *sc,
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    if (length == -1) {
-        // It's not worth the bother to handle nul terminated strings everywhere.
-        //   Just get the length and be done with it.
-        length = u_strlen(text);
+    UnicodeString idStr((length == -1), id, length);  // Aliasing constructor.
+    int32_t result = uspoof_checkUnicodeString(sc, idStr, position, status);
+    return result;
+}
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_checkUTF8(const USpoofChecker *sc,
+                 const char *id, int32_t length,
+                 int32_t *position,
+                 UErrorCode *status) {
+
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    UnicodeString idStr = UnicodeString::fromUTF8(StringPiece(id, length>=0 ? length : uprv_strlen(id)));
+    int32_t result = uspoof_checkUnicodeString(sc, idStr, position, status);
+    return result;
+}
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_areConfusable(const USpoofChecker *sc,
+                     const UChar *id1, int32_t length1,
+                     const UChar *id2, int32_t length2,
+                     UErrorCode *status) {
+    SpoofImpl::validateThis(sc, *status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    if (length1 < -1 || length2 < -1) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+        
+    UnicodeString id1Str((length1==-1), id1, length1);  // Aliasing constructor
+    UnicodeString id2Str((length2==-1), id2, length2);  // Aliasing constructor
+    return uspoof_areConfusableUnicodeString(sc, id1Str, id2Str, status);
+}
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_areConfusableUTF8(const USpoofChecker *sc,
+                         const char *id1, int32_t length1,
+                         const char *id2, int32_t length2,
+                         UErrorCode *status) {
+    SpoofImpl::validateThis(sc, *status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    if (length1 < -1 || length2 < -1) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    UnicodeString id1Str = UnicodeString::fromUTF8(StringPiece(id1, length1>=0? length1 : uprv_strlen(id1)));
+    UnicodeString id2Str = UnicodeString::fromUTF8(StringPiece(id2, length2>=0? length1 : uprv_strlen(id1)));
+    int32_t results = uspoof_areConfusableUnicodeString(sc, id1Str, id2Str, status);
+    return results;
+}
+ 
+
+U_CAPI int32_t U_EXPORT2
+uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
+                                  const icu::UnicodeString &id1,
+                                  const icu::UnicodeString &id2,
+                                  UErrorCode *status) {
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    // 
+    // See section 4 of UAX 39 for the algorithm for checking whether two strings are confusable,
+    //   and for definitions of the types (single, whole, mixed-script) of confusables.
+    
+    // We only care about a few of the check flags.  Ignore the others.
+    // If no tests relavant to this function have been specified, return an error.
+    // TODO:  is this really the right thing to do?  It's probably an error on the caller's part,
+    //        but logically we would just return 0 (no error).
+    if ((This->fChecks & (USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_MIXED_SCRIPT_CONFUSABLE | 
+                          USPOOF_WHOLE_SCRIPT_CONFUSABLE)) == 0) {
+        *status = U_INVALID_STATE_ERROR;
+        return 0;
+    }
+    int32_t  flagsForSkeleton = This->fChecks & USPOOF_ANY_CASE;
+
+    int32_t  result = 0;
+    IdentifierInfo *identifierInfo = getIdentifierInfo(*status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+    identifierInfo->setIdentifier(id1, *status);
+    int32_t id1ScriptCount = identifierInfo->getScriptCount();
+    identifierInfo->setIdentifier(id2, *status);
+    int32_t id2ScriptCount = identifierInfo->getScriptCount();
+    releaseIdentifierInfo(identifierInfo);
+    identifierInfo = NULL;
+
+    if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
+        UnicodeString   id1Skeleton;
+        UnicodeString   id2Skeleton;
+        if (id1ScriptCount <= 1 && id2ScriptCount <= 1) {
+            flagsForSkeleton |= USPOOF_SINGLE_SCRIPT_CONFUSABLE;
+            uspoof_getSkeletonUnicodeString(sc, flagsForSkeleton, id1, id1Skeleton, status);
+            uspoof_getSkeletonUnicodeString(sc, flagsForSkeleton, id2, id2Skeleton, status);
+            if (id1Skeleton == id2Skeleton) {
+                result |= USPOOF_SINGLE_SCRIPT_CONFUSABLE;
+            }
+        }
     }
 
+    if (result & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
+         // If the two inputs are single script confusable they cannot also be
+         // mixed or whole script confusable, according to the UAX39 definitions.
+         // So we can skip those tests.
+         return result;
+    }
+
+    // Two identifiers are whole script confusable if each is of a single script 
+    // and they are mixed script confusable.
+    UBool possiblyWholeScriptConfusables = 
+        id1ScriptCount <= 1 && id2ScriptCount <= 1 && (This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE);
+
+    //
+    // Mixed Script Check
+    //
+    if ((This->fChecks & USPOOF_MIXED_SCRIPT_CONFUSABLE) || possiblyWholeScriptConfusables ) {
+        // For getSkeleton(), resetting the USPOOF_SINGLE_SCRIPT_CONFUSABLE flag will get us
+        // the mixed script table skeleton, which is what we want.
+        // The Any Case / Lower Case bit in the skelton flags was set at the top of the function.
+        UnicodeString id1Skeleton;
+        UnicodeString id2Skeleton;
+        flagsForSkeleton &= ~USPOOF_SINGLE_SCRIPT_CONFUSABLE;
+        uspoof_getSkeletonUnicodeString(sc, flagsForSkeleton, id1, id1Skeleton, status);
+        uspoof_getSkeletonUnicodeString(sc, flagsForSkeleton, id2, id2Skeleton, status);
+        if (id1Skeleton == id2Skeleton) {
+            result |= USPOOF_MIXED_SCRIPT_CONFUSABLE;
+            if (possiblyWholeScriptConfusables) {
+                result |= USPOOF_WHOLE_SCRIPT_CONFUSABLE;
+            }
+        }
+    }
+
+    return result;
+}
+
+
+
+
+U_CAPI int32_t U_EXPORT2
+uspoof_checkUnicodeString(const USpoofChecker *sc,
+                          const icu::UnicodeString &id, 
+                          int32_t *position,
+                          UErrorCode *status) {
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+    if (This == NULL) {
+        return 0;
+    }
     int32_t result = 0;
 
     IdentifierInfo *identifierInfo = NULL;
@@ -332,18 +484,18 @@ uspoof_check(const USpoofChecker *sc,
         if (U_FAILURE(*status)) {
             goto cleanupAndReturn;
         }
-        identifierInfo->setIdentifier(UnicodeString(FALSE, text, length), *status);
+        identifierInfo->setIdentifier(id, *status);
         identifierInfo->setIdentifierProfile(*This->fAllowedCharsSet);
     }
 
 
     if ((This->fChecks) & USPOOF_RESTRICTION_LEVEL) {
-        URestrictionLevel textRestrictionLevel = identifierInfo->getRestrictionLevel(*status);
-        if (textRestrictionLevel > This->fRestrictionLevel) {
+        URestrictionLevel idRestrictionLevel = identifierInfo->getRestrictionLevel(*status);
+        if (idRestrictionLevel > This->fRestrictionLevel) {
             result |= USPOOF_RESTRICTION_LEVEL;
         }
         if (This->fChecks & USPOOF_AUX_INFO) {
-            result |= textRestrictionLevel;
+            result |= idRestrictionLevel;
         }
     }
 
@@ -364,8 +516,10 @@ uspoof_check(const USpoofChecker *sc,
     if (This->fChecks & USPOOF_CHAR_LIMIT) {
         int32_t i;
         UChar32 c;
+        int32_t length = id.length();
         for (i=0; i<length ;) {
-            U16_NEXT(text, i, length, c);
+            c = id.char32At(i);
+            i += U16_LENGTH(c);
             if (!This->fAllowedCharsSet->contains(c)) {
                 result |= USPOOF_CHAR_LIMIT;
                 break;
@@ -376,9 +530,10 @@ uspoof_check(const USpoofChecker *sc,
     if (This->fChecks & 
         (USPOOF_WHOLE_SCRIPT_CONFUSABLE | USPOOF_MIXED_SCRIPT_CONFUSABLE | USPOOF_INVISIBLE)) {
         // These are the checks that need to be done on NFD input
-        NFDBuffer   normalizedInput(text, length, *status);
-        const UChar  *nfdText = normalizedInput.getBuffer();
-        int32_t      nfdLength = normalizedInput.getLength();
+        const Normalizer2 *nfdNormalizer = Normalizer2::getNFDInstance(*status);
+        UnicodeString nfdText;
+        nfdNormalizer->normalize(id, nfdText, *status);
+        int32_t nfdLength = nfdText.length();
 
         if (This->fChecks & USPOOF_INVISIBLE) {
            
@@ -391,7 +546,8 @@ uspoof_check(const USpoofChecker *sc,
             UnicodeSet  marksSeenSoFar;   // Set of combining marks in a single combining sequence.
             
             for (i=0; i<nfdLength ;) {
-                U16_NEXT(nfdText, i, nfdLength, c);
+                c = nfdText.char32At(i);
+                i += U16_LENGTH(c);
                 if (u_charType(c) != U_NON_SPACING_MARK) {
                     firstNonspacingMark = 0;
                     if (haveMultipleMarks) {
@@ -439,13 +595,13 @@ uspoof_check(const USpoofChecker *sc,
                 if (U_FAILURE(*status)) {
                     goto cleanupAndReturn;
                 }
-                identifierInfo->setIdentifier(UnicodeString(FALSE, text, length), *status);
+                identifierInfo->setIdentifier(id, *status);
             }
 
             int32_t scriptCount = identifierInfo->getScriptCount();
             
             ScriptSet scripts;
-            This->wholeScriptCheck(nfdText, nfdLength, &scripts, *status);
+            This->wholeScriptCheck(nfdText, &scripts, *status);
             int32_t confusableScriptCount = scripts.countMembers();
             //printf("confusableScriptCount = %d\n", confusableScriptCount);
             
@@ -473,281 +629,43 @@ cleanupAndReturn:
 
 
 U_CAPI int32_t U_EXPORT2
-uspoof_checkUTF8(const USpoofChecker *sc,
-                 const char *text, int32_t length,
-                 int32_t *position,
-                 UErrorCode *status) {
-
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    UChar stackBuf[USPOOF_STACK_BUFFER_SIZE];
-    UChar* text16 = stackBuf;
-    int32_t len16;
-    
-    u_strFromUTF8(text16, USPOOF_STACK_BUFFER_SIZE, &len16, text, length, status);
-    if (U_FAILURE(*status) && *status != U_BUFFER_OVERFLOW_ERROR) {
-        return 0;
-    }
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
-        text16 = static_cast<UChar *>(uprv_malloc(len16 * sizeof(UChar) + 2));
-        if (text16 == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return 0;
-        }
-        *status = U_ZERO_ERROR;
-        u_strFromUTF8(text16, len16+1, NULL, text, length, status);
-    }
-
-    int32_t result = uspoof_check(sc, text16, len16, position, status);
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-
-    if (text16 != stackBuf) {
-        uprv_free(text16);
-    }
-    return result;
-    
-}
-
-/*  A convenience wrapper around the public uspoof_getSkeleton that handles
- *  allocating a larger buffer than provided if the original is too small.
- */
-static UChar *getSkeleton(const USpoofChecker *sc, uint32_t type, const UChar *s, int32_t inputLength,
-                         UChar *dest, int32_t destCapacity, int32_t *outputLength, UErrorCode *status) {
-    int32_t requiredCapacity = 0;
-    UChar *buf = dest;
-
-    if (U_FAILURE(*status)) {
-        return NULL;
-    }
-    requiredCapacity = uspoof_getSkeleton(sc, type, s, inputLength, dest, destCapacity, status);
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
-        buf = static_cast<UChar *>(uprv_malloc(requiredCapacity * sizeof(UChar)));
-        if (buf == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return NULL;
-        }
-        *status = U_ZERO_ERROR;
-        uspoof_getSkeleton(sc, type, s, inputLength, buf, requiredCapacity, status);
-    }
-    *outputLength = requiredCapacity;
-    return buf;
-}
-
-
-U_CAPI int32_t U_EXPORT2
-uspoof_areConfusable(const USpoofChecker *sc,
-                     const UChar *s1, int32_t length1,
-                     const UChar *s2, int32_t length2,
-                     UErrorCode *status) {
-    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    // 
-    // See section 4 of UAX 39 for the algorithm for checking whether two strings are confusable,
-    //   and for definitions of the types (single, whole, mixed-script) of confusables.
-    
-    // We only care about a few of the check flags.  Ignore the others.
-    // If no tests relavant to this function have been specified, return an error.
-    // TODO:  is this really the right thing to do?  It's probably an error on the caller's part,
-    //        but logically we would just return 0 (no error).
-    if ((This->fChecks & (USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_MIXED_SCRIPT_CONFUSABLE | 
-                          USPOOF_WHOLE_SCRIPT_CONFUSABLE)) == 0) {
-        *status = U_INVALID_STATE_ERROR;
-        return 0;
-    }
-    int32_t  flagsForSkeleton = This->fChecks & USPOOF_ANY_CASE;
-    UChar    s1SkeletonBuf[USPOOF_STACK_BUFFER_SIZE];
-    UChar   *s1Skeleton;
-    int32_t  s1SkeletonLength = 0;
-
-    UChar    s2SkeletonBuf[USPOOF_STACK_BUFFER_SIZE];
-    UChar   *s2Skeleton;
-    int32_t  s2SkeletonLength = 0;
-
-    int32_t  result = 0;
-    IdentifierInfo *identifierInfo = getIdentifierInfo(*status);
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    identifierInfo->setIdentifier(UnicodeString(FALSE, s1, length1), *status);
-    int32_t s1ScriptCount = identifierInfo->getScriptCount();
-    identifierInfo->setIdentifier(UnicodeString(FALSE, s2, length2), *status);
-    int32_t s2ScriptCount = identifierInfo->getScriptCount();
-    releaseIdentifierInfo(identifierInfo);
-    identifierInfo = NULL;
-
-    // TODO: Switch the skeleton over to UnicodeString for easier memory management.
-    if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
-        // Do the Single Script compare.
-        if (s1ScriptCount <= 1 && s2ScriptCount <= 1) {
-            flagsForSkeleton |= USPOOF_SINGLE_SCRIPT_CONFUSABLE;
-            s1Skeleton = getSkeleton(sc, flagsForSkeleton, s1, length1, s1SkeletonBuf, 
-                                     sizeof(s1SkeletonBuf)/sizeof(UChar), &s1SkeletonLength, status);
-            s2Skeleton = getSkeleton(sc, flagsForSkeleton, s2, length2, s2SkeletonBuf, 
-                                     sizeof(s2SkeletonBuf)/sizeof(UChar), &s2SkeletonLength, status);
-            if (s1SkeletonLength == s2SkeletonLength && u_strncmp(s1Skeleton, s2Skeleton, s1SkeletonLength) == 0) {
-                result |= USPOOF_SINGLE_SCRIPT_CONFUSABLE;
-            }
-            if (s1Skeleton != s1SkeletonBuf) {
-                uprv_free(s1Skeleton);
-            }
-            if (s2Skeleton != s2SkeletonBuf) {
-                uprv_free(s2Skeleton);
-            }
-        }
-    }
-
-    if (result & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
-         // If the two inputs are single script confusable they cannot also be
-         // mixed or whole script confusable, according to the UAX39 definitions.
-         // So we can skip those tests.
-         return result;
-    }
-
-    // Optimization for whole script confusables test:  two identifiers are whole script confusable if
-    // each is of a single script and they are mixed script confusable.
-    UBool possiblyWholeScriptConfusables = 
-        s1ScriptCount <= 1 && s2ScriptCount <= 1 && (This->fChecks & USPOOF_WHOLE_SCRIPT_CONFUSABLE);
-
-    //
-    // Mixed Script Check
-    //
-    if ((This->fChecks & USPOOF_MIXED_SCRIPT_CONFUSABLE) || possiblyWholeScriptConfusables ) {
-        // For getSkeleton(), resetting the USPOOF_SINGLE_SCRIPT_CONFUSABLE flag will get us
-        // the mixed script table skeleton, which is what we want.
-        // The Any Case / Lower Case bit in the skelton flags was set at the top of the function.
-        flagsForSkeleton &= ~USPOOF_SINGLE_SCRIPT_CONFUSABLE;
-        s1Skeleton = getSkeleton(sc, flagsForSkeleton, s1, length1, s1SkeletonBuf, 
-                                 sizeof(s1SkeletonBuf)/sizeof(UChar), &s1SkeletonLength, status);
-        s2Skeleton = getSkeleton(sc, flagsForSkeleton, s2, length2, s2SkeletonBuf, 
-                                 sizeof(s2SkeletonBuf)/sizeof(UChar), &s2SkeletonLength, status);
-        if (s1SkeletonLength == s2SkeletonLength && u_strncmp(s1Skeleton, s2Skeleton, s1SkeletonLength) == 0) {
-            result |= USPOOF_MIXED_SCRIPT_CONFUSABLE;
-            if (possiblyWholeScriptConfusables) {
-                result |= USPOOF_WHOLE_SCRIPT_CONFUSABLE;
-            }
-        }
-        if (s1Skeleton != s1SkeletonBuf) {
-            uprv_free(s1Skeleton);
-        }
-        if (s2Skeleton != s2SkeletonBuf) {
-            uprv_free(s2Skeleton);
-        }
-    }
-
-    return result;
-}
-
-
-// Convenience function for converting a UTF-8 input to a UChar * string, including
-//          reallocating a buffer when required.  Parameters and their interpretation mostly
-//          match u_strFromUTF8.
-
-static UChar * convertFromUTF8(UChar *outBuf, int32_t outBufCapacity, int32_t *outputLength,
-                               const char *in, int32_t inLength, UErrorCode *status) {
-    if (U_FAILURE(*status)) {
-        return NULL;
-    }
-    UChar *dest = outBuf;
-    u_strFromUTF8(dest, outBufCapacity, outputLength, in, inLength, status);
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
-        dest = static_cast<UChar *>(uprv_malloc(*outputLength * sizeof(UChar)));
-        if (dest == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return NULL;
-        }
-        *status = U_ZERO_ERROR;
-        u_strFromUTF8(dest, *outputLength, NULL, in, inLength, status);
-    }
-    return dest;
-}
-
-    
-
-U_CAPI int32_t U_EXPORT2
-uspoof_areConfusableUTF8(const USpoofChecker *sc,
-                         const char *s1, int32_t length1,
-                         const char *s2, int32_t length2,
-                         UErrorCode *status) {
+uspoof_getSkeleton(const USpoofChecker *sc,
+                   uint32_t type,
+                   const UChar *id,  int32_t length,
+                   UChar *dest, int32_t destCapacity,
+                   UErrorCode *status) {
 
     SpoofImpl::validateThis(sc, *status);
     if (U_FAILURE(*status)) {
         return 0;
     }
-
-    UChar    s1Buf[USPOOF_STACK_BUFFER_SIZE];
-    int32_t  lengthS1U;
-    UChar   *s1U = convertFromUTF8(s1Buf, USPOOF_STACK_BUFFER_SIZE, &lengthS1U, s1, length1, status);
-
-    UChar    s2Buf[USPOOF_STACK_BUFFER_SIZE];
-    int32_t  lengthS2U;
-    UChar   *s2U = convertFromUTF8(s2Buf, USPOOF_STACK_BUFFER_SIZE, &lengthS2U, s2, length2, status);
-
-    int32_t results = uspoof_areConfusable(sc, s1U, lengthS1U, s2U, lengthS2U, status);
-    
-    if (s1U != s1Buf) {
-        uprv_free(s1U);
-    }
-    if (s2U != s2Buf) {
-        uprv_free(s2U);
-    }
-    return results;
-}
- 
-
-U_CAPI int32_t U_EXPORT2
-uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
-                                  const icu::UnicodeString &s1,
-                                  const icu::UnicodeString &s2,
-                                  UErrorCode *status) {
-
-    const UChar *u1  = s1.getBuffer();
-    int32_t  length1 = s1.length();
-    const UChar *u2  = s2.getBuffer();
-    int32_t  length2 = s2.length();
-
-    int32_t results  = uspoof_areConfusable(sc, u1, length1, u2, length2, status);
-    return results;
-}
-
-
-
-
-U_CAPI int32_t U_EXPORT2
-uspoof_checkUnicodeString(const USpoofChecker *sc,
-                          const icu::UnicodeString &text, 
-                          int32_t *position,
-                          UErrorCode *status) {
-    int32_t result = uspoof_check(sc, text.getBuffer(), text.length(), position, status);
-    return result;
-}
-
-
-U_CAPI int32_t U_EXPORT2
-uspoof_getSkeleton(const USpoofChecker *sc,
-                   uint32_t type,
-                   const UChar *s,  int32_t length,
-                   UChar *dest, int32_t destCapacity,
-                   UErrorCode *status) {
-
-    // TODO:  this function could be sped up a bit
-    //        Skip the input normalization when not needed, work from callers data.
-    //        Put the initial skeleton straight into the caller's destination buffer.
-    //        It probably won't need normalization.
-    //        But these would make the structure more complicated.  
-
-    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    if (length<-1 || destCapacity<0 || (destCapacity==0 && dest!=NULL) ||
-        (type & ~(USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE)) != 0) {
+    if (length<-1 || destCapacity<0 || (destCapacity==0 && dest!=NULL)) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
+    }
+
+    UnicodeString idStr((length==-1), id, length);  // Aliasing constructor
+    UnicodeString destStr;
+    uspoof_getSkeletonUnicodeString(sc, type, idStr, destStr, status);
+    destStr.extract(dest, destCapacity, *status);
+    return destStr.length();
+}
+
+
+
+U_I18N_API UnicodeString &  U_EXPORT2
+uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
+                                uint32_t type,
+                                const UnicodeString &id,
+                                UnicodeString &dest,
+                                UErrorCode *status) {
+    const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
+    if (U_FAILURE(*status)) {
+        return dest;
+    }
+    if ((type & ~(USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE)) != 0) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return dest;
     }
 
    int32_t tableMask = 0;
@@ -766,120 +684,25 @@ uspoof_getSkeleton(const USpoofChecker *sc,
         break;
       default:
         *status = U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
+        return dest;
     }
 
-    // NFD transform of the user supplied input
-    
-    UChar nfdStackBuf[USPOOF_STACK_BUFFER_SIZE];
-    UChar *nfdInput = nfdStackBuf;
-    int32_t normalizedLen = unorm_normalize(
-        s, length, UNORM_NFD, 0, nfdInput, USPOOF_STACK_BUFFER_SIZE, status);
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
-        nfdInput = (UChar *)uprv_malloc((normalizedLen+1)*sizeof(UChar));
-        if (nfdInput == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return 0;
-        }
-        *status = U_ZERO_ERROR;
-        normalizedLen = unorm_normalize(s, length, UNORM_NFD, 0,
-                                        nfdInput, normalizedLen+1, status);
-    }
-    if (U_FAILURE(*status)) {
-        if (nfdInput != nfdStackBuf) {
-            uprv_free(nfdInput);
-        }
-        return 0;
-    }
-
-    // buffer to hold the Unicode defined skeleton mappings for a single code point
-    UChar buf[USPOOF_MAX_SKELETON_EXPANSION];
+    const Normalizer2 *nfdNormalizer = Normalizer2::getNFDInstance(*status);
+    UnicodeString nfdId;
+    nfdNormalizer->normalize(id, nfdId, *status);
 
     // Apply the skeleton mapping to the NFD normalized input string
     // Accumulate the skeleton, possibly unnormalized, in a UnicodeString.
     int32_t inputIndex = 0;
     UnicodeString skelStr;
-    while (inputIndex < normalizedLen) {
-        UChar32 c;
-        U16_NEXT(nfdInput, inputIndex, normalizedLen, c);
-        int32_t replaceLen = This->confusableLookup(c, tableMask, buf);
-        skelStr.append(buf, replaceLen);
+    int32_t normalizedLen = nfdId.length();
+    for (inputIndex=0; inputIndex < normalizedLen; ) {
+        UChar32 c = nfdId.char32At(inputIndex);
+        inputIndex += U16_LENGTH(c);
+        This->confusableLookup(c, tableMask, skelStr);
     }
 
-    if (nfdInput != nfdStackBuf) {
-        uprv_free(nfdInput);
-    }
-    
-    const UChar *result = skelStr.getBuffer();
-    int32_t  resultLen  = skelStr.length();
-    UChar   *normedResult = NULL;
-
-    // Check the skeleton for NFD, normalize it if needed.
-    // Unnormalized results should be very rare.
-    if (!unorm_isNormalized(result, resultLen, UNORM_NFD, status)) {
-        normalizedLen = unorm_normalize(result, resultLen, UNORM_NFD, 0, NULL, 0, status);
-        normedResult = static_cast<UChar *>(uprv_malloc((normalizedLen+1)*sizeof(UChar)));
-        if (normedResult == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return 0;
-        }
-        *status = U_ZERO_ERROR;
-        unorm_normalize(result, resultLen, UNORM_NFD, 0, normedResult, normalizedLen+1, status);
-        result = normedResult;
-        resultLen = normalizedLen;
-    }
-
-    // Copy the skeleton to the caller's buffer
-    if (U_SUCCESS(*status)) {
-        if (destCapacity == 0 || resultLen > destCapacity) {
-            *status = resultLen>destCapacity ? U_BUFFER_OVERFLOW_ERROR : U_STRING_NOT_TERMINATED_WARNING;
-        } else {
-            u_memcpy(dest, result, resultLen);
-            if (destCapacity > resultLen) {
-                dest[resultLen] = 0;
-            } else {
-                *status = U_STRING_NOT_TERMINATED_WARNING;
-            }
-        }
-     }       
-     uprv_free(normedResult);
-     return resultLen;
-}
-
-
-
-U_I18N_API UnicodeString &  U_EXPORT2
-uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
-                                uint32_t type,
-                                const UnicodeString &s,
-                                UnicodeString &dest,
-                                UErrorCode *status) {
-    if (U_FAILURE(*status)) {
-        return dest;
-    }
-    dest.remove();
-    
-    const UChar *str = s.getBuffer();
-    int32_t      strLen = s.length();
-    UChar        smallBuf[USPOOF_STACK_BUFFER_SIZE];
-    UChar       *buf = smallBuf;
-    int32_t outputSize = uspoof_getSkeleton(sc, type, str, strLen, smallBuf, USPOOF_STACK_BUFFER_SIZE, status);
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
-        buf = static_cast<UChar *>(uprv_malloc((outputSize+1)*sizeof(UChar)));
-        if (buf == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            return dest;
-        }
-        *status = U_ZERO_ERROR;
-        uspoof_getSkeleton(sc, type, str, strLen, buf, outputSize+1, status);
-    }
-    if (U_SUCCESS(*status)) {
-        dest.setTo(buf, outputSize);
-    }
-
-    if (buf != smallBuf) {
-        uprv_free(buf);
-    }
+    nfdNormalizer->normalize(skelStr, dest, *status);
     return dest;
 }
 
@@ -887,62 +710,29 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
 U_CAPI int32_t U_EXPORT2
 uspoof_getSkeletonUTF8(const USpoofChecker *sc,
                        uint32_t type,
-                       const char *s,  int32_t length,
+                       const char *id,  int32_t length,
                        char *dest, int32_t destCapacity,
                        UErrorCode *status) {
-    // Lacking a UTF-8 normalization API, just converting the input to
-    // UTF-16 seems as good an approach as any.  In typical use, input will
-    // be an identifier, which is to say not too long for stack buffers.
+    SpoofImpl::validateThis(sc, *status);
     if (U_FAILURE(*status)) {
         return 0;
     }
-    // Buffers for the UChar form of the input and skeleton strings.
-    UChar    smallInBuf[USPOOF_STACK_BUFFER_SIZE];
-    UChar   *inBuf = smallInBuf;
-    UChar    smallOutBuf[USPOOF_STACK_BUFFER_SIZE];
-    UChar   *outBuf = smallOutBuf;
-
-    int32_t  lengthInUChars = 0;
-    int32_t  skelLengthInUChars = 0;
-    int32_t  skelLengthInUTF8 = 0;
-    
-    u_strFromUTF8(inBuf, USPOOF_STACK_BUFFER_SIZE, &lengthInUChars,
-                  s, length, status);
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
-        inBuf = static_cast<UChar *>(uprv_malloc((lengthInUChars+1)*sizeof(UChar)));
-        if (inBuf == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            goto cleanup;
-        }
-        *status = U_ZERO_ERROR;
-        u_strFromUTF8(inBuf, lengthInUChars+1, &lengthInUChars,
-                      s, length, status);
-    }
-    
-    skelLengthInUChars = uspoof_getSkeleton(sc, type, inBuf, lengthInUChars,
-                                         outBuf, USPOOF_STACK_BUFFER_SIZE, status);
-    if (*status == U_BUFFER_OVERFLOW_ERROR) {
-        outBuf = static_cast<UChar *>(uprv_malloc((skelLengthInUChars+1)*sizeof(UChar)));
-        if (outBuf == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-            goto cleanup;
-        }
-        *status = U_ZERO_ERROR;
-        skelLengthInUChars = uspoof_getSkeleton(sc, type, inBuf, lengthInUChars,
-                                         outBuf, skelLengthInUChars+1, status);
+    if (length<-1 || destCapacity<0 || (destCapacity==0 && dest!=NULL)) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
     }
 
-    u_strToUTF8(dest, destCapacity, &skelLengthInUTF8,
-                outBuf, skelLengthInUChars, status);
+    UnicodeString srcStr = UnicodeString::fromUTF8(StringPiece(id, length>=0 ? length : uprv_strlen(id)));
+    UnicodeString destStr;
+    uspoof_getSkeletonUnicodeString(sc, type, srcStr, destStr, status);
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
 
-  cleanup:
-    if (inBuf != smallInBuf) {
-        uprv_free(inBuf);
-    }
-    if (outBuf != smallOutBuf) {
-        uprv_free(outBuf);
-    }
-    return skelLengthInUTF8;
+    int32_t lengthInUTF8 = 0;
+    u_strToUTF8(dest, destCapacity, &lengthInUTF8,
+                destStr.getBuffer(), destStr.length(), status);
+    return lengthInUTF8;
 }
 
 

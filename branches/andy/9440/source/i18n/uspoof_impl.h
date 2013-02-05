@@ -65,7 +65,7 @@ public:
      *                       One of USPOOF_SL_TABLE_FLAG, USPOOF_MA_TABLE_FLAG, etc.
      *  @return   The length in UTF-16 code units of the substition string.
      */  
-    int32_t confusableLookup(UChar32 inChar, int32_t tableMask, UChar *destBuf) const;
+    int32_t confusableLookup(UChar32 inChar, int32_t tableMask, UnicodeString &destBuf) const;
 
     /** Set and Get AllowedLocales, implementations of the corresponding API */
     void setAllowedLocales(const char *localesList, UErrorCode &status);
@@ -83,7 +83,7 @@ public:
     // Return the test bit flag to be ORed into the eventual user return value
     //    if a Spoof opportunity is detected.
     void wholeScriptCheck(
-        const UChar *text, int32_t length, ScriptSet *result, UErrorCode &status) const;
+        const UnicodeString &text, ScriptSet *result, UErrorCode &status) const;
 	    
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;
@@ -166,35 +166,6 @@ struct SpoofStringLengthsElement {
     uint16_t      fLastString;         // index in string table of last string with this length
     uint16_t      fStrLength;           // Length of strings
 };
-
-
-
-//-------------------------------------------------------------------------------
-//
-//  NFDBuffer   A little class to handle the NFD normalization that is
-//               needed on incoming identifiers to be checked.
-//               Takes care of buffer handling and normalization
-//
-//               Instances of this class are intended to be stack-allocated.
-//
-//               TODO:  how to map position offsets back to user values?
-//
-//--------------------------------------------------------------------------------
-class NFDBuffer: public UMemory {
-public:
-    NFDBuffer(const UChar *text, int32_t length, UErrorCode &status);
-    ~NFDBuffer();
-    const UChar *getBuffer();
-    int32_t getLength();
-
-  private:
-    const UChar *fOriginalText;
-    UChar       *fNormalizedText;
-    int32_t      fNormalizedTextLength;
-    UChar        fSmallBuf[USPOOF_STACK_BUFFER_SIZE];
-};
-
-
 
 
 

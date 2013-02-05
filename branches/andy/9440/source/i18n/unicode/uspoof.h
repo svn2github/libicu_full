@@ -633,7 +633,7 @@ uspoof_getAllowedUnicodeSet(const USpoofChecker *sc, UErrorCode *status);
  * The set of checks to be performed is specified with uspoof_setChecks().
  * 
  * @param sc      The USpoofChecker 
- * @param text    The string to be checked for possible security issues,
+ * @param id      The identifier to be checked for possible security issues,
  *                in UTF-16 format.
  * @param length  the length of the string to be checked, expressed in
  *                16 bit UTF-16 code units, or -1 if the string is 
@@ -655,7 +655,7 @@ uspoof_getAllowedUnicodeSet(const USpoofChecker *sc, UErrorCode *status);
  */
 U_STABLE int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
-                         const UChar *text, int32_t length, 
+                         const UChar *id, int32_t length, 
                          int32_t *position,
                          UErrorCode *status);
 
@@ -666,7 +666,7 @@ uspoof_check(const USpoofChecker *sc,
  * The set of checks to be performed is specified with uspoof_setChecks().
  * 
  * @param sc      The USpoofChecker 
- * @param text    A UTF-8 string to be checked for possible security issues.
+ * @param id      A identifier to be checked for possible security issues, in UTF8 format.
  * @param length  the length of the string to be checked, or -1 if the string is 
  *                zero terminated.
  * @param position      An out parameter.
@@ -689,7 +689,7 @@ uspoof_check(const USpoofChecker *sc,
  */
 U_STABLE int32_t U_EXPORT2
 uspoof_checkUTF8(const USpoofChecker *sc,
-                 const char *text, int32_t length,
+                 const char *id, int32_t length,
                  int32_t *position,
                  UErrorCode *status);
 
@@ -701,7 +701,7 @@ uspoof_checkUTF8(const USpoofChecker *sc,
  * The set of checks to be performed is specified with uspoof_setChecks().
  * 
  * @param sc      The USpoofChecker 
- * @param text    A UnicodeString to be checked for possible security issues.
+ * @param id      A identifier to be checked for possible security issues.
  * @param position      An out parameter.
  *                Originally, the index of the first string position that failed a check.
  *                Now, always returns zero.
@@ -720,7 +720,7 @@ uspoof_checkUTF8(const USpoofChecker *sc,
  */
 U_STABLE int32_t U_EXPORT2
 uspoof_checkUnicodeString(const USpoofChecker *sc,
-                          const icu::UnicodeString &text, 
+                          const icu::UnicodeString &id, 
                           int32_t *position,
                           UErrorCode *status);
 
@@ -746,30 +746,30 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
  *
  *
  * @param sc      The USpoofChecker
- * @param s1      The first of the two strings to be compared for 
+ * @param id1     The first of the two identifiers to be compared for 
  *                confusability.  The strings are in UTF-16 format.
- * @param length1 the length of the first string, expressed in
+ * @param length1 the length of the first identifer, expressed in
  *                16 bit UTF-16 code units, or -1 if the string is 
- *                zero terminated.
- * @param s2      The second of the two strings to be compared for 
- *                confusability.  The strings are in UTF-16 format.
- * @param length2 The length of the second string, expressed in
+ *                nul terminated.
+ * @param id2     The second of the two identifiers to be compared for 
+ *                confusability.  The identifiers are in UTF-16 format.
+ * @param length2 The length of the second identifiers, expressed in
  *                16 bit UTF-16 code units, or -1 if the string is 
- *                zero terminated.
+ *                nul terminated.
  * @param status  The error code, set if an error occurred while attempting to
  *                perform the check.
- *                Confusability of the strings is not reported here,
+ *                Confusability of the identifiers is not reported here,
  *                but through this function's return value.
  * @return        An integer value with bit(s) set corresponding to
  *                the type of confusability found, as defined by
- *                enum USpoofChecks.  Zero is returned if the strings
+ *                enum USpoofChecks.  Zero is returned if the identifiers
  *                are not confusable.
  * @stable ICU 4.2
  */
 U_STABLE int32_t U_EXPORT2
 uspoof_areConfusable(const USpoofChecker *sc,
-                     const UChar *s1, int32_t length1,
-                     const UChar *s2, int32_t length2,
+                     const UChar *id1, int32_t length1,
+                     const UChar *id2, int32_t length2,
                      UErrorCode *status);
 
 
@@ -781,14 +781,14 @@ uspoof_areConfusable(const USpoofChecker *sc,
  * USpoofChecker.
  *
  * @param sc      The USpoofChecker
- * @param s1      The first of the two strings to be compared for 
+ * @param id1     The first of the two identifiers to be compared for 
  *                confusability.  The strings are in UTF-8 format.
- * @param length1 the length of the first string, in bytes, or -1 
- *                if the string is zero terminated.
- * @param s2      The second of the two strings to be compared for 
- *                confusability.  The strings are in UTF-18 format.
+ * @param length1 the length of the first identifiers, in bytes, or -1 
+ *                if the string is nul terminated.
+ * @param id2     The second of the two identifiers to be compared for 
+ *                confusability.  The strings are in UTF-8 format.
  * @param length2 The length of the second string in bytes, or -1 
- *                if the string is zero terminated.
+ *                if the string is nul terminated.
  * @param status  The error code, set if an error occurred while attempting to
  *                perform the check.
  *                Confusability of the strings is not reported here,
@@ -801,8 +801,8 @@ uspoof_areConfusable(const USpoofChecker *sc,
  */
 U_STABLE int32_t U_EXPORT2
 uspoof_areConfusableUTF8(const USpoofChecker *sc,
-                         const char *s1, int32_t length1,
-                         const char *s2, int32_t length2,
+                         const char *id1, int32_t length1,
+                         const char *id2, int32_t length2,
                          UErrorCode *status);
 
 
@@ -816,17 +816,17 @@ uspoof_areConfusableUTF8(const USpoofChecker *sc,
  * USpoofChecker.
  *
  * @param sc      The USpoofChecker
- * @param s1      The first of the two strings to be compared for 
+ * @param id1     The first of the two identifiers to be compared for 
  *                confusability.  The strings are in UTF-8 format.
- * @param s2      The second of the two strings to be compared for 
- *                confusability.  The strings are in UTF-18 format.
+ * @param id2     The second of the two identifiers to be compared for 
+ *                confusability.  The strings are in UTF-8 format.
  * @param status  The error code, set if an error occurred while attempting to
  *                perform the check.
- *                Confusability of the strings is not reported here,
+ *                Confusability of the identifiers is not reported here,
  *                but through this function's return value.
  * @return        An integer value with bit(s) set corresponding to
  *                the type of confusability found, as defined by
- *                enum USpoofChecks.  Zero is returned if the strings
+ *                enum USpoofChecks.  Zero is returned if the identifiers
  *                are not confusable.
  * @stable ICU 4.2
  */
@@ -839,9 +839,9 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
 
 
 /**
-  *  Get the "skeleton" for an identifier string.
-  *  Skeletons are a transformation of the input string;
-  *  Two strings are confusable if their skeletons are identical.
+  *  Get the "skeleton" for an identifier.
+  *  Skeletons are a transformation of the input identifier;
+  *  Two identifiers are confusable if their skeletons are identical.
   *  See Unicode UAX #39 for additional information.
   *
   *  Using skeletons directly makes it possible to quickly check
@@ -855,8 +855,8 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
   *                The default is Mixed-Script, Lowercase.
   *                Allowed options are USPOOF_SINGLE_SCRIPT_CONFUSABLE and
   *                USPOOF_ANY_CASE_CONFUSABLE.  The two flags may be ORed.
-  * @param s       The input string whose skeleton will be computed.
-  * @param length  The length of the input string, expressed in 16 bit
+  * @param id      The input identifier whose skeleton will be computed.
+  * @param length  The length of the input identifier, expressed in 16 bit
   *                UTF-16 code units, or -1 if the string is zero terminated.
   * @param dest    The output buffer, to receive the skeleton string.
   * @param destCapacity  The length of the output buffer, in 16 bit units.
@@ -873,14 +873,14 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
 U_STABLE int32_t U_EXPORT2
 uspoof_getSkeleton(const USpoofChecker *sc,
                    uint32_t type,
-                   const UChar *s,  int32_t length,
+                   const UChar *id,  int32_t length,
                    UChar *dest, int32_t destCapacity,
                    UErrorCode *status);
     
 /**
-  *  Get the "skeleton" for an identifier string.
-  *  Skeletons are a transformation of the input string;
-  *  Two strings are confusable if their skeletons are identical.
+  *  Get the "skeleton" for an identifier.
+  *  Skeletons are a transformation of the input identifier;
+  *  Two identifiers are confusable if their skeletons are identical.
   *  See Unicode UAX #39 for additional information.
   *
   *  Using skeletons directly makes it possible to quickly check
@@ -894,7 +894,7 @@ uspoof_getSkeleton(const USpoofChecker *sc,
   *                The default is Mixed-Script, Lowercase.
   *                Allowed options are USPOOF_SINGLE_SCRIPT_CONFUSABLE and
   *                USPOOF_ANY_CASE.  The two flags may be ORed.
-  * @param s       The UTF-8 format input string whose skeleton will be computed.
+  * @param id      The UTF-8 format identifier whose skeleton will be computed.
   * @param length  The length of the input string, in bytes,
   *                or -1 if the string is zero terminated.
   * @param dest    The output buffer, to receive the skeleton string.
@@ -915,15 +915,15 @@ uspoof_getSkeleton(const USpoofChecker *sc,
 U_STABLE int32_t U_EXPORT2
 uspoof_getSkeletonUTF8(const USpoofChecker *sc,
                        uint32_t type,
-                       const char *s,  int32_t length,
+                       const char *id,  int32_t length,
                        char *dest, int32_t destCapacity,
                        UErrorCode *status);
     
 #if U_SHOW_CPLUSPLUS_API
 /**
-  *  Get the "skeleton" for an identifier string.
-  *  Skeletons are a transformation of the input string;
-  *  Two strings are confusable if their skeletons are identical.
+  *  Get the "skeleton" for an identifier.
+  *  Skeletons are a transformation of the input identifier;
+  *  Two identifiers are confusable if their skeletons are identical.
   *  See Unicode UAX #39 for additional information.
   *
   *  Using skeletons directly makes it possible to quickly check
@@ -937,8 +937,8 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
   *                The default is Mixed-Script, Lowercase.
   *                Allowed options are USPOOF_SINGLE_SCRIPT_CONFUSABLE and
   *                USPOOF_ANY_CASE_CONFUSABLE.  The two flags may be ORed.
-  * @param s       The input string whose skeleton will be computed.
-  * @param dest    The output string, to receive the skeleton string.
+  * @param id      The input identifier whose skeleton will be computed.
+  * @param dest    The output identifier, to receive the skeleton string.
   * @param status  The error code, set if an error occurred while attempting to
   *                perform the check.
   * @return        A reference to the destination (skeleton) string.
@@ -948,7 +948,7 @@ uspoof_getSkeletonUTF8(const USpoofChecker *sc,
 U_I18N_API icu::UnicodeString & U_EXPORT2
 uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 uint32_t type,
-                                const icu::UnicodeString &s,
+                                const icu::UnicodeString &id,
                                 icu::UnicodeString &dest,
                                 UErrorCode *status);
 #endif   /* U_SHOW_CPLUSPLUS_API */

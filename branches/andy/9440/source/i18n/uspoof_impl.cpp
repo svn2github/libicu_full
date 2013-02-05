@@ -7,7 +7,6 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
-#include "unicode/unorm.h"
 #include "unicode/uchar.h"
 #include "unicode/uniset.h"
 #include "unicode/utf16.h"
@@ -125,10 +124,10 @@ SpoofImpl *SpoofImpl::validateThis(USpoofChecker *sc, UErrorCode &status) {
 //                        implementation.
 //
 //                        Given a source character, produce the corresponding
-//                        replacement character(s)
+//                        replacement character(s), appending them to the dest string.
 //
 //---------------------------------------------------------------------------------------
-int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *destBuf) const {
+int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UnicodeString &dest) const {
 
     // Binary search the spoof data key table for the inChar
     int32_t  *low   = fSpoofData->fCFUKeys;
@@ -152,7 +151,7 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
     if (inChar != midc) {
         // Char not found.  It maps to itself.
         int i = 0;
-        U16_APPEND_UNSAFE(destBuf, i, inChar)
+        dest.append(inChar);
         return i;
     } 
   foundChar:
@@ -180,7 +179,7 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
         // No key entry for this char & table.
         // The input char maps to itself.
         int i = 0;
-        U16_APPEND_UNSAFE(destBuf, i, inChar)
+        dest.append(inChar);
         return i;
     }
 
@@ -192,7 +191,7 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
     //                 an index into the string table (for longer strings)
     uint16_t value = fSpoofData->fCFUValues[keyTableIndex];
     if (stringLen == 1) {
-        destBuf[0] = value;
+        dest.append((UChar)value);
         return 1;
     }
 
@@ -216,9 +215,7 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
 
     U_ASSERT(value + stringLen <= fSpoofData->fRawData->fCFUStringTableLen);
     UChar *src = &fSpoofData->fCFUStrings[value];
-    for (ix=0; ix<stringLen; ix++) {
-        destBuf[ix] = src[ix];
-    }
+    dest.append(src, stringLen);
     return stringLen;
 }
 
@@ -235,16 +232,15 @@ int32_t SpoofImpl::confusableLookup(UChar32 inChar, int32_t tableMask, UChar *de
 //
 //---------------------------------------------------------------------------------------
 void SpoofImpl::wholeScriptCheck(
-    const UChar *text, int32_t length, ScriptSet *result, UErrorCode &status) const {
-
-    int32_t       inputIdx = 0;
-    UChar32       c;
+        const UnicodeString &text, ScriptSet *result, UErrorCode &status) const {
 
     UTrie2 *table =
         (fChecks & USPOOF_ANY_CASE) ? fSpoofData->fAnyCaseTrie : fSpoofData->fLowerCaseTrie;
     result->setAll();
-    while (inputIdx < length) {
-        U16_NEXT(text, inputIdx, length, c);
+    int32_t length = text.length();
+    for (int32_t inputIdx=0; inputIdx < length;) {
+        UChar32 c = text.char32At(inputIdx);
+        inputIdx += U16_LENGTH(c);
         uint32_t index = utrie2_get32(table, c);
         if (index == 0) {
             // No confusables in another script for this char.
@@ -634,54 +630,6 @@ void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
     initPtrs(status);
     return (char *)fRawData + returnOffset;
 }
-
-
-//-----------------------------------------------------------------------------
-//
-//  NFDBuffer Implementation.
-//
-//-----------------------------------------------------------------------------
-
-NFDBuffer::NFDBuffer(const UChar *text, int32_t length, UErrorCode &status) {
-    fNormalizedText = NULL;
-    fNormalizedTextLength = 0;
-    fOriginalText = text;
-    if (U_FAILURE(status)) {
-        return;
-    }
-    fNormalizedText = fSmallBuf;
-    fNormalizedTextLength = unorm_normalize(
-        text, length, UNORM_NFD, 0, fNormalizedText, USPOOF_STACK_BUFFER_SIZE, &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR) {
-        status = U_ZERO_ERROR;
-        fNormalizedText = (UChar *)uprv_malloc((fNormalizedTextLength+1)*sizeof(UChar));
-        if (fNormalizedText == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-        } else {
-            fNormalizedTextLength = unorm_normalize(text, length, UNORM_NFD, 0,
-                                        fNormalizedText, fNormalizedTextLength+1, &status);
-        }
-    }
-}
-
-
-NFDBuffer::~NFDBuffer() {
-    if (fNormalizedText != fSmallBuf) {
-        uprv_free(fNormalizedText);
-    }
-    fNormalizedText = 0;
-}
-
-const UChar *NFDBuffer::getBuffer() {
-    return fNormalizedText;
-}
-
-int32_t NFDBuffer::getLength() {
-    return fNormalizedTextLength;
-}
-
-
-
 
 
 U_NAMESPACE_END
