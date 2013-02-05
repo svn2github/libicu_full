@@ -76,97 +76,9 @@ static const UDataInfo invUcaDataInfo={
 
 static UCAElements le;
 
-static uint32_t gVariableTop;  // TODO: store in the base builder, or otherwise make this not be a global variable
-
-// returns number of characters read
-static int32_t readElement(char **from, char *to, char separator, UErrorCode *status) {
-    if(U_FAILURE(*status)) {
-        return 0;
-    }
-    char buffer[1024];
-    int32_t i = 0;
-    for(;;) {
-        char c = **from;
-        if(c == separator || (separator == ' ' && c == '\t')) {
-            break;
-        }
-        if (c == '\0') {
-            return 0;
-        }
-        if(c != ' ') {
-            *(buffer+i++) = c;
-        }
-        (*from)++;
-    }
-    (*from)++;
-    *(buffer + i) = 0;
-    strcpy(to, buffer);
-    return i;
-}
-
-/* TODO: remove?!
-static int32_t skipUntilWhiteSpace(char **from, UErrorCode *status) {
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    int32_t count = 0;
-    while (**from != ' ' && **from != '\t' && **from != '\0') {
-        (*from)++;
-        count++;
-    }
-    return count;
-}
-*/
-
-static int32_t skipWhiteSpace(char **from, UErrorCode *status) {
-    if (U_FAILURE(*status)) {
-        return 0;
-    }
-    int32_t count = 0;
-    while (**from == ' ' || **from == '\t') {
-        (*from)++;
-        count++;
-    }
-    return count;
-}
-
-static uint32_t parseWeight(char *s, uint32_t maxWeight, UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode) || *s == 0) { return 0; }
-    if(*s == '0' && s[1] == '0') {
-        // leading 0 byte
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-    char *end;
-    unsigned long weight = uprv_strtoul(s, &end, 16);
-    if(end == s || *end != 0 || weight > maxWeight) {
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-    // Left-align the weight.
-    if(weight != 0) {
-        while(weight <= (maxWeight >> 8)) { weight <<= 8; }
-    }
-    return (uint32_t)weight;
-}
-
-static int64_t getSingleCEValue(const CollationDataBuilder &builder,
-                                char *primary, char *secondary, char *tertiary, UErrorCode *status) {
-    uint32_t p = parseWeight(primary, 0xffffffff, *status);
-    uint32_t s = parseWeight(secondary, 0xffff, *status);
-    uint32_t t = parseWeight(tertiary, 0xffff, *status);
-    if(U_FAILURE(*status)) {
-        return 0;
-    }
-    // Transform an implicit primary weight.
-    if(0xe0000000 <= p && p <= 0xe4ffffff) {
-        UChar32 c = uprv_uca_getCodePointFromRaw(uprv_uca_getRawFromImplicit(p));
-        U_ASSERT(c >= 0);
-        int64_t ce = builder.getSingleCE(c, *status);
-// TODO: remove debug code -- printf("implicit p %08lx -> U+%04lx -> new p %08lx\n", (long)p, (long)c, (long)(uint32_t)(ce >> 32));
-        p = (uint32_t)(ce >> 32);
-    }
-    return ((int64_t)p << 32) | (s << 16) | t;
+static char *skipWhiteSpace(char *s) {
+    while(*s == ' ' || *s == '\t') { ++s; }
+    return s;
 }
 
 static int32_t hex2num(char hex) {
@@ -177,7 +89,109 @@ static int32_t hex2num(char hex) {
     } else if(hex>='A' && hex<='F') {
         return hex-'A'+10;
     } else {
+        return -1;
+    }
+}
+
+static uint32_t parseWeight(char *&s, const char *separators,
+                            int32_t maxBytes, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    uint32_t weight = 0;
+    int32_t numBytes = 0;
+    for(;;) {
+        // Check one character after another, so that we don't just run over a 00.
+        int32_t nibble1, nibble2;
+        if((nibble1 = hex2num(s[0])) < 0 || (nibble2 = hex2num(s[1])) < 0) {
+            // Stop when we find something other than a pair of hex digits.
+            break;
+        }
+        if(numBytes == maxBytes || (numBytes != 0 && nibble1 == 0 && nibble2 <= 1)) {
+            // Too many bytes, or a 00 or 01 byte which is illegal inside a weight.
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return 0;
+        }
+        weight = (weight << 8) | ((uint32_t)nibble1 << 4) | (uint32_t)nibble2;
+        ++numBytes;
+        s += 2;
+        if(*s != ' ') {
+            break;
+        }
+        ++s;
+    }
+    char c = *s;
+    if(c == 0 || strchr(separators, c) == NULL) {
+        errorCode = U_INVALID_FORMAT_ERROR;
         return 0;
+    }
+    // numBytes==0 is ok, for example in [,,] or [, 82, 05]
+    // Left-align the weight.
+    while(numBytes < 4) {
+        weight <<= 8;
+        ++numBytes;
+    }
+    return weight;
+}
+
+/**
+ * Parse a CE like [0A 86, 05, 17] or [U+4E00, 10].
+ * Stop with an error, or else with the pointer s after the closing bracket.
+ */
+static int64_t parseCE(const CollationDataBuilder &builder, char *&s, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    ++s;  // skip over the '['
+    if(s[0] == 'U' && s[1] == '+') {
+        // Read a code point and look up its CE.
+        // We use this especially for implicit primary weights,
+        // so that we can use different algorithms in the FractionalUCA.txt
+        // generator and the parser.
+        // The generator may not even need to compute any implicit primaries at all.
+        s += 2;
+        char *end;
+        unsigned long longCp = uprv_strtoul(s, &end, 16);
+        if(end == s || longCp > 0x10ffff) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return 0;
+        }
+        UChar32 c = (UChar32)longCp;
+        int64_t ce = builder.getSingleCE(c, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        s = end;
+        if(*s == ']') {  // [U+4E00]
+            ++s;
+            return ce;
+        }
+        if(*s != ',') {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return 0;
+        }
+        // Parse the following, secondary or tertiary weight.
+        s = skipWhiteSpace(s + 1);
+        uint32_t w = parseWeight(s, ",]", 2, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        if(*s == ']') {  // [U+4E00, 10]
+            ++s;
+            // Set the tertiary weight to w.
+            return (ce & 0xffffffffffff0000) | (w >> 16);
+        }
+        // Set the secondary weight to w: [U+9F9C, 70, 20]
+        ce = (ce & 0xffffffff00000000) | w;
+        // Parse and set the tertiary weight.
+        s = skipWhiteSpace(s + 1);
+        w = parseWeight(s, "]", 2, errorCode);
+        ++s;
+        return ce | (w >> 16);
+    } else {
+        uint32_t p = parseWeight(s, ",", 4, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        int64_t ce = (int64_t)p << 32;
+        s = skipWhiteSpace(s + 1);
+        uint32_t w = parseWeight(s, ",", 2, errorCode);
+        if(U_FAILURE(errorCode)) { return 0; }
+        ce |= w;
+        s = skipWhiteSpace(s + 1);
+        w = parseWeight(s, "]", 2, errorCode);
+        ++s;
+        return ce | (w >> 16);
     }
 }
 
@@ -213,163 +227,102 @@ int32_t getReorderCode(const char* name) {
     return -1;  // Same as UCHAR_INVALID_CODE or USCRIPT_INVALID_CODE.
 }
 
+enum ActionType {
+  READCE,
+  READPRIMARY,
+  READBYTE,
+  READUNIFIEDIDEOGRAPH,
+  READUCAVERSION,
+  READLEADBYTETOSCRIPTS,
+  IGNORE
+};
+
+static struct {
+    const char *const name;
+    int64_t value;
+    const ActionType what_to_do;
+} vt[]  = {
+    {"[first tertiary ignorable",     0, IGNORE},
+    {"[last tertiary ignorable",      0, IGNORE},
+    {"[first secondary ignorable",    0, READCE},
+    {"[last secondary ignorable",     0, READCE},
+    {"[first primary ignorable",      0, READCE},
+    {"[last primary ignorable",       0, READCE},
+    {"[first variable",               0, READCE},
+    {"[last variable",                0, READCE},
+    {"[first regular",                0, READCE},
+    {"[last regular",                 0, READCE},
+    {"[first implicit",               0, READCE},
+    {"[last implicit",                0, READCE},
+    {"[first trailing",               0, READCE},
+    {"[last trailing",                0, READCE},
+
+    {"[Unified_Ideograph",            0, READUNIFIEDIDEOGRAPH},
+
+    {"[fixed first implicit byte",    0, IGNORE},
+    {"[fixed last implicit byte",     0, IGNORE},
+    {"[fixed first trail byte",       0, IGNORE},
+    {"[fixed last trail byte",        0, IGNORE},
+    {"[fixed first special byte",     0, IGNORE},
+    {"[fixed last special byte",      0, IGNORE},
+    // TODO: check == Collation::COMMON_BYTE
+    {"[fixed secondary common byte",                  0, READBYTE},
+    // TODO: check <= CollationKeys::SEC_COMMON_HIGH
+    {"[fixed last secondary common byte",             0, READBYTE},
+    {"[fixed first ignorable secondary byte",         0, READBYTE},
+    // TODO: check == Collation::COMMON_BYTE
+    {"[fixed tertiary common byte",                   0, READBYTE},
+    {"[fixed first ignorable tertiary byte",          0, READBYTE},
+    {"[variable top = ",              0, IGNORE},
+    {"[UCA version = ",               0, READUCAVERSION},
+    {"[top_byte",                     0, READLEADBYTETOSCRIPTS},
+    {"[reorderingTokens",             0, IGNORE},
+    {"[categories",                   0, IGNORE},
+    {"[first tertiary in secondary non-ignorable",    0, IGNORE},
+    {"[last tertiary in secondary non-ignorable",     0, IGNORE},
+    {"[first secondary in primary non-ignorable",     0, IGNORE},
+    {"[last secondary in primary non-ignorable",      0, IGNORE},
+};
+
 static UnicodeString *leadByteScripts = NULL;
 
-UCAElements *readAnElement(FILE *data,
-                           CollationBaseDataBuilder &builder,
-                           UCAConstants *consts,
-                           int64_t ces[32], int32_t &cesLength,
-                           UErrorCode *status) {
-    char buffer[2048], primary[100], secondary[100], tertiary[100];
-    UChar leadByte[100], scriptCode[100];
-    int32_t i = 0;
-    char *pointer = NULL;
-    char *commentStart = NULL;
-    char *startCodePoint = NULL;
-    char *endCodePoint = NULL;
-    char *result = fgets(buffer, 2048, data);
-    int32_t buflen = (int32_t)uprv_strlen(buffer);
-    if(U_FAILURE(*status)) {
-        return 0;
-    }
-    *primary = *secondary = *tertiary = '\0';
-    *leadByte = *scriptCode = '\0';
-    if(result == NULL) {
-        if(feof(data)) {
-            return NULL;
-        } else {
-            fprintf(stderr, "empty line but no EOF!\n");
-            *status = U_INVALID_FORMAT_ERROR;
-            return NULL;
-        }
-    }
-    while(buflen>0 && (buffer[buflen-1] == '\r' || buffer[buflen-1] == '\n')) {
-      buffer[--buflen] = 0;
-    }
-
-    if(buffer[0] == 0 || buffer[0] == '#') {
-        return NULL; // just a comment, skip whole line
-    }
-
-    UCAElements *element = &le;
-    memset(element, 0, sizeof(*element));
-
-    enum ActionType {
-      READCE,
-      READPRIMARY,
-      READFIRSTPRIMARY,  // TODO: remove
-      READUNIFIEDIDEOGRAPH,
-      READUCAVERSION,
-      READLEADBYTETOSCRIPTS,
-      IGNORE
-    };
-
-    // Directives.
-    if(buffer[0] == '[') {
-      uint32_t cnt = 0;
-      static const struct {
-        char name[128];
-        uint32_t *what;
-        ActionType what_to_do;
-      } vt[]  = { {"[first tertiary ignorable",  consts->UCA_FIRST_TERTIARY_IGNORABLE,  READCE},
-                  {"[last tertiary ignorable",   consts->UCA_LAST_TERTIARY_IGNORABLE,   READCE},
-                  {"[first secondary ignorable", consts->UCA_FIRST_SECONDARY_IGNORABLE, READCE},
-                  {"[last secondary ignorable",  consts->UCA_LAST_SECONDARY_IGNORABLE,  READCE},
-                  {"[first primary ignorable",   consts->UCA_FIRST_PRIMARY_IGNORABLE,   READCE},
-                  {"[last primary ignorable",    consts->UCA_LAST_PRIMARY_IGNORABLE,    READCE},
-                  {"[first variable",            consts->UCA_FIRST_VARIABLE,            READCE},
-                  {"[last variable",             consts->UCA_LAST_VARIABLE,             READCE},
-                  {"[first regular",             consts->UCA_FIRST_NON_VARIABLE,        READCE},
-                  {"[last regular",              consts->UCA_LAST_NON_VARIABLE,         READCE},
-                  {"[first implicit",            consts->UCA_FIRST_IMPLICIT,            READCE},
-                  {"[last implicit",             consts->UCA_LAST_IMPLICIT,             READCE},
-                  {"[first trailing",            consts->UCA_FIRST_TRAILING,            READCE},
-                  {"[last trailing",             consts->UCA_LAST_TRAILING,             READCE},
-
-                  {"[Unified_Ideograph",            NULL, READUNIFIEDIDEOGRAPH},
-                  {"[first_primary",                NULL, IGNORE},  // TODO: remove
-
-                  {"[fixed top",                    NULL, IGNORE},
-                  {"[fixed first implicit byte",    NULL, IGNORE},
-                  {"[fixed last implicit byte",     NULL, IGNORE},
-                  {"[fixed first trail byte",       NULL, IGNORE},
-                  {"[fixed last trail byte",        NULL, IGNORE},
-                  {"[fixed first special byte",     NULL, IGNORE},
-                  {"[fixed last special byte",      NULL, IGNORE},
-                  {"[variable top = ",              &gVariableTop,                      READPRIMARY},
-                  {"[UCA version = ",               NULL,                               READUCAVERSION},
-                  {"[top_byte",                     NULL,                               READLEADBYTETOSCRIPTS},
-                  {"[reorderingTokens",             NULL,                               IGNORE},
-                  {"[categories",                   NULL,                               IGNORE},
-                  // TODO: Do not ignore these -- they are important for tailoring,
-                  // for creating well-formed Collation Element Tables.
-                  {"[first tertiary in secondary non-ignorable",                 NULL,                               IGNORE},
-                  {"[last tertiary in secondary non-ignorable",                 NULL,                               IGNORE},
-                  {"[first secondary in primary non-ignorable",                 NULL,                               IGNORE},
-                  {"[last secondary in primary non-ignorable",                 NULL,                               IGNORE},
-      };
-      for (cnt = 0; cnt<LENGTHOF(vt); cnt++) {
-        uint32_t vtLen = (uint32_t)uprv_strlen(vt[cnt].name);
+// TODO: How best to return the option values?
+// Probably enum constants?
+// Maybe put values into ces[0]?
+static UCAElements *readAnOption(
+        CollationBaseDataBuilder &builder, char *buffer, UErrorCode *status) {
+    for (int32_t cnt = 0; cnt<LENGTHOF(vt); cnt++) {
+        int32_t vtLen = (int32_t)uprv_strlen(vt[cnt].name);
         if(uprv_strncmp(buffer, vt[cnt].name, vtLen) == 0) {
             ActionType what_to_do = vt[cnt].what_to_do;
+            char *pointer = skipWhiteSpace(buffer + vtLen);
             if (what_to_do == IGNORE) { //vt[cnt].what_to_do == IGNORE
                 return NULL;
+            } else if (what_to_do == READCE) {
+                vt[cnt].value = parseCE(builder, pointer, *status);
+                if(U_SUCCESS(*status) && *pointer != ']') {
+                    *status = U_INVALID_FORMAT_ERROR;
+                }
+                if(U_FAILURE(*status)) {
+                    fprintf(stderr, "Syntax error: unable to parse the CE from line '%s'\n", buffer);
+                    return NULL;
+                }
             } else if(what_to_do == READPRIMARY) {
-              pointer = buffer+vtLen;
-              readElement(&pointer, primary, ']', status);
-              *(vt[cnt].what) = parseWeight(primary, 0xffffffff, *status);
-              if(U_FAILURE(*status)) {
-                  fprintf(stderr, "Value of \"%s\" is not a primary weight\n", buffer);
-                  return NULL;
-              }
-#if 0  // TODO: remove
-            } else if(what_to_do == READFIRSTPRIMARY) {
-                pointer = buffer+vtLen;
-                skipWhiteSpace(&pointer, status);
-                UBool firstInGroup = FALSE;
-                if(uprv_strncmp(pointer, "group", 5) == 0) {
-                    firstInGroup = TRUE;
-                    pointer += 5;
-                    skipWhiteSpace(&pointer, status);
-                }
-                char scriptName[100];
-                int32_t length = readElement(&pointer, scriptName, ' ', status);
-                if (length <= 0) {
-                    fprintf(stderr, "Syntax error: unable to parse reorder code from line '%s'\n", buffer);
-                    *status = U_INVALID_FORMAT_ERROR;
-                    return NULL;
-                }
-                int32_t reorderCode = getReorderCode(scriptName);
-                if (reorderCode < 0) {
-                    fprintf(stderr, "Syntax error: unable to parse reorder code from line '%s'\n", buffer);
-                    *status = U_INVALID_FORMAT_ERROR;
-                    return NULL;
-                }
-                if (CollationData::scriptByteFromInt(reorderCode) < 0) {
-                    fprintf(stderr, "reorder code %d for \"%s\" cannot be encoded by CollationData::scriptByteFromInt(reorderCode)\n",
-                            reorderCode, scriptName);
-                    *status = U_INTERNAL_PROGRAM_ERROR;
-                    return NULL;
-                }
-                readElement(&pointer, primary, ']', status);
-                uint32_t weight = parseWeight(primary, 0xffffffff, *status);
+                vt[cnt].value = parseWeight(pointer, "]", 4, *status);
                 if(U_FAILURE(*status)) {
                     fprintf(stderr, "Value of \"%s\" is not a primary weight\n", buffer);
                     return NULL;
                 }
-                builder.addFirstPrimary(reorderCode, firstInGroup, weight, *status);
+            } else if(what_to_do == READBYTE) {
+                vt[cnt].value = parseWeight(pointer, "]", 1, *status);
                 if(U_FAILURE(*status)) {
-                    fprintf(stderr, "Failure setting data for \"%s\" - %s -- [first_primary] data out of order?\n",
-                            buffer, u_errorName(*status));
+                    fprintf(stderr, "Value of \"%s\" is not a valid byte\n", buffer);
                     return NULL;
                 }
-#endif
             } else if(what_to_do == READUNIFIEDIDEOGRAPH) {
-                pointer = buffer+vtLen;
                 UVector32 unihan(*status);
                 if(U_FAILURE(*status)) { return NULL; }
                 for(;;) {
-                    skipWhiteSpace(&pointer, status);
                     if(*pointer == ']') { break; }
                     if(*pointer == 0) {
                         // Missing ] after ranges.
@@ -390,89 +343,55 @@ UCAElements *readAnElement(FILE *data,
                     }
                     unihan.addElement((UChar32)start, *status);
                     unihan.addElement((UChar32)end, *status);
-                    pointer = s;
+                    pointer = skipWhiteSpace(s);
                 }
                 builder.initHanRanges(unihan.getBuffer(), unihan.size(), *status);
-            } else if (what_to_do == READCE) {
-              // TODO: combine & clean up the two CE parsers
-#if 0  // TODO
-              pointer = strchr(buffer+vtLen, '[');
-              if(pointer) {
-                pointer++;
-                element->sizePrim[0]=readElement(&pointer, primary, ',', status) / 2;
-                element->sizeSec[0]=readElement(&pointer, secondary, ',', status) / 2;
-                element->sizeTer[0]=readElement(&pointer, tertiary, ']', status) / 2;
-                vt[cnt].what[0] = getSingleCEValue(primary, secondary, tertiary, status);
-                if(element->sizePrim[0] > 2 || element->sizeSec[0] > 1 || element->sizeTer[0] > 1) {
-                  uint32_t CEi = 1;
-                  uint32_t value = UCOL_CONTINUATION_MARKER; /* Continuation marker */
-                    if(2*CEi<element->sizePrim[i]) {
-                        value |= ((hex2num(*(primary+4*CEi))&0xF)<<28);
-                        value |= ((hex2num(*(primary+4*CEi+1))&0xF)<<24);
-                    }
-
-                    if(2*CEi+1<element->sizePrim[i]) {
-                        value |= ((hex2num(*(primary+4*CEi+2))&0xF)<<20);
-                        value |= ((hex2num(*(primary+4*CEi+3))&0xF)<<16);
-                    }
-
-                    if(CEi<element->sizeSec[i]) {
-                        value |= ((hex2num(*(secondary+2*CEi))&0xF)<<12);
-                        value |= ((hex2num(*(secondary+2*CEi+1))&0xF)<<8);
-                    }
-
-                    if(CEi<element->sizeTer[i]) {
-                        value |= ((hex2num(*(tertiary+2*CEi))&0x3)<<4);
-                        value |= (hex2num(*(tertiary+2*CEi+1))&0xF);
-                    }
-
-                    CEi++;
-
-                    vt[cnt].what[1] = value;
-                    //element->CEs[CEindex++] = value;
-                } else {
-                  vt[cnt].what[1] = 0;
+            } else if (what_to_do == READUCAVERSION) {
+                u_versionFromString(UCAVersion, pointer);
+                if(beVerbose) {
+                    char uca[U_MAX_VERSION_STRING_LENGTH];
+                    u_versionToString(UCAVersion, uca);
+                    printf("UCA version %s\n", uca);
                 }
-              } else {
-                fprintf(stderr, "Failed to read a CE from line %s\n", buffer);
-              }
-#endif
-            } else if (what_to_do == READUCAVERSION) { //vt[cnt].what_to_do == READUCAVERSION
-              u_versionFromString(UCAVersion, buffer+vtLen);
-              if(beVerbose) {
-                char uca[U_MAX_VERSION_STRING_LENGTH];
-                u_versionToString(UCAVersion, uca);
-                printf("UCA version %s\n", uca);
-              }
-              UVersionInfo UCDVersion;
-              u_getUnicodeVersion(UCDVersion);
-              if (UCAVersion[0] != UCDVersion[0] || UCAVersion[1] != UCDVersion[1]) {
-                char uca[U_MAX_VERSION_STRING_LENGTH];
-                char ucd[U_MAX_VERSION_STRING_LENGTH];
-                u_versionToString(UCAVersion, uca);
-                u_versionToString(UCDVersion, ucd);
-                // Warning, not error, to permit bootstrapping during a version upgrade.
-                fprintf(stderr, "warning: UCA version %s != UCD version %s (temporarily change the FractionalUCA.txt UCA version during Unicode version upgrade)\n", uca, ucd);
-                // *status = U_INVALID_FORMAT_ERROR;
-                // return NULL;
-              }
-            } else if (what_to_do == READLEADBYTETOSCRIPTS) { //vt[cnt].what_to_do == READLEADBYTETOSCRIPTS
-                pointer = buffer + vtLen;
-                skipWhiteSpace(&pointer, status);
-
+                UVersionInfo UCDVersion;
+                u_getUnicodeVersion(UCDVersion);
+                if (UCAVersion[0] != UCDVersion[0] || UCAVersion[1] != UCDVersion[1]) {
+                    char uca[U_MAX_VERSION_STRING_LENGTH];
+                    char ucd[U_MAX_VERSION_STRING_LENGTH];
+                    u_versionToString(UCAVersion, uca);
+                    u_versionToString(UCDVersion, ucd);
+                    // Warning, not error, to permit bootstrapping during a version upgrade.
+                    fprintf(stderr, "warning: UCA version %s != UCD version %s\n", uca, ucd);
+                }
+            } else if (what_to_do == READLEADBYTETOSCRIPTS) {
                 uint16_t leadByte = (hex2num(*pointer++) * 16);
                 leadByte += hex2num(*pointer++);
-                //printf("~~~~ processing lead byte = %02x\n", leadByte);
-                skipWhiteSpace(&pointer, status);
+
+                if(0xe0 <= leadByte && leadByte < Collation::UNASSIGNED_IMPLICIT_BYTE) {
+                    // Extend the Hani range to the end of what this implementation uses.
+                    // FractionalUCA.txt assumes a different algorithm for implicit primary weights,
+                    // and different high-lead byte ranges.
+                    leadByteScripts[leadByte] = leadByteScripts[0xdf];
+                    return NULL;
+                }
 
                 UnicodeString scripts;
-                char scriptName[100];
-                int32_t elementLength = 0;
-                while ((elementLength = readElement(&pointer, scriptName, ' ', status)) > 0) {
-                    if (scriptName[0] == ']') {
+                for(;;) {
+                    pointer = skipWhiteSpace(pointer);
+                    if (*pointer == ']') {
                         break;
                     }
+                    const char *scriptName = pointer;
+                    char c;
+                    while((c = *pointer) != 0 && c != ' ' && c != '\t' && c != ']') { ++pointer; }
+                    if(c == 0) {
+                        fprintf(stderr, "Syntax error: unterminated list of scripts: '%s'\n", buffer);
+                        *status = U_INVALID_FORMAT_ERROR;
+                        return NULL;
+                    }
+                    *pointer = 0;
                     int32_t reorderCode = getReorderCode(scriptName);
+                    *pointer = c;
                     if (reorderCode == -3) {  // COMPRESS
                         builder.setCompressibleLeadByte(leadByte);
                         continue;
@@ -481,7 +400,7 @@ UCAElements *readAnElement(FILE *data,
                         continue;  // Ignore "TERMINATOR" etc.
                     }
                     if (reorderCode < 0 || 0xffff < reorderCode) {
-                        printf("Syntax error: unable to parse reorder code from '%s'\n", scriptName);
+                        fprintf(stderr, "Syntax error: unable to parse reorder code from '%s'\n", scriptName);
                         *status = U_INVALID_FORMAT_ERROR;
                         return NULL;
                     }
@@ -496,21 +415,54 @@ UCAElements *readAnElement(FILE *data,
             }
             return NULL;
         }
-      }
-      fprintf(stderr, "Warning: unrecognized option: %s\n", buffer);
-      //*status = U_INVALID_FORMAT_ERROR;
-      return NULL;
+    }
+    fprintf(stderr, "Warning: unrecognized option: %s\n", buffer);
+    return NULL;
+}
+
+static UCAElements *readAnElement(FILE *data,
+        CollationBaseDataBuilder &builder,
+        int64_t ces[32], int32_t &cesLength,
+        UErrorCode *status) {
+    if(U_FAILURE(*status)) {
+        return NULL;
+    }
+    char buffer[2048];
+    char *result = fgets(buffer, 2048, data);
+    if(result == NULL) {
+        if(feof(data)) {
+            return NULL;
+        } else {
+            fprintf(stderr, "empty line but no EOF!\n");
+            *status = U_INVALID_FORMAT_ERROR;
+            return NULL;
+        }
+    }
+    int32_t buflen = (int32_t)uprv_strlen(buffer);
+    while(buflen>0 && (buffer[buflen-1] == '\r' || buffer[buflen-1] == '\n')) {
+      buffer[--buflen] = 0;
     }
 
-    startCodePoint = buffer;
-    endCodePoint = strchr(startCodePoint, ';');
+    if(buffer[0] == 0 || buffer[0] == '#') {
+        return NULL; // just a comment, skip whole line
+    }
 
-    if(endCodePoint == 0) {
+    UCAElements *element = &le;
+    memset(element, 0, sizeof(*element));
+
+    // Directives.
+    if(buffer[0] == '[') {
+        return readAnOption(builder, buffer, status);
+    }
+
+    char *startCodePoint = buffer;
+    char *endCodePoint = strchr(startCodePoint, ';');
+    if(endCodePoint == NULL) {
         fprintf(stderr, "error - line with no code point!\n");
         *status = U_INVALID_FORMAT_ERROR; /* No code point - could be an error, but probably only an empty line */
         return NULL;
     } else {
-        *(endCodePoint) = 0;
+        *endCodePoint = 0;
     }
 
     char *pipePointer = strchr(buffer, '|');
@@ -544,49 +496,33 @@ UCAElements *readAnElement(FILE *data,
     }
     element->cPoints = element->uchars;
 
-    startCodePoint = endCodePoint+1;
+    char *pointer = endCodePoint + 1;
 
-    commentStart = strchr(startCodePoint, '#');
+    char *commentStart = strchr(pointer, '#');
     if(commentStart == NULL) {
-        commentStart = strlen(startCodePoint) + startCodePoint;
+        commentStart = strchr(pointer, 0);
     }
 
-    i = 0;
     cesLength = 0;
     element->noOfCEs = 0;
     for(;;) {
-        endCodePoint = strchr(startCodePoint, ']');
-        if(endCodePoint == NULL || endCodePoint >= commentStart) {
+        pointer = skipWhiteSpace(pointer);
+        if(pointer == commentStart) {
             break;
         }
-        pointer = strchr(startCodePoint, '[');
-        pointer++;
-
-        readElement(&pointer, primary, ',', status);
-        readElement(&pointer, secondary, ',', status);
-        readElement(&pointer, tertiary, ']', status);
-        ces[cesLength++] = getSingleCEValue(builder, primary, secondary, tertiary, status);
-        // TODO: max 31 CEs
-
-        startCodePoint = endCodePoint+1;
-        i++;
-    }
-
-    // we don't want any strange stuff after useful data!
-    if (pointer == NULL) {
-        /* huh? Did we get ']' without the '['? Pair your brackets! */
-        *status=U_INVALID_FORMAT_ERROR;
-    }
-    else {
-        while(pointer < commentStart)  {
-            if(*pointer != ' ' && *pointer != '\t')
-            {
-                *status=U_INVALID_FORMAT_ERROR;
-                break;
-            }
-            pointer++;
+        if(cesLength >= 31) {
+            fprintf(stderr, "Error: Too many CEs on line '%s'\n", buffer);
+            *status = U_INVALID_FORMAT_ERROR;
+            return NULL;
+        }
+        ces[cesLength++] = parseCE(builder, pointer, *status);
+        if(U_FAILURE(*status)) {
+            fprintf(stderr, "Syntax error parsing CE from line '%s' - %s\n",
+                    buffer, u_errorName(*status));
+            return NULL;
         }
     }
+
     if(element->cSize == 1 && element->cPoints[0] == 0xfffe) {
         // UCA 6.0 gives U+FFFE a special minimum weight using the
         // byte 02 which is the merge-sort-key separator and illegal for any
@@ -594,8 +530,9 @@ UCAElements *readAnElement(FILE *data,
     } else {
         // Rudimentary check for valid bytes in CE weights.
         // For a more comprehensive check see cintltst /tscoll/citertst/TestCEValidity
-        for (i = 0; i < cesLength; ++i) {
+        for (int32_t i = 0; i < cesLength; ++i) {
             int64_t ce = ces[i];
+            UBool isCompressible = FALSE;
             for (int j = 7; j >= 0; --j) {
                 uint8_t b = (uint8_t)(ce >> (j * 8));
                 if(j <= 1) { b &= 0x3f; }  // tertiary bytes use 6 bits
@@ -607,22 +544,20 @@ UCAElements *readAnElement(FILE *data,
                     fprintf(stderr, "Warning: invalid UCA weight lead byte 02 for %s\n", buffer);
                     return NULL;
                 }
-                // Primary second bytes 03 and FF are compression terminators.
-                // TODO: 02 & 03 are usable when the lead byte is not compressible.
-                // 02 is unusable and 03 is the low compression terminator when the lead byte is compressible.
-                if (j == 6 && b == 0xff) {
-                    fprintf(stderr, "Warning: invalid UCA primary second weight byte %02X for %s\n",
-                            b, buffer);
-                    return NULL;
+                if (j == 7) {
+                    isCompressible = builder.isCompressibleLeadByte(b);
+                } else if (j == 6) {
+                    // Primary second bytes 03 and FF are compression terminators.
+                    // 02, 03 and FF are usable when the lead byte is not compressible.
+                    // 02 is unusable and 03 is the low compression terminator when the lead byte is compressible.
+                    if (isCompressible && (b <= 3 || b == 0xff)) {
+                        fprintf(stderr, "Warning: invalid UCA primary second weight byte %02X for %s\n",
+                                b, buffer);
+                        return NULL;
+                    }
                 }
             }
         }
-    }
-
-    if(U_FAILURE(*status)) {
-        fprintf(stderr, "problem putting stuff in hash table %s\n", u_errorName(*status));
-        *status = U_INTERNAL_PROGRAM_ERROR;
-        return NULL;
     }
 
     return element;
@@ -660,6 +595,7 @@ parseFractionalUCA(const char *filename,
                    CollationBaseDataBuilder &builder,
                    UErrorCode *status)
 {
+    if(U_FAILURE(*status)) { return; }
     FILE *data = fopen(filename, "r");
     if(data == NULL) {
         fprintf(stderr, "Couldn't open file: %s\n", filename);
@@ -667,30 +603,10 @@ parseFractionalUCA(const char *filename,
         return;
     }
     uint32_t line = 0;
-    UCAElements *element = NULL;
     // TODO: Turn UCAConstants into fields in the inverse-base table.
     // Pass the inverse-base builder into the parsing function.
-    UCAConstants consts;
-    uprv_memset(&consts, 0, sizeof(consts));
-
-    /* first set up constants for implicit calculation */
-    uprv_uca_initImplicitConstants(status);
-
-    // TODO: uprv_memset(inverseTable, 0xDA, sizeof(int32_t)*3*0xFFFF);
-
-    if(U_FAILURE(*status))
-    {
-        fprintf(stderr, "Failed to initialize data structures for parsing FractionalUCA.txt - %s\n", u_errorName(*status));
-        fclose(data);
-        return;
-    }
 
     UChar32 maxCodePoint = 0;
-    int32_t numArtificialSecondaries = 0;
-    int32_t numExtraSecondaryExpansions = 0;
-    int32_t numExtraExpansionCEs = 0;
-    int32_t numDiffTertiaries = 0;
-    int32_t surrogateCount = 0;
     while(!feof(data)) {
         if(U_FAILURE(*status)) {
             fprintf(stderr, "Something returned an error %i (%s) while processing line %u of %s. Exiting...\n",
@@ -699,85 +615,15 @@ parseFractionalUCA(const char *filename,
         }
 
         line++;
-        if(beVerbose) {
-          printf("%u ", (int)line);
-        }
+
         int64_t ces[32];
         int32_t cesLength = 0;
-        element = readAnElement(data, builder, &consts, ces, cesLength, status);
+        UCAElements *element = readAnElement(data, builder, ces, cesLength, status);
         if(element != NULL) {
             // we have read the line, now do something sensible with the read data!
-
+            uint32_t p = (uint32_t)(ces[0] >> 32);
 #if 0  // TODO
-            // if element is a contraction, we want to add it to contractions[]
-            int32_t length = (int32_t)element->cSize;
-            if(length > 1 && element->cPoints[0] != 0xFDD0) { // this is a contraction
-              if(U16_IS_LEAD(element->cPoints[0]) && U16_IS_TRAIL(element->cPoints[1]) && length == 2) {
-                surrogateCount++;
-              } else {
-                if(noOfContractions>=MAX_UCA_CONTRACTIONS) {
-                  fprintf(stderr,
-                          "\nMore than %d contractions. Please increase MAX_UCA_CONTRACTIONS in genuca.cpp. "
-                          "Exiting...\n",
-                          (int)MAX_UCA_CONTRACTIONS);
-                  exit(U_BUFFER_OVERFLOW_ERROR);
-                }
-                if(length > MAX_UCA_CONTRACTION_LENGTH) {
-                  fprintf(stderr,
-                          "\nLine %d: Contraction of length %d is too long. Please increase MAX_UCA_CONTRACTION_LENGTH in genuca.cpp. "
-                          "Exiting...\n",
-                          (int)line, (int)length);
-                  exit(U_BUFFER_OVERFLOW_ERROR);
-                }
-                UChar *t = &contractions[noOfContractions][0];
-                u_memcpy(t, element->cPoints, length);
-                t += length;
-                for(; length < MAX_UCA_CONTRACTION_LENGTH; ++length) {
-                    *t++ = 0;
-                }
-                noOfContractions++;
-              }
-            }
-            else {
-                // TODO (claireho): does this work? Need more tests
-                // The following code is to handle the UCA pre-context rules
-                // for L/l with middle dot. We share the structures for contractionCombos.
-                // The format for pre-context character is
-                // contractions[0]: codepoint in element->cPoints[0]
-                // contractions[1]: '\0' to differentiate from a contraction
-                // contractions[2]: prefix char
-                if (element->prefixSize>0) {
-                    if(length > 1 || element->prefixSize > 1) {
-                        fprintf(stderr,
-                                "\nLine %d: Character with prefix, "
-                                "either too many characters or prefix too long.\n",
-                                (int)line);
-                        exit(U_INTERNAL_PROGRAM_ERROR);
-                    }
-                    if(noOfContractions>=MAX_UCA_CONTRACTIONS) {
-                      fprintf(stderr,
-                              "\nMore than %d contractions. Please increase MAX_UCA_CONTRACTIONS in genuca.cpp. "
-                              "Exiting...\n",
-                              (int)MAX_UCA_CONTRACTIONS);
-                      exit(U_BUFFER_OVERFLOW_ERROR);
-                    }
-                    UChar *t = &contractions[noOfContractions][0];
-                    t[0]=element->cPoints[0];
-                    t[1]=0;
-                    t[2]=element->prefixChars[0];
-                    t += 3;
-                    for(length = 3; length < MAX_UCA_CONTRACTION_LENGTH; ++length) {
-                        *t++ = 0;
-                    }
-                    noOfContractions++;
-                }
-            }
-#endif
-
-#if 0  // TODO
-            /* we're first adding to inverse, because addAnElement will reverse the order */
-            /* of code points and stuff... we don't want that to happen */
-            if((element->CEs[0] >> 24) != 2) {
+            if(p != Collation::MERGE_SEPARATOR_PRIMARY) {
                 // Add every element except for the special minimum-weight character U+FFFE
                 // which has 02 weights.
                 // If we had 02 weights in the invuca table, then tailoring primary
@@ -787,7 +633,16 @@ parseFractionalUCA(const char *filename,
                 addToInverse(element, status);
             }
 #endif
-            if(!((int32_t)element->cSize > 1 && element->cPoints[0] == 0xFDD0)) {
+
+            if(element->cSize > 1 && element->cPoints[0] == 0xFDD0) {
+                // FractionalUCA.txt contractions starting with U+FDD0
+                // are only entered into the inverse table,
+                // not into the normal collation data.
+                if(element->cSize == 2 && element->cPoints[1] == 0x34 && cesLength == 1) {
+                    // Lead byte for numeric sorting.
+                    builder.setNumericPrimary(p);
+                }
+            } else {
                 UnicodeString prefix(FALSE, element->prefixChars, (int32_t)element->prefixSize);
                 UnicodeString s(FALSE, element->cPoints, (int32_t)element->cSize);
 
@@ -799,37 +654,15 @@ parseFractionalUCA(const char *filename,
                 // (U+FFFD & U+FFFF have higher primaries in v2 than in FractionalUCA.txt.)
                 if(0xfffd <= c && c <= 0xffff) { continue; }
 
-                builder.add(prefix, s, ces, cesLength, *status);
-
-                uint32_t p = (uint32_t)(ces[0] >> 32);
-                if(cesLength >= 2 && p != 0) {
-                    int64_t prevCE = ces[0];
-                    for(int32_t i = 1; i < cesLength; ++i) {
-                        int64_t ce = ces[i];
-                        if((uint32_t)(ce >> 32) == 0 && ((uint32_t)ce >> 16) > 0xdb99 && (uint32_t)(prevCE >> 32) != 0) {
-                            ++numArtificialSecondaries;
-                            if(cesLength == 2) {
-                                ++numExtraSecondaryExpansions;
-                                numExtraExpansionCEs += 2;
-                            } else {
-                                ++numExtraExpansionCEs;
-                            }
-                            if(((uint32_t)prevCE & 0x3f3f) != ((uint32_t)ce & 0x3f3f)) {
-                                ++numDiffTertiaries;
-                            }
-                        }
-                        prevCE = ce;
-                    }
+                if(element->cSize == 2 && element->cPoints[0] == 0xFDD1 && element->cPoints[1] == 0xFDD1) {
+                    // Set the unassigned first primary.
+                    ces[0] = Collation::unassignedCEFromCodePoint(0);
                 }
+
+                builder.add(prefix, s, ces, cesLength, *status);
             }
         }
     }
-
-    // TODO: Remove analysis & output.
-    printf("*** number of artificial secondary CEs:                 %6ld\n", (long)numArtificialSecondaries);
-    printf("    number of 2-CE expansions that could be single CEs: %6ld\n", (long)numExtraSecondaryExpansions);
-    printf("    number of extra expansion CEs:                      %6ld\n", (long)numExtraExpansionCEs);
-    printf("    number of artificial sec. CEs w. diff. tertiaries:  %6ld\n", (long)numDiffTertiaries);
 
     int32_t numRanges = 0;
     int32_t numRangeCodePoints = 0;
@@ -842,7 +675,7 @@ parseFractionalUCA(const char *filename,
     // Detect ranges of characters in primary code point order,
     // with 3-byte primaries and
     // with consistent "step" differences between adjacent primaries.
-    // TODO: Modify the FractionalUCA generator to use the same primary-weight incrementation.
+    // This relies on the FractionalUCA generator using the same primary-weight incrementation.
     // Start at U+0180: No ranges for common Latin characters.
     // Go one beyond maxCodePoint in case a range ends there.
     for(UChar32 c = 0x180; c <= (maxCodePoint + 1); ++c) {
@@ -889,12 +722,14 @@ parseFractionalUCA(const char *filename,
                         (int)rangeStep, u_errorName(*status));
             } else if(didSetRange) {
                 int32_t rangeLength = rangeLast - rangeFirst + 1;
-                /*printf("* set code point order range U+%04lx..U+%04lx [%d] "
-                        "%08lx..%08lx step %d\n",
-                        (long)rangeFirst, (long)rangeLast,
-                        (int)rangeLength,
-                        (long)rangeFirstPrimary, (long)rangeLastPrimary,
-                        (int)rangeStep);*/
+                if(beVerbose) {
+                    printf("* set code point order range U+%04lx..U+%04lx [%d] "
+                            "%08lx..%08lx step %d\n",
+                            (long)rangeFirst, (long)rangeLast,
+                            (int)rangeLength,
+                            (long)rangeFirstPrimary, (long)rangeLastPrimary,
+                            (int)rangeStep);
+                }
                 ++numRanges;
                 numRangeCodePoints += rangeLength;
             }
@@ -926,12 +761,6 @@ parseFractionalUCA(const char *filename,
     // It should be easy to copy mappings from an un-built builder to a new one.
     // Add CollationDataBuilder::copyFrom(builder, code point, errorCode) -- copy contexts & expansions.
 
-    // TODO: Analyse why CLDR root collation data is large.
-    // Size of expansions for canonical decompositions?
-    // Size of expansions for compatibility decompositions?
-    // For the latter, consider storing some of them as specials,
-    //   decompose at runtime?? Store unusual tertiary in special CE32?
-
     if(UCAVersion[0] == 0 && UCAVersion[1] == 0 && UCAVersion[2] == 0 && UCAVersion[3] == 0) {
         fprintf(stderr, "UCA version not specified. Cannot create data file!\n");
         fclose(data);
@@ -940,12 +769,6 @@ parseFractionalUCA(const char *filename,
 
     if (beVerbose) {
         printf("\nLines read: %u\n", (int)line);
-        printf("Surrogate count: %i\n", (int)surrogateCount);
-        printf("Raw data breakdown:\n");
-        /*printf("Compact array stage1 top: %i, stage2 top: %i\n", t->mapping->stage1Top, t->mapping->stage2Top);*/
-        // TODO: printf("Number of contractions: %u\n", (int)noOfContractions);
-        // TODO: printf("Contraction image size: %u\n", (int)t->image->contractionSize);
-        // TODO: printf("Expansions size: %i\n", (int)t->expansions->position);
     }
 
 
@@ -1040,12 +863,6 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                 }
             }
             // lead is one greater than the last lead byte with the same set of scripts as firstLead.
-            if(firstScripts.indexOf(USCRIPT_HAN) >= 0) {
-                // Extend the Hani range to the end of what this implementation uses.
-                // FractionalUCA.txt assumes a different algorithm for implicit primary weights,
-                // and different high-lead byte ranges.
-                lead = Collation::UNASSIGNED_IMPLICIT_BYTE;
-            }
             builder.addReorderingGroup(firstLead, lead - 1, firstScripts, errorCode);
             if(U_FAILURE(errorCode)) { return; }
             firstLead = lead;
@@ -1059,7 +876,6 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                 u_errorName(errorCode));
         return;
     }
-    cd->variableTop = gVariableTop;  // TODO
 
     int32_t indexes[CollationData::IX_TOTAL_SIZE + 1]={
         0, 0, 0, 0,

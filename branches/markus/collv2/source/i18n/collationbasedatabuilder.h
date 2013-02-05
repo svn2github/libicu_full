@@ -55,6 +55,8 @@ public:
      */
     void initHanRanges(const UChar32 ranges[], int32_t length, UErrorCode &errorCode);
 
+    void setNumericPrimary(uint32_t np) { numericPrimary = np; }
+
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
     void setCompressibleLeadByte(uint32_t b);
@@ -72,6 +74,7 @@ private:
     // Flags for which primary-weight lead bytes are compressible.
     UBool compressibleBytes[256];
     UnicodeString scripts;
+    uint32_t numericPrimary;
 };
 
 U_NAMESPACE_END

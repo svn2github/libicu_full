@@ -32,7 +32,8 @@ U_NAMESPACE_BEGIN
 
 CollationBaseDataBuilder::CollationBaseDataBuilder(UErrorCode &errorCode)
         : CollationDataBuilder(errorCode),
-          scripts() {
+          scripts(),
+          numericPrimary(0) {
 }
 
 CollationBaseDataBuilder::~CollationBaseDataBuilder() {
@@ -163,7 +164,7 @@ CollationBaseDataBuilder::buildBaseData(UErrorCode &errorCode) {
     buildMappings(*cd, errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
 
-    // TODO: cd->variableTop = variableTop;
+    cd->numericPrimary = numericPrimary;
     cd->compressibleBytes = compressibleBytes;
     cd->scripts = reinterpret_cast<const uint16_t *>(scripts.getBuffer());
     cd->scriptsLength = scripts.length();
