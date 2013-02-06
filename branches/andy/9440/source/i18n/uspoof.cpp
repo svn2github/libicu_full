@@ -374,7 +374,7 @@ uspoof_areConfusableUTF8(const USpoofChecker *sc,
         return 0;
     }
     UnicodeString id1Str = UnicodeString::fromUTF8(StringPiece(id1, length1>=0? length1 : uprv_strlen(id1)));
-    UnicodeString id2Str = UnicodeString::fromUTF8(StringPiece(id2, length2>=0? length1 : uprv_strlen(id1)));
+    UnicodeString id2Str = UnicodeString::fromUTF8(StringPiece(id2, length2>=0? length2 : uprv_strlen(id2)));
     int32_t results = uspoof_areConfusableUnicodeString(sc, id1Str, id2Str, status);
     return results;
 }
@@ -661,10 +661,6 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 UErrorCode *status) {
     const SpoofImpl *This = SpoofImpl::validateThis(sc, *status);
     if (U_FAILURE(*status)) {
-        return dest;
-    }
-    if ((type & ~(USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE)) != 0) {
-        *status = U_ILLEGAL_ARGUMENT_ERROR;
         return dest;
     }
 

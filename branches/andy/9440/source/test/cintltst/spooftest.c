@@ -432,7 +432,7 @@ static void TestUSpoofCAPI(void) {
         checkResults = uspoof_checkUTF8(sc, utf8buf, -1, &position, &status);
         TEST_ASSERT_SUCCESS(status);
         TEST_ASSERT_EQ(0, checkResults);
-        TEST_ASSERT_EQ(666, position);
+        TEST_ASSERT_EQ(0, position);
 
         u_strToUTF8(utf8buf, sizeof(utf8buf), NULL, goodCyrl, -1, &status);
         TEST_ASSERT_SUCCESS(status);
@@ -446,7 +446,7 @@ static void TestUSpoofCAPI(void) {
         checkResults = uspoof_checkUTF8(sc, utf8buf, -1, &position, &status);
         TEST_ASSERT_SUCCESS(status);
         TEST_ASSERT_EQ(USPOOF_MIXED_SCRIPT_CONFUSABLE | USPOOF_SINGLE_SCRIPT , checkResults);
-        TEST_ASSERT_EQ(2, position);
+        TEST_ASSERT_EQ(0, position);
 
     TEST_TEARDOWN;
 
