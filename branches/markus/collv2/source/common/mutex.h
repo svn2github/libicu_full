@@ -89,7 +89,7 @@ typedef void *InstantiatorFn(const void *context, UErrorCode &errorCode);
  * Best used via SimpleSingletonWrapper or similar.
  * Define a static SimpleSingleton instance via the STATIC_SIMPLE_SINGLETON macro.
  */
-struct SimpleSingleton {
+struct U_COMMON_API SimpleSingleton {
     void *fInstance;
 
     /**
@@ -142,7 +142,7 @@ private:
  * Best used via TriStateSingletonWrapper or similar.
  * Define a static TriStateSingleton instance via the STATIC_TRI_STATE_SINGLETON macro.
  */
-struct TriStateSingleton {
+struct U_COMMON_API TriStateSingleton {
     void *fInstance;
     UErrorCode fErrorCode;
 
