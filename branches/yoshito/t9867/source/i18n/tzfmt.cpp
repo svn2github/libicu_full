@@ -28,19 +28,50 @@
 
 U_NAMESPACE_BEGIN
 
+// Bit flags used by the parse method.
+// The order must match UTimeZoneFormatStyle enum.
+static const int16_t STYLE_PARSE_FLAGS[] = {
+    0x0001, // UTZFMT_STYLE_GENERIC_LOCATION,
+    0x0002, // UTZFMT_STYLE_GENERIC_LONG,
+    0x0004, // UTZFMT_STYLE_GENERIC_SHORT,
+    0x0008, // UTZFMT_STYLE_SPECIFIC_LONG,
+    0x0010, // UTZFMT_STYLE_SPECIFIC_SHORT,
+    0x0020, // UTZFMT_STYLE_LOCALIZED_GMT,
+    0x0040, // UTZFMT_STYLE_LOCALIZED_GMT_SHORT,
+    0x0080, // UTZFMT_STYLE_ISO_BASIC_SHORT,
+    0x0100, // UTZFMT_STYLE_ISO_BASIC_LOCAL_SHORT,
+    0x0080, // UTZFMT_STYLE_ISO_BASIC_FIXED,
+    0x0100, // UTZFMT_STYLE_ISO_BASIC_LOCAL_FIXED,
+    0x0080, // UTZFMT_STYLE_ISO_BASIC_FULL,
+    0x0100, // UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL,
+    0x0080, // UTZFMT_STYLE_ISO_EXTENDED_FIXED,
+    0x0100, // UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FIXED,
+    0x0080, // UTZFMT_STYLE_ISO_EXTENDED_FULL,
+    0x0100, // UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FULL,
+    0x0200, // UTZFMT_STYLE_ZONE_ID,
+    0x0400, // UTZFMT_STYLE_ZONE_ID_SHORT,
+    0x0800  // UTZFMT_STYLE_EXEMPLAR_LOCATION
+};
+
 static const char gZoneStringsTag[] = "zoneStrings";
 static const char gGmtFormatTag[]= "gmtFormat";
 static const char gGmtZeroFormatTag[] = "gmtZeroFormat";
 static const char gHourFormatTag[]= "hourFormat";
 
 static const UChar TZID_GMT[] = {0x0045, 0x0074, 0x0063, 0x002F, 0x0047, 0x004D, 0x0054, 0};    // Etc/GMT
+static const UChar UNKNOWN_ZONE_ID[] = {
+    0x0045, 0x0074, 0x0063, 0x002F, 0x0055, 0x006E, 0x006B, 0x006E, 0x006F, 0x0077, 0x006E, 0}; // Etc/Unknown
+static const UChar UNKNOWN_SHORT_ZONE_ID[] = {0x0075, 0x006E, 0x006B, 0};   // unk
+static const UChar UNKNOWN_LOCATION[] = {0x0055, 0x006E, 0x006B, 0x006E, 0x006F, 0x0077, 0x006E, 0};    // Unknown
 
 static const UChar DEFAULT_GMT_PATTERN[] = {0x0047, 0x004D, 0x0054, 0x007B, 0x0030, 0x007D, 0}; // GMT{0}
 //static const UChar DEFAULT_GMT_ZERO[] = {0x0047, 0x004D, 0x0054, 0}; // GMT
-static const UChar DEFAULT_GMT_POSITIVE_HM[] = {0x002B, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0}; // +HH:mm
-static const UChar DEFAULT_GMT_POSITIVE_HMS[] = {0x002B, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x003A, 0x0073, 0x0073, 0}; // +HH:mm:ss
-static const UChar DEFAULT_GMT_NEGATIVE_HM[] = {0x002D, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0}; // -HH:mm
-static const UChar DEFAULT_GMT_NEGATIVE_HMS[] = {0x002D, 0x0048, 0x0048, 0x003A, 0x006D, 0x006D, 0x003A, 0x0073, 0x0073, 0}; // -HH:mm:ss
+static const UChar DEFAULT_GMT_POSITIVE_HM[] = {0x002B, 0x0048, 0x003A, 0x006D, 0x006D, 0}; // +H:mm
+static const UChar DEFAULT_GMT_POSITIVE_HMS[] = {0x002B, 0x0048, 0x003A, 0x006D, 0x006D, 0x003A, 0x0073, 0x0073, 0}; // +H:mm:ss
+static const UChar DEFAULT_GMT_NEGATIVE_HM[] = {0x002D, 0x0048, 0x003A, 0x006D, 0x006D, 0}; // -H:mm
+static const UChar DEFAULT_GMT_NEGATIVE_HMS[] = {0x002D, 0x0048, 0x003A, 0x006D, 0x006D, 0x003A, 0x0073, 0x0073, 0}; // -H:mm:ss
+static const UChar DEFAULT_GMT_POSITIVE_H[] = {0x002B, 0x0048, 0}; // +H
+static const UChar DEFAULT_GMT_NEGATIVE_H[] = {0x002D, 0x0048, 0}; // -H
 
 static const UChar32 DEFAULT_GMT_DIGITS[] = {
     0x0030, 0x0031, 0x0032, 0x0033, 0x0034,
@@ -50,7 +81,7 @@ static const UChar32 DEFAULT_GMT_DIGITS[] = {
 static const UChar DEFAULT_GMT_OFFSET_SEP = 0x003A; // ':'
 
 static const UChar ARG0[] = {0x007B, 0x0030, 0x007D};   // "{0}"
-static const int ARG0_LEN = 3;
+static const int32_t ARG0_LEN = 3;
 
 static const UChar DEFAULT_GMT_OFFSET_MINUTE_PATTERN[] = {0x006D, 0x006D, 0};   // "mm"
 static const UChar DEFAULT_GMT_OFFSET_SECOND_PATTERN[] = {0x0073, 0x0073, 0};   // "ss"
@@ -69,6 +100,8 @@ static const int32_t PARSE_GMT_OFFSET_TYPES[] = {
     UTZFMT_PAT_NEGATIVE_HMS,
     UTZFMT_PAT_POSITIVE_HM,
     UTZFMT_PAT_NEGATIVE_HM,
+    UTZFMT_PAT_POSITIVE_H,
+    UTZFMT_PAT_NEGATIVE_H,
     -1
 };
 
@@ -245,7 +278,7 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneFormat)
 TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status) 
 : fLocale(locale), fTimeZoneNames(NULL), fTimeZoneGenericNames(NULL), fDefParseOptionFlags(0) {
 
-    for (int32_t i = 0; i <= UTZFMT_PAT_NEGATIVE_HMS; i++) {
+    for (int32_t i = 0; i < UTZFMT_PAT_COUNT; i++) {
         fGMTOffsetPatternItems[i] = NULL;
     }
 
@@ -299,20 +332,29 @@ TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status)
     }
     initGMTPattern(UnicodeString(gmtPattern, -1), status);
 
-    UBool useDefHourFmt = TRUE;
+    UBool useDefaultOffsetPatterns = TRUE;
     if (hourFormats) {
         UChar *sep = u_strchr(hourFormats, (UChar)0x003B /* ';' */);
         if (sep != NULL) {
+            useDefaultOffsetPatterns = FALSE;
+
+            UErrorCode tmpStatus = U_ZERO_ERROR;
             fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM].setTo(FALSE, hourFormats, (int32_t)(sep - hourFormats));
             fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM].setTo(TRUE, sep + 1, -1);
-            expandOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HMS]);
-            expandOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HMS]);
-            useDefHourFmt = FALSE;
+            expandOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HMS], tmpStatus);
+            expandOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HMS], tmpStatus);
+            truncateOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_H], tmpStatus);
+            truncateOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_H], tmpStatus);
+            if (U_SUCCESS(tmpStatus)) {
+                useDefaultOffsetPatterns = TRUE;
+            }
         }
     }
-    if (useDefHourFmt) {
+    if (useDefaultOffsetPatterns) {
+        fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_H].setTo(TRUE, DEFAULT_GMT_POSITIVE_H, -1);
         fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM].setTo(TRUE, DEFAULT_GMT_POSITIVE_HM, -1);
         fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HMS].setTo(TRUE, DEFAULT_GMT_POSITIVE_HMS, -1);
+        fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_H].setTo(TRUE, DEFAULT_GMT_NEGATIVE_H, -1);
         fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM].setTo(TRUE, DEFAULT_GMT_NEGATIVE_HM, -1);
         fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HMS].setTo(TRUE, DEFAULT_GMT_NEGATIVE_HMS, -1);
     }
@@ -333,7 +375,7 @@ TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status)
 TimeZoneFormat::TimeZoneFormat(const TimeZoneFormat& other)
 : Format(other), fTimeZoneNames(NULL), fTimeZoneGenericNames(NULL) {
 
-    for (int32_t i = 0; i <= UTZFMT_PAT_NEGATIVE_HMS; i++) {
+    for (int32_t i = 0; i < UTZFMT_PAT_COUNT; i++) {
         fGMTOffsetPatternItems[i] = NULL;
     }
     *this = other;
@@ -343,7 +385,7 @@ TimeZoneFormat::TimeZoneFormat(const TimeZoneFormat& other)
 TimeZoneFormat::~TimeZoneFormat() {
     delete fTimeZoneNames;
     delete fTimeZoneGenericNames;
-    for (int32_t i = 0; i <= UTZFMT_PAT_NEGATIVE_HMS; i++) {
+    for (int32_t i = 0; i <= UTZFMT_PAT_COUNT; i++) {
         delete fGMTOffsetPatternItems[i];
     }
 }
@@ -371,7 +413,7 @@ TimeZoneFormat::operator=(const TimeZoneFormat& other) {
     fGMTPatternSuffix = other.fGMTPatternSuffix;
 
     UErrorCode status = U_ZERO_ERROR;
-    for (int32_t i = 0; i <= UTZFMT_PAT_NEGATIVE_HMS; i++) {
+    for (int32_t i = 0; i < UTZFMT_PAT_COUNT; i++) {
         fGMTOffsetPatterns[i] = other.fGMTOffsetPatterns[i];
         delete fGMTOffsetPatternItems[i];
     }
@@ -398,7 +440,7 @@ TimeZoneFormat::operator==(const Format& other) const {
             && fGMTZeroFormat == tzfmt->fGMTZeroFormat
             && *fTimeZoneNames == *tzfmt->fTimeZoneNames;
 
-    for (int32_t i = 0; i <= UTZFMT_PAT_NEGATIVE_HMS && isEqual; i++) {
+    for (int32_t i = 0; i < UTZFMT_PAT_COUNT && isEqual; i++) {
         isEqual = fGMTOffsetPatterns[i] == tzfmt->fGMTOffsetPatterns[i];
     }
     for (int32_t i = 0; i < 10 && isEqual; i++) {
@@ -486,7 +528,24 @@ TimeZoneFormat::setGMTOffsetPattern(UTimeZoneFormatGMTOffsetPatternType type, co
         return;
     }
 
-    OffsetFields required = (type == UTZFMT_PAT_POSITIVE_HMS || type == UTZFMT_PAT_NEGATIVE_HMS) ? FIELDS_HMS : FIELDS_HM;
+    OffsetFields required = FIELDS_HM;
+    switch (type) {
+    case UTZFMT_PAT_POSITIVE_H:
+    case UTZFMT_PAT_NEGATIVE_H:
+        required = FIELDS_H;
+        break;
+    case UTZFMT_PAT_POSITIVE_HM:
+    case UTZFMT_PAT_NEGATIVE_HM:
+        required = FIELDS_HM;
+        break;
+    case UTZFMT_PAT_POSITIVE_HMS:
+    case UTZFMT_PAT_NEGATIVE_HMS:
+        required = FIELDS_HMS;
+        break;
+    default:
+        U_ASSERT(FALSE);
+        break;
+    }
 
     UVector* patternItems = parseOffsetPattern(pattern, required, status);
     if (patternItems == NULL) {
@@ -496,6 +555,7 @@ TimeZoneFormat::setGMTOffsetPattern(UTimeZoneFormatGMTOffsetPatternType type, co
     fGMTOffsetPatterns[type].setTo(pattern);
     delete fGMTOffsetPatternItems[type];
     fGMTOffsetPatternItems[type] = patternItems;
+    checkAbuttingHoursAndMinutes();
 }
 
 UnicodeString&
@@ -561,9 +621,7 @@ TimeZoneFormat::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate dat
     case UTZFMT_STYLE_SPECIFIC_SHORT:
         formatSpecific(tz, UTZNM_SHORT_STANDARD, UTZNM_SHORT_DAYLIGHT, date, name, timeType);
         break;
-    case UTZFMT_STYLE_RFC822:
-    case UTZFMT_STYLE_ISO8601:
-    case UTZFMT_STYLE_LOCALIZED_GMT:
+    default:
         // will be handled below
         break;
     }
@@ -572,16 +630,78 @@ TimeZoneFormat::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate dat
         UErrorCode status = U_ZERO_ERROR;
         int32_t rawOffset, dstOffset;
         tz.getOffset(date, FALSE, rawOffset, dstOffset, status);
+        int32_t offset = rawOffset + dstOffset;
         if (U_SUCCESS(status)) {
             switch (style) {
-            case UTZFMT_STYLE_RFC822:
-                formatOffsetRFC822(rawOffset + dstOffset, name, status);
+            case UTZFMT_STYLE_GENERIC_LOCATION:
+            case UTZFMT_STYLE_GENERIC_LONG:
+            case UTZFMT_STYLE_SPECIFIC_LONG:
+            case UTZFMT_STYLE_LOCALIZED_GMT:
+                formatOffsetLocalizedGMT(offset, name, status);
                 break;
-            case UTZFMT_STYLE_ISO8601:
-                formatOffsetISO8601(rawOffset + dstOffset, name, status);
+
+            case UTZFMT_STYLE_GENERIC_SHORT:
+            case UTZFMT_STYLE_SPECIFIC_SHORT:
+            case UTZFMT_STYLE_LOCALIZED_GMT_SHORT:
+                formatOffsetShortLocalizedGMT(offset, name, status);
                 break;
-            default:
-                formatOffsetLocalizedGMT(rawOffset + dstOffset, name, status);
+
+            case UTZFMT_STYLE_ISO_BASIC_SHORT:
+                formatOffsetISO8601Basic(offset, TRUE, TRUE, TRUE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_BASIC_LOCAL_SHORT:
+                formatOffsetISO8601Basic(offset, FALSE, TRUE, TRUE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_BASIC_FIXED:
+                formatOffsetISO8601Basic(offset, TRUE, FALSE, TRUE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_BASIC_LOCAL_FIXED:
+                formatOffsetISO8601Basic(offset, FALSE, FALSE, TRUE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_EXTENDED_FIXED:
+                formatOffsetISO8601Extended(offset, TRUE, FALSE, TRUE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FIXED:
+                formatOffsetISO8601Extended(offset, FALSE, FALSE, TRUE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_BASIC_FULL:
+                formatOffsetISO8601Basic(offset, TRUE, FALSE, FALSE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL:
+                formatOffsetISO8601Basic(offset, FALSE, FALSE, FALSE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_EXTENDED_FULL:
+                formatOffsetISO8601Extended(offset, TRUE, FALSE, FALSE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FULL:
+                formatOffsetISO8601Extended(offset, FALSE, FALSE, FALSE, name, status);
+                break;
+
+            case UTZFMT_STYLE_ZONE_ID:
+                tz.getID(name);
+                break;
+
+            case UTZFMT_STYLE_ZONE_ID_SHORT:
+                {
+                    const UChar* shortID = ZoneMeta::getShortID(tz);
+                    if (shortID == NULL) {
+                        shortID = UNKNOWN_SHORT_ZONE_ID;
+                    }
+                    name.setTo(shortID, -1);
+                }
+                break;
+
+            case UTZFMT_STYLE_EXEMPLAR_LOCATION:
+                formatExemplarLocation(tz, name);
                 break;
             }
             if (timeType) {
@@ -1028,47 +1148,125 @@ TimeZoneFormat::getTimeZoneGenericNames(UErrorCode& status) const {
     return fTimeZoneGenericNames;
 }
 
+UnicodeString&
+TimeZoneFormat::formatExemplarLocation(const TimeZone& tz, UnicodeString& name) const {
+    UnicodeString location;
+    const UChar* canonicalID = ZoneMeta::getCanonicalCLDRID(tz);
+
+    if (canonicalID) {
+        fTimeZoneNames->getExemplarLocationName(UnicodeString(canonicalID), location);
+    }
+    if (location.length() > 0) {
+        name.setTo(location);
+    } else {
+        // Use "unknown" location
+        fTimeZoneNames->getExemplarLocationName(UnicodeString(UNKNOWN_ZONE_ID), location);
+        if (location.length() > 0) {
+            name.setTo(location);
+        } else {
+            // last resort
+            name.setTo(UNKNOWN_LOCATION, -1);
+        }
+    }
+    return name;
+}
+
+
 // ------------------------------------------------------------------
 // Zone offset format and parse
 
 UnicodeString&
-TimeZoneFormat::formatOffsetRFC822(int32_t offset, UnicodeString& result, UErrorCode& status) const {
-    if (U_FAILURE(status)) {
-        result.setToBogus();
-        return result;
-    }
-    if (offset <= -MAX_OFFSET || offset >= MAX_OFFSET) {
-        result.setToBogus();
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-        return result;
-    }
-
-    // Note: FIELDS_HMS as maxFields is an ICU extension. RFC822 specification
-    // defines exactly 4 digits for the offset field in HHss format.
-    return formatOffsetWithAsciiDigits(offset, 0, FIELDS_HM, FIELDS_HMS, result);
+TimeZoneFormat::formatOffsetISO8601Basic(int32_t offset, UBool useUtcIndicator, UBool isShort, UBool ignoreSeconds,
+        UnicodeString& result, UErrorCode& status) const {
+    return formatOffsetISO8601(offset, TRUE, useUtcIndicator, isShort, ignoreSeconds, result, status);
 }
 
 UnicodeString&
-TimeZoneFormat::formatOffsetISO8601(int32_t offset, UnicodeString& result, UErrorCode& status) const {
+TimeZoneFormat::formatOffsetISO8601Extended(int32_t offset, UBool useUtcIndicator, UBool isShort, UBool ignoreSeconds,
+        UnicodeString& result, UErrorCode& status) const {
+    return formatOffsetISO8601(offset, FALSE, useUtcIndicator, isShort, ignoreSeconds, result, status);
+}
+
+UnicodeString&
+TimeZoneFormat::formatOffsetISO8601(int32_t offset, UBool isBasic, UBool useUtcIndicator,
+        UBool isShort, UBool ignoreSeconds, UnicodeString& result, UErrorCode& status) const {
     if (U_FAILURE(status)) {
         result.setToBogus();
         return result;
     }
-    if (offset <= -MAX_OFFSET || offset >= MAX_OFFSET) {
+    int32_t absOffset = offset < 0 ? -offset : offset;
+    if (useUtcIndicator && (absOffset < MILLIS_PER_SECOND || (ignoreSeconds && absOffset < MILLIS_PER_MINUTE))) {
+        result.setTo(ISO8601_UTC);
+        return result;
+    }
+
+    OffsetFields minFields = isShort ? FIELDS_H : FIELDS_HM;
+    OffsetFields maxFields = ignoreSeconds ? FIELDS_HM : FIELDS_HMS;
+    UChar sep = isBasic ? 0 : ISO8601_SEP;
+
+    // Note: FIELDS_HMS as maxFields is a CLDR/ICU extension. ISO 8601 specification does
+    // not support second field.
+
+    if (absOffset >= MAX_OFFSET) {
         result.setToBogus();
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
 
-    if (offset == 0) {
-        result.setTo(ISO8601_UTC);
-        return result;
+    int fields[3];
+    fields[0] = absOffset / MILLIS_PER_HOUR;
+    absOffset = absOffset % MILLIS_PER_HOUR;
+    fields[1] = absOffset / MILLIS_PER_MINUTE;
+    absOffset = absOffset % MILLIS_PER_MINUTE;
+    fields[2] = absOffset / MILLIS_PER_SECOND;
+
+    U_ASSERT(fields[0] >= 0 && fields[0] <= MAX_OFFSET_HOUR);
+    U_ASSERT(fields[1] >= 0 && fields[1] <= MAX_OFFSET_MINUTE);
+    U_ASSERT(fields[2] >= 0 && fields[2] <= MAX_OFFSET_SECOND);
+
+    int32_t lastIdx = maxFields;
+    while (lastIdx > minFields) {
+        if (fields[lastIdx] != 0) {
+            break;
+        }
+        lastIdx--;
     }
-    return formatOffsetWithAsciiDigits(offset, ISO8601_SEP, FIELDS_HM, FIELDS_HMS, result);
+
+    UChar sign = PLUS;
+    if (offset < 0) {
+        // if all output fields are 0s, do not use negative sign
+        for (int32_t idx = 0; idx <= lastIdx; idx++) {
+            if (fields[idx] != 0) {
+                sign = MINUS;
+                break;
+            }
+        }
+    }
+    result.setTo(sign);
+
+    for (int32_t idx = 0; idx <= lastIdx; idx++) {
+        if (sep && idx != 0) {
+            result.append(sep);
+        }
+        result.append((UChar)(0x0030 + fields[idx]/10));
+        result.append((UChar)(0x0030 + fields[idx]%10));
+    }
+
+    return result;
 }
 
 UnicodeString&
 TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const {
+    return formatOffsetLocalizedGMT(offset, FALSE, result, status);
+}
+
+UnicodeString&
+TimeZoneFormat::formatOffsetShortLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const {
+    return formatOffsetLocalizedGMT(offset, TRUE, result, status);
+}
+
+UnicodeString&
+TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UBool isShort, UnicodeString& result, UErrorCode& status) const {
     if (U_FAILURE(status)) {
         result.setToBogus();
         return result;
@@ -1100,13 +1298,21 @@ TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, 
 
     const UVector* offsetPatternItems = NULL;
     if (positive) {
-        offsetPatternItems = (offsetS == 0) ?
-            fGMTOffsetPatternItems[UTZFMT_PAT_POSITIVE_HM] :
-            fGMTOffsetPatternItems[UTZFMT_PAT_POSITIVE_HMS];
+        if (offsetS != 0) {
+            offsetPatternItems = fGMTOffsetPatternItems[UTZFMT_PAT_POSITIVE_HMS];
+        } else if (offsetM != 0 || !isShort) {
+            offsetPatternItems = fGMTOffsetPatternItems[UTZFMT_PAT_POSITIVE_HM];
+        } else {
+            offsetPatternItems = fGMTOffsetPatternItems[UTZFMT_PAT_POSITIVE_H];
+        }
     } else {
-        offsetPatternItems = (offsetS == 0) ?
-            fGMTOffsetPatternItems[UTZFMT_PAT_NEGATIVE_HM] :
-            fGMTOffsetPatternItems[UTZFMT_PAT_NEGATIVE_HMS];
+        if (offsetS != 0) {
+            offsetPatternItems = fGMTOffsetPatternItems[UTZFMT_PAT_NEGATIVE_HMS];
+        } else if (offsetM != 0 || !isShort) {
+            offsetPatternItems = fGMTOffsetPatternItems[UTZFMT_PAT_NEGATIVE_HM];
+        } else {
+            offsetPatternItems = fGMTOffsetPatternItems[UTZFMT_PAT_NEGATIVE_H];
+        }
     }
 
     U_ASSERT(offsetPatternItems != NULL);
@@ -1124,15 +1330,15 @@ TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, 
             break;
 
         case GMTOffsetField::HOUR:
-            appendOffsetDigits(result, offsetH, item->getWidth());
+            appendOffsetDigits(result, offsetH, (isShort ? 1 : 2));
             break;
 
         case GMTOffsetField::MINUTE:
-            appendOffsetDigits(result, offsetM, item->getWidth());
+            appendOffsetDigits(result, offsetM, 2);
             break;
 
         case GMTOffsetField::SECOND:
-            appendOffsetDigits(result, offsetS, item->getWidth());
+            appendOffsetDigits(result, offsetS, 2);
             break;
         }
     }
@@ -1140,6 +1346,8 @@ TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, 
     result.append(fGMTPatternSuffix);
     return result;
 }
+
+
 
 int32_t
 TimeZoneFormat::parseOffsetRFC822(const UnicodeString& text, ParsePosition& pos) const {
@@ -2044,15 +2252,17 @@ TimeZoneFormat::parseOffsetPattern(const UnicodeString& pattern, OffsetFields re
 }
 
 UnicodeString&
-TimeZoneFormat::expandOffsetPattern(const UnicodeString& offsetHM, UnicodeString& result) {
+TimeZoneFormat::expandOffsetPattern(const UnicodeString& offsetHM, UnicodeString& result, UErrorCode& status) {
+    result.setToBogus();
+    if (U_FAILURE(status)) {
+        result;
+    }
     U_ASSERT(u_strlen(DEFAULT_GMT_OFFSET_MINUTE_PATTERN) == 2);
 
     int32_t idx_mm = offsetHM.indexOf(DEFAULT_GMT_OFFSET_MINUTE_PATTERN, 2, 0);
     if (idx_mm < 0) {
-        // we cannot do anything with this...
-        result.setTo(offsetHM);
-        result.append(DEFAULT_GMT_OFFSET_SEP);
-        result.append(DEFAULT_GMT_OFFSET_SECOND_PATTERN, -1);
+        // Bad time zone hour pattern data
+        status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
 
@@ -2068,10 +2278,42 @@ TimeZoneFormat::expandOffsetPattern(const UnicodeString& offsetHM, UnicodeString
     return result;
 }
 
+UnicodeString&
+TimeZoneFormat::truncateOffsetPattern(const UnicodeString& offsetHM, UnicodeString& result, UErrorCode& status) {
+    result.setToBogus();
+    if (U_FAILURE(status)) {
+        return result;
+    }
+    U_ASSERT(u_strlen(DEFAULT_GMT_OFFSET_MINUTE_PATTERN) == 2);
+
+    int32_t idx_mm = offsetHM.indexOf(DEFAULT_GMT_OFFSET_MINUTE_PATTERN, 2, 0);
+    if (idx_mm < 0) {
+        // Bad time zone hour pattern data
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return result;
+    }
+    UChar HH[] = {0x0048, 0x0048};
+    int32_t idx_HH = offsetHM.tempSubString(0, idx_mm).lastIndexOf(HH, 2, 0);
+    if (idx_HH >= 0) {
+        return result.setTo(offsetHM.tempSubString(0, idx_HH + 2));
+    }
+    int32_t idx_H = offsetHM.tempSubString(0, idx_mm).lastIndexOf((UChar)0x0048, 0);
+    if (idx_H >= 0) {
+        return result.setTo(offsetHM.tempSubString(0, idx_H + 1));
+    }
+    // Bad time zone hour pattern data
+    status = U_ILLEGAL_ARGUMENT_ERROR;
+    return result;
+}
+
 void
 TimeZoneFormat::initGMTOffsetPatterns(UErrorCode& status) {
-    for (int32_t type = 0; type <= UTZFMT_PAT_NEGATIVE_HMS; type++) {
+    for (int32_t type = 0; type < UTZFMT_PAT_COUNT; type++) {
         switch (type) {
+        case UTZFMT_PAT_POSITIVE_H:
+        case UTZFMT_PAT_NEGATIVE_H:
+            fGMTOffsetPatternItems[type] = parseOffsetPattern(fGMTOffsetPatterns[type], FIELDS_H, status);
+            break;
         case UTZFMT_PAT_POSITIVE_HM:
         case UTZFMT_PAT_NEGATIVE_HM:
             fGMTOffsetPatternItems[type] = parseOffsetPattern(fGMTOffsetPatterns[type], FIELDS_HM, status);
@@ -2079,6 +2321,33 @@ TimeZoneFormat::initGMTOffsetPatterns(UErrorCode& status) {
         case UTZFMT_PAT_POSITIVE_HMS:
         case UTZFMT_PAT_NEGATIVE_HMS:
             fGMTOffsetPatternItems[type] = parseOffsetPattern(fGMTOffsetPatterns[type], FIELDS_HMS, status);
+            break;
+        }
+    }
+    checkAbuttingHoursAndMinutes();
+}
+
+void
+TimeZoneFormat::checkAbuttingHoursAndMinutes() {
+    fAbuttingOffsetHoursAndMinutes= FALSE;
+    for (int32_t type = 0; type < UTZFMT_PAT_COUNT; type++) {
+        UBool afterH = FALSE;
+        UVector *items = fGMTOffsetPatternItems[type];
+        for (int32_t i = 0; i < items->size(); i++) {
+            const GMTOffsetField* item = (GMTOffsetField*)items->elementAt(i);
+            GMTOffsetField::FieldType type = item->getType();
+            if (type != GMTOffsetField::TEXT) {
+                if (afterH) {
+                    fAbuttingOffsetHoursAndMinutes = TRUE;
+                    break;
+                } else if (type == GMTOffsetField::HOUR) {
+                    afterH = TRUE;
+                }
+            } else if (afterH) {
+                break;
+            }
+        }
+        if (fAbuttingOffsetHoursAndMinutes) {
             break;
         }
     }

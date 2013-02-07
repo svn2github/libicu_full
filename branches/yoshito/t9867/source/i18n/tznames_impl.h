@@ -184,6 +184,8 @@ public:
 
     TimeZoneNames::MatchInfoCollection* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 
+    static UnicodeString& getDefaultExemplarLocationName(const UnicodeString& tzID, UnicodeString& name);
+
 private:
 
     Locale fLocale;

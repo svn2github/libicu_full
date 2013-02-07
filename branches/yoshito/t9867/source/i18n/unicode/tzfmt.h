@@ -143,7 +143,12 @@ typedef enum UTimeZoneFormatStyle {
      * Short Time Zone ID (BCP 47 Unicode location extension, time zone type value), such as "uslax".
      * @draft ICU 51
      */
-    UTZFMT_STYLE_ZONE_ID_SHORT
+    UTZFMT_STYLE_ZONE_ID_SHORT,
+    /**
+     * Exemplar location, such as "Los Angeles" and "Paris".
+     * @draft ICU 51
+     */
+    UTZFMT_STYLE_EXEMPLAR_LOCATION
 } UTimeZoneFormatStyle;
 
 /**
@@ -182,6 +187,11 @@ typedef enum UTimeZoneFormatGMTOffsetPatternType {
      */
     UTZFMT_PAT_NEGATIVE_H,
 
+    /**
+     * Number of UTimeZoneFormatGMTOffsetPatternType types.
+     * @internal
+     */
+    UTZFMT_PAT_COUNT
 } UTimeZoneFormatGMTOffsetPatternType;
 
 /**
@@ -428,8 +438,8 @@ public:
      * @param useUtcIndicator true if ISO 8601 UTC indicator "Z" is used when the offset is 0.
      * @param isShort true if shortest form is used.
      * @param ignoreSeconds true if non-zero offset seconds is appended.
+     * @param result Receives the ISO format string.
      * @param status Receives the status
-     * @param result Receives the localized GMT format string.
      * @return the ISO 8601 basic format.
      * @see #formatOffsetISO8601Extended
      * @see #parseOffsetISO8601
@@ -446,8 +456,8 @@ public:
      * @param useUtcIndicator true if ISO 8601 UTC indicator "Z" is used when the offset is 0.
      * @param isShort true if shortest form is used.
      * @param ignoreSeconds true if non-zero offset seconds is appended.
+     * @param result Receives the ISO format string.
      * @param status Receives the status
-     * @param result Receives the localized GMT format string.
      * @return the ISO 8601 basic format.
      * @see #formatOffsetISO8601Extended
      * @see #parseOffsetISO8601
@@ -465,6 +475,9 @@ public:
      * <li>Offset digits (e.g. "0123456789" - see {@link #getGMTOffsetDigits})
      * <li>GMT zero format (e.g. "GMT" - see {@link #getGMTZeroFormat})
      * </ul>
+     * This format always uses 2 digit hours and minutes. When the given offset has non-zero
+     * seconds, 2 digit second field will be appended. For example,
+     * GMT+05:00 and GMT+05:28:06.
      * @param offset the offset from GMT(UTC) in milliseconds.
      * @param status Receives the status
      * @param result Receives the localized GMT format string.
@@ -523,7 +536,8 @@ public:
      * @param pos The ParsePosition object.
      * @return The offset from GMT(UTC) in milliseconds for the given ISO 8601 style
      *              time zone string.
-     * @see #formatOffsetISO8601
+     * @see #formatOffsetISO8601Basic
+     * @see #formatOffsetISO8601Extended
      * @draft ICU 50
      */
     int32_t parseOffsetISO8601(const UnicodeString& text, ParsePosition& pos) const;
@@ -663,7 +677,7 @@ private:
     UnicodeString fGMTPattern;
 
     /* Array of offset patterns used by Localized GMT format - e.g. "+HH:mm" */
-    UnicodeString fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HMS + 1];
+    UnicodeString fGMTOffsetPatterns[UTZFMT_PAT_COUNT];
 
     /* Localized decimal digits used by Localized GMT format */
     UChar32 fGMTOffsetDigits[10];
@@ -680,6 +694,8 @@ private:
 
     /* Compiled offset patterns generated from fGMTOffsetPatterns[] */
     UVector* fGMTOffsetPatternItems[UTZFMT_PAT_NEGATIVE_HMS + 1];
+
+    UBool fAbuttingOffsetHoursAndMinutes;
 
     /**
      * Returns the time zone's specific format string.
@@ -710,6 +726,15 @@ private:
      * @return the cached TimeZoneGenericNames.
      */
     const TimeZoneGenericNames* getTimeZoneGenericNames(UErrorCode& status) const;
+
+    /**
+     * Private method returning the time zone's exemplar location string.
+     * This method will never return empty.
+     * @param tz the time zone
+     * @param name receives the time zone's exemplar location name
+     * @return a reference to name.
+     */
+    UnicodeString& formatExemplarLocation(const TimeZone& tz, UnicodeString& name) const;
 
     /**
      * Private enum specifying a combination of offset fields
@@ -744,9 +769,20 @@ private:
      * Note: This code will be obsoleted once we add hour-minute-second pattern data in CLDR.
      * @param offsetHM the offset pattern including hour and minute fields
      * @param result the output offset pattern including hour, minute and second fields
+     * @param status receives the status
      * @return a reference to result
      */
-    static UnicodeString& expandOffsetPattern(const UnicodeString& offsetHM, UnicodeString& result);
+    static UnicodeString& expandOffsetPattern(const UnicodeString& offsetHM, UnicodeString& result, UErrorCode& status);
+
+    /**
+     * Truncates minute field to the offset pattern with hour/minute
+     * Note: This code will be obsoleted once we add hour pattern data in CLDR.
+     * @param offsetHM the offset pattern including hour and minute fields
+     * @param result the output offset pattern including only hour field
+     * @param status receives the status
+     * @return a reference to result
+     */
+    static UnicodeString& truncateOffsetPattern(const UnicodeString& offsetHM, UnicodeString& result, UErrorCode& status);
 
     /**
      * Break input string into UChar32[]. Each array element represents
@@ -759,6 +795,28 @@ private:
      *         (no under/overflow).
      */
     static UBool toCodePoints(const UnicodeString& str, UChar32* codeArray, int32_t capacity);
+
+    /**
+     * Private method supprting all of ISO8601 formats
+     * @param offset the offset from GMT(UTC) in milliseconds.
+     * @param useUtcIndicator true if ISO 8601 UTC indicator "Z" is used when the offset is 0.
+     * @param isShort true if shortest form is used.
+     * @param ignoreSeconds true if non-zero offset seconds is appended.
+     * @param result Receives the result
+     * @param status Receives the status
+     * @return the ISO 8601 basic format.
+     */
+    UnicodeString& formatOffsetISO8601(int32_t offset, UBool isBasic, UBool useUtcIndicator,
+        UBool isShort, UBool ignoreSeconds, UnicodeString& result, UErrorCode& status) const;
+
+    /**
+     * Private method used for localized GMT formatting.
+     * @param offset the zone's UTC offset
+     * @param isShort true if the short localized GMT format is desired.
+     * @param result receives the localized GMT format string
+     * @param status receives the status
+     */
+    UnicodeString& formatOffsetLocalizedGMT(int32_t offset, UBool isShort, UnicodeString& result, UErrorCode& status) const;
 
     /**
      * Returns offset from GMT(UTC) in milliseconds for the given ISO 8601 style
@@ -925,6 +983,14 @@ private:
      * @param status receives the status.
      */
     void initGMTOffsetPatterns(UErrorCode& status);
+
+    /**
+     * Check if there are any GMT format offset patterns without
+     * any separators between hour field and minute field and update
+     * fAbuttingOffsetHoursAndMinutes field. This method must be called
+     * after all patterns are parsed into pattern items.
+     */
+    void checkAbuttingHoursAndMinutes();
 
     /**
      * Creates an instance of TimeZone for the given offset
