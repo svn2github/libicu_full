@@ -39,13 +39,10 @@ U_NAMESPACE_USE
 //
 static UnicodeSet *gInclusionSet = NULL;
 static UnicodeSet *gRecommendedSet = NULL;
-static IdentifierInfo *gCachedIdentifierInfo = NULL;
 static UMutex gInitMutex = U_MUTEX_INITIALIZER;
 
 static UBool U_CALLCONV
 uspoof_cleanup(void) {
-    delete gCachedIdentifierInfo;
-    gCachedIdentifierInfo = NULL;
     delete gInclusionSet;
     gInclusionSet = NULL;
     delete gRecommendedSet;
@@ -95,6 +92,7 @@ uspoof_open(UErrorCode *status) {
     if (U_FAILURE(*status)) {
         return NULL;
     }
+    initializeStatics();
     SpoofImpl *si = new SpoofImpl(SpoofData::getDefault(*status), *status);
     if (U_FAILURE(*status)) {
         delete si;
@@ -110,6 +108,7 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
     if (U_FAILURE(*status)) {
         return NULL;
     }
+    initializeStatics();
     SpoofData *sd = new SpoofData(data, length, *status);
     SpoofImpl *si = new SpoofImpl(sd, *status);
     if (U_FAILURE(*status)) {
@@ -222,7 +221,7 @@ uspoof_getAllowedLocales(USpoofChecker *sc, UErrorCode *status) {
 U_CAPI const USet * U_EXPORT2
 uspoof_getAllowedChars(const USpoofChecker *sc, UErrorCode *status) {
     const UnicodeSet *result = uspoof_getAllowedUnicodeSet(sc, status);
-    return reinterpret_cast<const USet *>(result);
+    return result->toUSet();
 }
 
 U_CAPI const UnicodeSet * U_EXPORT2
@@ -237,7 +236,7 @@ uspoof_getAllowedUnicodeSet(const USpoofChecker *sc, UErrorCode *status) {
 
 U_CAPI void U_EXPORT2
 uspoof_setAllowedChars(USpoofChecker *sc, const USet *chars, UErrorCode *status) {
-    const UnicodeSet *set = reinterpret_cast<const UnicodeSet *>(chars);
+    const UnicodeSet *set = UnicodeSet::fromUSet(chars);
     uspoof_setAllowedUnicodeSet(sc, set, status);
 }
 
@@ -263,47 +262,6 @@ uspoof_setAllowedUnicodeSet(USpoofChecker *sc, const UnicodeSet *chars, UErrorCo
     This->fChecks |= USPOOF_CHAR_LIMIT;
 }
 
-// IdentifierInfo Cache. IdentifierInfo objects are somewhat expensive to create.
-//                       Maintain a one-element cache, which is sufficient to avoid repeatedly
-//                       creating new ones unless we get multi-thread concurrency in spoof
-//                       check operations, which should be statistically uncommon.
-
-static IdentifierInfo *getIdentifierInfo(UErrorCode &status) {
-    IdentifierInfo *returnIdInfo = NULL;
-    if (U_FAILURE(status)) {
-        return returnIdInfo;
-    }
-    {
-        Mutex m;
-        returnIdInfo = gCachedIdentifierInfo;
-        gCachedIdentifierInfo = NULL;
-    }
-    if (returnIdInfo == NULL) {
-        returnIdInfo = new IdentifierInfo(status);
-        if (U_SUCCESS(status) && returnIdInfo == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-        }
-        if (U_FAILURE(status) && returnIdInfo != NULL) {
-            delete returnIdInfo;
-            returnIdInfo = NULL;
-        }
-    }
-    return returnIdInfo;
-}
-
-
-static void releaseIdentifierInfo(IdentifierInfo *idInfo) {
-    if (idInfo != NULL) {
-        {
-            Mutex m;
-            if (gCachedIdentifierInfo == NULL) {
-                gCachedIdentifierInfo = idInfo;
-                idInfo = NULL;
-            }
-        }
-        delete idInfo;
-    }
-};
 
 U_CAPI int32_t U_EXPORT2
 uspoof_check(const USpoofChecker *sc,
@@ -405,7 +363,7 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
     int32_t  flagsForSkeleton = This->fChecks & USPOOF_ANY_CASE;
 
     int32_t  result = 0;
-    IdentifierInfo *identifierInfo = getIdentifierInfo(*status);
+    IdentifierInfo *identifierInfo = This->getIdentifierInfo(*status);
     if (U_FAILURE(*status)) {
         return 0;
     }
@@ -413,7 +371,7 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
     int32_t id1ScriptCount = identifierInfo->getScriptCount();
     identifierInfo->setIdentifier(id2, *status);
     int32_t id2ScriptCount = identifierInfo->getScriptCount();
-    releaseIdentifierInfo(identifierInfo);
+    This->releaseIdentifierInfo(identifierInfo);
     identifierInfo = NULL;
 
     if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
@@ -480,7 +438,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
 
     IdentifierInfo *identifierInfo = NULL;
     if ((This->fChecks) & (USPOOF_RESTRICTION_LEVEL | USPOOF_MIXED_NUMBERS)) {
-        identifierInfo = getIdentifierInfo(*status);
+        identifierInfo = This->getIdentifierInfo(*status);
         if (U_FAILURE(*status)) {
             goto cleanupAndReturn;
         }
@@ -513,7 +471,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
     }
 
 
-    if (This->fChecks & USPOOF_CHAR_LIMIT) {
+    if (This->fChecks & (USPOOF_CHAR_LIMIT)) {
         int32_t i;
         UChar32 c;
         int32_t length = id.length();
@@ -591,7 +549,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
             // one script.)
 
             if (identifierInfo == NULL) {
-                identifierInfo = getIdentifierInfo(*status);
+                identifierInfo = This->getIdentifierInfo(*status);
                 if (U_FAILURE(*status)) {
                     goto cleanupAndReturn;
                 }
@@ -620,7 +578,7 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
     }
 
 cleanupAndReturn:
-    releaseIdentifierInfo(identifierInfo);
+    This->releaseIdentifierInfo(identifierInfo);
     if (position != NULL) {
         *position = 0;
     }

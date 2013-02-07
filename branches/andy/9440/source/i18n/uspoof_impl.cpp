@@ -13,6 +13,7 @@
 #include "utrie2.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "identifier_info.h"
 #include "scriptset.h"
 #include "udatamem.h"
 #include "umutex.h"
@@ -28,28 +29,29 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SpoofImpl)
 
 SpoofImpl::SpoofImpl(SpoofData *data, UErrorCode &status) :
-        fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) , fAllowedLocales(uprv_strdup("")) {
+        fMagic(0), fChecks(USPOOF_ALL_CHECKS), fSpoofData(NULL), fAllowedCharsSet(NULL) , 
+        fAllowedLocales(NULL), fCachedIdentifierInfo(NULL) {
     if (U_FAILURE(status)) {
         return;
     }
-    fMagic = USPOOF_MAGIC;
     fSpoofData = data;
-    fChecks = USPOOF_ALL_CHECKS;
+    fRestrictionLevel = USPOOF_HIGHLY_RESTRICTIVE;
+
     UnicodeSet *allowedCharsSet = new UnicodeSet(0, 0x10ffff);
-    if (allowedCharsSet == NULL || fAllowedLocales == NULL) {
+    allowedCharsSet->freeze();
+    fAllowedCharsSet = allowedCharsSet;
+    fAllowedLocales  = uprv_strdup("");
+    if (fAllowedCharsSet == NULL || fAllowedLocales == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    allowedCharsSet->freeze();
-    fAllowedCharsSet = allowedCharsSet;
-    fRestrictionLevel = USPOOF_HIGHLY_RESTRICTIVE;
+    fMagic = USPOOF_MAGIC;
 }
 
 
-SpoofImpl::SpoofImpl() {
-    fMagic = USPOOF_MAGIC;
-    fSpoofData = NULL;
-    fChecks = USPOOF_ALL_CHECKS;
+SpoofImpl::SpoofImpl() :
+        fMagic(USPOOF_MAGIC), fChecks(USPOOF_ALL_CHECKS), fSpoofData(NULL), fAllowedCharsSet(NULL) , 
+        fAllowedLocales(NULL), fCachedIdentifierInfo(NULL) {
     UnicodeSet *allowedCharsSet = new UnicodeSet(0, 0x10ffff);
     allowedCharsSet->freeze();
     fAllowedCharsSet = allowedCharsSet;
@@ -60,7 +62,8 @@ SpoofImpl::SpoofImpl() {
 
 // Copy Constructor, used by the user level clone() function.
 SpoofImpl::SpoofImpl(const SpoofImpl &src, UErrorCode &status)  :
-    fMagic(0), fSpoofData(NULL), fAllowedCharsSet(NULL) {
+        fMagic(0), fChecks(USPOOF_ALL_CHECKS), fSpoofData(NULL), fAllowedCharsSet(NULL) , 
+        fAllowedLocales(NULL), fCachedIdentifierInfo(NULL) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -85,6 +88,7 @@ SpoofImpl::~SpoofImpl() {
     }
     delete fAllowedCharsSet;
     uprv_free((void *)fAllowedLocales);
+    delete fCachedIdentifierInfo;
 }
 
 //
@@ -401,6 +405,54 @@ UChar32 SpoofImpl::ScanHex(const UChar *s, int32_t start, int32_t limit, UErrorC
     }
     return (UChar32)val;
 }
+
+// IdentifierInfo Cache. IdentifierInfo objects are somewhat expensive to create.
+//                       Maintain a one-element cache, which is sufficient to avoid repeatedly
+//                       creating new ones unless we get multi-thread concurrency in spoof
+//                       check operations, which should be statistically uncommon.
+
+// These functions are used in place of new & delete of an IdentifierInfo.
+// They will recycle the IdentifierInfo when possible.
+// They are logically const, and used within const functions that must be thread safe.
+IdentifierInfo *SpoofImpl::getIdentifierInfo(UErrorCode &status) const {
+    IdentifierInfo *returnIdInfo = NULL;
+    if (U_FAILURE(status)) {
+        return returnIdInfo;
+    }
+    SpoofImpl *nonConstThis = const_cast<SpoofImpl *>(this);
+    {
+        Mutex m;
+        returnIdInfo = nonConstThis->fCachedIdentifierInfo;
+        nonConstThis->fCachedIdentifierInfo = NULL;
+    }
+    if (returnIdInfo == NULL) {
+        returnIdInfo = new IdentifierInfo(status);
+        if (U_SUCCESS(status) && returnIdInfo == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+        if (U_FAILURE(status) && returnIdInfo != NULL) {
+            delete returnIdInfo;
+            returnIdInfo = NULL;
+        }
+    }
+    return returnIdInfo;
+}
+
+
+void SpoofImpl::releaseIdentifierInfo(IdentifierInfo *idInfo) const {
+    if (idInfo != NULL) {
+        SpoofImpl *nonConstThis = const_cast<SpoofImpl *>(this);
+        {
+            Mutex m;
+            if (nonConstThis->fCachedIdentifierInfo == NULL) {
+                nonConstThis->fCachedIdentifierInfo = idInfo;
+                idInfo = NULL;
+            }
+        }
+        delete idInfo;
+    }
+};
+
 
 
 

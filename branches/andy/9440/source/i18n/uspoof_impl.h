@@ -15,10 +15,10 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uspoof.h"
-#include "utrie2.h"
 #include "unicode/uscript.h"
 #include "unicode/udata.h"
 
+#include "utrie2.h"
 
 #if !UCONFIG_NO_NORMALIZATION
 
@@ -37,10 +37,11 @@ U_NAMESPACE_BEGIN
 // Magic number for sanity checking spoof data.
 #define USPOOF_MAGIC 0x3845fdef
 
+class IdentifierInfo;
+class ScriptSet;
 class SpoofData;
 struct SpoofDataHeader;
 struct SpoofStringLengthsElement;
-class ScriptSet;
 
 /**
   *  Class SpoofImpl corresponds directly to the plain C API opaque type
@@ -88,6 +89,13 @@ public:
     static UClassID U_EXPORT2 getStaticClassID(void);
     virtual UClassID getDynamicClassID(void) const;
 
+    // IdentifierInfo Cache. IdentifierInfo objects are somewhat expensive to create.
+    //                       Maintain a one-element cache, which is sufficient to avoid repeatedly
+    //                       creating new ones unless we get multi-thread concurrency in spoof
+    //                       check operations, which should be statistically uncommon.
+    IdentifierInfo *getIdentifierInfo(UErrorCode &status) const; 
+    void releaseIdentifierInfo(IdentifierInfo *idInfo) const;
+
     //
     // Data Members
     //
@@ -102,6 +110,8 @@ public:
 
     const char       *fAllowedLocales;    // The list of allowed locales.
     URestrictionLevel fRestrictionLevel;  // The maximum restriction level for an acceptable identifier.
+
+    IdentifierInfo    *fCachedIdentifierInfo;    // Do not use directly. See getIdentifierInfo().:w
 };
 
 
