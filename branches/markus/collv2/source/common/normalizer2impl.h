@@ -34,7 +34,7 @@ U_NAMESPACE_BEGIN
 
 struct CanonIterData;
 
-class Hangul {
+class U_COMMON_API Hangul {
 public:
     /* Korean Hangul and Jamo constants */
     enum {
@@ -110,7 +110,7 @@ private:
 
 class Normalizer2Impl;
 
-class ReorderingBuffer : public UMemory {
+class U_COMMON_API ReorderingBuffer : public UMemory {
 public:
     ReorderingBuffer(const Normalizer2Impl &ni, UnicodeString &dest) :
         impl(ni), str(dest),
