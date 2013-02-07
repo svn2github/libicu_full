@@ -39,6 +39,7 @@ U_NAMESPACE_USE
 //
 static UnicodeSet *gInclusionSet = NULL;
 static UnicodeSet *gRecommendedSet = NULL;
+static const Normalizer2 *gNfdNormalizer = NULL;
 static UMutex gInitMutex = U_MUTEX_INITIALIZER;
 
 static UBool U_CALLCONV
@@ -47,6 +48,7 @@ uspoof_cleanup(void) {
     gInclusionSet = NULL;
     delete gRecommendedSet;
     gRecommendedSet = NULL;
+    gNfdNormalizer = NULL;
     return TRUE;
 }
 
@@ -80,6 +82,7 @@ static void initializeStatics() {
             "\\uA717-\\uA71F\\uA788\\uAA60-\\uAA7B\\uAC00-\\uD7A3\\uFA0E-"
             "\\uFA29\\U00020000-"
             "\\U0002B734]-[[:Cn:][:nfkcqc=n:][:XIDC=n:]]]"), status);
+        gNfdNormalizer = Normalizer2::getNFDInstance(status);
     }
     ucln_i18n_registerCleanup(UCLN_I18N_SPOOF, uspoof_cleanup);
     U_ASSERT(U_SUCCESS(status));   // TODO: remove after testing.
@@ -98,7 +101,7 @@ uspoof_open(UErrorCode *status) {
         delete si;
         si = NULL;
     }
-    return (USpoofChecker *)si;
+    return reinterpret_cast<USpoofChecker *>(si);
 }
 
 
@@ -141,7 +144,7 @@ uspoof_clone(const USpoofChecker *sc, UErrorCode *status) {
         delete result;
         result = NULL;
     }
-    return (USpoofChecker *)result;
+    return reinterpret_cast<USpoofChecker *>(result);
 }
 
 
@@ -488,9 +491,8 @@ uspoof_checkUnicodeString(const USpoofChecker *sc,
     if (This->fChecks & 
         (USPOOF_WHOLE_SCRIPT_CONFUSABLE | USPOOF_MIXED_SCRIPT_CONFUSABLE | USPOOF_INVISIBLE)) {
         // These are the checks that need to be done on NFD input
-        const Normalizer2 *nfdNormalizer = Normalizer2::getNFDInstance(*status);
         UnicodeString nfdText;
-        nfdNormalizer->normalize(id, nfdText, *status);
+        gNfdNormalizer->normalize(id, nfdText, *status);
         int32_t nfdLength = nfdText.length();
 
         if (This->fChecks & USPOOF_INVISIBLE) {
@@ -641,9 +643,8 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
         return dest;
     }
 
-    const Normalizer2 *nfdNormalizer = Normalizer2::getNFDInstance(*status);
     UnicodeString nfdId;
-    nfdNormalizer->normalize(id, nfdId, *status);
+    gNfdNormalizer->normalize(id, nfdId, *status);
 
     // Apply the skeleton mapping to the NFD normalized input string
     // Accumulate the skeleton, possibly unnormalized, in a UnicodeString.
@@ -656,7 +657,7 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
         This->confusableLookup(c, tableMask, skelStr);
     }
 
-    nfdNormalizer->normalize(skelStr, dest, *status);
+    gNfdNormalizer->normalize(skelStr, dest, *status);
     return dest;
 }
 

@@ -408,10 +408,13 @@ static void TestUSpoofCAPI(void) {
         TEST_ASSERT_SUCCESS(status);
         uset_close(tmpSet);
 
-        /* Latin Identifier should now fail; other non-latin test cases should still be OK */
+        /* Latin Identifier should now fail; other non-latin test cases should still be OK
+         *  Note: fail of CHAR_LIMIT also causes the restriction level to be USPOOF_UNRESTRICTIVE
+         *        which will give us a USPOOF_RESTRICTION_LEVEL failure.
+         */
         checkResults = uspoof_check(sc, goodLatin, -1, NULL, &status);
         TEST_ASSERT_SUCCESS(status);
-        TEST_ASSERT_EQ(USPOOF_CHAR_LIMIT, checkResults);
+        TEST_ASSERT_EQ(USPOOF_CHAR_LIMIT | USPOOF_RESTRICTION_LEVEL, checkResults);
 
         checkResults = uspoof_check(sc, goodGreek, -1, NULL, &status);
         TEST_ASSERT_SUCCESS(status);
