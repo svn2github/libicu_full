@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1996-2012, International Business Machines
+* Copyright (C) 1996-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationcompare.cpp
@@ -17,8 +17,8 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationcompare.h"
-#include "collationdata.h"
 #include "collationiterator.h"
+#include "collationsettings.h"
 #include "uassert.h"
 
 U_NAMESPACE_BEGIN
@@ -73,20 +73,20 @@ CEBuffer::doAppend(int64_t ce, UErrorCode &errorCode) {
 
 UCollationResult
 CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
+                                        const CollationSettings &settings,
                                         UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
 
     CEBuffer leftBuffer;
     CEBuffer rightBuffer;
 
-    const CollationData *data = left.getData();
-    int32_t options = data->options;
+    int32_t options = settings.options;
     uint32_t variableTop;
-    if((options & CollationData::ALTERNATE_MASK) == 0) {
+    if((options & CollationSettings::ALTERNATE_MASK) == 0) {
         variableTop = 0;
     } else {
         // +1 so that we can use "<" and primary ignorables test out early.
-        variableTop = data->variableTop + 1;
+        variableTop = settings.variableTop + 1;
     }
     UBool anyVariable = FALSE;
 
@@ -138,7 +138,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
         if(leftPrimary != rightPrimary) {
             // Return the primary difference, with script reordering.
-            const uint8_t *reorderTable = data->reorderTable;
+            const uint8_t *reorderTable = settings.reorderTable;
             if (reorderTable != NULL) {
                 leftPrimary = Collation::reorder(reorderTable, leftPrimary);
                 rightPrimary = Collation::reorder(reorderTable, rightPrimary);
@@ -152,8 +152,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
     // Compare the buffered secondary & tertiary weights.
     // We might skip the secondary level but continue with the case level
     // which is turned on separately.
-    if(CollationData::getStrength(options) >= UCOL_SECONDARY) {
-        if((options & CollationData::BACKWARD_SECONDARY) == 0) {
+    if(CollationSettings::getStrength(options) >= UCOL_SECONDARY) {
+        if((options & CollationSettings::BACKWARD_SECONDARY) == 0) {
             int32_t leftIndex = 0;
             int32_t rightIndex = 0;
             for(;;) {
@@ -226,8 +226,8 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         }
     }
 
-    if((options & CollationData::CASE_LEVEL) != 0) {
-        int32_t strength = CollationData::getStrength(options);
+    if((options & CollationSettings::CASE_LEVEL) != 0) {
+        int32_t strength = CollationSettings::getStrength(options);
         int32_t leftIndex = 0;
         int32_t rightIndex = 0;
         for(;;) {
@@ -277,7 +277,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             // There is one case weight for each previous-level weight,
             // so level length differences were handled there.
             if(leftCase != rightCase) {
-                if((options & CollationData::UPPER_FIRST) == 0) {
+                if((options & CollationSettings::UPPER_FIRST) == 0) {
                     return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
                 } else {
                     return (leftCase < rightCase) ? UCOL_GREATER : UCOL_LESS;
@@ -286,9 +286,9 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
             if((leftLower32 >> 16) == Collation::NO_CE_WEIGHT16) { break; }
         }
     }
-    if(CollationData::getStrength(options) <= UCOL_SECONDARY) { return UCOL_EQUAL; }
+    if(CollationSettings::getStrength(options) <= UCOL_SECONDARY) { return UCOL_EQUAL; }
 
-    uint32_t tertiaryMask = CollationData::getTertiaryMask(options);
+    uint32_t tertiaryMask = CollationSettings::getTertiaryMask(options);
 
     int32_t leftIndex = 0;
     int32_t rightIndex = 0;
@@ -313,7 +313,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         } while(rightTertiary == 0);
 
         if(leftTertiary != rightTertiary) {
-            if(CollationData::sortsTertiaryUpperCaseFirst(options)) {
+            if(CollationSettings::sortsTertiaryUpperCaseFirst(options)) {
                 // Pass through NO_CE and MERGE_SEPARATOR
                 // and keep real tertiary weights larger than the MERGE_SEPARATOR.
                 // Do not change the artificial uppercase weight of a tertiary CE (0.0.ut),
@@ -331,7 +331,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         }
         if(leftTertiary == Collation::NO_CE_WEIGHT16) { break; }
     }
-    if(CollationData::getStrength(options) <= UCOL_TERTIARY) { return UCOL_EQUAL; }
+    if(CollationSettings::getStrength(options) <= UCOL_TERTIARY) { return UCOL_EQUAL; }
 
     if(!anyVariable && (anyQuaternaries & 0xc0) == 0) {
         // If there are no "variable" CEs and no non-zero quaternary weights,
@@ -376,7 +376,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
 
         if(leftQuaternary != rightQuaternary) {
             // Return the difference, with script reordering.
-            const uint8_t *reorderTable = left.getData()->reorderTable;
+            const uint8_t *reorderTable = settings.reorderTable;
             if (reorderTable != NULL) {
                 leftQuaternary = Collation::reorder(reorderTable, leftQuaternary);
                 rightQuaternary = Collation::reorder(reorderTable, rightQuaternary);

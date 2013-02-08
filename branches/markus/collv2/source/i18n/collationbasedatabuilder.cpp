@@ -31,9 +31,7 @@
 U_NAMESPACE_BEGIN
 
 CollationBaseDataBuilder::CollationBaseDataBuilder(UErrorCode &errorCode)
-        : CollationDataBuilder(errorCode),
-          scripts(),
-          numericPrimary(0) {
+        : CollationDataBuilder(errorCode) {
 }
 
 CollationBaseDataBuilder::~CollationBaseDataBuilder() {
@@ -75,7 +73,8 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
 }
 
 void
-CollationBaseDataBuilder::initTailoring(const CollationData *, UErrorCode &errorCode) {
+CollationBaseDataBuilder::initTailoring(const CollationData *, const CollationSettings *,
+                                        UErrorCode &errorCode) {
     if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
 }
 
@@ -150,30 +149,12 @@ CollationBaseDataBuilder::addReorderingGroup(uint32_t firstByte, uint32_t lastBy
     scripts.append(groupScripts);
 }
 
-CollationData *
-CollationBaseDataBuilder::buildTailoring(UErrorCode &errorCode) {
-    if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
-    return NULL;
-}
-
-CollationData *
-CollationBaseDataBuilder::buildBaseData(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return NULL; }
-
-    // Create a CollationData container of aliases to this builder's finalized data.
-    LocalPointer<CollationData> cd(new CollationData(nfcImpl));
-    if(cd.isNull()) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-    buildMappings(*cd, errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
-
-    cd->numericPrimary = numericPrimary;
-    cd->compressibleBytes = compressibleBytes;
-    cd->scripts = reinterpret_cast<const uint16_t *>(scripts.getBuffer());
-    cd->scriptsLength = scripts.length();
-    return cd.orphan();
+void
+CollationBaseDataBuilder::build(UErrorCode &errorCode) {
+    buildMappings(errorCode);
+    data.compressibleBytes = compressibleBytes;
+    data.scripts = reinterpret_cast<const uint16_t *>(scripts.getBuffer());
+    data.scriptsLength = scripts.length();
 }
 
 U_NAMESPACE_END

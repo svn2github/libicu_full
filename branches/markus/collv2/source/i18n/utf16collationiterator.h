@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2010-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * utf16collationiterator.h
@@ -30,9 +30,9 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API UTF16CollationIterator : public CollationIterator {
 public:
-    UTF16CollationIterator(const CollationData *d,
+    UTF16CollationIterator(const CollationData *d, UBool numeric,
                            const UChar *s, const UChar *lim)
-            : CollationIterator(d),
+            : CollationIterator(d, numeric),
               start(s), pos(s), limit(lim) {}
 
     virtual void resetToStart();
@@ -71,9 +71,9 @@ protected:
  */
 class U_I18N_API FCDUTF16CollationIterator : public UTF16CollationIterator {
 public:
-    FCDUTF16CollationIterator(const CollationData *data,
+    FCDUTF16CollationIterator(const CollationData *data, UBool numeric,
                               const UChar *s, const UChar *lim)
-            : UTF16CollationIterator(data, s, lim),
+            : UTF16CollationIterator(data, numeric, s, lim),
               rawStart(s), segmentStart(s), segmentLimit(NULL), rawLimit(lim),
               nfcImpl(data->nfcImpl),
               checkDir(1) {}

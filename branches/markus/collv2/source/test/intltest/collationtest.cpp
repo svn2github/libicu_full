@@ -54,13 +54,12 @@ public:
     CollationTest()
             : fcd(NULL),
               fileLineNumber(0),
-              baseBuilder(NULL), baseData(NULL),
+              baseBuilder(NULL),
               collData(NULL),
               coll(NULL) {}
 
     ~CollationTest() {
         delete baseBuilder;
-        delete baseData;
         delete coll;
     }
 
@@ -135,7 +134,6 @@ private:
     int32_t fileLineNumber;
     UnicodeString fileTestName;
     CollationBaseDataBuilder *baseBuilder;
-    CollationData *baseData;
     const CollationData *collData;
     Collator *coll;
 };
@@ -163,13 +161,13 @@ void CollationTest::TestMinMax() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
+    builder.build(errorCode);
+    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
     }
 
     static const UChar s[2] = { 0xfffe, 0xffff };
-    UTF16CollationIterator ci(cd.getAlias(), s, s + 2);
+    UTF16CollationIterator ci(&builder.getData(), FALSE, s, s + 2);
     int64_t ce = ci.nextCE(errorCode);
     int64_t expected =
         ((int64_t)Collation::MERGE_SEPARATOR_PRIMARY << 32) |
@@ -224,7 +222,7 @@ void CollationTest::TestImplicits() {
     const UnicodeSet *sets[] = { &coreHan, &otherHan, &unassigned };
     UChar32 prev = 0;
     uint32_t prevPrimary = 0;
-    UTF16CollationIterator ci(cd, NULL, NULL);
+    UTF16CollationIterator ci(cd, FALSE, NULL, NULL);
     for(int32_t i = 0; i < LENGTHOF(sets); ++i) {
         LocalPointer<UnicodeSetIterator> iter(new UnicodeSetIterator(*sets[i]));
         while(iter->next()) {
@@ -261,15 +259,15 @@ void CollationTest::TestNulTerminated() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
+    builder.build(errorCode);
+    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
     }
 
     static const UChar s[] = { 0x61, 0x62, 0x61, 0x62, 0 };
 
-    UTF16CollationIterator ci1(cd.getAlias(), s, s + 2);
-    UTF16CollationIterator ci2(cd.getAlias(), s + 2, NULL);
+    UTF16CollationIterator ci1(&builder.getData(), FALSE, s, s + 2);
+    UTF16CollationIterator ci2(&builder.getData(), FALSE, s + 2, NULL);
     for(int32_t i = 0;; ++i) {
         int64_t ce1 = ci1.nextCE(errorCode);
         int64_t ce2 = ci2.nextCE(errorCode);
@@ -389,8 +387,8 @@ void CollationTest::TestFCD() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.initBase(errorCode);
-    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
-    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.buildBaseData()")) {
+    builder.build(errorCode);
+    if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
     }
 
@@ -422,7 +420,7 @@ void CollationTest::TestFCD() {
         0x4e00, 0xf71, 0xf80
     };
 
-    FCDUTF16CollationIterator u16ci(cd.getAlias(), s, NULL);
+    FCDUTF16CollationIterator u16ci(&builder.getData(), FALSE, s, NULL);
     if(errorCode.logIfFailureAndReset("FCDUTF16CollationIterator constructor")) {
         return;
     }
@@ -433,7 +431,7 @@ void CollationTest::TestFCD() {
     cpi.resetToStart();
     std::string utf8;
     UnicodeString(s).toUTF8String(utf8);
-    FCDUTF8CollationIterator u8ci(cd.getAlias(), reinterpret_cast<const uint8_t *>(utf8.c_str()), -1);
+    FCDUTF8CollationIterator u8ci(&builder.getData(), FALSE, reinterpret_cast<const uint8_t *>(utf8.c_str()), -1);
     if(errorCode.logIfFailureAndReset("FCDUTF8CollationIterator constructor")) {
         return;
     }
@@ -443,7 +441,7 @@ void CollationTest::TestFCD() {
     cpi.resetToStart();
     UCharIterator iter;
     uiter_setString(&iter, s, LENGTHOF(s) - 1);  // -1: without the terminating NUL
-    FCDUIterCollationIterator uici(cd.getAlias(), iter, 0);
+    FCDUIterCollationIterator uici(&builder.getData(), FALSE, iter, 0);
     if(errorCode.logIfFailureAndReset("FCDUIterCollationIterator constructor")) {
         return;
     }
@@ -842,23 +840,24 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         }
     }
     if(errorCode.isFailure()) { return; }
-    delete baseData;
-    baseData = baseBuilder->buildBaseData(errorCode);
+    baseBuilder->build(errorCode);
     if(errorCode.isFailure()) {
         errln(fileTestName);
-        errln("CollationBaseDataBuilder.buildBaseData() failed");
+        errln("CollationBaseDataBuilder.build() failed");
     }
-    collData = baseData;
+    collData = &baseBuilder->getData();
 }
 
 void CollationTest::replaceCollator(IcuTestErrorCode &errorCode) {
+    // TODO: if we always replaceCollator() after buildBase() then we can merge this into that
     if(errorCode.isFailure()) { return; }
-    Collator *newColl = new RuleBasedCollator2(collData);
+    Collator *newColl = new RuleBasedCollator2(baseBuilder);
     if(newColl == NULL) {
         errln("unable to allocate a new collator");
         errorCode.set(U_MEMORY_ALLOCATION_ERROR);
         return;
     }
+    baseBuilder = NULL;  // coll adopted the builder
     delete coll;
     coll = newColl;
 }
@@ -921,11 +920,11 @@ UBool CollationTest::checkCEsNormal(const UnicodeString &s,
                                     int64_t ces[], int32_t cesLength,
                                     IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
-    UTF16CollationIterator ci(collData, buffer, buffer + s.length());
+    UTF16CollationIterator ci(collData, FALSE, buffer, buffer + s.length());
     if(!checkCEs(ci, "UTF-16", ces, cesLength, errorCode)) { return FALSE; }
     // Test NUL-termination if s does not contain a NUL.
     if(s.indexOf((UChar)0) >= 0) { return TRUE; }
-    UTF16CollationIterator ci0(collData, buffer, NULL);
+    UTF16CollationIterator ci0(collData, FALSE, buffer, NULL);
     return checkCEs(ci0, "UTF-16-NUL", ces, cesLength, errorCode);
 }
 
@@ -933,11 +932,11 @@ UBool CollationTest::checkCEsFCD(const UnicodeString &s,
                                  int64_t ces[], int32_t cesLength,
                                  IcuTestErrorCode &errorCode) {
     const UChar *buffer = s.getBuffer();
-    FCDUTF16CollationIterator ci(collData, buffer, buffer + s.length());
+    FCDUTF16CollationIterator ci(collData, FALSE, buffer, buffer + s.length());
     if(!checkCEs(ci, "FCD-UTF-16", ces, cesLength, errorCode)) { return FALSE; }
     // Test NUL-termination if s does not contain a NUL.
     if(s.indexOf((UChar)0) >= 0) { return TRUE; }
-    FCDUTF16CollationIterator ci0(collData, buffer, NULL);
+    FCDUTF16CollationIterator ci0(collData, FALSE, buffer, NULL);
     return checkCEs(ci0, "FCD-UTF-16-NUL", ces, cesLength, errorCode);
 }
 

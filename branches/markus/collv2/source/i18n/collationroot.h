@@ -19,6 +19,7 @@
 U_NAMESPACE_BEGIN
 
 struct CollationData;
+struct CollationDataReader;
 class Collator;
 
 /**
@@ -30,8 +31,9 @@ public:
     static Collator *createCollator(UErrorCode &errorCode);
 
 private:
-    static CollationData *load(UErrorCode &errorCode);
+    static CollationDataReader *load(UErrorCode &errorCode);
     static void *createInstance(const void *context, UErrorCode &errorCode);
+    static const CollationDataReader *getReader(UErrorCode &errorCode);
 };
 
 U_NAMESPACE_END

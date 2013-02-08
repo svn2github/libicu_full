@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationdatabuilder.h
@@ -18,8 +18,10 @@
 
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
+#include "unicode/uversion.h"
 #include "collation.h"
 #include "collationdata.h"
+#include "collationsettings.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
 #include "uvectr32.h"
@@ -41,7 +43,8 @@ public:
 
     virtual ~CollationDataBuilder();
 
-    virtual void initTailoring(const CollationData *b, UErrorCode &errorCode);
+    virtual void initTailoring(const CollationData *b, const CollationSettings *bs,
+                               UErrorCode &errorCode);
 
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
@@ -102,7 +105,12 @@ public:
                                           uint32_t primary, int32_t step,
                                           UErrorCode &errorCode);
 
-    virtual CollationData *buildTailoring(UErrorCode &errorCode);
+    virtual void build(UErrorCode &errorCode);
+
+    const CollationData &getData() const { return data; }
+    const CollationSettings &getSettings() const { return settings; }
+    const UnicodeString &getRules() const { return rules; }
+    const UVersionInfo &getVersion() const { return version; }
 
     int32_t lengthOfCE32s() const { return ce32s.size(); }
     int32_t lengthOfCEs() const { return ce64s.size(); }
@@ -140,7 +148,7 @@ protected:
     uint32_t encodeCEsAsCE32s(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
     uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
 
-    void buildMappings(CollationData &cd, UErrorCode &errorCode);
+    void buildMappings(UErrorCode &errorCode);
 
     void buildContexts(UErrorCode &errorCode);
     void buildContext(UChar32 c, UErrorCode &errorCode);
@@ -149,6 +157,7 @@ protected:
 
     const Normalizer2Impl &nfcImpl;
     const CollationData *base;
+    const CollationSettings *baseSettings;
     UTrie2 *trie;
     UVector32 ce32s;
     UVector64 ce64s;
@@ -159,6 +168,11 @@ protected:
     // Serialized UCharsTrie structures for finalized contexts.
     UnicodeString contexts;
     UnicodeSet unsafeBackwardSet;
+
+    CollationData data;
+    CollationSettings settings;
+    UnicodeString rules;
+    UVersionInfo version;
 };
 
 #if 0

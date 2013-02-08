@@ -21,14 +21,18 @@
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/utf8.h"
+#include "unicode/uversion.h"
 #include "bocsu.h"
 #include "cmemory.h"
 #include "collation.h"
 #include "collationcompare.h"
 #include "collationdata.h"
+#include "collationdatabuilder.h"
+#include "collationdatareader.h"
 #include "collationiterator.h"
 #include "collationkeys.h"
 #include "collationroot.h"
+#include "collationsettings.h"
 #include "cstring.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
@@ -120,10 +124,36 @@ CollationKeyByteSink2::Resize(int32_t appendCapacity, int32_t length) {
 
 // TODO: Add UTRACE_... calls back in.
 
+RuleBasedCollator2::RuleBasedCollator2(const CollationDataReader &r)
+        : data(&r.data),
+          settings(&r.settings),
+          reader(&r),
+          ownedBuilder(NULL),
+          ownedSettings(NULL),
+          ownedReorderCodesCapacity(0),
+          explicitlySetAttributes(0) {}
+
+RuleBasedCollator2::RuleBasedCollator2(CollationDataBuilder *b)
+        : data(&b->getData()),
+          settings(&b->getSettings()),
+          reader(NULL),
+          ownedBuilder(b),
+          ownedSettings(NULL),
+          ownedReorderCodesCapacity(0),
+          explicitlySetAttributes(0) {}
+
 RuleBasedCollator2::~RuleBasedCollator2() {
-    delete ownedData;
-    uprv_free(ownedReorderTable);
-    uprv_free(ownedReorderCodes);
+    delete ownedBuilder;
+    if(ownedSettings != NULL) {
+        const CollationSettings &defaultSettings = getDefaultSettings();
+        if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
+            uprv_free(const_cast<uint8_t *>(ownedSettings->reorderTable));
+        }
+        if(ownedSettings->reorderCodes != defaultSettings.reorderCodes) {
+            uprv_free(const_cast<int32_t *>(ownedSettings->reorderCodes));
+        }
+        delete ownedSettings;
+    }
 }
 
 Collator *
@@ -145,11 +175,27 @@ RuleBasedCollator2::hashCode() const {
 }
 
 Locale
-RuleBasedCollator2::getLocale(ULocDataLocaleType type, UErrorCode& status) const {
-    return Locale::getDefault();  // TODO
+RuleBasedCollator2::getLocale(ULocDataLocaleType type, UErrorCode& errorCode) const {
+    if(U_FAILURE(errorCode) || reader == NULL) {
+        return Locale::getRoot();
+    }
+    if(type != ULOC_ACTUAL_LOCALE && type != ULOC_VALID_LOCALE) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return Locale::getRoot();
+    }
+    // TODO: return either locale from the reader
+    return Locale::getRoot();
 }
 
-// TODO: const UnicodeString& getRules(void) const;
+const UnicodeString&
+RuleBasedCollator2::getRules() const {
+    if(reader != NULL) {
+        return reader->rules;
+    } else {
+        return ownedBuilder->getRules();
+    }
+}
+
 // TODO: void getRules(UColRuleOption delta, UnicodeString &buffer);
 
 // TODO: uint8_t *cloneRuleData(int32_t &length, UErrorCode &status);
@@ -157,27 +203,49 @@ RuleBasedCollator2::getLocale(ULocDataLocaleType type, UErrorCode& status) const
 // TODO: int32_t cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status);
 
 void
-RuleBasedCollator2::getVersion(UVersionInfo info) const {
-    // TODO
+RuleBasedCollator2::getVersion(UVersionInfo version) const {
+    if(reader != NULL) {
+        // TODO: add UCA version, builder version, ...
+        uprv_memcpy(version, reader->version, 4);
+    } else {
+        // TODO: memset to 0?
+        uprv_memcpy(version, ownedBuilder->getVersion(), 4);
+    }
 }
 
 // TODO: int32_t getMaxExpansion(int32_t order) const;
 
 UnicodeSet *
-RuleBasedCollator2::getTailoredSet(UErrorCode &status) const {
-    return NULL;  // TODO
+RuleBasedCollator2::getTailoredSet(UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return NULL; }
+    UnicodeSet *tailored = new UnicodeSet();
+    if(tailored == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    // TODO: add actually-tailored characters and strings
+    return tailored;
+}
+
+const CollationSettings &
+RuleBasedCollator2::getDefaultSettings() const {
+    if(reader != NULL) {
+        return reader->settings;
+    } else {
+        return ownedBuilder->getSettings();
+    }
 }
 
 UBool
-RuleBasedCollator2::ensureOwnedData(UErrorCode &errorCode) {
+RuleBasedCollator2::ensureOwnedSettings(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return FALSE; }
-    if(ownedData != NULL) { return TRUE; }
-    ownedData = defaultData->clone();
-    if(ownedData == NULL) {
+    if(ownedSettings != NULL) { return TRUE; }
+    ownedSettings = new CollationSettings(getDefaultSettings());
+    if(ownedSettings == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return FALSE;
     }
-    data = ownedData;
+    settings = ownedSettings;
     return TRUE;
 }
 
@@ -187,31 +255,31 @@ RuleBasedCollator2::getAttribute(UColAttribute attr, UErrorCode &errorCode) cons
     int32_t option;
     switch(attr) {
     case UCOL_FRENCH_COLLATION:
-        option = CollationData::BACKWARD_SECONDARY;
+        option = CollationSettings::BACKWARD_SECONDARY;
         break;
     case UCOL_ALTERNATE_HANDLING:
-        return data->getAlternateHandling();
+        return settings->getAlternateHandling();
     case UCOL_CASE_FIRST:
-        return data->getCaseFirst();
+        return settings->getCaseFirst();
     case UCOL_CASE_LEVEL:
-        option = CollationData::CASE_LEVEL;
+        option = CollationSettings::CASE_LEVEL;
         break;
     case UCOL_NORMALIZATION_MODE:
-        option = CollationData::CHECK_FCD;
+        option = CollationSettings::CHECK_FCD;
         break;
     case UCOL_STRENGTH:
-        return (UColAttributeValue)data->getStrength();
+        return (UColAttributeValue)settings->getStrength();
     case UCOL_HIRAGANA_QUATERNARY_MODE:
         // Deprecated attribute, unsettable.
         return UCOL_OFF;
     case UCOL_NUMERIC_COLLATION:
-        option = CollationData::NUMERIC;
+        option = CollationSettings::NUMERIC;
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return UCOL_DEFAULT;
     }
-    return ((data->options & option) == 0) ? UCOL_OFF : UCOL_ON;
+    return ((settings->options & option) == 0) ? UCOL_OFF : UCOL_ON;
 }
 
 void
@@ -223,32 +291,36 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
         setAttributeExplicitly(attr);
         return;
     }
-    if(ownedData == NULL) {
+    if(ownedSettings == NULL) {
         if(value == UCOL_DEFAULT) {
             setAttributeDefault(attr);
             return;
         }
-        if(!ensureOwnedData(errorCode)) { return; }
+        if(!ensureOwnedSettings(errorCode)) { return; }
     }
 
+    const CollationSettings &defaultSettings = getDefaultSettings();
     switch(attr) {
     case UCOL_FRENCH_COLLATION:
-        ownedData->setFlag(CollationData::BACKWARD_SECONDARY, value, defaultData->options, errorCode);
+        ownedSettings->setFlag(CollationSettings::BACKWARD_SECONDARY, value,
+                               defaultSettings.options, errorCode);
         break;
     case UCOL_ALTERNATE_HANDLING:
-        ownedData->setAlternateHandling(value, defaultData->options, errorCode);
+        ownedSettings->setAlternateHandling(value, defaultSettings.options, errorCode);
         break;
     case UCOL_CASE_FIRST:
-        ownedData->setCaseFirst(value, defaultData->options, errorCode);
+        ownedSettings->setCaseFirst(value, defaultSettings.options, errorCode);
         break;
     case UCOL_CASE_LEVEL:
-        ownedData->setFlag(CollationData::CASE_LEVEL, value, defaultData->options, errorCode);
+        ownedSettings->setFlag(CollationSettings::CASE_LEVEL, value,
+                               defaultSettings.options, errorCode);
         break;
     case UCOL_NORMALIZATION_MODE:
-        ownedData->setFlag(CollationData::CHECK_FCD, value, defaultData->options, errorCode);
+        ownedSettings->setFlag(CollationSettings::CHECK_FCD, value,
+                               defaultSettings.options, errorCode);
         break;
     case UCOL_STRENGTH:
-        ownedData->setStrength(value, defaultData->options, errorCode);
+        ownedSettings->setStrength(value, defaultSettings.options, errorCode);
         break;
     case UCOL_HIRAGANA_QUATERNARY_MODE:
         // Deprecated attribute. Check for valid values but do not change anything.
@@ -257,7 +329,7 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
         }
         break;
     case UCOL_NUMERIC_COLLATION:
-        ownedData->setFlag(CollationData::NUMERIC, value, defaultData->options, errorCode);
+        ownedSettings->setFlag(CollationSettings::NUMERIC, value, defaultSettings.options, errorCode);
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -272,8 +344,8 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
 }
 
 uint32_t
-RuleBasedCollator2::getVariableTop(UErrorCode &errorCode) const {
-    return data->variableTop;
+RuleBasedCollator2::getVariableTop(UErrorCode & /*errorCode*/) const {
+    return settings->variableTop;
 }
 
 uint32_t
@@ -288,13 +360,14 @@ RuleBasedCollator2::setVariableTop(const UChar *varTop, int32_t len, UErrorCode 
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
+    UBool numeric = settings->isNumeric();
     int64_t ce1, ce2;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
-        UTF16CollationIterator ci(data, varTop, varTop + len);
+    if(settings->dontCheckFCD()) {
+        UTF16CollationIterator ci(data, numeric, varTop, varTop + len);
         ce1 = ci.nextCE(errorCode);
         ce2 = ci.nextCE(errorCode);
     } else {
-        FCDUTF16CollationIterator ci(data, varTop, varTop + len);
+        FCDUTF16CollationIterator ci(data, numeric, varTop, varTop + len);
         ce1 = ci.nextCE(errorCode);
         ce2 = ci.nextCE(errorCode);
     }
@@ -303,7 +376,7 @@ RuleBasedCollator2::setVariableTop(const UChar *varTop, int32_t len, UErrorCode 
         return 0;
     }
     setVariableTop((uint32_t)(ce1 >> 32), errorCode);
-    return data->variableTop;
+    return settings->variableTop;
 }
 
 uint32_t
@@ -313,10 +386,10 @@ RuleBasedCollator2::setVariableTop(const UnicodeString &varTop, UErrorCode &erro
 
 void
 RuleBasedCollator2::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode) || varTop == data->variableTop) { return; }
-    if(!ensureOwnedData(errorCode)) { return; }
-    ownedData->variableTop = varTop;
-    if(varTop == defaultData->variableTop) {
+    if(U_FAILURE(errorCode) || varTop == settings->variableTop) { return; }
+    if(!ensureOwnedSettings(errorCode)) { return; }
+    ownedSettings->variableTop = varTop;
+    if(varTop == getDefaultSettings().variableTop) {
         setAttributeDefault(ATTR_VARIABLE_TOP);
     } else {
         setAttributeExplicitly(ATTR_VARIABLE_TOP);
@@ -331,13 +404,13 @@ RuleBasedCollator2::getReorderCodes(int32_t *dest, int32_t capacity,
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    int32_t length = data->reorderCodesLength;
+    int32_t length = settings->reorderCodesLength;
     if(length == 0) { return 0; }
     if(length > capacity) {
         errorCode = U_BUFFER_OVERFLOW_ERROR;
         return length;
     }
-    uprv_memcpy(dest, data->reorderCodes, length * 4);
+    uprv_memcpy(dest, settings->reorderCodes, length * 4);
     return length;
 }
 
@@ -349,41 +422,68 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
+    if(length == 0 && settings->reorderCodesLength == 0) {
+        return;
+    }
+    const CollationSettings &defaultSettings = getDefaultSettings();
     if(length == 1 && reorderCodes[0] == UCOL_REORDER_CODE_DEFAULT) {
-        if(ownedData != NULL) {
-            ownedData->reorderTable = defaultData->reorderTable;
-            ownedData->reorderCodes = defaultData->reorderCodes;
-            ownedData->reorderCodesLength = defaultData->reorderCodesLength;
+        if(ownedSettings != NULL) {
+            if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
+                uprv_free(const_cast<uint8_t *>(ownedSettings->reorderTable));
+                ownedSettings->reorderTable = defaultSettings.reorderTable;
+            }
+            if(ownedSettings->reorderCodes != defaultSettings.reorderCodes) {
+                uprv_free(const_cast<int32_t *>(ownedSettings->reorderCodes));
+                ownedReorderCodesCapacity = 0;
+                ownedSettings->reorderCodes = defaultSettings.reorderCodes;
+            }
+            ownedSettings->reorderCodesLength = defaultSettings.reorderCodesLength;
         }
         return;
     }
-    if(!ensureOwnedData(errorCode)) { return; }
-    if(ownedReorderTable == NULL) {
+    if(!ensureOwnedSettings(errorCode)) { return; }
+    if(length == 0) {
+        // When we turn off reordering, we want to set a NULL permutation
+        // rather than a no-op permutation.
+        if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
+            uprv_free(const_cast<uint8_t *>(ownedSettings->reorderTable));
+            ownedSettings->reorderTable = NULL;
+        }
+        ownedSettings->reorderCodesLength = 0;
+        return;
+    }
+    uint8_t *ownedReorderTable;
+    if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
+        ownedReorderTable = const_cast<uint8_t *>(ownedSettings->reorderTable);
+    } else {
         ownedReorderTable = (uint8_t *)uprv_malloc(256);
         if(ownedReorderTable == NULL) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
+        ownedSettings->reorderTable = ownedReorderTable;
     }
-    const CollationData *baseData = CollationRoot::getBaseData(errorCode);
+    data->makeReorderTable(reorderCodes, length, ownedReorderTable, errorCode);
     if(U_FAILURE(errorCode)) { return; }
-    baseData->makeReorderTable(reorderCodes, length, ownedReorderTable, errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-    if(length > ownedReorderCodesCapacity) {
+    int32_t *ownedReorderCodes;
+    if(length <= ownedReorderCodesCapacity) {
+        // We own this array if capacity > 0.
+        ownedReorderCodes = const_cast<int32_t *>(ownedSettings->reorderCodes);
+    } else {
         int32_t newCapacity = length + 20;
-        int32_t *newReorderCodes = (int32_t *)uprv_malloc(newCapacity * 4);
-        if(newReorderCodes == NULL) {
+        ownedReorderCodes = (int32_t *)uprv_malloc(newCapacity * 4);
+        if(ownedReorderCodes == NULL) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
-        uprv_free(ownedReorderCodes);
-        ownedReorderCodes = newReorderCodes;
+        if(ownedSettings->reorderCodes != defaultSettings.reorderCodes) {
+            uprv_free(const_cast<int32_t *>(ownedSettings->reorderCodes));
+        }
+        ownedSettings->reorderCodes = ownedReorderCodes;
         ownedReorderCodesCapacity = newCapacity;
     }
     uprv_memcpy(ownedReorderCodes, reorderCodes, length * 4);
-    ownedData->reorderTable = ownedReorderTable;
-    ownedData->reorderCodes = ownedReorderCodes;
-    ownedData->reorderCodesLength = length;
+    ownedSettings->reorderCodesLength = length;
 }
 
 int32_t
@@ -601,7 +701,7 @@ protected:
 class FCDUTF8NFDIterator : public NFDIterator {
 public:
     FCDUTF8NFDIterator(const CollationData *data, const uint8_t *text, int32_t textLength)
-            : u8ci(data, text, textLength) {}
+            : u8ci(data, FALSE, text, textLength) {}
 protected:
     virtual UChar32 nextRawCodePoint() {
         UErrorCode errorCode = U_ZERO_ERROR;
@@ -625,7 +725,7 @@ private:
 class FCDUIterNFDIterator : public NFDIterator {
 public:
     FCDUIterNFDIterator(const CollationData *data, UCharIterator &it, int32_t startIndex)
-            : uici(data, it, startIndex) {}
+            : uici(data, FALSE, it, startIndex) {}
 protected:
     virtual UChar32 nextRawCodePoint() {
         UErrorCode errorCode = U_ZERO_ERROR;
@@ -709,7 +809,7 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
                 (equalPrefixLength != rightLength && data->isUnsafeBackward(right[equalPrefixLength]))) {
             // Identical prefix: Back up to the start of a contraction or reordering sequence.
             while(--equalPrefixLength > 0 && data->isUnsafeBackward(left[equalPrefixLength])) {}
-        } else if((data->options & CollationData::BACKWARD_SECONDARY) != 0) {
+        } else if(settings->hasBackwardSecondary()) {
             // With a backward level, a longer string can compare less-than a prefix of it.
             // TODO: add a unit test for this case
         } else if(equalPrefixLength == leftLength) {
@@ -721,17 +821,18 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
         right += equalPrefixLength;
     }
 
+    UBool numeric = settings->isNumeric();
     UCollationResult result;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
-        UTF16CollationIterator leftIter(data, left, leftLimit);
-        UTF16CollationIterator rightIter(data, right, rightLimit);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
+    if(settings->dontCheckFCD()) {
+        UTF16CollationIterator leftIter(data, numeric, left, leftLimit);
+        UTF16CollationIterator rightIter(data, numeric, right, rightLimit);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     } else {
-        FCDUTF16CollationIterator leftIter(data, left, leftLimit);
-        FCDUTF16CollationIterator rightIter(data, right, rightLimit);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
+        FCDUTF16CollationIterator leftIter(data, numeric, left, leftLimit);
+        FCDUTF16CollationIterator rightIter(data, numeric, right, rightLimit);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     }
-    if(result != UCOL_EQUAL || data->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
+    if(result != UCOL_EQUAL || settings->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
         return result;
     }
 
@@ -739,7 +840,7 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
 
     // Compare identical level.
     const Normalizer2Impl &nfcImpl = data->nfcImpl;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
+    if(settings->dontCheckFCD()) {
         UTF16NFDIterator leftIter(left, leftLimit);
         UTF16NFDIterator rightIter(right, rightLimit);
         result = compareNFDIter(nfcImpl, leftIter, rightIter);
@@ -807,7 +908,7 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
             do {
                 U8_PREV_OR_FFFD(left, 0, equalPrefixLength, c);
             } while(equalPrefixLength > 0 && data->isUnsafeBackward(c));
-        } else if((data->options & CollationData::BACKWARD_SECONDARY) != 0) {
+        } else if(settings->hasBackwardSecondary()) {
             // With a backward level, a longer string can compare less-than a prefix of it.
         } else if(equalPrefixLength == leftLength) {
             return UCOL_LESS;
@@ -822,17 +923,18 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
         }
     }
 
+    UBool numeric = settings->isNumeric();
     UCollationResult result;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
-        UTF8CollationIterator leftIter(data, left, leftLength);
-        UTF8CollationIterator rightIter(data, right, rightLength);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
+    if(settings->dontCheckFCD()) {
+        UTF8CollationIterator leftIter(data, numeric, left, leftLength);
+        UTF8CollationIterator rightIter(data, numeric, right, rightLength);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     } else {
-        FCDUTF8CollationIterator leftIter(data, left, leftLength);
-        FCDUTF8CollationIterator rightIter(data, right, rightLength);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
+        FCDUTF8CollationIterator leftIter(data, numeric, left, leftLength);
+        FCDUTF8CollationIterator rightIter(data, numeric, right, rightLength);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     }
-    if(result != UCOL_EQUAL || data->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
+    if(result != UCOL_EQUAL || settings->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
         return result;
     }
 
@@ -840,7 +942,7 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
 
     // Compare identical level.
     const Normalizer2Impl &nfcImpl = data->nfcImpl;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
+    if(settings->dontCheckFCD()) {
         UTF8NFDIterator leftIter(left, leftLength);
         UTF8NFDIterator rightIter(right, rightLength);
         result = compareNFDIter(nfcImpl, leftIter, rightIter);
@@ -880,7 +982,7 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
                     leftUnit = left.previous(&left);
                     right.previous(&right);
                 } while(equalPrefixLength > 0 && data->isUnsafeBackward(leftUnit));
-            } else if((data->options & CollationData::BACKWARD_SECONDARY) != 0) {
+            } else if(settings->hasBackwardSecondary()) {
                 // With a backward level, a longer string can compare less-than a prefix of it.
             } else if(leftUnit < 0) {
                 return UCOL_LESS;
@@ -890,17 +992,18 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
         }
     }
 
+    UBool numeric = settings->isNumeric();
     UCollationResult result;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
-        UIterCollationIterator leftIter(data, left);
-        UIterCollationIterator rightIter(data, right);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
+    if(settings->dontCheckFCD()) {
+        UIterCollationIterator leftIter(data, numeric, left);
+        UIterCollationIterator rightIter(data, numeric, right);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     } else {
-        FCDUIterCollationIterator leftIter(data, left, equalPrefixLength);
-        FCDUIterCollationIterator rightIter(data, right, equalPrefixLength);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, errorCode);
+        FCDUIterCollationIterator leftIter(data, numeric, left, equalPrefixLength);
+        FCDUIterCollationIterator rightIter(data, numeric, right, equalPrefixLength);
+        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     }
-    if(result != UCOL_EQUAL || data->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
+    if(result != UCOL_EQUAL || settings->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
         return result;
     }
 
@@ -908,7 +1011,7 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
     left.move(&left, equalPrefixLength, UITER_ZERO);
     right.move(&right, equalPrefixLength, UITER_ZERO);
     const Normalizer2Impl &nfcImpl = data->nfcImpl;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
+    if(settings->dontCheckFCD()) {
         UIterNFDIterator leftIter(left);
         UIterNFDIterator rightIter(right);
         result = compareNFDIter(nfcImpl, leftIter, rightIter);
@@ -975,17 +1078,20 @@ RuleBasedCollator2::writeSortKey(const UChar *s, int32_t length,
                                  SortKeyByteSink2 &sink, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return; }
     const UChar *limit = (length >= 0) ? s + length : NULL;
+    UBool numeric = settings->isNumeric();
     CollationKeys::LevelCallback callback;
-    if((data->options & CollationData::CHECK_FCD) == 0) {
-        UTF16CollationIterator iter(data, s, limit);
-        CollationKeys::writeSortKeyUpToQuaternary(iter, sink, Collation::PRIMARY_LEVEL,
+    if(settings->dontCheckFCD()) {
+        UTF16CollationIterator iter(data, numeric, s, limit);
+        CollationKeys::writeSortKeyUpToQuaternary(iter, data->compressibleBytes, *settings,
+                                                  sink, Collation::PRIMARY_LEVEL,
                                                   callback, errorCode);
     } else {
-        FCDUTF16CollationIterator iter(data, s, limit);
-        CollationKeys::writeSortKeyUpToQuaternary(iter, sink, Collation::PRIMARY_LEVEL,
+        FCDUTF16CollationIterator iter(data, numeric, s, limit);
+        CollationKeys::writeSortKeyUpToQuaternary(iter, data->compressibleBytes, *settings,
+                                                  sink, Collation::PRIMARY_LEVEL,
                                                   callback, errorCode);
     }
-    if(data->getStrength() == UCOL_IDENTICAL) {
+    if(settings->getStrength() == UCOL_IDENTICAL) {
         writeIdenticalLevel(s, limit, sink, errorCode);
     }
     static const char terminator = 0;  // TERMINATOR_BYTE
@@ -1075,13 +1181,16 @@ RuleBasedCollator2::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
 
     Collation::Level level = (Collation::Level)state[0];
     if(level <= Collation::QUATERNARY_LEVEL) {
+        UBool numeric = settings->isNumeric();
         PartLevelCallback callback(sink);
-        if((data->options & CollationData::CHECK_FCD) == 0) {
-            UIterCollationIterator ci(data, *iter);
-            CollationKeys::writeSortKeyUpToQuaternary(ci, sink, level, callback, errorCode);
+        if(settings->dontCheckFCD()) {
+            UIterCollationIterator ci(data, numeric, *iter);
+            CollationKeys::writeSortKeyUpToQuaternary(ci, data->compressibleBytes, *settings,
+                                                      sink, level, callback, errorCode);
         } else {
-            FCDUIterCollationIterator ci(data, *iter, 0);
-            CollationKeys::writeSortKeyUpToQuaternary(ci, sink, level, callback, errorCode);
+            FCDUIterCollationIterator ci(data, numeric, *iter, 0);
+            CollationKeys::writeSortKeyUpToQuaternary(ci, data->compressibleBytes, *settings,
+                                                      sink, level, callback, errorCode);
         }
         if(U_FAILURE(errorCode)) { return 0; }
         if(sink.NumberOfBytesAppended() > count) {
@@ -1090,7 +1199,7 @@ RuleBasedCollator2::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
             return count;
         }
         // All of the normal levels are done.
-        if(data->getStrength() == UCOL_IDENTICAL) {
+        if(settings->getStrength() == UCOL_IDENTICAL) {
             level = Collation::IDENTICAL_LEVEL;
             iter->move(iter, 0, UITER_START);
         }

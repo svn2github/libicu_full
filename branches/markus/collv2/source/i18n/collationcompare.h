@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1996-2012, International Business Machines
+* Copyright (C) 1996-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationcompare.h
@@ -21,10 +21,12 @@
 U_NAMESPACE_BEGIN
 
 class CollationIterator;
+struct CollationSettings;
 
 class U_I18N_API CollationCompare /* not : public UObject because all methods are static */ {
 public:
     static UCollationResult compareUpToQuaternary(CollationIterator &left, CollationIterator &right,
+                                                  const CollationSettings &settings,
                                                   UErrorCode &errorCode);
 };
 

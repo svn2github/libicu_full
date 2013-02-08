@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * uitercollationiterator.h
@@ -31,8 +31,8 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API UIterCollationIterator : public CollationIterator {
 public:
-    UIterCollationIterator(const CollationData *d, UCharIterator &ui)
-            : CollationIterator(d), iter(ui) {}
+    UIterCollationIterator(const CollationData *d, UBool numeric, UCharIterator &ui)
+            : CollationIterator(d, numeric), iter(ui) {}
 
     virtual void resetToStart();
 
@@ -66,8 +66,8 @@ protected:
  */
 class U_I18N_API FCDUIterCollationIterator : public UIterCollationIterator {
 public:
-    FCDUIterCollationIterator(const CollationData *data, UCharIterator &ui, int32_t startIndex)
-            : UIterCollationIterator(data, ui),
+    FCDUIterCollationIterator(const CollationData *data, UBool numeric, UCharIterator &ui, int32_t startIndex)
+            : UIterCollationIterator(data, numeric, ui),
               state(ITER_CHECK_FWD), start(startIndex),
               nfcImpl(data->nfcImpl) {}
 

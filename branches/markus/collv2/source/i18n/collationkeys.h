@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationkeys.h
@@ -24,6 +24,7 @@
 U_NAMESPACE_BEGIN
 
 class CollationIterator;
+struct CollationSettings;
 
 class SortKeyByteSink2 : public ByteSink {
 public:
@@ -103,7 +104,10 @@ public:
      * Separates levels with the LEVEL_SEPARATOR_BYTE
      * but does not write a TERMINATOR_BYTE.
      */
-    static void writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSink2 &sink,
+    static void writeSortKeyUpToQuaternary(CollationIterator &iter,
+                                           const UBool *compressibleBytes,
+                                           const CollationSettings &settings,
+                                           SortKeyByteSink2 &sink,
                                            Collation::Level minLevel, LevelCallback &callback,
                                            UErrorCode &errorCode);
 private:
@@ -153,14 +157,6 @@ private:
     // a lead byte below the common-weight compression range.
     static const uint32_t QUAT_SHIFTED_LIMIT_BYTE = QUAT_COMMON_LOW - 1;  // 0x1b
 };
-
-// TODO: class PartLevelCallback : public LevelCallback {
-//   tests overflow of CheckedArrayByteSink, has reference to that
-//   has lastLevel, set in needToWrite()
-// }
-//
-// TODO: class SlicingByteSink writes to byte array only after numIgnore bytes,
-// and then exactly until the array is full.
 
 U_NAMESPACE_END
 

@@ -78,8 +78,11 @@ U_CDECL_END
 
 CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
         : nfcImpl(*Normalizer2Factory::getNFCImpl(errorCode)),
-          base(NULL), trie(NULL),
-          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode) {
+          base(NULL), baseSettings(NULL),
+          trie(NULL),
+          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode),
+          data(nfcImpl) {
+    version[0] = version[1] = version[2] = version[3] = 0;
     // Reserve the first CE32 for U+0000.
     ce32s.addElement(0, errorCode);
     conditionalCE32s.setDeleter(uprv_deleteConditionalCE32);
@@ -90,17 +93,20 @@ CollationDataBuilder::~CollationDataBuilder() {
 }
 
 void
-CollationDataBuilder::initTailoring(const CollationData *b, UErrorCode &errorCode) {
+CollationDataBuilder::initTailoring(const CollationData *b, const CollationSettings *bs,
+                                    UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     if(trie != NULL) {
         errorCode = U_INVALID_STATE_ERROR;
         return;
     }
-    if(b == NULL) {
+    if(b == NULL || bs == NULL) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
     base = b;
+    baseSettings = bs;
+    settings = *bs;
 
     // For a tailoring, the default is to fall back to the base.
     trie = utrie2_open(Collation::MIN_SPECIAL_CE32, Collation::FFFD_CE32, &errorCode);
@@ -578,26 +584,15 @@ CollationDataBuilder::setLeadSurrogates(UErrorCode &errorCode) {
     }
 }
 
-CollationData *
-CollationDataBuilder::buildTailoring(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return NULL; }
-
-    // Create a CollationData container of aliases to this builder's finalized data.
-    LocalPointer<CollationData> cd(new CollationData(nfcImpl));
-    if(cd.isNull()) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-    buildMappings(*cd, errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
-
-    cd->variableTop = base->variableTop;
-    cd->compressibleBytes = base->compressibleBytes;
-    return cd.orphan();
+void
+CollationDataBuilder::build(UErrorCode &errorCode) {
+    buildMappings(errorCode);
+    data.numericPrimary = base->numericPrimary;
+    data.compressibleBytes = base->compressibleBytes;
 }
 
 void
-CollationDataBuilder::buildMappings(CollationData &cd, UErrorCode &errorCode) {
+CollationDataBuilder::buildMappings(UErrorCode &errorCode) {
     // TODO: Prevent build() after build().
     // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
 
@@ -631,18 +626,17 @@ CollationDataBuilder::buildMappings(CollationData &cd, UErrorCode &errorCode) {
     }
     unsafeBackwardSet.freeze();
 
-    cd.trie = trie;
-    cd.ce32s = reinterpret_cast<const uint32_t *>(ce32s.getBuffer());
-    cd.ces = ce64s.getBuffer();
-    cd.contexts = contexts.getBuffer();
-    cd.base = base;
+    data.trie = trie;
+    data.ce32s = reinterpret_cast<const uint32_t *>(ce32s.getBuffer());
+    data.ces = ce64s.getBuffer();
+    data.contexts = contexts.getBuffer();
+    data.base = base;
     if(jamoIndex >= 0) {
-        cd.jamoCEs = cd.ces + jamoIndex;
+        data.jamoCEs = data.ces + jamoIndex;
     } else {
-        cd.jamoCEs = base->jamoCEs;
+        data.jamoCEs = base->jamoCEs;
     }
-    // TODO: set cd.numericPrimary
-    cd.unsafeBackwardSet = &unsafeBackwardSet;
+    data.unsafeBackwardSet = &unsafeBackwardSet;
 }
 
 void

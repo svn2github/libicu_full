@@ -17,6 +17,7 @@
 #include "unicode/udata.h"
 #include "collation.h"
 #include "collationdata.h"
+#include "collationdatareader.h"
 #include "collationroot.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
@@ -40,24 +41,24 @@ static UBool U_CALLCONV uprv_collation_root_cleanup() {
 
 U_CDECL_END
 
-CollationData *
+CollationDataReader *
 CollationRoot::load(UErrorCode &errorCode) {
     const Normalizer2Impl *nfcImpl = Normalizer2Factory::getNFCImpl(errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
-    LocalPointer<CollationData> cd(new CollationData(*nfcImpl));
-    if(cd.isNull()) {
+    LocalPointer<CollationDataReader> cdr(new CollationDataReader(*nfcImpl));
+    if(cdr.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    cd->memory = udata_openChoice(U_ICUDATA_NAME U_TREE_SEPARATOR_STRING "coll",
-                                  "icu", "ucadata2",
-                                  CollationData::isAcceptable, NULL, &errorCode);
+    cdr->memory = udata_openChoice(U_ICUDATA_NAME U_TREE_SEPARATOR_STRING "coll",
+                                   "icu", "ucadata2",
+                                   CollationDataReader::isAcceptable, NULL, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
-    const uint8_t *inBytes = reinterpret_cast<const uint8_t *>(udata_getMemory(cd->memory));
-    cd->setData(NULL, inBytes, errorCode);
+    const uint8_t *inBytes = reinterpret_cast<const uint8_t *>(udata_getMemory(cdr->memory));
+    cdr->setData(NULL, inBytes, errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     ucln_i18n_registerCleanup(UCLN_I18N_COLLATION_ROOT, uprv_collation_root_cleanup);
-    return cd.orphan();
+    return cdr.orphan();
 }
 
 void *
@@ -65,18 +66,25 @@ CollationRoot::createInstance(const void * /*context*/, UErrorCode &errorCode) {
     return CollationRoot::load(errorCode);
 }
 
+const CollationDataReader *
+CollationRoot::getReader(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return NULL; }
+    return TriStateSingletonWrapper<CollationDataReader>(rootSingleton).
+        getInstance(createInstance, NULL, errorCode);
+}
+
 const CollationData *
 CollationRoot::getBaseData(UErrorCode &errorCode) {
+    const CollationDataReader *reader = getReader(errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
-    return TriStateSingletonWrapper<CollationData>(rootSingleton).
-        getInstance(createInstance, NULL, errorCode);
+    return &reader->data;
 }
 
 Collator *
 CollationRoot::createCollator(UErrorCode &errorCode) {
-    const CollationData *rootData = getBaseData(errorCode);
+    const CollationDataReader *reader = getReader(errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
-    return new RuleBasedCollator2(rootData);
+    return new RuleBasedCollator2(*reader);
 }
 
 U_NAMESPACE_END

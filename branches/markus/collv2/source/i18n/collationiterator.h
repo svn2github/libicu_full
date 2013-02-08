@@ -68,18 +68,17 @@ private:
  */
 class U_I18N_API CollationIterator : public UObject {
 public:
-    CollationIterator(const CollationData *d)
+    CollationIterator(const CollationData *d, UBool numeric)
             // Optimization: Skip initialization of fields that are not used
             // until they are set together with other state changes.
             : trie(d->trie),
               data(d),
               cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
               skipped(NULL),
-              numCpFwd(-1) {}
+              numCpFwd(-1),
+              isNumeric(numeric) {}
 
     virtual ~CollationIterator();
-
-    const CollationData *getData() const { return data; }
 
     /**
      * Resets the iterator state and position to the beginning of the text.
@@ -308,6 +307,8 @@ private:
     //       Try to start iterating backwards from all code point boundaries
     //       inside varied text.
     int32_t numCpFwd;
+    // Numeric collation (CollationSettings::NUMERIC).
+    UBool isNumeric;
 };
 
 U_NAMESPACE_END

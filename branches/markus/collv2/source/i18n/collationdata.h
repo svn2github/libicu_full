@@ -19,6 +19,7 @@
 #include "unicode/ucol.h"
 #include "unicode/uniset.h"
 #include "collation.h"
+#include "collationsettings.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
 
@@ -28,141 +29,21 @@ U_NAMESPACE_BEGIN
 
 /**
  * Collation data container.
+ * Immutable data created by a CollationDataBuilder, or loaded from a file,
+ * or deserialized from API-provided binary data.
+ *
  * Includes data for the collation base (root/default), aliased if this is not the base.
  */
 struct U_I18N_API CollationData : public UMemory {
-    /**
-     * Options bit 0: Perform the FCD check on the input text and deliver normalized text.
-     */
-    static const int32_t CHECK_FCD = 1;
-    /**
-     * Options bit 1: Numeric collation.
-     * Also known as CODAN = COllate Digits As Numbers.
-     *
-     * Treat digit sequences as numbers with CE sequences in numeric order,
-     * rather than returning a normal CE for each digit.
-     */
-    static const int32_t NUMERIC = 2;
-    /**
-     * "Shifted" alternate handling, see ALTERNATE_MASK.
-     */
-    static const int32_t SHIFTED = 4;
-    /**
-     * Options bits 3..2: Alternate-handling mask. 0 for non-ignorable.
-     * Reserve values 8 and 0xc for shift-trimmed and blanked.
-     */
-    static const int32_t ALTERNATE_MASK = 0xc;
-    /**
-     * Options bits 7..4: The 4-bit maxVariable value bit field is shifted by this value.
-     */
-    static const int32_t MAX_VARIABLE_SHIFT = 4;
-    /** maxVariable options bit mask before shifting. */
-    static const int32_t MAX_VARIABLE_MASK = 0xf0;
-    /**
-     * Options bit 8: Sort uppercase first if caseLevel or caseFirst is on.
-     */
-    static const int32_t UPPER_FIRST = 0x100;
-    /**
-     * Options bit 9: Keep the case bits in the tertiary weight (they trump other tertiary values)
-     * unless case level is on (when they are *moved* into the separate case level).
-     * By default, the case bits are removed from the tertiary weight (ignored).
-     *
-     * When CASE_FIRST is off, UPPER_FIRST must be off too, corresponding to
-     * the tri-value UCOL_CASE_FIRST attribute: UCOL_OFF vs. UCOL_LOWER_FIRST vs. UCOL_UPPER_FIRST.
-     */
-    static const int32_t CASE_FIRST = 0x200;
-    /**
-     * Options bit mask for caseFirst and upperFirst, before shifting.
-     * Same value as caseFirst==upperFirst.
-     */
-    static const int32_t CASE_FIRST_AND_UPPER_MASK = CASE_FIRST | UPPER_FIRST;
-    /**
-     * Options bit 10: Insert the case level between the secondary and tertiary levels.
-     */
-    static const int32_t CASE_LEVEL = 0x400;
-    /**
-     * Options bit 11: Compare secondary weights backwards. ("French secondary")
-     */
-    static const int32_t BACKWARD_SECONDARY = 0x800;
-    /**
-     * Options bits 15..12: The 4-bit strength value bit field is shifted by this value.
-     * It is the top used bit field in the options. (No need to mask after shifting.)
-     */
-    static const int32_t STRENGTH_SHIFT = 12;
-    /** Strength options bit mask before shifting. */
-    static const int32_t STRENGTH_MASK = 0xf000;
-
-    /** maxVariable values */
-    enum MaxVariable {
-        MAX_VAR_SPACE,
-        MAX_VAR_PUNCT,
-        MAX_VAR_SYMBOL,
-        MAX_VAR_CURRENCY
-    };
-
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL),
               ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
               jamoCEs(NULL),
               nfcImpl(nfc),
-              options((UCOL_DEFAULT_STRENGTH << STRENGTH_SHIFT) |
-                      (MAX_VAR_PUNCT << MAX_VARIABLE_SHIFT)),
-              variableTop(0), numericPrimary(0x12000000),
-              compressibleBytes(NULL), reorderTable(NULL),
-              reorderCodes(NULL), reorderCodesLength(0),
+              numericPrimary(0x12000000),
+              compressibleBytes(NULL),
               unsafeBackwardSet(NULL),
-              scripts(NULL), scriptsLength(0),
-              memory(NULL),
-              ownedTrie(NULL), ownedUnsafeBackwardSet(NULL) {}
-
-    CollationData *clone() const;
-
-    ~CollationData();
-
-    void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
-
-    static int32_t getStrength(int32_t options) {
-        return options >> STRENGTH_SHIFT;
-    }
-
-    int32_t getStrength() const {
-        return getStrength(options);
-    }
-
-    /** Sets the options bit for an on/off attribute. */
-    void setFlag(int32_t bit, UColAttributeValue value,
-                 int32_t defaultOptions, UErrorCode &errorCode);
-
-    UColAttributeValue getFlag(int32_t bit) const {
-        return ((options & bit) != 0) ? UCOL_ON : UCOL_OFF;
-    }
-
-    void setCaseFirst(UColAttributeValue value, int32_t defaultOptions, UErrorCode &errorCode);
-
-    UColAttributeValue getCaseFirst() const {
-        int32_t option = options & CASE_FIRST_AND_UPPER_MASK;
-        return (option == 0) ? UCOL_OFF :
-                (option == CASE_FIRST) ? UCOL_LOWER_FIRST : UCOL_UPPER_FIRST;
-    }
-
-    void setAlternateHandling(UColAttributeValue value,
-                              int32_t defaultOptions, UErrorCode &errorCode);
-
-    UColAttributeValue getAlternateHandling() const {
-        return ((options & CollationData::ALTERNATE_MASK) == 0) ? UCOL_NON_IGNORABLE : UCOL_SHIFTED;
-    }
-
-    static uint32_t getTertiaryMask(int32_t options) {
-        // Remove the case bits from the tertiary weight when caseLevel is on or caseFirst is off.
-        return ((options & (CASE_LEVEL | CASE_FIRST)) == CASE_FIRST) ?
-                Collation::CASE_AND_TERTIARY_MASK : Collation::ONLY_TERTIARY_MASK;
-    }
-
-    static UBool sortsTertiaryUpperCaseFirst(int32_t options) {
-        // On tertiary level, consider case bits and sort uppercase first
-        // if caseLevel is off and caseFirst==upperFirst.
-        return (options & (CASE_LEVEL | CASE_FIRST_AND_UPPER_MASK)) == CASE_FIRST_AND_UPPER_MASK;
-    }
+              scripts(NULL), scriptsLength(0) {}
 
     uint32_t getCE32(UChar32 c) const {
         return UTRIE2_GET32(trie, c);
@@ -205,6 +86,12 @@ struct U_I18N_API CollationData : public UMemory {
         return nfcImpl.getFCD16(c);
     }
 
+    /**
+     * Finds the variable top primary weight for the maximum variable reordering group.
+     * Returns 0 if the maxVariable is not valid.
+     */
+    uint32_t getVariableTopForMaxVariable(CollationSettings::MaxVariable maxVariable) const;
+
     int32_t getEquivalentScripts(int32_t script,
                                  int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;
 
@@ -216,75 +103,6 @@ struct U_I18N_API CollationData : public UMemory {
      */
     void makeReorderTable(const int32_t *reorder, int32_t length,
                           uint8_t table[256], UErrorCode &errorCode) const;
-
-    enum {
-        /**
-         * Number of int32_t indexes.
-         *
-         * Can be 2 if there are only options.
-         * Can be 7 or 8 if there are only options and a script reordering.
-         * The loader treats any index>=indexes[IX_INDEXES_LENGTH] as 0.
-         */
-        IX_INDEXES_LENGTH,  // 0
-        /**
-         * Bits 31..24: numericPrimary, for numeric collation
-         *      23.. 0: options bit set
-         */
-        IX_OPTIONS,
-        IX_RESERVED2,
-        IX_RESERVED3,
-
-        /** Array offset to Jamo CEs in ces[], or <0 if none. */
-        IX_JAMO_CES_START,  // 4
-
-        // Byte offsets from the start of the data, after the generic header.
-        // The indexes[] are at byte offset 0, other data follows.
-        // Each data item is aligned properly.
-        // The data items should be in descending order of unit size,
-        // to minimize the need for padding.
-        // Each item's byte length is given by the difference between its offset and
-        // the next index/offset value.
-        /** Byte offset to int32_t reorderCodes[]. */
-        IX_REORDER_CODES_OFFSET,
-        /**
-         * Byte offset to uint8_t reorderTable[].
-         * Empty table if <256 bytes (padding only).
-         * Otherwise 256 bytes or more (with padding).
-         */
-        IX_REORDER_TABLE_OFFSET,
-        /** Byte offset to the collation trie. Its length is a multiple of 8 bytes. */
-        IX_TRIE_OFFSET,
-
-        IX_RESERVED8_OFFSET,  // 8
-        /** Byte offset to int64_t ces[]. */
-        IX_CES_OFFSET,
-        IX_RESERVED10_OFFSET,
-        /** Byte offset to uint32_t ce32s[]. */
-        IX_CE32S_OFFSET,
-
-        IX_RESERVED12_OFFSET,  // 12
-        /** Byte offset to UChar *contexts[]. */
-        IX_CONTEXTS_OFFSET,
-        /** Byte offset to uint16_t [] with serialized unsafeBackwardSet. */
-        IX_UNSAFE_BWD_OFFSET,
-        IX_RESERVED15_OFFSET,
-
-        /** Byte offset to uint16_t scripts[]. */
-        IX_SCRIPTS_OFFSET,  // 16
-        /**
-         * Byte offset to UBool compressibleBytes[].
-         * Empty table if <256 bytes (padding only).
-         * Otherwise 256 bytes or more (with padding).
-         */
-        IX_COMPRESSIBLE_BYTES_OFFSET,
-        IX_RESERVED18_OFFSET,
-        IX_TOTAL_SIZE
-    };
-
-    void setData(const CollationData *baseData, const uint8_t *inBytes, UErrorCode &errorCode);
-
-    static UBool U_CALLCONV
-    isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
 
     /** Main lookup trie. */
     const UTrie2 *trie;
@@ -309,19 +127,10 @@ struct U_I18N_API CollationData : public UMemory {
         // Build & return a simple array of CEs.
         // Tailoring: Only necessary if Jamos are tailored.
     const Normalizer2Impl &nfcImpl;
-    /** Collation::CHECK_FCD etc. */
-    int32_t options;
-    /** Variable-top primary weight. 0 if "shifted" mode is off. */
-    uint32_t variableTop;
-    /** The single-byte primary weight (xx000000) for '0' (U+0030). */
+    /** The single-byte primary weight (xx000000) for numeric collation. */
     uint32_t numericPrimary;
     /** 256 flags for which primary-weight lead bytes are compressible. */
     const UBool *compressibleBytes;
-    /** 256-byte table for reordering permutation of primary lead bytes; NULL if no reordering. */
-    const uint8_t *reorderTable;
-    /** Array of reorder codes; NULL if no reordering. */
-    const int32_t *reorderCodes;
-    int32_t reorderCodesLength;
     /**
      * Set of code points that are unsafe for starting string comparison after an identical prefix,
      * or in backwards CE iteration.
@@ -349,27 +158,9 @@ struct U_I18N_API CollationData : public UMemory {
     const uint16_t *scripts;
     int32_t scriptsLength;
 
-    UDataMemory *memory;
-    /** Same as trie if this data object owns it, otherwise NULL. */
-    UTrie2 *ownedTrie;
-    /** Same as unsafeBackwardSet if this data object owns it, otherwise NULL. */
-    UnicodeSet *ownedUnsafeBackwardSet;
-
 private:
     int32_t findScript(int32_t script) const;
-    /**
-     * Finds the variable top primary weight for the maximum variable reordering group.
-     * Returns 0 if the maxVariable is not valid.
-     */
-    uint32_t getVariableTopForMaxVariable(MaxVariable maxVariable) const;
 };
-
-/**
- * Format of collation data (ucadata.icu, binary data in coll/ *.res files).
- * Format version 4.0.
- *
- * TODO: document format, see normalizer2impl.h
- */
 
 U_NAMESPACE_END
 

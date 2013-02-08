@@ -41,7 +41,8 @@ public:
     void initBase(UErrorCode &errorCode);
 
     /** Non-functional in this subclass. */
-    virtual void initTailoring(const CollationData *b, UErrorCode &errorCode);
+    virtual void initTailoring(const CollationData *b, const CollationSettings *bs,
+                               UErrorCode &errorCode);
 
     /**
      * Sets the Han ranges as ranges of offset CE32s.
@@ -55,7 +56,7 @@ public:
      */
     void initHanRanges(const UChar32 ranges[], int32_t length, UErrorCode &errorCode);
 
-    void setNumericPrimary(uint32_t np) { numericPrimary = np; }
+    void setNumericPrimary(uint32_t np) { data.numericPrimary = np; }
 
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
@@ -65,16 +66,12 @@ public:
                             const UnicodeString &groupScripts,
                             UErrorCode &errorCode);
 
-    CollationData *buildBaseData(UErrorCode &errorCode);
-
-    /** Non-functional in this subclass. */
-    virtual CollationData *buildTailoring(UErrorCode &errorCode);
+    virtual void build(UErrorCode &errorCode);
 
 private:
     // Flags for which primary-weight lead bytes are compressible.
     UBool compressibleBytes[256];
     UnicodeString scripts;
-    uint32_t numericPrimary;
 };
 
 U_NAMESPACE_END

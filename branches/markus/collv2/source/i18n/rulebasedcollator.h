@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1996-2012, International Business Machines
+* Copyright (C) 1996-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * rulebasedcollator.h
@@ -26,6 +26,9 @@
 U_NAMESPACE_BEGIN
 
 struct CollationData;
+class CollationDataBuilder;
+struct CollationDataReader;
+struct CollationSettings;
 class CollationElementIterator;
 class SortKeyByteSink2;
 
@@ -99,12 +102,12 @@ public:
     *  cloneBinary. Binary image used in instantiation of the 
     *  collator remains owned by the user and should stay around for 
     *  the lifetime of the collator. The API also takes a base collator
-    *  which usualy should be UCA.
+    *  which usualy should be the root collator.
     *  @param bin binary image owned by the user and required through the
     *             lifetime of the collator
     *  @param length size of the image. If negative, the API will try to
     *                figure out the length of the image
-    *  @param base fallback collator, usually UCA. Base is required to be
+    *  @param base fallback collator, usually root. The base is required to be
     *              present through the lifetime of the collator. Currently 
     *              it cannot be NULL.
     *  @param status for catching errors
@@ -317,7 +320,7 @@ public:
      *         created from.
      * @stable ICU 2.0
      */
-    // TODO: const UnicodeString& getRules(void) const;
+    const UnicodeString& getRules() const;
 
     /**
      * Gets the version information for a Collator.
@@ -565,14 +568,8 @@ public:
                     uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 
 public:  // TODO: Public only for testing.
-    RuleBasedCollator2(const CollationData *d)
-            : data(d), defaultData(d), ownedData(NULL),
-              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0),
-              explicitlySetAttributes(0) {}
-    RuleBasedCollator2(const CollationData *d, CollationData *od)
-            : data(d), defaultData(d), ownedData(od),
-              ownedReorderTable(NULL), ownedReorderCodes(NULL), ownedReorderCodesCapacity(0),
-              explicitlySetAttributes(0) {}
+    RuleBasedCollator2(const CollationDataReader &r);
+    RuleBasedCollator2(CollationDataBuilder *b);
 
 private:
     /**
@@ -599,7 +596,8 @@ private:
     void writeIdenticalLevel(const UChar *s, const UChar *limit,
                              SortKeyByteSink2 &sink, UErrorCode &errorCode) const;
 
-    UBool ensureOwnedData(UErrorCode &errorCode);
+    const CollationSettings &getDefaultSettings() const;
+    UBool ensureOwnedSettings(UErrorCode &errorCode);
 
     void setAttributeDefault(int32_t attribute) {
         explicitlySetAttributes &= ~((uint32_t)1 << attribute);
@@ -612,11 +610,11 @@ private:
         return (UBool)((explicitlySetAttributes & ((uint32_t)1 << attribute)) != 0);
     }
 
-    const CollationData *data;  // == defaultData or ownedData
-    const CollationData *defaultData;
-    CollationData *ownedData;  // NULL until cloned from defaultData & modified
-    uint8_t *ownedReorderTable;
-    int32_t *ownedReorderCodes;
+    const CollationData *data;
+    const CollationSettings *settings;  // == defaultSettings or ownedSettings
+    const CollationDataReader *reader;
+    CollationDataBuilder *ownedBuilder;
+    CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
     int32_t ownedReorderCodesCapacity;
     uint32_t explicitlySetAttributes;
 };

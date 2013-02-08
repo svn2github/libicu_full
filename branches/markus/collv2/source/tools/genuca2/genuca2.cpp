@@ -27,6 +27,7 @@
 #include "collationbasedatabuilder.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
+#include "collationdatareader.h"
 #include "cstring.h"
 #include "toolutil.h"
 #include "ucol_bld.h"
@@ -870,14 +871,16 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         delete[] leadByteScripts;
     }
 
-    LocalPointer<CollationData> cd(builder.buildBaseData(errorCode));
+    builder.build(errorCode);
     if(U_FAILURE(errorCode)) {
-        fprintf(stderr, "builder.buildBaseData() failed: %s\n",
+        fprintf(stderr, "builder.build() failed: %s\n",
                 u_errorName(errorCode));
         return;
     }
+    const CollationData &data = builder.getData();
+    const CollationSettings &settings = builder.getSettings();
 
-    int32_t indexes[CollationData::IX_TOTAL_SIZE + 1]={
+    int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1]={
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
@@ -887,17 +890,17 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
 
     // For the root collator, we write an even number of indexes
     // so that we start with an 8-aligned offset.
-    indexes[CollationData::IX_INDEXES_LENGTH] = CollationData::IX_TOTAL_SIZE + 1;
-    indexes[CollationData::IX_OPTIONS] = cd->numericPrimary | cd->options;
+    indexes[CollationDataReader::IX_INDEXES_LENGTH] = CollationDataReader::IX_TOTAL_SIZE + 1;
+    indexes[CollationDataReader::IX_OPTIONS] = data.numericPrimary | settings.options;
 
-    indexes[CollationData::IX_JAMO_CES_START] = cd->jamoCEs - cd->ces;
+    indexes[CollationDataReader::IX_JAMO_CES_START] = data.jamoCEs - data.ces;
 
     printf("*** CLDR root collation part sizes ***\n");
     int32_t totalSize = (int32_t)sizeof(indexes);
 
-    indexes[CollationData::IX_REORDER_CODES_OFFSET] = totalSize;
-    indexes[CollationData::IX_REORDER_TABLE_OFFSET] = totalSize;
-    indexes[CollationData::IX_TRIE_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_REORDER_CODES_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_REORDER_TABLE_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_TRIE_OFFSET] = totalSize;
     int32_t trieSize = builder.serializeTrie(trieBytes, LENGTHOF(trieBytes), errorCode);
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "builder.serializeTrie()=%ld failed: %s\n",
@@ -912,25 +915,25 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     int32_t cePadding = (totalSize & 7) == 0 ? 0 : 4;
     totalSize += cePadding;
 
-    indexes[CollationData::IX_RESERVED8_OFFSET] = totalSize;
-    indexes[CollationData::IX_CES_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_RESERVED8_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_CES_OFFSET] = totalSize;
     int32_t length = builder.lengthOfCEs();
     printf("  CEs:              %6ld *8 = %6ld\n", (long)length, (long)length * 8);
     totalSize += length * 8;
 
-    indexes[CollationData::IX_RESERVED10_OFFSET] = totalSize;
-    indexes[CollationData::IX_CE32S_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_RESERVED10_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_CE32S_OFFSET] = totalSize;
     length = builder.lengthOfCE32s();
     printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
     totalSize += length * 4;
 
-    indexes[CollationData::IX_RESERVED12_OFFSET] = totalSize;
-    indexes[CollationData::IX_CONTEXTS_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_RESERVED12_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_CONTEXTS_OFFSET] = totalSize;
     length = builder.lengthOfContexts();
     printf("  contexts:         %6ld *2 = %6ld\n", (long)length, (long)length * 2);
     totalSize += length * 2;
 
-    indexes[CollationData::IX_UNSAFE_BWD_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_UNSAFE_BWD_OFFSET] = totalSize;
     int32_t unsafeBwdSetLength = builder.serializeUnsafeBackwardSet(
         unsafeBwdSetWords, LENGTHOF(unsafeBwdSetWords), errorCode);
     if(U_FAILURE(errorCode)) {
@@ -941,18 +944,18 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)unsafeBwdSetLength, (long)unsafeBwdSetLength * 2);
     totalSize += unsafeBwdSetLength * 2;
 
-    indexes[CollationData::IX_RESERVED15_OFFSET] = totalSize;
-    indexes[CollationData::IX_SCRIPTS_OFFSET] = totalSize;
-    length = cd->scriptsLength;
+    indexes[CollationDataReader::IX_RESERVED15_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_SCRIPTS_OFFSET] = totalSize;
+    length = data.scriptsLength;
     printf("  scripts data:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
     totalSize += length * 2;
 
-    indexes[CollationData::IX_COMPRESSIBLE_BYTES_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_COMPRESSIBLE_BYTES_OFFSET] = totalSize;
     printf("  compressibleBytes:               256\n");
     totalSize += 256;
 
-    indexes[CollationData::IX_RESERVED18_OFFSET] = totalSize;
-    indexes[CollationData::IX_TOTAL_SIZE] = totalSize;
+    indexes[CollationDataReader::IX_RESERVED18_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_TOTAL_SIZE] = totalSize;
     printf("*** CLDR root collation size:   %6ld\n", (long)totalSize);
 
     UNewDataMemory *pData=udata_create(path, "icu", "ucadata2", &ucaDataInfo,
@@ -966,12 +969,12 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     udata_writeBlock(pData, indexes, sizeof(indexes));
     udata_writeBlock(pData, trieBytes, trieSize);
     udata_writePadding(pData, cePadding);
-    udata_writeBlock(pData, cd->ces, builder.lengthOfCEs() * 8);
-    udata_writeBlock(pData, cd->ce32s, builder.lengthOfCE32s() * 4);
-    udata_writeBlock(pData, cd->contexts, builder.lengthOfContexts() * 2);
+    udata_writeBlock(pData, data.ces, builder.lengthOfCEs() * 8);
+    udata_writeBlock(pData, data.ce32s, builder.lengthOfCE32s() * 4);
+    udata_writeBlock(pData, data.contexts, builder.lengthOfContexts() * 2);
     udata_writeBlock(pData, unsafeBwdSetWords, unsafeBwdSetLength * 2);
-    udata_writeBlock(pData, cd->scripts, cd->scriptsLength * 2);
-    udata_writeBlock(pData, cd->compressibleBytes, 256);
+    udata_writeBlock(pData, data.scripts, data.scriptsLength * 2);
+    udata_writeBlock(pData, data.compressibleBytes, 256);
 
     long dataLength = udata_finish(pData, &errorCode);
     if(U_FAILURE(errorCode)) {

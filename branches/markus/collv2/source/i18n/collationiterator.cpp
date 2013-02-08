@@ -240,7 +240,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             break;
 #endif
         case Collation::DIGIT_TAG:
-            if(data->options & CollationData::NUMERIC) {
+            if(isNumeric) {
                 // Collect digits.
                 CharString digits;
                 for(;;) {
@@ -898,7 +898,7 @@ CollationIterator::previousCEFromSpecialCE32(
             return 0;
 #endif
         case Collation::DIGIT_TAG:
-            if(data->options & CollationData::NUMERIC) {
+            if(isNumeric) {
                 // Collect digits.
                 CharString digits;
                 for(;;) {

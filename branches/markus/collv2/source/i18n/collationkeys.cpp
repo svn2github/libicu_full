@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationkeys.cpp
@@ -15,9 +15,9 @@
 
 #include "unicode/bytestream.h"
 #include "collation.h"
-#include "collationdata.h"
 #include "collationiterator.h"
 #include "collationkeys.h"
+#include "collationsettings.h"
 #include "uassert.h"
 
 U_NAMESPACE_BEGIN
@@ -221,16 +221,18 @@ static const uint32_t levelMasks[UCOL_STRENGTH_LIMIT] = {
 };
 
 void
-CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSink2 &sink,
+CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
+                                          const UBool *compressibleBytes,
+                                          const CollationSettings &settings,
+                                          SortKeyByteSink2 &sink,
                                           Collation::Level minLevel, LevelCallback &callback,
                                           UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
 
-    const CollationData *data = iter.getData();
-    int32_t options = data->options;
+    int32_t options = settings.options;
     // Set of levels to process and write.
-    uint32_t levels = levelMasks[CollationData::getStrength(options)];
-    if((options & CollationData::CASE_LEVEL) != 0) {
+    uint32_t levels = levelMasks[CollationSettings::getStrength(options)];
+    if((options & CollationSettings::CASE_LEVEL) != 0) {
         levels |= Collation::CASE_LEVEL_FLAG;
     }
     // Minus the levels below minLevel.
@@ -238,15 +240,15 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
     if(levels == 0) { return; }
 
     uint32_t variableTop;
-    if((options & CollationData::ALTERNATE_MASK) == 0) {
+    if((options & CollationSettings::ALTERNATE_MASK) == 0) {
         variableTop = 0;
     } else {
         // +1 so that we can use "<" and primary ignorables test out early.
-        variableTop = data->variableTop + 1;
+        variableTop = settings.variableTop + 1;
     }
-    const uint8_t *reorderTable = data->reorderTable;
+    const uint8_t *reorderTable = settings.reorderTable;
 
-    uint32_t tertiaryMask = CollationData::getTertiaryMask(options);
+    uint32_t tertiaryMask = CollationSettings::getTertiaryMask(options);
 
     SortKeyLevel cases;
     SortKeyLevel secondaries;
@@ -315,7 +317,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
                     }
                 }
                 sink.Append(p1);
-                if(data->isCompressibleLeadByte(p1)) {
+                if(compressibleBytes[p1]) {
                     compressedP1 = p1;
                 } else {
                     compressedP1 = 0;
@@ -335,7 +337,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
                 // secondary ignorable
             } else if(s == Collation::COMMON_WEIGHT16) {
                 ++commonSecondaries;
-            } else if((options & CollationData::BACKWARD_SECONDARY) == 0) {
+            } else if((options & CollationSettings::BACKWARD_SECONDARY) == 0) {
                 if(commonSecondaries != 0) {
                     --commonSecondaries;
                     while(commonSecondaries >= SEC_COMMON_MAX_COUNT) {
@@ -388,7 +390,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
         if(lower32 == 0) { continue; }  // completely ignorable, no case/tertiary/quaternary
 
         if((levels & Collation::CASE_LEVEL_FLAG) != 0) {
-            if((CollationData::getStrength(options) == UCOL_PRIMARY) ?
+            if((CollationSettings::getStrength(options) == UCOL_PRIMARY) ?
                     p == 0 : lower32 <= 0xffff) {
                 // Primary+case: Ignore case level weights of primary ignorables.
                 // Otherwise: Ignore case level weights of secondary ignorables.
@@ -398,7 +400,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
                 U_ASSERT((c & 0xc0) != 0xc0);
                 if((c & 0xc0) == 0 && c > Collation::MERGE_SEPARATOR_BYTE) {
                     ++commonCases;
-                } else if((options & CollationData::UPPER_FIRST) == 0) {
+                } else if((options & CollationSettings::UPPER_FIRST) == 0) {
                     // lowerFirst: Compress common weights to nibbles 1..7..13, mixed=14, upper=15.
                     if(commonCases != 0) {
                         --commonCases;
@@ -466,7 +468,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
                 }
                 if(t > Collation::COMMON_WEIGHT16) { t += 0xc000; }
                 tertiaries.appendWeight16(t);
-            } else if((options & CollationData::UPPER_FIRST) == 0) {
+            } else if((options & CollationSettings::UPPER_FIRST) == 0) {
                 // Tertiary weights with caseFirst=lowerFirst.
                 // Move lead bytes 06..BF to 46..FF for the common-weight range.
                 if(commonTertiaries != 0) {
@@ -539,7 +541,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
             if((q & 0xc0) == 0 && q > Collation::MERGE_SEPARATOR_WEIGHT16) {
                 ++commonQuaternaries;
             } else if(q <= Collation::MERGE_SEPARATOR_WEIGHT16 &&
-                    (options & CollationData::ALTERNATE_MASK) == 0 &&
+                    (options & CollationSettings::ALTERNATE_MASK) == 0 &&
                     (quaternaries.isEmpty() ||
                         quaternaries[quaternaries.length() - 1] == Collation::MERGE_SEPARATOR_BYTE)) {
                 // If alternate=non-ignorable and there are only
@@ -589,7 +591,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter, SortKeyByteSi
         sink.Append(Collation::LEVEL_SEPARATOR_BYTE);
         uint8_t *secs = secondaries.data();
         int32_t length = secondaries.length() - 1;  // Ignore the trailing NO_CE.
-        if((options & CollationData::BACKWARD_SECONDARY) != 0) {
+        if((options & CollationSettings::BACKWARD_SECONDARY) != 0) {
             // The backwards secondary level compares secondary weights backwards
             // within segments separated by the merge separator (U+FFFE, weight 02).
             // The separator weights 01 & 02 were reduced to 00 & 01 so that
