@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2008-2011, International Business Machines
+*   Copyright (C) 2012-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 */
@@ -15,8 +15,6 @@
 #include "scriptset.h"
 #include "ucln_in.h"
 #include "uvector.h"
-
-#include "stdio.h"    // TODO: debugging, remove.
 
 U_NAMESPACE_BEGIN
 
