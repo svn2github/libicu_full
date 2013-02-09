@@ -3555,9 +3555,15 @@ void DateFormatTest::TestGMTParsing() {
         "HH:mm:ss vvvv",    "10:20:30 UT+10:00",    "10:20:30 +1000",
         "HH:mm:ss zzzz",    "10:20:30 UTC",         "10:20:30 +0000",   // standalone "UTC"
         "ZZZZ HH:mm:ss",    "UT 10:20:30",          "10:20:30 +0000",
-        "V HH:mm:ss",       "UT+0130 10:20:30",     "10:20:30 +0130",
-        "V HH:mm:ss",       "UTC+0130 10:20:30",    "10:20:30 +0130",
-        "HH mm Z ss",       "10 20 GMT-1100 30",    "10:20:30 -1100",
+        "z HH:mm:ss",       "UT+0130 10:20:30",     "10:20:30 +0130",
+        "z HH:mm:ss",       "UTC+0130 10:20:30",    "10:20:30 +0130",
+        // Note: GMT-1100 no longer works because of the introduction of the short
+        // localized GMT support. Previous implementation support this level of
+        // leniency (no separator char in localized GMT format), but the new
+        // implementation handles GMT-11 as the legitimate short localized GMT format
+        // and stop at there. Otherwise, roundtrip would be broken.
+        //"HH mm Z ss",       "10 20 GMT-1100 30",    "10:20:30 -1100",
+        "HH mm Z ss",       "10 20 GMT-11 30",    "10:20:30 -1100",
         "HH:mm:ssZZZZZ",    "14:25:45Z",            "14:25:45 +0000",
         "HH:mm:ssZZZZZ",    "15:00:00-08:00",       "15:00:00 -0800",
     };
