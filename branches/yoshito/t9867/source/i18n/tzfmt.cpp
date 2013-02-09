@@ -30,6 +30,8 @@ U_NAMESPACE_BEGIN
 
 // Bit flags used by the parse method.
 // The order must match UTimeZoneFormatStyle enum.
+#define ISO_Z_STYLE_FLAG 0x0080
+#define ISO_LOCAL_STYLE_FLAG 0x0100
 static const int16_t STYLE_PARSE_FLAGS[] = {
     0x0001, // UTZFMT_STYLE_GENERIC_LOCATION,
     0x0002, // UTZFMT_STYLE_GENERIC_LONG,
@@ -38,16 +40,16 @@ static const int16_t STYLE_PARSE_FLAGS[] = {
     0x0010, // UTZFMT_STYLE_SPECIFIC_SHORT,
     0x0020, // UTZFMT_STYLE_LOCALIZED_GMT,
     0x0040, // UTZFMT_STYLE_LOCALIZED_GMT_SHORT,
-    0x0080, // UTZFMT_STYLE_ISO_BASIC_SHORT,
-    0x0100, // UTZFMT_STYLE_ISO_BASIC_LOCAL_SHORT,
-    0x0080, // UTZFMT_STYLE_ISO_BASIC_FIXED,
-    0x0100, // UTZFMT_STYLE_ISO_BASIC_LOCAL_FIXED,
-    0x0080, // UTZFMT_STYLE_ISO_BASIC_FULL,
-    0x0100, // UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL,
-    0x0080, // UTZFMT_STYLE_ISO_EXTENDED_FIXED,
-    0x0100, // UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FIXED,
-    0x0080, // UTZFMT_STYLE_ISO_EXTENDED_FULL,
-    0x0100, // UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FULL,
+    ISO_Z_STYLE_FLAG,       // UTZFMT_STYLE_ISO_BASIC_SHORT,
+    ISO_LOCAL_STYLE_FLAG,   // UTZFMT_STYLE_ISO_BASIC_LOCAL_SHORT,
+    ISO_Z_STYLE_FLAG,       // UTZFMT_STYLE_ISO_BASIC_FIXED,
+    ISO_LOCAL_STYLE_FLAG,   // UTZFMT_STYLE_ISO_BASIC_LOCAL_FIXED,
+    ISO_Z_STYLE_FLAG,       // UTZFMT_STYLE_ISO_BASIC_FULL,
+    ISO_LOCAL_STYLE_FLAG,   // UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL,
+    ISO_Z_STYLE_FLAG,       // UTZFMT_STYLE_ISO_EXTENDED_FIXED,
+    ISO_LOCAL_STYLE_FLAG,   // UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FIXED,
+    ISO_Z_STYLE_FLAG,       // UTZFMT_STYLE_ISO_EXTENDED_FULL,
+    ISO_LOCAL_STYLE_FLAG,   // UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FULL,
     0x0200, // UTZFMT_STYLE_ZONE_ID,
     0x0400, // UTZFMT_STYLE_ZONE_ID_SHORT,
     0x0800  // UTZFMT_STYLE_EXEMPLAR_LOCATION
@@ -125,10 +127,9 @@ static const int32_t MAX_OFFSET_SECOND = 59;
 
 static const int32_t UNKNOWN_OFFSET = 0x7FFFFFFF;
 
-static const int32_t ALL_SPECIFIC_NAME_TYPES = UTZNM_LONG_STANDARD | UTZNM_LONG_DAYLIGHT | UTZNM_SHORT_STANDARD | UTZNM_SHORT_DAYLIGHT;
+static const int32_t ALL_SIMPLE_NAME_TYPES = UTZNM_LONG_STANDARD | UTZNM_LONG_DAYLIGHT | UTZNM_SHORT_STANDARD | UTZNM_SHORT_DAYLIGHT | UTZNM_EXEMPLAR_LOCATION;
 static const int32_t ALL_GENERIC_NAME_TYPES = UTZGNM_LOCATION | UTZGNM_LONG | UTZGNM_SHORT;
 
-#define STYLE_FLAG(c) (1 << (c))
 #define DIGIT_VAL(c) (0x0030 <= (c) && (c) <= 0x0039 ? (c) - 0x0030 : -1)
 #define MAX_OFFSET_DIGITS 6
 
@@ -765,23 +766,22 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
     int32_t maxPos = text.length();
     int32_t offset;
 
-    UBool fallbackLocalizedGMT = FALSE;
-    if (style == UTZFMT_STYLE_SPECIFIC_LONG || style == UTZFMT_STYLE_SPECIFIC_SHORT
-        || style == UTZFMT_STYLE_GENERIC_LONG || style == UTZFMT_STYLE_GENERIC_SHORT || style == UTZFMT_STYLE_GENERIC_LOCATION) {
-        // above styles may use localized gmt format as fallback
-        fallbackLocalizedGMT = TRUE;
-    }
+    // Styles using localized GMT format as fallback
+    UBool fallbackLocalizedGMT = 
+        (style == UTZFMT_STYLE_SPECIFIC_LONG || style == UTZFMT_STYLE_GENERIC_LONG || style == UTZFMT_STYLE_GENERIC_LOCATION);
+    UBool fallbackShortLocalizedGMT =
+        (style == UTZFMT_STYLE_SPECIFIC_SHORT || UTZFMT_STYLE_GENERIC_SHORT);
 
-    int32_t evaluated = 0;
+    int32_t evaluated = 0;  // bit flags representing already evaluated styles
     ParsePosition tmpPos(startIdx);
 
     int32_t parsedOffset = UNKNOWN_OFFSET;  // stores successfully parsed offset for later use
     int32_t parsedPos = -1;                 // stores successfully parsed offset position for later use
 
     // Try localized GMT format first if necessary
-    if (fallbackLocalizedGMT) {
+    if (fallbackLocalizedGMT || fallbackShortLocalizedGMT) {
         UBool hasDigitOffset = FALSE;
-        offset = parseOffsetLocalizedGMT(text, tmpPos, &hasDigitOffset);
+        offset = parseOffsetLocalizedGMT(text, tmpPos, fallbackShortLocalizedGMT, &hasDigitOffset);
         if (tmpPos.getErrorIndex() == -1) {
             // Even when the input text was successfully parsed as a localized GMT format text,
             // we may still need to evaluate the specified style if -
@@ -794,50 +794,88 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
             parsedOffset = offset;
             parsedPos = tmpPos.getIndex();
         }
-        evaluated |= STYLE_FLAG(UTZFMT_STYLE_LOCALIZED_GMT);
-
-        tmpPos.setIndex(startIdx);
-        tmpPos.setErrorIndex(-1);
+        // Note: For now, no distinction between long/short localized GMT format in the parser.
+        // This might be changed in future.
+        // evaluated |= (fallbackLocalizedGMT ? STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT] : STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT_SHORT]);
+        evaluated |= STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT] | STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT_SHORT];
     }
 
     UErrorCode status = U_ZERO_ERROR;
     UnicodeString tzID;
-    UTimeZoneFormatTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
 
     // Try the specified style
     switch (style) {
-    case UTZFMT_STYLE_RFC822:
-        {
-            offset = parseOffsetRFC822(text, tmpPos);
-            if (tmpPos.getErrorIndex() == -1) {
-                pos.setIndex(tmpPos.getIndex());
-                return createTimeZoneForOffset(offset);
-            }
-        }
-        break;
-
     case UTZFMT_STYLE_LOCALIZED_GMT:
         {
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
+
             offset = parseOffsetLocalizedGMT(text, tmpPos);
             if (tmpPos.getErrorIndex() == -1) {
                 pos.setIndex(tmpPos.getIndex());
                 return createTimeZoneForOffset(offset);
             }
-        }
-        break;
 
-    case UTZFMT_STYLE_ISO8601:
+            // Note: For now, no distinction between long/short localized GMT format in the parser.
+            // This might be changed in future.
+            evaluated |= STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT_SHORT];
+
+            break;
+        }
+    case UTZFMT_STYLE_LOCALIZED_GMT_SHORT:
         {
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
+
+            offset = parseOffsetShortLocalizedGMT(text, tmpPos);
+            if (tmpPos.getErrorIndex() == -1) {
+                pos.setIndex(tmpPos.getIndex());
+                return createTimeZoneForOffset(offset);
+            }
+
+            // Note: For now, no distinction between long/short localized GMT format in the parser.
+            // This might be changed in future.
+            evaluated |= STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT];
+
+            break;
+        }
+    case UTZFMT_STYLE_ISO_BASIC_SHORT:
+    case UTZFMT_STYLE_ISO_BASIC_FIXED:
+    case UTZFMT_STYLE_ISO_BASIC_FULL:
+    case UTZFMT_STYLE_ISO_EXTENDED_FIXED:
+    case UTZFMT_STYLE_ISO_EXTENDED_FULL:
+        {
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
+
             offset = parseOffsetISO8601(text, tmpPos);
             if (tmpPos.getErrorIndex() == -1) {
                 pos.setIndex(tmpPos.getIndex());
                 return createTimeZoneForOffset(offset);
             }
-            // Note: ISO 8601 parser also support basic format (without ':'),
-            // which is same with RFC 822 format.
-            evaluated |= STYLE_FLAG(UTZFMT_STYLE_RFC822);
+
+            break;
         }
-        break;
+
+    case UTZFMT_STYLE_ISO_BASIC_LOCAL_SHORT:
+    case UTZFMT_STYLE_ISO_BASIC_LOCAL_FIXED:
+    case UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL:
+    case UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FIXED:
+    case UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FULL:
+        {
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
+
+            // Exclude the case of UTC Indicator "Z" here
+            UBool hasDigitOffset = FALSE;
+            offset = parseOffsetISO8601(text, tmpPos, FALSE, &hasDigitOffset);
+            if (tmpPos.getErrorIndex() == -1 && hasDigitOffset) {
+                pos.setIndex(tmpPos.getIndex());
+                return createTimeZoneForOffset(offset);
+            }
+
+            break;
+        }
 
     case UTZFMT_STYLE_SPECIFIC_LONG:
     case UTZFMT_STYLE_SPECIFIC_SHORT:
@@ -875,9 +913,8 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
                     return TimeZone::createTimeZone(tzID);
                 }
             }
+            break;
         }
-        break;
-
     case UTZFMT_STYLE_GENERIC_LONG:
     case UTZFMT_STYLE_GENERIC_SHORT:
     case UTZFMT_STYLE_GENERIC_LOCATION:
@@ -901,9 +938,10 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
             }
 
             int32_t len = 0;
+            UTimeZoneFormatTimeType tt = UTZFMT_TIME_TYPE_UNKNOWN;
             const TimeZoneGenericNames *gnames = getTimeZoneGenericNames(status);
             if (U_SUCCESS(status)) {
-                len = gnames->findBestMatch(text, startIdx, genericNameTypes, tzID, parsedTimeType, status);
+                len = gnames->findBestMatch(text, startIdx, genericNameTypes, tzID, tt, status);
             }
             if (U_FAILURE(status)) {
                 pos.setErrorIndex(startIdx);
@@ -912,16 +950,32 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
             if (len > 0) {
                 // Found a match
                 if (timeType) {
-                    *timeType = parsedTimeType;
+                    *timeType = tt;
                 }
                 pos.setIndex(startIdx + len);
                 U_ASSERT(!tzID.isEmpty());
                 return TimeZone::createTimeZone(tzID);
             }
+
+            break;
         }
-        break;
+    case UTZFMT_STYLE_ZONE_ID:
+        {
+            //TODO
+            break;
+        }
+    case UTZFMT_STYLE_ZONE_ID_SHORT:
+        {
+            //TODO
+            break;
+        }
+    case UTZFMT_STYLE_EXEMPLAR_LOCATION:
+        {
+            //TODO
+            break;
+        }
     }
-    evaluated |= STYLE_FLAG(style);
+    evaluated |= STYLE_PARSE_FLAGS[style];
 
 
     if (parsedPos > startIdx) {
@@ -938,13 +992,18 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
 
     // Failed to parse the input text as the time zone format in the specified style.
     // Check the longest match among other styles below.
+    UnicodeString parsedID;
+    UTimeZoneFormatTimeType parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+
     U_ASSERT(parsedPos < 0);
     U_ASSERT(parsedOffset == UNKNOWN_OFFSET);
-    tmpPos.setIndex(startIdx);
-    tmpPos.setErrorIndex(-1);
 
     // ISO 8601
-    if ((evaluated & STYLE_FLAG(UTZFMT_STYLE_ISO8601)) == 0) {
+    if (parsedPos < maxPos &&
+        ((evaluated & ISO_Z_STYLE_FLAG) == 0 || (evaluated & ISO_LOCAL_STYLE_FLAG) == 0)) {
+        tmpPos.setIndex(startIdx);
+        tmpPos.setErrorIndex(-1);
+
         UBool hasDigitOffset = FALSE;
         offset = parseOffsetISO8601(text, tmpPos, FALSE, &hasDigitOffset);
         if (tmpPos.getErrorIndex() == -1) {
@@ -953,49 +1012,64 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
                 return createTimeZoneForOffset(offset);
             }
             // Note: When ISO 8601 format contains offset digits, it should not
-            // collide with other formats (except RFC 822, which is compatible with
-            // ISO 8601 basic format). However, ISO 8601 UTC format "Z" (single letter)
-            // may collide with other names. In this case, we need to evaluate other
-            // names.
-            parsedOffset = offset;
-            parsedPos = tmpPos.getIndex();
-            U_ASSERT(parsedPos == startIdx + 1);    // only when "Z" is used
+            // collide with other formats. However, ISO 8601 UTC format "Z" (single letter)
+            // may collide with other names. In this case, we need to evaluate other names.
+            if (parsedPos < tmpPos.getIndex()) {
+                parsedOffset = offset;
+                parsedID.setToBogus();
+                parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                parsedPos = tmpPos.getIndex();
+                U_ASSERT(parsedPos == startIdx + 1);    // only when "Z" is used
+            }
         }
-        tmpPos.setIndex(startIdx);
-        tmpPos.setErrorIndex(-1);
     }
 
-    // RFC 822
-    // Note: ISO 8601 parser supports RFC 822 format. So we do not need to parse
-    // it as RFC 822 here. This might be changed in future when we support
-    // strict format option for ISO 8601 or RFC 822.
-
-    //if ((evaluated & STYLE_FLAG(UTZFMT_STYLE_RFC822)) == 0) {
-    //    offset = parseOffsetRFC822(text, tmpPos);
-    //    if (tmpPos.getErrorIndex() == -1) {
-    //        pos.setIndex(tmpPos.getIndex());
-    //        return createTimeZoneForOffset(offset);
-    //    }
-    //    tmpPos.setIndex(startIdx);
-    //    tmpPos.setErrorIndex(-1);
-    //}
-
     // Localized GMT format
-    if ((evaluated & STYLE_FLAG(UTZFMT_STYLE_LOCALIZED_GMT)) == 0) {
+    if (parsedPos < maxPos &&
+        (evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT]) == 0) {
+        tmpPos.setIndex(startIdx);
+        tmpPos.setErrorIndex(-1);
+
         UBool hasDigitOffset = FALSE;
-        offset = parseOffsetLocalizedGMT(text, tmpPos, &hasDigitOffset);
+        offset = parseOffsetLocalizedGMT(text, tmpPos, FALSE, &hasDigitOffset);
         if (tmpPos.getErrorIndex() == -1) {
             if (tmpPos.getIndex() == maxPos || hasDigitOffset) {
                 pos.setIndex(tmpPos.getIndex());
                 return createTimeZoneForOffset(offset);
             }
             // Evaluate other names - see the comment earlier in this method.
-            parsedOffset = offset;
-            parsedPos = tmpPos.getIndex();
+            if (parsedPos < tmpPos.getIndex()) {
+                parsedOffset = offset;
+                parsedID.setToBogus();
+                parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                parsedPos = tmpPos.getIndex();
+            }
         }
     }
 
-    // When ParseOption.ALL_STYLES is available, we also try to look all possible display names.
+    if (parsedPos < maxPos &&
+        (evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_LOCALIZED_GMT_SHORT]) == 0) {
+        tmpPos.setIndex(startIdx);
+        tmpPos.setErrorIndex(-1);
+
+        UBool hasDigitOffset = FALSE;
+        offset = parseOffsetLocalizedGMT(text, tmpPos, TRUE, &hasDigitOffset);
+        if (tmpPos.getErrorIndex() == -1) {
+            if (tmpPos.getIndex() == maxPos || hasDigitOffset) {
+                pos.setIndex(tmpPos.getIndex());
+                return createTimeZoneForOffset(offset);
+            }
+            // Evaluate other names - see the comment earlier in this method.
+            if (parsedPos < tmpPos.getIndex()) {
+                parsedOffset = offset;
+                parsedID.setToBogus();
+                parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                parsedPos = tmpPos.getIndex();
+            }
+        }
+    }
+
+    // When ParseOption.ALL_STYLES is available, we also try to look all possible display names and IDs.
     // For example, when style is GENERIC_LONG, "EST" (SPECIFIC_SHORT) is never
     // used for America/New_York. With parseAllStyles true, this code parses "EST"
     // as America/New_York.
@@ -1003,62 +1077,82 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
     // Note: Adding all possible names into the trie used by the implementation is quite heavy operation,
     // which we want to avoid normally (note that we cache the trie, so this is applicable to the
     // first time only as long as the cache does not expire).
+
     if (parseOptions & UTZFMT_PARSE_OPTION_ALL_STYLES) {
-        // Try all specific names first
-        LocalPointer<TimeZoneNames::MatchInfoCollection> spAllMatches(fTimeZoneNames->find(text, startIdx, ALL_SPECIFIC_NAME_TYPES, status));
-        if (U_FAILURE(status)) {
-            pos.setErrorIndex(startIdx);
-            return NULL;
-        }
-        int32_t spMatchIdx = -1;
-        if (!spAllMatches.isNull()) {
+        // Try all specific names and exemplar location names
+        if (parsedPos < maxPos) {
+            LocalPointer<TimeZoneNames::MatchInfoCollection> specificMatches(fTimeZoneNames->find(text, startIdx, ALL_SIMPLE_NAME_TYPES, status));
+            if (U_FAILURE(status)) {
+                pos.setErrorIndex(startIdx);
+                return NULL;
+            }
+            int32_t specificMatchIdx = -1;
             int32_t matchPos = -1;
-            for (int32_t i = 0; i < spAllMatches->size(); i++) {
-                matchPos  = startIdx + spAllMatches->getMatchLengthAt(i);
-                if (matchPos > parsedPos) {
-                    spMatchIdx = i;
-                    parsedPos = matchPos;
+            if (!specificMatches.isNull()) {
+                for (int32_t i = 0; i < specificMatches->size(); i++) {
+                    if (startIdx + specificMatches->getMatchLengthAt(i) > matchPos) {
+                        specificMatchIdx = i;
+                        matchPos = startIdx + specificMatches->getMatchLengthAt(i);
+                    }
                 }
             }
+            if (parsedPos < matchPos) {
+                U_ASSERT(specificMatchIdx >= 0);
+                parsedPos = matchPos;
+                getTimeZoneID(specificMatches.getAlias(), specificMatchIdx, parsedID);
+                parsedTimeType = getTimeType(specificMatches->getNameTypeAt(specificMatchIdx));
+                parsedOffset = UNKNOWN_OFFSET;
+            }
         }
-        int32_t genMatchLen = -1;
+        // Try generic names
         if (parsedPos < maxPos) {
+            int32_t genMatchLen = -1;
+            UnicodeString tmpID;
+            UTimeZoneFormatTimeType tt = UTZFMT_TIME_TYPE_UNKNOWN;
+
             const TimeZoneGenericNames *gnames = getTimeZoneGenericNames(status);
             if (U_SUCCESS(status)) {
-                genMatchLen = gnames->findBestMatch(text, startIdx, ALL_GENERIC_NAME_TYPES, tzID, parsedTimeType, status);
+                genMatchLen = gnames->findBestMatch(text, startIdx, ALL_GENERIC_NAME_TYPES, tmpID, tt, status);
             }
             if (U_FAILURE(status)) {
                 pos.setErrorIndex(startIdx);
                 return NULL;
             }
-        }
-        // Pick up better match
-        if (startIdx + genMatchLen > parsedPos) {
-            // use generic name match
-            parsedPos = startIdx + genMatchLen;
-            if (timeType) {
-                *timeType = parsedTimeType;
+
+            if (parsedPos < startIdx + genMatchLen) {
+                parsedPos = startIdx + genMatchLen;
+                parsedID.setTo(tmpID);
+                parsedTimeType = tt;
+                parsedOffset = UNKNOWN_OFFSET;
             }
-            pos.setIndex(parsedPos);
-            U_ASSERT(!tzID.isEmpty());
-            return TimeZone::createTimeZone(tzID);
-        } else if (spMatchIdx >= 0) {
-            // use specific name match
-            if (timeType) {
-                *timeType = getTimeType(spAllMatches->getNameTypeAt(spMatchIdx));
-            }
-            pos.setIndex(parsedPos);
-            getTimeZoneID(spAllMatches.getAlias(), spMatchIdx, tzID);
-            U_ASSERT(!tzID.isEmpty());
-            return TimeZone::createTimeZone(tzID);
         }
+
+
+        // Try IDs
+        if ((evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_ZONE_ID]) == 0) {
+            //TODO
+        }
+
+        if ((evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_ZONE_ID]) == 0) {
+            //TODO
+        }
+
     }
 
     if (parsedPos > startIdx) {
-        // Parsed successfully as one of 'offset' format
-        U_ASSERT(parsedOffset != UNKNOWN_OFFSET);
+        // Parsed successfully
+        TimeZone* parsedTZ;
+        if (parsedID.length() > 0) {
+            parsedTZ = TimeZone::createTimeZone(parsedID);
+        } else {
+            U_ASSERT(parsedOffset != UNKNOWN_OFFSET);
+            parsedTZ = createTimeZoneForOffset(parsedOffset);
+        }
+        if (timeType) {
+            *timeType = parsedTimeType;
+        }
         pos.setIndex(parsedPos);
-        return createTimeZoneForOffset(parsedOffset);
+        return parsedTZ;
     }
 
     pos.setErrorIndex(startIdx);
@@ -1188,6 +1282,34 @@ TimeZoneFormat::formatOffsetISO8601Extended(int32_t offset, UBool useUtcIndicato
 }
 
 UnicodeString&
+TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const {
+    return formatOffsetLocalizedGMT(offset, FALSE, result, status);
+}
+
+UnicodeString&
+TimeZoneFormat::formatOffsetShortLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const {
+    return formatOffsetLocalizedGMT(offset, TRUE, result, status);
+}
+
+int32_t
+TimeZoneFormat::parseOffsetISO8601(const UnicodeString& text, ParsePosition& pos) const {
+    return parseOffsetISO8601(text, pos, FALSE);
+}
+
+int32_t
+TimeZoneFormat::parseOffsetLocalizedGMT(const UnicodeString& text, ParsePosition& pos) const {
+    return parseOffsetLocalizedGMT(text, pos, FALSE, NULL);
+}
+
+int32_t
+TimeZoneFormat::parseOffsetShortLocalizedGMT(const UnicodeString& text, ParsePosition& pos) const {
+    return parseOffsetLocalizedGMT(text, pos, TRUE, NULL);
+}
+
+// ------------------------------------------------------------------
+// Private zone offset format/parse implementation
+
+UnicodeString&
 TimeZoneFormat::formatOffsetISO8601(int32_t offset, UBool isBasic, UBool useUtcIndicator,
         UBool isShort, UBool ignoreSeconds, UnicodeString& result, UErrorCode& status) const {
     if (U_FAILURE(status)) {
@@ -1205,7 +1327,7 @@ TimeZoneFormat::formatOffsetISO8601(int32_t offset, UBool isBasic, UBool useUtcI
     UChar sep = isBasic ? 0 : ISO8601_SEP;
 
     // Note: FIELDS_HMS as maxFields is a CLDR/ICU extension. ISO 8601 specification does
-    // not support second field.
+    // not support seconds field.
 
     if (absOffset >= MAX_OFFSET) {
         result.setToBogus();
@@ -1253,16 +1375,6 @@ TimeZoneFormat::formatOffsetISO8601(int32_t offset, UBool isBasic, UBool useUtcI
     }
 
     return result;
-}
-
-UnicodeString&
-TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const {
-    return formatOffsetLocalizedGMT(offset, FALSE, result, status);
-}
-
-UnicodeString&
-TimeZoneFormat::formatOffsetShortLocalizedGMT(int32_t offset, UnicodeString& result, UErrorCode& status) const {
-    return formatOffsetLocalizedGMT(offset, TRUE, result, status);
 }
 
 UnicodeString&
@@ -1347,56 +1459,6 @@ TimeZoneFormat::formatOffsetLocalizedGMT(int32_t offset, UBool isShort, UnicodeS
     return result;
 }
 
-
-
-int32_t
-TimeZoneFormat::parseOffsetRFC822(const UnicodeString& text, ParsePosition& pos) const {
-    int32_t start = pos.getIndex();
-    if (start >= text.length()) {
-        pos.setErrorIndex(start);
-        return 0;
-    }
-
-    int32_t sign = 1;
-    UChar signChar = text.charAt(start);
-    if (signChar == PLUS) {
-        sign = 1;
-    } else if (signChar == MINUS) {
-        sign = -1;
-    } else {
-        // Not an RFC822 offset string
-        pos.setErrorIndex(start);
-        return 0;
-    }
-
-    // Parse digits
-    pos.setIndex(start + 1);
-    int32_t offset = parseAbuttingAsciiOffsetFields(text, pos, FIELDS_H, FIELDS_HMS, false);
-
-    if (pos.getErrorIndex() != -1) {
-        pos.setIndex(start);    // reset
-        pos.setErrorIndex(start);
-        return 0;
-    }
-
-    return sign * offset;
-}
-
-int32_t
-TimeZoneFormat::parseOffsetISO8601(const UnicodeString& text, ParsePosition& pos) const {
-    return parseOffsetISO8601(text, pos, FALSE);
-}
-
-int32_t
-TimeZoneFormat::parseOffsetLocalizedGMT(const UnicodeString& text, ParsePosition& pos) const {
-    return parseOffsetLocalizedGMT(text, pos, NULL);
-}
-
-
-
-// ------------------------------------------------------------------
-// Private zone offset format/parse implementation
-
 int32_t
 TimeZoneFormat::parseOffsetISO8601(const UnicodeString& text, ParsePosition& pos, UBool extendedOnly, UBool* hasDigitOffset /* = NULL */) const {
     if (hasDigitOffset) {
@@ -1426,7 +1488,7 @@ TimeZoneFormat::parseOffsetISO8601(const UnicodeString& text, ParsePosition& pos
         return 0;
     }
     ParsePosition posOffset(start + 1);
-    int32_t offset = parseAsciiOffsetFields(text, posOffset, ISO8601_SEP, FIELDS_H, FIELDS_HMS, FALSE);
+    int32_t offset = parseAsciiOffsetFields(text, posOffset, ISO8601_SEP, FIELDS_H, FIELDS_HMS);
     if (posOffset.getErrorIndex() == -1 && !extendedOnly && (posOffset.getIndex() - start <= 3)) {
         // If the text is successfully parsed as extended format with the options above, it can be also parsed
         // as basic format. For example, "0230" can be parsed as offset 2:00 (only first digits are valid for
@@ -1452,54 +1514,36 @@ TimeZoneFormat::parseOffsetISO8601(const UnicodeString& text, ParsePosition& pos
 }
 
 int32_t
-TimeZoneFormat::parseOffsetLocalizedGMT(const UnicodeString& text, ParsePosition& pos, UBool* hasDigitOffset) const {
+TimeZoneFormat::parseOffsetLocalizedGMT(const UnicodeString& text, ParsePosition& pos, UBool isShort, UBool* hasDigitOffset) const {
     int32_t start = pos.getIndex();
-    int32_t idx = start;
-    UBool parsed = FALSE;
     int32_t offset = 0;
+    int32_t parsedLength = 0;
 
     if (hasDigitOffset) {
         *hasDigitOffset = FALSE;
     }
 
-    do {
-        // Prefix part
-        int32_t len = fGMTPatternPrefix.length();
-        if (len > 0 && text.caseCompare(idx, len, fGMTPatternPrefix, 0) != 0) {
-            // prefix match failed
-            break;
-        }
-        idx += len;
+    offset = parseOffsetLocalizedGMTPattern(text, start, isShort, parsedLength);
 
-        // Offset part
-        offset = parseOffsetFields(text, idx, FALSE, len);
-        if (len == 0) {
-            // offset field match failed
-            break;
-        }
-        idx += len;
+    // For now, parseOffsetLocalizedGMTPattern handles both long and short
+    // formats, no matter isShort is true or false. This might be changed in future
+    // when strict parsing is necessary, or different set of patterns are used for
+    // short/long formats.
+#if 0
+    if (parsedLength == 0) {
+        offset = parseOffsetLocalizedGMTPattern(text, start, !isShort, parsedLength);
+    }
+#endif
 
-        // Suffix part
-        len = fGMTPatternSuffix.length();
-        if (len > 0 && text.caseCompare(idx, len, fGMTPatternSuffix, 0) != 0) {
-            // no suffix match
-            break;
-        }
-        idx += len;
-        parsed = TRUE;
-
-    } while (false);
-
-    if (parsed) {
+    if (parsedLength > 0) {
         if (hasDigitOffset) {
             *hasDigitOffset = TRUE;
         }
-        pos.setIndex(idx);
+        pos.setIndex(start + parsedLength);
         return offset;
     }
 
     // Try the default patterns
-    int32_t parsedLength = 0;
     offset = parseOffsetDefaultLocalizedGMT(text, start, parsedLength);
     if (parsedLength > 0) {
         if (hasDigitOffset) {
@@ -1531,83 +1575,153 @@ TimeZoneFormat::parseOffsetLocalizedGMT(const UnicodeString& text, ParsePosition
 }
 
 int32_t
-TimeZoneFormat::parseOffsetFields(const UnicodeString& text, int32_t start, UBool minimumHourWidth, int32_t& parsedLen) const {
+TimeZoneFormat::parseOffsetLocalizedGMTPattern(const UnicodeString& text, int32_t start, UBool isShort, int32_t& parsedLen) const {
+    int32_t idx = start;
     int32_t offset = 0;
-    UBool sawVarHourAndAbuttingField = FALSE;
+    UBool parsed = FALSE;
+
+    do {
+        // Prefix part
+        int32_t len = fGMTPatternPrefix.length();
+        if (len > 0 && text.caseCompare(idx, len, fGMTPatternPrefix, 0) != 0) {
+            // prefix match failed
+            break;
+        }
+        idx += len;
+
+        // Offset part
+        offset = parseOffsetFields(text, idx, FALSE, len);
+        if (len == 0) {
+            // offset field match failed
+            break;
+        }
+        idx += len;
+
+        len = fGMTPatternSuffix.length();
+        if (len > 0 && text.caseCompare(idx, len, fGMTPatternSuffix, 0) != 0) {
+            // no suffix match
+            break;
+        }
+        idx += len;
+        parsed = TRUE;
+    } while (FALSE);
+
+    parsedLen = parsed ? idx - start : 0;
+    return offset;
+}
+
+int32_t
+TimeZoneFormat::parseOffsetFields(const UnicodeString& text, int32_t start, UBool isShort, int32_t& parsedLen) const {
+    int32_t outLen = 0;
+    int32_t offset = 0;
+    int32_t sign = 1;
 
     parsedLen = 0;
 
+    int32_t offsetH, offsetM, offsetS;
+    offsetH = offsetM = offsetS = 0;
+
     for (int32_t patidx = 0; PARSE_GMT_OFFSET_TYPES[patidx] >= 0; patidx++) {
         int32_t gmtPatType = PARSE_GMT_OFFSET_TYPES[patidx];
-        int32_t offsetH = 0, offsetM = 0, offsetS = 0;
-        int32_t idx = start;
         UVector* items = fGMTOffsetPatternItems[gmtPatType];
         U_ASSERT(items != NULL);
- 
-        UBool failed = FALSE;
-        for (int32_t i = 0; i < items->size(); i++) {
-            int32_t tmpParsedLen = 0;
-            const GMTOffsetField* field = (const GMTOffsetField*)items->elementAt(i);
-            GMTOffsetField::FieldType fieldType = field->getType();
-            if (fieldType == GMTOffsetField::TEXT) {
-                const UChar* patStr = field->getPatternText();
-                tmpParsedLen = u_strlen(patStr);
-                if (text.caseCompare(idx, tmpParsedLen, patStr, 0) != 0) {
-                    failed = TRUE;
-                    break;
-                }
-                idx += tmpParsedLen;
-            } else {
-                if (fieldType == GMTOffsetField::HOUR) {
-                    uint8_t minDigits = 1;
-                    uint8_t maxDigits = minimumHourWidth ? 1 : 2;
-                    if (!minimumHourWidth && !sawVarHourAndAbuttingField) {
-                        if (i + 1 < items->size()) {
-                            const GMTOffsetField* nextField = (const GMTOffsetField*)items->elementAt(i + 1);
-                            if (nextField->getType() != GMTOffsetField::TEXT) {
-                                sawVarHourAndAbuttingField = true;
-                            }
-                        }
-                    }
-                    offsetH = parseOffsetFieldWithLocalizedDigits(text, idx, minDigits, maxDigits, 0, MAX_OFFSET_HOUR, tmpParsedLen);
-                } else if (fieldType == GMTOffsetField::MINUTE) {
-                    offsetM = parseOffsetFieldWithLocalizedDigits(text, idx, 2, 2, 0, MAX_OFFSET_MINUTE, tmpParsedLen);
-                } else if (fieldType == GMTOffsetField::SECOND) {
-                    offsetS = parseOffsetFieldWithLocalizedDigits(text, idx, 2, 2, 0, MAX_OFFSET_SECOND, tmpParsedLen);
-                }
 
-                if (tmpParsedLen == 0) {
-                    failed = TRUE;
-                    break;
-                }
-                idx += tmpParsedLen;
-            }
-        }
-        if (!failed) {
-            int32_t sign = (gmtPatType == UTZFMT_PAT_POSITIVE_HM || gmtPatType == UTZFMT_PAT_POSITIVE_HMS) ? 1 : -1;
-            offset = ((((offsetH * 60) + offsetM) * 60) + offsetS) * 1000 * sign;
-            parsedLen = idx - start;
+        outLen = parseOffsetFieldsWithPattern(text, start, items, FALSE, offsetH, offsetM, offsetS);
+        if (outLen > 0) {
+            sign = (gmtPatType == UTZFMT_PAT_POSITIVE_H || gmtPatType == UTZFMT_PAT_POSITIVE_HM || gmtPatType == UTZFMT_PAT_POSITIVE_HMS) ?
+                1 : -1;
             break;
         }
     }
 
-    if (parsedLen == 0 && sawVarHourAndAbuttingField && !minimumHourWidth) {
-        // When hour field is variable width and another non-literal pattern
-        // field follows, the parse loop above might eat up the digit from
-        // the abutting field. For example, with pattern "-Hmm" and input "-100",
-        // the hour is parsed as -10 and fails to parse minute field.
-        //
-        // If this is the case, try parsing the text one more time with the arg
-        // minimumHourWidth = true
-        //
-        // Note: This fallback is not applicable when quitAtHourField is true, because
-        // the option is designed for supporting the case like "GMT+5". In this case,
-        // we should get better result for parsing hour digits as much as possible.
+    if (outLen > 0 && fAbuttingOffsetHoursAndMinutes) {
+        // When hours field is sabutting minutes field,
+        // the parse result above may not be appropriate.
+        // For example, "01020" is parsed as 01:02: above,
+        // but it should be parsed as 00:10:20.
+        int32_t tmpLen = 0;
+        int32_t tmpSign = 1;
+        int32_t tmpH, tmpM, tmpS;
 
-        return parseOffsetFields(text, start, true, parsedLen);
+        for (int32_t patidx = 0; PARSE_GMT_OFFSET_TYPES[patidx] >= 0; patidx++) {
+            int32_t gmtPatType = PARSE_GMT_OFFSET_TYPES[patidx];
+            UVector* items = fGMTOffsetPatternItems[gmtPatType];
+            U_ASSERT(items != NULL);
+
+            // forcing parse to use single hour digit
+            tmpLen = parseOffsetFieldsWithPattern(text, start, items, TRUE, tmpH, tmpM, tmpS);
+            if (tmpLen > 0) {
+                tmpSign = (gmtPatType == UTZFMT_PAT_POSITIVE_H || gmtPatType == UTZFMT_PAT_POSITIVE_HM || gmtPatType == UTZFMT_PAT_POSITIVE_HMS) ?
+                    1 : -1;
+                break;
+            }
+        }
+        if (tmpLen > outLen) {
+            // Better parse result with single hour digit
+            outLen = tmpLen;
+            sign = tmpSign;
+            offsetH = tmpH;
+            offsetM = tmpM;
+            offsetS = tmpS;
+        }
+    }
+
+    if (outLen > 0) {
+        offset = ((((offsetH * 60) + offsetM) * 60) + offsetS) * 1000 * sign;
+        parsedLen = outLen;
     }
 
     return offset;
+}
+
+int32_t
+TimeZoneFormat::parseOffsetFieldsWithPattern(const UnicodeString& text, int32_t start,
+        UVector* patternItems, UBool forceSingleHourDigit, int32_t& hour, int32_t& min, int32_t& sec) const {
+    UBool failed = FALSE;
+    int32_t offsetH, offsetM, offsetS;
+    offsetH = offsetM = offsetS = 0;
+    int32_t idx = start;
+
+    for (int32_t i = 0; i < patternItems->size(); i++) {
+        int32_t len;
+        const GMTOffsetField* field = (const GMTOffsetField*)patternItems->elementAt(i);
+        GMTOffsetField::FieldType fieldType = field->getType();
+        if (fieldType == GMTOffsetField::TEXT) {
+            const UChar* patStr = field->getPatternText();
+            len = u_strlen(patStr);
+            if (text.caseCompare(idx, len, patStr, 0) != 0) {
+                failed = TRUE;
+                break;
+            }
+            idx += len;
+        } else {
+            if (fieldType == GMTOffsetField::HOUR) {
+                uint8_t maxDigits = forceSingleHourDigit ? 1 : 2;
+                offsetH = parseOffsetFieldWithLocalizedDigits(text, idx, 1, maxDigits, 0, MAX_OFFSET_HOUR, len);
+            } else if (fieldType == GMTOffsetField::MINUTE) {
+                offsetM = parseOffsetFieldWithLocalizedDigits(text, idx, 2, 2, 0, MAX_OFFSET_MINUTE, len);
+            } else if (fieldType == GMTOffsetField::SECOND) {
+                offsetS = parseOffsetFieldWithLocalizedDigits(text, idx, 2, 2, 0, MAX_OFFSET_SECOND, len);
+            }
+
+            if (len == 0) {
+                failed = TRUE;
+                break;
+            }
+            idx += len;
+        }
+    }
+
+    if (failed) {
+        hour = min = sec = 0;
+        return 0;
+    }
+
+    hour = offsetH;
+    min = offsetM;
+    sec = offsetS;
+
+    return idx - start;
 }
 
 int32_t
@@ -1974,25 +2088,30 @@ TimeZoneFormat::parseAbuttingAsciiOffsetFields(const UnicodeString& text, ParseP
 }
 
 int32_t
-TimeZoneFormat::parseAsciiOffsetFields(const UnicodeString& text, ParsePosition& pos, UChar sep, OffsetFields minFields, OffsetFields maxFields, UBool fixedHourWidth) {
+TimeZoneFormat::parseAsciiOffsetFields(const UnicodeString& text, ParsePosition& pos, UChar sep, OffsetFields minFields, OffsetFields maxFields) {
     int32_t start = pos.getIndex();
     int32_t fieldVal[] = {0, 0, 0};
     int32_t fieldLen[] = {0, -1, -1};
     for (int32_t idx = start, fieldIdx = 0; idx < text.length() && fieldIdx <= maxFields; idx++) {
         UChar c = text.charAt(idx);
         if (c == sep) {
-            if (fieldLen[fieldIdx] < 0) {
-                // next field - expected
-                fieldLen[fieldIdx] = 0;
-            } else if (fieldIdx == 0 && !fixedHourWidth) {
+            if (fieldIdx == 0) {
+                if (fieldLen[0] == 0) {
+                    // no hours field
+                    break;
+                }
                 // 1 digit hour, move to next field
-                fieldIdx++;
-                fieldLen[fieldIdx] = 0;
             } else {
-                // otherwise, premature field
-                break;
+                if (fieldLen[fieldIdx] != -1) {
+                    // premature minute or seconds field
+                    break;
+                }
+                fieldLen[fieldIdx] = 0;
             }
             continue;
+        } else if (fieldLen[fieldIdx] == -1) {
+            // no separator after 2 digit field
+            break;
         }
         int32_t digit = DIGIT_VAL(c);
         if (digit < 0) {
@@ -2012,13 +2131,10 @@ TimeZoneFormat::parseAsciiOffsetFields(const UnicodeString& text, ParsePosition&
     int32_t parsedFields = -1;
     do {
         // hour
-        if (fieldLen[0] == 0 || (fieldLen[0] == 1 && fixedHourWidth)) {
+        if (fieldLen[0] == 0) {
             break;
         }
         if (fieldVal[0] > MAX_OFFSET_HOUR) {
-            if (fixedHourWidth) {
-                break;
-            }
             offset = (fieldVal[0] / 10) * MILLIS_PER_HOUR;
             parsedFields = FIELDS_H;
             parsedLen = 1;
