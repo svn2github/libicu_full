@@ -47,7 +47,7 @@
  * resource data.
  */
 
-#define PATTERN_CHARS_LEN 31
+#define PATTERN_CHARS_LEN 34
 
 /**
  * Unlocalized date-time pattern characters. For example: 'y', 'd', etc. All

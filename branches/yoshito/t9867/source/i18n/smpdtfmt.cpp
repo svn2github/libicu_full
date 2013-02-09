@@ -204,6 +204,9 @@ static const int32_t gFieldRangeBias[] = {
     -1,  // 'q' - UDAT_STANDALONE_QUARTER_FIELD
     -1   // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
     -1,  // 'U' - UDAT_YEAR_NAME_FIELD
+    -1,  // 'O' - UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD
+    -1,  // 'X' - UDAT_TIMEZONE_ISO_FIELD
+    -1,  // 'x' - UDAT_TIMEZONE_ISO_LOCAL_FIELD
 };
 
 // When calendar uses hebr numbering (i.e. he@calendar=hebrew),
@@ -989,7 +992,7 @@ SimpleDateFormat::fgPatternIndexToDateFormatField[] = {
     /*V*/   UDAT_TIMEZONE_SPECIAL_FIELD,
     /*U*/   UDAT_YEAR_NAME_FIELD,
     /*O*/   UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD,
-    /*Xx*/  UDAT_TIMEZONE_ISO_FIELD, UDAT_TIMEZONE_ISO_FIELD,
+    /*Xx*/  UDAT_TIMEZONE_ISO_FIELD, UDAT_TIMEZONE_ISO_LOCAL_FIELD,
 };
 
 //----------------------------------------------------------------------

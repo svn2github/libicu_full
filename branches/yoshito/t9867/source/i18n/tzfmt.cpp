@@ -337,8 +337,6 @@ TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status)
     if (hourFormats) {
         UChar *sep = u_strchr(hourFormats, (UChar)0x003B /* ';' */);
         if (sep != NULL) {
-            useDefaultOffsetPatterns = FALSE;
-
             UErrorCode tmpStatus = U_ZERO_ERROR;
             fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM].setTo(FALSE, hourFormats, (int32_t)(sep - hourFormats));
             fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM].setTo(TRUE, sep + 1, -1);
@@ -347,7 +345,7 @@ TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status)
             truncateOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_POSITIVE_H], tmpStatus);
             truncateOffsetPattern(fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_HM], fGMTOffsetPatterns[UTZFMT_PAT_NEGATIVE_H], tmpStatus);
             if (U_SUCCESS(tmpStatus)) {
-                useDefaultOffsetPatterns = TRUE;
+                useDefaultOffsetPatterns = FALSE;
             }
         }
     }
@@ -386,7 +384,7 @@ TimeZoneFormat::TimeZoneFormat(const TimeZoneFormat& other)
 TimeZoneFormat::~TimeZoneFormat() {
     delete fTimeZoneNames;
     delete fTimeZoneGenericNames;
-    for (int32_t i = 0; i <= UTZFMT_PAT_COUNT; i++) {
+    for (int32_t i = 0; i < UTZFMT_PAT_COUNT; i++) {
         delete fGMTOffsetPatternItems[i];
     }
 }
@@ -961,17 +959,38 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
         }
     case UTZFMT_STYLE_ZONE_ID:
         {
-            //TODO
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
+
+            parseZoneID(text, tmpPos, tzID);
+            if (tmpPos.getErrorIndex() == -1) {
+                pos.setIndex(tmpPos.getIndex());
+                return TimeZone::createTimeZone(tzID);
+            }
             break;
         }
     case UTZFMT_STYLE_ZONE_ID_SHORT:
         {
-            //TODO
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
+
+            parseShortZoneID(text, tmpPos, tzID);
+            if (tmpPos.getErrorIndex() == -1) {
+                pos.setIndex(tmpPos.getIndex());
+                return TimeZone::createTimeZone(tzID);
+            }
             break;
         }
     case UTZFMT_STYLE_EXEMPLAR_LOCATION:
         {
-            //TODO
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
+
+            parseExemplarLocation(text, tmpPos, tzID);
+            if (tmpPos.getErrorIndex() == -1) {
+                pos.setIndex(tmpPos.getIndex());
+                return TimeZone::createTimeZone(tzID);
+            }
             break;
         }
     }
@@ -1107,12 +1126,11 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
         // Try generic names
         if (parsedPos < maxPos) {
             int32_t genMatchLen = -1;
-            UnicodeString tmpID;
             UTimeZoneFormatTimeType tt = UTZFMT_TIME_TYPE_UNKNOWN;
 
             const TimeZoneGenericNames *gnames = getTimeZoneGenericNames(status);
             if (U_SUCCESS(status)) {
-                genMatchLen = gnames->findBestMatch(text, startIdx, ALL_GENERIC_NAME_TYPES, tmpID, tt, status);
+                genMatchLen = gnames->findBestMatch(text, startIdx, ALL_GENERIC_NAME_TYPES, tzID, tt, status);
             }
             if (U_FAILURE(status)) {
                 pos.setErrorIndex(startIdx);
@@ -1121,22 +1139,38 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
 
             if (parsedPos < startIdx + genMatchLen) {
                 parsedPos = startIdx + genMatchLen;
-                parsedID.setTo(tmpID);
+                parsedID.setTo(tzID);
                 parsedTimeType = tt;
                 parsedOffset = UNKNOWN_OFFSET;
             }
         }
 
+        // Try time zone ID
+        if (parsedPos < maxPos && (evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_ZONE_ID]) == 0) {
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
 
-        // Try IDs
-        if ((evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_ZONE_ID]) == 0) {
-            //TODO
+            parseZoneID(text, tmpPos, tzID);
+            if (tmpPos.getErrorIndex() == -1 && parsedPos < tmpPos.getIndex()) {
+                parsedPos = tmpPos.getIndex();
+                parsedID.setTo(tzID);
+                parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                parsedOffset = UNKNOWN_OFFSET;
+            }
         }
+        // Try short time zone ID
+        if (parsedPos < maxPos && (evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_ZONE_ID]) == 0) {
+            tmpPos.setIndex(startIdx);
+            tmpPos.setErrorIndex(-1);
 
-        if ((evaluated & STYLE_PARSE_FLAGS[UTZFMT_STYLE_ZONE_ID]) == 0) {
-            //TODO
+            parseShortZoneID(text, tmpPos, tzID);
+            if (tmpPos.getErrorIndex() == -1 && parsedPos < tmpPos.getIndex()) {
+                parsedPos = tmpPos.getIndex();
+                parsedID.setTo(tzID);
+                parsedTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                parsedOffset = UNKNOWN_OFFSET;
+            }
         }
-
     }
 
     if (parsedPos > startIdx) {
@@ -2518,6 +2552,54 @@ TimeZoneFormat::getTimeZoneID(const TimeZoneNames::MatchInfoCollection* matches,
             fTimeZoneNames->getReferenceZoneID(mzID, fTargetRegion, tzID);
         }
     }
+    return tzID;
+}
+
+UnicodeString&
+TimeZoneFormat::parseZoneID(const UnicodeString& text, ParsePosition& pos, UnicodeString& tzID) const {
+    //TODO
+    pos.setErrorIndex(pos.getIndex());
+    return tzID;
+}
+
+UnicodeString&
+TimeZoneFormat::parseShortZoneID(const UnicodeString& text, ParsePosition& pos, UnicodeString& tzID) const {
+    //TODO
+    pos.setErrorIndex(pos.getIndex());
+    return tzID;
+}
+
+
+UnicodeString&
+TimeZoneFormat::parseExemplarLocation(const UnicodeString& text, ParsePosition& pos, UnicodeString& tzID) const {
+    int32_t startIdx = pos.getIndex();
+    int32_t parsedPos = -1;
+    tzID.setToBogus();
+
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<TimeZoneNames::MatchInfoCollection> exemplarMatches(fTimeZoneNames->find(text, startIdx, UTZFMT_STYLE_EXEMPLAR_LOCATION, status));
+    if (U_FAILURE(status)) {
+        pos.setErrorIndex(startIdx);
+        return tzID;
+    }
+    int32_t matchIdx = -1;
+    if (!exemplarMatches.isNull()) {
+        for (int32_t i = 0; i < exemplarMatches->size(); i++) {
+            if (startIdx + exemplarMatches->getMatchLengthAt(i) > parsedPos) {
+                matchIdx = i;
+                parsedPos = startIdx + exemplarMatches->getMatchLengthAt(i);
+            }
+        }
+        if (parsedPos > 0) {
+            pos.setIndex(parsedPos);
+            getTimeZoneID(exemplarMatches.getAlias(), matchIdx, tzID);
+        }
+    }
+
+    if (tzID.length() == 0) {
+        pos.setErrorIndex(startIdx);
+    }
+
     return tzID;
 }
 

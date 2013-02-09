@@ -1031,7 +1031,7 @@ private:
      */
     static UTimeZoneFormatTimeType getTimeType(UTimeZoneNameType nameType);
 
-    /*
+    /**
      * Returns the time zone ID of a match at the specified index within
      * the MatchInfoCollection.
      * @param matches the collection of matches
@@ -1040,6 +1040,34 @@ private:
      * @return a reference to tzID.
      */
     UnicodeString& getTimeZoneID(const TimeZoneNames::MatchInfoCollection* matches, int32_t idx, UnicodeString& tzID) const;
+
+
+    /**
+     * Parse a zone ID.
+     * @param text the text contains a time zone ID string at the position.
+     * @param pos the position
+     * @param tzID receives the zone ID
+     * @return a reference to tzID
+     */
+    UnicodeString& parseZoneID(const UnicodeString& text, ParsePosition& pos, UnicodeString& tzID) const;
+
+    /**
+     * Parse a short zone ID.
+     * @param text the text contains a short time zone ID string at the position.
+     * @param pos the position
+     * @param tzID receives the short zone ID
+     * @return a reference to tzID
+     */
+    UnicodeString& parseShortZoneID(const UnicodeString& text, ParsePosition& pos, UnicodeString& tzID) const;
+
+    /**
+     * Parse an exemplar location string.
+     * @param text the text contains an exemplar location string at the position.
+     * @param pos the position.
+     * @param tzID receives the time zone ID
+     * @return a reference to tzID
+     */
+    UnicodeString& parseExemplarLocation(const UnicodeString& text, ParsePosition& pos, UnicodeString& tzID) const;
 };
 
 U_NAMESPACE_END

@@ -628,50 +628,49 @@ TZNames::createInstance(UResourceBundle* rb, const char* key, const UnicodeStrin
     if (rb == NULL || key == NULL || *key == 0) {
         return NULL;
     }
-    TZNames* tznames = NULL;
+
+    const UChar** names = loadData(rb, key);
+    const UChar* locationName = NULL;
     UChar* locationNameOwned = NULL;
+
     UErrorCode status = U_ZERO_ERROR;
-    UResourceBundle* rbTable = ures_getByKeyWithFallback(rb, key, NULL, &status);
-    if (U_SUCCESS(status)) {
-        int32_t len = 0;
-        const UChar* locationName = ures_getStringByKeyWithFallback(rbTable, gEcTag, &len, &status);
-        if (U_FAILURE(status) || len == 0) {
-            UnicodeString tmpName;
-            int32_t tmpNameLen = 0;
-            TimeZoneNamesImpl::getDefaultExemplarLocationName(tzID, tmpName);
-            tmpNameLen = tmpName.length();
-            if (tmpNameLen > 0) {
-                locationNameOwned = (UChar*) uprv_malloc(sizeof(UChar) * (tmpNameLen + 1));
-                if (locationNameOwned) {
-                    tmpName.extract(locationNameOwned, tmpNameLen + 1, status);
-                    if (U_FAILURE(status)) {
-                        goto error_create_tznames;
-                    }
-                    locationName = locationNameOwned;
-                }
-            }
-        }
+    int32_t len = 0;
 
-        const UChar** names = loadData(rb, key);
+    UResourceBundle* table = ures_getByKeyWithFallback(rb, key, NULL, &status);
+    locationName = ures_getStringByKeyWithFallback(table, gEcTag, &len, &status);
+    // ignore missing resource here
+    status = U_ZERO_ERROR;
 
-        if (locationName != NULL || names != NULL) {
-            tznames = new TZNames(names);
-            if (tznames == NULL) {
-                goto error_create_tznames;
+    ures_close(table);
+
+    if (locationName == NULL) {
+        UnicodeString tmpName;
+        int32_t tmpNameLen = 0;
+        TimeZoneNamesImpl::getDefaultExemplarLocationName(tzID, tmpName);
+        tmpNameLen = tmpName.length();
+
+        if (tmpNameLen > 0) {
+            locationNameOwned = (UChar*) uprv_malloc(sizeof(UChar) * (tmpNameLen + 1));
+            if (locationNameOwned) {
+                tmpName.extract(locationNameOwned, tmpNameLen + 1, status);
+                locationName = locationNameOwned;
             }
-            tznames->fLocationName = locationName;
-            tznames->fLocationNameOwned = locationNameOwned;
         }
     }
-    ures_close(rbTable);
+
+    TZNames* tznames = NULL;
+    if (locationName != NULL || names != NULL) {
+        tznames = new TZNames(names);
+        if (tznames == NULL) {
+            if (locationNameOwned) {
+                uprv_free(locationNameOwned);
+            }
+        }
+        tznames->fLocationName = locationName;
+        tznames->fLocationNameOwned = locationNameOwned;
+    }
+
     return tznames;
-
-error_create_tznames:
-    ures_close(rbTable);
-    if (locationNameOwned) {
-        uprv_free(locationNameOwned);
-    }
-    return NULL;
 }
 
 // ---------------------------------------------------
