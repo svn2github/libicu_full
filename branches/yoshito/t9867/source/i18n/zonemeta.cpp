@@ -431,6 +431,7 @@ ZoneMeta::getCanonicalCountry(const UnicodeString &tzid, UnicodeString &country,
 
                     if (U_SUCCESS(status)) {
                         gCountryInfoVectorsInitialized = TRUE;
+                        ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
                     } else {
                         delete gSingleZoneCountries;
                         delete gMultiZonesCountries;
@@ -828,6 +829,7 @@ ZoneMeta::initAvailableMetaZoneIDs () {
                         gMetaZoneIDs = metaZoneIDs;
                         gMetaZoneIDTable = metaZoneIDTable;
                         gMetaZoneIDsInitialized = TRUE;
+                        ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
                     } else {
                         uhash_close(metaZoneIDTable);
                         delete metaZoneIDs;

@@ -42,8 +42,8 @@ static const char* PATTERNS[] = {
     "xxx",
     "xxxx",
     "xxxxx",
-//    "V",
-//    "VV",
+    "V",
+    "VV",
     "VVV",
     "VVVV"
 };
