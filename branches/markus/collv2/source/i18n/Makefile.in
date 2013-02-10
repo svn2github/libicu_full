@@ -74,6 +74,7 @@ coleitr.o coll.o tblcoll.o sortkey.o bocsu.o ucoleitr.o \
 ucol.o ucol_res.o ucol_bld.o ucol_sit.o ucol_tok.o ucol_wgt.o ucol_cnt.o ucol_elm.o \
 collation.o collationsettings.o collationdata.o collationdatareader.o collationfcd.o \
 collationiterator.o utf16collationiterator.o utf8collationiterator.o uitercollationiterator.o \
+collationsets.o \
 collationcompare.o collationkeys.o rulebasedcollator.o collationroot.o \
 collationdatabuilder.o collationbasedatabuilder.o \
 strmatch.o usearch.o search.o stsearch.o \

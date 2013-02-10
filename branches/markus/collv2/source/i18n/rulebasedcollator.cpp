@@ -14,6 +14,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/coll.h"
+#include "unicode/localpointer.h"
 #include "unicode/locid.h"
 #include "unicode/sortkey.h"
 #include "unicode/ucol.h"
@@ -32,6 +33,7 @@
 #include "collationiterator.h"
 #include "collationkeys.h"
 #include "collationroot.h"
+#include "collationsets.h"
 #include "collationsettings.h"
 #include "cstring.h"
 #include "rulebasedcollator.h"
@@ -158,8 +160,51 @@ RuleBasedCollator2::~RuleBasedCollator2() {
 
 Collator *
 RuleBasedCollator2::clone() const {
-    // TODO: new RuleBasedCollator2(), copyFrom(*this, UErrorCode), delete & return NULL if U_FAILURE
-    return NULL;
+    LocalPointer<RuleBasedCollator2> newCollator;
+    if(reader != NULL) {
+        newCollator.adoptInstead(new RuleBasedCollator2(*reader));
+    } else {
+        // TODO: CollationDataBuilder *newBuilder = ownedBuilder->clone();
+        // if(newBuilder == NULL) { return NULL; }
+        // newCollator.adoptInstead(new RuleBasedCollator2(newBuilder));
+    }
+    if(newCollator.isNull()) { return NULL; }
+    if(ownedSettings != NULL) {
+        LocalPointer<CollationSettings> newSettings(new CollationSettings(*newCollator->settings));
+        if(newSettings.isNull()) { return NULL; }
+        LocalArray<uint8_t> newReorderTable;
+        LocalArray<int32_t> newReorderCodes;
+        const CollationSettings &defaultSettings = getDefaultSettings();
+        if(settings->reorderTable != defaultSettings.reorderTable) {
+            if(settings->reorderTable == NULL) {
+                newSettings->reorderTable = NULL;
+            } else {
+                newReorderTable.adoptInstead((uint8_t *)uprv_malloc(256));
+                if(newReorderTable.isNull()) { return NULL; }
+                uprv_memcpy(newReorderTable.getAlias(), settings->reorderTable, 256);
+                newSettings->reorderTable = newReorderTable.getAlias();
+            }
+        }
+        if(settings->reorderCodes != defaultSettings.reorderCodes) {
+            int32_t length = settings->reorderCodesLength;
+            if(length == 0) {
+                newSettings->reorderCodesLength = 0;
+            } else {
+                newReorderCodes.adoptInstead((int32_t *)uprv_malloc(length * 4));
+                if(newReorderCodes.isNull()) { return NULL; }
+                uprv_memcpy(newReorderCodes.getAlias(), settings->reorderCodes, length * 4);
+                newSettings->reorderCodes = newReorderCodes.getAlias();
+                newCollator->ownedReorderCodesCapacity = length;
+            }
+        }
+        // The settings themselves do not take ownership of their arrays.
+        // The collator takes ownership of both the settings and arrays now.
+        newCollator->ownedSettings = newSettings.orphan();
+        newReorderTable.orphan();
+        newReorderCodes.orphan();
+    }
+    newCollator->explicitlySetAttributes = explicitlySetAttributes;
+    return newCollator.orphan();
 }
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedCollator2)
@@ -223,8 +268,25 @@ RuleBasedCollator2::getTailoredSet(UErrorCode &errorCode) const {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    // TODO: add actually-tailored characters and strings
+    if(data->base != NULL) {
+        // TODO: add actually-tailored characters and strings
+    }
     return tailored;
+}
+
+void
+RuleBasedCollator2::getContractionsAndExpansions(
+        UnicodeSet *contractions, UnicodeSet *expansions,
+        UBool addPrefixes, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return; }
+    if(contractions != NULL) {
+        contractions->clear();
+    }
+    if(expansions != NULL) {
+        expansions->clear();
+    }
+    ContractionsAndExpansions cne(contractions, expansions, addPrefixes);
+    cne.get(data, errorCode);
 }
 
 const CollationSettings &
@@ -452,16 +514,18 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
         ownedSettings->reorderCodesLength = 0;
         return;
     }
+    LocalArray<uint8_t> newReorderTable;
     uint8_t *ownedReorderTable;
     if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
         ownedReorderTable = const_cast<uint8_t *>(ownedSettings->reorderTable);
     } else {
-        ownedReorderTable = (uint8_t *)uprv_malloc(256);
-        if(ownedReorderTable == NULL) {
+        newReorderTable.adoptInstead((uint8_t *)uprv_malloc(256));
+        if(newReorderTable.isNull()) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
-        ownedSettings->reorderTable = ownedReorderTable;
+        // Do not modify the ownedSettings->reorderTable until everything is ok.
+        ownedReorderTable = newReorderTable.getAlias();
     }
     data->makeReorderTable(reorderCodes, length, ownedReorderTable, errorCode);
     if(U_FAILURE(errorCode)) { return; }
@@ -484,6 +548,9 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
     }
     uprv_memcpy(ownedReorderCodes, reorderCodes, length * 4);
     ownedSettings->reorderCodesLength = length;
+    if(newReorderTable.isValid()) {
+        ownedSettings->reorderTable = newReorderTable.orphan();
+    }
 }
 
 int32_t

@@ -567,6 +567,22 @@ public:
     nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
                     uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 
+    /**
+     * Implements ucol_getContractionsAndExpansions().
+     * Gets this collator's sets of contraction strings and/or
+     * characters and strings that map to multiple collation elements (expansions).
+     * If addPrefixes is TRUE, then contractions that are expressed as
+     * prefix/pre-context rules are included.
+     * @param contractions if not NULL, the set to hold the contractions
+     * @param expansions if not NULL, the set to hold the expansions
+     * @param addPrefixes include prefix contextual mappings
+     * @param errorCode in/out ICU error code
+     * @internal
+     */
+    void getContractionsAndExpansions(
+            UnicodeSet *contractions, UnicodeSet *expansions,
+            UBool addPrefixes, UErrorCode &errorCode) const;
+
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationDataReader &r);
     RuleBasedCollator2(CollationDataBuilder *b);
@@ -612,6 +628,7 @@ private:
 
     const CollationData *data;
     const CollationSettings *settings;  // == defaultSettings or ownedSettings
+    // Either reader!=NULL or ownedBuilder!=NULL.
     const CollationDataReader *reader;
     CollationDataBuilder *ownedBuilder;
     CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
