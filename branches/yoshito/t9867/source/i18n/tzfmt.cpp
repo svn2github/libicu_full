@@ -768,7 +768,7 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
     UBool fallbackLocalizedGMT = 
         (style == UTZFMT_STYLE_SPECIFIC_LONG || style == UTZFMT_STYLE_GENERIC_LONG || style == UTZFMT_STYLE_GENERIC_LOCATION);
     UBool fallbackShortLocalizedGMT =
-        (style == UTZFMT_STYLE_SPECIFIC_SHORT || UTZFMT_STYLE_GENERIC_SHORT);
+        (style == UTZFMT_STYLE_SPECIFIC_SHORT || style == UTZFMT_STYLE_GENERIC_SHORT);
 
     int32_t evaluated = 0;  // bit flags representing already evaluated styles
     ParsePosition tmpPos(startIdx);
@@ -2577,7 +2577,7 @@ TimeZoneFormat::parseExemplarLocation(const UnicodeString& text, ParsePosition& 
     tzID.setToBogus();
 
     UErrorCode status = U_ZERO_ERROR;
-    LocalPointer<TimeZoneNames::MatchInfoCollection> exemplarMatches(fTimeZoneNames->find(text, startIdx, UTZFMT_STYLE_EXEMPLAR_LOCATION, status));
+    LocalPointer<TimeZoneNames::MatchInfoCollection> exemplarMatches(fTimeZoneNames->find(text, startIdx, UTZNM_EXEMPLAR_LOCATION, status));
     if (U_FAILURE(status)) {
         pos.setErrorIndex(startIdx);
         return tzID;
