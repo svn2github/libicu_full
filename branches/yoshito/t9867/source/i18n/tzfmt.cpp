@@ -707,7 +707,6 @@ TimeZoneFormat::format(UTimeZoneFormatStyle style, const TimeZone& tz, UDate dat
                 *timeType = (dstOffset != 0) ? UTZFMT_TIME_TYPE_DAYLIGHT : UTZFMT_TIME_TYPE_STANDARD;
             }
         }
-        U_ASSERT(U_SUCCESS(status));
     }
 
     return name;

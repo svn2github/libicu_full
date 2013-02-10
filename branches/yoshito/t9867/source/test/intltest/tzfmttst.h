@@ -20,6 +20,8 @@ class TimeZoneFormatTest : public IntlTest {
 
     void TestTimeZoneRoundTrip(void);
     void TestTimeRoundTrip(void);
+    void TestParse(void);
+    void TestISOFormat(void);
 };
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
