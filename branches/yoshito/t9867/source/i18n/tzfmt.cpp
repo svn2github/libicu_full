@@ -156,7 +156,7 @@ static UBool U_CALLCONV tzfmt_cleanup(void)
     gZoneIdTrieInitialized = FALSE;
 
     if (gShortZoneIdTrie != NULL) {
-        delete gZoneIdTrie;
+        delete gShortZoneIdTrie;
     }
     gShortZoneIdTrie = NULL;
     gShortZoneIdTrieInitialized = FALSE;
