@@ -1637,7 +1637,7 @@ TimeZoneFormat::parseOffsetLocalizedGMT(const UnicodeString& text, ParsePosition
 }
 
 int32_t
-TimeZoneFormat::parseOffsetLocalizedGMTPattern(const UnicodeString& text, int32_t start, UBool isShort, int32_t& parsedLen) const {
+TimeZoneFormat::parseOffsetLocalizedGMTPattern(const UnicodeString& text, int32_t start, UBool /*isShort*/, int32_t& parsedLen) const {
     int32_t idx = start;
     int32_t offset = 0;
     UBool parsed = FALSE;
@@ -1673,7 +1673,7 @@ TimeZoneFormat::parseOffsetLocalizedGMTPattern(const UnicodeString& text, int32_
 }
 
 int32_t
-TimeZoneFormat::parseOffsetFields(const UnicodeString& text, int32_t start, UBool isShort, int32_t& parsedLen) const {
+TimeZoneFormat::parseOffsetFields(const UnicodeString& text, int32_t start, UBool /*isShort*/, int32_t& parsedLen) const {
     int32_t outLen = 0;
     int32_t offset = 0;
     int32_t sign = 1;
@@ -2433,7 +2433,7 @@ UnicodeString&
 TimeZoneFormat::expandOffsetPattern(const UnicodeString& offsetHM, UnicodeString& result, UErrorCode& status) {
     result.setToBogus();
     if (U_FAILURE(status)) {
-        result;
+        return result;
     }
     U_ASSERT(u_strlen(DEFAULT_GMT_OFFSET_MINUTE_PATTERN) == 2);
 
@@ -2593,8 +2593,8 @@ public:
     const UChar* getID();
     int32_t getMatchLen();
 private:
-    const UChar* fID;
     int32_t fLen;
+    const UChar* fID;
 };
 
 ZoneIdMatchHandler::ZoneIdMatchHandler() 
@@ -2644,7 +2644,7 @@ TimeZoneFormat::parseZoneID(const UnicodeString& text, ParsePosition& pos, Unico
                 TextTrieMap* trie = new TextTrieMap(TRUE, NULL);    // No deleter, because values are pooled by ZoneMeta
                 if (trie) {
                     const UnicodeString *id;
-                    while (id = tzenum->snext(status)) {
+                    while ((id = tzenum->snext(status))) {
                         const UChar* uid = ZoneMeta::findTimeZoneID(*id);
                         if (uid) {
                             trie->put(uid, const_cast<UChar *>(uid), status);
@@ -2700,7 +2700,7 @@ TimeZoneFormat::parseShortZoneID(const UnicodeString& text, ParsePosition& pos, 
                     TextTrieMap* trie = new TextTrieMap(TRUE, NULL);    // No deleter, because values are pooled by ZoneMeta
                     if (trie) {
                         const UnicodeString *id;
-                        while (id = tzenum->snext(status)) {
+                        while ((id = tzenum->snext(status))) {
                             const UChar* uID = ZoneMeta::findTimeZoneID(*id);
                             const UChar* shortID = ZoneMeta::getShortID(*id);
                             if (shortID && uID) {

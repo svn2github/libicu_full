@@ -857,7 +857,7 @@ TimeZoneFormatTest::TestISOFormat(void) {
     }
     UDate d = Calendar::getNow();
 
-    for (int32_t i = 0; i < sizeof(OFFSET)/sizeof(OFFSET[0]); i++) {
+    for (uint32_t i = 0; i < sizeof(OFFSET)/sizeof(OFFSET[0]); i++) {
         SimpleTimeZone* tz = new SimpleTimeZone(OFFSET[i], UnicodeString("Zone Offset:") + OFFSET[i] + "ms");
         sdf->adoptTimeZone(tz);
         for (int32_t j = 0; PATTERN[j] != 0; j++) {
@@ -900,7 +900,7 @@ TimeZoneFormatTest::TestISOFormat(void) {
 
             sdf->parse(UnicodeString(ISO_STR[i][j]), *(outcal.getAlias()), pos);
 
-            if (pos.getIndex() != uprv_strlen(ISO_STR[i][j])) {
+            if (pos.getIndex() != (int32_t)uprv_strlen(ISO_STR[i][j])) {
                 errln((UnicodeString)"FAIL: Failed to parse the entire input string: " + ISO_STR[i][j]);
             }
 
