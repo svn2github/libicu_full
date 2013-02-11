@@ -139,7 +139,7 @@ IdentifierInfo &IdentifierInfo::setIdentifier(const UnicodeString &identifier, U
         // Store a representative character for each kind of decimal digit
         if (u_charType(cp) == U_DECIMAL_DIGIT_NUMBER) {
             // Just store the zero character as a representative for comparison. Unicode guarantees it is cp - value
-            fNumerics->add(cp - u_getNumericValue(cp));
+            fNumerics->add(cp - (UChar32)u_getNumericValue(cp));
         }
         UScriptCode extensions[500];
         int32_t extensionsCount = uscript_getScriptExtensions(cp, extensions, LENGTHOF(extensions), &status);

@@ -456,7 +456,7 @@
     <ClCompile Include="ucsdet.cpp">
       <Filter>charset detect</Filter>
     </ClCompile>
-    <ClCompile Include="identifer_info.cpp">
+    <ClCompile Include="identifier_info.cpp">
       <Filter>spoof</Filter>
     </ClCompile>
     <ClCompile Include="scriptset.cpp">
