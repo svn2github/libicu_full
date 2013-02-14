@@ -430,20 +430,16 @@ private:
 
 
     /**
-     * Check whether one field width is numeric while the other is string.
+     * Check if the field width for a paricular letter is special.
      *
-     * TODO (xji): make it general
-     *
-     * @param fieldWidth          one field width
-     * @param anotherFieldWidth   another field width
+     * @param fieldWidth          the field width
      * @param patternLetter       pattern letter char
-     * @return true if one field width is numeric and the other is string,
+     * @return true if field width is special,
      *         false otherwise.
      * @internal ICU 4.0
      */
-    static UBool U_EXPORT2 stringNumeric(int32_t fieldWidth,
-                                         int32_t anotherFieldWidth,
-                                         char patternLetter);
+    static UBool U_EXPORT2 specialCount(int32_t fieldWidth,
+                                        char patternLetter);
 
 
     /** 

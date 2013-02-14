@@ -401,17 +401,23 @@ DateIntervalInfo::parseSkeleton(const UnicodeString& skeleton,
 
 
 UBool 
-DateIntervalInfo::stringNumeric(int32_t fieldWidth, int32_t anotherFieldWidth,
-                                char patternLetter) {
-    if ( patternLetter == 'M' ) {
-        if ( (fieldWidth <= 2 && anotherFieldWidth > 2) ||
-             (fieldWidth > 2 && anotherFieldWidth <= 2 )) {
-            return true;
-        }
+DateIntervalInfo::specialCount(int32_t fieldWidth, char patternLetter) {
+    if ( patternLetter == 'M' && fieldWidth <= 2) {
+        return true;
+    }
+    if (patternLetter == 'y' && fieldWidth == 2) {
+        return true;
     }
     return false;
 }
 
+
+static int32_t distanceBetweenNonSpecialAndSpecial(char patternLetter) {
+    if (patternLetter == 'y') {
+        return 64;
+    }
+    return 256; // Default distance between special and non-special counts.
+}
 
 
 const UnicodeString* 
@@ -452,7 +458,6 @@ DateIntervalInfo::getBestSkeleton(const UnicodeString& skeleton,
     };
 
     const int32_t DIFFERENT_FIELD = 0x1000;
-    const int32_t STRING_NUMERIC_DIFFERENCE = 0x100;
     const int32_t BASE = 0x41;
     const UChar CHAR_V = 0x0076;
     const UChar CHAR_Z = 0x007A;
@@ -513,13 +518,16 @@ DateIntervalInfo::getBestSkeleton(const UnicodeString& skeleton,
             } else if ( fieldWidth == 0 ) {
                 fieldDifference = -1;
                 distance += DIFFERENT_FIELD;
-            } else if (stringNumeric(inputFieldWidth, fieldWidth, 
-                                     (char)(i+BASE) ) ) {
-                distance += STRING_NUMERIC_DIFFERENCE;
             } else {
-                distance += (inputFieldWidth > fieldWidth) ? 
+                char patternLetter = (char)(i+BASE);
+                if (specialCount(inputFieldWidth, patternLetter) !=
+                        specialCount(fieldWidth, patternLetter)) {
+                    distance += distanceBetweenNonSpecialAndSpecial(patternLetter);
+                } else {
+                    distance += (inputFieldWidth > fieldWidth) ? 
                             (inputFieldWidth - fieldWidth) : 
                             (fieldWidth - inputFieldWidth);
+                }
             }
         }
         if ( distance < bestDistance ) {
