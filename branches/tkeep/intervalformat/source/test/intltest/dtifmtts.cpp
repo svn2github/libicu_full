@@ -1177,8 +1177,8 @@ void DateIntervalFormatTest::testYearFormats() {
         errln("Failure encountered: %s", u_errorName(status));
         return;
     }
-    fromTime->set(2013, 3, 26);
-    toTime->set(2013, 3, 28);
+    fromTime->set(113, 3, 26);
+    toTime->set(113, 3, 28);
 
     {
         LocalPointer<DateIntervalFormat> dif(DateIntervalFormat::createInstance("yyyyMd", enLocale, status));
@@ -1188,7 +1188,7 @@ void DateIntervalFormatTest::testYearFormats() {
         }
         dif->setDateIntervalInfo(*dii, status);
         UnicodeString actual;
-        UnicodeString expected(ctou("4/26/2013 \\u2013 4/28/2013"));
+        UnicodeString expected(ctou("4/26/113 \\u2013 4/28/113"));
         FieldPosition pos = 0;
         dif->format(*fromTime, *toTime, actual, pos, status);
         if (U_FAILURE(status)) {
