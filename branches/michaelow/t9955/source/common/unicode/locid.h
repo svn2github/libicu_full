@@ -450,7 +450,6 @@ public:
      */
     int32_t getKeywordValue(const char* keywordName, char *buffer, int32_t bufferCapacity, UErrorCode &status) const;
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Sets the value for a keyword.
      *
@@ -460,10 +459,9 @@ public:
      *  that keyword does not exist.
      * @param status Returns any error information while performing this operation.
      *
-     * @draft ICU 49
+     * @stable ICU 49
      */
     void setKeywordValue(const char* keywordName, const char* keywordValue, UErrorCode &status);
-#endif  /* U_HIDE_DRAFT_API */
 
     /**
      * returns the locale's three-letter language code, as specified

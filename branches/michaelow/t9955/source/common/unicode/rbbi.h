@@ -654,7 +654,7 @@ public:
      * @param status     Receives errors detected by this function.
      * @return           *this
      *
-     * @draft ICU 49
+     * @stable ICU 49
      */
     virtual RuleBasedBreakIterator &refreshInputText(UText *input, UErrorCode &status);
 
