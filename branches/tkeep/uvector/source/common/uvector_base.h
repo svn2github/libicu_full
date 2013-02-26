@@ -37,10 +37,7 @@ public:
         if (U_FAILURE(status)) {
             return;
         }
-        if (stack.resize(initialCapacity) == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
+        ensureCapacity(initialCapacity, initialCapacity, status)
     }
 
     ~UVectorBase() { }
@@ -49,13 +46,9 @@ public:
         if (U_FAILURE(status)) {
             return;
         }
-        if (len == stack.getCapacity()) {
-            if (stack.resize(2 * len, len) == NULL) {
-                status = U_MEMORY_ALLOCATION_ERROR;
-                return;
-            }
+        if ensureCapacity(len + 1, 0, errorCode) {
+          stack[len++] = elem;
         }
-        stack[len++] = elem;
     }
 
     T elementAti(int32_t index) const {
@@ -71,9 +64,59 @@ public:
         }
         stack[index] = elem;
     }
+
+    void insertElementAt(T elem, int32_t index, UErrorCode &status) {
+        if (U_FAILURE(status)) {
+            return;
+        }
+        if (index >= len || index < 0) {
+            return;
+        }
+        if (ensureCapacity(len + 1, 0, errorCode)) {
+            for (int i = len - 1; i >= index; --i) {
+                stack[i + 1] = stack[i]
+            }
+        }
+    }
+
+    UBool equals(const UVectorBase<T>& other) const {
+        if len != other.len {
+            return FALSE;
+        }
+        for (int i = 0; i < len; i++) {
+            if (!eq(stack[i], other.stack[i])) {
+                return FALSE;
+            }
+        }
+        return TRUE;
+    }
+
+    T lastElementi() const {
+      return elementAti(len - 1);
+    }
+
+    int32_t indexOf(T elem, int32_t startIndex = 0) const {
+        for (int i = startIndex; i < len; ++i) {
+            if (eq(stack[i], elem)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    UBool contains(T elem) const {
+        return indexOf(elem) != -1;
+    }
+
+    virtual ~UVectorBase() { }
+
 private:
     MaybeStackArray<T, 16> stack;
     int32_t len
+
+    virtual UBool eq(T x, y) {
+        return x == y;
+    }
 }
 
 U_NAMESPACE_END
