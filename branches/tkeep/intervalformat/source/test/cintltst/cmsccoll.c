@@ -653,6 +653,7 @@ static void testCollator(UCollator *coll, UErrorCode *status) {
       }
     }
     uprv_free(src.source);
+    uprv_free(src.reorderCodes);
   }
 }
 
@@ -1000,6 +1001,7 @@ static void testAgainstUCA(UCollator *coll, UCollator *UCA, const char *refName,
       log_verbose("No immediate difference with Win32!\n");
     }
     uprv_free(src.source);
+    uprv_free(src.reorderCodes);
   }
 }
 
@@ -1287,6 +1289,7 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
             lastContCE = currContCE & 0xFFFFFFBF;
         }
         uprv_free(src.source);
+        uprv_free(src.reorderCodes);
     }
     ucol_close(UCA);
     uprv_delete_collIterate(c);
@@ -1398,7 +1401,10 @@ static void RamsRulesTest(void) {
                 continue;
             }
             if (uprv_strcmp("bn", locName)==0 ||
+                uprv_strcmp("bs", locName)==0 ||            /* Add due to import per cldrbug 5647 */
+                uprv_strcmp("bs_Cyrl", locName)==0 ||       /* Add due to import per cldrbug 5647 */
                 uprv_strcmp("en_US_POSIX", locName)==0 ||
+                uprv_strcmp("fa_AF", locName)==0 ||         /* Add due to import per cldrbug 5647 */
                 uprv_strcmp("he", locName)==0 ||            /* Add due to new tailoring of \u05F3 vs \u0027 per cldrbug 5576 */
                 uprv_strcmp("he_IL", locName)==0 ||         /* Add due to new tailoring of \u05F3 vs \u0027 per cldrbug 5576 */
                 uprv_strcmp("km", locName)==0 ||
@@ -1406,6 +1412,7 @@ static void RamsRulesTest(void) {
                 uprv_strcmp("my", locName)==0 ||
                 uprv_strcmp("si", locName)==0 ||
                 uprv_strcmp("si_LK", locName)==0 ||
+                uprv_strcmp("sr_Latn", locName)==0 ||       /* Add due to import per cldrbug 5647 */
                 uprv_strcmp("th", locName)==0 ||
                 uprv_strcmp("th_TH", locName)==0 ||
                 uprv_strcmp("zh", locName)==0 ||

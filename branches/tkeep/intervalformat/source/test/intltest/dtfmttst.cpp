@@ -3665,7 +3665,7 @@ void DateFormatTest::TestNumberAsStringParsing()
     const NumAsStringItem * itemPtr;
     for (itemPtr = items; itemPtr->localeStr != NULL; itemPtr++ ) {
         if (!isICUVersionAtLeast(51, 0, 2) && itemPtr->localeStr[0] == 0 && itemPtr->lenient == FALSE) {
-            continue; // Need to investigate this, noted in #9925 
+            continue; // Time-bomb added per #9925, fix per #9975
         }
         Locale locale = Locale::createFromName(itemPtr->localeStr);
         UErrorCode status = U_ZERO_ERROR;
@@ -3908,6 +3908,14 @@ void DateFormatTest::TestMonthPatterns()
                                                             CharsToUnicodeString("2 s\\u00ECyu\\u00E8bis ren-chen"),
                                                             CharsToUnicodeString("2 w\\u01D4yu\\u00E8 ren-chen") } },
         { "fr@calendar=chinese",      DateFormat::kShort, { UnicodeString("2/4/29"),        UnicodeString("2/4bis/29"),             UnicodeString("2/5/29") } },
+        { "en@calendar=dangi",        DateFormat::kLong,  { UnicodeString("Month3bis 2, 29"), UnicodeString("Month4 2, 29"),      UnicodeString("Month5 1, 29") } },
+        { "en@calendar=dangi",        DateFormat::kShort, { UnicodeString("3bis/2/29"),        UnicodeString("4/2/29"),             UnicodeString("5/1/29") } },
+        { "ko@calendar=dangi",        DateFormat::kLong,  { CharsToUnicodeString("\\uC784\\uC9C4\\uB144 3bis\\uC6D4 2\\uC77C"),
+                                                            CharsToUnicodeString("\\uC784\\uC9C4\\uB144 4\\uC6D4 2\\uC77C"),
+                                                            CharsToUnicodeString("\\uC784\\uC9C4\\uB144 5\\uC6D4 1\\uC77C") } },
+        { "ko@calendar=dangi",        DateFormat::kShort, { CharsToUnicodeString("29. 3bis. 2."),
+                                                            CharsToUnicodeString("29. 4. 2."),
+                                                            CharsToUnicodeString("29. 5. 1.") } },
         // terminator
         { NULL,                       0,                  { UnicodeString(""), UnicodeString(""), UnicodeString("") } }
     };

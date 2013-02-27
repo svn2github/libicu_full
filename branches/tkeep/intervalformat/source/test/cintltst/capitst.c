@@ -772,11 +772,10 @@ void TestSafeClone() {
             || someClonedCollators[idx] < (UCollator *)buffer[idx]
             || someClonedCollators[idx] > (UCollator *)(buffer[idx]+(U_COL_SAFECLONE_BUFFERSIZE-1)))
         {
-            /* TODO: resolves this per #9926; U_COL_SAFECLONE_BUFFERSIZE may be too small. */
-            /* For now we turn this into a log message (log_verbose) instead of an error (log_err) */
-            log_verbose("FAIL: Cloned collator didn't use provided buffer, index %d, status %s, clone NULL? %d\n",
-                                                    idx, myErrorName(err), someClonedCollators[idx] == NULL);
-            return;
+            /* TODO: The use of U_COL_SAFECLONE_BUFFERSIZE will be deprecated per #9932.
+               In the meantime, just turn the following former error into a log message. */
+            log_verbose("NOTE: Cloned collator did not use provided buffer, index %d, status %s, clone NULL? %d\n",
+                                                        idx, myErrorName(err), someClonedCollators[idx] == NULL);
         }
         if (!ucol_equals(someClonedCollators[idx], someCollators[idx])) {
             log_err("FAIL: Cloned collator is not equal to original at index = %d.\n", idx);
@@ -1401,7 +1400,7 @@ void TestGetLocale() {
     const char* actualLocale;
   } testStruct[] = {
     { "sr_RS", "sr_Cyrl_RS", "sr" },
-    { "sh_YU", "sr_Latn_RS", "hr" }, /* this used to be sh, but now sh collation aliases hr */
+    { "sh_YU", "sr_Latn_RS", "sr_Latn" }, /* was sh, then aliased to hr, now sr_Latn via import per cldrbug 5647: */
     { "en_BE_FOO", "en_BE", "root" },
     { "de_DE_NONEXISTANT", "de_DE", "de" }
   };
