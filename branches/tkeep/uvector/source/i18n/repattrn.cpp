@@ -115,7 +115,7 @@ RegexPattern &RegexPattern::operator = (const RegexPattern &other) {
         if (U_FAILURE(fDeferredStatus)) {
             return *this;
         }
-        UnicodeSet *sourceSet = (UnicodeSet *)other.fSets->elementAt(i);
+        UnicodeSet *sourceSet = (UnicodeSet *)other.fSets->elementAti(i);
         UnicodeSet *newSet    = new UnicodeSet(*sourceSet);
         if (newSet == NULL) {
             fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
@@ -174,7 +174,7 @@ void RegexPattern::init() {
     }
 
     // Slot zero of the vector of sets is reserved.  Fill it here.
-    fSets->addElement((int32_t)0, fDeferredStatus);
+    fSets->addElement((void *) NULL, fDeferredStatus);
 }
 
 

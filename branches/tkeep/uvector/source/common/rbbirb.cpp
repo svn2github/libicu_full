@@ -32,6 +32,7 @@
 #include "rbbisetb.h"
 #include "rbbitblb.h"
 #include "rbbidata.h"
+#include "uvectr32.h"
 
 
 U_NAMESPACE_BEGIN
@@ -81,7 +82,7 @@ RBBIRuleBuilder::RBBIRuleBuilder(const UnicodeString   &rules,
     }
 
     fUSetNodes          = new UVector(status); // bcos status gets overwritten here
-    fRuleStatusVals     = new UVector(status);
+    fRuleStatusVals     = new UVector32(status);
     fScanner            = new RBBIRuleScanner(this);
     fSetBuilder         = new RBBISetBuilder(this);
     if (U_FAILURE(status)) {

@@ -31,6 +31,7 @@ struct              RBBIRuleTableEl;
 class               RBBISetBuilder;
 class               RBBINode;
 class               RBBITableBuilder;
+class               UVector32;
 
 
 
@@ -153,7 +154,7 @@ public:
     RBBITableBuilder              *fSafeFwdTables;
     RBBITableBuilder              *fSafeRevTables;
 
-    UVector                       *fRuleStatusVals;  // The values that can be returned
+    UVector32                       *fRuleStatusVals;  // The values that can be returned
                                                      //   from getRuleStatus().
 
     RBBIDataHeader                *flattenData();    // Create the flattened (runtime format)

@@ -170,11 +170,11 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
 class BITestData {
 public:
     UnicodeString    fDataToBreak;
-    UVector          fExpectedBreakPositions;
-    UVector          fExpectedTags;
-    UVector          fLineNum;
-    UVector          fActualBreakPositions;   // Test Results.
-    UVector          fActualTags;
+    UVector32        fExpectedBreakPositions;
+    UVector32        fExpectedTags;
+    UVector32        fLineNum;
+    UVector32        fActualBreakPositions;   // Test Results.
+    UVector32        fActualTags;
 
     BITestData(UErrorCode &status);
     void             addDataChunk(const char *data, int32_t tag, int32_t lineNum, UErrorCode status);
@@ -254,7 +254,7 @@ void BITestData::checkResults(const char *heading, RBBITest *test) {
 
         if (fActualTags.elementAti(actualIndex) != fExpectedTags.elementAti(expectedIndex)) {
             test->errln("%s, tag mismatch.  Test Line = %d, expected tag=%d, got %d",
-                heading, fLineNum.elementAt(expectedIndex),
+                heading, fLineNum.elementAti(expectedIndex),
                 fExpectedTags.elementAti(expectedIndex), fActualTags.elementAti(actualIndex));
         }
 

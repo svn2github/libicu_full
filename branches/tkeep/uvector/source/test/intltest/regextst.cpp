@@ -29,7 +29,7 @@
 #include "unicode/uniset.h"
 #include "unicode/ustring.h"
 #include "regextst.h"
-#include "uvector.h"
+#include "uvectr32.h"
 #include "util.h"
 #include <stdlib.h>
 #include <string.h>
@@ -3234,10 +3234,10 @@ void RegexTest::Extended() {
 //---------------------------------------------------------------------------
 
 
-//  Set a value into a UVector at position specified by a decimal number in
+//  Set a value into a UVector32 at position specified by a decimal number in
 //   a UnicodeString.   This is a utility function needed by the actual test function,
 //   which follows.
-static void set(UVector &vec, int32_t val, UnicodeString index) {
+static void set(UVector32 &vec, int32_t val, UnicodeString index) {
     UErrorCode  status=U_ZERO_ERROR;
     int32_t  idx = 0;
     for (int32_t i=0; i<index.length(); i++) {
@@ -3249,7 +3249,7 @@ static void set(UVector &vec, int32_t val, UnicodeString index) {
     vec.setElementAt(val, idx);
 }
 
-static void setInt(UVector &vec, int32_t val, int32_t idx) {
+static void setInt(UVector32 &vec, int32_t val, int32_t idx) {
     UErrorCode  status=U_ZERO_ERROR;
     while (vec.size()<idx+1) {vec.addElement(-1, status);}
     vec.setElementAt(val, idx);
@@ -3294,10 +3294,10 @@ void RegexTest::regex_find(const UnicodeString &pattern,
     RegexMatcher        *parseMatcher  = NULL;
     RegexPattern        *callerPattern = NULL, *UTF8Pattern = NULL;
     RegexMatcher        *matcher       = NULL, *UTF8Matcher = NULL;
-    UVector             groupStarts(status);
-    UVector             groupEnds(status);
-    UVector             groupStartsUTF8(status);
-    UVector             groupEndsUTF8(status);
+    UVector32           groupStarts(status);
+    UVector32           groupEnds(status);
+    UVector32           groupStartsUTF8(status);
+    UVector32           groupEndsUTF8(status);
     UBool               isMatch        = FALSE, isUTF8Match = FALSE;
     UBool               failed         = FALSE;
     int32_t             numFinds;

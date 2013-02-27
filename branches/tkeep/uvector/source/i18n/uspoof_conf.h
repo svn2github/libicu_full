@@ -27,6 +27,8 @@
 
 U_NAMESPACE_BEGIN
 
+class UVector32;
+
 // SPUString
 //              Holds a string that is the result of one of the mappings defined
 //              by the confusable mapping data (confusables.txt from Unicode.org)
@@ -92,10 +94,10 @@ class ConfusabledataBuilder : public UMemory {
 
     // The binary data is first assembled into the following four collections, then
     //   copied to its final raw-memory destination.
-    UVector            *fKeyVec;
-    UVector            *fValueVec;
+    UVector32          *fKeyVec;
+    UVector32          *fValueVec;
     UnicodeString      *fStringTable;
-    UVector            *fStringLengthsTable;
+    UVector32          *fStringLengthsTable;
     
     SPUStringPool      *stringPool;
     URegularExpression *fParseLine;

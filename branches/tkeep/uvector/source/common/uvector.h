@@ -124,7 +124,6 @@ public:
 
     void addElement(void* obj, UErrorCode &status);
 
-    void addElement(int32_t elem, UErrorCode &status);
 
     void setElementAt(void* obj, int32_t index);
 
@@ -261,6 +260,7 @@ public:
     virtual UClassID getDynamicClassID() const;
 
 private:
+
     void _init(int32_t initialCapacity, UErrorCode &status);
 
     int32_t indexOf(UElement key, int32_t startIndex = 0, int8_t hint = 0) const;
@@ -272,6 +272,9 @@ private:
 
     // Disallow
     UVector& operator=(const UVector&);
+
+protected:
+    void addElement(int32_t elem, UErrorCode &status);
 
 };
 

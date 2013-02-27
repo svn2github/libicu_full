@@ -31,6 +31,7 @@
 #include "uassert.h"
 #include "uarrsort.h"
 #include "uspoof_conf.h"
+#include "uvectr32.h"
 
 U_NAMESPACE_USE
 
@@ -165,8 +166,8 @@ ConfusabledataBuilder::ConfusabledataBuilder(SpoofImpl *spImpl, UErrorCode &stat
     fMLTable    = uhash_open(uhash_hashLong, uhash_compareLong, NULL, &status);
     fMATable    = uhash_open(uhash_hashLong, uhash_compareLong, NULL, &status);
     fKeySet     = new UnicodeSet();
-    fKeyVec     = new UVector(status);
-    fValueVec   = new UVector(status);
+    fKeyVec     = new UVector32(status);
+    fValueVec   = new UVector32(status);
     stringPool = new SPUStringPool(status);
 }
 
@@ -323,7 +324,7 @@ void ConfusabledataBuilder::build(const char * confusables, int32_t confusablesL
     // (Strings in the table are sorted by length)
     stringPool->sort(status);
     fStringTable = new UnicodeString();
-    fStringLengthsTable = new UVector(status);
+    fStringLengthsTable = new UVector32(status);
     int32_t previousStringLength = 0;
     int32_t previousStringIndex  = 0;
     int32_t poolSize = stringPool->size();

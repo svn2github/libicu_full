@@ -21,6 +21,7 @@
 #include "cstring.h"
 #include "uassert.h"
 #include "cmemory.h"
+#include "uvectr32.h"
 
 U_NAMESPACE_BEGIN
 
