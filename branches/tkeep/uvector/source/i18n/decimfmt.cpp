@@ -71,6 +71,15 @@
 #include "decfmtst.h"
 #include "dcfmtimp.h"
 
+/*
+ * On certain platforms, round is a macro defined in math.h
+ * This undefine is to avoid conflict between the macro and
+ * the function defined below.
+ */
+#ifdef round
+#undef round
+#endif
+
 U_NAMESPACE_BEGIN
 
 
@@ -1910,7 +1919,7 @@ CurrencyAmount* DecimalFormat::parseCurrency(const UnicodeString& text,
                                              ParsePosition& pos) const {
     Formattable parseResult;
     int32_t start = pos.getIndex();
-    UChar curbuf[4];
+    UChar curbuf[4] = {};
     parse(text, parseResult, pos, curbuf);
     if (pos.getIndex() != start) {
         UErrorCode ec = U_ZERO_ERROR;

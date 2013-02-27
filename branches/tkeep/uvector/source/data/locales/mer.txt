@@ -22,13 +22,9 @@ mer{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "RŨ",
-                "ŨG",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -67,49 +63,6 @@ mer{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "KIU",
-                        "MRA",
-                        "WAI",
-                        "WET",
-                        "WEN",
-                        "WTN",
-                        "JUM",
-                    }
-                    wide{
-                        "Kiumia",
-                        "Muramuko",
-                        "Wairi",
-                        "Wethatu",
-                        "Wena",
-                        "Wetano",
-                        "Jumamosi",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "K",
-                        "M",
-                        "W",
-                        "W",
-                        "W",
-                        "W",
-                        "J",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    wide{
-                        "Ĩmwe kĩrĩ inya",
-                        "Ijĩrĩ kĩrĩ inya",
-                        "Ithatũ kĩrĩ inya",
-                        "Inya kĩrĩ inya",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -124,7 +77,7 @@ mer{
                 "EEEE, d MMMM y",
                 "d MMMM y",
                 "d MMM y",
-                "dd/MM/yyyy",
+                "dd/MM/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

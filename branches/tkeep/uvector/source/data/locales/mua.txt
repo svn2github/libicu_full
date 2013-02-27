@@ -29,13 +29,9 @@ mua{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "comme",
-                "lilli",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -75,55 +71,6 @@ mua{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Cya",
-                        "Cla",
-                        "Czi",
-                        "Cko",
-                        "Cka",
-                        "Cga",
-                        "Cze",
-                    }
-                    wide{
-                        "Com'yakke",
-                        "Comlaaɗii",
-                        "Comzyiiɗii",
-                        "Comkolle",
-                        "Comkaldǝɓlii",
-                        "Comgaisuu",
-                        "Comzyeɓsuu",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "Y",
-                        "L",
-                        "Z",
-                        "O",
-                        "A",
-                        "G",
-                        "E",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "F1",
-                        "F2",
-                        "F3",
-                        "F4",
-                    }
-                    wide{
-                        "Tai fĩi sai ma tǝn kee zah",
-                        "Tai fĩi sai zah lǝn gwa ma kee",
-                        "Tai fĩi sai zah lǝn sai ma kee",
-                        "Tai fĩi sai ma coo kee zah 'na",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -138,7 +85,7 @@ mua{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

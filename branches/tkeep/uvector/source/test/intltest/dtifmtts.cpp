@@ -25,6 +25,7 @@
 #include "unicode/dtintrv.h"
 #include "unicode/dtitvinf.h"
 #include "unicode/dtitvfmt.h"
+#include "unicode/localpointer.h"
 #include "unicode/timezone.h"
 
 
@@ -138,36 +139,57 @@ void DateIntervalFormatTest::testAPI() {
         dataerrln("ERROR: getDateIntervalInfo/setDateIntervalInfo failed");
     }
 
-    // We make sure that setDateIntervalInfo does not corrupt the cache. See ticket 9919.
-    status = U_ZERO_ERROR;
-    logln("Testing DateIntervalFormat setDateIntervalInfo");
-    const Locale &enLocale = Locale::getEnglish();
-    DateIntervalFormat* dif = DateIntervalFormat::createInstance("yMd", enLocale, status);
-    UnicodeString expected;
-    Calendar *fromTime = Calendar::createInstance(enLocale, status);
-    Calendar *toTime = Calendar::createInstance(enLocale, status);
-    FieldPosition pos = 0;
-    fromTime->set(2013, 3, 26);
-    toTime->set(2013, 3, 28);
-    dif->format(*fromTime, *toTime, expected, pos, status);
-    DateIntervalInfo* dii = new DateIntervalInfo(Locale::getEnglish(), status);
-    dii->setIntervalPattern(ctou("yMd"), UCAL_DATE, ctou("M/d/y \\u2013 d"), status);
-    dif->setDateIntervalInfo(*dii, status);
-    delete dii;
-    delete dif;
-    dif = DateIntervalFormat::createInstance("yMd", enLocale, status);
-    UnicodeString actual;
-    pos = 0;
-    dif->format(*fromTime, *toTime, actual, pos, status);
-    delete dif;
-    delete fromTime;
-    delete toTime;
-    if (U_FAILURE(status)) {
-        errln("Failure encountered: %s", u_errorName(status));
-        return;
-    }
-    if (expected != actual) {
-        errln("DateIntervalFormat.setIntervalInfo should have no side effects.");
+    {
+        // We make sure that setDateIntervalInfo does not corrupt the cache. See ticket 9919.
+        status = U_ZERO_ERROR;
+        logln("Testing DateIntervalFormat setDateIntervalInfo");
+        const Locale &enLocale = Locale::getEnglish();
+        LocalPointer<DateIntervalFormat> dif(DateIntervalFormat::createInstance("yMd", enLocale, status));
+        if (U_FAILURE(status)) {
+            errln("Failure encountered: %s", u_errorName(status));
+            return;
+        }
+        UnicodeString expected;
+        LocalPointer<Calendar> fromTime(Calendar::createInstance(enLocale, status));
+        LocalPointer<Calendar> toTime(Calendar::createInstance(enLocale, status));
+        if (U_FAILURE(status)) {
+            errln("Failure encountered: %s", u_errorName(status));
+            return;
+        }
+        FieldPosition pos = 0;
+        fromTime->set(2013, 3, 26);
+        toTime->set(2013, 3, 28);
+        dif->format(*fromTime, *toTime, expected, pos, status);
+        if (U_FAILURE(status)) {
+            errln("Failure encountered: %s", u_errorName(status));
+            return;
+        }
+        LocalPointer<DateIntervalInfo> dii(new DateIntervalInfo(Locale::getEnglish(), status));
+        if (U_FAILURE(status)) {
+            errln("Failure encountered: %s", u_errorName(status));
+            return;
+        }
+        dii->setIntervalPattern(ctou("yMd"), UCAL_DATE, ctou("M/d/y \\u2013 d"), status);
+        dif->setDateIntervalInfo(*dii, status);
+        if (U_FAILURE(status)) {
+            errln("Failure encountered: %s", u_errorName(status));
+            return;
+        }
+        dif.adoptInstead(DateIntervalFormat::createInstance("yMd", enLocale, status));
+        if (U_FAILURE(status)) {
+            errln("Failure encountered: %s", u_errorName(status));
+            return;
+        }
+        UnicodeString actual;
+        pos = 0;
+        dif->format(*fromTime, *toTime, actual, pos, status);
+        if (U_FAILURE(status)) {
+            errln("Failure encountered: %s", u_errorName(status));
+            return;
+        }
+        if (expected != actual) {
+            errln("DateIntervalFormat.setIntervalInfo should have no side effects.");
+        }
     }
     
     /*
@@ -251,7 +273,7 @@ void DateIntervalFormatTest::testAPI() {
     Formattable formattable;
     formattable.setInt64(10);
     UnicodeString res;
-    pos = 0;
+    FieldPosition pos = 0;
     status = U_ZERO_ERROR;
     dtitvfmt->format(formattable, res, pos, status);
     if ( status != U_ILLEGAL_ARGUMENT_ERROR ) {
@@ -307,8 +329,8 @@ void DateIntervalFormatTest::testAPI() {
         DateInterval * dtitv12 = new DateInterval(date1, date2);
         TimeZone * tzCalif = TimeZone::createTimeZone("US/Pacific");
         TimeZone * tzTokyo = TimeZone::createTimeZone("Asia/Tokyo");
-        UnicodeString fmtCalif = UnicodeString(ctou("Mar 2, 10:30 \\u2013 Mar 2, 17:30"));
-        UnicodeString fmtTokyo = UnicodeString(ctou("Mar 3, 03:30 \\u2013 Mar 3, 10:30"));
+        UnicodeString fmtCalif = UnicodeString(ctou("Mar 2, 10:30\\u201317:30"));
+        UnicodeString fmtTokyo = UnicodeString(ctou("Mar 3, 03:30\\u201310:30"));
 
         dtitvfmt->adoptTimeZone(tzCalif);
         res.remove();
@@ -416,23 +438,23 @@ void DateIntervalFormatTest::testFormat() {
         
         "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdMMM", "Wed, Oct 10, 2007 \\u2013 Fri, Oct 10, 2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdMy", "Wed, 10/10/07 \\u2013 Fri, 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdMy", "Wed, 10/10/2007 \\u2013 Fri, 10/10/2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "dMy", "10/10/07 \\u2013 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "dMy", "10/10/2007 \\u2013 10/10/2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "dM", "10/10/07 \\u2013 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "dM", "10/10/2007 \\u2013 10/10/2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "My", "10/07 \\u2013 10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "My", "10/2007 \\u2013 10/2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdM", "Wed, 10/10/07 \\u2013 Fri, 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdM", "Wed, 10/10/2007 \\u2013 Fri, 10/10/2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "d", "10/10/07 \\u2013 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "d", "10/10/2007 \\u2013 10/10/2008", 
         
         "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "Ed", "10 Wed \\u2013 10 Fri", 
         
         "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "y", "2007\\u20132008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "M", "10/07 \\u2013 10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "M", "10/2007 \\u2013 10/2008", 
         
         
         
@@ -450,9 +472,9 @@ void DateIntervalFormatTest::testFormat() {
         
         "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "hz", "10/10/2007, 10 AM PDT \\u2013 10/10/2008, 10 AM PDT", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EEddMMyyyy", "Wed, 10/10/07 \\u2013 Fri, 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EEddMMyyyy", "Wed, 10/10/2007 \\u2013 Fri, 10/10/2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EddMMy", "Wed, 10/10/07 \\u2013 Fri, 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EddMMy", "Wed, 10/10/2007 \\u2013 Fri, 10/10/2008", 
         
         "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "hhmm", "10/10/2007, 10:10 AM \\u2013 10/10/2008, 10:10 AM", 
         
@@ -462,7 +484,7 @@ void DateIntervalFormatTest::testFormat() {
         
         "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "dMMMMMy", "O 10, 2007 \\u2013 O 10, 2008", 
         
-        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EEEEEdM", "W, 10/10/07 \\u2013 F, 10/10/08", 
+        "en", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EEEEEdM", "W, 10/10/2007 \\u2013 F, 10/10/2008", 
         
         "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EEEEdMMMMy", "Wednesday, October 10 \\u2013 Saturday, November 10, 2007", 
         
@@ -484,12 +506,12 @@ void DateIntervalFormatTest::testFormat() {
         
         "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EdMMM", "Wed, Oct 10 \\u2013 Sat, Nov 10", 
         
-        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EdMy", "Wed, 10/10/07 \\u2013 Sat, 11/10/07", 
+        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EdMy", "Wed, 10/10/2007 \\u2013 Sat, 11/10/2007", 
         
-        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "dMy", "10/10/07 \\u2013 11/10/07", 
+        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "dMy", "10/10/2007 \\u2013 11/10/2007", 
         
         
-        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "My", "10/07 \\u2013 11/07", 
+        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "My", "10/2007 \\u2013 11/2007", 
         
         "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EdM", "Wed, 10/10 \\u2013 Sat, 11/10", 
         
@@ -519,9 +541,9 @@ void DateIntervalFormatTest::testFormat() {
         
         "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "hz", "10/10/2007, 10 AM PDT \\u2013 11/10/2007, 10 AM PST", 
         
-        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EEddMMyyyy", "Wed, 10/10/07 \\u2013 Sat, 11/10/07", 
+        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EEddMMyyyy", "Wed, 10/10/2007 \\u2013 Sat, 11/10/2007", 
         
-        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EddMMy", "Wed, 10/10/07 \\u2013 Sat, 11/10/07", 
+        "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "EddMMy", "Wed, 10/10/2007 \\u2013 Sat, 11/10/2007", 
         
         
         "en", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "hhmmzz", "10/10/2007, 10:10 AM PDT \\u2013 11/10/2007, 10:10 AM PST", 
@@ -551,9 +573,9 @@ void DateIntervalFormatTest::testFormat() {
         
         "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EdMMM", "Sat, Nov 10 \\u2013 Tue, Nov 20", 
         
-        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EdMy", "Sat, 11/10/07 \\u2013 Tue, 11/20/07", 
+        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EdMy", "Sat, 11/10/2007 \\u2013 Tue, 11/20/2007", 
         
-        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "dMy", "11/10/07 \\u2013 11/20/07", 
+        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "dMy", "11/10/2007 \\u2013 11/20/2007", 
         
         "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "dM", "11/10 \\u2013 11/20", 
         
@@ -587,9 +609,9 @@ void DateIntervalFormatTest::testFormat() {
         
         "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "hz", "11/10/2007, 10 AM PST \\u2013 11/20/2007, 10 AM PST", 
         
-        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EEddMMyyyy", "Sat, 11/10/07 \\u2013 Tue, 11/20/07", 
+        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EEddMMyyyy", "Sat, 11/10/2007 \\u2013 Tue, 11/20/2007", 
         
-        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EddMMy", "Sat, 11/10/07 \\u2013 Tue, 11/20/07", 
+        "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EddMMy", "Sat, 11/10/2007 \\u2013 Tue, 11/20/2007", 
         
         "en", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "hhmm", "11/10/2007, 10:10 AM \\u2013 11/20/2007, 10:10 AM", 
         
@@ -645,14 +667,14 @@ void DateIntervalFormatTest::testFormat() {
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "MMMM", "January", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "hm", "10:00 AM \\u2013 2:10 PM", 
-        "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "Hm", "10:00 \\u2013 14:10", 
+        "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "Hm", "10:00\\u201314:10", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "hmv", "10:00 AM \\u2013 2:10 PM PT", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "hmz", "10:00 AM \\u2013 2:10 PM PST", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "h", "10 AM \\u2013 2 PM", 
-        "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "H", "10 \\u2013 14", 
+        "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "H", "10\\u201314", 
         
         
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "hz", "10 AM \\u2013 2 PM PST", 
@@ -662,7 +684,7 @@ void DateIntervalFormatTest::testFormat() {
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "EddMMy", "Wed, 01/10/2007", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "hhmm", "10:00 AM \\u2013 2:10 PM", 
-        "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "HHmm", "10:00 \\u2013 14:10", 
+        "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "HHmm", "10:00\\u201314:10", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 14:10:10", "hhmmzz", "10:00 AM \\u2013 2:10 PM PST", 
         
@@ -708,7 +730,7 @@ void DateIntervalFormatTest::testFormat() {
         
         
         "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hm", "10:00\\u201310:20 AM", 
-        "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "Hm", "10:00 \\u2013 10:20", 
+        "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "Hm", "10:00\\u201310:20", 
         
         
         "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hmz", "10:00\\u201310:20 AM PST", 
@@ -721,7 +743,7 @@ void DateIntervalFormatTest::testFormat() {
         "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "EddMMy", "Wed, 01/10/2007", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hhmm", "10:00\\u201310:20 AM", 
-        "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "HHmm", "10:00 \\u2013 10:20", 
+        "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "HHmm", "10:00\\u201310:20", 
         
         "en", "2007 01 10 10:00:10", "2007 01 10 10:20:10", "hhmmzz", "10:00\\u201310:20 AM PST", 
         
@@ -810,7 +832,7 @@ void DateIntervalFormatTest::testFormat() {
         "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EEEEdMMMM", "11\\u670810\\u65e5\\u661f\\u671f\\u516d\\u81f320\\u65e5\\u661f\\u671f\\u4e8c", 
         
         
-        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EdMy", "07/11/10\\u5468\\u516d\\u81f307/11/20\\u5468\\u4e8c", 
+        "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EdMy", "2007/11/10\\u5468\\u516d\\u81f32007/11/20\\u5468\\u4e8c", 
         
         
         "zh", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "dM", "11/10 \\u2013 11/20", 
@@ -860,19 +882,19 @@ void DateIntervalFormatTest::testFormat() {
         "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "MMMy", "Okt. 2007 - Okt. 2008", 
         
         
-        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdMy", "Mi., 10.10.07 - Fr., 10.10.08", 
+        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdMy", "Mi., 10.10.2007 - Fr., 10.10.2008", 
         
-        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "dMy", "10.10.07 - 10.10.08", 
+        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "dMy", "10.10.2007 - 10.10.2008", 
         
         
-        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "My", "10.07 - 10.08", 
+        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "My", "10.2007 - 10.2008", 
         
-        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdM", "Mi., 10.10.07 - Fr., 10.10.08", 
+        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "EdM", "Mi., 10.10.2007 - Fr., 10.10.2008", 
         
         
         "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "y", "2007-2008", 
         
-        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "M", "10.07 - 10.08", 
+        "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "M", "10.2007 - 10.2008", 
         
         
         "de", "2007 10 10 10:10:10", "2008 10 10 10:10:10", "hm", "10.10.2007 10:10 vorm. - 10.10.2008 10:10 vorm.", 
@@ -890,7 +912,7 @@ void DateIntervalFormatTest::testFormat() {
         
         "de", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "dM", "10.10. - 10.11.", 
         
-        "de", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "My", "10.07 - 11.07", 
+        "de", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "My", "10.2007 - 11.2007", 
         
         
         "de", "2007 10 10 10:10:10", "2007 11 10 10:10:10", "d", "10.10. - 10.11.", 
@@ -913,7 +935,7 @@ void DateIntervalFormatTest::testFormat() {
         
         "de", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EEEEdMMM", "Samstag, 10. - Dienstag, 20. Nov.", 
         
-        "de", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EdMy", "Sa., 10.11.07 - Di., 20.11.07", 
+        "de", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "EdMy", "Sa., 10.11.2007 - Di., 20.11.2007", 
         
         
         "de", "2007 11 10 10:10:10", "2007 11 20 10:10:10", "dM", "10.11. - 20.11.", 
@@ -976,19 +998,19 @@ void DateIntervalFormatTest::testFormat() {
         "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "MMMy", "\\u0E15.\\u0E04. 2550 - \\u0E15.\\u0E04. 2551", 
         
         
-        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "EdMy", "\\u0E1E. 10/10/50 - \\u0E28. 10/10/51", 
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "EdMy", "\\u0E1E. 10/10/2550 - \\u0E28. 10/10/2551", 
         
-        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "dMy", "10/10/50 - 10/10/51", 
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "dMy", "10/10/2550 - 10/10/2551", 
         
         
-        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "My", "10/50 - 10/51", 
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "My", "10/2550 - 10/2551", 
         
-        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "EdM", "\\u0E1E. 10/10/50 - \\u0E28. 10/10/51", 
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "EdM", "\\u0E1E. 10/10/2550 - \\u0E28. 10/10/2551", 
         
         
         "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "y", "2550-2551", 
         
-        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "M", "10/50 - 10/51", 
+        "th", "2550 10 10 10:10:10", "2551 10 10 10:10:10", "M", "10/2550 - 10/2551", 
         
         
         "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "EEEEdMMMy", "\\u0E27\\u0E31\\u0E19\\u0E1E\\u0E38\\u0E18 10 \\u0E15.\\u0E04. - \\u0E27\\u0E31\\u0E19\\u0E40\\u0E2A\\u0E32\\u0E23\\u0E4C 10 \\u0E1E.\\u0E22. 2550", 
@@ -1000,7 +1022,7 @@ void DateIntervalFormatTest::testFormat() {
         
        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "dM", "10/10 - 10/11", 
         
-        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "My", "10/50 - 11/50", 
+        "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "My", "10/2550 - 11/2550", 
         
         
         "th", "2550 10 10 10:10:10", "2550 11 10 10:10:10", "d", "10/10 - 10/11", 
@@ -1137,19 +1159,25 @@ void DateIntervalFormatTest::testFormatUserDII() {
 
 void DateIntervalFormatTest::testSetIntervalPatternNoSideEffect() {
     UErrorCode ec = U_ZERO_ERROR;
-    DateIntervalInfo* dtitvinf = new DateIntervalInfo(ec);
-    UnicodeString expected;
-    dtitvinf->getIntervalPattern(ctou("yMd"), UCAL_DATE, expected, ec);
-    dtitvinf->setIntervalPattern(ctou("yMd"), UCAL_DATE, ctou("M/d/y \\u2013 d"), ec);
-    delete dtitvinf;
+    LocalPointer<DateIntervalInfo> dtitvinf(new DateIntervalInfo(ec));
     if (U_FAILURE(ec)) {
         errln("Failure encountered: %s", u_errorName(ec));
         return;
     }
-    dtitvinf = new DateIntervalInfo(ec);
+    UnicodeString expected;
+    dtitvinf->getIntervalPattern(ctou("yMd"), UCAL_DATE, expected, ec);
+    dtitvinf->setIntervalPattern(ctou("yMd"), UCAL_DATE, ctou("M/d/y \\u2013 d"), ec);
+    if (U_FAILURE(ec)) {
+        errln("Failure encountered: %s", u_errorName(ec));
+        return;
+    }
+    dtitvinf.adoptInstead(new DateIntervalInfo(ec));
+    if (U_FAILURE(ec)) {
+        errln("Failure encountered: %s", u_errorName(ec));
+        return;
+    }
     UnicodeString actual;
     dtitvinf->getIntervalPattern(ctou("yMd"), UCAL_DATE, actual, ec);
-    delete dtitvinf;
     if (U_FAILURE(ec)) {
         errln("Failure encountered: %s", u_errorName(ec));
         return;

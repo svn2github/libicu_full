@@ -35,13 +35,9 @@ ln{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "ntɔ́ngɔ́",
-                "mpókwa",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -81,55 +77,6 @@ ln{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "eye",
-                        "ybo",
-                        "mbl",
-                        "mst",
-                        "min",
-                        "mtn",
-                        "mps",
-                    }
-                    wide{
-                        "eyenga",
-                        "mokɔlɔ mwa yambo",
-                        "mokɔlɔ mwa míbalé",
-                        "mokɔlɔ mwa mísáto",
-                        "mokɔlɔ ya mínéi",
-                        "mokɔlɔ ya mítáno",
-                        "mpɔ́sɔ",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "e",
-                        "y",
-                        "m",
-                        "m",
-                        "m",
-                        "m",
-                        "p",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "SM1",
-                        "SM2",
-                        "SM3",
-                        "SM4",
-                    }
-                    wide{
-                        "sánzá mísáto ya yambo",
-                        "sánzá mísáto ya míbalé",
-                        "sánzá mísáto ya mísáto",
-                        "sánzá mísáto ya mínei",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -144,7 +91,7 @@ ln{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

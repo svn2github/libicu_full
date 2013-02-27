@@ -33,13 +33,9 @@ sq{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "PD",
-                "MD",
-            }
             DateTimePatterns{
                 "h.mm.ss.a zzzz",
                 "h.mm.ss.a z",
@@ -73,49 +69,15 @@ sq{
                 hms{"h.mm.ss.a"}
                 ms{"mm.ss"}
                 y{"y"}
-                yM{"M.yyyy"}
-                yMEd{"E, d.M.yyyy"}
+                yM{"M.y"}
+                yMEd{"E, d.M.y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, d MMM y"}
                 yMMMM{"MMMM y"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Die",
-                        "Hën",
-                        "Mar",
-                        "Mër",
-                        "Enj",
-                        "Pre",
-                        "Sht",
-                    }
-                    wide{
-                        "e diel",
-                        "e hënë",
-                        "e martë",
-                        "e mërkurë",
-                        "e enjte",
-                        "e premte",
-                        "e shtunë",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "D",
-                        "H",
-                        "M",
-                        "M",
-                        "E",
-                        "P",
-                        "S",
-                    }
-                }
             }
             intervalFormats{
                 yMMM{
-                    M{"yyyy-MM – MM"}
+                    M{"y-MM – MM"}
                     y{"MMM y - MMM y"}
                 }
                 yMMMEd{
@@ -142,7 +104,7 @@ sq{
                 "h.mm.a",
                 "EEEE, dd MMMM y",
                 "dd MMMM y",
-                "yyyy-MM-dd",
+                "y-MM-dd",
                 "yy-MM-dd",
                 "{1} {0}",
                 "{1} {0}",
@@ -168,12 +130,11 @@ sq{
                 hms{"h.mm.ss.a"}
                 ms{"mm.ss"}
                 y{"y"}
-                yM{"M.yyyy"}
-                yMEd{"E, d.M.yyyy"}
+                yM{"M.y"}
+                yMEd{"E, d.M.y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, d MMM y"}
                 yMMMM{"MMMM y"}
-                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{
@@ -216,7 +177,7 @@ sq{
             }
             intervalFormats{
                 yMMM{
-                    M{"yyyy-MM – MM"}
+                    M{"y-MM – MM"}
                     y{"MMM y - MMM y"}
                 }
                 yMMMEd{

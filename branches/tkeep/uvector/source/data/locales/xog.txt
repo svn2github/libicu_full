@@ -22,13 +22,9 @@ xog{
             }
         }
     }
-    Version{"2.0.81.59"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "Munkyo",
-                "Eigulo",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -67,55 +63,6 @@ xog{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Sabi",
-                        "Bala",
-                        "Kubi",
-                        "Kusa",
-                        "Kuna",
-                        "Kuta",
-                        "Muka",
-                    }
-                    wide{
-                        "Sabiiti",
-                        "Balaza",
-                        "Owokubili",
-                        "Owokusatu",
-                        "Olokuna",
-                        "Olokutaanu",
-                        "Olomukaaga",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "S",
-                        "B",
-                        "B",
-                        "S",
-                        "K",
-                        "K",
-                        "M",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    wide{
-                        "Ebisera ebyomwaka ebisoka",
-                        "Ebisera ebyomwaka ebyokubiri",
-                        "Ebisera ebyomwaka ebyokusatu",
-                        "Ebisera ebyomwaka ebyokuna",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -130,7 +77,7 @@ xog{
                 "EEEE, d MMMM y",
                 "d MMMM y",
                 "d MMM y",
-                "dd/MM/yyyy",
+                "dd/MM/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

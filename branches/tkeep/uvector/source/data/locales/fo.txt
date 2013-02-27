@@ -28,7 +28,7 @@ fo{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
             DateTimePatterns{
@@ -46,44 +46,6 @@ fo{
                 "{1} {0}",
                 "{1} {0}",
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "sun",
-                        "mán",
-                        "týs",
-                        "mik",
-                        "hós",
-                        "frí",
-                        "ley",
-                    }
-                    wide{
-                        "sunnudagur",
-                        "mánadagur",
-                        "týsdagur",
-                        "mikudagur",
-                        "hósdagur",
-                        "fríggjadagur",
-                        "leygardagur",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "K1",
-                        "K2",
-                        "K3",
-                        "K4",
-                    }
-                    wide{
-                        "1. kvartal",
-                        "2. kvartal",
-                        "3. kvartal",
-                        "4. kvartal",
-                    }
-                }
-            }
         }
         gregorian{
             DateTimePatterns{
@@ -93,7 +55,7 @@ fo{
                 "HH:mm",
                 "EEEE dd MMMM y",
                 "d. MMM y",
-                "dd-MM-yyyy",
+                "dd-MM-y",
                 "dd-MM-yy",
                 "{1} {0}",
                 "{1} {0}",

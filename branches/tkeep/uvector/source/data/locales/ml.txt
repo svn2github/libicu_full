@@ -165,13 +165,9 @@ ml{
         }
         native{"mlym"}
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -208,7 +204,8 @@ ml{
                 ms{"mm:ss"}
                 y{"y"}
                 yM{"M-y"}
-                yMEd{"d-M-yyyy, E"}
+                yMEd{"d-M-y, E"}
+                yMM{"MM-y"}
                 yMMM{"y MMM"}
                 yMMMEd{"y MMM d, E"}
                 yMMMM{"y MMMM"}
@@ -216,60 +213,6 @@ ml{
                 yMd{"d/M/y"}
                 yQQQ{"y QQQ"}
                 yQQQQ{"y QQQQ"}
-                yyQQQ{"QQQ yy"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "ഞായർ",
-                        "തിങ്കൾ",
-                        "ചൊവ്വ",
-                        "ബുധൻ",
-                        "വ്യാഴം",
-                        "വെള്ളി",
-                        "ശനി",
-                    }
-                    short{
-                        "ഞാ",
-                        "തി",
-                        "ചൊ",
-                        "ബു",
-                        "വ്യാ",
-                        "വെ",
-                        "ശ",
-                    }
-                    wide{
-                        "ഞായറാഴ്ച",
-                        "തിങ്കളാഴ്ച",
-                        "ചൊവ്വാഴ്ച",
-                        "ബുധനാഴ്ച",
-                        "വ്യാഴാഴ്ച",
-                        "വെള്ളിയാഴ്ച",
-                        "ശനിയാഴ്ച",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "ഞാ",
-                        "തി",
-                        "ചൊ",
-                        "ബു",
-                        "വ്യാ",
-                        "വെ",
-                        "ശ",
-                    }
-                    short{
-                        "ഞാ",
-                        "തി",
-                        "ചൊ",
-                        "ബു",
-                        "വ്യാ",
-                        "വെ",
-                        "ശ",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -337,13 +280,13 @@ ml{
                     y{"y-y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"d/M/yy, E - d/M/yy, E"}
-                    d{"d/M/yy, E - d/M/yy, E"}
-                    y{"d/M/yy, E - d/M/yy, E"}
+                    M{"d/M/y, E - d/M/y, E"}
+                    d{"d/M/y, E - d/M/y, E"}
+                    y{"d/M/y, E - d/M/y, E"}
                 }
                 yMMM{
                     M{"y MMM-MMM"}
@@ -355,8 +298,8 @@ ml{
                     y{"y MMM d, E - y MMM d, E"}
                 }
                 yMMMM{
-                    M{"yyyy-MM – MM"}
-                    y{"yyyy-MM – yyyy-MM"}
+                    M{"y-MM – MM"}
+                    y{"y-MM – y-MM"}
                 }
                 yMMMd{
                     M{"y MMM d - MMM d"}
@@ -364,45 +307,9 @@ ml{
                     y{"y MMM d - y MMM d"}
                 }
                 yMd{
-                    M{"d/M/yy – d/M/yy"}
-                    d{"d/M/yy – d/M/yy"}
-                    y{"d/M/yy – d/M/yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "ഒന്നാം പാദം",
-                        "രണ്ടാം പാദം",
-                        "മൂന്നാം പാദം",
-                        "നാലാം പാദം",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
+                    M{"d/M/y – d/M/y"}
+                    d{"d/M/y – d/M/y"}
+                    y{"d/M/y – d/M/y"}
                 }
             }
         }
@@ -447,7 +354,8 @@ ml{
                 ms{"mm:ss"}
                 y{"y"}
                 yM{"M-y"}
-                yMEd{"d-M-yyyy, E"}
+                yMEd{"d-M-y, E"}
+                yMM{"MM-y"}
                 yMMM{"y MMM"}
                 yMMMEd{"y MMM d, E"}
                 yMMMM{"y MMMM"}
@@ -455,9 +363,6 @@ ml{
                 yMd{"d/M/y"}
                 yQQQ{"y QQQ"}
                 yQQQQ{"y QQQQ"}
-                yyQQQ{"QQQ yy"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{
@@ -586,13 +491,13 @@ ml{
                     y{"y-y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"d/M/yy, E - d/M/yy, E"}
-                    d{"d/M/yy, E - d/M/yy, E"}
-                    y{"d/M/yy, E - d/M/yy, E"}
+                    M{"d/M/y, E - d/M/y, E"}
+                    d{"d/M/y, E - d/M/y, E"}
+                    y{"d/M/y, E - d/M/y, E"}
                 }
                 yMMM{
                     M{"y MMM-MMM"}
@@ -604,8 +509,8 @@ ml{
                     y{"y MMM d, E - y MMM d, E"}
                 }
                 yMMMM{
-                    M{"yyyy-MM – MM"}
-                    y{"yyyy-MM – yyyy-MM"}
+                    M{"y-MM – MM"}
+                    y{"y-MM – y-MM"}
                 }
                 yMMMd{
                     M{"y MMM d - MMM d"}
@@ -613,9 +518,9 @@ ml{
                     y{"y MMM d - y MMM d"}
                 }
                 yMd{
-                    M{"d/M/yy – d/M/yy"}
-                    d{"d/M/yy – d/M/yy"}
-                    y{"d/M/yy – d/M/yy"}
+                    M{"d/M/y – d/M/y"}
+                    d{"d/M/y – d/M/y"}
+                    y{"d/M/y – d/M/y"}
                 }
             }
             monthNames{

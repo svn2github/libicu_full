@@ -28,13 +28,9 @@ shi_Latn{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "tifawt",
-                "tadggʷat",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -71,44 +67,6 @@ shi_Latn{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "asa",
-                        "ayn",
-                        "asi",
-                        "akṛ",
-                        "akw",
-                        "asim",
-                        "asiḍ",
-                    }
-                    wide{
-                        "asamas",
-                        "aynas",
-                        "asinas",
-                        "akṛas",
-                        "akwas",
-                        "asimwas",
-                        "asiḍyas",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "ak 1",
-                        "ak 2",
-                        "ak 3",
-                        "ak 4",
-                    }
-                    wide{
-                        "akṛaḍyur 1",
-                        "akṛaḍyur 2",
-                        "akṛaḍyur 3",
-                        "akṛaḍyur 4",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -123,7 +81,7 @@ shi_Latn{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM, y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

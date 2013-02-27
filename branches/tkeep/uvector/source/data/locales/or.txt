@@ -38,13 +38,9 @@ or{
         }
         native{"orya"}
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "am",
-                "pm",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -63,42 +59,9 @@ or{
             availableFormats{
                 MMMMd{"MMMM d"}
                 MMdd{"dd-MM"}
-                yyQQQ{"QQQ yy"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "ରବି",
-                        "ସୋମ",
-                        "ମଙ୍ଗଳ",
-                        "ବୁଧ",
-                        "ଗୁରୁ",
-                        "ଶୁକ୍ର",
-                        "ଶନି",
-                    }
-                    wide{
-                        "ରବିବାର",
-                        "ସୋମବାର",
-                        "ମଙ୍ଗଳବାର",
-                        "ବୁଧବାର",
-                        "ଗୁରୁବାର",
-                        "ଶୁକ୍ରବାର",
-                        "ଶନିବାର",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "ର",
-                        "ସୋ",
-                        "ମ",
-                        "ବୁ",
-                        "ଗୁ",
-                        "ଶୁ",
-                        "ଶ",
-                    }
-                }
+                yMM{"MM-y"}
+                yMMMM{"MMMM y"}
+                yQQQ{"QQQ y"}
             }
         }
         gregorian{
@@ -124,9 +87,9 @@ or{
             availableFormats{
                 MMMMd{"MMMM d"}
                 MMdd{"dd-MM"}
-                yyQQQ{"QQQ yy"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
+                yMM{"MM-y"}
+                yMMMM{"MMMM y"}
+                yQQQ{"QQQ y"}
             }
             dayNames{
                 format{

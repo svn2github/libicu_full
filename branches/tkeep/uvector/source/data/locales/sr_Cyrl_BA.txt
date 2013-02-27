@@ -7,7 +7,7 @@
 // *
 // ***************************************************************************
 sr_Cyrl_BA{
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
             DateTimePatterns{
@@ -25,28 +25,6 @@ sr_Cyrl_BA{
                 "{1} {0}",
                 "{1} {0}",
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "нед",
-                        "пон",
-                        "уто",
-                        "сри",
-                        "чет",
-                        "пет",
-                        "суб",
-                    }
-                    wide{
-                        "недеља",
-                        "понедељак",
-                        "уторак",
-                        "сриједа",
-                        "четвртак",
-                        "петак",
-                        "субота",
-                    }
-                }
-            }
         }
         gregorian{
             DateTimePatterns{
@@ -56,7 +34,7 @@ sr_Cyrl_BA{
                 "HH:mm",
                 "EEEE, dd. MMMM y.",
                 "dd. MMMM y.",
-                "yyyy-MM-dd",
+                "y-MM-dd",
                 "yy-MM-dd",
                 "{1} {0}",
                 "{1} {0}",

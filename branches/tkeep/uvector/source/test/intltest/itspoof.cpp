@@ -32,17 +32,17 @@
     errcheckln(status, "Failure at file %s, line %d, error = %s", __FILE__, __LINE__, u_errorName(status));}}
 
 #define TEST_ASSERT(expr) {if ((expr)==FALSE) { \
-    errln("Test Failure at file %s, line %d: \"%s\" is false.\n", __FILE__, __LINE__, #expr);};}
+    errln("Test Failure at file %s, line %d: \"%s\" is false.", __FILE__, __LINE__, #expr);};}
 
 #define TEST_ASSERT_MSG(expr, msg) {if ((expr)==FALSE) { \
-    errln("Test Failure at file %s, line %d, %s: \"%s\" is false.\n", __FILE__, __LINE__, msg, #expr);};}
+    dataerrln("Test Failure at file %s, line %d, %s: \"%s\" is false.", __FILE__, __LINE__, msg, #expr);};}
 
 #define TEST_ASSERT_EQ(a, b) { if ((a) != (b)) { \
-    errln("Test Failure at file %s, line %d: \"%s\" (%d) != \"%s\" (%d) \n", \
+    errln("Test Failure at file %s, line %d: \"%s\" (%d) != \"%s\" (%d)", \
              __FILE__, __LINE__, #a, (a), #b, (b)); }}
 
 #define TEST_ASSERT_NE(a, b) { if ((a) == (b)) { \
-    errln("Test Failure at file %s, line %d: \"%s\" (%d) == \"%s\" (%d) \n", \
+    errln("Test Failure at file %s, line %d: \"%s\" (%d) == \"%s\" (%d)", \
              __FILE__, __LINE__, #a, (a), #b, (b)); }}
 
 #define LENGTHOF(array) ((int32_t)(sizeof(array)/sizeof((array)[0])))
@@ -450,7 +450,6 @@ void IntlTestSpoof::testConfData() {
         }
     }
 }
-#endif // UCONFIG_NO_REGULAR_EXPRESSIONS
 
 // testIdentifierInfo. Note that IdentifierInfo is not public ICU API at this time
 void IntlTestSpoof::testIdentifierInfo() {
@@ -754,3 +753,5 @@ void IntlTestSpoof::testMixedNumbers() {
         uspoof_close(sc);
     }
 }
+
+#endif /* !UCONFIG_NO_REGULAR_EXPRESSIONS && !UCONFIG_NO_NORMALIZATION && !UCONFIG_NO_FILE_IO */

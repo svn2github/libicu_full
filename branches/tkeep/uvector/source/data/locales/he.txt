@@ -196,13 +196,9 @@ he{
         native{"latn"}
         traditional{"hebr"}
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.82.15"}
     calendar{
         generic{
-            AmPmMarkers{
-                "לפנה״צ",
-                "אחה״צ",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -220,6 +216,10 @@ he{
             }
             availableFormats{
                 Ed{"E ה-d"}
+                Gy{"y G"}
+                GyMMM{"MMM y G"}
+                GyMMMEd{"E, d בMMM y G"}
+                GyMMMd{"d בMMM y G"}
                 H{"HH"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
@@ -227,93 +227,24 @@ he{
                 MEd{"E, d/M"}
                 MMM{"LLL"}
                 MMMEd{"E, d בMMM"}
-                MMMMEd{"E, d בMMMM"}
-                MMMMd{"d בMMMM"}
                 MMMd{"d בMMM"}
-                MMdd{"dd/MM"}
                 Md{"d/M"}
                 d{"d"}
                 h{"‏h a"}
                 hm{"h:mm a"}
                 hms{"h:mm:ss a"}
-                mmss{"mm:ss"}
                 ms{"mm:ss"}
-                y{"y"}
-                yM{"M.yyyy"}
-                yMEd{"E, d/M/y"}
-                yMMM{"MMM y"}
-                yMMMEd{"E, d בMMM y"}
-                yMMMM{"MMMM y"}
-                yMMMd{"d בMMM y"}
-                yMd{"d.M.yyyy"}
-                yQQQ{"y QQQ"}
-                yQQQQ{"y QQQQ"}
-                yyMM{"MM/yy"}
-                yyMMM{"MMM yyyy"}
-                yyQQQ{"QQQ yy"}
-                yyyy{"y"}
-                yyyyMM{"MM/yyyy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "יום א׳",
-                        "יום ב׳",
-                        "יום ג׳",
-                        "יום ד׳",
-                        "יום ה׳",
-                        "יום ו׳",
-                        "שבת",
-                    }
-                    narrow{
-                        "א'",
-                        "ב'",
-                        "ג'",
-                        "ד'",
-                        "ה'",
-                        "ו׳",
-                        "ש׳",
-                    }
-                    short{
-                        "א'",
-                        "ב'",
-                        "ג'",
-                        "ד'",
-                        "ה'",
-                        "ו'",
-                        "ש'",
-                    }
-                    wide{
-                        "יום ראשון",
-                        "יום שני",
-                        "יום שלישי",
-                        "יום רביעי",
-                        "יום חמישי",
-                        "יום שישי",
-                        "יום שבת",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "א׳",
-                        "ב׳",
-                        "ג׳",
-                        "ד׳",
-                        "ה׳",
-                        "ו",
-                        "ש",
-                    }
-                    short{
-                        "א'",
-                        "ב'",
-                        "ג'",
-                        "ד'",
-                        "ה'",
-                        "ו'",
-                        "ש'",
-                    }
-                }
+                y{"y G"}
+                yyyy{"y G"}
+                yyyyM{"M.y G"}
+                yyyyMEd{"E, d/M/y G"}
+                yyyyMM{"MM/y G"}
+                yyyyMMM{"MMM y G"}
+                yyyyMMMEd{"E, d בMMM y G"}
+                yyyyMMMd{"d בMMM y G"}
+                yyyyMd{"d.M.y G"}
+                yyyyQQQ{"G y QQQ"}
+                yyyyQQQQ{"G y QQQQ"}
             }
             intervalFormats{
                 H{
@@ -381,13 +312,13 @@ he{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM/yy – MM/yy"}
-                    y{"MM/yy – MM/yy"}
+                    M{"MM/y – MM/y"}
+                    y{"MM/y – MM/y"}
                 }
                 yMEd{
-                    M{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
-                    d{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
-                    y{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
+                    M{"EEEE dd/MM/y – EEEE dd/MM/y"}
+                    d{"EEEE dd/MM/y – EEEE dd/MM/y"}
+                    y{"EEEE dd/MM/y – EEEE dd/MM/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -408,33 +339,9 @@ he{
                     y{"d MMM y – d MMM y"}
                 }
                 yMd{
-                    M{"dd/MM/yy – dd/MM/yy"}
-                    d{"dd/MM/yy – dd/MM/yy"}
-                    y{"dd/MM/yy – dd/MM/yy"}
-                }
-            }
-            quarters{
-                format{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "רבעון 1",
-                        "רבעון 2",
-                        "רבעון 3",
-                        "רבעון 4",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "ר1",
-                        "ר2",
-                        "ר3",
-                        "ר4",
-                    }
+                    M{"dd/MM/y – dd/MM/y"}
+                    d{"dd/MM/y – dd/MM/y"}
+                    y{"dd/MM/y – dd/MM/y"}
                 }
             }
         }
@@ -450,7 +357,7 @@ he{
                 "HH:mm",
                 "EEEE, d בMMMM y",
                 "d בMMMM y",
-                "d בMMM yyyy",
+                "d בMMM y",
                 "dd/MM/yy",
                 "{1}, {0}",
                 "{1} {0}",
@@ -460,6 +367,10 @@ he{
             }
             availableFormats{
                 Ed{"E ה-d"}
+                Gy{"y G"}
+                GyMMM{"MMM y G"}
+                GyMMMEd{"E, d בMMM y G"}
+                GyMMMd{"d בMMM y G"}
                 H{"HH"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
@@ -467,33 +378,24 @@ he{
                 MEd{"E, d/M"}
                 MMM{"LLL"}
                 MMMEd{"E, d בMMM"}
-                MMMMEd{"E, d בMMMM"}
-                MMMMd{"d בMMMM"}
                 MMMd{"d בMMM"}
-                MMdd{"dd/MM"}
                 Md{"d/M"}
                 d{"d"}
                 h{"‏h a"}
                 hm{"h:mm a"}
                 hms{"h:mm:ss a"}
-                mmss{"mm:ss"}
                 ms{"mm:ss"}
                 y{"y"}
-                yM{"M.yyyy"}
+                yM{"M.y"}
                 yMEd{"E, d/M/y"}
+                yMM{"MM/y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, d בMMM y"}
                 yMMMM{"MMMM y"}
                 yMMMd{"d בMMM y"}
-                yMd{"d.M.yyyy"}
+                yMd{"d.M.y"}
                 yQQQ{"y QQQ"}
                 yQQQQ{"y QQQQ"}
-                yyMM{"MM/yy"}
-                yyMMM{"MMM yyyy"}
-                yyQQQ{"QQQ yy"}
-                yyyy{"y"}
-                yyyyMM{"MM/yyyy"}
-                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{
@@ -631,13 +533,13 @@ he{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM/yy – MM/yy"}
-                    y{"MM/yy – MM/yy"}
+                    M{"MM/y – MM/y"}
+                    y{"MM/y – MM/y"}
                 }
                 yMEd{
-                    M{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
-                    d{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
-                    y{"EEEE dd/MM/yy – EEEE dd/MM/yy"}
+                    M{"EEEE dd/MM/y – EEEE dd/MM/y"}
+                    d{"EEEE dd/MM/y – EEEE dd/MM/y"}
+                    y{"EEEE dd/MM/y – EEEE dd/MM/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -658,9 +560,9 @@ he{
                     y{"d MMM y – d MMM y"}
                 }
                 yMd{
-                    M{"dd/MM/yy – dd/MM/yy"}
-                    d{"dd/MM/yy – dd/MM/yy"}
-                    y{"dd/MM/yy – dd/MM/yy"}
+                    M{"dd/MM/y – dd/MM/y"}
+                    d{"dd/MM/y – dd/MM/y"}
+                    y{"dd/MM/y – dd/MM/y"}
                 }
             }
             monthNames{
@@ -793,6 +695,10 @@ he{
                 "{1}, {0}",
             }
             availableFormats{
+                Gy{"y G"}
+                GyMMM{"MMMM y G"}
+                GyMMMEd{"E, d MMMM y G"}
+                GyMMMd{"d MMMM y G"}
                 M{"MMMM"}
                 MEd{"E, d בMMMM"}
                 MMM{"MMMM"}
@@ -801,13 +707,13 @@ he{
                 MMMMd{"d בMMMM"}
                 MMMd{"d בMMMM"}
                 Md{"d בMMMM"}
-                yM{"MMMM y"}
-                yMEd{"E, d בMMMM y"}
-                yMMM{"MMMM y"}
-                yMMMEd{"E, d בMMMM y"}
-                yMMMM{"MMMM y"}
-                yMMMd{"d בMMMM y"}
-                yMd{"d בMMMM y"}
+                yyyyM{"MMMM y"}
+                yyyyMEd{"E, d בMMMM y"}
+                yyyyMMM{"MMMM y"}
+                yyyyMMMEd{"E, d בMMMM y"}
+                yyyyMMMM{"MMMM y"}
+                yyyyMMMd{"d בMMMM y"}
+                yyyyMd{"d בMMMM y"}
             }
             eras{
                 abbreviated{
@@ -918,38 +824,32 @@ he{
             }
         }
         islamic{
-            DateTimePatterns{
-                "HH:mm:ss zzzz",
-                "HH:mm:ss z",
-                "HH:mm:ss",
-                "HH:mm",
-                "EEEE, d בMMMM y",
-                "d בMMMM y",
-                "d בMMM yyyy",
-                "dd/MM/yy",
-                "{1}, {0}",
-                "{1} {0}",
-                "{1} {0}",
-                "{1}, {0}",
-                "{1}, {0}",
-            }
             availableFormats{
+                Ed{"E ה-d"}
+                Gy{"y G"}
+                GyMMM{"MMM y G"}
+                GyMMMEd{"E, d בMMM y G"}
+                GyMMMd{"d בMMM y G"}
                 Hm{"HH:mm"}
                 Hms{"HH:mm:ss"}
                 MEd{"E, d/M"}
-                MMMMEd{"E, d בMMMM"}
-                MMMMd{"d בMMMM"}
+                MMMEd{"E, d בMMM"}
                 MMMd{"d בMMM"}
                 Md{"d/M"}
+                d{"d"}
                 h{"h a"}
                 hm{"h:mm a"}
                 hms{"h:mm:ss a"}
-                yM{"M/yyyy"}
-                yMEd{"E, d.M.yyyy"}
-                yMMM{"MMM y"}
-                yMMMEd{"E, d בMMM y"}
-                yQQQ{"QQQ y"}
-                yQQQQ{"QQQQ y"}
+                y{"y G"}
+                yyyy{"y G"}
+                yyyyM{"M/y"}
+                yyyyMEd{"E, d.M.y"}
+                yyyyMMM{"MMM y"}
+                yyyyMMMEd{"E, d בMMM y"}
+                yyyyMMMd{"d בMMM y"}
+                yyyyMd{"d.M.y G"}
+                yyyyQQQ{"QQQ y"}
+                yyyyQQQQ{"QQQQ y"}
             }
             eras{
                 abbreviated{

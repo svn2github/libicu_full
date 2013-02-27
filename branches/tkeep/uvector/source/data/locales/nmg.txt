@@ -33,13 +33,9 @@ nmg{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "maná",
-                "kugú",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -79,55 +75,6 @@ nmg{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "sɔ́n",
-                        "mɔ́n",
-                        "smb",
-                        "sml",
-                        "smn",
-                        "mbs",
-                        "sas",
-                    }
-                    wide{
-                        "sɔ́ndɔ",
-                        "mɔ́ndɔ",
-                        "sɔ́ndɔ mafú mába",
-                        "sɔ́ndɔ mafú málal",
-                        "sɔ́ndɔ mafú mána",
-                        "mabágá má sukul",
-                        "sásadi",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "s",
-                        "m",
-                        "s",
-                        "s",
-                        "s",
-                        "m",
-                        "s",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "T1",
-                        "T2",
-                        "T3",
-                        "T4",
-                    }
-                    wide{
-                        "Tindɛ nvúr",
-                        "Tindɛ ńmba",
-                        "Tindɛ ńlal",
-                        "Tindɛ ńna",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -142,7 +89,7 @@ nmg{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

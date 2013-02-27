@@ -30,7 +30,7 @@ ha{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
             DateTimePatterns{
@@ -70,55 +70,6 @@ ha{
                 yMMMM{"MMMM y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Lh",
-                        "Li",
-                        "Ta",
-                        "Lr",
-                        "Al",
-                        "Ju",
-                        "As",
-                    }
-                    wide{
-                        "Lahadi",
-                        "Litinin",
-                        "Talata",
-                        "Laraba",
-                        "Alhamis",
-                        "Jumma'a",
-                        "Asabar",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "L",
-                        "L",
-                        "T",
-                        "L",
-                        "A",
-                        "J",
-                        "A",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "K1",
-                        "K2",
-                        "K3",
-                        "K4",
-                    }
-                    wide{
-                        "Kwata na ɗaya",
-                        "Kwata na biyu",
-                        "Kwata na uku",
-                        "Kwata na huɗu",
-                    }
-                }
             }
         }
         gregorian{

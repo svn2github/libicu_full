@@ -22,7 +22,7 @@ mfe{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
             DateTimePatterns{
@@ -55,64 +55,13 @@ mfe{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E d/M/y"}
+                yMM{"MM/y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E d MMM y"}
                 yMMMM{"MMMM y"}
+                yMMMd{"d MMM y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyMM{"MM/yy"}
-                yyMMM{"MMM yy"}
-                yyMMMEd{"E d MMM yy"}
-                yyMMMd{"d MMM yy"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "dim",
-                        "lin",
-                        "mar",
-                        "mer",
-                        "ze",
-                        "van",
-                        "sam",
-                    }
-                    wide{
-                        "dimans",
-                        "lindi",
-                        "mardi",
-                        "merkredi",
-                        "zedi",
-                        "vandredi",
-                        "samdi",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "d",
-                        "l",
-                        "m",
-                        "m",
-                        "z",
-                        "v",
-                        "s",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "T1",
-                        "T2",
-                        "T3",
-                        "T4",
-                    }
-                    wide{
-                        "1e trimes",
-                        "2em trimes",
-                        "3em trimes",
-                        "4em trimes",
-                    }
-                }
             }
         }
         gregorian{
@@ -124,7 +73,7 @@ mfe{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM, y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",
@@ -146,15 +95,13 @@ mfe{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E d/M/y"}
+                yMM{"MM/y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E d MMM y"}
                 yMMMM{"MMMM y"}
+                yMMMd{"d MMM y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyMM{"MM/yy"}
-                yyMMM{"MMM yy"}
-                yyMMMEd{"E d MMM yy"}
-                yyMMMd{"d MMM yy"}
             }
             dayNames{
                 format{

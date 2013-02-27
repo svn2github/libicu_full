@@ -35,13 +35,9 @@ ti{
         native{"latn"}
         traditional{"ethi"}
     }
-    Version{"2.0.81.59"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "ንጉሆ ሰዓተ",
-                "ድሕር ሰዓት",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -60,33 +56,9 @@ ti{
             availableFormats{
                 MMMMdd{"dd MMMM"}
                 MMdd{"dd/MM"}
-                yyMM{"MM/yy"}
-                yyQQQ{"QQQ yy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    wide{
-                        "ሰንበት",
-                        "ሰኑይ",
-                        "ሠሉስ",
-                        "ረቡዕ",
-                        "ኃሙስ",
-                        "ዓርቢ",
-                        "ቀዳም",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "ሰ",
-                        "ሰ",
-                        "ሠ",
-                        "ረ",
-                        "ኃ",
-                        "ዓ",
-                        "ቀ",
-                    }
-                }
+                yMM{"MM/y"}
+                yMMMM{"MMMM y"}
+                yQQQ{"QQQ y"}
             }
         }
         gregorian{
@@ -112,9 +84,9 @@ ti{
             availableFormats{
                 MMMMdd{"dd MMMM"}
                 MMdd{"dd/MM"}
-                yyMM{"MM/yy"}
-                yyQQQ{"QQQ yy"}
-                yyyyMMMM{"MMMM y"}
+                yMM{"MM/y"}
+                yMMMM{"MMMM y"}
+                yQQQ{"QQQ y"}
             }
             dayNames{
                 format{

@@ -142,13 +142,9 @@ fil{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -185,6 +181,7 @@ fil{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E, M/d/y"}
+                yMM{"MM-y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, MMM d, y"}
                 yMMMM{"MMMM y"}
@@ -192,68 +189,6 @@ fil{
                 yMd{"M/d/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"y QQQQ"}
-                yyMM{"MM-yy"}
-                yyMMM{"MMM yy"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Lin",
-                        "Lun",
-                        "Mar",
-                        "Mye",
-                        "Huw",
-                        "Bye",
-                        "Sab",
-                    }
-                    short{
-                        "Li",
-                        "Lu",
-                        "Ma",
-                        "Mi",
-                        "Hu",
-                        "Bi",
-                        "Sab",
-                    }
-                    wide{
-                        "Linggo",
-                        "Lunes",
-                        "Martes",
-                        "Miyerkules",
-                        "Huwebes",
-                        "Biyernes",
-                        "Sabado",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Lin",
-                        "Lun",
-                        "Mar",
-                        "Miy",
-                        "Huw",
-                        "Biy",
-                        "Sab",
-                    }
-                    narrow{
-                        "L",
-                        "L",
-                        "M",
-                        "M",
-                        "H",
-                        "B",
-                        "S",
-                    }
-                    short{
-                        "Li",
-                        "Lu",
-                        "Ma",
-                        "Mi",
-                        "Hu",
-                        "Bi",
-                        "Sab",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -318,13 +253,13 @@ fil{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E, M/d/yy – E, M/d/yy"}
-                    d{"E, M/d/yy – E, M/d/yy"}
-                    y{"E, M/d/yy – E, M/d/yy"}
+                    M{"E, M/d/y – E, M/d/y"}
+                    d{"E, M/d/y – E, M/d/y"}
+                    y{"E, M/d/y – E, M/d/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -345,51 +280,9 @@ fil{
                     y{"MMM d, y – MMM d, y"}
                 }
                 yMd{
-                    M{"M/d/yy – M/d/yy"}
-                    d{"M/d/yy – M/d/yy"}
-                    y{"M/d/yy – M/d/yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "ika-1 sangkapat",
-                        "ika-2 sangkapat",
-                        "ika-3 quarter",
-                        "ika-4 na quarter",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "ika-1 sangkapat",
-                        "ika-2 quarter",
-                        "ika-3 sangkapat",
-                        "ika-4 na quarter",
-                    }
+                    M{"M/d/y – M/d/y"}
+                    d{"M/d/y – M/d/y"}
+                    y{"M/d/y – M/d/y"}
                 }
             }
         }
@@ -434,6 +327,7 @@ fil{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E, M/d/y"}
+                yMM{"MM-y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, MMM d, y"}
                 yMMMM{"MMMM y"}
@@ -441,8 +335,6 @@ fil{
                 yMd{"M/d/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"y QQQQ"}
-                yyMM{"MM-yy"}
-                yyMMM{"MMM yy"}
             }
             dayNames{
                 format{
@@ -573,13 +465,13 @@ fil{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E, M/d/yy – E, M/d/yy"}
-                    d{"E, M/d/yy – E, M/d/yy"}
-                    y{"E, M/d/yy – E, M/d/yy"}
+                    M{"E, M/d/y – E, M/d/y"}
+                    d{"E, M/d/y – E, M/d/y"}
+                    y{"E, M/d/y – E, M/d/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -600,9 +492,9 @@ fil{
                     y{"MMM d, y – MMM d, y"}
                 }
                 yMd{
-                    M{"M/d/yy – M/d/yy"}
-                    d{"M/d/yy – M/d/yy"}
-                    y{"M/d/yy – M/d/yy"}
+                    M{"M/d/y – M/d/y"}
+                    d{"M/d/y – M/d/y"}
+                    y{"M/d/y – M/d/y"}
                 }
             }
             monthNames{

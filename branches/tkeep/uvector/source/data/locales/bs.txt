@@ -23,13 +23,9 @@ bs{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "pre podne",
-                "popodne",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -68,44 +64,6 @@ bs{
                 yMd{"dd.MM.y."}
                 yQQQ{"y QQQ"}
                 yQQQQ{"y QQQQ"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "ned",
-                        "pon",
-                        "uto",
-                        "sri",
-                        "čet",
-                        "pet",
-                        "sub",
-                    }
-                    wide{
-                        "nedjelja",
-                        "ponedjeljak",
-                        "utorak",
-                        "srijeda",
-                        "četvrtak",
-                        "petak",
-                        "subota",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "K1",
-                        "K2",
-                        "K3",
-                        "K4",
-                    }
-                    wide{
-                        "Prvi kvartal",
-                        "Drugi kvartal",
-                        "Treći kvartal",
-                        "Četvrti kvartal",
-                    }
-                }
             }
         }
         gregorian{
@@ -279,15 +237,15 @@ bs{
                 hm{"hh:mm a"}
                 hms{"hh:mm:ss a"}
                 ms{"mm:ss"}
-                yyyy{"y. G"}
-                yyyyM{"MM.y. G"}
-                yyyyMEd{"E, dd.MM.y. G"}
-                yyyyMMM{"MMM y. G"}
-                yyyyMMMEd{"E, dd. MMM y. G"}
-                yyyyMMMd{"dd. MMM y. G"}
-                yyyyMd{"dd.MM.y. G"}
-                yyyyQQQ{"y G QQQ"}
-                yyyyQQQQ{"y G QQQQ"}
+                y{"y. G"}
+                yM{"MM.y. G"}
+                yMEd{"E, dd.MM.y. G"}
+                yMMM{"MMM y. G"}
+                yMMMEd{"E, dd. MMM y. G"}
+                yMMMd{"dd. MMM y. G"}
+                yMd{"dd.MM.y. G"}
+                yQQQ{"y G QQQ"}
+                yQQQQ{"y G QQQQ"}
             }
             eras{
                 abbreviated{

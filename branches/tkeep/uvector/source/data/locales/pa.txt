@@ -31,13 +31,9 @@ pa{
         }
         native{"guru"}
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "ਪੂਰਵ ਦੁਪਹਿਰ",
-                "ਬਾਅਦ ਦੁਪਹਿਰ",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -57,68 +53,8 @@ pa{
                 HHmmss{"HH:mm:ss"}
                 Md{"d/M"}
                 mmss{"mm:ss"}
-                yyMMM{"MMM yy"}
-                yyQQQ{"QQQ yy"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "ਐਤ.",
-                        "ਸੋਮ.",
-                        "ਮੰਗਲ.",
-                        "ਬੁਧ.",
-                        "ਵੀਰ.",
-                        "ਸ਼ੁਕਰ.",
-                        "ਸ਼ਨੀ.",
-                    }
-                    wide{
-                        "ਐਤਵਾਰ",
-                        "ਸੋਮਵਾਰ",
-                        "ਮੰਗਲਵਾਰ",
-                        "ਬੁਧਵਾਰ",
-                        "ਵੀਰਵਾਰ",
-                        "ਸ਼ੁੱਕਰਵਾਰ",
-                        "ਸ਼ਨੀਚਰਵਾਰ",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "ਐ",
-                        "ਸੋ",
-                        "ਮੰ",
-                        "ਬੁੱ",
-                        "ਵੀ",
-                        "ਸ਼ੁੱ",
-                        "ਸ਼",
-                    }
-                    wide{
-                        "ਐਤਵਾਰ",
-                        "ਸੋਮਵਾਰ",
-                        "ਮੰਗਲਵਾਰ",
-                        "ਬੁਧਵਾਰ",
-                        "ਵੀਰਵਾਰ",
-                        "ਸ਼ੁੱਕਰਵਾਰ",
-                        "ਸ਼ਨੀਚਰਵਾਰ",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    wide{
-                        "ਇਕ ਚੌਥਾਈ",
-                        "ਅੱਧਾ",
-                        "ਪੌਣਾ",
-                        "ਪੂਰਾ",
-                    }
-                }
-                stand-alone{
-                    wide{
-                        "ਇਕ ਚੌਥਾਈ",
-                        "ਅੱਧਾ",
-                        "ਪੌਣਾ",
-                        "ਪੂਰਾ",
-                    }
-                }
+                yMMM{"MMM y"}
+                yQQQ{"QQQ y"}
             }
         }
         gregorian{
@@ -134,7 +70,7 @@ pa{
                 "EEEE, dd MMMM y",
                 "d MMMM y",
                 "d MMM y",
-                "dd/MM/yyyy",
+                "dd/MM/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",
@@ -145,8 +81,8 @@ pa{
                 HHmmss{"HH:mm:ss"}
                 Md{"d/M"}
                 mmss{"mm:ss"}
-                yyMMM{"MMM yy"}
-                yyQQQ{"QQQ yy"}
+                yMMM{"MMM y"}
+                yQQQ{"QQQ y"}
             }
             dayNames{
                 format{

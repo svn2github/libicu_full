@@ -15,43 +15,8 @@ uz{
     LocaleScript{
         "Cyrl",
     }
-    Version{"2.0.81.59"}
+    Version{"2.0.81.88"}
     calendar{
-        generic{
-            dayNames{
-                format{
-                    abbreviated{
-                        "Якш",
-                        "Душ",
-                        "Сеш",
-                        "Чор",
-                        "Пай",
-                        "Жум",
-                        "Шан",
-                    }
-                    wide{
-                        "якшанба",
-                        "душанба",
-                        "сешанба",
-                        "чоршанба",
-                        "пайшанба",
-                        "жума",
-                        "шанба",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "Я",
-                        "Д",
-                        "С",
-                        "Ч",
-                        "П",
-                        "Ж",
-                        "Ш",
-                    }
-                }
-            }
-        }
         gregorian{
             dayNames{
                 format{

@@ -148,13 +148,9 @@ hy{
         native{"latn"}
         traditional{"armn"}
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "կեսօրից առաջ",
-                "կեսօրից հետո",
-            }
             DateTimePatterns{
                 "H:mm:ss, zzzz",
                 "H:mm:ss, z",
@@ -195,57 +191,6 @@ hy{
                 yMd{"dd.MM.y"}
                 yQQQ{"y թ, QQQ"}
                 yQQQQ{"y թ, QQQQ"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "կիր",
-                        "երկ",
-                        "երք",
-                        "չոր",
-                        "հնգ",
-                        "ուր",
-                        "շաբ",
-                    }
-                    narrow{
-                        "Կ",
-                        "Ե",
-                        "Ե",
-                        "Չ",
-                        "Հ",
-                        "Ու",
-                        "Շ",
-                    }
-                    short{
-                        "կիր",
-                        "երկ",
-                        "երք",
-                        "չոր",
-                        "հնգ",
-                        "ուր",
-                        "շաբ",
-                    }
-                    wide{
-                        "կիրակի",
-                        "երկուշաբթի",
-                        "երեքշաբթի",
-                        "չորեքշաբթի",
-                        "հինգշաբթի",
-                        "ուրբաթ",
-                        "շաբաթ",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "Կ",
-                        "Ե",
-                        "Ե",
-                        "Չ",
-                        "Հ",
-                        "Ու",
-                        "Շ",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -310,13 +255,13 @@ hy{
                     y{"y-y"}
                 }
                 yM{
-                    M{"MM.yy - MM.yy"}
-                    y{"MM.yy - MM.yy"}
+                    M{"MM.y - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMEd{
-                    M{"ccc, dd.MM.yy - ccc, dd.MM.yy"}
-                    d{"ccc, dd.MM.yy - ccc, dd.MM.yy"}
-                    y{"ccc, dd.MM.yy - ccc, dd.MM.yy"}
+                    M{"ccc, dd.MM.y - ccc, dd.MM.y"}
+                    d{"ccc, dd.MM.y - ccc, dd.MM.y"}
+                    y{"ccc, dd.MM.y - ccc, dd.MM.y"}
                 }
                 yMMM{
                     M{"MMM-MMM y թ."}
@@ -328,7 +273,7 @@ hy{
                     y{"E, d MMM, y - E, d MMM, y թ."}
                 }
                 yMMMM{
-                    M{"yyyy թ. MMM – MMM"}
+                    M{"y թ. MMM – MMM"}
                     y{"MMM y - MMM y թ"}
                 }
                 yMMMd{
@@ -337,51 +282,9 @@ hy{
                     y{"dd MMM, y - dd MMM, y թ."}
                 }
                 yMd{
-                    M{"dd.MM.yy - dd.MM.yy"}
-                    d{"dd.MM.yy - dd.MM.yy"}
-                    y{"dd.MM.yy - dd.MM.yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "1-ին եռմս.",
-                        "2-րդ եռմս.",
-                        "3-րդ եռմս.",
-                        "4-րդ եռմս.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1-ին եռամսյակ",
-                        "2-րդ եռամսյակ",
-                        "3-րդ եռամսյակ",
-                        "4-րդ եռամսյակ",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "1-ին եռմս.",
-                        "2-րդ եռմս.",
-                        "3-րդ եռմս.",
-                        "4-րդ եռմս.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1-ին եռամսյակ",
-                        "2-րդ եռամսյակ",
-                        "3-րդ եռամսյակ",
-                        "4-րդ եռամսյակ",
-                    }
+                    M{"dd.MM.y - dd.MM.y"}
+                    d{"dd.MM.y - dd.MM.y"}
+                    y{"dd.MM.y - dd.MM.y"}
                 }
             }
         }
@@ -551,13 +454,13 @@ hy{
                     y{"y-y"}
                 }
                 yM{
-                    M{"MM.yy - MM.yy"}
-                    y{"MM.yy - MM.yy"}
+                    M{"MM.y - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMEd{
-                    M{"ccc, dd.MM.yy - ccc, dd.MM.yy"}
-                    d{"ccc, dd.MM.yy - ccc, dd.MM.yy"}
-                    y{"ccc, dd.MM.yy - ccc, dd.MM.yy"}
+                    M{"ccc, dd.MM.y - ccc, dd.MM.y"}
+                    d{"ccc, dd.MM.y - ccc, dd.MM.y"}
+                    y{"ccc, dd.MM.y - ccc, dd.MM.y"}
                 }
                 yMMM{
                     M{"MMM-MMM y թ."}
@@ -569,7 +472,7 @@ hy{
                     y{"E, d MMM, y - E, d MMM, y թ."}
                 }
                 yMMMM{
-                    M{"yyyy թ. MMM – MMM"}
+                    M{"y թ. MMM – MMM"}
                     y{"MMM y - MMM y թ"}
                 }
                 yMMMd{
@@ -578,9 +481,9 @@ hy{
                     y{"dd MMM, y - dd MMM, y թ."}
                 }
                 yMd{
-                    M{"dd.MM.yy - dd.MM.yy"}
-                    d{"dd.MM.yy - dd.MM.yy"}
-                    y{"dd.MM.yy - dd.MM.yy"}
+                    M{"dd.MM.y - dd.MM.y"}
+                    d{"dd.MM.y - dd.MM.y"}
+                    y{"dd.MM.y - dd.MM.y"}
                 }
             }
             monthNames{

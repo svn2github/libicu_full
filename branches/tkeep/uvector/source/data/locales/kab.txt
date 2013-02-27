@@ -27,13 +27,9 @@ kab{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "n tufat",
-                "n tmeddit",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -64,65 +60,13 @@ kab{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E d/M/y"}
+                yMM{"MM/y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E d MMM y"}
                 yMMMM{"MMMM y"}
+                yMMMd{"d MMM y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyMM{"MM/y"}
-                yyMMM{"MMM yy"}
-                yyMMMEd{"E d MMM yy"}
-                yyMMMd{"d MMM yy"}
-                yyyyMMMM{"MMMM yyyy"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Yan",
-                        "San",
-                        "Kraḍ",
-                        "Kuẓ",
-                        "Sam",
-                        "Sḍis",
-                        "Say",
-                    }
-                    wide{
-                        "Yanass",
-                        "Sanass",
-                        "Kraḍass",
-                        "Kuẓass",
-                        "Samass",
-                        "Sḍisass",
-                        "Sayass",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "Y",
-                        "S",
-                        "K",
-                        "K",
-                        "S",
-                        "S",
-                        "S",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "Kḍg1",
-                        "Kḍg2",
-                        "Kḍg3",
-                        "Kḍg4",
-                    }
-                    wide{
-                        "akraḍaggur amenzu",
-                        "akraḍaggur wis-sin",
-                        "akraḍaggur wis-kraḍ",
-                        "akraḍaggur wis-kuẓ",
-                    }
-                }
             }
         }
         gregorian{
@@ -138,7 +82,7 @@ kab{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM, y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",
@@ -160,16 +104,13 @@ kab{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E d/M/y"}
+                yMM{"MM/y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E d MMM y"}
                 yMMMM{"MMMM y"}
+                yMMMd{"d MMM y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyMM{"MM/y"}
-                yyMMM{"MMM yy"}
-                yyMMMEd{"E d MMM yy"}
-                yyMMMd{"d MMM yy"}
-                yyyyMMMM{"MMMM yyyy"}
             }
             dayNames{
                 format{

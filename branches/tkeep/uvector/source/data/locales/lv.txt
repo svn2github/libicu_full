@@ -170,13 +170,9 @@ lv{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "priekšpusdienā",
-                "pēcpusdienā",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -212,94 +208,15 @@ lv{
                 mmss{"mm:ss"}
                 ms{"mm:ss"}
                 y{"y. 'g'."}
-                yM{"MM.yyyy."}
+                yM{"MM.y."}
                 yMEd{"E, d.M.y."}
-                yMMM{"yyyy. 'g'. MMM"}
+                yMMM{"y. 'g'. MMM"}
                 yMMMEd{"E, y. 'g'. d. MMM"}
                 yMMMM{"y. 'g'. MMMM"}
                 yMMMd{"y. 'g'. d. MMM"}
                 yMd{"d.M.y."}
                 yQQQ{"QQQ y"}
                 yQQQQ{"y QQQQ"}
-                yyyy{"y. 'g'."}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Sv",
-                        "Pr",
-                        "Ot",
-                        "Tr",
-                        "Ce",
-                        "Pk",
-                        "Se",
-                    }
-                    narrow{
-                        "S",
-                        "P",
-                        "O",
-                        "T",
-                        "C",
-                        "P",
-                        "S",
-                    }
-                    short{
-                        "Sv",
-                        "Pr",
-                        "Ot",
-                        "Tr",
-                        "Ce",
-                        "Pk",
-                        "Se",
-                    }
-                    wide{
-                        "svētdiena",
-                        "pirmdiena",
-                        "otrdiena",
-                        "trešdiena",
-                        "ceturtdiena",
-                        "piektdiena",
-                        "sestdiena",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Sv",
-                        "Pr",
-                        "Ot",
-                        "Tr",
-                        "Ce",
-                        "Pk",
-                        "Se",
-                    }
-                    narrow{
-                        "S",
-                        "P",
-                        "O",
-                        "T",
-                        "C",
-                        "P",
-                        "S",
-                    }
-                    short{
-                        "Sv",
-                        "P",
-                        "O",
-                        "T",
-                        "C",
-                        "Pk",
-                        "S",
-                    }
-                    wide{
-                        "Svētdiena",
-                        "Pirmdiena",
-                        "Otrdiena",
-                        "Trešdiena",
-                        "Ceturtdiena",
-                        "Piektdiena",
-                        "Sestdiena",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -364,13 +281,13 @@ lv{
                     y{"y.–y."}
                 }
                 yM{
-                    M{"MM.yyyy.–MM.yyyy."}
-                    y{"MM.yyyy.–MM.yyyy."}
+                    M{"MM.y.–MM.y."}
+                    y{"MM.y.–MM.y."}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy. – E, dd.MM.yy."}
-                    d{"E, dd.MM.yy. – E, dd.MM.yy."}
-                    y{"E, dd.MM.yy. – E, dd.MM.yy."}
+                    M{"E, dd.MM.y. – E, dd.MM.y."}
+                    d{"E, dd.MM.y. – E, dd.MM.y."}
+                    y{"E, dd.MM.y. – E, dd.MM.y."}
                 }
                 yMMM{
                     M{"y. 'gada' MMM–MMM"}
@@ -382,8 +299,8 @@ lv{
                     y{"E, y. 'gada' d. MMM – E, y. 'gada' d. MMM"}
                 }
                 yMMMM{
-                    M{"MM.yyyy.–MM.yyyy."}
-                    y{"MM.yyyy.–MM.yyyy."}
+                    M{"MM.y.–MM.y."}
+                    y{"MM.y.–MM.y."}
                 }
                 yMMMd{
                     M{"y. 'gada' d. MMM – d. MMM"}
@@ -391,51 +308,9 @@ lv{
                     y{"y. 'gada' d. MMM – y. 'gada' d. MMM"}
                 }
                 yMd{
-                    M{"dd.MM.yy.–dd.MM.yy."}
-                    d{"dd.MM.yyyy.–dd.MM.yyyy."}
-                    y{"dd.MM.yy.–dd.MM.yy."}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "C1",
-                        "C2",
-                        "C3",
-                        "C4",
-                    }
-                    narrow{
-                        "1.",
-                        "2.",
-                        "3.",
-                        "4.",
-                    }
-                    wide{
-                        "1. ceturksnis",
-                        "2. ceturksnis",
-                        "3. ceturksnis",
-                        "4. ceturksnis",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "C1",
-                        "C2",
-                        "C3",
-                        "C4",
-                    }
-                    narrow{
-                        "1.",
-                        "2.",
-                        "3.",
-                        "4.",
-                    }
-                    wide{
-                        "1. ceturksnis",
-                        "2. ceturksnis",
-                        "3. ceturksnis",
-                        "4. ceturksnis",
-                    }
+                    M{"dd.MM.y.–dd.MM.y."}
+                    d{"dd.MM.y.–dd.MM.y."}
+                    y{"dd.MM.y.–dd.MM.y."}
                 }
             }
         }
@@ -479,16 +354,15 @@ lv{
                 mmss{"mm:ss"}
                 ms{"mm:ss"}
                 y{"y. 'g'."}
-                yM{"MM.yyyy."}
+                yM{"MM.y."}
                 yMEd{"E, d.M.y."}
-                yMMM{"yyyy. 'g'. MMM"}
+                yMMM{"y. 'g'. MMM"}
                 yMMMEd{"E, y. 'g'. d. MMM"}
                 yMMMM{"y. 'g'. MMMM"}
                 yMMMd{"y. 'g'. d. MMM"}
                 yMd{"d.M.y."}
                 yQQQ{"QQQ y"}
                 yQQQQ{"y QQQQ"}
-                yyyy{"y. 'g'."}
             }
             dayNames{
                 format{
@@ -641,13 +515,13 @@ lv{
                     y{"y.–y."}
                 }
                 yM{
-                    M{"MM.yyyy.–MM.yyyy."}
-                    y{"MM.yyyy.–MM.yyyy."}
+                    M{"MM.y.–MM.y."}
+                    y{"MM.y.–MM.y."}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy. – E, dd.MM.yy."}
-                    d{"E, dd.MM.yy. – E, dd.MM.yy."}
-                    y{"E, dd.MM.yy. – E, dd.MM.yy."}
+                    M{"E, dd.MM.y. – E, dd.MM.y."}
+                    d{"E, dd.MM.y. – E, dd.MM.y."}
+                    y{"E, dd.MM.y. – E, dd.MM.y."}
                 }
                 yMMM{
                     M{"y. 'gada' MMM–MMM"}
@@ -659,8 +533,8 @@ lv{
                     y{"E, y. 'gada' d. MMM – E, y. 'gada' d. MMM"}
                 }
                 yMMMM{
-                    M{"MM.yyyy.–MM.yyyy."}
-                    y{"MM.yyyy.–MM.yyyy."}
+                    M{"MM.y.–MM.y."}
+                    y{"MM.y.–MM.y."}
                 }
                 yMMMd{
                     M{"y. 'gada' d. MMM – d. MMM"}
@@ -668,9 +542,9 @@ lv{
                     y{"y. 'gada' d. MMM – y. 'gada' d. MMM"}
                 }
                 yMd{
-                    M{"dd.MM.yy.–dd.MM.yy."}
-                    d{"dd.MM.yyyy.–dd.MM.yyyy."}
-                    y{"dd.MM.yy.–dd.MM.yy."}
+                    M{"dd.MM.y.–dd.MM.y."}
+                    d{"dd.MM.y.–dd.MM.y."}
+                    y{"dd.MM.y.–dd.MM.y."}
                 }
             }
             monthNames{

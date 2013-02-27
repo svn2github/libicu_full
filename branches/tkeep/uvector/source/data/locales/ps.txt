@@ -43,13 +43,10 @@ ps{
         }
         native{"arabext"}
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
+        default{"persian"}
         generic{
-            AmPmMarkers{
-                "غ.م.",
-                "غ.و.",
-            }
             DateTimePatterns{
                 "H:mm:ss (zzzz)",
                 "H:mm:ss (z)",
@@ -70,19 +67,6 @@ ps{
                 Hm{"H:mm"}
                 Hms{"H:mm:ss"}
             }
-            dayNames{
-                format{
-                    wide{
-                        "یکشنبه",
-                        "دوشنبه",
-                        "سه‌شنبه",
-                        "چهارشنبه",
-                        "پنجشنبه",
-                        "جمعه",
-                        "شنبه",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -97,7 +81,7 @@ ps{
                 "EEEE د y د MMMM d",
                 "د y د MMMM d",
                 "d MMM y",
-                "yyyy/M/d",
+                "y/M/d",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

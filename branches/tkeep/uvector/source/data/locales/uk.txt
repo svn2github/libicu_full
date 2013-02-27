@@ -190,7 +190,7 @@ uk{
             }
         }
     }
-    Version{"2.0.81.59"}
+    Version{"2.0.81.88"}
     calendar{
         coptic{
             monthNames{
@@ -214,10 +214,6 @@ uk{
             }
         }
         generic{
-            AmPmMarkers{
-                "дп",
-                "пп",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -256,70 +252,16 @@ uk{
                 mmss{"mm:ss"}
                 ms{"mm:ss"}
                 y{"y"}
-                yM{"MM.yyyy"}
-                yMEd{"E, dd.MM.yyyy"}
+                yM{"MM.y"}
+                yMEd{"E, dd.MM.y"}
+                yMM{"MM.y"}
                 yMMM{"LLL y"}
                 yMMMEd{"E, d MMM y"}
                 yMMMM{"LLLL y"}
                 yMMMd{"d MMM y"}
-                yMd{"dd.MM.yy"}
+                yMd{"dd.MM.y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y 'р'."}
-                yyMM{"MM.yy"}
-                yyMMM{"LLL yy"}
-                yyyyMMMM{"LLLL y"}
-                yyyyQQQQ{"QQQQ y 'р'."}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Нд",
-                        "Пн",
-                        "Вт",
-                        "Ср",
-                        "Чт",
-                        "Пт",
-                        "Сб",
-                    }
-                    short{
-                        "Нд",
-                        "Пн",
-                        "Вт",
-                        "Ср",
-                        "Чт",
-                        "Пт",
-                        "Сб",
-                    }
-                    wide{
-                        "Неділя",
-                        "Понеділок",
-                        "Вівторок",
-                        "Середа",
-                        "Четвер",
-                        "Пʼятниця",
-                        "Субота",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "Н",
-                        "П",
-                        "В",
-                        "С",
-                        "Ч",
-                        "П",
-                        "С",
-                    }
-                    short{
-                        "Нд",
-                        "Пн",
-                        "Вт",
-                        "Ср",
-                        "Чт",
-                        "Пт",
-                        "Сб",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -384,13 +326,13 @@ uk{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM.yy – MM.yy"}
-                    y{"MM.yy – MM.yy"}
+                    M{"MM.y – MM.y"}
+                    y{"MM.y – MM.y"}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy – E, dd.MM.yy"}
-                    d{"E, dd.MM.yy – E, dd.MM.yy"}
-                    y{"E, dd.MM.yy – E, dd.MM.yy"}
+                    M{"E, dd.MM.y – E, dd.MM.y"}
+                    d{"E, dd.MM.y – E, dd.MM.y"}
+                    y{"E, dd.MM.y – E, dd.MM.y"}
                 }
                 yMMM{
                     M{"LLL–LLL y"}
@@ -411,51 +353,9 @@ uk{
                     y{"d MMM y – d MMM y"}
                 }
                 yMd{
-                    M{"dd.MM.yy – dd.MM.yy"}
-                    d{"dd.MM.yy – dd.MM.yy"}
-                    y{"dd.MM.yy – dd.MM.yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "I кв.",
-                        "II кв.",
-                        "III кв.",
-                        "IV кв.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "I квартал",
-                        "II квартал",
-                        "III квартал",
-                        "IV квартал",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "1-й кв.",
-                        "2-й кв.",
-                        "3-й кв.",
-                        "4-й кв.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1-й квартал",
-                        "2-й квартал",
-                        "3-й квартал",
-                        "4-й квартал",
-                    }
+                    M{"dd.MM.y – dd.MM.y"}
+                    d{"dd.MM.y – dd.MM.y"}
+                    y{"dd.MM.y – dd.MM.y"}
                 }
             }
         }
@@ -502,19 +402,16 @@ uk{
                 mmss{"mm:ss"}
                 ms{"mm:ss"}
                 y{"y"}
-                yM{"MM.yyyy"}
-                yMEd{"E, dd.MM.yyyy"}
+                yM{"MM.y"}
+                yMEd{"E, dd.MM.y"}
+                yMM{"MM.y"}
                 yMMM{"LLL y"}
                 yMMMEd{"E, d MMM y"}
                 yMMMM{"LLLL y"}
                 yMMMd{"d MMM y"}
-                yMd{"dd.MM.yy"}
+                yMd{"dd.MM.y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y 'р'."}
-                yyMM{"MM.yy"}
-                yyMMM{"LLL yy"}
-                yyyyMMMM{"LLLL y"}
-                yyyyQQQQ{"QQQQ y 'р'."}
             }
             dayNames{
                 format{
@@ -640,13 +537,13 @@ uk{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM.yy – MM.yy"}
-                    y{"MM.yy – MM.yy"}
+                    M{"MM.y – MM.y"}
+                    y{"MM.y – MM.y"}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy – E, dd.MM.yy"}
-                    d{"E, dd.MM.yy – E, dd.MM.yy"}
-                    y{"E, dd.MM.yy – E, dd.MM.yy"}
+                    M{"E, dd.MM.y – E, dd.MM.y"}
+                    d{"E, dd.MM.y – E, dd.MM.y"}
+                    y{"E, dd.MM.y – E, dd.MM.y"}
                 }
                 yMMM{
                     M{"LLL–LLL y"}
@@ -667,9 +564,9 @@ uk{
                     y{"d MMM y – d MMM y"}
                 }
                 yMd{
-                    M{"dd.MM.yy – dd.MM.yy"}
-                    d{"dd.MM.yy – dd.MM.yy"}
-                    y{"dd.MM.yy – dd.MM.yy"}
+                    M{"dd.MM.y – dd.MM.y"}
+                    d{"dd.MM.y – dd.MM.y"}
+                    y{"dd.MM.y – dd.MM.y"}
                 }
             }
             monthNames{

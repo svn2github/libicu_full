@@ -121,7 +121,7 @@ ms{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -261,10 +261,6 @@ ms{
             }
         }
         generic{
-            AmPmMarkers{
-                "PG",
-                "PTG",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -308,84 +304,6 @@ ms{
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "Ahd",
-                        "Isn",
-                        "Sel",
-                        "Rab",
-                        "Kha",
-                        "Jum",
-                        "Sab",
-                    }
-                    narrow{
-                        "A",
-                        "I",
-                        "S",
-                        "R",
-                        "K",
-                        "J",
-                        "S",
-                    }
-                    short{
-                        "Ah",
-                        "Is",
-                        "Se",
-                        "Ra",
-                        "Kh",
-                        "Ju",
-                        "Sa",
-                    }
-                    wide{
-                        "Ahad",
-                        "Isnin",
-                        "Selasa",
-                        "Rabu",
-                        "Khamis",
-                        "Jumaat",
-                        "Sabtu",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Ahd",
-                        "Isn",
-                        "Sel",
-                        "Rab",
-                        "Kha",
-                        "Jum",
-                        "Sab",
-                    }
-                    narrow{
-                        "A",
-                        "I",
-                        "S",
-                        "R",
-                        "K",
-                        "J",
-                        "S",
-                    }
-                    short{
-                        "Ah",
-                        "Is",
-                        "Se",
-                        "Ra",
-                        "Kh",
-                        "Ju",
-                        "Sa",
-                    }
-                    wide{
-                        "Ahad",
-                        "Isnin",
-                        "Selasa",
-                        "Rabu",
-                        "Khamis",
-                        "Jumaat",
-                        "Sabtu",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -450,13 +368,13 @@ ms{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E, d/M/yy – E, d/M/yy"}
-                    d{"E, d/M/yy – E, d/M/yy"}
-                    y{"E, d/M/yy – E, d/M/yy"}
+                    M{"E, d/M/y – E, d/M/y"}
+                    d{"E, d/M/y – E, d/M/y"}
+                    y{"E, d/M/y – E, d/M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -477,51 +395,9 @@ ms{
                     y{"d MMM y – d MMM y"}
                 }
                 yMd{
-                    M{"d/M/yy – d/M/yy"}
-                    d{"d/M/yy – d/M/yy"}
-                    y{"d/M/yy – d/M/yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "Suku 1",
-                        "Suku Ke-2",
-                        "Suku Ke-3",
-                        "Suku Ke-4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "Suku pertama",
-                        "Suku Ke-2",
-                        "Suku Ke-3",
-                        "Suku Ke-4",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Suku 1",
-                        "Suku Ke-2",
-                        "Suku Ke-3",
-                        "Suku Ke-4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "Suku pertama",
-                        "Suku Ke-2",
-                        "Suku Ke-3",
-                        "Suku Ke-4",
-                    }
+                    M{"d/M/y – d/M/y"}
+                    d{"d/M/y – d/M/y"}
+                    y{"d/M/y – d/M/y"}
                 }
             }
         }
@@ -537,7 +413,7 @@ ms{
                 "h:mm a",
                 "EEEE, d MMMM y",
                 "d MMMM y",
-                "dd/MM/yyyy",
+                "dd/MM/y",
                 "d/MM/yy",
                 "{1} {0}",
                 "{1} {0}",
@@ -721,13 +597,13 @@ ms{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E, d/M/yy – E, d/M/yy"}
-                    d{"E, d/M/yy – E, d/M/yy"}
-                    y{"E, d/M/yy – E, d/M/yy"}
+                    M{"E, d/M/y – E, d/M/y"}
+                    d{"E, d/M/y – E, d/M/y"}
+                    y{"E, d/M/y – E, d/M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -748,9 +624,9 @@ ms{
                     y{"d MMM y – d MMM y"}
                 }
                 yMd{
-                    M{"d/M/yy – d/M/yy"}
-                    d{"d/M/yy – d/M/yy"}
-                    y{"d/M/yy – d/M/yy"}
+                    M{"d/M/y – d/M/y"}
+                    d{"d/M/y – d/M/y"}
+                    y{"d/M/y – d/M/y"}
                 }
             }
             monthNames{
@@ -909,11 +785,11 @@ ms{
                 MMMMd{"d MMMM"}
                 MMMd{"d MMM"}
                 Md{"d/M"}
-                yyyyM{"M/y G"}
-                yyyyMEd{"E, d/M/y G"}
-                yyyyMMM{"MMM y G"}
-                yyyyMMMEd{"E, d MMM y G"}
-                yyyyMMMd{"d MMM y G"}
+                yM{"M/y G"}
+                yMEd{"E, d/M/y G"}
+                yMMM{"MMM y G"}
+                yMMMEd{"E, d MMM y G"}
+                yMMMd{"d MMM y G"}
             }
         }
         japanese{
@@ -939,11 +815,11 @@ ms{
                 MMMMd{"d MMMM"}
                 MMMd{"d MMM"}
                 Md{"d/M"}
-                yyyyM{"M/y G"}
-                yyyyMEd{"E, d/M/y G"}
-                yyyyMMM{"MMM y G"}
-                yyyyMMMEd{"E, d MMM y G"}
-                yyyyMMMd{"d MMM y G"}
+                yM{"M/y G"}
+                yMEd{"E, d/M/y G"}
+                yMMM{"MMM y G"}
+                yMMMEd{"E, d MMM y G"}
+                yMMMd{"d MMM y G"}
             }
         }
         roc{
@@ -969,11 +845,11 @@ ms{
                 MMMMd{"d MMMM"}
                 MMMd{"d MMM"}
                 Md{"d/M"}
-                yyyyM{"M/y G"}
-                yyyyMEd{"E, d/M/y G"}
-                yyyyMMM{"MMM y G"}
-                yyyyMMMEd{"E, d MMM y G"}
-                yyyyMMMd{"d MMM y G"}
+                yM{"M/y G"}
+                yMEd{"E, d/M/y G"}
+                yMMM{"MMM y G"}
+                yMMMEd{"E, d MMM y G"}
+                yMMMd{"d MMM y G"}
             }
         }
     }

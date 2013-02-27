@@ -35,13 +35,9 @@ bas{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "I bikɛ̂glà",
-                "I ɓugajɔp",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -81,55 +77,6 @@ bas{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "nɔy",
-                        "nja",
-                        "uum",
-                        "ŋge",
-                        "mbɔ",
-                        "kɔɔ",
-                        "jon",
-                    }
-                    wide{
-                        "ŋgwà nɔ̂y",
-                        "ŋgwà njaŋgumba",
-                        "ŋgwà ûm",
-                        "ŋgwà ŋgê",
-                        "ŋgwà mbɔk",
-                        "ŋgwà kɔɔ",
-                        "ŋgwà jôn",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "n",
-                        "n",
-                        "u",
-                        "ŋ",
-                        "m",
-                        "k",
-                        "j",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "K1s3",
-                        "K2s3",
-                        "K3s3",
-                        "K4s3",
-                    }
-                    wide{
-                        "Kèk bisu i soŋ iaâ",
-                        "Kèk i ńyonos biɓaà i soŋ iaâ",
-                        "Kèk i ńyonos biaâ i soŋ iaâ",
-                        "Kèk i ńyonos binâ i soŋ iaâ",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -144,7 +91,7 @@ bas{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM, y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

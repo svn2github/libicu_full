@@ -142,13 +142,9 @@ bg{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "пр. об.",
-                "сл. об.",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -187,69 +183,14 @@ bg{
                 y{"y 'г'."}
                 yM{"M.y 'г'."}
                 yMEd{"E, d.MM.y 'г'."}
+                yMM{"MM.y"}
                 yMMM{"MMM y 'г'."}
                 yMMMEd{"E, d MMM y 'г'."}
+                yMMMM{"MMMM y"}
                 yMMMd{"dd MMM y"}
-                yMd{"dd.MM.yy"}
+                yMd{"dd.MM.y"}
                 yQQQ{"QQQ y 'г'."}
                 yQQQQ{"QQQQ y 'г'."}
-                yyMM{"MM.yy"}
-                yyQQQ{"QQQ yy"}
-                yyyy{"y"}
-                yyyyMM{"MM.yyyy"}
-                yyyyMMMM{"MMMM y"}
-                yyyyQQQQ{"QQQQ y 'г'."}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "нд",
-                        "пн",
-                        "вт",
-                        "ср",
-                        "чт",
-                        "пт",
-                        "сб",
-                    }
-                    short{
-                        "нд",
-                        "пн",
-                        "вт",
-                        "ср",
-                        "чт",
-                        "пт",
-                        "сб",
-                    }
-                    wide{
-                        "неделя",
-                        "понеделник",
-                        "вторник",
-                        "сряда",
-                        "четвъртък",
-                        "петък",
-                        "събота",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "н",
-                        "п",
-                        "в",
-                        "с",
-                        "ч",
-                        "п",
-                        "с",
-                    }
-                    short{
-                        "нд",
-                        "пн",
-                        "вт",
-                        "ср",
-                        "чт",
-                        "пт",
-                        "сб",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -314,13 +255,13 @@ bg{
                     y{"y-y"}
                 }
                 yM{
-                    M{"MM.yy - MM.yy"}
-                    y{"MM.yy - MM.yy"}
+                    M{"MM.y - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMEd{
-                    M{"dd.MM.yy, E - dd.MM.yy, E"}
-                    d{"dd.MM.yy, E - dd.MM.yy, E"}
-                    y{"dd.MM.yy, E - dd.MM.yy, E"}
+                    M{"dd.MM.y, E - dd.MM.y, E"}
+                    d{"dd.MM.y, E - dd.MM.y, E"}
+                    y{"dd.MM.y, E - dd.MM.y, E"}
                 }
                 yMMM{
                     M{"MMM-MMM y"}
@@ -341,45 +282,9 @@ bg{
                     y{"dd MMM y - dd MMM y"}
                 }
                 yMd{
-                    M{"dd.MM.yy - dd.MM.yy"}
-                    d{"dd.MM.yy - dd.MM.yy"}
-                    y{"dd.MM.yy - dd.MM.yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "I трим.",
-                        "II трим.",
-                        "III трим.",
-                        "IV трим.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1-во тримесечие",
-                        "2-ро тримесечие",
-                        "3-то тримесечие",
-                        "4-то тримесечие",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "1 трим.",
-                        "2 трим.",
-                        "3 трим.",
-                        "4 трим.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
+                    M{"dd.MM.y - dd.MM.y"}
+                    d{"dd.MM.y - dd.MM.y"}
+                    y{"dd.MM.y - dd.MM.y"}
                 }
             }
         }
@@ -395,7 +300,7 @@ bg{
                 "HH:mm",
                 "dd MMMM y, EEEE",
                 "dd MMMM y",
-                "dd.MM.yyyy",
+                "dd.MM.y",
                 "dd.MM.yy",
                 "{1}, {0}",
                 "{1}, {0}",
@@ -426,18 +331,14 @@ bg{
                 y{"y 'г'."}
                 yM{"M.y 'г'."}
                 yMEd{"E, d.MM.y 'г'."}
+                yMM{"MM.y"}
                 yMMM{"MMM y 'г'."}
                 yMMMEd{"E, d MMM y 'г'."}
+                yMMMM{"MMMM y"}
                 yMMMd{"dd MMM y"}
-                yMd{"dd.MM.yy"}
+                yMd{"dd.MM.y"}
                 yQQQ{"QQQ y 'г'."}
                 yQQQQ{"QQQQ y 'г'."}
-                yyMM{"MM.yy"}
-                yyQQQ{"QQQ yy"}
-                yyyy{"y"}
-                yyyyMM{"MM.yyyy"}
-                yyyyMMMM{"MMMM y"}
-                yyyyQQQQ{"QQQQ y 'г'."}
             }
             dayNames{
                 format{
@@ -567,13 +468,13 @@ bg{
                     y{"y-y"}
                 }
                 yM{
-                    M{"MM.yy - MM.yy"}
-                    y{"MM.yy - MM.yy"}
+                    M{"MM.y - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMEd{
-                    M{"dd.MM.yy, E - dd.MM.yy, E"}
-                    d{"dd.MM.yy, E - dd.MM.yy, E"}
-                    y{"dd.MM.yy, E - dd.MM.yy, E"}
+                    M{"dd.MM.y, E - dd.MM.y, E"}
+                    d{"dd.MM.y, E - dd.MM.y, E"}
+                    y{"dd.MM.y, E - dd.MM.y, E"}
                 }
                 yMMM{
                     M{"MMM-MMM y"}
@@ -594,9 +495,9 @@ bg{
                     y{"dd MMM y - dd MMM y"}
                 }
                 yMd{
-                    M{"dd.MM.yy - dd.MM.yy"}
-                    d{"dd.MM.yy - dd.MM.yy"}
-                    y{"dd.MM.yy - dd.MM.yy"}
+                    M{"dd.MM.y - dd.MM.y"}
+                    d{"dd.MM.y - dd.MM.y"}
+                    y{"dd.MM.y - dd.MM.y"}
                 }
             }
             monthNames{

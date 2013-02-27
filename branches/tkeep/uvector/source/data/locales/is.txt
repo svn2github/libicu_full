@@ -142,13 +142,9 @@ is{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "f.h.",
-                "e.h.",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -183,7 +179,7 @@ is{
                 hms{"h:mm:ss a"}
                 ms{"mm:ss"}
                 y{"y"}
-                yM{"M. yyyy"}
+                yM{"M. y"}
                 yMEd{"E d/M/y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E d. MMM y"}
@@ -192,68 +188,6 @@ is{
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyM{"M.yyyy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "sun",
-                        "mán",
-                        "þri",
-                        "mið",
-                        "fim",
-                        "fös",
-                        "lau",
-                    }
-                    narrow{
-                        "S",
-                        "M",
-                        "Þ",
-                        "M",
-                        "F",
-                        "F",
-                        "L",
-                    }
-                    short{
-                        "su",
-                        "má",
-                        "þr",
-                        "mi",
-                        "fi",
-                        "fö",
-                        "la",
-                    }
-                    wide{
-                        "sunnudagur",
-                        "mánudagur",
-                        "þriðjudagur",
-                        "miðvikudagur",
-                        "fimmtudagur",
-                        "föstudagur",
-                        "laugardagur",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "S",
-                        "M",
-                        "þ",
-                        "M",
-                        "F",
-                        "F",
-                        "L",
-                    }
-                    short{
-                        "su",
-                        "má",
-                        "þr",
-                        "mi",
-                        "fi",
-                        "fö",
-                        "la",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -321,13 +255,13 @@ is{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M.yyyy – M.yyyy"}
-                    y{"M.yyyy – M.yyyy"}
+                    M{"M.y – M.y"}
+                    y{"M.y – M.y"}
                 }
                 yMEd{
-                    M{"E, d.M.yyyy – E, d.M.yyyy"}
-                    d{"E, d.M.yyyy – E, d.M.yyyy"}
-                    y{"E, d.M.yyyy – E, d.M.yyyy"}
+                    M{"E, d.M.y – E, d.M.y"}
+                    d{"E, d.M.y – E, d.M.y"}
+                    y{"E, d.M.y – E, d.M.y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -348,51 +282,9 @@ is{
                     y{"d. MMM y – d. MMM y"}
                 }
                 yMd{
-                    M{"d.M.yyyy – d.M.yyyy"}
-                    d{"d.M.yyyy – d.M.yyyy"}
-                    y{"d.M.yyyy – d.M.yyyy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "F1",
-                        "F2",
-                        "F3",
-                        "F4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1. fjórðungur",
-                        "2. fjórðungur",
-                        "3. fjórðungur",
-                        "4. fjórðungur",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "1F",
-                        "2F",
-                        "3F",
-                        "4F",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1. fjórðungur",
-                        "2. fjórðungur",
-                        "3. fjórðungur",
-                        "4. fjórðungur",
-                    }
+                    M{"d.M.y – d.M.y"}
+                    d{"d.M.y – d.M.y"}
+                    y{"d.M.y – d.M.y"}
                 }
             }
         }
@@ -408,8 +300,8 @@ is{
                 "HH:mm",
                 "EEEE, d. MMMM y",
                 "d. MMMM y",
-                "d.M.yyyy",
-                "d.M.yyyy",
+                "d.M.y",
+                "d.M.y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",
@@ -435,7 +327,7 @@ is{
                 hms{"h:mm:ss a"}
                 ms{"mm:ss"}
                 y{"y"}
-                yM{"M. yyyy"}
+                yM{"M. y"}
                 yMEd{"E d/M/y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E d. MMM y"}
@@ -444,8 +336,6 @@ is{
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyM{"M.yyyy"}
-                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{
@@ -583,13 +473,13 @@ is{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M.yyyy – M.yyyy"}
-                    y{"M.yyyy – M.yyyy"}
+                    M{"M.y – M.y"}
+                    y{"M.y – M.y"}
                 }
                 yMEd{
-                    M{"E, d.M.yyyy – E, d.M.yyyy"}
-                    d{"E, d.M.yyyy – E, d.M.yyyy"}
-                    y{"E, d.M.yyyy – E, d.M.yyyy"}
+                    M{"E, d.M.y – E, d.M.y"}
+                    d{"E, d.M.y – E, d.M.y"}
+                    y{"E, d.M.y – E, d.M.y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -610,9 +500,9 @@ is{
                     y{"d. MMM y – d. MMM y"}
                 }
                 yMd{
-                    M{"d.M.yyyy – d.M.yyyy"}
-                    d{"d.M.yyyy – d.M.yyyy"}
-                    y{"d.M.yyyy – d.M.yyyy"}
+                    M{"d.M.y – d.M.y"}
+                    d{"d.M.y – d.M.y"}
+                    y{"d.M.y – d.M.y"}
                 }
             }
             monthNames{

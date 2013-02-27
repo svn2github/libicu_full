@@ -151,13 +151,9 @@ mr{
         }
         native{"deva"}
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimePatterns{
                 "h-mm-ss a zzzz",
                 "h-mm-ss a z",
@@ -194,83 +190,14 @@ mr{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E, M/d/y"}
+                yMM{"MM-y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, MMM d, y"}
+                yMMMM{"MMMM y"}
                 yMMMd{"d MMM y"}
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "रवि",
-                        "सोम",
-                        "मंगळ",
-                        "बुध",
-                        "गुरु",
-                        "शुक्र",
-                        "शनि",
-                    }
-                    short{
-                        "र",
-                        "सो",
-                        "मं",
-                        "बु",
-                        "गु",
-                        "शु",
-                        "श",
-                    }
-                    wide{
-                        "रविवार",
-                        "सोमवार",
-                        "मंगळवार",
-                        "बुधवार",
-                        "गुरुवार",
-                        "शुक्रवार",
-                        "शनिवार",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "रवि",
-                        "सोम",
-                        "मंगळ",
-                        "बुध",
-                        "गुरु",
-                        "शुक्र",
-                        "शनि",
-                    }
-                    narrow{
-                        "र",
-                        "सो",
-                        "मं",
-                        "बु",
-                        "गु",
-                        "शु",
-                        "श",
-                    }
-                    short{
-                        "र",
-                        "सो",
-                        "मं",
-                        "बु",
-                        "गु",
-                        "शु",
-                        "श",
-                    }
-                    wide{
-                        "रविवार",
-                        "सोमवार",
-                        "मंगळवार",
-                        "बुधवार",
-                        "गुरुवार",
-                        "शुक्रवार",
-                        "शनिवार",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -335,13 +262,13 @@ mr{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E, d/M/yy - E, d/M/yy"}
-                    d{"E, d/M/yy - E, d/M/yy"}
-                    y{"E, d/M/yy - E, d/M/yy"}
+                    M{"E, d/M/y - E, d/M/y"}
+                    d{"E, d/M/y - E, d/M/y"}
+                    y{"E, d/M/y - E, d/M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -362,45 +289,9 @@ mr{
                     y{"d MMM y - d MMM y"}
                 }
                 yMd{
-                    M{"d/M/yy - d/M/yy"}
-                    d{"d/M/yy - d/M/yy"}
-                    y{"d/M/yy - d/M/yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "ति 1",
-                        "ति 2",
-                        "ति 3",
-                        "ति 4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "प्रथम तिमाही",
-                        "द्वितीय तिमाही",
-                        "तृतीय तिमाही",
-                        "चतुर्थ तिमाही",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "ति 1",
-                        "ति 2",
-                        "ति 3",
-                        "ति 4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
+                    M{"d/M/y - d/M/y"}
+                    d{"d/M/y - d/M/y"}
+                    y{"d/M/y - d/M/y"}
                 }
             }
         }
@@ -445,14 +336,14 @@ mr{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E, M/d/y"}
+                yMM{"MM-y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, MMM d, y"}
+                yMMMM{"MMMM y"}
                 yMMMd{"d MMM y"}
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{
@@ -596,13 +487,13 @@ mr{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E, d/M/yy - E, d/M/yy"}
-                    d{"E, d/M/yy - E, d/M/yy"}
-                    y{"E, d/M/yy - E, d/M/yy"}
+                    M{"E, d/M/y - E, d/M/y"}
+                    d{"E, d/M/y - E, d/M/y"}
+                    y{"E, d/M/y - E, d/M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -623,9 +514,9 @@ mr{
                     y{"d MMM y - d MMM y"}
                 }
                 yMd{
-                    M{"d/M/yy - d/M/yy"}
-                    d{"d/M/yy - d/M/yy"}
-                    y{"d/M/yy - d/M/yy"}
+                    M{"d/M/y - d/M/y"}
+                    d{"d/M/y - d/M/y"}
+                    y{"d/M/y - d/M/y"}
                 }
             }
             monthNames{

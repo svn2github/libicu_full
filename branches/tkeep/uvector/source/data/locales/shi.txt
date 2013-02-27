@@ -26,13 +26,9 @@ shi{
             }
         }
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "ⵜⵉⴼⴰⵡⵜ",
-                "ⵜⴰⴷⴳⴳⵯⴰⵜ",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -69,44 +65,6 @@ shi{
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
             }
-            dayNames{
-                format{
-                    abbreviated{
-                        "ⴰⵙⴰ",
-                        "ⴰⵢⵏ",
-                        "ⴰⵙⵉ",
-                        "ⴰⴽⵕ",
-                        "ⴰⴽⵡ",
-                        "ⴰⵙⵉⵎ",
-                        "ⴰⵙⵉⴹ",
-                    }
-                    wide{
-                        "ⴰⵙⴰⵎⴰⵙ",
-                        "ⴰⵢⵏⴰⵙ",
-                        "ⴰⵙⵉⵏⴰⵙ",
-                        "ⴰⴽⵕⴰⵙ",
-                        "ⴰⴽⵡⴰⵙ",
-                        "ⵙⵉⵎⵡⴰⵙ",
-                        "ⴰⵙⵉⴹⵢⴰⵙ",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "ⴰⴽ 1",
-                        "ⴰⴽ 2",
-                        "ⴰⴽ 3",
-                        "ⴰⴽ 4",
-                    }
-                    wide{
-                        "ⴰⴽⵕⴰⴹⵢⵓⵔ 1",
-                        "ⴰⴽⵕⴰⴹⵢⵓⵔ 2",
-                        "ⴰⴽⵕⴰⴹⵢⵓⵔ 3",
-                        "ⴰⴽⵕⴰⴹⵢⵓⵔ 4",
-                    }
-                }
-            }
         }
         gregorian{
             AmPmMarkers{
@@ -121,7 +79,7 @@ shi{
                 "EEEE d MMMM y",
                 "d MMMM y",
                 "d MMM, y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",

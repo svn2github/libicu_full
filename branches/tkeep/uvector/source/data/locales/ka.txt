@@ -128,13 +128,9 @@ ka{
         native{"latn"}
         traditional{"geor"}
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -175,84 +171,6 @@ ka{
                 yMd{"d.M.y"}
                 yQQQ{"QQQ, y"}
                 yQQQQ{"QQQQ, y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "კვი",
-                        "ორშ",
-                        "სამ",
-                        "ოთხ",
-                        "ხუთ",
-                        "პარ",
-                        "შაბ",
-                    }
-                    narrow{
-                        "კ",
-                        "ო",
-                        "ს",
-                        "ო",
-                        "ხ",
-                        "პ",
-                        "შ",
-                    }
-                    short{
-                        "კვ",
-                        "ორ",
-                        "სმ",
-                        "ოთ",
-                        "ხთ",
-                        "პრ",
-                        "შბ",
-                    }
-                    wide{
-                        "კვირა",
-                        "ორშაბათი",
-                        "სამშაბათი",
-                        "ოთხშაბათი",
-                        "ხუთშაბათი",
-                        "პარასკევი",
-                        "შაბათი",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "კვი",
-                        "ორშ",
-                        "სამ",
-                        "ოთხ",
-                        "ხუთ",
-                        "პარ",
-                        "შაბ",
-                    }
-                    narrow{
-                        "კ",
-                        "ო",
-                        "ს",
-                        "ო",
-                        "ხ",
-                        "პ",
-                        "შ",
-                    }
-                    short{
-                        "კვ",
-                        "ორ",
-                        "სმ",
-                        "ოთ",
-                        "ხთ",
-                        "პრ",
-                        "შბ",
-                    }
-                    wide{
-                        "კვირა",
-                        "ორშაბათი",
-                        "სამშაბათი",
-                        "ოთხშაბათი",
-                        "ხუთშაბათი",
-                        "პარასკევი",
-                        "შაბათი",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -317,13 +235,13 @@ ka{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM.yy - MM.yy"}
-                    y{"MM.yy - MM.yy"}
+                    M{"MM.y - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy - E, dd.MM.yy"}
-                    d{"E, dd.MM.yy - E, dd.MM.yy"}
-                    y{"E, dd.MM.yy - E, dd.MM.yy"}
+                    M{"E, dd.MM.y - E, dd.MM.y"}
+                    d{"E, dd.MM.y - E, dd.MM.y"}
+                    y{"E, dd.MM.y - E, dd.MM.y"}
                 }
                 yMMM{
                     M{"MMM-MMM y"}
@@ -335,59 +253,17 @@ ka{
                     y{"E, d MMM, y - E, d MMM, y"}
                 }
                 yMMMM{
-                    M{"MM - MM.yyyy"}
-                    y{"MM.yyyy - MM.yyyy"}
+                    M{"MM - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMMMd{
                     M{"dd MM - dd MM, y"}
                     y{"dd MMM, y - d MMM, y"}
                 }
                 yMd{
-                    M{"dd.MM.yy - dd.MM.yy"}
-                    d{"dd.MM.yy - dd.MM.yy"}
-                    y{"dd.MM.yy - dd.MM.yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "I კვ.",
-                        "II კვ.",
-                        "III კვ.",
-                        "IV კვ.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "I კვარტალი",
-                        "II კვარტალი",
-                        "III კვარტალი",
-                        "IV კვარტალი",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "I კვ.",
-                        "II კვ.",
-                        "III კვ.",
-                        "IV კვ.",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "I კვარტალი",
-                        "II კვარტალი",
-                        "III კვარტალი",
-                        "IV კვარტალი",
-                    }
+                    M{"dd.MM.y - dd.MM.y"}
+                    d{"dd.MM.y - dd.MM.y"}
+                    y{"dd.MM.y - dd.MM.y"}
                 }
             }
         }
@@ -592,13 +468,13 @@ ka{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM.yy - MM.yy"}
-                    y{"MM.yy - MM.yy"}
+                    M{"MM.y - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy - E, dd.MM.yy"}
-                    d{"E, dd.MM.yy - E, dd.MM.yy"}
-                    y{"E, dd.MM.yy - E, dd.MM.yy"}
+                    M{"E, dd.MM.y - E, dd.MM.y"}
+                    d{"E, dd.MM.y - E, dd.MM.y"}
+                    y{"E, dd.MM.y - E, dd.MM.y"}
                 }
                 yMMM{
                     M{"MMM-MMM y"}
@@ -610,17 +486,17 @@ ka{
                     y{"E, d MMM, y - E, d MMM, y"}
                 }
                 yMMMM{
-                    M{"MM - MM.yyyy"}
-                    y{"MM.yyyy - MM.yyyy"}
+                    M{"MM - MM.y"}
+                    y{"MM.y - MM.y"}
                 }
                 yMMMd{
                     M{"dd MM - dd MM, y"}
                     y{"dd MMM, y - d MMM, y"}
                 }
                 yMd{
-                    M{"dd.MM.yy - dd.MM.yy"}
-                    d{"dd.MM.yy - dd.MM.yy"}
-                    y{"dd.MM.yy - dd.MM.yy"}
+                    M{"dd.MM.y - dd.MM.y"}
+                    d{"dd.MM.y - dd.MM.y"}
+                    y{"dd.MM.y - dd.MM.y"}
                 }
             }
             monthNames{

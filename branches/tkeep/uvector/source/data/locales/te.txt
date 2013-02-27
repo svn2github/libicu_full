@@ -151,13 +151,9 @@ te{
         }
         native{"telu"}
     }
-    Version{"2.0.81.59"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -194,92 +190,14 @@ te{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E, d/M/y"}
+                yMM{"MM-y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, d, MMM y"}
+                yMMMM{"MMMM y"}
                 yMMMd{"d, MMM y"}
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "ఆది",
-                        "సోమ",
-                        "మంగళ",
-                        "బుధ",
-                        "గురు",
-                        "శుక్ర",
-                        "శని",
-                    }
-                    narrow{
-                        "ఆ",
-                        "సో",
-                        "మ",
-                        "బు",
-                        "గు",
-                        "శు",
-                        "శ",
-                    }
-                    short{
-                        "ఆది",
-                        "సోమ",
-                        "మం",
-                        "బుధ",
-                        "గురు",
-                        "శుక్ర",
-                        "శని",
-                    }
-                    wide{
-                        "ఆదివారం",
-                        "సోమవారం",
-                        "మంగళవారం",
-                        "బుధవారం",
-                        "గురువారం",
-                        "శుక్రవారం",
-                        "శనివారం",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "ఆది",
-                        "సోమ",
-                        "మంగళ",
-                        "బుధ",
-                        "గురు",
-                        "శుక్ర",
-                        "శని",
-                    }
-                    narrow{
-                        "ఆ",
-                        "సో",
-                        "మ",
-                        "బు",
-                        "గు",
-                        "శు",
-                        "శ",
-                    }
-                    short{
-                        "ఆది",
-                        "సోమ",
-                        "మం",
-                        "బుధ",
-                        "గురు",
-                        "శుక్ర",
-                        "శని",
-                    }
-                    wide{
-                        "ఆదివారం",
-                        "సోమవారం",
-                        "మంగళవారం",
-                        "బుధవారం",
-                        "గురువారం",
-                        "శుక్రవారం",
-                        "శనివారం",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -328,8 +246,8 @@ te{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -338,48 +256,6 @@ te{
                 yMMMM{
                     M{"MMMM–MMMM y"}
                     y{"MMMM y – MMMM y"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "త్రై1",
-                        "త్రై2",
-                        "త్రై3",
-                        "త్రై4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1వ త్రైమాసం",
-                        "2వ త్రైమాసం",
-                        "3వ త్రైమాసం",
-                        "4వ త్రైమాసం",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "త్రై1",
-                        "త్రై2",
-                        "త్రై3",
-                        "త్రై4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "మొదటి త్రైమాసికం",
-                        "రెండవ త్రైమాసికం",
-                        "మూడవ త్రైమాసికం",
-                        "నాల్గవ త్రైమాసికం",
-                    }
                 }
             }
         }
@@ -424,14 +300,14 @@ te{
                 y{"y"}
                 yM{"M/y"}
                 yMEd{"E, d/M/y"}
+                yMM{"MM-y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, d, MMM y"}
+                yMMMM{"MMMM y"}
                 yMMMd{"d, MMM y"}
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyMM{"MM-yyyy"}
-                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{
@@ -572,8 +448,8 @@ te{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}

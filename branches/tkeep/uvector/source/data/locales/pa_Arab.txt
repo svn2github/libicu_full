@@ -23,7 +23,7 @@ pa_Arab{
         default{"arabext"}
         native{"arabext"}
     }
-    Version{"2.0.81.58"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
             DateTimePatterns{
@@ -45,31 +45,8 @@ pa_Arab{
                 HHmmss{"HH:mm:ss"}
                 Md{"d/M"}
                 mmss{"mm:ss"}
-                yyMMM{"MMM yy"}
-                yyQQQ{"QQQ yy"}
-            }
-            dayNames{
-                format{
-                    wide{
-                        "اتوار",
-                        "پیر",
-                        "منگل",
-                        "بُدھ",
-                        "جمعرات",
-                        "جمعہ",
-                        "ہفتہ",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    wide{
-                        "چوتھاي پہلاں",
-                        "چوتھاي دوجا",
-                        "چوتھاي تيجا",
-                        "چوتھاي چوتھا",
-                    }
-                }
+                yMMM{"MMM y"}
+                yQQQ{"QQQ y"}
             }
         }
         gregorian{
@@ -81,7 +58,7 @@ pa_Arab{
                 "EEEE, dd MMMM y",
                 "d MMMM y",
                 "d MMM y",
-                "dd/MM/yyyy",
+                "dd/MM/y",
                 "{1} {0}",
                 "{1} {0}",
                 "{1} {0}",
@@ -92,8 +69,8 @@ pa_Arab{
                 HHmmss{"HH:mm:ss"}
                 Md{"d/M"}
                 mmss{"mm:ss"}
-                yyMMM{"MMM yy"}
-                yyQQQ{"QQQ yy"}
+                yMMM{"MMM y"}
+                yQQQ{"QQQ y"}
             }
             dayNames{
                 format{

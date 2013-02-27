@@ -142,13 +142,9 @@ et{
             }
         }
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "AM",
-                "PM",
-            }
             DateTimePatterns{
                 "H:mm.ss zzzz",
                 "H:mm.ss z",
@@ -187,92 +183,14 @@ et{
                 y{"y"}
                 yM{"M.y"}
                 yMEd{"E, d.M y"}
+                yMM{"MM.y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, d. MMMM y"}
+                yMMMM{"MMMM y"}
                 yMMMd{"d. MMM y"}
                 yMd{"d.M.y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyMM{"MM.yyyy"}
-                yyyyMMMM{"MMMM y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "P",
-                        "E",
-                        "T",
-                        "K",
-                        "N",
-                        "R",
-                        "L",
-                    }
-                    narrow{
-                        "P",
-                        "E",
-                        "T",
-                        "K",
-                        "N",
-                        "R",
-                        "L",
-                    }
-                    short{
-                        "P",
-                        "E",
-                        "T",
-                        "K",
-                        "N",
-                        "R",
-                        "L",
-                    }
-                    wide{
-                        "pühapäev",
-                        "esmaspäev",
-                        "teisipäev",
-                        "kolmapäev",
-                        "neljapäev",
-                        "reede",
-                        "laupäev",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "P",
-                        "E",
-                        "T",
-                        "K",
-                        "N",
-                        "R",
-                        "L",
-                    }
-                    narrow{
-                        "P",
-                        "E",
-                        "T",
-                        "K",
-                        "N",
-                        "R",
-                        "L",
-                    }
-                    short{
-                        "P",
-                        "E",
-                        "T",
-                        "K",
-                        "N",
-                        "R",
-                        "L",
-                    }
-                    wide{
-                        "pühapäev",
-                        "esmaspäev",
-                        "teisipäev",
-                        "kolmapäev",
-                        "neljapäev",
-                        "reede",
-                        "laupäev",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -337,13 +255,13 @@ et{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM.yy–MM.yy"}
-                    y{"MM.yy–MM.yy"}
+                    M{"MM.y–MM.y"}
+                    y{"MM.y–MM.y"}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy–E, dd.MM.yy"}
-                    d{"E, dd.MM.yy–E, dd.MM.yy"}
-                    y{"E, dd.MM.yy–E, dd.MM.yy"}
+                    M{"E, dd.MM.y–E, dd.MM.y"}
+                    d{"E, dd.MM.y–E, dd.MM.y"}
+                    y{"E, dd.MM.y–E, dd.MM.y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -364,51 +282,9 @@ et{
                     y{"d. MMM y–d. MMM y"}
                 }
                 yMd{
-                    M{"dd.MM.yy–dd.MM.yy"}
-                    d{"dd.MM.yy–dd.MM.yy"}
-                    y{"dd.MM.yy–dd.MM.yy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "K1",
-                        "K2",
-                        "K3",
-                        "K4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1. kvartal",
-                        "2. kvartal",
-                        "3. kvartal",
-                        "4. kvartal",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "K1",
-                        "K2",
-                        "K3",
-                        "K4",
-                    }
-                    narrow{
-                        "1.",
-                        "2.",
-                        "3.",
-                        "4.",
-                    }
-                    wide{
-                        "1. kvartal",
-                        "2. kvartal",
-                        "3. kvartal",
-                        "4. kvartal",
-                    }
+                    M{"dd.MM.y–dd.MM.y"}
+                    d{"dd.MM.y–dd.MM.y"}
+                    y{"dd.MM.y–dd.MM.y"}
                 }
             }
         }
@@ -424,7 +300,7 @@ et{
                 "H:mm",
                 "EEEE, d. MMMM y",
                 "d. MMMM y",
-                "dd.MM.yyyy",
+                "dd.MM.y",
                 "dd.MM.yy",
                 "{1} {0}",
                 "{1} {0}",
@@ -455,14 +331,14 @@ et{
                 y{"y"}
                 yM{"M.y"}
                 yMEd{"E, d.M y"}
+                yMM{"MM.y"}
                 yMMM{"MMM y"}
                 yMMMEd{"E, d. MMMM y"}
+                yMMMM{"MMMM y"}
                 yMMMd{"d. MMM y"}
                 yMd{"d.M.y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-                yyyyMM{"MM.yyyy"}
-                yyyyMMMM{"MMMM y"}
             }
             dayNames{
                 format{
@@ -615,13 +491,13 @@ et{
                     y{"y–y"}
                 }
                 yM{
-                    M{"MM.yy–MM.yy"}
-                    y{"MM.yy–MM.yy"}
+                    M{"MM.y–MM.y"}
+                    y{"MM.y–MM.y"}
                 }
                 yMEd{
-                    M{"E, dd.MM.yy–E, dd.MM.yy"}
-                    d{"E, dd.MM.yy–E, dd.MM.yy"}
-                    y{"E, dd.MM.yy–E, dd.MM.yy"}
+                    M{"E, dd.MM.y–E, dd.MM.y"}
+                    d{"E, dd.MM.y–E, dd.MM.y"}
+                    y{"E, dd.MM.y–E, dd.MM.y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -642,9 +518,9 @@ et{
                     y{"d. MMM y–d. MMM y"}
                 }
                 yMd{
-                    M{"dd.MM.yy–dd.MM.yy"}
-                    d{"dd.MM.yy–dd.MM.yy"}
-                    y{"dd.MM.yy–dd.MM.yy"}
+                    M{"dd.MM.y–dd.MM.y"}
+                    d{"dd.MM.y–dd.MM.y"}
+                    y{"dd.MM.y–dd.MM.y"}
                 }
             }
             monthNames{

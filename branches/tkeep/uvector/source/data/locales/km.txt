@@ -125,13 +125,9 @@ km{
         }
         native{"khmr"}
     }
-    Version{"2.0.81.46"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "ព្រឹក",
-                "ល្ងាច",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -172,84 +168,6 @@ km{
                 yMd{"d-M-y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "អាទិត្យ",
-                        "ចន្ទ",
-                        "អង្គារ",
-                        "ពុធ",
-                        "ព្រហស្បតិ៍",
-                        "សុក្រ",
-                        "សៅរ៍",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                    }
-                    short{
-                        "អាទិត្យ",
-                        "ចន្ទ",
-                        "អង្គារ",
-                        "ពុធ",
-                        "ព្រហស្បតិ៍",
-                        "សុក្រ",
-                        "សៅរ៍",
-                    }
-                    wide{
-                        "អាទិត្យ",
-                        "ចន្ទ",
-                        "អង្គារ",
-                        "ពុធ",
-                        "ព្រហស្បតិ៍",
-                        "សុក្រ",
-                        "សៅរ៍",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "អាទិត្យ",
-                        "ចន្ទ",
-                        "អង្គារ",
-                        "ពុធ",
-                        "ព្រហស្បតិ៍",
-                        "សុក្រ",
-                        "សៅរ៍",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                    }
-                    short{
-                        "អាទិត្យ",
-                        "ចន្ទ",
-                        "អង្គារ",
-                        "ពុធ",
-                        "ព្រហស្បតិ៍",
-                        "សុក្រ",
-                        "សៅរ៍",
-                    }
-                    wide{
-                        "អាទិត្យ",
-                        "ចន្ទ",
-                        "អង្គារ",
-                        "ពុធ",
-                        "ព្រហស្បតិ៍",
-                        "សុក្រ",
-                        "សៅរ៍",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -314,26 +232,26 @@ km{
                     y{"y-y"}
                 }
                 yM{
-                    M{"M/yyyy - M/yyyy"}
-                    y{"M/yyyy - M/yyyy"}
+                    M{"M/y - M/y"}
+                    y{"M/y - M/y"}
                 }
                 yMEd{
-                    M{"E, d/M/yyyy - E, d/M/yyyy"}
-                    d{"E, d/M/yyyy - E, d/M/yyyy"}
-                    y{"E, d/M/yyyy - E, d/M/yyyy"}
+                    M{"E, d/M/y - E, d/M/y"}
+                    d{"E, d/M/y - E, d/M/y"}
+                    y{"E, d/M/y - E, d/M/y"}
                 }
                 yMMM{
-                    M{"MM – MM-yyyy"}
-                    y{"MM-yyyy – MM-yyyy"}
+                    M{"MM – MM-y"}
+                    y{"MM-y – MM-y"}
                 }
                 yMMMEd{
                     M{"E, dd MMM y - E, dd MMM y"}
                     d{"E, dd MMM y - E, dd MMM y"}
-                    y{"E, dd-MM-yyyy – E, dd MMM y"}
+                    y{"E, dd-MM-y – E, dd MMM y"}
                 }
                 yMMMM{
-                    M{"MM – MM yyyy"}
-                    y{"MM-yyyy – MM-yyyy"}
+                    M{"MM – MM y"}
+                    y{"MM-y – MM-y"}
                 }
                 yMMMd{
                     M{"d MMM y – d MMM"}
@@ -341,51 +259,9 @@ km{
                     y{"d MMM y - d MMM y"}
                 }
                 yMd{
-                    M{"d/M/yyyy - d/M/yyyy"}
-                    d{"d/M/yyyy - d/M/yyyy"}
-                    y{"d/M/yyyy - d/M/yyyy"}
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "ត្រីមាស ១",
-                        "ត្រីមាស ២",
-                        "ត្រីមាស ៣",
-                        "ត្រីមាស ៤",
-                    }
-                    narrow{
-                        "១",
-                        "២",
-                        "៣",
-                        "៤",
-                    }
-                    wide{
-                        "ត្រីមាស ទី ១",
-                        "ត្រីមាស ទី ២",
-                        "ត្រីមាស ទី ៣",
-                        "ត្រីមាស ទី ៤",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "ត្រីមាស ១",
-                        "ត្រីមាស ២",
-                        "ត្រីមាស ៣",
-                        "ត្រីមាស ៤",
-                    }
-                    narrow{
-                        "១",
-                        "២",
-                        "៣",
-                        "៤",
-                    }
-                    wide{
-                        "ត្រីមាសទី ១",
-                        "ត្រីមាសទី ២",
-                        "ត្រីមាសទី ៣",
-                        "ត្រីមាសទី ៤",
-                    }
+                    M{"d/M/y - d/M/y"}
+                    d{"d/M/y - d/M/y"}
+                    y{"d/M/y - d/M/y"}
                 }
             }
         }
@@ -402,7 +278,7 @@ km{
                 "EEEE, d MMMM y",
                 "d MMMM, y",
                 "d MMM y",
-                "d/M/yyyy",
+                "d/M/y",
                 "{1}, {0}",
                 "{1}, {0}",
                 "{1}, {0}",
@@ -586,26 +462,26 @@ km{
                     y{"y-y"}
                 }
                 yM{
-                    M{"M/yyyy - M/yyyy"}
-                    y{"M/yyyy - M/yyyy"}
+                    M{"M/y - M/y"}
+                    y{"M/y - M/y"}
                 }
                 yMEd{
-                    M{"E, d/M/yyyy - E, d/M/yyyy"}
-                    d{"E, d/M/yyyy - E, d/M/yyyy"}
-                    y{"E, d/M/yyyy - E, d/M/yyyy"}
+                    M{"E, d/M/y - E, d/M/y"}
+                    d{"E, d/M/y - E, d/M/y"}
+                    y{"E, d/M/y - E, d/M/y"}
                 }
                 yMMM{
-                    M{"MM – MM-yyyy"}
-                    y{"MM-yyyy – MM-yyyy"}
+                    M{"MM – MM-y"}
+                    y{"MM-y – MM-y"}
                 }
                 yMMMEd{
                     M{"E, dd MMM y - E, dd MMM y"}
                     d{"E, dd MMM y - E, dd MMM y"}
-                    y{"E, dd-MM-yyyy – E, dd MMM y"}
+                    y{"E, dd-MM-y – E, dd MMM y"}
                 }
                 yMMMM{
-                    M{"MM – MM yyyy"}
-                    y{"MM-yyyy – MM-yyyy"}
+                    M{"MM – MM y"}
+                    y{"MM-y – MM-y"}
                 }
                 yMMMd{
                     M{"d MMM y – d MMM"}
@@ -613,9 +489,9 @@ km{
                     y{"d MMM y - d MMM y"}
                 }
                 yMd{
-                    M{"d/M/yyyy - d/M/yyyy"}
-                    d{"d/M/yyyy - d/M/yyyy"}
-                    y{"d/M/yyyy - d/M/yyyy"}
+                    M{"d/M/y - d/M/y"}
+                    d{"d/M/y - d/M/y"}
+                    y{"d/M/y - d/M/y"}
                 }
             }
             monthNames{

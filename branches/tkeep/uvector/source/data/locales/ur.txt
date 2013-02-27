@@ -113,13 +113,9 @@ ur{
         }
         native{"arabext"}
     }
-    Version{"2.0.81.59"}
+    Version{"2.0.81.88"}
     calendar{
         generic{
-            AmPmMarkers{
-                "دن",
-                "رات",
-            }
             DateTimePatterns{
                 "h:mm:ss a zzzz",
                 "h:mm:ss a z",
@@ -160,57 +156,6 @@ ur{
                 yMd{"d/M/y"}
                 yQQQ{"QQQ y"}
                 yQQQQ{"QQQQ y"}
-            }
-            dayNames{
-                format{
-                    narrow{
-                        "S",
-                        "M",
-                        "T",
-                        "W",
-                        "T",
-                        "F",
-                        "S",
-                    }
-                    short{
-                        "اتوار",
-                        "سوموار",
-                        "منگل",
-                        "بدھ",
-                        "جمعرات",
-                        "جمعہ",
-                        "ہفتہ",
-                    }
-                    wide{
-                        "اتوار",
-                        "پیر",
-                        "منگل",
-                        "بده",
-                        "جمعرات",
-                        "جمعہ",
-                        "ہفتہ",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "S",
-                        "M",
-                        "T",
-                        "W",
-                        "T",
-                        "F",
-                        "S",
-                    }
-                    short{
-                        "اتوار",
-                        "سوموار",
-                        "منگل",
-                        "بدھ",
-                        "جمعرات",
-                        "جمعہ",
-                        "ہفتہ",
-                    }
-                }
             }
             intervalFormats{
                 H{
@@ -275,13 +220,13 @@ ur{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E، d/M/yy – E، d/M/yy"}
-                    d{"E، d/M/yy – E، d/M/yy"}
-                    y{"E، d/M/yy – E، d/M/yy"}
+                    M{"E، d/M/y – E، d/M/y"}
+                    d{"E، d/M/y – E، d/M/y"}
+                    y{"E، d/M/y – E، d/M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -302,33 +247,9 @@ ur{
                     y{"d MMM، y – d MMM، y"}
                 }
                 yMd{
-                    M{"d/M/yy – d/M/yy"}
-                    d{"d/M/yy - d/M/yy"}
-                    y{"d/M/yy – d/M/yy"}
-                }
-            }
-            quarters{
-                format{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "پہلی سہ ماہی",
-                        "دوسری سہ ماہی",
-                        "تیسری سہ ماہی",
-                        "چوتهی سہ ماہی",
-                    }
-                }
-                stand-alone{
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
+                    M{"d/M/y – d/M/y"}
+                    d{"d/M/y - d/M/y"}
+                    y{"d/M/y – d/M/y"}
                 }
             }
         }
@@ -502,13 +423,13 @@ ur{
                     y{"y–y"}
                 }
                 yM{
-                    M{"M/yy – M/yy"}
-                    y{"M/yy – M/yy"}
+                    M{"M/y – M/y"}
+                    y{"M/y – M/y"}
                 }
                 yMEd{
-                    M{"E، d/M/yy – E، d/M/yy"}
-                    d{"E، d/M/yy – E، d/M/yy"}
-                    y{"E، d/M/yy – E، d/M/yy"}
+                    M{"E، d/M/y – E، d/M/y"}
+                    d{"E، d/M/y – E، d/M/y"}
+                    y{"E، d/M/y – E، d/M/y"}
                 }
                 yMMM{
                     M{"MMM–MMM y"}
@@ -529,9 +450,9 @@ ur{
                     y{"d MMM، y – d MMM، y"}
                 }
                 yMd{
-                    M{"d/M/yy – d/M/yy"}
-                    d{"d/M/yy - d/M/yy"}
-                    y{"d/M/yy – d/M/yy"}
+                    M{"d/M/y – d/M/y"}
+                    d{"d/M/y - d/M/y"}
+                    y{"d/M/y – d/M/y"}
                 }
             }
             monthNames{
