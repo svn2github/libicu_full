@@ -212,6 +212,13 @@ public:
         IMPLICIT_TAG = 15
     };
 
+    static uint32_t makeSpecialCE32(uint32_t tag, int32_t value) {
+        return makeSpecialCE32(tag, (uint32_t)value);
+    }
+    static uint32_t makeSpecialCE32(uint32_t tag, uint32_t value) {
+        return Collation::MIN_SPECIAL_CE32 | (tag << 20) | value;
+    }
+
     static inline UBool isSpecialCE32(uint32_t ce32) {
         // Java: Emulate unsigned-int less-than comparison.
         // return (ce32^0x80000000)>=0x7f000000;
@@ -220,6 +227,55 @@ public:
 
     static inline int32_t getSpecialCE32Tag(uint32_t ce32) {
         return (int32_t)((ce32 >> 20) & 0xf);
+    }
+
+    static inline UBool hasCE32Tag(uint32_t ce32, int32_t tag) {
+        return isSpecialCE32(ce32) && getSpecialCE32Tag(ce32) == tag;
+    }
+
+    /**
+     * Returns the expansion data index from a ce32 with
+     * EXPANSION32_TAG or EXPANSION_TAG.
+     */
+    static inline int32_t getExpansionIndex(uint32_t ce32) {
+        return (ce32 >> 3) & 0x1ffff;
+    }
+
+    /**
+     * Returns the expansion data length from a ce32 with
+     * EXPANSION32_TAG or EXPANSION_TAG.
+     * If the length is 0, then the actual length is stored in the first data unit.
+     */
+    static inline int32_t getExpansionLength(uint32_t ce32) {
+        return ce32 & 7;
+    }
+
+    /**
+     * Returns the prefix data index from a ce32 with PREFIX_TAG.
+     */
+    static inline int32_t getPrefixIndex(uint32_t ce32) {
+        return ce32 & 0xfffff;
+    }
+
+    /**
+     * Returns the contraction data index from a ce32 with CONTRACTION_TAG.
+     */
+    static inline int32_t getContractionIndex(uint32_t ce32) {
+        return (ce32 >> 2) & 0x3ffff;
+    }
+
+    /**
+     * Returns the index of the real CE32 from a ce32 with DIGIT_TAG.
+     */
+    static inline int32_t getDigitIndex(uint32_t ce32) {
+        return (ce32 >> 4) & 0xffff;
+    }
+
+    /**
+     * Returns the index of the offset data "CE" from a ce32 with OFFSET_TAG.
+     */
+    static inline int32_t getOffsetIndex(uint32_t ce32) {
+        return ce32 & 0xfffff;
     }
 
     /** Returns a 64-bit CE from a non-special CE32. */
@@ -235,10 +291,12 @@ public:
             // long-secondary form sssstt00 -> 00000000sssstt00,
             // including the tertiary-ignorable, all-zero CE
             // Java: Use a mask to work around sign extension.
-            // return (long)ce32&0xffffffff;
+            // return (long)ce32 & 0xffffffff;
             return ce32;
         }
     }
+
+    static uint32_t makeLongPrimaryCE32(uint32_t p) { return p + 1; }
 
     /** Is ce32 a long-primary pppppp01? */
     static inline UBool isLongPrimaryCE32(uint32_t ce32) {

@@ -124,18 +124,8 @@ protected:
     UBool setJamoCEs(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);
 
-    static uint32_t makeLongPrimaryCE32(uint32_t p) { return p + 1; }
-
-    static uint32_t makeSpecialCE32(uint32_t tag, int32_t value) {
-        return makeSpecialCE32(tag, (uint32_t)value);
-    }
-    static uint32_t makeSpecialCE32(uint32_t tag, uint32_t value) {
-        return Collation::MIN_SPECIAL_CE32 | (tag << 20) | value;
-    }
-
     static inline UBool isContractionCE32(uint32_t ce32) {
-        return Collation::isSpecialCE32(ce32) &&
-            Collation::getSpecialCE32Tag(ce32) == Collation::CONTRACTION_TAG;
+        return Collation::hasCE32Tag(ce32, Collation::CONTRACTION_TAG);
     }
 
     uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;

@@ -269,7 +269,11 @@ RuleBasedCollator2::getTailoredSet(UErrorCode &errorCode) const {
         return NULL;
     }
     if(data->base != NULL) {
-        // TODO: add actually-tailored characters and strings
+        TailoredSet(tailored).forData(data, errorCode);
+        if(U_FAILURE(errorCode)) {
+            delete tailored;
+            return NULL;
+        }
     }
     return tailored;
 }
@@ -285,8 +289,7 @@ RuleBasedCollator2::getContractionsAndExpansions(
     if(expansions != NULL) {
         expansions->clear();
     }
-    ContractionsAndExpansions cne(contractions, expansions, addPrefixes);
-    cne.get(data, errorCode);
+    ContractionsAndExpansions(contractions, expansions, addPrefixes).forData(data, errorCode);
 }
 
 const CollationSettings &

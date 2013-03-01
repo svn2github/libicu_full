@@ -68,7 +68,7 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
     utrie2_set32(trie, 0xfffe, Collation::MERGE_SEPARATOR_CE32, &errorCode);
     utrie2_set32(trie, 0xffff, Collation::MAX_REGULAR_CE32, &errorCode);
 
-    uint32_t hangulCE32 = makeSpecialCE32(Collation::HANGUL_TAG, 0u);
+    uint32_t hangulCE32 = Collation::makeSpecialCE32(Collation::HANGUL_TAG, 0u);
     utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
 }
 

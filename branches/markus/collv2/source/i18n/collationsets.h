@@ -17,10 +17,61 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/uniset.h"
+#include "collation.h"
 
 U_NAMESPACE_BEGIN
 
 struct CollationData;
+
+/**
+ * Finds the set of characters and strings that sort differently in the tailoring
+ * from the base data.
+ *
+ * Every mapping in the tailoring needs to be compared to the base,
+ * because some mappings are copied for optimization, and
+ * all contractions for a character are copied if any contractions for that character
+ * are added, modified or removed.
+ *
+ * It might be simpler to re-parse the rule string, but:
+ * - That would require duplicating some of the from-rules builder code.
+ * - That would make the runtime code depend on the builder.
+ * - That would only work if we have the rule string, and we allow users to
+ *   omit the rule string from data files.
+ */
+class TailoredSet : public UMemory {
+public:
+    TailoredSet(UnicodeSet *t)
+            : data(NULL), baseData(NULL),
+              tailored(t),
+              prefix(NULL), suffix(NULL),
+              errorCode(U_ZERO_ERROR) {}
+
+    void forData(const CollationData *d, UErrorCode &errorCode);
+
+    // all following: @internal, only public for access by callback
+
+    void handleCE32(UChar32 start, UChar32 end, uint32_t ce32);
+
+    uint32_t getIndirectCE32(const CollationData *d, uint32_t ce32);
+    uint32_t getFinalCE32(const CollationData *d, uint32_t ce32);
+
+    void compare(UChar32 c, uint32_t ce32, uint32_t baseCE32);
+    void comparePrefixes(UChar32 c, const UChar *p, const UChar *q);
+    void compareContractions(UChar32 c, const UChar *p, const UChar *q);
+
+    void addPrefixes(const CollationData *d, UChar32 c, const UChar *p);
+    void addPrefix(const CollationData *d, const UnicodeString &pfx, UChar32 c, uint32_t ce32);
+    void addContractions(UChar32 c, const UChar *p);
+    void addSuffix(UChar32 c, const UnicodeString &sfx);
+    void add(UChar32 c);
+
+    const CollationData *data;
+    const CollationData *baseData;
+    UnicodeSet *tailored;
+    const UnicodeString *prefix;
+    const UnicodeString *suffix;
+    UErrorCode errorCode;
+};
 
 class ContractionsAndExpansions : public UMemory {
 public:
@@ -32,7 +83,7 @@ public:
               prefix(NULL), suffix(NULL),
               errorCode(U_ZERO_ERROR) {}
 
-    void get(const CollationData *d, UErrorCode &errorCode);
+    void forData(const CollationData *d, UErrorCode &errorCode);
 
     // all following: @internal, only public for access by callback
 
