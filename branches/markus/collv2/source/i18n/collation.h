@@ -70,8 +70,18 @@ public:
     static const uint32_t CASE_AND_TERTIARY_MASK = 0xff3f;
 
     static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible
+    /**
+     * First unassigned: AlphabeticIndex overflow boundary.
+     * We want a 3-byte primary so that it fits into the root elements table.
+     *
+     * This 3-byte primary will not collide with
+     * any unassigned-implicit 4-byte primaries because
+     * the first few hundred Unicode code points all have real mappings.
+     */
+    static const uint32_t FIRST_UNASSIGNED_PRIMARY = 0xfd040200;
 
     static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // not compressible
+    static const uint32_t FIRST_TRAILING_PRIMARY = 0xfe020200;  // [first trailing]
     static const uint32_t MAX_PRIMARY = 0xfeff0000;  // U+FFFF
     static const uint32_t MAX_REGULAR_CE32 = 0xfeff0505;  // U+FFFF
 
@@ -308,6 +318,17 @@ public:
         return ce32 - 1;
     }
 
+    /** Creates a CE from a primary weight. */
+    static inline int64_t makeCE(uint32_t p) {
+        return ((int64_t)p << 32) | COMMON_SEC_AND_TER_CE;
+    }
+
+    /**
+     * Increments a 2-byte primary by a code point offset.
+     */
+    static uint32_t incTwoBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressible,
+                                              int32_t offset);
+
     /**
      * Increments a 3-byte primary by a code point offset.
      */
@@ -327,8 +348,7 @@ public:
     // TODO: Set [last unassigned] to unassignedPrimaryFromCodePoint(0x10ffff).
 
     static inline int64_t unassignedCEFromCodePoint(UChar32 c) {
-        int64_t ce = unassignedPrimaryFromCodePoint(c);
-        return (ce << 32) | COMMON_SEC_AND_TER_CE;
+        return makeCE(unassignedPrimaryFromCodePoint(c));
     }
 
     static inline uint32_t reorder(const uint8_t reorderTable[256], uint32_t primary) {

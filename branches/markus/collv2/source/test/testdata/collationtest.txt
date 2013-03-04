@@ -343,8 +343,8 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 @ rawbase
 # string then list of CEs; empty leading weight=0, other empty=common
 a 20..
-b 2233.44.5566
-c 11223344.5566.77
+b 2233.44.5506
+c 11223344.5566.07
 # ch 30..20
 # l|\xb7 ..   # prefix
 \u3041 74..

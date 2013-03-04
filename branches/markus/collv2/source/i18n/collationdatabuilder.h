@@ -69,9 +69,9 @@ public:
      */
     int64_t getSingleCE(UChar32 c, UErrorCode &errorCode) const;
 
-    void add(const UnicodeString &prefix, const UnicodeString &s,
-             const int64_t ces[], int32_t cesLength,
-             UErrorCode &errorCode);
+    virtual void add(const UnicodeString &prefix, const UnicodeString &s,
+                     const int64_t ces[], int32_t cesLength,
+                     UErrorCode &errorCode);
 
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order,

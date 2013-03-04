@@ -171,16 +171,13 @@ void CollationTest::TestMinMax() {
     int64_t ce = ci.nextCE(errorCode);
     int64_t expected =
         ((int64_t)Collation::MERGE_SEPARATOR_PRIMARY << 32) |
-        (Collation::MERGE_SEPARATOR_BYTE << 24) |
-        (Collation::MERGE_SEPARATOR_BYTE << 8);
+        Collation::MERGE_SEPARATOR_LOWER32;
     if(ce != expected) {
         errln("CollationIterator.nextCE(U+fffe)=%04lx != 02.02.02", (long)ce);
     }
 
     ce = ci.nextCE(errorCode);
-    expected =
-        ((int64_t)Collation::MAX_PRIMARY << 32) |
-        Collation::COMMON_SEC_AND_TER_CE;
+    expected = Collation::makeCE(Collation::MAX_PRIMARY);
     if(ce != expected) {
         errln("CollationIterator.nextCE(U+ffff)=%04lx != max..", (long)ce);
     }

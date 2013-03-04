@@ -62,15 +62,35 @@ public:
 
     void setCompressibleLeadByte(uint32_t b);
 
+    static int32_t diffTwoBytePrimaries(uint32_t p1, uint32_t p2, UBool isCompressible);
+    static int32_t diffThreeBytePrimaries(uint32_t p1, uint32_t p2, UBool isCompressible);
+
+    virtual void add(const UnicodeString &prefix, const UnicodeString &s,
+                     const int64_t ces[], int32_t cesLength,
+                     UErrorCode &errorCode);
+
+    void addRootElements(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
+    void addRootElement(int64_t ce, UErrorCode &errorCode);
+
     void addReorderingGroup(uint32_t firstByte, uint32_t lastByte,
                             const UnicodeString &groupScripts,
                             UErrorCode &errorCode);
 
     virtual void build(UErrorCode &errorCode);
 
+    void buildRootElementsTable(UVector32 &table, UErrorCode &errorCode);
+
 private:
+    int32_t writeRootElementsRange(
+            uint32_t prevPrimary, uint32_t p, int32_t i,
+            UVector32 &table, UErrorCode &errorCode);
+
     // Flags for which primary-weight lead bytes are compressible.
     UBool compressibleBytes[256];
+    uint32_t firstHanPrimary;
+    uint32_t lastHanPrimary;
+    int32_t hanStep;
+    UVector64 rootElements;
     UnicodeString scripts;
 };
 

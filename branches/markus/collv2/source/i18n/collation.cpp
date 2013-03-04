@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2010-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collation.cpp
@@ -19,6 +19,25 @@ U_NAMESPACE_BEGIN
 
 const uint32_t Collation::ONLY_TERTIARY_MASK;
 const uint32_t Collation::CASE_AND_TERTIARY_MASK;
+
+uint32_t
+Collation::incTwoBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressible, int32_t offset) {
+    // Extract the second byte, minus the minimum byte value,
+    // plus the offset, modulo the number of usable byte values, plus the minimum.
+    // Reserve the PRIMARY_COMPRESSION_LOW_BYTE and high byte if necessary.
+    uint32_t primary;
+    if(isCompressible) {
+        offset += ((int32_t)(basePrimary >> 16) & 0xff) - 4;
+        primary = (uint32_t)((offset % 251) + 4) << 16;
+        offset /= 251;
+    } else {
+        offset += ((int32_t)(basePrimary >> 16) & 0xff) - 2;
+        primary = (uint32_t)((offset % 254) + 2) << 16;
+        offset /= 254;
+    }
+    // First byte, assume no further overflow.
+    return primary | ((basePrimary & 0xff000000) + (uint32_t)(offset << 24));
+}
 
 uint32_t
 Collation::incThreeBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressible, int32_t offset) {

@@ -324,8 +324,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
 int64_t
 CollationIterator::getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32) {
     int64_t dataCE = d->ces[Collation::getOffsetIndex(ce32)];
-    int64_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
-    return (p << 32) | Collation::COMMON_SEC_AND_TER_CE;
+    return Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(c, dataCE));
 }
 
 uint32_t
@@ -699,7 +698,7 @@ CollationIterator::setNumericSegmentCEs(const char *digits, int32_t length, UErr
         if(value < numBytes) {
             // Two-byte primary for 0..73, good for day & month numbers etc.
             uint32_t primary = numericPrimary | ((firstByte + value) << 16);
-            forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
+            forwardCEs[0] = Collation::makeCE(primary);
             return;
         }
         value -= numBytes;
@@ -709,7 +708,7 @@ CollationIterator::setNumericSegmentCEs(const char *digits, int32_t length, UErr
             // Three-byte primary for 74..10233=74+40*254-1, good for year numbers and more.
             uint32_t primary = numericPrimary |
                 ((firstByte + value / 254) << 16) | ((2 + value % 254) << 8);
-            forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
+            forwardCEs[0] = Collation::makeCE(primary);
             return;
         }
         value -= numBytes * 254;
@@ -722,7 +721,7 @@ CollationIterator::setNumericSegmentCEs(const char *digits, int32_t length, UErr
             primary |= (2 + value % 254) << 8;
             value /= 254;
             primary |= (firstByte + value % 254) << 16;
-            forwardCEs[0] = ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE;
+            forwardCEs[0] = Collation::makeCE(primary);
             return;
         }
         // original value > 1042489
@@ -761,8 +760,7 @@ CollationIterator::setNumericSegmentCEs(const char *digits, int32_t length, UErr
             // Every three pairs/bytes we need to store a 4-byte-primary CE
             // and start with a new CE with the '0' primary lead byte.
             primary |= pair;
-            cesLength = forwardCEs.append(cesLength,
-                ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE, errorCode);
+            cesLength = forwardCEs.append(cesLength, Collation::makeCE(primary), errorCode);
             primary = numericPrimary;
             shift = 16;
         } else {
@@ -773,8 +771,7 @@ CollationIterator::setNumericSegmentCEs(const char *digits, int32_t length, UErr
         pos += 2;
     }
     primary |= (pair - 1) << shift;
-    cesLength = forwardCEs.append(cesLength,
-        ((int64_t)primary << 32) | Collation::COMMON_SEC_AND_TER_CE, errorCode);
+    cesLength = forwardCEs.append(cesLength, Collation::makeCE(primary), errorCode);
     ces = forwardCEs.getBuffer();
     cesMaxIndex = cesLength;
 }
