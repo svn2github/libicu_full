@@ -210,9 +210,10 @@ void CollationTest::TestImplicits() {
                             "\\p{Block=CJK_Compatibility_Ideographs}]]",
                         errorCode);
     UnicodeSet unassigned("[[:Cn:][:Cs:][:Co:]]", errorCode);
-    unassigned.remove(0xfffe, 0xffff);
+    unassigned.remove(0xfffe, 0xffff);  // These have special CLDR root mappings.
     unassigned.remove(0xfff1, 0xfff2);  // TODO: remove hack "tailoring"
     unassigned.remove(0x2066, 0x2069);  // TODO: remove this when UCD 6.3 is integrated
+    unassigned.remove(0x061c);  // TODO: remove this when UCD 6.3 is integrated
     if(errorCode.logIfFailureAndReset("UnicodeSet")) {
         return;
     }
@@ -236,7 +237,7 @@ void CollationTest::TestImplicits() {
                 continue;
             }
             if((ce & 0xffffffff) != Collation::COMMON_SEC_AND_TER_CE) {
-                errln("CollationIterator.nextCE(U+%04lx) has non-common sec/ter weights: %04lx",
+                errln("CollationIterator.nextCE(U+%04lx) has non-common sec/ter weights: %08lx",
                       (long)c, (long)(ce & 0xffffffff));
                 continue;
             }
