@@ -68,7 +68,7 @@ int32_t getIndex(const int32_t *indexes, int32_t length, int32_t i) {
     return (i < length) ? indexes[i] : 0;
 }
 
-};  // namespace
+}  // namespace
 
 void
 CollationDataReader::setData(const CollationData *baseData, const uint8_t *inBytes,
@@ -174,6 +174,17 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
         data.ce32s = reinterpret_cast<const uint32_t *>(inBytes + offset);
     } else {
         data.ce32s = NULL;
+    }
+
+    index = IX_ROOT_ELEMENTS_OFFSET;
+    offset = getIndex(inIndexes, indexesLength, index);
+    length = getIndex(inIndexes, indexesLength, index + 1) - offset;
+    if(length >= 4) {
+        data.rootElements = reinterpret_cast<const uint32_t *>(inBytes + offset);
+        data.rootElementsLength = length / 4;
+    } else {
+        data.rootElements = NULL;
+        data.rootElementsLength = 0;
     }
 
     index = IX_CONTEXTS_OFFSET;

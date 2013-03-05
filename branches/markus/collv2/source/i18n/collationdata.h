@@ -43,7 +43,8 @@ struct U_I18N_API CollationData : public UMemory {
               numericPrimary(0x12000000),
               compressibleBytes(NULL),
               unsafeBackwardSet(NULL),
-              scripts(NULL), scriptsLength(0) {}
+              scripts(NULL), scriptsLength(0),
+              rootElements(NULL), rootElementsLength(0) {}
 
     uint32_t getCE32(UChar32 c) const {
         return UTRIE2_GET32(trie, c);
@@ -157,6 +158,14 @@ struct U_I18N_API CollationData : public UMemory {
      */
     const uint16_t *scripts;
     int32_t scriptsLength;
+
+    /**
+     * Collation elements in the root collator.
+     * Used by the CollationRootElements class.
+     * NULL in a tailoring.
+     */
+    const uint32_t *rootElements;
+    int32_t rootElementsLength;
 
 private:
     int32_t findScript(int32_t script) const;

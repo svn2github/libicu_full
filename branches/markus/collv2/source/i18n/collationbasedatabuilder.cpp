@@ -22,6 +22,7 @@
 #include "collationbasedatabuilder.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
+#include "collationrootelements.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
 #include "uvectr32.h"
@@ -332,14 +333,6 @@ CollationBaseDataBuilder::build(UErrorCode &errorCode) {
     data.scripts = reinterpret_cast<const uint16_t *>(scripts.getBuffer());
     data.scriptsLength = scripts.length();
 }
-
-// TODO: move to .h -- 2013mar01
-class CollationRootElements {
-public:
-    static const uint32_t SEC_TER_DELTA_FLAG = 0x80;
-    static const uint32_t PRIMARY_STEP_MASK = 0x7f;
-    static const uint32_t NO_CASE_NO_QUAT_MASK = 0xffff3f3f;
-};
 
 void
 CollationBaseDataBuilder::buildRootElementsTable(UVector32 &table, UErrorCode &errorCode) {

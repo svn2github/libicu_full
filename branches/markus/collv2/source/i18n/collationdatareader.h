@@ -91,7 +91,8 @@ struct U_I18N_API CollationDataReader : public UMemory {
         /** Byte offset to uint32_t ce32s[]. */
         IX_CE32S_OFFSET,
 
-        IX_RESERVED12_OFFSET,  // 12
+        /** Byte offset to uint32_t rootElements[]. */
+        IX_ROOT_ELEMENTS_OFFSET,  // 12
         /** Byte offset to UChar *contexts[]. */
         IX_CONTEXTS_OFFSET,
         /** Byte offset to uint16_t [] with serialized unsafeBackwardSet. */

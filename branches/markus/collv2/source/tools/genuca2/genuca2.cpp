@@ -28,6 +28,7 @@
 #include "collationdata.h"
 #include "collationdatabuilder.h"
 #include "collationdatareader.h"
+#include "collationrootelements.h"
 #include "cstring.h"
 #include "toolutil.h"
 #include "ucol_bld.h"
@@ -264,12 +265,9 @@ static struct {
     {"[fixed last trail byte",        0, IGNORE},
     {"[fixed first special byte",     0, IGNORE},
     {"[fixed last special byte",      0, IGNORE},
-    // TODO: check == Collation::COMMON_BYTE
     {"[fixed secondary common byte",                  0, READBYTE},
-    // TODO: check <= CollationKeys::SEC_COMMON_HIGH
     {"[fixed last secondary common byte",             0, READBYTE},
     {"[fixed first ignorable secondary byte",         0, READBYTE},
-    // TODO: check == Collation::COMMON_BYTE
     {"[fixed tertiary common byte",                   0, READBYTE},
     {"[fixed first ignorable tertiary byte",          0, READBYTE},
     {"[variable top = ",              0, IGNORE},
@@ -282,6 +280,15 @@ static struct {
     {"[first secondary in primary non-ignorable",     0, IGNORE},
     {"[last secondary in primary non-ignorable",      0, IGNORE},
 };
+
+static int64_t getOptionValue(const char *name) {
+    for (int32_t i = 0; i < LENGTHOF(vt); ++i) {
+        if(uprv_strcmp(name, vt[i].name) == 0) {
+            return vt[i].value;
+        }
+    }
+    return 0;
+}
 
 static UnicodeString *leadByteScripts = NULL;
 
@@ -804,6 +811,17 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                       const char *path, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
 
+    if(getOptionValue("[fixed secondary common byte") != Collation::COMMON_BYTE) {
+        fprintf(stderr, "error: unexpected [fixed secondary common byte]");
+        errorCode = U_INVALID_FORMAT_ERROR;
+        return;
+    }
+    if(getOptionValue("[fixed tertiary common byte") != Collation::COMMON_BYTE) {
+        fprintf(stderr, "error: unexpected [fixed tertiary common byte]");
+        errorCode = U_INVALID_FORMAT_ERROR;
+        return;
+    }
+
     if(leadByteScripts != NULL) {
         uint32_t firstLead = Collation::MERGE_SEPARATOR_BYTE + 1;
         do {
@@ -855,6 +873,35 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         0, 0, 0, 0
     };
 
+    UVector32 rootElements(errorCode);
+    for(int32_t i = 0; i < CollationRootElements::IX_COUNT; ++i) {
+        rootElements.addElement(0, errorCode);
+    }
+    builder.buildRootElementsTable(rootElements, errorCode);
+    if(U_FAILURE(errorCode)) {
+        fprintf(stderr, "builder.buildRootElementsTable() failed: %s\n",
+                u_errorName(errorCode));
+        return;
+    }
+    int32_t index = CollationRootElements::IX_COUNT;
+    rootElements.setElementAt(index, CollationRootElements::IX_FIRST_TERTIARY_INDEX);
+
+    while((rootElements.elementAti(index) & 0xffff0000) == 0) { ++index; }
+    rootElements.setElementAt(index, CollationRootElements::IX_FIRST_SECONDARY_INDEX);
+
+    while((rootElements.elementAti(index) & CollationRootElements::SEC_TER_DELTA_FLAG) != 0) {
+        ++index;
+    }
+    rootElements.setElementAt(index, CollationRootElements::IX_FIRST_PRIMARY_INDEX);
+
+    rootElements.setElementAt(Collation::COMMON_SEC_AND_TER_CE,
+                              CollationRootElements::IX_COMMON_SEC_AND_TER_CE);
+
+    int32_t secTerBoundaries = (int32_t)getOptionValue("[fixed last secondary common byte") << 24;
+    secTerBoundaries |= (int32_t)getOptionValue("[fixed first ignorable secondary byte") << 16;
+    secTerBoundaries |= (int32_t)getOptionValue("[fixed first ignorable tertiary byte");
+    rootElements.setElementAt(secTerBoundaries, CollationRootElements::IX_SEC_TER_BOUNDARIES);
+
     // For the root collator, we write an even number of indexes
     // so that we start with an 8-aligned offset.
     indexes[CollationDataReader::IX_INDEXES_LENGTH] = CollationDataReader::IX_TOTAL_SIZE + 1;
@@ -894,7 +941,11 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
     totalSize += length * 4;
 
-    indexes[CollationDataReader::IX_RESERVED12_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_ROOT_ELEMENTS_OFFSET] = totalSize;
+    length = rootElements.size();
+    printf("  rootElements:     %6ld *4 = %6ld\n", (long)length, (long)length * 4);
+    totalSize += length * 4;
+
     indexes[CollationDataReader::IX_CONTEXTS_OFFSET] = totalSize;
     length = builder.lengthOfContexts();
     printf("  contexts:         %6ld *2 = %6ld\n", (long)length, (long)length * 2);
@@ -938,6 +989,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     udata_writePadding(pData, cePadding);
     udata_writeBlock(pData, data.ces, builder.lengthOfCEs() * 8);
     udata_writeBlock(pData, data.ce32s, builder.lengthOfCE32s() * 4);
+    udata_writeBlock(pData, rootElements.getBuffer(), rootElements.size() * 4);
     udata_writeBlock(pData, data.contexts, builder.lengthOfContexts() * 2);
     udata_writeBlock(pData, unsafeBwdSetWords, unsafeBwdSetLength * 2);
     udata_writeBlock(pData, data.scripts, data.scriptsLength * 2);
@@ -1097,27 +1149,6 @@ parseAndWriteCollationRootData(
     builder.add(prefix, s, &ce, 1, errorCode);
     // end artificial tailoring
     buildAndWriteBaseData(builder, binaryDataPath, errorCode);
-    // TODO: buildAndWriteRootElements(builder, binaryDataPath, errorCode);
-    // TODO: begin experimental root elements output
-    UVector32 rootElementsTable(errorCode);
-    builder.buildRootElementsTable(rootElementsTable, errorCode);
-    printf("# %d root elements\n", rootElementsTable.size());
-#if 0
-    for(int32_t i = 0; i < rootElementsTable.size(); ++i) {
-        int32_t re = rootElementsTable.elementAti(i);
-        if((re & 0x80) == 0) {
-            int32_t step = re & 0x7f;
-            if(step != 0) {
-                printf("    %% %d\n", step);
-            }
-            printf("%06x\n", (re >> 8) & 0xffffff);
-        } else {
-            printf("        %08x\n", re & ~0x80);
-        }
-    }
-#endif
-    // TODO: end experimental root elements output
-    // TODO: find & store the root elements index of the first CE with a non-zero secondary & primary weight
     buildAndWriteFCDData(sourceCodePath, errorCode);
 }
 
