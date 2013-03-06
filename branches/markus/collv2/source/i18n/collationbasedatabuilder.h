@@ -38,11 +38,7 @@ public:
 
     virtual ~CollationBaseDataBuilder();
 
-    void initBase(UErrorCode &errorCode);
-
-    /** Non-functional in this subclass. */
-    virtual void initTailoring(const CollationData *b, const CollationSettings *bs,
-                               UErrorCode &errorCode);
+    void init(UErrorCode &errorCode);
 
     /**
      * Sets the Han ranges as ranges of offset CE32s.

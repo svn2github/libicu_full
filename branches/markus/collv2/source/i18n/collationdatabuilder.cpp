@@ -92,31 +92,6 @@ CollationDataBuilder::~CollationDataBuilder() {
     utrie2_close(trie);
 }
 
-void
-CollationDataBuilder::initTailoring(const CollationData *b, const CollationSettings *bs,
-                                    UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return; }
-    if(trie != NULL) {
-        errorCode = U_INVALID_STATE_ERROR;
-        return;
-    }
-    if(b == NULL || bs == NULL) {
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
-    base = b;
-    baseSettings = bs;
-    settings = *bs;
-
-    // For a tailoring, the default is to fall back to the base.
-    trie = utrie2_open(Collation::MIN_SPECIAL_CE32, Collation::FFFD_CE32, &errorCode);
-
-    unsafeBackwardSet = *b->unsafeBackwardSet;
-
-    if(U_FAILURE(errorCode)) { return; }
-    // TODO
-}
-
 UBool
 CollationDataBuilder::maybeSetPrimaryRange(UChar32 start, UChar32 end,
                                            uint32_t primary, int32_t step,
@@ -583,13 +558,6 @@ CollationDataBuilder::setLeadSurrogates(UErrorCode &errorCode) {
         utrie2_set32ForLeadSurrogateCodeUnit(
             trie, lead, Collation::makeSpecialCE32(Collation::LEAD_SURROGATE_TAG, value), &errorCode);
     }
-}
-
-void
-CollationDataBuilder::build(UErrorCode &errorCode) {
-    buildMappings(errorCode);
-    data.numericPrimary = base->numericPrimary;
-    data.compressibleBytes = base->compressibleBytes;
 }
 
 void

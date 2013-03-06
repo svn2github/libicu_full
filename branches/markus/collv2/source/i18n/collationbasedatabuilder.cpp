@@ -93,7 +93,7 @@ CollationBaseDataBuilder::~CollationBaseDataBuilder() {
 }
 
 void
-CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
+CollationBaseDataBuilder::init(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     if(trie != NULL) {
         errorCode = U_INVALID_STATE_ERROR;
@@ -150,12 +150,6 @@ CollationBaseDataBuilder::initBase(UErrorCode &errorCode) {
     ce32 = Collation::MAX_REGULAR_CE32;
     utrie2_set32(trie, 0xffff, ce32, &errorCode);
     addRootElement(Collation::ceFromCE32(ce32), errorCode);
-}
-
-void
-CollationBaseDataBuilder::initTailoring(const CollationData *, const CollationSettings *,
-                                        UErrorCode &errorCode) {
-    if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
 }
 
 void

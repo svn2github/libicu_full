@@ -619,7 +619,7 @@ parseFractionalUCA(const char *filename,
                 if(c > maxCodePoint) { maxCodePoint = c; }
 
                 // We ignore the CEs for U+FFFD..U+FFFF and for the unassigned first primary.
-                // CollationBaseDataBuilder::initBase() maps them to special CEs.
+                // CollationBaseDataBuilder::init() maps them to special CEs.
                 // Except for U+FFFE, these have higher primaries in v2 than in FractionalUCA.txt.
                 if(0xfffd <= c && c <= 0xffff) { continue; }
                 if(s.length() == 2 && s[0] == 0xFDD1 && s[1] == 0xFDD0) {
@@ -1133,7 +1133,7 @@ parseAndWriteCollationRootData(
         UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     CollationBaseDataBuilder builder(errorCode);
-    builder.initBase(errorCode);
+    builder.init(errorCode);
     parseFractionalUCA(fracUCAPath, builder, &errorCode);
     // TODO: remove artificial "tailoring", replace with real tailoring
     // Set U+FFF1 to a tertiary CE.

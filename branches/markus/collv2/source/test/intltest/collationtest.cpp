@@ -160,7 +160,7 @@ void CollationTest::TestMinMax() {
     IcuTestErrorCode errorCode(*this, "TestMinMax");
 
     CollationBaseDataBuilder builder(errorCode);
-    builder.initBase(errorCode);
+    builder.init(errorCode);
     builder.build(errorCode);
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
@@ -256,7 +256,7 @@ void CollationTest::TestNulTerminated() {
     IcuTestErrorCode errorCode(*this, "TestNulTerminated");
 
     CollationBaseDataBuilder builder(errorCode);
-    builder.initBase(errorCode);
+    builder.init(errorCode);
     builder.build(errorCode);
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
@@ -384,7 +384,7 @@ void CollationTest::TestFCD() {
     IcuTestErrorCode errorCode(*this, "TestFCD");
 
     CollationBaseDataBuilder builder(errorCode);
-    builder.initBase(errorCode);
+    builder.init(errorCode);
     builder.build(errorCode);
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
@@ -814,10 +814,10 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         errln("new CollationBaseDataBuilder() failed");
         return;
     }
-    baseBuilder->initBase(errorCode);
+    baseBuilder->init(errorCode);
     if(errorCode.isFailure()) {
         errln(fileTestName);
-        errln("CollationBaseDataBuilder.initBase() failed");
+        errln("CollationBaseDataBuilder.init() failed");
         return;
     }
 

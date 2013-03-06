@@ -43,9 +43,6 @@ public:
 
     virtual ~CollationDataBuilder();
 
-    virtual void initTailoring(const CollationData *b, const CollationSettings *bs,
-                               UErrorCode &errorCode);
-
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
     inline UBool isCompressiblePrimary(uint32_t p) const {
@@ -105,7 +102,7 @@ public:
                                           uint32_t primary, int32_t step,
                                           UErrorCode &errorCode);
 
-    virtual void build(UErrorCode &errorCode);
+    virtual void build(UErrorCode &errorCode) = 0;
 
     const CollationData &getData() const { return data; }
     const CollationSettings &getSettings() const { return settings; }
