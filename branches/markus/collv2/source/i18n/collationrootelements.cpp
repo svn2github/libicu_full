@@ -21,6 +21,7 @@ U_NAMESPACE_BEGIN
 
 int32_t
 CollationRootElements::findPrimary(uint32_t p) {
+    U_ASSERT((p & 0xff) == 0);  // at most a 3-byte primary
     // modified binary search
     int32_t start = (int32_t)elements[IX_FIRST_PRIMARY_INDEX];
     U_ASSERT(p >= elements[start]);
@@ -62,7 +63,7 @@ CollationRootElements::findPrimary(uint32_t p) {
                 }
             }
         }
-        if(p < q) {
+        if(p < (q & 0xffffff00)) {  // reset the "step" bits of a range end primary
             limit = i;
         } else {
             start = i;
