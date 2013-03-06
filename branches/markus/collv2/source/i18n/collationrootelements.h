@@ -63,7 +63,17 @@ public:
         IX_COUNT
     };
 
+    uint32_t getFirstPrimary() const {
+        return elements[elements[IX_FIRST_PRIMARY_INDEX]];
+    }
+
 private:
+    /**
+     * Finds the largest index i where elements[i]<=p.
+     * Requires getFirstPrimary()<=p<0xff000000 (SPECIAL_BYTE<<24).
+     */
+    int32_t findPrimary(uint32_t p);
+
     const uint32_t *elements;
     int32_t length;
 };

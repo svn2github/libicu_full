@@ -24,6 +24,7 @@
 #include "collationdatabuilder.h"
 #include "collationrootelements.h"
 #include "normalizer2impl.h"
+#include "uassert.h"
 #include "utrie2.h"
 #include "uvectr32.h"
 #include "uvectr64.h"
@@ -429,7 +430,10 @@ CollationBaseDataBuilder::writeRootElementsRange(
     if((p & prevPrimary & 0xff0000) == 0) { return 0; }
     // Lead bytes of compressible primaries must match.
     UBool isCompressible = isCompressiblePrimary(p);
-    if(isCompressible && (p & 0xff000000) != (prevPrimary & 0xff000000)) { return 0; }
+    if((isCompressible || isCompressiblePrimary(prevPrimary)) &&
+            (p & 0xff000000) != (prevPrimary & 0xff000000)) {
+        return 0;
+    }
     // Number of bytes in the primaries.
     UBool twoBytes;
     // Number of primaries from prevPrimary to p.
@@ -463,8 +467,10 @@ CollationBaseDataBuilder::writeRootElementsRange(
         p = (uint32_t)(ce >> 32);
         uint32_t secTer = (uint32_t)ce & CollationRootElements::NO_CASE_NO_QUAT_MASK;
         // Does this primary increase by "step" from the last one?
-        // Do we stay within the same compressible lead byte?
-        if(p != nextPrimary || (isCompressible && (p & 0xff000000) != (prevPrimary & 0xff000000))) {
+        if(p != nextPrimary ||
+                // Do not cross into a new lead byte if either is compressible.
+                ((p & 0xff000000) != (prevPrimary & 0xff000000) &&
+                    (isCompressible || isCompressiblePrimary(p)))) {
             // The range ends with the previous CE.
             p = prevPrimary;
             break;
