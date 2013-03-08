@@ -863,7 +863,9 @@ DateIntervalFormat::getDateTimeSkeleton(const UnicodeString& skeleton,
 
     /* generate normalized form for date*/
     if ( yCount != 0 ) {
-        normalizedDateSkeleton.append(LOW_Y);
+        for (i = 0; i < yCount; ++i) {
+            normalizedDateSkeleton.append(LOW_Y);
+        }
     }
     if ( MCount != 0 ) {
         if ( MCount < 3 ) {
