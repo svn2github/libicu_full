@@ -1197,7 +1197,10 @@ void DateIntervalFormatTest::testYearFormats() {
         errln("Failure encountered: %s", u_errorName(status));
         return;
     }
+    // April 26, 113. Three digit year so that we can test 2 digit years;
+    // 4 digit years with padded 0's and full years.
     fromTime->set(113, 3, 26);
+    // April 28, 113.
     toTime->set(113, 3, 28);
     {
         LocalPointer<DateIntervalFormat> dif(DateIntervalFormat::createInstance("yyyyMd", enLocale, status));
