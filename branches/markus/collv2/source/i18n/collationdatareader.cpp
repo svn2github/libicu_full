@@ -20,6 +20,8 @@
 #include "collation.h"
 #include "collationdata.h"
 #include "collationdatareader.h"
+#include "collationkeys.h"
+#include "collationrootelements.h"
 #include "collationsettings.h"
 #include "uassert.h"
 #include "utrie2.h"
@@ -180,8 +182,25 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 4) {
+        length /= 4;
         data.rootElements = reinterpret_cast<const uint32_t *>(inBytes + offset);
-        data.rootElementsLength = length / 4;
+        data.rootElementsLength = length;
+        if(length <= CollationRootElements::IX_SEC_TER_BOUNDARIES) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        uint32_t commonSecTer = data.rootElements[CollationRootElements::IX_COMMON_SEC_AND_TER_CE];
+        if(commonSecTer != Collation::COMMON_SEC_AND_TER_CE) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        uint32_t secTerBoundaries = data.rootElements[CollationRootElements::IX_SEC_TER_BOUNDARIES];
+        if((secTerBoundaries >> 24) < CollationKeys::SEC_COMMON_HIGH) {
+            // [fixed last secondary common byte] is too low,
+            // and secondary weights would collide with compressed common secondaries.
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
     } else {
         data.rootElements = NULL;
         data.rootElementsLength = 0;

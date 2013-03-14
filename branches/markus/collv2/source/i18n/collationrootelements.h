@@ -55,7 +55,6 @@ public:
          * Bits  7.. 0: [fixed first ignorable tertiary byte 3C]
          */
         IX_SEC_TER_BOUNDARIES,
-        // TODO: check [fixed last secondary common byte] <= CollationKeys::SEC_COMMON_HIGH
         /**
          * The current number of indexes.
          * Currently the same as elements[IX_FIRST_TERTIARY_INDEX].

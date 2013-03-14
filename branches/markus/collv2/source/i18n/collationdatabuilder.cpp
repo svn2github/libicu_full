@@ -80,7 +80,8 @@ CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
         : nfcImpl(*Normalizer2Factory::getNFCImpl(errorCode)),
           base(NULL), baseSettings(NULL),
           trie(NULL),
-          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode) {
+          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode),
+          modified(FALSE) {
     // Reserve the first CE32 for U+0000.
     ce32s.addElement(0, errorCode);
     conditionalCE32s.setDeleter(uprv_deleteConditionalCE32);
@@ -120,6 +121,7 @@ CollationDataBuilder::maybeSetPrimaryRange(UChar32 start, UChar32 end,
         }
         uint32_t offsetCE32 = Collation::makeSpecialCE32(Collation::OFFSET_TAG, index);
         utrie2_setRange32(trie, start, end, offsetCE32, TRUE, &errorCode);
+        modified = TRUE;
         return TRUE;
     } else {
         return FALSE;
@@ -143,6 +145,7 @@ CollationDataBuilder::setPrimaryRangeAndReturnNext(UChar32 start, UChar32 end,
             primary = Collation::incThreeBytePrimaryByOffset(primary, isCompressible, step);
             if(start > end) { return primary; }
         }
+        modified = TRUE;
     }
 }
 
@@ -357,6 +360,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
             cond = nextCond;
         }
     }
+    modified = TRUE;
 }
 
 uint32_t

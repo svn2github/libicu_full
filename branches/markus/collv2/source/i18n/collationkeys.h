@@ -24,6 +24,7 @@
 U_NAMESPACE_BEGIN
 
 class CollationIterator;
+struct CollationDataReader;
 struct CollationSettings;
 
 class SortKeyByteSink2 : public ByteSink {
@@ -111,6 +112,8 @@ public:
                                            Collation::Level minLevel, LevelCallback &callback,
                                            UErrorCode &errorCode);
 private:
+    friend struct CollationDataReader;
+
     CollationKeys();  // no instantiation
 
     // Secondary level: Compress up to 33 common weights as 05..25 or 25..45.

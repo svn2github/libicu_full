@@ -50,6 +50,11 @@ public:
     }
 
     /**
+     * @return TRUE if this builder has mappings (e.g., add() has been called)
+     */
+    UBool hasMappings() const { return modified; }
+
+    /**
      * @return TRUE if c has CEs in this builder
      */
     UBool isAssigned(UChar32 c) const;
@@ -151,6 +156,7 @@ protected:
     // Serialized UCharsTrie structures for finalized contexts.
     UnicodeString contexts;
     UnicodeSet unsafeBackwardSet;
+    UBool modified;
 };
 
 #if 0
