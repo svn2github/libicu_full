@@ -52,7 +52,7 @@ public:
      */
     void initHanRanges(const UChar32 ranges[], int32_t length, UErrorCode &errorCode);
 
-    void setNumericPrimary(uint32_t np) { data.numericPrimary = np; }
+    void setNumericPrimary(uint32_t np) { numericPrimary = np; }
 
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
@@ -72,7 +72,7 @@ public:
                             const UnicodeString &groupScripts,
                             UErrorCode &errorCode);
 
-    virtual void build(UErrorCode &errorCode);
+    virtual void build(CollationData &data, UErrorCode &errorCode);
 
     void buildRootElementsTable(UVector32 &table, UErrorCode &errorCode);
 
@@ -83,6 +83,7 @@ private:
 
     // Flags for which primary-weight lead bytes are compressible.
     UBool compressibleBytes[256];
+    uint32_t numericPrimary;
     uint32_t firstHanPrimary;
     uint32_t lastHanPrimary;
     int32_t hanStep;

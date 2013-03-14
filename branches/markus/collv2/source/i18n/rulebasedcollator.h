@@ -26,9 +26,9 @@
 U_NAMESPACE_BEGIN
 
 struct CollationData;
-class CollationDataBuilder;
 struct CollationDataReader;
 struct CollationSettings;
+struct CollationTailoring;
 class CollationElementIterator;
 class SortKeyByteSink2;
 
@@ -585,7 +585,7 @@ public:
 
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationDataReader &r);
-    RuleBasedCollator2(CollationDataBuilder *b);
+    RuleBasedCollator2(CollationTailoring *t);
 
 private:
     /**
@@ -630,7 +630,7 @@ private:
     const CollationSettings *settings;  // == defaultSettings or ownedSettings
     // Either reader!=NULL or ownedBuilder!=NULL.
     const CollationDataReader *reader;
-    CollationDataBuilder *ownedBuilder;
+    CollationTailoring *tailoring;
     CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
     int32_t ownedReorderCodesCapacity;
     uint32_t explicitlySetAttributes;

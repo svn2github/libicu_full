@@ -30,6 +30,7 @@
 #include "collationdatareader.h"
 #include "collationrootelements.h"
 #include "cstring.h"
+#include "normalizer2impl.h"
 #include "toolutil.h"
 #include "ucol_bld.h"
 #include "ucol_elm.h"
@@ -856,14 +857,17 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         delete[] leadByteScripts;
     }
 
-    builder.build(errorCode);
+    CollationData data(*Normalizer2Factory::getNFCImpl(errorCode));
+    builder.build(data, errorCode);
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "builder.build() failed: %s\n",
                 u_errorName(errorCode));
         return;
     }
-    const CollationData &data = builder.getData();
-    const CollationSettings &settings = builder.getSettings();
+
+    // The CollationSettings constructor gives us the properly encoded
+    // default options, so that we need not duplicate them here.
+    CollationSettings settings;
 
     int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1]={
         0, 0, 0, 0,

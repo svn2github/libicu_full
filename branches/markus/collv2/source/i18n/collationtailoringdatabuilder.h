@@ -3,14 +3,14 @@
 * Copyright (C) 2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
-* collationtailoringbuilder.h
+* collationtailoringdatabuilder.h
 *
 * created on: 2013mar05
 * created by: Markus W. Scherer
 */
 
-#ifndef __COLLATIONTAILORINGBUILDER_H__
-#define __COLLATIONTAILORINGBUILDER_H__
+#ifndef __COLLATIONTAILORINGDATABUILDER_H__
+#define __COLLATIONTAILORINGDATABUILDER_H__
 
 #include "unicode/utypes.h"
 
@@ -34,15 +34,15 @@ U_NAMESPACE_BEGIN
 /**
  * Low-level tailoring CollationData builder.
  */
-class U_I18N_API CollationTailoringBuilder : public CollationDataBuilder {
+class U_I18N_API CollationTailoringDataBuilder : public CollationDataBuilder {
 public:
-    CollationTailoringBuilder(UErrorCode &errorCode);
+    CollationTailoringDataBuilder(UErrorCode &errorCode);
 
-    virtual ~CollationTailoringBuilder();
+    virtual ~CollationTailoringDataBuilder();
 
-    void init(const CollationData *b, const CollationSettings *bs, UErrorCode &errorCode);
+    void init(const CollationData *b, UErrorCode &errorCode);
 
-    virtual void build(UErrorCode &errorCode);
+    virtual void build(CollationData &data, UErrorCode &errorCode);
 
 private:
 };
@@ -50,4 +50,4 @@ private:
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION
-#endif  // __COLLATIONTAILORINGBUILDER_H__
+#endif  // __COLLATIONTAILORINGDATABUILDER_H__

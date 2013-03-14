@@ -253,9 +253,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                     if(ce32 == Collation::MIN_SPECIAL_CE32) {
                         ce32 = data->base->getCE32(c);
                     }
-                    if(!Collation::isSpecialCE32(ce32) ||
-                        Collation::DIGIT_TAG != Collation::getSpecialCE32Tag(ce32)
-                    ) {
+                    if(!Collation::hasCE32Tag(ce32, Collation::DIGIT_TAG)) {
                         backwardNumCodePoints(1, errorCode);
                         break;
                     }
@@ -907,9 +905,7 @@ CollationIterator::previousCEFromSpecialCE32(
                     if(ce32 == Collation::MIN_SPECIAL_CE32) {
                         ce32 = data->base->getCE32(c);
                     }
-                    if(!Collation::isSpecialCE32(ce32) ||
-                        Collation::DIGIT_TAG != Collation::getSpecialCE32Tag(ce32)
-                    ) {
+                    if(!Collation::hasCE32Tag(ce32, Collation::DIGIT_TAG)) {
                         forwardNumCodePoints(1, errorCode);
                         break;
                     }

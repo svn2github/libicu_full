@@ -102,12 +102,7 @@ public:
                                           uint32_t primary, int32_t step,
                                           UErrorCode &errorCode);
 
-    virtual void build(UErrorCode &errorCode) = 0;
-
-    const CollationData &getData() const { return data; }
-    const CollationSettings &getSettings() const { return settings; }
-    const UnicodeString &getRules() const { return rules; }
-    const UVersionInfo &getVersion() const { return version; }
+    virtual void build(CollationData &data, UErrorCode &errorCode) = 0;
 
     int32_t lengthOfCE32s() const { return ce32s.size(); }
     int32_t lengthOfCEs() const { return ce64s.size(); }
@@ -116,6 +111,7 @@ public:
     int32_t serializeTrie(void *data, int32_t capacity, UErrorCode &errorCode) const;
     int32_t serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
                                        UErrorCode &errorCode) const;
+    UTrie2 *orphanTrie();
 
 protected:
     UBool setJamoCEs(UErrorCode &errorCode);
@@ -135,7 +131,7 @@ protected:
     uint32_t encodeCEsAsCE32s(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
     uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
 
-    void buildMappings(UErrorCode &errorCode);
+    void buildMappings(CollationData &data, UErrorCode &errorCode);
 
     void buildContexts(UErrorCode &errorCode);
     void buildContext(UChar32 c, UErrorCode &errorCode);
@@ -155,11 +151,6 @@ protected:
     // Serialized UCharsTrie structures for finalized contexts.
     UnicodeString contexts;
     UnicodeSet unsafeBackwardSet;
-
-    CollationData data;
-    CollationSettings settings;
-    UnicodeString rules;
-    UVersionInfo version;
 };
 
 #if 0

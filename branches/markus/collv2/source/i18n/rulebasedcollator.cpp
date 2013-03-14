@@ -28,13 +28,13 @@
 #include "collation.h"
 #include "collationcompare.h"
 #include "collationdata.h"
-#include "collationdatabuilder.h"
 #include "collationdatareader.h"
 #include "collationiterator.h"
 #include "collationkeys.h"
 #include "collationroot.h"
 #include "collationsets.h"
 #include "collationsettings.h"
+#include "collationtailoring.h"
 #include "cstring.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
@@ -130,22 +130,26 @@ RuleBasedCollator2::RuleBasedCollator2(const CollationDataReader &r)
         : data(&r.data),
           settings(&r.settings),
           reader(&r),
-          ownedBuilder(NULL),
+          tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0) {}
 
-RuleBasedCollator2::RuleBasedCollator2(CollationDataBuilder *b)
-        : data(&b->getData()),
-          settings(&b->getSettings()),
+RuleBasedCollator2::RuleBasedCollator2(CollationTailoring *t)
+        : data(t->data),
+          settings(&t->settings),
           reader(NULL),
-          ownedBuilder(b),
+          tailoring(t),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
-          explicitlySetAttributes(0) {}
+          explicitlySetAttributes(0) {
+    tailoring->addRef();
+}
 
 RuleBasedCollator2::~RuleBasedCollator2() {
-    delete ownedBuilder;
+    if(tailoring != NULL) {
+        tailoring->removeRef();
+    }
     if(ownedSettings != NULL) {
         const CollationSettings &defaultSettings = getDefaultSettings();
         if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
@@ -164,9 +168,7 @@ RuleBasedCollator2::clone() const {
     if(reader != NULL) {
         newCollator.adoptInstead(new RuleBasedCollator2(*reader));
     } else {
-        // TODO: CollationDataBuilder *newBuilder = ownedBuilder->clone();
-        // if(newBuilder == NULL) { return NULL; }
-        // newCollator.adoptInstead(new RuleBasedCollator2(newBuilder));
+        newCollator.adoptInstead(new RuleBasedCollator2(tailoring));
     }
     if(newCollator.isNull()) { return NULL; }
     if(ownedSettings != NULL) {
@@ -237,7 +239,7 @@ RuleBasedCollator2::getRules() const {
     if(reader != NULL) {
         return reader->rules;
     } else {
-        return ownedBuilder->getRules();
+        return tailoring->rules;
     }
 }
 
@@ -254,7 +256,7 @@ RuleBasedCollator2::getVersion(UVersionInfo version) const {
         uprv_memcpy(version, reader->version, 4);
     } else {
         // TODO: memset to 0?
-        uprv_memcpy(version, ownedBuilder->getVersion(), 4);
+        uprv_memcpy(version, tailoring->version, 4);
     }
 }
 
@@ -297,7 +299,7 @@ RuleBasedCollator2::getDefaultSettings() const {
     if(reader != NULL) {
         return reader->settings;
     } else {
-        return ownedBuilder->getSettings();
+        return tailoring->settings;
     }
 }
 

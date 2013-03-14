@@ -85,6 +85,7 @@ binarySearch(const UVector64 &list, int64_t ce) {
 
 CollationBaseDataBuilder::CollationBaseDataBuilder(UErrorCode &errorCode)
         : CollationDataBuilder(errorCode),
+          numericPrimary(0x12000000),
           firstHanPrimary(0), lastHanPrimary(0), hanStep(2),
           rootElements(errorCode) {
 }
@@ -322,8 +323,9 @@ CollationBaseDataBuilder::addReorderingGroup(uint32_t firstByte, uint32_t lastBy
 }
 
 void
-CollationBaseDataBuilder::build(UErrorCode &errorCode) {
-    buildMappings(errorCode);
+CollationBaseDataBuilder::build(CollationData &data, UErrorCode &errorCode) {
+    buildMappings(data, errorCode);
+    data.numericPrimary = numericPrimary;
     data.compressibleBytes = compressibleBytes;
     data.scripts = reinterpret_cast<const uint16_t *>(scripts.getBuffer());
     data.scriptsLength = scripts.length();

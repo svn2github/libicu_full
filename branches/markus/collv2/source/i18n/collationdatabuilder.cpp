@@ -80,9 +80,7 @@ CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
         : nfcImpl(*Normalizer2Factory::getNFCImpl(errorCode)),
           base(NULL), baseSettings(NULL),
           trie(NULL),
-          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode),
-          data(nfcImpl) {
-    version[0] = version[1] = version[2] = version[3] = 0;
+          ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode) {
     // Reserve the first CE32 for U+0000.
     ce32s.addElement(0, errorCode);
     conditionalCE32s.setDeleter(uprv_deleteConditionalCE32);
@@ -561,7 +559,7 @@ CollationDataBuilder::setLeadSurrogates(UErrorCode &errorCode) {
 }
 
 void
-CollationDataBuilder::buildMappings(UErrorCode &errorCode) {
+CollationDataBuilder::buildMappings(CollationData &data, UErrorCode &errorCode) {
     // TODO: Prevent build() after build().
     // TODO: Copy Latin-1 into each tailoring, but not 0..ff, rather 0..7f && c0..ff.
 
@@ -745,6 +743,13 @@ int32_t
 CollationDataBuilder::serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
                                                  UErrorCode &errorCode) const {
     return unsafeBackwardSet.serialize(data, capacity, errorCode);
+}
+
+UTrie2 *
+CollationDataBuilder::orphanTrie() {
+    UTrie2 *orphan = trie;
+    trie = NULL;
+    return orphan;
 }
 
 // TODO: In CollationWeights allocator,

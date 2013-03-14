@@ -30,6 +30,7 @@
 #include "collationdatabuilder.h"
 #include "collationiterator.h"
 #include "collationroot.h"
+#include "collationtailoring.h"
 #include "cstring.h"
 #include "intltest.h"
 #include "normalizer2impl.h"
@@ -60,6 +61,7 @@ public:
 
     ~CollationTest() {
         delete baseBuilder;
+        delete ownedData;
         delete coll;
     }
 
@@ -135,6 +137,7 @@ private:
     UnicodeString fileTestName;
     CollationBaseDataBuilder *baseBuilder;
     const CollationData *collData;
+    CollationData *ownedData;
     Collator *coll;
 };
 
@@ -161,13 +164,14 @@ void CollationTest::TestMinMax() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.init(errorCode);
-    builder.build(errorCode);
+    CollationData data(*Normalizer2Factory::getNFCImpl(errorCode));
+    builder.build(data, errorCode);
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
     }
 
     static const UChar s[2] = { 0xfffe, 0xffff };
-    UTF16CollationIterator ci(&builder.getData(), FALSE, s, s + 2);
+    UTF16CollationIterator ci(&data, FALSE, s, s + 2);
     int64_t ce = ci.nextCE(errorCode);
     int64_t expected =
         ((int64_t)Collation::MERGE_SEPARATOR_PRIMARY << 32) |
@@ -257,15 +261,16 @@ void CollationTest::TestNulTerminated() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.init(errorCode);
-    builder.build(errorCode);
+    CollationData data(*Normalizer2Factory::getNFCImpl(errorCode));
+    builder.build(data, errorCode);
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
     }
 
     static const UChar s[] = { 0x61, 0x62, 0x61, 0x62, 0 };
 
-    UTF16CollationIterator ci1(&builder.getData(), FALSE, s, s + 2);
-    UTF16CollationIterator ci2(&builder.getData(), FALSE, s + 2, NULL);
+    UTF16CollationIterator ci1(&data, FALSE, s, s + 2);
+    UTF16CollationIterator ci2(&data, FALSE, s + 2, NULL);
     for(int32_t i = 0;; ++i) {
         int64_t ce1 = ci1.nextCE(errorCode);
         int64_t ce2 = ci2.nextCE(errorCode);
@@ -385,7 +390,8 @@ void CollationTest::TestFCD() {
 
     CollationBaseDataBuilder builder(errorCode);
     builder.init(errorCode);
-    builder.build(errorCode);
+    CollationData data(*Normalizer2Factory::getNFCImpl(errorCode));
+    builder.build(data, errorCode);
     if(errorCode.logIfFailureAndReset("CollationBaseDataBuilder.build()")) {
         return;
     }
@@ -418,7 +424,7 @@ void CollationTest::TestFCD() {
         0x4e00, 0xf71, 0xf80
     };
 
-    FCDUTF16CollationIterator u16ci(&builder.getData(), FALSE, s, NULL);
+    FCDUTF16CollationIterator u16ci(&data, FALSE, s, NULL);
     if(errorCode.logIfFailureAndReset("FCDUTF16CollationIterator constructor")) {
         return;
     }
@@ -429,7 +435,7 @@ void CollationTest::TestFCD() {
     cpi.resetToStart();
     std::string utf8;
     UnicodeString(s).toUTF8String(utf8);
-    FCDUTF8CollationIterator u8ci(&builder.getData(), FALSE, reinterpret_cast<const uint8_t *>(utf8.c_str()), -1);
+    FCDUTF8CollationIterator u8ci(&data, FALSE, reinterpret_cast<const uint8_t *>(utf8.c_str()), -1);
     if(errorCode.logIfFailureAndReset("FCDUTF8CollationIterator constructor")) {
         return;
     }
@@ -439,7 +445,7 @@ void CollationTest::TestFCD() {
     cpi.resetToStart();
     UCharIterator iter;
     uiter_setString(&iter, s, LENGTHOF(s) - 1);  // -1: without the terminating NUL
-    FCDUIterCollationIterator uici(&builder.getData(), FALSE, iter, 0);
+    FCDUIterCollationIterator uici(&data, FALSE, iter, 0);
     if(errorCode.logIfFailureAndReset("FCDUIterCollationIterator constructor")) {
         return;
     }
@@ -838,24 +844,36 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         }
     }
     if(errorCode.isFailure()) { return; }
-    baseBuilder->build(errorCode);
+    delete ownedData;
+    ownedData = new CollationData(*Normalizer2Factory::getNFCImpl(errorCode));
+    if(ownedData == NULL) {
+        errorCode.set(U_MEMORY_ALLOCATION_ERROR);
+        return;
+    }
+    baseBuilder->build(*ownedData, errorCode);
     if(errorCode.isFailure()) {
         errln(fileTestName);
         errln("CollationBaseDataBuilder.build() failed");
     }
-    collData = &baseBuilder->getData();
+    collData = ownedData;
 }
 
 void CollationTest::replaceCollator(IcuTestErrorCode &errorCode) {
     // TODO: if we always replaceCollator() after buildBase() then we can merge this into that
     if(errorCode.isFailure()) { return; }
-    Collator *newColl = new RuleBasedCollator2(baseBuilder);
+    LocalPointer<CollationTailoring> tailoring(new CollationTailoring());
+    if(tailoring.isNull()) {
+        errorCode.set(U_MEMORY_ALLOCATION_ERROR);
+        return;
+    }
+    tailoring->data = collData;
+    Collator *newColl = new RuleBasedCollator2(tailoring.getAlias());
     if(newColl == NULL) {
         errln("unable to allocate a new collator");
         errorCode.set(U_MEMORY_ALLOCATION_ERROR);
         return;
     }
-    baseBuilder = NULL;  // coll adopted the builder
+    tailoring.orphan();  // newColl adopted the tailoring.
     delete coll;
     coll = newColl;
 }
