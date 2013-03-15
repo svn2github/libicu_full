@@ -28,36 +28,6 @@
 
 U_NAMESPACE_BEGIN
 
-// TODO: only for cloning a reader that was used to deserialize API-input binary data,
-// where there is no UDataMemory
-CollationDataReader *
-CollationDataReader::clone() const {
-    LocalPointer<CollationDataReader> newReader(new CollationDataReader(*this));
-    if(newReader.isNull()) {
-        return NULL;
-    }
-    // The copy constructor does a shallow clone, copying all fields.
-    // We cannot clone the UDataMemory.
-    U_ASSERT(memory == NULL);
-    newReader->memory = NULL;
-    if(trie != NULL) {
-        UErrorCode errorCode = U_ZERO_ERROR;
-        newReader->trie = utrie2_clone(trie, &errorCode);
-        if(newReader->trie == NULL || U_FAILURE(errorCode)) {
-            return NULL;
-        }
-        newReader->data.trie = newReader->trie;
-    }
-    if(unsafeBackwardSet != NULL) {
-        newReader->unsafeBackwardSet = new UnicodeSet(*unsafeBackwardSet);
-        if(newReader->unsafeBackwardSet == NULL) {
-            return NULL;
-        }
-        newReader->data.unsafeBackwardSet = newReader->unsafeBackwardSet;
-    }
-    return newReader.orphan();
-}
-
 CollationDataReader::~CollationDataReader() {
     udata_close(memory);
     utrie2_close(trie);

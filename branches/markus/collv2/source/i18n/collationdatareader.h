@@ -42,8 +42,6 @@ struct U_I18N_API CollationDataReader : public UMemory {
         version[0] = version[1] = version[2] = version[3] = 0;
     }
 
-    CollationDataReader *clone() const;
-
     ~CollationDataReader();
 
     enum {

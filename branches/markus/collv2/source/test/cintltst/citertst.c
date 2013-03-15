@@ -1009,6 +1009,7 @@ static void TestSmallBuffer()
     }
 }
 
+#if 0
 /**
 * Sniplets of code from genuca
 */
@@ -1023,6 +1024,7 @@ static int32_t hex2num(char hex) {
         return 0;
     }
 }
+#endif
 
 /**
 * Getting codepoints from a string
@@ -1067,6 +1069,7 @@ static char *getCodePoints(char *str, UChar *codepoints, UChar *contextCPs) {
     return semi + 1;
 }
 
+#if 0
 /**
 * Sniplets of code from genuca
 */
@@ -1219,6 +1222,7 @@ static char * getCEs(char *str, uint32_t *ces, UErrorCode *status) {
     ces[count] = 0;
     return pStartCP;
 }
+#endif
 
 /**
 * Getting the FractionalUCA.txt file stream

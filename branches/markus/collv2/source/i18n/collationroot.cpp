@@ -35,7 +35,7 @@ STATIC_TRI_STATE_SINGLETON(rootSingleton);
 U_CDECL_BEGIN
 
 static UBool U_CALLCONV uprv_collation_root_cleanup() {
-    TriStateSingletonWrapper<CollationData>(rootSingleton).deleteInstance();
+    TriStateSingletonWrapper<CollationDataReader>(rootSingleton).deleteInstance();
     return TRUE;
 }
 
