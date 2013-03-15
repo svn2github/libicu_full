@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-*   Copyright (C) 1997-2012, International Business Machines
+*   Copyright (C) 1997-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -30,6 +30,18 @@ U_NAMESPACE_BEGIN
 
 class CharString;
 class DigitList;
+
+#ifndef U_HIDE_INTERNAL_API
+/**
+ * \def UNUM_INTERNAL_STACKARRAY_SIZE
+ * @internal
+ */
+#if U_PLATFORM == U_PF_OS400
+#define UNUM_INTERNAL_STACKARRAY_SIZE 144
+#else
+#define UNUM_INTERNAL_STACKARRAY_SIZE 128
+#endif
+#endif  /* U_HIDE_INTERNAL_API */
 
 /**
  * Formattable objects can be passed to the Format class or
@@ -649,7 +661,7 @@ private:
 
     DigitList            *fDecimalNum;
 
-    char                fStackData[128]; // must be big enough for DigitList
+    char                fStackData[UNUM_INTERNAL_STACKARRAY_SIZE]; // must be big enough for DigitList
 
     Type                fType;
     UnicodeString       fBogus; // Bogus string when it's needed.
@@ -673,11 +685,9 @@ inline UnicodeString& Formattable::getString(void) {
     return *fValue.fString;
 }
 
-#ifndef U_HIDE_DEPRECATED_API
 inline int32_t Formattable::getLong(UErrorCode* status) const {
     return getLong(*status);
 }
-#endif
 
 
 U_NAMESPACE_END

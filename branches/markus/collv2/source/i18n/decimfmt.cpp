@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2012, International Business Machines Corporation and    *
+* Copyright (C) 1997-2013, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -70,6 +70,15 @@
 #include "hash.h"
 #include "decfmtst.h"
 #include "dcfmtimp.h"
+
+/*
+ * On certain platforms, round is a macro defined in math.h
+ * This undefine is to avoid conflict between the macro and
+ * the function defined below.
+ */
+#ifdef round
+#undef round
+#endif
 
 U_NAMESPACE_BEGIN
 
@@ -341,6 +350,7 @@ DecimalFormat::init(UErrorCode &status) {
     fNegSuffixPattern = 0;
     fCurrencyChoice = 0;
     fMultiplier = NULL;
+    fScale = 0;
     fGroupingSize = 0;
     fGroupingSize2 = 0;
     fDecimalSeparatorAlwaysShown = FALSE;
@@ -369,7 +379,8 @@ DecimalFormat::init(UErrorCode &status) {
 
 #if UCONFIG_FORMAT_FASTPATHS_49
     DecimalFormatInternal &data = internalData(fReserved);
-    data.fFastpathStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
+    data.fFastFormatStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
+    data.fFastParseStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
 #endif
     // only do this once per obj.
     DecimalFormatStaticSets::initSets(&status);
@@ -515,7 +526,8 @@ DecimalFormat::construct(UErrorCode&             status,
     }
 #if UCONFIG_FORMAT_FASTPATHS_49
     DecimalFormatInternal &data = internalData(fReserved);
-    data.fFastpathStatus = kFastpathNO; // allow it to be calculated
+    data.fFastFormatStatus = kFastpathNO; // allow it to be calculated
+    data.fFastParseStatus = kFastpathNO; // allow it to be calculated
     handleChanged();
 #endif
 }
@@ -1013,41 +1025,66 @@ DecimalFormat::format(int32_t number,
 void DecimalFormat::handleChanged() {
   DecimalFormatInternal &data = internalData(fReserved);
 
-  if(data.fFastpathStatus == kFastpathUNKNOWN) {
+  if(data.fFastFormatStatus == kFastpathUNKNOWN || data.fFastParseStatus == kFastpathUNKNOWN) {
     return; // still constructing. Wait.
   }
 
-  data.fFastpathStatus = kFastpathNO;
+  data.fFastParseStatus = data.fFastFormatStatus = kFastpathNO;
 
+#if UCONFIG_HAVE_PARSEALLINPUT
+  if(fParseAllInput == UNUM_NO) {
+    debug("No Parse fastpath: fParseAllInput==UNUM_NO");
+  } else 
+#endif
+  if (fFormatWidth!=0) {
+      debug("No Parse fastpath: fFormatWidth");
+  } else if(fPositivePrefix.length()>0) {
+    debug("No Parse fastpath: positive prefix");
+  } else if(fPositiveSuffix.length()>0) {
+    debug("No Parse fastpath: positive suffix");
+  } else if(fNegativePrefix.length()>1 
+            || ((fNegativePrefix.length()==1) && (fNegativePrefix.charAt(0)!=0x002D))) {
+    debug("No Parse fastpath: negative prefix that isn't '-'");
+  } else if(fNegativeSuffix.length()>0) {
+    debug("No Parse fastpath: negative suffix");
+  } else {
+    data.fFastParseStatus = kFastpathYES;
+    debug("parse fastpath: YES");
+  }
+  
   if (fGroupingSize!=0 && isGroupingUsed()) {
-    debug("No fastpath: fGroupingSize!=0 and grouping is used");
+    debug("No format fastpath: fGroupingSize!=0 and grouping is used");
 #ifdef FMT_DEBUG
     printf("groupingsize=%d\n", fGroupingSize);
 #endif
   } else if(fGroupingSize2!=0 && isGroupingUsed()) {
-    debug("No fastpath: fGroupingSize2!=0");
+    debug("No format fastpath: fGroupingSize2!=0");
   } else if(fUseExponentialNotation) {
-    debug("No fastpath: fUseExponentialNotation");
+    debug("No format fastpath: fUseExponentialNotation");
   } else if(fFormatWidth!=0) {
-    debug("No fastpath: fFormatWidth!=0");
+    debug("No format fastpath: fFormatWidth!=0");
   } else if(fMinSignificantDigits!=1) {
-    debug("No fastpath: fMinSignificantDigits!=1");
+    debug("No format fastpath: fMinSignificantDigits!=1");
   } else if(fMultiplier!=NULL) {
-    debug("No fastpath: fMultiplier!=NULL");
+    debug("No format fastpath: fMultiplier!=NULL");
+  } else if(fScale!=0) {
+    debug("No format fastpath: fScale!=0");
   } else if(0x0030 != getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0)) {
-    debug("No fastpath: 0x0030 != getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0)");
+    debug("No format fastpath: 0x0030 != getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0)");
   } else if(fDecimalSeparatorAlwaysShown) {
-    debug("No fastpath: fDecimalSeparatorAlwaysShown");
+    debug("No format fastpath: fDecimalSeparatorAlwaysShown");
   } else if(getMinimumFractionDigits()>0) {
-    debug("No fastpath: fMinFractionDigits>0");
+    debug("No format fastpath: fMinFractionDigits>0");
   } else if(fCurrencySignCount > fgCurrencySignCountZero) {
-    debug("No fastpath: fCurrencySignCount > fgCurrencySignCountZero");
+    debug("No format fastpath: fCurrencySignCount > fgCurrencySignCountZero");
   } else if(fRoundingIncrement!=0) {
-    debug("No fastpath: fRoundingIncrement!=0");
+    debug("No format fastpath: fRoundingIncrement!=0");
   } else {
-    data.fFastpathStatus = kFastpathYES;
-    debug("kFastpathYES!");
+    data.fFastFormatStatus = kFastpathYES;
+    debug("format:kFastpathYES!");
   }
+
+
 }
 #endif
 //------------------------------------------------------------------------------
@@ -1105,7 +1142,7 @@ DecimalFormat::_format(int64_t number,
   printf("fastpath? [%d]\n", number);
 #endif
     
-  if( data.fFastpathStatus==kFastpathYES) {
+  if( data.fFastFormatStatus==kFastpathYES) {
 
 #define kZero 0x0030
     const int32_t MAX_IDX = MAX_DIGITS+2;
@@ -1319,7 +1356,94 @@ DecimalFormat::format(const DigitList &number,
     return appendTo;
 }
 
+DigitList&
+DecimalFormat::_round(const DigitList &number, DigitList &adjustedNum, UBool& isNegative, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return adjustedNum;
+    }
+    adjustedNum = number;
+    isNegative = false;
+    if (number.isNaN()) {
+        return adjustedNum;
+    }
 
+    // Do this BEFORE checking to see if value is infinite or negative! Sets the
+    // begin and end index to be length of the string composed of
+    // localized name of Infinite and the positive/negative localized
+    // signs.
+
+    adjustedNum.setRoundingMode(fRoundingMode);
+    if (fMultiplier != NULL) {
+        adjustedNum.mult(*fMultiplier, status);
+        if (U_FAILURE(status)) {
+            return adjustedNum;
+        }
+    }
+
+    if (fScale != 0) {
+        DigitList ten;
+        ten.set(10);
+        if (fScale > 0) {
+            for (int32_t i = fScale ; i > 0 ; i--) {
+                adjustedNum.mult(ten, status);
+                if (U_FAILURE(status)) {
+                    return adjustedNum;
+                }
+            }
+        } else {
+            for (int32_t i = fScale ; i < 0 ; i++) {
+                adjustedNum.div(ten, status);
+                if (U_FAILURE(status)) {
+                    return adjustedNum;
+                }
+            }
+        }
+    }
+
+    /*
+     * Note: sign is important for zero as well as non-zero numbers.
+     * Proper detection of -0.0 is needed to deal with the
+     * issues raised by bugs 4106658, 4106667, and 4147706.  Liu 7/6/98.
+     */
+    isNegative = !adjustedNum.isPositive();
+
+    // Apply rounding after multiplier
+
+    adjustedNum.fContext.status &= ~DEC_Inexact;
+    if (fRoundingIncrement != NULL) {
+        adjustedNum.div(*fRoundingIncrement, status);
+        adjustedNum.toIntegralValue();
+        adjustedNum.mult(*fRoundingIncrement, status);
+        adjustedNum.trim();
+        if (U_FAILURE(status)) {
+            return adjustedNum;
+        }
+    }
+    if (fRoundingMode == kRoundUnnecessary && (adjustedNum.fContext.status & DEC_Inexact)) {
+        status = U_FORMAT_INEXACT_ERROR;
+        return adjustedNum;
+    }
+
+    if (adjustedNum.isInfinite()) {
+        return adjustedNum;
+    }
+
+    if (fUseExponentialNotation || areSignificantDigitsUsed()) {
+        int32_t sigDigits = precision();
+        if (sigDigits > 0) {
+            adjustedNum.round(sigDigits);
+        }
+    } else {
+        // Fixed point format.  Round to a set number of fraction digits.
+        int32_t numFractionDigits = precision();
+        adjustedNum.roundFixedPoint(numFractionDigits);
+    }
+    if (fRoundingMode == kRoundUnnecessary && (adjustedNum.fContext.status & DEC_Inexact)) {
+        status = U_FORMAT_INEXACT_ERROR;
+        return adjustedNum;
+    }
+    return adjustedNum;
+}
 
 UnicodeString&
 DecimalFormat::_format(const DigitList &number,
@@ -1327,6 +1451,10 @@ DecimalFormat::_format(const DigitList &number,
                         FieldPositionHandler& handler,
                         UErrorCode &status) const
 {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+
     // Special case for NaN, sets the begin and end index to be the
     // the string length of localized name of NaN.
     if (number.isNaN())
@@ -1340,38 +1468,12 @@ DecimalFormat::_format(const DigitList &number,
         return appendTo;
     }
 
-    // Do this BEFORE checking to see if value is infinite or negative! Sets the
-    // begin and end index to be length of the string composed of
-    // localized name of Infinite and the positive/negative localized
-    // signs.
-
-    DigitList adjustedNum(number);  // Copy, so we do not alter the original. 
-    adjustedNum.setRoundingMode(fRoundingMode);
-    if (fMultiplier != NULL) {
-        adjustedNum.mult(*fMultiplier, status);
-    }
-
-    /* 
-     * Note: sign is important for zero as well as non-zero numbers.
-     * Proper detection of -0.0 is needed to deal with the
-     * issues raised by bugs 4106658, 4106667, and 4147706.  Liu 7/6/98.
-     */
-    UBool isNegative = !adjustedNum.isPositive();
-
-    // Apply rounding after multiplier
-    
-    adjustedNum.fContext.status &= ~DEC_Inexact;
-    if (fRoundingIncrement != NULL) {
-        adjustedNum.div(*fRoundingIncrement, status);
-        adjustedNum.toIntegralValue();
-        adjustedNum.mult(*fRoundingIncrement, status);
-        adjustedNum.trim();
-    }
-    if (fRoundingMode == kRoundUnnecessary && (adjustedNum.fContext.status & DEC_Inexact)) {
-        status = U_FORMAT_INEXACT_ERROR;
+    DigitList adjustedNum;
+    UBool isNegative;
+    _round(number, adjustedNum, isNegative, status);
+    if (U_FAILURE(status)) {
         return appendTo;
     }
-        
 
     // Special case for INFINITE,
     if (adjustedNum.isInfinite()) {
@@ -1387,25 +1489,8 @@ DecimalFormat::_format(const DigitList &number,
         addPadding(appendTo, handler, prefixLen, suffixLen);
         return appendTo;
     }
-
-    if (fUseExponentialNotation || areSignificantDigitsUsed()) {
-        int32_t sigDigits = precision();
-        if (sigDigits > 0) {
-            adjustedNum.round(sigDigits);
-        }
-    } else {
-        // Fixed point format.  Round to a set number of fraction digits.
-        int32_t numFractionDigits = precision();
-        adjustedNum.roundFixedPoint(numFractionDigits);
-    }
-    if (fRoundingMode == kRoundUnnecessary && (adjustedNum.fContext.status & DEC_Inexact)) {
-        status = U_FORMAT_INEXACT_ERROR;
-        return appendTo;
-    }
- 
     return subformat(appendTo, handler, adjustedNum, FALSE, status);
 }
-
 
 UnicodeString&
 DecimalFormat::format(  const Formattable& obj,
@@ -1834,7 +1919,7 @@ CurrencyAmount* DecimalFormat::parseCurrency(const UnicodeString& text,
                                              ParsePosition& pos) const {
     Formattable parseResult;
     int32_t start = pos.getIndex();
-    UChar curbuf[4];
+    UChar curbuf[4] = {};
     parse(text, parseResult, pos, curbuf);
     if (pos.getIndex() != start) {
         UErrorCode ec = U_ZERO_ERROR;
@@ -1942,6 +2027,22 @@ void DecimalFormat::parse(const UnicodeString& text,
         if (fMultiplier != NULL) {
             UErrorCode ec = U_ZERO_ERROR;
             digits->div(*fMultiplier, ec);
+        }
+
+        if (fScale != 0) {
+            DigitList ten;
+            ten.set(10);
+            if (fScale > 0) {
+                for (int32_t i = fScale; i > 0; i--) {
+                    UErrorCode ec = U_ZERO_ERROR;
+                    digits->div(ten,ec);
+                }
+            } else {
+                for (int32_t i = fScale; i < 0; i++) {
+                    UErrorCode ec = U_ZERO_ERROR;
+                    digits->mult(ten,ec);
+                }
+            }
         }
 
         // Negative zero special case:
@@ -2116,11 +2217,16 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
     int32_t textLength = text.length(); // One less pointer to follow
     UBool strictParse = !isLenient();
     UChar32 zero = getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
+    const UnicodeString *groupingString = &getConstSymbol(DecimalFormatSymbols::kGroupingSeparatorSymbol);
+    UChar32 groupingChar = groupingString->char32At(0);
+    int32_t groupingStringLength = groupingString->length();
+    int32_t groupingCharLength   = U16_LENGTH(groupingChar);
+    UBool   groupingUsed = isGroupingUsed();
 #ifdef FMT_DEBUG
     UChar dbgbuf[300];
     UnicodeString s(dbgbuf,0,300);;
     s.append((UnicodeString)"PARSE \"").append(text.tempSubString(position)).append((UnicodeString)"\" " );
-#define DBGAPPD(x) if(x) { s.append(UnicodeString(#x "="));  if(x->isEmpty()) { s.append(UnicodeString("<empty>")); } else { s.append(*x); } s.append(UnicodeString(" ")); }
+#define DBGAPPD(x) if(x) { s.append(UnicodeString(#x "="));  if(x->isEmpty()) { s.append(UnicodeString("<empty>")); } else { s.append(*x); } s.append(UnicodeString(" ")); } else { s.append(UnicodeString(#x "=NULL ")); }
     DBGAPPD(negPrefix);
     DBGAPPD(negSuffix);
     DBGAPPD(posPrefix);
@@ -2130,27 +2236,18 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 #endif
 
     UBool fastParseOk = false; /* TRUE iff fast parse is OK */
-    UBool fastParseHadDecimal = FALSE; /* true if fast parse saw a decimal point. */
-
-    if(!currencyParsing &&
-
-
-       ( (
-#if UCONFIG_HAVE_PARSEALLINPUT
-         fParseAllInput == UNUM_YES ) ||
-          ( fParseAllInput == UNUM_MAYBE &&
-#endif
-            fFormatWidth==0 &&
-            //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
-            text.length()>0 &&
-            text.length()<32 &&
-            (posPrefix==NULL||posPrefix->isEmpty()) &&
-            (posSuffix==NULL||posSuffix->isEmpty()) &&
-            //            (negPrefix==NULL||negPrefix->isEmpty()) &&
-            //            (negSuffix==NULL||(negSuffix->isEmpty()) ) &&
-            TRUE
-            )
-          )) {  // optimized path
+    // UBool fastParseHadDecimal = FALSE; /* true if fast parse saw a decimal point. */
+    const DecimalFormatInternal &data = internalData(fReserved);
+    if((data.fFastParseStatus==kFastpathYES) &&
+       !currencyParsing &&
+       //       (negPrefix!=NULL&&negPrefix->isEmpty()) ||
+       text.length()>0 &&
+       text.length()<32 &&
+       (posPrefix==NULL||posPrefix->isEmpty()) &&
+       (posSuffix==NULL||posSuffix->isEmpty()) &&
+       //            (negPrefix==NULL||negPrefix->isEmpty()) &&
+       //            (negSuffix==NULL||(negSuffix->isEmpty()) ) &&
+       TRUE) {  // optimized path
       int j=position;
       int l=text.length();
       int digitCount=0;
@@ -2158,21 +2255,28 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
       const UnicodeString *decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
       UChar32 decimalChar = 0;
       UBool intOnly = FALSE;
+      UChar32 lookForGroup = (groupingUsed&&intOnly&&strictParse)?groupingChar:0;
+
       int32_t decimalCount = decimalString->countChar32(0,3);
       if(isParseIntegerOnly()) {
         decimalChar = 0; // not allowed
-        intOnly = TRUE;
+        intOnly = TRUE; // Don't look for decimals.
       } else if(decimalCount==1) {
-        decimalChar = decimalString->char32At(0);
+        decimalChar = decimalString->char32At(0); // Look for this decimal
       } else if(decimalCount==0) {
-        decimalChar=0;
+        decimalChar=0; // NO decimal set
       } else {
-        j=l+1;//=break
+        j=l+1;//Set counter to end of line, so that we break. Unknown decimal situation.
       }
 
-      if(ch=='-') {
-        /* for now- no negs. */
-        j=l+1;//=break
+#ifdef FMT_DEBUG
+      printf("Preparing to do fastpath parse: decimalChar=U+%04X, groupingChar=U+%04X, first ch=U+%04X intOnly=%c strictParse=%c\n",
+        decimalChar, groupingChar, ch,
+        (intOnly)?'y':'n',
+        (strictParse)?'y':'n');
+#endif
+      if(ch==0x002D) { // '-'
+        j=l+1;//=break - negative number.
         
         /*
           parsedNum.append('-',err); 
@@ -2189,22 +2293,27 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
           if((digitCount>0) || digit!=0 || j==(l-1)) {
             digitCount++;
           }
+        } else if(ch == 0) { // break out
+          digitCount=-1;
+          break;
         } else if(ch == decimalChar) {
           parsedNum.append((char)('.'), err);
           decimalChar=0; // no more decimals.
-          fastParseHadDecimal=TRUE;
-        } else if(intOnly && !u_isdigit(ch)) {
-          break; // hit a non-integer. (fall through if integer, to slow parse)
+          // fastParseHadDecimal=TRUE;
+        } else if(ch == lookForGroup) {
+          // ignore grouping char. No decimals, so it has to be an ignorable grouping sep
+        } else if(intOnly && (lookForGroup!=0) && !u_isdigit(ch)) {
+          // parsing integer only and can fall through
         } else {
-          digitCount=-1; // fail
+          digitCount=-1; // fail - fall through to slow parse
           break;
         }
         j+=U16_LENGTH(ch);
         ch = text.char32At(j); // for next  
       }
       if(
-         ((j==l)||intOnly)
-         && (digitCount>0)) {
+         ((j==l)||intOnly) // end OR only parsing integer
+         && (digitCount>0)) { // and have at least one digit
 #ifdef FMT_DEBUG
         printf("PP -> %d, good = [%s]  digitcount=%d, fGroupingSize=%d fGroupingSize2=%d!\n", j, parsedNum.data(), digitCount, fGroupingSize, fGroupingSize2);
 #endif
@@ -2310,13 +2419,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         } else {
             decimalString = &getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
         }
-        const UnicodeString *groupingString = &getConstSymbol(DecimalFormatSymbols::kGroupingSeparatorSymbol);
         UChar32 decimalChar = decimalString->char32At(0);
-        UChar32 groupingChar = groupingString->char32At(0);
         int32_t decimalStringLength = decimalString->length();
         int32_t decimalCharLength   = U16_LENGTH(decimalChar);
-        int32_t groupingStringLength = groupingString->length();
-        int32_t groupingCharLength   = U16_LENGTH(groupingChar);
 
         UBool sawDecimal = FALSE;
         UChar32 sawDecimalChar = 0xFFFF;
@@ -2425,7 +2530,7 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
             else if (groupingStringLength > 0 && 
                 matchGrouping(groupingChar, sawGrouping, sawGroupingChar, groupingSet, 
                             decimalChar, decimalSet,
-                            ch) && isGroupingUsed())
+                            ch) && groupingUsed)
             {
                 if (sawDecimal) {
                     break;
@@ -5448,6 +5553,10 @@ DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
       }
       break;
 
+    case UNUM_SCALE:
+        fScale = newValue;
+        break;
+
     default:
       status = U_UNSUPPORTED_ERROR;
       break;
@@ -5522,6 +5631,9 @@ int32_t DecimalFormat::getAttribute( UNumberFormatAttribute attr,
     case UNUM_PARSE_NO_EXPONENT:
     case UNUM_FORMAT_FAIL_IF_MORE_THAN_MAX_DIGITS:
       return fBoolFlags.get(attr);
+
+    case UNUM_SCALE:
+        return fScale;
 
     default:
         status = U_UNSUPPORTED_ERROR;

@@ -57,6 +57,7 @@ public:
               fileLineNumber(0),
               baseBuilder(NULL),
               collData(NULL),
+              ownedData(NULL),
               coll(NULL) {}
 
     ~CollationTest() {

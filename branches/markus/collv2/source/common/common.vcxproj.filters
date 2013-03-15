@@ -406,6 +406,9 @@
     <ClCompile Include="uscript.c">
       <Filter>properties &amp; sets</Filter>
     </ClCompile>
+    <ClCompile Include="uscript_props.cpp">
+      <Filter>properties &amp; sets</Filter>
+    </ClCompile>
     <ClCompile Include="uset.cpp">
       <Filter>properties &amp; sets</Filter>
     </ClCompile>
@@ -807,6 +810,9 @@
     </ClInclude>
     <ClInclude Include="uchar_props_data.h">
       <Filter>properties &amp; sets</Filter>
+    </ClInclude>
+    <ClInclude Include="unicode\enumset.h">
+      <Filter>data &amp; memory</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

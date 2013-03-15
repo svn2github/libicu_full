@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1997-2012, International Business Machines Corporation and    *
+* Copyright (C) 1997-2013, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -137,8 +137,9 @@ static const UDateFormatField kTimeFields[] = {
     UDAT_HOUR1_FIELD,
     UDAT_HOUR0_FIELD,
     UDAT_MILLISECONDS_IN_DAY_FIELD,
-    UDAT_TIMEZONE_RFC_FIELD };
-static const int8_t kTimeFieldsCount = 9;
+    UDAT_TIMEZONE_RFC_FIELD,
+    UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD };
+static const int8_t kTimeFieldsCount = 10;
 
 
 // This is a pattern-of-last-resort used when we can't load a usable pattern out
@@ -203,6 +204,9 @@ static const int32_t gFieldRangeBias[] = {
     -1,  // 'q' - UDAT_STANDALONE_QUARTER_FIELD
     -1   // 'V' - UDAT_TIMEZONE_SPECIAL_FIELD
     -1,  // 'U' - UDAT_YEAR_NAME_FIELD
+    -1,  // 'O' - UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD
+    -1,  // 'X' - UDAT_TIMEZONE_ISO_FIELD
+    -1,  // 'x' - UDAT_TIMEZONE_ISO_LOCAL_FIELD
 };
 
 // When calendar uses hebr numbering (i.e. he@calendar=hebrew),
@@ -936,13 +940,13 @@ SimpleDateFormat::fgCalendarFieldToLevel[] =
 const int32_t
 SimpleDateFormat::fgPatternCharToLevel[] = {
     //       A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
-        -1, 40, -1, -1, 20, 30, 30,  0, 50, -1, -1, 50, 20, 20, -1, -1,
+        -1, 40, -1, -1, 20, 30, 30,  0, 50, -1, -1, 50, 20, 20, -1,  0,
     //   P   Q   R   S   T   U   V   W   X   Y   Z
-        -1, 20, -1, 80, -1, 10,  0, 30, -1, 10,  0, -1, -1, -1, -1, -1,
+        -1, 20, -1, 80, -1, 10,  0, 30,  0, 10,  0, -1, -1, -1, -1, -1,
     //       a   b   c   d   e   f   g   h   i   j   k   l   m   n   o
         -1, 40, -1, 30, 30, 30, -1,  0, 50, -1, -1, 50, -1, 60, -1, -1,
     //   p   q   r   s   t   u   v   w   x   y   z
-        -1, 20, -1, 70, -1, 10,  0, 20, -1, 10,  0, -1, -1, -1, -1, -1
+        -1, 20, -1, 70, -1, 10,  0, 20,  0, 10,  0, -1, -1, -1, -1, -1
 };
 
 
@@ -965,6 +969,8 @@ SimpleDateFormat::fgPatternIndexToCalendarField[] =
     /*q*/   UCAL_MONTH,
     /*V*/   UCAL_ZONE_OFFSET,
     /*U*/   UCAL_YEAR,
+    /*O*/   UCAL_ZONE_OFFSET,
+    /*Xx*/  UCAL_ZONE_OFFSET, UCAL_ZONE_OFFSET,
 };
 
 // Map index into pattern character string to DateFormat field number
@@ -985,6 +991,8 @@ SimpleDateFormat::fgPatternIndexToDateFormatField[] = {
     /*q*/   UDAT_STANDALONE_QUARTER_FIELD,
     /*V*/   UDAT_TIMEZONE_SPECIAL_FIELD,
     /*U*/   UDAT_YEAR_NAME_FIELD,
+    /*O*/   UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD,
+    /*Xx*/  UDAT_TIMEZONE_ISO_FIELD, UDAT_TIMEZONE_ISO_LOCAL_FIELD,
 };
 
 //----------------------------------------------------------------------
@@ -1151,16 +1159,13 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
                 }
             }
         } else {
-           UChar ch = ovrField.charAt(0);
-           UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), ch);
-           UDateFormatField patternCharIndex;
-
            // if the pattern character is unrecognized, signal an error and bail out
-           if (patternCharPtr == NULL) {
+           UDateFormatField patternCharIndex =
+              DateFormatSymbols::getPatternCharIndex(ovrField.charAt(0));
+           if (patternCharIndex == UDAT_FIELD_COUNT) {
                status = U_INVALID_FORMAT_ERROR;
                return;
            }
-           patternCharIndex = (UDateFormatField)(patternCharPtr - DateFormatSymbols::getPatternUChars());
 
            // Set the number formatter in the table
            fNumberFormatters[patternCharIndex] = nf;
@@ -1169,6 +1174,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
         start = delimiterPosition + 1;
     }
 }
+
 //---------------------------------------------------------------------
 void
 SimpleDateFormat::subFormat(UnicodeString &appendTo,
@@ -1187,8 +1193,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     // this function gets called by format() to produce the appropriate substitution
     // text for an individual pattern symbol (e.g., "HH" or "yyyy")
 
-    UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), ch);
-    UDateFormatField patternCharIndex;
+    UDateFormatField patternCharIndex = DateFormatSymbols::getPatternCharIndex(ch);
     const int32_t maxIntCount = 10;
     int32_t beginOffset = appendTo.length();
     NumberFormat *currentNumberFormat;
@@ -1198,7 +1203,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     UBool isChineseCalendar = (uprv_strcmp(cal.getType(),"chinese") == 0);
 
     // if the pattern character is unrecognized, signal an error and dump out
-    if (patternCharPtr == NULL)
+    if (patternCharIndex == UDAT_FIELD_COUNT)
     {
         if (ch != 0x6C) { // pattern char 'l' (SMALL LETTER L) just gets ignored
             status = U_INVALID_FORMAT_ERROR;
@@ -1206,7 +1211,6 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         return;
     }
 
-    patternCharIndex = (UDateFormatField)(patternCharPtr - DateFormatSymbols::getPatternUChars());
     UCalendarDateFields field = fgPatternIndexToCalendarField[patternCharIndex];
     int32_t value = cal.get(field, status);
     if (U_FAILURE(status)) {
@@ -1347,6 +1351,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         break;
 
     // for "ee" or "e", use local numeric day-of-the-week
+    // for "EEEEEE" or "eeeeee", write out the short day-of-the-week name
     // for "EEEEE" or "eeeee", write out the narrow day-of-the-week name
     // for "EEEE" or "eeee", write out the wide day-of-the-week name
     // for "EEE" or "EE" or "E" or "eee", write out the abbreviated day-of-the-week name
@@ -1371,6 +1376,10 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
             _appendSymbol(appendTo, value, fSymbols->fWeekdays,
                           fSymbols->fWeekdaysCount);
             capContextUsageType = DateFormatSymbols::kCapContextUsageDayFormat;
+        } else if (count == 6) {
+            _appendSymbol(appendTo, value, fSymbols->fShorterWeekdays,
+                          fSymbols->fShorterWeekdaysCount);
+            capContextUsageType = DateFormatSymbols::kCapContextUsageDayFormat;
         } else {
             _appendSymbol(appendTo, value, fSymbols->fShortWeekdays,
                           fSymbols->fShortWeekdaysCount);
@@ -1381,6 +1390,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     // for "ccc", write out the abbreviated day-of-the-week name
     // for "cccc", write out the wide day-of-the-week name
     // for "ccccc", use the narrow day-of-the-week name
+    // for "ccccc", use the short day-of-the-week name
     case UDAT_STANDALONE_DAY_FIELD:
         if ( count < 3 ) {
             zeroPaddingNumber(currentNumberFormat,appendTo, value, 1, maxIntCount);
@@ -1399,6 +1409,10 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         } else if (count == 4) {
             _appendSymbol(appendTo, value, fSymbols->fStandaloneWeekdays,
                           fSymbols->fStandaloneWeekdaysCount);
+            capContextUsageType = DateFormatSymbols::kCapContextUsageDayStandalone;
+        } else if (count == 6) {
+            _appendSymbol(appendTo, value, fSymbols->fStandaloneShorterWeekdays,
+                          fSymbols->fStandaloneShorterWeekdaysCount);
             capContextUsageType = DateFormatSymbols::kCapContextUsageDayStandalone;
         } else { // count == 3
             _appendSymbol(appendTo, value, fSymbols->fStandaloneShortWeekdays,
@@ -1422,43 +1436,42 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
             zeroPaddingNumber(currentNumberFormat,appendTo, value, count, maxIntCount);
         break;
 
-    // for the "z" symbols, we have to check our time zone data first.  If we have a
-    // localized name for the time zone, then "zzzz" / "zzz" indicate whether
-    // daylight time is in effect (long/short) and "zz" / "z" do not (long/short).
-    // If we don't have a localized time zone name,
-    // then the time zone shows up as "GMT+hh:mm" or "GMT-hh:mm" (where "hh:mm" is the
-    // offset from GMT) regardless of how many z's were in the pattern symbol
-    case UDAT_TIMEZONE_FIELD:
-    case UDAT_TIMEZONE_GENERIC_FIELD:
-    case UDAT_TIMEZONE_SPECIAL_FIELD:
-    case UDAT_TIMEZONE_RFC_FIELD: // 'Z' - TIMEZONE_RFC
+    case UDAT_TIMEZONE_FIELD: // 'z'
+    case UDAT_TIMEZONE_RFC_FIELD: // 'Z'
+    case UDAT_TIMEZONE_GENERIC_FIELD: // 'v'
+    case UDAT_TIMEZONE_SPECIAL_FIELD: // 'V'
+    case UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD: // 'O'
+    case UDAT_TIMEZONE_ISO_FIELD: // 'X'
+    case UDAT_TIMEZONE_ISO_LOCAL_FIELD: // 'x'
         {
             UnicodeString zoneString;
             const TimeZone& tz = cal.getTimeZone();
             UDate date = cal.getTime(status);
             if (U_SUCCESS(status)) {
-                if (patternCharIndex == UDAT_TIMEZONE_RFC_FIELD) {
-                    if (count < 4) {
-                        // "Z"
-                        tzFormat()->format(UTZFMT_STYLE_RFC822, tz, date, zoneString);
-                    } else if (count == 5) {
-                        // "ZZZZZ"
-                        tzFormat()->format(UTZFMT_STYLE_ISO8601, tz, date, zoneString);
-                    } else {
-                        // "ZZ", "ZZZ", "ZZZZ"
-                        tzFormat()->format(UTZFMT_STYLE_LOCALIZED_GMT, tz, date, zoneString);
-                    }
-                } else if (patternCharIndex == UDAT_TIMEZONE_FIELD) {
+                if (patternCharIndex == UDAT_TIMEZONE_FIELD) {
                     if (count < 4) {
                         // "z", "zz", "zzz"
                         tzFormat()->format(UTZFMT_STYLE_SPECIFIC_SHORT, tz, date, zoneString);
                         capContextUsageType = DateFormatSymbols::kCapContextUsageMetazoneShort;
                     } else {
-                        // "zzzz"
+                        // "zzzz" or longer
                         tzFormat()->format(UTZFMT_STYLE_SPECIFIC_LONG, tz, date, zoneString);
                         capContextUsageType = DateFormatSymbols::kCapContextUsageMetazoneLong;
                     }
-                } else if (patternCharIndex == UDAT_TIMEZONE_GENERIC_FIELD) {
+                }
+                else if (patternCharIndex == UDAT_TIMEZONE_RFC_FIELD) {
+                    if (count < 4) {
+                        // "Z"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL, tz, date, zoneString);
+                    } else if (count == 5) {
+                        // "ZZZZZ"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_EXTENDED_FULL, tz, date, zoneString);
+                    } else {
+                        // "ZZ", "ZZZ", "ZZZZ"
+                        tzFormat()->format(UTZFMT_STYLE_LOCALIZED_GMT, tz, date, zoneString);
+                    }
+                }
+                else if (patternCharIndex == UDAT_TIMEZONE_GENERIC_FIELD) {
                     if (count == 1) {
                         // "v"
                         tzFormat()->format(UTZFMT_STYLE_GENERIC_SHORT, tz, date, zoneString);
@@ -1468,16 +1481,70 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
                         tzFormat()->format(UTZFMT_STYLE_GENERIC_LONG, tz, date, zoneString);
                         capContextUsageType = DateFormatSymbols::kCapContextUsageMetazoneLong;
                     }
-                } else { // patternCharIndex == UDAT_TIMEZONE_SPECIAL_FIELD
+                }
+                else if (patternCharIndex == UDAT_TIMEZONE_SPECIAL_FIELD) {
                     if (count == 1) {
                         // "V"
-                        tzFormat()->format(UTZFMT_STYLE_SPECIFIC_SHORT, tz, date, zoneString);
-                        capContextUsageType = DateFormatSymbols::kCapContextUsageMetazoneShort;
+                        tzFormat()->format(UTZFMT_STYLE_ZONE_ID_SHORT, tz, date, zoneString);
+                    } else if (count == 2) {
+                        // "VV"
+                        tzFormat()->format(UTZFMT_STYLE_ZONE_ID, tz, date, zoneString);
+                    } else if (count == 3) {
+                        // "VVV"
+                        tzFormat()->format(UTZFMT_STYLE_EXEMPLAR_LOCATION, tz, date, zoneString);
                     } else if (count == 4) {
                         // "VVVV"
                         tzFormat()->format(UTZFMT_STYLE_GENERIC_LOCATION, tz, date, zoneString);
                         capContextUsageType = DateFormatSymbols::kCapContextUsageZoneLong;
                     }
+                }
+                else if (patternCharIndex == UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD) {
+                    if (count == 1) {
+                        // "O"
+                        tzFormat()->format(UTZFMT_STYLE_LOCALIZED_GMT_SHORT, tz, date, zoneString);
+                    } else if (count == 4) {
+                        // "OOOO"
+                        tzFormat()->format(UTZFMT_STYLE_LOCALIZED_GMT, tz, date, zoneString);
+                    }
+                }
+                else if (patternCharIndex == UDAT_TIMEZONE_ISO_FIELD) {
+                    if (count == 1) {
+                        // "X"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_BASIC_SHORT, tz, date, zoneString);
+                    } else if (count == 2) {
+                        // "XX"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_BASIC_FIXED, tz, date, zoneString);
+                    } else if (count == 3) {
+                        // "XXX"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_EXTENDED_FIXED, tz, date, zoneString);
+                    } else if (count == 4) {
+                        // "XXXX"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_BASIC_FULL, tz, date, zoneString);
+                    } else if (count == 5) {
+                        // "XXXXX"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_EXTENDED_FULL, tz, date, zoneString);
+                    }
+                }
+                else if (patternCharIndex == UDAT_TIMEZONE_ISO_LOCAL_FIELD) {
+                    if (count == 1) {
+                        // "x"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_BASIC_LOCAL_SHORT, tz, date, zoneString);
+                    } else if (count == 2) {
+                        // "xx"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_BASIC_LOCAL_FIXED, tz, date, zoneString);
+                    } else if (count == 3) {
+                        // "xxx"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FIXED, tz, date, zoneString);
+                    } else if (count == 4) {
+                        // "xxxx"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL, tz, date, zoneString);
+                    } else if (count == 5) {
+                        // "xxxxx"
+                        tzFormat()->format(UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FULL, tz, date, zoneString);
+                    }
+                }
+                else {
+                    U_ASSERT(FALSE);
                 }
             }
             appendTo += zoneString;
@@ -1570,19 +1637,45 @@ SimpleDateFormat::zeroPaddingNumber(NumberFormat *currentNumberFormat,UnicodeStr
 //----------------------------------------------------------------------
 
 /**
- * Format characters that indicate numeric fields.  The character
- * at index 0 is treated specially.
- */
-static const UChar NUMERIC_FORMAT_CHARS[] = {0x4D, 0x59, 0x79, 0x75, 0x64, 0x65, 0x68, 0x48, 0x6D, 0x73, 0x53, 0x44, 0x46, 0x77, 0x57, 0x6B, 0x4B, 0x00}; /* "MYyudehHmsSDFwWkK" */
-
-/**
  * Return true if the given format character, occuring count
  * times, represents a numeric field.
  */
 UBool SimpleDateFormat::isNumeric(UChar formatChar, int32_t count) {
-    UnicodeString s(NUMERIC_FORMAT_CHARS);
-    int32_t i = s.indexOf(formatChar);
-    return (i > 0 || (i == 0 && count < 3));
+    return DateFormatSymbols::isNumericPatternChar(formatChar, count);
+}
+
+UBool
+SimpleDateFormat::isAtNumericField(const UnicodeString &pattern, int32_t patternOffset) {
+    if (patternOffset >= pattern.length()) {
+        // not at any field
+        return FALSE;
+    }
+    UChar ch = pattern.charAt(patternOffset);
+    UDateFormatField f = DateFormatSymbols::getPatternCharIndex(ch);
+    if (f == UDAT_FIELD_COUNT) {
+        // not at any field
+        return FALSE;
+    }
+    int32_t i = patternOffset;
+    while (pattern.charAt(++i) == ch) {}
+    return DateFormatSymbols::isNumericField(f, i - patternOffset);
+}
+
+UBool
+SimpleDateFormat::isAfterNonNumericField(const UnicodeString &pattern, int32_t patternOffset) {
+    if (patternOffset <= 0) {
+        // not after any field
+        return FALSE;
+    }
+    UChar ch = pattern.charAt(--patternOffset);
+    UDateFormatField f = DateFormatSymbols::getPatternCharIndex(ch);
+    if (f == UDAT_FIELD_COUNT) {
+        // not after any field
+        return FALSE;
+    }
+    int32_t i = patternOffset;
+    while (pattern.charAt(--i) == ch) {}
+    return !DateFormatSymbols::isNumericField(f, patternOffset - i);
 }
 
 void
@@ -1611,7 +1704,6 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
     int32_t abutPass = 0;
     UBool inQuote = FALSE;
 
-    const UnicodeString numericFormatChars(NUMERIC_FORMAT_CHARS);
     MessageFormat * numericLeapMonthFormatter = NULL;
 
     Calendar* calClone = NULL;
@@ -1661,33 +1753,12 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
 
             if (isNumeric(ch, count)) {
                 if (abutPat < 0) {
-                    // Determine if there is an abutting numeric field.  For
-                    // most fields we can just look at the next characters,
-                    // but the 'm' field is either numeric or text,
-                    // depending on the count, so we have to look ahead for
-                    // that field.
-                    if ((i+1)<fPattern.length()) {
-                        UBool abutting;
-                        UChar nextCh = fPattern.charAt(i+1);
-                        int32_t k = numericFormatChars.indexOf(nextCh);
-                        if (k == 0) {
-                            int32_t j = i+2;
-                            while (j<fPattern.length() &&
-                                   fPattern.charAt(j) == nextCh) {
-                                ++j;
-                            }
-                            abutting = (j-i) < 4; // nextCount < 3
-                        } else {
-                            abutting = k > 0;
-                        }
-
-                        // Record the start of a set of abutting numeric
-                        // fields.
-                        if (abutting) {
-                            abutPat = fieldPat;
-                            abutStart = pos;
-                            abutPass = 0;
-                        }
+                    // Determine if there is an abutting numeric field.
+                    // Record the start of a set of abutting numeric fields.
+                    if (isAtNumericField(fPattern, i + 1)) {
+                        abutPat = fieldPat;
+                        abutStart = pos;
+                        abutPass = 0;
                     }
                 }
             } else {
@@ -1771,6 +1842,14 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
                 status = U_PARSE_ERROR;
                 goto ExitParse;
             }
+        }
+    }
+
+    // Special hack for trailing "." after non-numeric field.
+    if (text.charAt(pos) == 0x2e && lenient) {
+        // only do if the last field is not numeric
+        if (isAfterNonNumericField(fPattern, fPattern.length())) {
+            pos++; // skip the extra "."
         }
     }
 
@@ -1975,6 +2054,12 @@ SimpleDateFormat::parse(const UnicodeString& text, UErrorCode& status) const
 }
 //----------------------------------------------------------------------
 
+static UBool
+newBestMatchWithOptionalDot(const UnicodeString &lcaseText,
+                            const UnicodeString &data,
+                            UnicodeString &bestMatchName,
+                            int32_t &bestMatchLength);
+
 int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
                               int32_t start,
                               UCalendarDateFields field,
@@ -1990,6 +2075,7 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
     // We keep track of the longest match, and return that.  Note that this
     // unfortunately requires us to test all array elements.
     int32_t bestMatchLength = 0, bestMatch = -1;
+    UnicodeString bestMatchName;
 
     // {sfb} kludge to support case-insensitive comparison
     // {markus 2002oct11} do not just use caseCompareBetween because we do not know
@@ -1997,7 +2083,7 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
     // {alan 20040607} don't case change the whole string, since the length
     // can change
     // TODO we need a case-insensitive startsWith function
-    UnicodeString lcase, lcaseText;
+    UnicodeString lcaseText;
     text.extract(start, INT32_MAX, lcaseText);
     lcaseText.foldCase();
 
@@ -2006,14 +2092,8 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
         // Always compare if we have no match yet; otherwise only compare
         // against potentially better matches (longer strings).
 
-        lcase.fastCopyFrom(data[i]).foldCase();
-        int32_t length = lcase.length();
-
-        if (length > bestMatchLength &&
-            lcaseText.compareBetween(0, length, lcase, 0, length) == 0)
-        {
+        if (newBestMatchWithOptionalDot(lcaseText, data[i], bestMatchName, bestMatchLength)) {
             bestMatch = i;
-            bestMatchLength = length;
         }
     }
     if (bestMatch >= 0)
@@ -2023,7 +2103,6 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
         // Once we have a match, we have to determine the length of the
         // original source string.  This will usually be == the length of
         // the case folded string, but it may differ (e.g. sharp s).
-        lcase.fastCopyFrom(data[bestMatch]).foldCase();
 
         // Most of the time, the length will be the same as the length
         // of the string from the locale data.  Sometimes it will be
@@ -2031,7 +2110,7 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
         // adding a character at a time, until we have a match.  We do
         // this all in one loop, where we try 'len' first (at index
         // i==0).
-        int32_t len = data[bestMatch].length(); // 99+% of the time
+        int32_t len = bestMatchName.length(); // 99+% of the time
         int32_t n = text.length() - start;
         for (i=0; i<=n; ++i) {
             int32_t j=i;
@@ -2042,7 +2121,7 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
             }
             text.extract(start, j, lcaseText);
             lcaseText.foldCase();
-            if (lcase == lcaseText) {
+            if (bestMatchName == lcaseText) {
                 return start + j;
             }
         }
@@ -2099,7 +2178,7 @@ UBool SimpleDateFormat::matchLiterals(const UnicodeString &pattern,
         }
     }
         
-    for (p = 0; p < literal.length() && t < text.length(); p += 1, t += 1) {
+    for (p = 0; p < literal.length() && t < text.length();) {
         UBool needWhitespace = FALSE;
         
         while (p < literal.length() && PatternProps::isWhiteSpace(literal.charAt(p))) {
@@ -2140,11 +2219,20 @@ UBool SimpleDateFormat::matchLiterals(const UnicodeString &pattern,
             // Ran out of text, or found a non-matching character:
             // OK in lenient mode, an error in strict mode.
             if (lenient) {
+                if (t == textOffset && text.charAt(t) == 0x2e &&
+                        isAfterNonNumericField(pattern, patternOffset)) {
+                    // Lenient mode and the literal input text begins with a "." and
+                    // we are after a non-numeric field: We skip the "."
+                    ++t;
+                    continue;  // Do not update p.
+                }
                 break;
             }
             
             return FALSE;
         }
+        ++p;
+        ++t;
     }
     
     // At this point if we're in strict mode we have a complete match.
@@ -2154,11 +2242,8 @@ UBool SimpleDateFormat::matchLiterals(const UnicodeString &pattern,
         // no match. Pretend it matched a run of whitespace
         // and ignorables in the text.
         const  UnicodeSet *ignorables = NULL;
-        UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), pattern.charAt(i));
-        
-        if (patternCharPtr != NULL) {
-            UDateFormatField patternCharIndex = (UDateFormatField) (patternCharPtr - DateFormatSymbols::getPatternUChars());
-            
+        UDateFormatField patternCharIndex = DateFormatSymbols::getPatternCharIndex(pattern.charAt(i));
+        if (patternCharIndex != UDAT_FIELD_COUNT) {
             ignorables = SimpleDateFormatStaticSets::getIgnorables(patternCharIndex);
         }
         
@@ -2207,7 +2292,7 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
     // {alan 20040607} don't case change the whole string, since the length
     // can change
     // TODO we need a case-insensitive startsWith function
-    UnicodeString lcase, lcaseText;
+    UnicodeString lcaseText;
     text.extract(start, INT32_MAX, lcaseText);
     lcaseText.foldCase();
 
@@ -2216,15 +2301,8 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
         // Always compare if we have no match yet; otherwise only compare
         // against potentially better matches (longer strings).
 
-        lcase.fastCopyFrom(data[i]).foldCase();
-        int32_t length = lcase.length();
-
-        if (length > bestMatchLength &&
-            lcaseText.compareBetween(0, length, lcase, 0, length) == 0)
-        {
+        if (newBestMatchWithOptionalDot(lcaseText, data[i], bestMatchName, bestMatchLength)) {
             bestMatch = i;
-            bestMatchLength = length;
-            bestMatchName.setTo(data[i]);
             isLeapMonth = 0;
         }
 
@@ -2234,15 +2312,8 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
             Formattable monthName((const UnicodeString&)(data[i]));
             MessageFormat::format(*monthPattern, &monthName, 1, leapMonthName, status);
             if (U_SUCCESS(status)) {
-                lcase.fastCopyFrom(leapMonthName).foldCase();
-                length = lcase.length();
-
-                if (length > bestMatchLength &&
-                    lcaseText.compareBetween(0, length, lcase, 0, length) == 0)
-                {
+                if (newBestMatchWithOptionalDot(lcaseText, leapMonthName, bestMatchName, bestMatchLength)) {
                     bestMatch = i;
-                    bestMatchLength = length;
-                    bestMatchName.setTo(leapMonthName);
                     isLeapMonth = 1;
                 }
             }
@@ -2267,7 +2338,6 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
         // Once we have a match, we have to determine the length of the
         // original source string.  This will usually be == the length of
         // the case folded string, but it may differ (e.g. sharp s).
-        lcase.fastCopyFrom(bestMatchName).foldCase();
 
         // Most of the time, the length will be the same as the length
         // of the string from the locale data.  Sometimes it will be
@@ -2286,13 +2356,44 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
             }
             text.extract(start, j, lcaseText);
             lcaseText.foldCase();
-            if (lcase == lcaseText) {
+            if (bestMatchName == lcaseText) {
                 return start + j;
             }
         }
     }
 
     return -start;
+}
+
+static UBool
+newBestMatchWithOptionalDot(const UnicodeString &lcaseText,
+                            const UnicodeString &data,
+                            UnicodeString &bestMatchName,
+                            int32_t &bestMatchLength) {
+    UnicodeString lcase;
+    lcase.fastCopyFrom(data).foldCase();
+    int32_t length = lcase.length();
+    if (length <= bestMatchLength) {
+        // data cannot provide a better match.
+        return FALSE;
+    }
+
+    if (lcaseText.compareBetween(0, length, lcase, 0, length) == 0) {
+        // normal match
+        bestMatchName = lcase;
+        bestMatchLength = length;
+        return TRUE;
+    }
+    if (lcase.charAt(--length) == 0x2e) {
+        if (lcaseText.compareBetween(0, length, lcase, 0, length) == 0) {
+            // The input text matches the data except for data's trailing dot.
+            bestMatchName = lcase;
+            bestMatchName.truncate(length);
+            bestMatchLength = length;
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 //----------------------------------------------------------------------
@@ -2322,10 +2423,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     int32_t i;
     int32_t ps = 0;
     ParsePosition pos(0);
-    UDateFormatField patternCharIndex;
+    UDateFormatField patternCharIndex = DateFormatSymbols::getPatternCharIndex(ch);
     NumberFormat *currentNumberFormat;
     UnicodeString temp;
-    UChar *patternCharPtr = u_strchr(DateFormatSymbols::getPatternUChars(), ch);
     UBool lenient = isLenient();
     UBool gotNumber = FALSE;
 
@@ -2333,11 +2433,10 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     //fprintf(stderr, "%s:%d - [%c]  st=%d \n", __FILE__, __LINE__, (char) ch, start);
 #endif
 
-    if (patternCharPtr == NULL) {
+    if (patternCharIndex == UDAT_FIELD_COUNT) {
         return -start;
     }
 
-    patternCharIndex = (UDateFormatField)(patternCharPtr - DateFormatSymbols::getPatternUChars());
     currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
     UCalendarDateFields field = fgPatternIndexToCalendarField[patternCharIndex];
     UnicodeString hebr("hebr", 4, US_INV);
@@ -2513,19 +2612,22 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             && u_isdigit(text.charAt(start))
             && u_isdigit(text.charAt(start+1)))
         {
-            // Assume for example that the defaultCenturyStart is 6/18/1903.
-            // This means that two-digit years will be forced into the range
-            // 6/18/1903 to 6/17/2003.  As a result, years 00, 01, and 02
-            // correspond to 2000, 2001, and 2002.  Years 04, 05, etc. correspond
-            // to 1904, 1905, etc.  If the year is 03, then it is 2003 if the
-            // other fields specify a date before 6/18, or 1903 if they specify a
-            // date afterwards.  As a result, 03 is an ambiguous year.  All other
-            // two-digit years are unambiguous.
-          if(fHaveDefaultCentury) { // check if this formatter even has a pivot year
-              int32_t ambiguousTwoDigitYear = fDefaultCenturyStartYear % 100;
-              ambiguousYear[0] = (value == ambiguousTwoDigitYear);
-              value += (fDefaultCenturyStartYear/100)*100 +
-                (value < ambiguousTwoDigitYear ? 100 : 0);
+        	// only adjust year for patterns less than 3.
+        	if(count < 3) {
+        		// Assume for example that the defaultCenturyStart is 6/18/1903.
+        		// This means that two-digit years will be forced into the range
+        		// 6/18/1903 to 6/17/2003.  As a result, years 00, 01, and 02
+        		// correspond to 2000, 2001, and 2002.  Years 04, 05, etc. correspond
+        		// to 1904, 1905, etc.  If the year is 03, then it is 2003 if the
+        		// other fields specify a date before 6/18, or 1903 if they specify a
+        		// date afterwards.  As a result, 03 is an ambiguous year.  All other
+        		// two-digit years are unambiguous.
+        		if(fHaveDefaultCentury) { // check if this formatter even has a pivot year
+        			int32_t ambiguousTwoDigitYear = fDefaultCenturyStartYear % 100;
+        			ambiguousYear[0] = (value == ambiguousTwoDigitYear);
+        			value += (fDefaultCenturyStartYear/100)*100 +
+        					(value < ambiguousTwoDigitYear ? 100 : 0);
+        		}
             }
         }
         cal.set(UCAL_YEAR, value);
@@ -2658,7 +2760,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                 a *= 10;
                 i--;
             }
-            value = (value + (a>>1)) / a;
+            value /= a;
         }
         cal.set(UCAL_MILLISECOND, value);
         return pos.getIndex();
@@ -2675,16 +2777,20 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
     case UDAT_DAY_OF_WEEK_FIELD:
         {
             // Want to be able to parse both short and long forms.
-            // Try count == 4 (EEEE) first:
+            // Try count == 4 (EEEE) wide first:
             int32_t newStart = 0;
             if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                       fSymbols->fWeekdays, fSymbols->fWeekdaysCount, NULL, cal)) > 0)
                 return newStart;
-            // EEEE failed, now try EEE
+            // EEEE wide failed, now try EEE abbreviated
             else if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                    fSymbols->fShortWeekdays, fSymbols->fShortWeekdaysCount, NULL, cal)) > 0)
                 return newStart;
-            // EEE failed, now try EEEEE
+            // EEE abbreviated failed, now try EEEEEE short
+            else if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
+                                   fSymbols->fShorterWeekdays, fSymbols->fShorterWeekdaysCount, NULL, cal)) > 0)
+                return newStart;
+            // EEEEEE short failed, now try EEEEE narrow
             else if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                    fSymbols->fNarrowWeekdays, fSymbols->fNarrowWeekdaysCount, NULL, cal)) > 0)
                 return newStart;
@@ -2710,6 +2816,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
                 return newStart;
             else if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
                                           fSymbols->fStandaloneShortWeekdays, fSymbols->fStandaloneShortWeekdaysCount, NULL, cal)) > 0)
+                return newStart;
+            else if ((newStart = matchString(text, start, UCAL_DAY_OF_WEEK,
+                                          fSymbols->fStandaloneShorterWeekdays, fSymbols->fStandaloneShorterWeekdaysCount, NULL, cal)) > 0)
                 return newStart;
             else if (!lenient)
                 return newStart;
@@ -2783,7 +2892,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         }
         break;
 
-    case UDAT_TIMEZONE_FIELD:
+    case UDAT_TIMEZONE_FIELD: // 'z'
         {
             UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
             UTimeZoneFormatStyle style = (count < 4) ? UTZFMT_STYLE_SPECIFIC_SHORT : UTZFMT_STYLE_SPECIFIC_LONG;
@@ -2795,10 +2904,11 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             }
         }
         break;
-    case UDAT_TIMEZONE_RFC_FIELD:
+    case UDAT_TIMEZONE_RFC_FIELD: // 'Z'
         {
             UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
-            UTimeZoneFormatStyle style = (count < 4) ? UTZFMT_STYLE_RFC822 : ((count == 5) ? UTZFMT_STYLE_ISO8601: UTZFMT_STYLE_LOCALIZED_GMT);
+            UTimeZoneFormatStyle style = (count < 4) ?
+                UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL : ((count == 5) ? UTZFMT_STYLE_ISO_EXTENDED_FULL: UTZFMT_STYLE_LOCALIZED_GMT);
             TimeZone *tz  = tzFormat()->parse(style, text, pos, &tzTimeType);
             if (tz != NULL) {
                 ((SimpleDateFormat*)this)->tztype = tzTimeType;
@@ -2807,7 +2917,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             }
             return -start;
         }
-    case UDAT_TIMEZONE_GENERIC_FIELD:
+    case UDAT_TIMEZONE_GENERIC_FIELD: // 'v'
         {
             UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
             UTimeZoneFormatStyle style = (count < 4) ? UTZFMT_STYLE_GENERIC_SHORT : UTZFMT_STYLE_GENERIC_LONG;
@@ -2819,10 +2929,94 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             }
             return -start;
         }
-    case UDAT_TIMEZONE_SPECIAL_FIELD:
+    case UDAT_TIMEZONE_SPECIAL_FIELD: // 'V'
         {
             UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
-            UTimeZoneFormatStyle style = (count < 4) ? UTZFMT_STYLE_SPECIFIC_SHORT : UTZFMT_STYLE_GENERIC_LOCATION;
+            UTimeZoneFormatStyle style;
+            switch (count) {
+            case 1:
+                style = UTZFMT_STYLE_ZONE_ID_SHORT;
+                break;
+            case 2:
+                style = UTZFMT_STYLE_ZONE_ID;
+                break;
+            case 3:
+                style = UTZFMT_STYLE_EXEMPLAR_LOCATION;
+                break;
+            default:
+                style = UTZFMT_STYLE_GENERIC_LOCATION;
+                break;
+            }
+            TimeZone *tz  = tzFormat()->parse(style, text, pos, &tzTimeType);
+            if (tz != NULL) {
+                ((SimpleDateFormat*)this)->tztype = tzTimeType;
+                cal.adoptTimeZone(tz);
+                return pos.getIndex();
+            }
+            return -start;
+        }
+    case UDAT_TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD: // 'O'
+        {
+            UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+            UTimeZoneFormatStyle style = (count < 4) ? UTZFMT_STYLE_LOCALIZED_GMT_SHORT : UTZFMT_STYLE_LOCALIZED_GMT;
+            TimeZone *tz  = tzFormat()->parse(style, text, pos, &tzTimeType);
+            if (tz != NULL) {
+                ((SimpleDateFormat*)this)->tztype = tzTimeType;
+                cal.adoptTimeZone(tz);
+                return pos.getIndex();
+            }
+            return -start;
+        }
+    case UDAT_TIMEZONE_ISO_FIELD: // 'X'
+        {
+            UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+            UTimeZoneFormatStyle style;
+            switch (count) {
+            case 1:
+                style = UTZFMT_STYLE_ISO_BASIC_SHORT;
+                break;
+            case 2:
+                style = UTZFMT_STYLE_ISO_BASIC_FIXED;
+                break;
+            case 3:
+                style = UTZFMT_STYLE_ISO_EXTENDED_FIXED;
+                break;
+            case 4:
+                style = UTZFMT_STYLE_ISO_BASIC_FULL;
+                break;
+            default:
+                style = UTZFMT_STYLE_ISO_EXTENDED_FULL;
+                break;
+            }
+            TimeZone *tz  = tzFormat()->parse(style, text, pos, &tzTimeType);
+            if (tz != NULL) {
+                ((SimpleDateFormat*)this)->tztype = tzTimeType;
+                cal.adoptTimeZone(tz);
+                return pos.getIndex();
+            }
+            return -start;
+        }
+    case UDAT_TIMEZONE_ISO_LOCAL_FIELD: // 'x'
+        {
+            UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+            UTimeZoneFormatStyle style;
+            switch (count) {
+            case 1:
+                style = UTZFMT_STYLE_ISO_BASIC_LOCAL_SHORT;
+                break;
+            case 2:
+                style = UTZFMT_STYLE_ISO_BASIC_LOCAL_FIXED;
+                break;
+            case 3:
+                style = UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FIXED;
+                break;
+            case 4:
+                style = UTZFMT_STYLE_ISO_BASIC_LOCAL_FULL;
+                break;
+            default:
+                style = UTZFMT_STYLE_ISO_EXTENDED_LOCAL_FULL;
+                break;
+            }
             TimeZone *tz  = tzFormat()->parse(style, text, pos, &tzTimeType);
             if (tz != NULL) {
                 ((SimpleDateFormat*)this)->tztype = tzTimeType;
