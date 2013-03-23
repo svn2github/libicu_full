@@ -149,7 +149,6 @@
  */
 
 
-#if U_PLATFORM_HAS_WIN32_API
 
 /*  U_INIT_ONCE mimics the windows API INIT_ONCE, which exists on Windows Vista and newer.
  *  When ICU no longer needs to support older Windows platforms (XP) that do not have
@@ -161,9 +160,17 @@ typedef struct U_INIT_ONCE {
 } U_INIT_ONCE;
 #define U_INIT_ONCE_STATIC_INIT {0, NULL}
 
+/*
+ *  Init Once, not baked yet.
+ */
+struct UInitOnce;    // Rename of the existing one.
+template<class T> void u_initOnce(T *obj, UInitOnce *uio, (T::*fp)());
+template<class T> void u_resetOnce(T *obj, UInitOnce *uio, (T::*fp)());
+void u_initOnceReset(UInitOnce *);
+
+#if U_PLATFORM_HAS_WIN32_API
 typedef struct UMutex {
     U_INIT_ONCE       fInitOnce;
-    UMTX              fUserMutex;
     UBool             fInitialized;  /* Applies to fUserMutex only. */
     /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
                                    * Windows.h, which would allow using CRITICAL_SECTION
@@ -174,17 +181,16 @@ typedef struct UMutex {
 /* Initializer for a static UMUTEX. Deliberately contains no value for the
  *  CRITICAL_SECTION.
  */
-#define U_MUTEX_INITIALIZER {U_INIT_ONCE_STATIC_INIT, NULL, FALSE}
+#define U_MUTEX_INITIALIZER {U_INIT_ONCE_STATIC_INIT, FALSE}
 
 #elif U_PLATFORM_IMPLEMENTS_POSIX
 #include <pthread.h>
 
 struct UMutex {
     pthread_mutex_t  fMutex;
-    UMTX             fUserMutex;
     UBool            fInitialized;
 };
-#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER, NULL, FALSE}
+#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER, FALSE}
 
 #else
 /* Unknow platform type. */
