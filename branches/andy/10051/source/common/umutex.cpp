@@ -148,7 +148,7 @@ UBool u_initImplPreInit(UInitOnce *uio) {
     pthread_mutex_lock(&initMutex);
     int32_t state = uio->fState;
     if (state == 0) {
-        uio->fState = 1;
+        uio->fState.store(1, std::memory_order_release);
         pthread_mutex_unlock(&initMutex);
         return true;   // Caller will next call the init function.
     } else if (state == 2) {
@@ -164,9 +164,14 @@ UBool u_initImplPreInit(UInitOnce *uio) {
         while (uio->fState == 1) {
             pthread_cond_wait(&initCondition, &initMutex);
         }
-        U_ASSERT(uio->fState == 2);
+        UBool returnVal = uio->fState == 0;
+        if (returnVal) {
+            // Initialization that was running in another thread failed.
+            // We will retry it in this thread.
+	    uio->fState.store(1, std::memory_order_release);
+        }
         pthread_mutex_unlock(&initMutex);
-        return FALSE;
+        return returnVal;
     }
 }
 
