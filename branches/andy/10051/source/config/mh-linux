@@ -5,7 +5,7 @@
 
 ## Commands to generate dependency files
 GEN_DEPS.c=  $(CC) -E -MM $(DEFS) $(CPPFLAGS)
-GEN_DEPS.cc= $(CXX) -E -MM $(DEFS) $(CPPFLAGS)
+GEN_DEPS.cc= $(CXX) -E -MM $(DEFS) $(CPPFLAGS) $(CXXFLAGS)
 
 ## Flags for position independent code
 SHAREDLIBCFLAGS = -fPIC

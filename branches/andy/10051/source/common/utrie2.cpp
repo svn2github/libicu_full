@@ -735,9 +735,7 @@ uint16_t ForwardUTrie2StringIterator::next16() {
 
 UTrie2 *UTrie2Singleton::getInstance(InstantiatorFn *instantiator, const void *context,
                                      UErrorCode &errorCode) {
-    void *duplicate;
-    UTrie2 *instance=(UTrie2 *)singleton.getInstance(instantiator, context, duplicate, errorCode);
-    utrie2_close((UTrie2 *)duplicate);
+    UTrie2 *instance=(UTrie2 *)singleton.getInstance(instantiator, context, errorCode);
     return instance;
 }
 

@@ -18,38 +18,20 @@
 U_NAMESPACE_BEGIN
 
 void *SimpleSingleton::getInstance(InstantiatorFn *instantiator, const void *context,
-                                   void *&duplicate,
                                    UErrorCode &errorCode) {
-    duplicate=NULL;
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
-    // TODO: With atomicops.h: void *instance = (void*)Acquire_Load(&fInstance);
-    //       and remove UMTX_ACQUIRE_BARRIER below.
-    void *instance=ANNOTATE_UNPROTECTED_READ(fInstance);
-    UMTX_ACQUIRE_BARRIER;
-    ANNOTATE_HAPPENS_AFTER(&fInstance);
-    if(instance!=NULL) {
-        return instance;
+    if (std::atomic_load_explicit(&fInitOnce.fState, std::memory_order_acquire) == 2) {
+        return fInstance;
     }
-
-    // Attempt to create the instance.
-    // If a race occurs, then the losing thread will assign its new instance
-    // to the "duplicate" parameter, and the caller deletes it.
-    instance=instantiator(context, errorCode);
-    UMTX_RELEASE_BARRIER;  // Release-barrier before fInstance=instance;
-    Mutex mutex;
-    if(fInstance==NULL && U_SUCCESS(errorCode)) {
-        U_ASSERT(instance!=NULL);
-        ANNOTATE_HAPPENS_BEFORE(&fInstance);
-        // TODO: With atomicops.h: Release_Store(&fInstance, (AtomicWord)instance);
-        //       and remove UMTX_RELEASE_BARRIER above.
-        fInstance=instance;
-    } else {
-        duplicate=instance;
+    if (u_initImplPreInit(&fInitOnce)) {
+        fInstance = instantiator(context, errorCode);
+        u_initImplPostInit(&fInitOnce, fInstance != NULL);
     }
     return fInstance;
 }
+
 
 /*
  * Three states:
@@ -57,23 +39,43 @@ void *SimpleSingleton::getInstance(InstantiatorFn *instantiator, const void *con
  * Initial state: Instance creation not attempted yet.
  * fInstance=NULL && U_SUCCESS(fErrorCode)
  *
- * Instance creation succeeded:
+ * Instance creation run & succeeded:
  * fInstance!=NULL && U_SUCCESS(fErrorCode)
  *
- * Instance creation failed:
+ * Instance creation & failed:
  * fInstance=NULL && U_FAILURE(fErrorCode)
  * We will not attempt again to create the instance.
  *
- * fInstance changes at most once.
- * fErrorCode changes at most twice (intial->failed->succeeded).
+ * The instantiator function will be called only once, whether it succeeds or fails.
+ * The controlling state is maintained by the UInitOnce object, not by
+ *    fInstance and fErrorCode.
+ * The values of fInstance and fErrorCode must only be set between pre and post init(),
+ *    where they are in a controlled memory environment.
  */
 void *TriStateSingleton::getInstance(InstantiatorFn *instantiator, const void *context,
-                                     void *&duplicate,
                                      UErrorCode &errorCode) {
-    duplicate=NULL;
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
+    if (std::atomic_load_explicit(&fInitOnce.fState, std::memory_order_acquire) == 2) {
+        errorCode = fErrorCode;
+        return fInstance;
+    }
+    if (u_initImplPreInit(&fInitOnce)) {
+        errorCode = U_ZERO_ERROR;
+        fInstance = instantiator(context, errorCode);
+        fErrorCode = errorCode;
+        u_initImplPostInit(&fInitOnce, TRUE);
+    }
+    return fInstance;
+}
+
+
+
+
+
+
+#if 0
     // TODO: With atomicops.h: void *instance = (void*)Acquire_Load(&fInstance);
     //       and remove UMTX_ACQUIRE_BARRIER below.
     void *instance=ANNOTATE_UNPROTECTED_READ(fInstance);
@@ -122,10 +124,12 @@ void *TriStateSingleton::getInstance(InstantiatorFn *instantiator, const void *c
     }
     return fInstance;
 }
+#endif
 
 void TriStateSingleton::reset() {
     fInstance=NULL;
     fErrorCode=U_ZERO_ERROR;
+    fInitOnce.reset();
 }
 
 #if UCONFIG_NO_SERVICE

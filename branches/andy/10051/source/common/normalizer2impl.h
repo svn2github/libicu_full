@@ -216,7 +216,7 @@ private:
 class U_COMMON_API Normalizer2Impl : public UMemory {
 public:
     Normalizer2Impl() : memory(NULL), normTrie(NULL) {
-        canonIterDataSingleton.fInstance=NULL;
+        canonIterDataSingleton.reset();
     }
     ~Normalizer2Impl();
 

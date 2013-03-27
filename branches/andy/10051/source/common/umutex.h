@@ -160,13 +160,40 @@ typedef struct U_INIT_ONCE {
 } U_INIT_ONCE;
 #define U_INIT_ONCE_STATIC_INIT {0, NULL}
 
+#if U_SHOW_CPLUSPLUS_API
 /*
  *  Init Once, not baked yet.
  */
-struct UInitOnce;    // Rename of the existing one.
-template<class T> void u_initOnce(T *obj, UInitOnce *uio, (T::*fp)());
-template<class T> void u_resetOnce(T *obj, UInitOnce *uio, (T::*fp)());
-void u_initOnceReset(UInitOnce *);
+
+// Win32 note:
+//   variables declared volatile are read with acquire memory semantics,
+//   and written with release.
+
+// Needs C++11 
+#include <atomic>
+
+
+struct UInitOnce {
+    std::atomic<int32_t>  fState;
+    void reset() {fState = 0;};
+};
+#define U_INITONCE_INITIALIZER {ATOMIC_VAR_INIT(0)}
+
+UBool u_initImplPreInit(UInitOnce *);
+void  u_initImplPostInit(UInitOnce *, UBool success);
+
+template<class T> void u_initOnce(T *obj, UInitOnce *uio, void (T::*fp)()) {
+    if (std::atomic_load_explicit(&uio->fState, std::memory_order_acquire) == 2) {
+        return;
+    }
+    if (u_initImplPreInit(uio)) {
+        (obj->*fp)();
+        u_initImplPostInit(uio, TRUE);
+    }
+}
+
+
+#endif /*  U_SHOW_CPLUSPLUS_API */
 
 #if U_PLATFORM_HAS_WIN32_API
 typedef struct UMutex {
@@ -177,6 +204,7 @@ typedef struct UMutex {
                                    * directly here. */
     char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
 } UMutex;
+
 
 /* Initializer for a static UMUTEX. Deliberately contains no value for the
  *  CRITICAL_SECTION.

@@ -97,29 +97,104 @@ umtx_unlock(UMutex* mutex)
     #endif
 }
 
+static pthread_mutex_t initMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t initCondition = PTHREAD_COND_INITIALIZER;
+
+typedef UBool (*U_PINIT_ONCE_FN) (
+  U_INIT_ONCE     *initOnce,
+  void            *parameter,
+  void            **context
+);
+
+
 UBool u_InitOnceExecuteOnce(
     U_INIT_ONCE     *initOnce,
     U_PINIT_ONCE_FN initFn,
     void            *parameter,
     void            **context) {
+
+    (void)context;  // Unused for now.
     pthread_mutex_lock(&initMutex);
-    while (fState != 2) {
+    while (TRUE) {
+        int32_t state = initOnce->fState;
+        if (state == 2) {
+            break;
+        }
         if (state == 0) {
-            fState = 1;
+            initOnce->fState = 1;
             pthread_mutex_unlock(&initMutex);
-            UBool success = (*initFn)(initOnce, parameter, &initOnce->fContext);
+            (*initFn)(initOnce, parameter, &initOnce->fContext);
             pthread_mutex_lock(&initMutex);
-            fState = 2;
-            pthread_mutex_broadcast(&initCondition);
+            initOnce->fState = 2;
+            pthread_cond_broadcast(&initCondition);
         } else if (state == 1) {
             // Initialization in progress on another thread.
-            pthread_condition_wait(&initCondition, &initMutex);
+            pthread_cond_wait(&initCondition, &initMutex);
         }
     }
     pthread_mutex_unlock(&initMutex);
     return TRUE;
 }
 
+// This function is called when a test of a UInitOnce::fState reveals that
+//   initialization has not completed, that we either need to call the
+//   function on this thread, or wait for some other thread to complete.
+//
+// The actual call to the init function is made inline by template code
+//   that knows the C++ types involved. This function returns TRUE if
+//   the caller needs to call the Init function.
+//
+UBool u_initImplPreInit(UInitOnce *uio) {
+    pthread_mutex_lock(&initMutex);
+    int32_t state = uio->fState;
+    if (state == 0) {
+        uio->fState = 1;
+        pthread_mutex_unlock(&initMutex);
+        return true;   // Caller will next call the init function.
+    } else if (state == 2) {
+        // Another thread alread completed the initialization, in
+        //   a race with this thread. We can simply return FALSE, indicating no
+        //   further action is needed by the caller.
+        pthread_mutex_unlock(&initMutex);
+        return FALSE;
+    } else {
+        // Another thread is currently running the initialization.
+        // Wait until it completes.
+        U_ASSERT(state == 1);
+        while (uio->fState == 1) {
+            pthread_cond_wait(&initCondition, &initMutex);
+        }
+        U_ASSERT(uio->fState == 2);
+        pthread_mutex_unlock(&initMutex);
+        return FALSE;
+    }
+}
+
+// This function is called by the thread that ran an initialization function,
+// just after completing the function.
+//   Some threads may be waiting on the condition, requiring the broadcast wakeup.
+//   Some threads may be racing to test the fState variable outside of the mutex, 
+//   requiring the use of store/release when changing its value.
+//
+//   success: True:  the inialization succeeded. No further calls to the init
+//                   function will be made.
+//            False: the initializtion failed. The next call to u_initOnce()
+//                   will retry the initialization.
+
+void u_initImplPostInit(UInitOnce *uio, UBool success) {
+    int32_t nextState = success? 2: 0;
+    pthread_mutex_lock(&initMutex);
+    uio->fState.store(nextState, std::memory_order_release);
+    pthread_cond_broadcast(&initCondition);
+    pthread_mutex_unlock(&initMutex);
+}
+
+
+void u_initOnceReset(UInitOnce *uio) {
+    uio->fState = 0;
+}
+        
+    
 
 #elif U_PLATFORM_HAS_WIN32_API
 //

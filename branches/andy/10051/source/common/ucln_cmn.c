@@ -58,7 +58,6 @@ u_cleanup(void)
 
     ucln_lib_cleanup();
 
-    umtx_cleanup();
     cmemory_cleanup();       /* undo any heap functions set by u_setMemoryFunctions(). */
     gICUInitialized = FALSE;
     UTRACE_EXIT();           /* Must be before utrace_cleanup(), which turns off tracing. */
