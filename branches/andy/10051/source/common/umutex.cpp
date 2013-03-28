@@ -57,7 +57,6 @@
 // The ICU global mutex. Used when ICU implementation code passes NULL for the mutex pointer.
 static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 
-
 #if defined(POSIX)
 
 //
@@ -265,6 +264,58 @@ static UBool winMutexInit(U_INIT_ONCE *initOnce, void *param, void **context) {
     return TRUE;
 }
 
+
+// This function is called when a test of a UInitOnce::fState reveals that
+//   initialization has not completed, that we either need to call the
+//   function on this thread, or wait for some other thread to complete.
+//
+// The actual call to the init function is made inline by template code
+//   that knows the C++ types involved. This function returns TRUE if
+//   the caller needs to call the Init function.
+//
+UBool u_initImplPreInit(UInitOnce *uio) {
+    for (;;) {
+        int32_t previousState = InterlockedCompareExchange( 
+            &uio->fState,    //  Destination,
+            1,               //  Exchange Value
+            0);              //  Compare value
+
+        if (previousState == 0) {
+            return true;   // Caller will next call the init function.
+                           // Current state == 1.
+        } else if (previousState == 2) {
+            // Another thread alread completed the initialization, in
+            //   a race with this thread. We can simply return FALSE, indicating no
+            //   further action is needed by the caller.
+            return FALSE;
+        } else {
+            // Another thread is currently running the initialization.
+            // Wait until it completes.
+            do {
+                Sleep(1);
+                previousState = u_LoadAcquire(uio->fState);
+            } while (previousState == 1);
+        }
+    }
+}
+
+// This function is called by the thread that ran an initialization function,
+// just after completing the function.
+//
+//   success: True:  the inialization succeeded. No further calls to the init
+//                   function will be made.
+//            False: the initializtion failed. The next call to u_initOnce()
+//                   will retry the initialization.
+
+void u_initImplPostInit(UInitOnce *uio, UBool success) {
+    int32_t nextState = success? 2: 0;
+    u_StoreRelease(uio->fState, nextState);
+}
+
+
+void u_initOnceReset(UInitOnce *uio) {
+    uio->fState = 0;
+}
 /*
  *   umtx_lock
  */

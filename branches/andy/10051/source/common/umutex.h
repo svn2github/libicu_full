@@ -169,21 +169,44 @@ typedef struct U_INIT_ONCE {
 //   variables declared volatile are read with acquire memory semantics,
 //   and written with release.
 
-// Needs C++11 
+#if __cplusplus>=201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
+// C++11 definitions. 
 #include <atomic>
+typedef std::atomic<int32_t> atomic_int32_t;
+#define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
+inline int32_t u_LoadAcquire(atomic_int32_t &var) {
+	return std::atomic_load_explicit(&var, std::memory_order_acquire);};
+inline void u_StoreRelease(atomic_int32_t &var, int32_t val) {
+	var.store(val, std::memory_order_release);};
 
+
+
+#elif defined(_MSC_VER)
+// MSVC compiler. Reads and writes of volatile variables have
+//                acquire and release memory semantics, respectively.
+//                This is a Microsoft extension, not standard behavior.
+typedef volatile long atomic_int32_t;
+#define ATOMIC_INT32_T_INITIALIZER(val) val
+inline int32_t u_LoadAcquire(atomic_int32_t &var) {
+	return var;};
+inline void u_StoreRelease(atomic_int32_t &var, int32_t val) {
+	var = val;};
+#endif
 
 struct UInitOnce {
-    std::atomic<int32_t>  fState;
-    void reset() {fState = 0;};
+	atomic_int32_t   fState;
+	void reset() {fState = 0;};
 };
-#define U_INITONCE_INITIALIZER {ATOMIC_VAR_INIT(0)}
+#define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0)}
+
+
+
 
 UBool u_initImplPreInit(UInitOnce *);
 void  u_initImplPostInit(UInitOnce *, UBool success);
 
 template<class T> void u_initOnce(T *obj, UInitOnce *uio, void (T::*fp)()) {
-    if (std::atomic_load_explicit(&uio->fState, std::memory_order_acquire) == 2) {
+    if (u_LoadAcquire(uio->fState) == 2) {
         return;
     }
     if (u_initImplPreInit(uio)) {
@@ -196,7 +219,7 @@ template<class T> void u_initOnce(T *obj, UInitOnce *uio, void (T::*fp)()) {
 // u_initOnce variant with for plain functions, or static class functions.
 //            No context parameter.
 inline void u_initOnce(UInitOnce *uio, void (*fp)()) {
-    if (std::atomic_load_explicit(&uio->fState, std::memory_order_acquire) == 2) {
+    if (u_LoadAcquire(uio->fState) == 2) {
         return;
     }
     if (u_initImplPreInit(uio)) {

@@ -22,7 +22,7 @@ void *SimpleSingleton::getInstance(InstantiatorFn *instantiator, const void *con
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
-    if (std::atomic_load_explicit(&fInitOnce.fState, std::memory_order_acquire) == 2) {
+    if (u_LoadAcquire(fInitOnce.fState) == 2) {
         return fInstance;
     }
     if (u_initImplPreInit(&fInitOnce)) {
@@ -57,7 +57,7 @@ void *TriStateSingleton::getInstance(InstantiatorFn *instantiator, const void *c
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
-    if (std::atomic_load_explicit(&fInitOnce.fState, std::memory_order_acquire) == 2) {
+    if (u_LoadAcquire(fInitOnce.fState) == 2) {
         errorCode = fErrorCode;
         return fInstance;
     }
