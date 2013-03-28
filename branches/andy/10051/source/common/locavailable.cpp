@@ -30,6 +30,7 @@
 
 static icu::Locale*  availableLocaleList = NULL;
 static int32_t  availableLocaleListCount;
+static UInitOnce gInitOnce = U_INITONCE_INITIALIZER;
 
 U_CDECL_BEGIN
 
@@ -42,6 +43,7 @@ static UBool U_CALLCONV locale_available_cleanup(void)
         availableLocaleList = NULL;
     }
     availableLocaleListCount = 0;
+    gInitOnce.reset();
 
     return TRUE;
 }
@@ -50,40 +52,28 @@ U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
+// Available Locales List initialization function.
+//    It will be called exactly once.
+
+void Locale::initLocales() {
+    // for now, there is a hardcoded list, so just walk through that list and set it up.
+    availableLocaleListCount = uloc_countAvailable();
+    if(availableLocaleListCount) {
+       availableLocaleList = new Locale[availableLocaleListCount];
+    }
+    if (availableLocaleList == NULL) {
+        availableLocaleListCount= 0;
+    }
+    for (int32_t locCount=availableLocaleListCount-1; locCount>=0; --locCount) {
+        availableLocaleList[locCount].setFromPOSIXID(uloc_getAvailable(locCount));
+    }
+    ucln_common_registerCleanup(UCLN_COMMON_LOCALE_AVAILABLE, locale_available_cleanup);
+}
+
 const Locale* U_EXPORT2
 Locale::getAvailableLocales(int32_t& count)
 {
-    // for now, there is a hardcoded list, so just walk through that list and set it up.
-    UBool needInit;
-    UMTX_CHECK(NULL, availableLocaleList == NULL, needInit);
-
-    if (needInit) {
-        int32_t locCount = uloc_countAvailable();
-        Locale *newLocaleList = 0;
-        if(locCount) {
-           newLocaleList = new Locale[locCount];
-        }
-        if (newLocaleList == NULL) {
-            count = 0;
-            return NULL;
-        }
-
-        count = locCount;
-
-        while(--locCount >= 0) {
-            newLocaleList[locCount].setFromPOSIXID(uloc_getAvailable(locCount));
-        }
-
-        umtx_lock(NULL);
-        if(availableLocaleList == 0) {
-            availableLocaleListCount = count;
-            availableLocaleList = newLocaleList;
-            newLocaleList = NULL;
-            ucln_common_registerCleanup(UCLN_COMMON_LOCALE_AVAILABLE, locale_available_cleanup);
-        }
-        umtx_unlock(NULL);
-        delete []newLocaleList;
-    }
+    u_initOnce(&gInitOnce, &initLocales);
     count = availableLocaleListCount;
     return availableLocaleList;
 }

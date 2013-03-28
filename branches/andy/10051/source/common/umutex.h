@@ -193,6 +193,20 @@ template<class T> void u_initOnce(T *obj, UInitOnce *uio, void (T::*fp)()) {
 }
 
 
+// u_initOnce variant with for plain functions, or static class functions.
+//            No context parameter.
+inline void u_initOnce(UInitOnce *uio, void (*fp)()) {
+    if (std::atomic_load_explicit(&uio->fState, std::memory_order_acquire) == 2) {
+        return;
+    }
+    if (u_initImplPreInit(uio)) {
+        (*fp)();
+        u_initImplPostInit(uio, TRUE);
+    }
+}
+
+
+
 #endif /*  U_SHOW_CPLUSPLUS_API */
 
 #if U_PLATFORM_HAS_WIN32_API

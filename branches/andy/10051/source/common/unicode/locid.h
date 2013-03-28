@@ -732,6 +732,7 @@ private:
     UBool fIsBogus;
 
     static const Locale &getLocale(int locid);
+    static void initLocales();
 
     /**
      * A friend to allow the default locale to be set by either the C or C++ API.

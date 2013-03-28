@@ -288,34 +288,27 @@ static UBool U_CALLCONV breakiterator_cleanup(void) {
 U_CDECL_END
 U_NAMESPACE_BEGIN
 
+static void
+initService(void) {
+    gService = new ICUBreakIteratorService();
+    ucln_common_registerCleanup(UCLN_COMMON_BREAKITERATOR, breakiterator_cleanup);
+}
+
 static ICULocaleService*
 getService(void)
 {
-    UBool needsInit;
-    UMTX_CHECK(NULL, (UBool)(gService == NULL), needsInit);
-
-    if (needsInit) {
-        ICULocaleService  *tService = new ICUBreakIteratorService();
-        umtx_lock(NULL);
-        if (gService == NULL) {
-            gService = tService;
-            tService = NULL;
-            ucln_common_registerCleanup(UCLN_COMMON_BREAKITERATOR, breakiterator_cleanup);
-        }
-        umtx_unlock(NULL);
-        delete tService;
-    }
+    static UInitOnce gInitOnce = U_INITONCE_INITIALIZER;
+    u_initOnce(&gInitOnce, &initService);
     return gService;
 }
+
 
 // -------------------------------------
 
 static inline UBool
 hasService(void)
 {
-    UBool retVal;
-    UMTX_CHECK(NULL, gService != NULL, retVal);
-    return retVal;
+    return gService != NULL;
 }
 
 // -------------------------------------
