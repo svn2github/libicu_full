@@ -298,7 +298,7 @@ static ICULocaleService*
 getService(void)
 {
     static UInitOnce gInitOnce = U_INITONCE_INITIALIZER;
-    u_initOnce(&gInitOnce, &initService);
+    u_initOnce(gInitOnce, &initService);
     return gService;
 }
 

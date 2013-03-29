@@ -202,11 +202,11 @@ struct UInitOnce {
 
 
 
-UBool u_initImplPreInit(UInitOnce *);
-void  u_initImplPostInit(UInitOnce *, UBool success);
+UBool u_initImplPreInit(UInitOnce &);
+void  u_initImplPostInit(UInitOnce &, UBool success);
 
-template<class T> void u_initOnce(T *obj, UInitOnce *uio, void (T::*fp)()) {
-    if (u_LoadAcquire(uio->fState) == 2) {
+template<class T> void u_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
+    if (u_LoadAcquire(uio.fState) == 2) {
         return;
     }
     if (u_initImplPreInit(uio)) {
@@ -218,8 +218,8 @@ template<class T> void u_initOnce(T *obj, UInitOnce *uio, void (T::*fp)()) {
 
 // u_initOnce variant with for plain functions, or static class functions.
 //            No context parameter.
-inline void u_initOnce(UInitOnce *uio, void (*fp)()) {
-    if (u_LoadAcquire(uio->fState) == 2) {
+inline void u_initOnce(UInitOnce &uio, void (*fp)()) {
+    if (u_LoadAcquire(uio.fState) == 2) {
         return;
     }
     if (u_initImplPreInit(uio)) {

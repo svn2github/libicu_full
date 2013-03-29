@@ -52,6 +52,8 @@
 #include "unicode/unistr.h"
 #include "unicode/locid.h"
 
+#include "umutex.h"     // TODO(andy): get rid of this.
+
 /**
  * \file 
  * \brief C++ API: Resource Bundle
@@ -484,6 +486,10 @@ private:
     UResourceBundle *fResource;
     void constructForLocale(const UnicodeString& path, const Locale& locale, UErrorCode& error);
     Locale *fLocale;
+    // TODO(andy): This requires including an internal header to get the declaration of UInitOnce.
+    //             Figure out another way.
+    UInitOnce  fLocaleInitOnce;
+    void initLocale();   // Initialize fLocale field.
 
 };
 

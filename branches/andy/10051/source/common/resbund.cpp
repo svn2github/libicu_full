@@ -48,6 +48,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/resbund.h"
+#include "uassert.h"
 #include "umutex.h"
 
 #include "uresimp.h"
@@ -174,12 +175,14 @@ ResourceBundle::ResourceBundle(UErrorCode &err)
                                 :UObject(), fLocale(NULL)
 {
     fResource = ures_open(0, Locale::getDefault().getName(), &err);
+    fLocaleInitOnce.reset();
 }
 
 ResourceBundle::ResourceBundle(const ResourceBundle &other)
                               :UObject(other), fLocale(NULL)
 {
     UErrorCode status = U_ZERO_ERROR;
+    fLocaleInitOnce.reset();
 
     if (other.fResource) {
         fResource = ures_copyResb(0, other.fResource, &status);
@@ -192,6 +195,7 @@ ResourceBundle::ResourceBundle(const ResourceBundle &other)
 ResourceBundle::ResourceBundle(UResourceBundle *res, UErrorCode& err)
                                :UObject(), fLocale(NULL)
 {
+    fLocaleInitOnce.reset();
     if (res) {
         fResource = ures_copyResb(0, res, &err);
     } else {
@@ -203,6 +207,7 @@ ResourceBundle::ResourceBundle(UResourceBundle *res, UErrorCode& err)
 ResourceBundle::ResourceBundle(const char* path, const Locale& locale, UErrorCode& err) 
                                :UObject(), fLocale(NULL)
 {
+    fLocaleInitOnce.reset();
     fResource = ures_open(path, locale.getName(), &err);
 }
 
@@ -215,6 +220,11 @@ ResourceBundle& ResourceBundle::operator=(const ResourceBundle& other)
     if(fResource != 0) {
         ures_close(fResource);
         fResource = NULL;
+    }
+    if (fLocale != NULL) {
+        delete fLocale;
+        fLocale = NULL;
+        fLocaleInitOnce.reset();
     }
     UErrorCode status = U_ZERO_ERROR;
     if (other.fResource) {
@@ -367,28 +377,20 @@ void ResourceBundle::getVersion(UVersionInfo versionInfo) const {
     ures_getVersion(fResource, versionInfo);
 }
 
-const Locale &ResourceBundle::getLocale(void) const
-{
-    UBool needInit;
-    UMTX_CHECK(NULL, (fLocale == NULL), needInit);
-    if(needInit) {
-        UErrorCode status = U_ZERO_ERROR;
-        const char *localeName = ures_getLocaleInternal(fResource, &status);
-        Locale  *tLocale = new Locale(localeName);
-        // Null pointer check
-        if (tLocale == NULL) {
-        	return Locale::getDefault(); // Return default locale if one could not be created.
-        }
-        umtx_lock(NULL);
-        ResourceBundle *me = (ResourceBundle *)this; // semantically const
-        if (me->fLocale == NULL) {
-            me->fLocale = tLocale;
-            tLocale = NULL;
-        }
-        umtx_unlock(NULL);
-        delete tLocale;
+void ResourceBundle::initLocale() {
+    UErrorCode status = U_ZERO_ERROR;
+    U_ASSERT(fLocale == NULL);
+    const char *localeName = ures_getLocaleInternal(fResource, &status);
+    fLocale = new Locale(localeName);
+}
+
+const Locale &ResourceBundle::getLocale(void) const {
+    ResourceBundle *This = const_cast<ResourceBundle *>(this);
+    u_initOnce(This->fLocaleInitOnce, This, &ResourceBundle::initLocale);
+    if (This->fLocale == NULL) {
+        return Locale::getDefault(); // Return default locale if one could not be created.
     }
-    return *fLocale;
+    return *This->fLocale;
 }
 
 const Locale ResourceBundle::getLocale(ULocDataLocaleType type, UErrorCode &status) const

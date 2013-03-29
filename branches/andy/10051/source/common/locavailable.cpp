@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1997-2011, International Business Machines
+*   Copyright (C) 1997-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -23,6 +23,7 @@
 #include "unicode/ures.h"
 #include "cmemory.h"
 #include "ucln_cmn.h"
+#include "uassert.h"
 #include "umutex.h"
 #include "uresimp.h"
 
@@ -73,7 +74,7 @@ void Locale::initLocales() {
 const Locale* U_EXPORT2
 Locale::getAvailableLocales(int32_t& count)
 {
-    u_initOnce(&gInitOnce, &initLocales);
+    u_initOnce(gInitOnce, &initLocales);
     count = availableLocaleListCount;
     return availableLocaleList;
 }
@@ -94,6 +95,7 @@ static const char _kIndexTag[]        = "InstalledLocales";
 
 static char** _installedLocales = NULL;
 static int32_t _installedLocalesCount = 0;
+static UInitOnce _installedLocalesInitOnce;
 
 /* ### Get available **************************************************/
 
@@ -105,57 +107,51 @@ static UBool U_CALLCONV uloc_cleanup(void) {
         _installedLocales = NULL;
 
         _installedLocalesCount = 0;
+        _installedLocalesInitOnce.reset();
 
         uprv_free(temp);
     }
     return TRUE;
 }
 
+// Load Installed Locales. This function will be called exactly once
+//   via the initOnce mechanism.
+
+static void loadInstalledLocales() {
+    UResourceBundle *indexLocale = NULL;
+    UResourceBundle installed;
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t i = 0;
+    int32_t localeCount;
+    
+    U_ASSERT(_installedLocales == NULL);
+    U_ASSERT(_installedLocalesCount == 0);
+
+    _installedLocalesCount = 0;
+    ures_initStackObject(&installed);
+    indexLocale = ures_openDirect(NULL, _kIndexLocaleName, &status);
+    ures_getByKey(indexLocale, _kIndexTag, &installed, &status);
+    
+    if(U_SUCCESS(status)) {
+        localeCount = ures_getSize(&installed);
+        _installedLocales = (char **) uprv_malloc(sizeof(char*) * (localeCount+1));
+        if (_installedLocales != NULL) {
+            ures_resetIterator(&installed);
+            while(ures_hasNext(&installed)) {
+                ures_getNextString(&installed, NULL, (const char **)&_installedLocales[i++], &status);
+            }
+            _installedLocales[i] = NULL;
+            _installedLocalesCount = localeCount;
+            ucln_common_registerCleanup(UCLN_COMMON_ULOC, uloc_cleanup);
+        }
+    }
+    ures_close(&installed);
+    ures_close(indexLocale);
+}
+
 static void _load_installedLocales()
 {
-    UBool   localesLoaded;
-
-    UMTX_CHECK(NULL, _installedLocales != NULL, localesLoaded);
-    
-    if (localesLoaded == FALSE) {
-        UResourceBundle *indexLocale = NULL;
-        UResourceBundle installed;
-        UErrorCode status = U_ZERO_ERROR;
-        char ** temp;
-        int32_t i = 0;
-        int32_t localeCount;
-        
-        ures_initStackObject(&installed);
-        indexLocale = ures_openDirect(NULL, _kIndexLocaleName, &status);
-        ures_getByKey(indexLocale, _kIndexTag, &installed, &status);
-        
-        if(U_SUCCESS(status)) {
-            localeCount = ures_getSize(&installed);
-            temp = (char **) uprv_malloc(sizeof(char*) * (localeCount+1));
-            /* Check for null pointer */
-            if (temp != NULL) {
-                ures_resetIterator(&installed);
-                while(ures_hasNext(&installed)) {
-                    ures_getNextString(&installed, NULL, (const char **)&temp[i++], &status);
-                }
-                temp[i] = NULL;
-
-                umtx_lock(NULL);
-                if (_installedLocales == NULL)
-                {
-                    _installedLocalesCount = localeCount;
-                    _installedLocales = temp;
-                    temp = NULL;
-                    ucln_common_registerCleanup(UCLN_COMMON_ULOC, uloc_cleanup);
-                } 
-                umtx_unlock(NULL);
-
-                uprv_free(temp);
-            }
-        }
-        ures_close(&installed);
-        ures_close(indexLocale);
-    }
+    u_initOnce(_installedLocalesInitOnce, &loadInstalledLocales);
 }
 
 U_CAPI const char* U_EXPORT2

@@ -143,11 +143,11 @@ UBool u_InitOnceExecuteOnce(
 //   that knows the C++ types involved. This function returns TRUE if
 //   the caller needs to call the Init function.
 //
-UBool u_initImplPreInit(UInitOnce *uio) {
+UBool u_initImplPreInit(UInitOnce &uio) {
     pthread_mutex_lock(&initMutex);
-    int32_t state = uio->fState;
+    int32_t state = uio.fState;
     if (state == 0) {
-        uio->fState.store(1, std::memory_order_release);
+        uio.fState.store(1, std::memory_order_release);
         pthread_mutex_unlock(&initMutex);
         return true;   // Caller will next call the init function.
     } else if (state == 2) {
@@ -160,14 +160,14 @@ UBool u_initImplPreInit(UInitOnce *uio) {
         // Another thread is currently running the initialization.
         // Wait until it completes.
         U_ASSERT(state == 1);
-        while (uio->fState == 1) {
+        while (uio.fState == 1) {
             pthread_cond_wait(&initCondition, &initMutex);
         }
-        UBool returnVal = uio->fState == 0;
+        UBool returnVal = uio.fState == 0;
         if (returnVal) {
             // Initialization that was running in another thread failed.
             // We will retry it in this thread.
-	    uio->fState.store(1, std::memory_order_release);
+	    uio.fState.store(1, std::memory_order_release);
         }
         pthread_mutex_unlock(&initMutex);
         return returnVal;
@@ -185,17 +185,17 @@ UBool u_initImplPreInit(UInitOnce *uio) {
 //            False: the initializtion failed. The next call to u_initOnce()
 //                   will retry the initialization.
 
-void u_initImplPostInit(UInitOnce *uio, UBool success) {
+void u_initImplPostInit(UInitOnce &uio, UBool success) {
     int32_t nextState = success? 2: 0;
     pthread_mutex_lock(&initMutex);
-    uio->fState.store(nextState, std::memory_order_release);
+    uio.fState.store(nextState, std::memory_order_release);
     pthread_cond_broadcast(&initCondition);
     pthread_mutex_unlock(&initMutex);
 }
 
 
-void u_initOnceReset(UInitOnce *uio) {
-    uio->fState = 0;
+void u_initOnceReset(UInitOnce &uio) {
+    uio.fState = 0;
 }
         
     
@@ -273,10 +273,10 @@ static UBool winMutexInit(U_INIT_ONCE *initOnce, void *param, void **context) {
 //   that knows the C++ types involved. This function returns TRUE if
 //   the caller needs to call the Init function.
 //
-UBool u_initImplPreInit(UInitOnce *uio) {
+UBool u_initImplPreInit(UInitOnce &uio) {
     for (;;) {
         int32_t previousState = InterlockedCompareExchange( 
-            &uio->fState,    //  Destination,
+            &uio.fState,     //  Destination,
             1,               //  Exchange Value
             0);              //  Compare value
 
@@ -293,7 +293,7 @@ UBool u_initImplPreInit(UInitOnce *uio) {
             // Wait until it completes.
             do {
                 Sleep(1);
-                previousState = u_LoadAcquire(uio->fState);
+                previousState = u_LoadAcquire(uio.fState);
             } while (previousState == 1);
         }
     }
@@ -307,14 +307,14 @@ UBool u_initImplPreInit(UInitOnce *uio) {
 //            False: the initializtion failed. The next call to u_initOnce()
 //                   will retry the initialization.
 
-void u_initImplPostInit(UInitOnce *uio, UBool success) {
+void u_initImplPostInit(UInitOnce &uio, UBool success) {
     int32_t nextState = success? 2: 0;
-    u_StoreRelease(uio->fState, nextState);
+    u_StoreRelease(uio.fState, nextState);
 }
 
 
-void u_initOnceReset(UInitOnce *uio) {
-    uio->fState = 0;
+void u_initOnceReset(UInitOnce &uio) {
+    uio.fState = 0;
 }
 /*
  *   umtx_lock
