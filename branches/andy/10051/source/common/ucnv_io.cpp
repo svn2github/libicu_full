@@ -36,6 +36,7 @@
 
 #include "umutex.h"
 #include "uarrsort.h"
+#include "uassert.h"
 #include "udataswp.h"
 #include "cstring.h"
 #include "cmemory.h"
@@ -172,6 +173,8 @@ static const char DATA_NAME[] = "cnvalias";
 static const char DATA_TYPE[] = "icu";
 
 static UDataMemory *gAliasData=NULL;
+static UInitOnce    gAliasDataInitOnce = U_INITONCE_INITIALIZER;
+static UErrorCode   gAliasDataInitErr = U_ZERO_ERROR;
 
 enum {
     tocLengthIndex=0,
@@ -218,113 +221,104 @@ static UBool U_CALLCONV ucnv_io_cleanup(void)
         udata_close(gAliasData);
         gAliasData = NULL;
     }
+    gAliasDataInitOnce.reset();
 
     uprv_memset(&gMainTable, 0, sizeof(gMainTable));
 
     return TRUE;                   /* Everything was cleaned up */
 }
 
+static void initAliasData() {
+
+    UDataMemory *data;
+    const uint16_t *table;
+    const uint32_t *sectionSizes;
+    uint32_t tableStart;
+    uint32_t currOffset;
+
+    U_ASSERT(gAliasData == NULL);
+    gAliasDataInitErr = U_ZERO_ERROR;
+    data = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, &gAliasDataInitErr);
+    if(U_FAILURE(gAliasDataInitErr)) {
+        return;
+    }
+
+    sectionSizes = (const uint32_t *)udata_getMemory(data);
+    table = (const uint16_t *)sectionSizes;
+
+    tableStart      = sectionSizes[0];
+    if (tableStart < minTocLength) {
+        gAliasDataInitErr = U_INVALID_FORMAT_ERROR;
+        udata_close(data);
+        return;
+    }
+    gAliasData = data;
+    ucln_common_registerCleanup(UCLN_COMMON_UCNV_IO, ucnv_io_cleanup);
+
+    gMainTable.converterListSize      = sectionSizes[1];
+    gMainTable.tagListSize            = sectionSizes[2];
+    gMainTable.aliasListSize          = sectionSizes[3];
+    gMainTable.untaggedConvArraySize  = sectionSizes[4];
+    gMainTable.taggedAliasArraySize   = sectionSizes[5];
+    gMainTable.taggedAliasListsSize   = sectionSizes[6];
+    gMainTable.optionTableSize        = sectionSizes[7];
+    gMainTable.stringTableSize        = sectionSizes[8];
+
+    if (tableStart > 8) {
+        gMainTable.normalizedStringTableSize = sectionSizes[9];
+    }
+
+    currOffset = tableStart * (sizeof(uint32_t)/sizeof(uint16_t)) + (sizeof(uint32_t)/sizeof(uint16_t));
+    gMainTable.converterList = table + currOffset;
+
+    currOffset += gMainTable.converterListSize;
+    gMainTable.tagList = table + currOffset;
+
+    currOffset += gMainTable.tagListSize;
+    gMainTable.aliasList = table + currOffset;
+
+    currOffset += gMainTable.aliasListSize;
+    gMainTable.untaggedConvArray = table + currOffset;
+
+    currOffset += gMainTable.untaggedConvArraySize;
+    gMainTable.taggedAliasArray = table + currOffset;
+
+    /* aliasLists is a 1's based array, but it has a padding character */
+    currOffset += gMainTable.taggedAliasArraySize;
+    gMainTable.taggedAliasLists = table + currOffset;
+
+    currOffset += gMainTable.taggedAliasListsSize;
+    if (gMainTable.optionTableSize > 0
+        && ((const UConverterAliasOptions *)(table + currOffset))->stringNormalizationType < UCNV_IO_NORM_TYPE_COUNT)
+    {
+        /* Faster table */
+        gMainTable.optionTable = (const UConverterAliasOptions *)(table + currOffset);
+    }
+    else {
+        /* Smaller table, or I can't handle this normalization mode!
+        Use the original slower table lookup. */
+        gMainTable.optionTable = &defaultTableOptions;
+    }
+
+    currOffset += gMainTable.optionTableSize;
+    gMainTable.stringTable = table + currOffset;
+
+    currOffset += gMainTable.stringTableSize;
+    gMainTable.normalizedStringTable = ((gMainTable.optionTable->stringNormalizationType == UCNV_IO_UNNORMALIZED)
+        ? gMainTable.stringTable : (table + currOffset));
+
+}
+
+
 static UBool
 haveAliasData(UErrorCode *pErrorCode) {
-    int needInit;
-
     if(pErrorCode==NULL || U_FAILURE(*pErrorCode)) {
         return FALSE;
     }
 
-    UMTX_CHECK(NULL, (gAliasData==NULL), needInit);
-
-    /* load converter alias data from file if necessary */
-    if (needInit) {
-        UDataMemory *data;
-        const uint16_t *table;
-        const uint32_t *sectionSizes;
-        uint32_t tableStart;
-        uint32_t currOffset;
-
-        data = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, pErrorCode);
-        if(U_FAILURE(*pErrorCode)) {
-            return FALSE;
-        }
-
-        sectionSizes = (const uint32_t *)udata_getMemory(data);
-        table = (const uint16_t *)sectionSizes;
-
-        tableStart      = sectionSizes[0];
-        if (tableStart < minTocLength) {
-            *pErrorCode = U_INVALID_FORMAT_ERROR;
-            udata_close(data);
-            return FALSE;
-        }
-
-        umtx_lock(NULL);
-        if(gAliasData==NULL) {
-            gMainTable.converterListSize      = sectionSizes[1];
-            gMainTable.tagListSize            = sectionSizes[2];
-            gMainTable.aliasListSize          = sectionSizes[3];
-            gMainTable.untaggedConvArraySize  = sectionSizes[4];
-            gMainTable.taggedAliasArraySize   = sectionSizes[5];
-            gMainTable.taggedAliasListsSize   = sectionSizes[6];
-            gMainTable.optionTableSize        = sectionSizes[7];
-            gMainTable.stringTableSize        = sectionSizes[8];
-
-            if (tableStart > 8) {
-                gMainTable.normalizedStringTableSize = sectionSizes[9];
-            }
-
-            currOffset = tableStart * (sizeof(uint32_t)/sizeof(uint16_t)) + (sizeof(uint32_t)/sizeof(uint16_t));
-            gMainTable.converterList = table + currOffset;
-
-            currOffset += gMainTable.converterListSize;
-            gMainTable.tagList = table + currOffset;
-
-            currOffset += gMainTable.tagListSize;
-            gMainTable.aliasList = table + currOffset;
-
-            currOffset += gMainTable.aliasListSize;
-            gMainTable.untaggedConvArray = table + currOffset;
-
-            currOffset += gMainTable.untaggedConvArraySize;
-            gMainTable.taggedAliasArray = table + currOffset;
-
-            /* aliasLists is a 1's based array, but it has a padding character */
-            currOffset += gMainTable.taggedAliasArraySize;
-            gMainTable.taggedAliasLists = table + currOffset;
-
-            currOffset += gMainTable.taggedAliasListsSize;
-            if (gMainTable.optionTableSize > 0
-                && ((const UConverterAliasOptions *)(table + currOffset))->stringNormalizationType < UCNV_IO_NORM_TYPE_COUNT)
-            {
-                /* Faster table */
-                gMainTable.optionTable = (const UConverterAliasOptions *)(table + currOffset);
-            }
-            else {
-                /* Smaller table, or I can't handle this normalization mode!
-                Use the original slower table lookup. */
-                gMainTable.optionTable = &defaultTableOptions;
-            }
-
-            currOffset += gMainTable.optionTableSize;
-            gMainTable.stringTable = table + currOffset;
-
-            currOffset += gMainTable.stringTableSize;
-            gMainTable.normalizedStringTable = ((gMainTable.optionTable->stringNormalizationType == UCNV_IO_UNNORMALIZED)
-                ? gMainTable.stringTable : (table + currOffset));
-
-            ucln_common_registerCleanup(UCLN_COMMON_UCNV_IO, ucnv_io_cleanup);
-
-            gAliasData = data;
-            data=NULL;
-        }
-        umtx_unlock(NULL);
-
-        /* if a different thread set it first, then close the extra data */
-        if(data!=NULL) {
-            udata_close(data); /* NULL if it was set correctly */
-        }
-    }
-
-    return TRUE;
+    u_initOnce(gAliasDataInitOnce, &initAliasData);
+    *pErrorCode = gAliasDataInitErr;
+    return U_SUCCESS(gAliasDataInitErr);
 }
 
 static inline UBool

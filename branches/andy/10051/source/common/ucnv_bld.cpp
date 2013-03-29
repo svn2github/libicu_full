@@ -27,6 +27,7 @@
 #include "unicode/udata.h"
 #include "unicode/ucnv.h"
 #include "unicode/uloc.h"
+#include "mutex.h"
 #include "putilimp.h"
 #include "uassert.h"
 #include "utracimp.h"
@@ -1227,6 +1228,9 @@ internalSetName(const char *name, UErrorCode *status) {
 
     /* gDefaultConverterName MUST be the last global var set by this function.  */
     /*    It is the variable checked in ucnv_getDefaultName() to see if initialization is required. */
+    //    But there is nothing here preventing that from being reordered, either by the compiler
+    //             or hardware. I'm adding the mutex to ucnv_getDefaultName for now. UMTX_CHECK is not enough.
+    //             -- Andy
     gDefaultConverterName = gDefaultConverterNameBuffer;
 
     ucln_common_registerCleanup(UCLN_COMMON_UCNV, ucnv_cleanup);
@@ -1252,10 +1256,13 @@ ucnv_getDefaultName() {
     const char *name;
 
     /*
-    Multiple calls to ucnv_getDefaultName must be thread safe,
+    Concurrent calls to ucnv_getDefaultName must be thread safe,
     but ucnv_setDefaultName is not thread safe.
     */
-    UMTX_CHECK(&cnvCacheMutex, gDefaultConverterName, name);
+    {
+        Mutex lock(&cnvCacheMutex);
+        name = gDefaultConverterName;
+    }
     if(name==NULL) {
         UErrorCode errorCode = U_ZERO_ERROR;
         UConverter *cnv = NULL;

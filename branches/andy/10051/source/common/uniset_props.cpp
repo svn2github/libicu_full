@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1999-2012, International Business Machines
+*   Copyright (C) 1999-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -127,7 +127,12 @@ private:
 
 U_CDECL_BEGIN
 
-static UnicodeSet *INCLUSIONS[UPROPS_SRC_COUNT] = { NULL }; // cached getInclusions()
+struct Inclusion {
+    UnicodeSet  *fSet;
+    UInitOnce    fInitOnce;
+    UErrorCode   fErrorCode;
+};
+static Inclusion gInclusions[UPROPS_SRC_COUNT]; // cached getInclusions()
 
 STATIC_SIMPLE_SINGLETON(uni32Singleton);
 
@@ -156,14 +161,14 @@ _set_addString(USet *set, const UChar *str, int32_t length) {
  * Cleanup function for UnicodeSet
  */
 static UBool U_CALLCONV uset_cleanup(void) {
-    int32_t i;
-
-    for(i = UPROPS_SRC_NONE; i < UPROPS_SRC_COUNT; ++i) {
-        if (INCLUSIONS[i] != NULL) {
-            delete INCLUSIONS[i];
-            INCLUSIONS[i] = NULL;
-        }
+    for(int32_t i = UPROPS_SRC_NONE; i < UPROPS_SRC_COUNT; ++i) {
+        Inclusion &in = gInclusions[i];
+        delete in.fSet;
+        in.fSet = NULL;
+        in.fErrorCode = U_ZERO_ERROR;
+        in.fInitOnce.reset();
     }
+
     UnicodeSetSingleton(uni32Singleton, NULL).deleteInstance();
     return TRUE;
 }
@@ -179,98 +184,110 @@ Usually you don't see smaller sets than this for Unicode 5.0.
 */
 #define DEFAULT_INCLUSION_CAPACITY 3072
 
-const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
-    UBool needInit;
-    UMTX_CHECK(NULL, (INCLUSIONS[src] == NULL), needInit);
-    if (needInit) {
-        UnicodeSet* incl = new UnicodeSet();
-        USetAdder sa = {
-            (USet *)incl,
-            _set_add,
-            _set_addRange,
-            _set_addString,
-            NULL, // don't need remove()
-            NULL // don't need removeRange()
-        };
-        if (incl != NULL) {
-            incl->ensureCapacity(DEFAULT_INCLUSION_CAPACITY, status);
-            switch(src) {
-            case UPROPS_SRC_CHAR:
-                uchar_addPropertyStarts(&sa, &status);
-                break;
-            case UPROPS_SRC_PROPSVEC:
-                upropsvec_addPropertyStarts(&sa, &status);
-                break;
-            case UPROPS_SRC_CHAR_AND_PROPSVEC:
-                uchar_addPropertyStarts(&sa, &status);
-                upropsvec_addPropertyStarts(&sa, &status);
-                break;
-#if !UCONFIG_NO_NORMALIZATION
-            case UPROPS_SRC_CASE_AND_NORM: {
-                const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(status);
-                if(U_SUCCESS(status)) {
-                    impl->addPropertyStarts(&sa, status);
-                }
-                ucase_addPropertyStarts(ucase_getSingleton(), &sa, &status);
-                break;
-            }
-            case UPROPS_SRC_NFC: {
-                const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(status);
-                if(U_SUCCESS(status)) {
-                    impl->addPropertyStarts(&sa, status);
-                }
-                break;
-            }
-            case UPROPS_SRC_NFKC: {
-                const Normalizer2Impl *impl=Normalizer2Factory::getNFKCImpl(status);
-                if(U_SUCCESS(status)) {
-                    impl->addPropertyStarts(&sa, status);
-                }
-                break;
-            }
-            case UPROPS_SRC_NFKC_CF: {
-                const Normalizer2Impl *impl=Normalizer2Factory::getNFKC_CFImpl(status);
-                if(U_SUCCESS(status)) {
-                    impl->addPropertyStarts(&sa, status);
-                }
-                break;
-            }
-            case UPROPS_SRC_NFC_CANON_ITER: {
-                const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(status);
-                if(U_SUCCESS(status)) {
-                    impl->addCanonIterPropertyStarts(&sa, status);
-                }
-                break;
-            }
-#endif
-            case UPROPS_SRC_CASE:
-                ucase_addPropertyStarts(ucase_getSingleton(), &sa, &status);
-                break;
-            case UPROPS_SRC_BIDI:
-                ubidi_addPropertyStarts(ubidi_getSingleton(), &sa, &status);
-                break;
-            default:
-                status = U_INTERNAL_PROGRAM_ERROR;
-                break;
-            }
-            if (U_SUCCESS(status)) {
-                // Compact for caching
-                incl->compact();
-                umtx_lock(NULL);
-                if (INCLUSIONS[src] == NULL) {
-                    INCLUSIONS[src] = incl;
-                    incl = NULL;
-                    ucln_common_registerCleanup(UCLN_COMMON_USET, uset_cleanup);
-                }
-                umtx_unlock(NULL);
-            }
-            delete incl;
-        } else {
-            status = U_MEMORY_ALLOCATION_ERROR;
-        }
+void UnicodeSet::initInclusion(int32_t src) {
+    U_ASSERT(src >=0 && src<UPROPS_SRC_COUNT);
+    Inclusion &in = gInclusions[src];
+    UErrorCode &status = in.fErrorCode;
+    UnicodeSet * &incl = in.fSet;
+    // Note: "status" and "incl" are referring directly back to contents
+    //   in the gInclusions array.
+    U_ASSERT(incl == NULL);
+
+    status = U_ZERO_ERROR;
+    incl = new UnicodeSet();
+    if (incl == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
-    return INCLUSIONS[src];
+    USetAdder sa = {
+        (USet *)incl,
+        _set_add,
+        _set_addRange,
+        _set_addString,
+        NULL, // don't need remove()
+        NULL // don't need removeRange()
+    };
+
+    incl->ensureCapacity(DEFAULT_INCLUSION_CAPACITY, status);
+    switch(src) {
+    case UPROPS_SRC_CHAR:
+        uchar_addPropertyStarts(&sa, &status);
+        break;
+    case UPROPS_SRC_PROPSVEC:
+        upropsvec_addPropertyStarts(&sa, &status);
+        break;
+    case UPROPS_SRC_CHAR_AND_PROPSVEC:
+        uchar_addPropertyStarts(&sa, &status);
+        upropsvec_addPropertyStarts(&sa, &status);
+        break;
+#if !UCONFIG_NO_NORMALIZATION
+    case UPROPS_SRC_CASE_AND_NORM: {
+        const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(status);
+        if(U_SUCCESS(status)) {
+            impl->addPropertyStarts(&sa, status);
+        }
+        ucase_addPropertyStarts(ucase_getSingleton(), &sa, &status);
+        break;
+    }
+    case UPROPS_SRC_NFC: {
+        const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(status);
+        if(U_SUCCESS(status)) {
+            impl->addPropertyStarts(&sa, status);
+        }
+        break;
+    }
+    case UPROPS_SRC_NFKC: {
+        const Normalizer2Impl *impl=Normalizer2Factory::getNFKCImpl(status);
+        if(U_SUCCESS(status)) {
+            impl->addPropertyStarts(&sa, status);
+        }
+        break;
+    }
+    case UPROPS_SRC_NFKC_CF: {
+        const Normalizer2Impl *impl=Normalizer2Factory::getNFKC_CFImpl(status);
+        if(U_SUCCESS(status)) {
+            impl->addPropertyStarts(&sa, status);
+        }
+        break;
+    }
+    case UPROPS_SRC_NFC_CANON_ITER: {
+        const Normalizer2Impl *impl=Normalizer2Factory::getNFCImpl(status);
+        if(U_SUCCESS(status)) {
+            impl->addCanonIterPropertyStarts(&sa, status);
+        }
+        break;
+    }
+#endif
+    case UPROPS_SRC_CASE:
+        ucase_addPropertyStarts(ucase_getSingleton(), &sa, &status);
+        break;
+    case UPROPS_SRC_BIDI:
+        ubidi_addPropertyStarts(ubidi_getSingleton(), &sa, &status);
+        break;
+    default:
+        status = U_INTERNAL_PROGRAM_ERROR;
+        break;
+    }
+
+    if (U_FAILURE(status)) {
+        delete incl;
+        incl = NULL;
+        return;
+    }
+    // Compact for caching
+    incl->compact();
+    ucln_common_registerCleanup(UCLN_COMMON_USET, uset_cleanup);
 }
+
+
+const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
+    U_ASSERT(src >=0 && src<UPROPS_SRC_COUNT);
+    Inclusion &i = gInclusions[src];
+    u_initOnce(i.fInitOnce, &initInclusion, src);
+    status = i.fErrorCode;
+    return i.fSet;
+}
+
 
 // Cache some sets for other services -------------------------------------- ***
 

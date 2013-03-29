@@ -194,9 +194,11 @@ inline void u_StoreRelease(atomic_int32_t &var, int32_t val) {
 #endif
 
 struct UInitOnce {
-	atomic_int32_t   fState;
-	void reset() {fState = 0;};
+    atomic_int32_t   fState;
+    void reset() {fState = 0;};
 };
+// TODO: Withdraw the initializer, document that it works with default initialization.
+//       In some contexts (arrays, members) it's awkward to use the initializer.
 #define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0)}
 
 
@@ -229,7 +231,17 @@ inline void u_initOnce(UInitOnce &uio, void (*fp)()) {
 }
 
 
-
+// u_initOnce variant with for plain functions, or static class functions,
+//            with a context parameter.
+template<class T> void u_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
+    if (u_LoadAcquire(uio.fState) == 2) {
+        return;
+    }
+    if (u_initImplPreInit(uio)) {
+        (*fp)(context);
+        u_initImplPostInit(uio, TRUE);
+    }
+}
 #endif /*  U_SHOW_CPLUSPLUS_API */
 
 #if U_PLATFORM_HAS_WIN32_API

@@ -34,6 +34,7 @@
 #include "ulocimp.h"
 #include "umutex.h"
 #include "putilimp.h"
+#include "uassert.h"
 
 
 /*
@@ -42,6 +43,8 @@ TODO: This cache should probably be removed when the deprecated code is
       completely removed.
 */
 static UHashtable *cache = NULL;
+static UInitOnce   gCacheInitOnce;
+static UErrorCode  gCacheStatus = U_ZERO_ERROR;
 
 static UMutex resbMutex = U_MUTEX_INITIALIZER;
 
@@ -261,29 +264,27 @@ static UBool U_CALLCONV ures_cleanup(void)
             cache = NULL;
         }
     }
+    gCacheInitOnce.reset();
     return (cache == NULL);
 }
 
 /** INTERNAL: Initializes the cache for resources */
-static void initCache(UErrorCode *status) {
-    UBool makeCache = FALSE;
-    UMTX_CHECK(&resbMutex, (cache ==  NULL), makeCache);
-    if(makeCache) {
-        UHashtable *newCache = uhash_open(hashEntry, compareEntries, NULL, status);
-        if (U_FAILURE(*status)) {
-            return;
-        }
-        umtx_lock(&resbMutex);
-        if(cache == NULL) {
-            cache = newCache;
-            newCache = NULL;
-            ucln_common_registerCleanup(UCLN_COMMON_URES, ures_cleanup);
-        }
-        umtx_unlock(&resbMutex);
-        if(newCache != NULL) {
-            uhash_close(newCache);
-        }
+static void createCache() {
+    U_ASSERT(cache == NULL);
+    gCacheStatus = U_ZERO_ERROR;
+    cache = uhash_open(hashEntry, compareEntries, NULL, &gCacheStatus);
+    if (U_FAILURE(gCacheStatus)) {
+        cache = NULL;
     }
+    ucln_common_registerCleanup(UCLN_COMMON_URES, ures_cleanup);
+}
+     
+static void initCache(UErrorCode *status) {
+    if (U_FAILURE(*status)) {
+        return;
+    }
+    u_initOnce(gCacheInitOnce, &createCache);
+    *status = gCacheStatus;
 }
 
 /** INTERNAL: sets the name (locale) of the resource bundle to given name */

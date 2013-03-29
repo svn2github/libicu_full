@@ -20,6 +20,7 @@
 #include "unicode/udata.h"
 #include "unicode/utf.h"
 #include "unicode/utf16.h"
+#include "uassert.h"
 #include "ustr_imp.h"
 #include "umutex.h"
 #include "cmemory.h"
@@ -103,6 +104,7 @@ typedef struct {
 static UDataMemory *uCharNamesData=NULL;
 static UCharNames *uCharNames=NULL;
 static UErrorCode gLoadErrorCode=U_ZERO_ERROR;
+static UInitOnce  gCharNamesInitOnce = U_INITONCE_INITIALIZER;
 
 /*
  * Maximum length of character names (regular & 1.0).
@@ -168,6 +170,7 @@ static UBool U_CALLCONV unames_cleanup(void)
     if(uCharNames) {
         uCharNames = NULL;
     }
+    gCharNamesInitOnce.reset();
     gMaxNameLength=0;
     return TRUE;
 }
@@ -187,52 +190,30 @@ isAcceptable(void * /*context*/,
         pInfo->formatVersion[0]==1);
 }
 
+static void
+loadCharNames() {
+    U_ASSERT(uCharNamesData == NULL);
+    U_ASSERT(uCharNames == NULL);
+    gLoadErrorCode = U_ZERO_ERROR;
+
+    uCharNamesData = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, &gLoadErrorCode);
+    if(U_FAILURE(gLoadErrorCode)) {
+        uCharNamesData = NULL;
+        return;
+    }
+    uCharNames = (UCharNames *)udata_getMemory(uCharNamesData);
+    ucln_common_registerCleanup(UCLN_COMMON_UNAMES, unames_cleanup);
+}
+
+
 static UBool
 isDataLoaded(UErrorCode *pErrorCode) {
-    /* load UCharNames from file if necessary */
-    UBool isCached;
-
-    /* do this because double-checked locking is broken */
-    UMTX_CHECK(NULL, (uCharNames!=NULL), isCached);
-
-    if(!isCached) {
-        UCharNames *names;
-        UDataMemory *data;
-
-        /* check error code from previous attempt */
-        if(U_FAILURE(gLoadErrorCode)) {
-            *pErrorCode=gLoadErrorCode;
-            return FALSE;
-        }
-
-        /* open the data outside the mutex block */
-        data=udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, pErrorCode);
-        if(U_FAILURE(*pErrorCode)) {
-            gLoadErrorCode=*pErrorCode;
-            return FALSE;
-        }
-
-        names=(UCharNames *)udata_getMemory(data);
-
-        /* in the mutex block, set the data for this process */
-        {
-            umtx_lock(NULL);
-            if(uCharNames==NULL) {
-                uCharNamesData=data;
-                uCharNames=names;
-                data=NULL;
-                names=NULL;
-                ucln_common_registerCleanup(UCLN_COMMON_UNAMES, unames_cleanup);
-            }
-            umtx_unlock(NULL);
-        }
-
-        /* if a different thread set it first, then close the extra data */
-        if(data!=NULL) {
-            udata_close(data); /* NULL if it was set correctly */
-        }
+    if (U_FAILURE(*pErrorCode)) {
+        return FALSE;
     }
-    return TRUE;
+    u_initOnce(gCharNamesInitOnce, &loadCharNames);
+    *pErrorCode=gLoadErrorCode;
+    return U_SUCCESS(gLoadErrorCode);
 }
 
 #define WRITE_CHAR(buffer, bufferLength, bufferPos, c) { \
