@@ -386,7 +386,7 @@ void ResourceBundle::initLocale() {
 
 const Locale &ResourceBundle::getLocale(void) const {
     ResourceBundle *This = const_cast<ResourceBundle *>(this);
-    u_initOnce(This->fLocaleInitOnce, This, &ResourceBundle::initLocale);
+    umtx_initOnce(This->fLocaleInitOnce, This, &ResourceBundle::initLocale);
     if (This->fLocale == NULL) {
         return Locale::getDefault(); // Return default locale if one could not be created.
     }

@@ -271,6 +271,7 @@ U_NAMESPACE_END
 // defined in ucln_cmn.h
 
 static icu::ICULocaleService* gService = NULL;
+static UInitOnce gInitOnce;
 
 /**
  * Release all static memory held by breakiterator.
@@ -282,6 +283,7 @@ static UBool U_CALLCONV breakiterator_cleanup(void) {
         delete gService;
         gService = NULL;
     }
+    gInitOnce.reset();
 #endif
     return TRUE;
 }
@@ -297,8 +299,7 @@ initService(void) {
 static ICULocaleService*
 getService(void)
 {
-    static UInitOnce gInitOnce = U_INITONCE_INITIALIZER;
-    u_initOnce(gInitOnce, &initService);
+    umtx_initOnce(gInitOnce, &initService);
     return gService;
 }
 

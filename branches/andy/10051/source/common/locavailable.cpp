@@ -74,7 +74,7 @@ void Locale::initLocales() {
 const Locale* U_EXPORT2
 Locale::getAvailableLocales(int32_t& count)
 {
-    u_initOnce(gInitOnce, &initLocales);
+    umtx_initOnce(gInitOnce, &initLocales);
     count = availableLocaleListCount;
     return availableLocaleList;
 }
@@ -151,7 +151,7 @@ static void loadInstalledLocales() {
 
 static void _load_installedLocales()
 {
-    u_initOnce(_installedLocalesInitOnce, &loadInstalledLocales);
+    umtx_initOnce(_installedLocalesInitOnce, &loadInstalledLocales);
 }
 
 U_CAPI const char* U_EXPORT2

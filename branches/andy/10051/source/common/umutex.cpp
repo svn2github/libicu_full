@@ -143,7 +143,7 @@ UBool u_InitOnceExecuteOnce(
 //   that knows the C++ types involved. This function returns TRUE if
 //   the caller needs to call the Init function.
 //
-UBool u_initImplPreInit(UInitOnce &uio) {
+UBool umtx_initImplPreInit(UInitOnce &uio) {
     pthread_mutex_lock(&initMutex);
     int32_t state = uio.fState;
     if (state == 0) {
@@ -182,10 +182,10 @@ UBool u_initImplPreInit(UInitOnce &uio) {
 //
 //   success: True:  the inialization succeeded. No further calls to the init
 //                   function will be made.
-//            False: the initializtion failed. The next call to u_initOnce()
+//            False: the initializtion failed. The next call to umtx_initOnce()
 //                   will retry the initialization.
 
-void u_initImplPostInit(UInitOnce &uio, UBool success) {
+void umtx_initImplPostInit(UInitOnce &uio, UBool success) {
     int32_t nextState = success? 2: 0;
     pthread_mutex_lock(&initMutex);
     uio.fState.store(nextState, std::memory_order_release);
@@ -194,7 +194,7 @@ void u_initImplPostInit(UInitOnce &uio, UBool success) {
 }
 
 
-void u_initOnceReset(UInitOnce &uio) {
+void umtx_initOnceReset(UInitOnce &uio) {
     uio.fState = 0;
 }
         
@@ -273,7 +273,7 @@ static UBool winMutexInit(U_INIT_ONCE *initOnce, void *param, void **context) {
 //   that knows the C++ types involved. This function returns TRUE if
 //   the caller needs to call the Init function.
 //
-UBool u_initImplPreInit(UInitOnce &uio) {
+UBool umtx_initImplPreInit(UInitOnce &uio) {
     for (;;) {
         int32_t previousState = InterlockedCompareExchange( 
             &uio.fState,     //  Destination,
@@ -293,7 +293,7 @@ UBool u_initImplPreInit(UInitOnce &uio) {
             // Wait until it completes.
             do {
                 Sleep(1);
-                previousState = u_LoadAcquire(uio.fState);
+                previousState = umtx_LoadAcquire(uio.fState);
             } while (previousState == 1);
         }
     }
@@ -304,16 +304,16 @@ UBool u_initImplPreInit(UInitOnce &uio) {
 //
 //   success: True:  the inialization succeeded. No further calls to the init
 //                   function will be made.
-//            False: the initializtion failed. The next call to u_initOnce()
+//            False: the initializtion failed. The next call to umtx_initOnce()
 //                   will retry the initialization.
 
-void u_initImplPostInit(UInitOnce &uio, UBool success) {
+void umtx_initImplPostInit(UInitOnce &uio, UBool success) {
     int32_t nextState = success? 2: 0;
-    u_StoreRelease(uio.fState, nextState);
+    umtx_StoreRelease(uio.fState, nextState);
 }
 
 
-void u_initOnceReset(UInitOnce &uio) {
+void umtx_initOnceReset(UInitOnce &uio) {
     uio.fState = 0;
 }
 /*

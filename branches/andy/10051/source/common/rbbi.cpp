@@ -1837,7 +1837,7 @@ static void initLanguageFactories() {
 static const LanguageBreakEngine*
 getLanguageBreakEngineFromFactory(UChar32 c, int32_t breakType)
 {
-    u_initOnce(gLanguageBreakFactoriesInitOnce, &initLanguageFactories);
+    umtx_initOnce(gLanguageBreakFactoriesInitOnce, &initLanguageFactories);
     if (gLanguageBreakFactories == NULL) {
         return NULL;
     }

@@ -283,7 +283,7 @@ static void initCache(UErrorCode *status) {
     if (U_FAILURE(*status)) {
         return;
     }
-    u_initOnce(gCacheInitOnce, &createCache);
+    umtx_initOnce(gCacheInitOnce, &createCache);
     *status = gCacheStatus;
 }
 

@@ -174,9 +174,9 @@ typedef struct U_INIT_ONCE {
 #include <atomic>
 typedef std::atomic<int32_t> atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
-inline int32_t u_LoadAcquire(atomic_int32_t &var) {
+inline int32_t umtx_LoadAcquire(atomic_int32_t &var) {
 	return std::atomic_load_explicit(&var, std::memory_order_acquire);};
-inline void u_StoreRelease(atomic_int32_t &var, int32_t val) {
+inline void umtx_StoreRelease(atomic_int32_t &var, int32_t val) {
 	var.store(val, std::memory_order_release);};
 
 
@@ -187,9 +187,9 @@ inline void u_StoreRelease(atomic_int32_t &var, int32_t val) {
 //                This is a Microsoft extension, not standard behavior.
 typedef volatile long atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
-inline int32_t u_LoadAcquire(atomic_int32_t &var) {
+inline int32_t umtx_LoadAcquire(atomic_int32_t &var) {
 	return var;};
-inline void u_StoreRelease(atomic_int32_t &var, int32_t val) {
+inline void umtx_StoreRelease(atomic_int32_t &var, int32_t val) {
 	var = val;};
 #endif
 
@@ -204,42 +204,42 @@ struct UInitOnce {
 
 
 
-UBool u_initImplPreInit(UInitOnce &);
-void  u_initImplPostInit(UInitOnce &, UBool success);
+UBool umtx_initImplPreInit(UInitOnce &);
+void  umtx_initImplPostInit(UInitOnce &, UBool success);
 
-template<class T> void u_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
-    if (u_LoadAcquire(uio.fState) == 2) {
+template<class T> void umtx_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
+    if (umtx_LoadAcquire(uio.fState) == 2) {
         return;
     }
-    if (u_initImplPreInit(uio)) {
+    if (umtx_initImplPreInit(uio)) {
         (obj->*fp)();
-        u_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio, TRUE);
     }
 }
 
 
-// u_initOnce variant with for plain functions, or static class functions.
+// umtx_initOnce variant with for plain functions, or static class functions.
 //            No context parameter.
-inline void u_initOnce(UInitOnce &uio, void (*fp)()) {
-    if (u_LoadAcquire(uio.fState) == 2) {
+inline void umtx_initOnce(UInitOnce &uio, void (*fp)()) {
+    if (umtx_LoadAcquire(uio.fState) == 2) {
         return;
     }
-    if (u_initImplPreInit(uio)) {
+    if (umtx_initImplPreInit(uio)) {
         (*fp)();
-        u_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio, TRUE);
     }
 }
 
 
-// u_initOnce variant with for plain functions, or static class functions,
+// umtx_initOnce variant with for plain functions, or static class functions,
 //            with a context parameter.
-template<class T> void u_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
-    if (u_LoadAcquire(uio.fState) == 2) {
+template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
+    if (umtx_LoadAcquire(uio.fState) == 2) {
         return;
     }
-    if (u_initImplPreInit(uio)) {
+    if (umtx_initImplPreInit(uio)) {
         (*fp)(context);
-        u_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio, TRUE);
     }
 }
 #endif /*  U_SHOW_CPLUSPLUS_API */

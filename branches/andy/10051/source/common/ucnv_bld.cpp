@@ -1160,7 +1160,7 @@ static UBool haveAvailableConverterList(UErrorCode *pErrorCode) {
     if (U_FAILURE(*pErrorCode)) {
         return FALSE;
     }
-    u_initOnce(gAvailableConvertersInitOnce, &initAvailableConvertersList);
+    umtx_initOnce(gAvailableConvertersInitOnce, &initAvailableConvertersList);
     *pErrorCode = gAvailableConvertersStatus;
     return U_SUCCESS(gAvailableConvertersStatus);
 }

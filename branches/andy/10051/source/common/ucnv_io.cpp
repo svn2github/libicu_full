@@ -316,7 +316,7 @@ haveAliasData(UErrorCode *pErrorCode) {
         return FALSE;
     }
 
-    u_initOnce(gAliasDataInitOnce, &initAliasData);
+    umtx_initOnce(gAliasDataInitOnce, &initAliasData);
     *pErrorCode = gAliasDataInitErr;
     return U_SUCCESS(gAliasDataInitErr);
 }

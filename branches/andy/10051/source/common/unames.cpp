@@ -211,7 +211,7 @@ isDataLoaded(UErrorCode *pErrorCode) {
     if (U_FAILURE(*pErrorCode)) {
         return FALSE;
     }
-    u_initOnce(gCharNamesInitOnce, &loadCharNames);
+    umtx_initOnce(gCharNamesInitOnce, &loadCharNames);
     *pErrorCode=gLoadErrorCode;
     return U_SUCCESS(gLoadErrorCode);
 }

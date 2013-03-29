@@ -219,7 +219,7 @@ initCache(UErrorCode *status) {
     if (U_FAILURE(*status)) {
         return;
     }
-    u_initOnce(gSharedDataInitOnce, &createCache);
+    umtx_initOnce(gSharedDataInitOnce, &createCache);
     *status = gSharedDataStatus;
 }
 

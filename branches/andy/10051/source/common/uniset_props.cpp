@@ -283,7 +283,7 @@ void UnicodeSet::initInclusion(int32_t src) {
 const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
     U_ASSERT(src >=0 && src<UPROPS_SRC_COUNT);
     Inclusion &i = gInclusions[src];
-    u_initOnce(i.fInitOnce, &initInclusion, src);
+    umtx_initOnce(i.fInitOnce, &initInclusion, src);
     status = i.fErrorCode;
     return i.fSet;
 }

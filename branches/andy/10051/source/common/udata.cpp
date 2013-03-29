@@ -284,7 +284,7 @@ static void udata_initHashTable() {
   *     Lazy create it if it doesn't yet exist.
   */
 static UHashtable *udata_getHashTable() {
-    u_initOnce(gCommonDataCacheInitOnce, &udata_initHashTable);
+    umtx_initOnce(gCommonDataCacheInitOnce, &udata_initHashTable);
     return gCommonDataCache;
 }
 
