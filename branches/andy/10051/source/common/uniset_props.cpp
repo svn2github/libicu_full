@@ -130,7 +130,6 @@ U_CDECL_BEGIN
 struct Inclusion {
     UnicodeSet  *fSet;
     UInitOnce    fInitOnce;
-    UErrorCode   fErrorCode;
 };
 static Inclusion gInclusions[UPROPS_SRC_COUNT]; // cached getInclusions()
 
@@ -165,7 +164,6 @@ static UBool U_CALLCONV uset_cleanup(void) {
         Inclusion &in = gInclusions[i];
         delete in.fSet;
         in.fSet = NULL;
-        in.fErrorCode = U_ZERO_ERROR;
         in.fInitOnce.reset();
     }
 
@@ -184,16 +182,11 @@ Usually you don't see smaller sets than this for Unicode 5.0.
 */
 #define DEFAULT_INCLUSION_CAPACITY 3072
 
-void UnicodeSet::initInclusion(int32_t src) {
+void UnicodeSet::initInclusion(int32_t src, UErrorCode &status) {
     U_ASSERT(src >=0 && src<UPROPS_SRC_COUNT);
-    Inclusion &in = gInclusions[src];
-    UErrorCode &status = in.fErrorCode;
-    UnicodeSet * &incl = in.fSet;
-    // Note: "status" and "incl" are referring directly back to contents
-    //   in the gInclusions array.
+    UnicodeSet * &incl = gInclusions[src].fSet;
     U_ASSERT(incl == NULL);
 
-    status = U_ZERO_ERROR;
     incl = new UnicodeSet();
     if (incl == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -283,8 +276,7 @@ void UnicodeSet::initInclusion(int32_t src) {
 const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
     U_ASSERT(src >=0 && src<UPROPS_SRC_COUNT);
     Inclusion &i = gInclusions[src];
-    umtx_initOnce(i.fInitOnce, &initInclusion, src);
-    status = i.fErrorCode;
+    umtx_initOnce(i.fInitOnce, &initInclusion, src, status);
     return i.fSet;
 }
 

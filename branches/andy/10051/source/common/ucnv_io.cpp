@@ -174,7 +174,6 @@ static const char DATA_TYPE[] = "icu";
 
 static UDataMemory *gAliasData=NULL;
 static UInitOnce    gAliasDataInitOnce = U_INITONCE_INITIALIZER;
-static UErrorCode   gAliasDataInitErr = U_ZERO_ERROR;
 
 enum {
     tocLengthIndex=0,
@@ -228,7 +227,7 @@ static UBool U_CALLCONV ucnv_io_cleanup(void)
     return TRUE;                   /* Everything was cleaned up */
 }
 
-static void initAliasData() {
+static void initAliasData(UErrorCode &errCode) {
 
     UDataMemory *data;
     const uint16_t *table;
@@ -236,10 +235,11 @@ static void initAliasData() {
     uint32_t tableStart;
     uint32_t currOffset;
 
+    ucln_common_registerCleanup(UCLN_COMMON_UCNV_IO, ucnv_io_cleanup);
+
     U_ASSERT(gAliasData == NULL);
-    gAliasDataInitErr = U_ZERO_ERROR;
-    data = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, &gAliasDataInitErr);
-    if(U_FAILURE(gAliasDataInitErr)) {
+    data = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, &errCode);
+    if(U_FAILURE(errCode)) {
         return;
     }
 
@@ -248,12 +248,11 @@ static void initAliasData() {
 
     tableStart      = sectionSizes[0];
     if (tableStart < minTocLength) {
-        gAliasDataInitErr = U_INVALID_FORMAT_ERROR;
+        errCode = U_INVALID_FORMAT_ERROR;
         udata_close(data);
         return;
     }
     gAliasData = data;
-    ucln_common_registerCleanup(UCLN_COMMON_UCNV_IO, ucnv_io_cleanup);
 
     gMainTable.converterListSize      = sectionSizes[1];
     gMainTable.tagListSize            = sectionSizes[2];
@@ -306,19 +305,13 @@ static void initAliasData() {
     currOffset += gMainTable.stringTableSize;
     gMainTable.normalizedStringTable = ((gMainTable.optionTable->stringNormalizationType == UCNV_IO_UNNORMALIZED)
         ? gMainTable.stringTable : (table + currOffset));
-
 }
 
 
 static UBool
 haveAliasData(UErrorCode *pErrorCode) {
-    if(pErrorCode==NULL || U_FAILURE(*pErrorCode)) {
-        return FALSE;
-    }
-
-    umtx_initOnce(gAliasDataInitOnce, &initAliasData);
-    *pErrorCode = gAliasDataInitErr;
-    return U_SUCCESS(gAliasDataInitErr);
+    umtx_initOnce(gAliasDataInitOnce, &initAliasData, *pErrorCode);
+    return U_SUCCESS(*pErrorCode);
 }
 
 static inline UBool

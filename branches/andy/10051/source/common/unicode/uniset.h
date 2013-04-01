@@ -1586,7 +1586,7 @@ private:
                               UnicodeString& rebuiltPat,
                               UErrorCode& ec);
 
-    static void initInclusion(int32_t src);
+    static void initInclusion(int32_t src, UErrorCode &status);
     static const UnicodeSet* getInclusions(int32_t src, UErrorCode &status);
 
     /**

@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2003-2012, International Business Machines Corporation and    *
+* Copyright (C) 2003-2013, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -124,12 +124,11 @@ void BuddhistCalendar::timeToFields(UDate theTime, UBool quick, UErrorCode& stat
 }
 #endif
 
-// default century
-const UDate     BuddhistCalendar::fgSystemDefaultCentury        = DBL_MIN;
-const int32_t   BuddhistCalendar::fgSystemDefaultCenturyYear    = -1;
-
+// default century. Values are initialized on first use, under control
+//                  of gBCInitOnce.
 UDate           BuddhistCalendar::fgSystemDefaultCenturyStart       = DBL_MIN;
 int32_t         BuddhistCalendar::fgSystemDefaultCenturyStartYear   = -1;
+static UInitOnce gBCInitOnce;
 
 
 UBool BuddhistCalendar::haveDefaultCentury() const
@@ -150,16 +149,8 @@ int32_t BuddhistCalendar::defaultCenturyStartYear() const
 UDate
 BuddhistCalendar::internalGetDefaultCenturyStart() const
 {
-    // lazy-evaluate systemDefaultCenturyStart
-    UBool needsUpdate;
-    UMTX_CHECK(NULL, (fgSystemDefaultCenturyStart == fgSystemDefaultCentury), needsUpdate);
-
-    if (needsUpdate) {
-        initializeSystemDefaultCentury();
-    }
-
-    // use defaultCenturyStart unless it's the flag value;
-    // then use systemDefaultCenturyStart
+    // lazy-evaluate systemDefaultCenturyStart and systemDefaultCenturyStartYear
+    umtx_initOnce(gBCInitOnce, &initializeSystemDefaultCentury);
 
     return fgSystemDefaultCenturyStart;
 }
@@ -167,16 +158,8 @@ BuddhistCalendar::internalGetDefaultCenturyStart() const
 int32_t
 BuddhistCalendar::internalGetDefaultCenturyStartYear() const
 {
-    // lazy-evaluate systemDefaultCenturyStartYear
-    UBool needsUpdate;
-    UMTX_CHECK(NULL, (fgSystemDefaultCenturyStart == fgSystemDefaultCentury), needsUpdate);
-
-    if (needsUpdate) {
-        initializeSystemDefaultCentury();
-    }
-
-    // use defaultCenturyStart unless it's the flag value;
-    // then use systemDefaultCenturyStartYear
+    // lazy-evaluate systemDefaultCenturyStartYear and systemDefaultCenturyStart 
+    umtx_initOnce(gBCInitOnce, &initializeSystemDefaultCentury);
 
     return    fgSystemDefaultCenturyStartYear;
 }
@@ -189,18 +172,13 @@ BuddhistCalendar::initializeSystemDefaultCentury()
     // the current time.
     UErrorCode status = U_ZERO_ERROR;
     BuddhistCalendar calendar(Locale("@calendar=buddhist"),status);
-    if (U_SUCCESS(status))
-    {
+    if (U_SUCCESS(status)) {
         calendar.setTime(Calendar::getNow(), status);
         calendar.add(UCAL_YEAR, -80, status);
         UDate    newStart =  calendar.getTime(status);
         int32_t  newYear  =  calendar.get(UCAL_YEAR, status);
-        umtx_lock(NULL);
-        if (fgSystemDefaultCenturyStart == fgSystemDefaultCentury) {
-            fgSystemDefaultCenturyStartYear = newYear;
-            fgSystemDefaultCenturyStart = newStart;
-        }
-        umtx_unlock(NULL);
+        fgSystemDefaultCenturyStartYear = newYear;
+        fgSystemDefaultCenturyStart = newStart;
     }
     // We have no recourse upon failure unless we want to propagate the failure
     // out.

@@ -103,7 +103,6 @@ typedef struct {
 
 static UDataMemory *uCharNamesData=NULL;
 static UCharNames *uCharNames=NULL;
-static UErrorCode gLoadErrorCode=U_ZERO_ERROR;
 static UInitOnce  gCharNamesInitOnce = U_INITONCE_INITIALIZER;
 
 /*
@@ -191,29 +190,24 @@ isAcceptable(void * /*context*/,
 }
 
 static void
-loadCharNames() {
+loadCharNames(UErrorCode &status) {
     U_ASSERT(uCharNamesData == NULL);
     U_ASSERT(uCharNames == NULL);
-    gLoadErrorCode = U_ZERO_ERROR;
 
-    uCharNamesData = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, &gLoadErrorCode);
-    if(U_FAILURE(gLoadErrorCode)) {
+    uCharNamesData = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, &status);
+    if(U_FAILURE(status)) {
         uCharNamesData = NULL;
-        return;
+    } else {
+        uCharNames = (UCharNames *)udata_getMemory(uCharNamesData);
     }
-    uCharNames = (UCharNames *)udata_getMemory(uCharNamesData);
     ucln_common_registerCleanup(UCLN_COMMON_UNAMES, unames_cleanup);
 }
 
 
 static UBool
 isDataLoaded(UErrorCode *pErrorCode) {
-    if (U_FAILURE(*pErrorCode)) {
-        return FALSE;
-    }
-    umtx_initOnce(gCharNamesInitOnce, &loadCharNames);
-    *pErrorCode=gLoadErrorCode;
-    return U_SUCCESS(gLoadErrorCode);
+    umtx_initOnce(gCharNamesInitOnce, &loadCharNames, *pErrorCode);
+    return U_SUCCESS(*pErrorCode);
 }
 
 #define WRITE_CHAR(buffer, bufferLength, bufferPos, c) { \

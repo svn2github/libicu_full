@@ -43,7 +43,6 @@ Static cache for already opened StringPrep profiles
 */
 static UHashtable *SHARED_DATA_HASHTABLE = NULL;
 static UInitOnce   gSharedDataInitOnce;
-static UErrorCode  gSharedDataStatus = U_ZERO_ERROR;
 
 static UMutex usprepMutex = U_MUTEX_INITIALIZER;
 
@@ -197,7 +196,7 @@ static UBool U_CALLCONV usprep_cleanup(void){
             SHARED_DATA_HASHTABLE = NULL;
         }
     }
-
+    gSharedDataInitOnce.reset();
     return (SHARED_DATA_HASHTABLE == NULL);
 }
 U_CDECL_END
@@ -205,10 +204,9 @@ U_CDECL_END
 
 /** Initializes the cache for resources */
 static void
-createCache() {
-    gSharedDataStatus = U_ZERO_ERROR;
-    SHARED_DATA_HASHTABLE = uhash_open(hashEntry, compareEntries, NULL, &gSharedDataStatus);
-    if (U_FAILURE(gSharedDataStatus)) {
+createCache(UErrorCode &status) {
+    SHARED_DATA_HASHTABLE = uhash_open(hashEntry, compareEntries, NULL, &status);
+    if (U_FAILURE(status)) {
         SHARED_DATA_HASHTABLE = NULL;
     }
     ucln_common_registerCleanup(UCLN_COMMON_USPREP, usprep_cleanup);
@@ -216,11 +214,7 @@ createCache() {
 
 static void 
 initCache(UErrorCode *status) {
-    if (U_FAILURE(*status)) {
-        return;
-    }
-    umtx_initOnce(gSharedDataInitOnce, &createCache);
-    *status = gSharedDataStatus;
+    umtx_initOnce(gSharedDataInitOnce, &createCache, *status);
 }
 
 static UBool U_CALLCONV

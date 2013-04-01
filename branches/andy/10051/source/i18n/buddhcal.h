@@ -1,6 +1,6 @@
 /*
  ********************************************************************************
- * Copyright (C) 2003-2007, International Business Machines Corporation
+ * Copyright (C) 2003-2013, International Business Machines Corporation
  * and others. All Rights Reserved.
  ********************************************************************************
  *
@@ -193,8 +193,7 @@ private:
  private: // default century stuff.
     /**
      * The system maintains a static default century start date.  This is initialized
-     * the first time it is used.  Before then, it is set to SYSTEM_DEFAULT_CENTURY to
-     * indicate an uninitialized state.  Once the system default century date and year
+     * the first time it is used. Once the system default century date and year
      * are set, they do not change.
      */
     static UDate         fgSystemDefaultCenturyStart;
@@ -203,16 +202,6 @@ private:
      * See documentation for systemDefaultCenturyStart.
      */
     static int32_t          fgSystemDefaultCenturyStartYear;
-
-    /**
-     * Default value that indicates the defaultCenturyStartYear is unitialized
-     */
-    static const int32_t    fgSystemDefaultCenturyYear;
-
-    /**
-     * start of default century, as a date
-     */
-    static const UDate        fgSystemDefaultCentury;
 
     /**
      * Returns the beginning date of the 100-year window that dates 

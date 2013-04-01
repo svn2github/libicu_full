@@ -168,7 +168,6 @@ static UMutex cnvCacheMutex = U_MUTEX_INITIALIZER;  /* Mutex for synchronizing c
 static const char **gAvailableConverters = NULL;
 static uint16_t gAvailableConverterCount = 0;
 static UInitOnce gAvailableConvertersInitOnce = U_INITONCE_INITIALIZER;
-static UErrorCode gAvailableConvertersStatus = U_ZERO_ERROR;
 
 #if !U_CHARSET_IS_UTF8
 
@@ -197,13 +196,12 @@ static const char DATA_TYPE[] = "cnv";
  */
 static void
 ucnv_flushAvailableConverterCache() {
+    gAvailableConverterCount = 0;
     if (gAvailableConverters) {
-        gAvailableConverterCount = 0;
         uprv_free((char **)gAvailableConverters);
         gAvailableConverters = NULL;
     }
     gAvailableConvertersInitOnce.reset();
-    gAvailableConvertersStatus = U_ZERO_ERROR;
 }
 
 /* ucnv_cleanup - delete all storage held by the converter cache, except any  */
@@ -1118,21 +1116,21 @@ ucnv_flushCache ()
 
 /* available converters list --------------------------------------------------- */
 
-static void initAvailableConvertersList() {
+static void initAvailableConvertersList(UErrorCode &errCode) {
     U_ASSERT(gAvailableConverterCount == 0);
     U_ASSERT(gAvailableConverters == NULL);
 
-    gAvailableConvertersStatus = U_ZERO_ERROR;
-    UEnumeration *allConvEnum = ucnv_openAllNames(&gAvailableConvertersStatus);
-    int32_t allConverterCount = uenum_count(allConvEnum, &gAvailableConvertersStatus);
-    if (U_FAILURE(gAvailableConvertersStatus)) {
+    ucln_common_registerCleanup(UCLN_COMMON_UCNV, ucnv_cleanup);
+    UEnumeration *allConvEnum = ucnv_openAllNames(&errCode);
+    int32_t allConverterCount = uenum_count(allConvEnum, &errCode);
+    if (U_FAILURE(errCode)) {
         return;
     }
 
     /* We can't have more than "*converterTable" converters to open */
     gAvailableConverters = (const char **) uprv_malloc(allConverterCount * sizeof(char*));
     if (!gAvailableConverters) {
-        gAvailableConvertersStatus = U_MEMORY_ALLOCATION_ERROR;
+        errCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
 
@@ -1152,17 +1150,12 @@ static void initAvailableConvertersList() {
     }
 
     uenum_close(allConvEnum);
-    ucln_common_registerCleanup(UCLN_COMMON_UCNV, ucnv_cleanup);
 }
 
 
 static UBool haveAvailableConverterList(UErrorCode *pErrorCode) {
-    if (U_FAILURE(*pErrorCode)) {
-        return FALSE;
-    }
-    umtx_initOnce(gAvailableConvertersInitOnce, &initAvailableConvertersList);
-    *pErrorCode = gAvailableConvertersStatus;
-    return U_SUCCESS(gAvailableConvertersStatus);
+    umtx_initOnce(gAvailableConvertersInitOnce, &initAvailableConvertersList, *pErrorCode);
+    return U_SUCCESS(*pErrorCode);
 }
 
 U_CFUNC uint16_t

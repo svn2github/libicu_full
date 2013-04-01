@@ -31,7 +31,7 @@ static UMutex gZoneMetaLock = U_MUTEX_INITIALIZER;
 
 // CLDR Canonical ID mapping table
 static UHashtable *gCanonicalIDCache = NULL;
-static UBool gCanonicalIDCacheInitialized = FALSE;
+static UInitOnce   gCanonicalIDCacheInitOnce = U_INITONCE_INITIALIZER;
 
 // Metazone mapping table
 static UHashtable *gOlsonToMeta = NULL;
@@ -45,7 +45,8 @@ static UBool gMetaZoneIDsInitialized = FALSE;
 // Country info vectors
 static icu::UVector *gSingleZoneCountries = NULL;
 static icu::UVector *gMultiZonesCountries = NULL;
-static UBool gCountryInfoVectorsInitialized = FALSE;
+// static UBool gCountryInfoVectorsInitialized = FALSE;
+static UInitOnce gCountryInfoVectorsInitOnce = U_INITONCE_INITIALIZER;
 
 U_CDECL_BEGIN
 
@@ -58,7 +59,7 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
         uhash_close(gCanonicalIDCache);
         gCanonicalIDCache = NULL;
     }
-    gCanonicalIDCacheInitialized = FALSE;
+    gCanonicalIDCacheInitOnce.reset();
 
     if (gOlsonToMeta != NULL) {
         uhash_close(gOlsonToMeta);
@@ -75,8 +76,10 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
     gMetaZoneIDsInitialized = FALSE;
 
     delete gSingleZoneCountries;
+    gSingleZoneCountries = NULL;
     delete gMultiZonesCountries;
-    gCountryInfoVectorsInitialized = FALSE;
+    gMultiZonesCountries = NULL;
+    gCountryInfoVectorsInitOnce.reset();
 
     return TRUE;
 }
@@ -212,6 +215,19 @@ parseDate (const UChar *text, UErrorCode &status) {
     return 0;
 }
 
+static void initCanonicalIDCache(UErrorCode &status) {
+    gCanonicalIDCache = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
+    if (gCanonicalIDCache == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    if (U_FAILURE(status)) {
+        gCanonicalIDCache = NULL;
+    }
+    // No key/value deleters - keys/values are from a resource bundle
+    ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+}
+
+
 const UChar* U_EXPORT2
 ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UErrorCode& status) {
     if (U_FAILURE(status)) {
@@ -225,27 +241,9 @@ ZoneMeta::getCanonicalCLDRID(const UnicodeString &tzid, UErrorCode& status) {
     }
 
     // Checking the cached results
-    UBool initialized;
-    UMTX_CHECK(&gZoneMetaLock, gCanonicalIDCacheInitialized, initialized);
-    if (!initialized) {
-        // Create empty hashtable
-        umtx_lock(&gZoneMetaLock);
-        {
-            if (!gCanonicalIDCacheInitialized) {
-                gCanonicalIDCache = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
-                if (gCanonicalIDCache == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                }
-                if (U_FAILURE(status)) {
-                    gCanonicalIDCache = NULL;
-                    return NULL;
-                }
-                // No key/value deleters - keys/values are from a resource bundle
-                gCanonicalIDCacheInitialized = TRUE;
-                ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
-            }
-        }
-        umtx_unlock(&gZoneMetaLock);
+    umtx_initOnce(gCanonicalIDCacheInitOnce, &initCanonicalIDCache, status);
+    if (U_FAILURE(status)) {
+        return NULL;
     }
 
     const UChar *canonicalID = NULL;
@@ -393,6 +391,28 @@ ZoneMeta::getCanonicalCLDRID(const TimeZone& tz) {
     return getCanonicalCLDRID(tz.getID(tzID), status);
 }
 
+static void countryInfoVectorsInit(UErrorCode &status) {
+    // Create empty vectors
+    // No deleters for these UVectors, it's a reference to a resource bundle string.
+    gSingleZoneCountries = new UVector(NULL, uhash_compareUChars, status);
+    if (gSingleZoneCountries == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    gMultiZonesCountries = new UVector(NULL, uhash_compareUChars, status);
+    if (gMultiZonesCountries == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+
+    if (U_FAILURE(status)) {
+        delete gSingleZoneCountries;
+        delete gMultiZonesCountries;
+        gSingleZoneCountries = NULL;
+        gMultiZonesCountries  = NULL;
+    }
+    ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+}
+
+
 UnicodeString& U_EXPORT2
 ZoneMeta::getCanonicalCountry(const UnicodeString &tzid, UnicodeString &country, UBool *isPrimary /* = NULL */) {
     if (isPrimary != NULL) {
@@ -412,39 +432,9 @@ ZoneMeta::getCanonicalCountry(const UnicodeString &tzid, UnicodeString &country,
 
         // Checking the cached results
         UErrorCode status = U_ZERO_ERROR;
-        UBool initialized;
-        UMTX_CHECK(&gZoneMetaLock, gCountryInfoVectorsInitialized, initialized);
-        if (!initialized) {
-            // Create empty vectors
-            umtx_lock(&gZoneMetaLock);
-            {
-                if (!gCountryInfoVectorsInitialized) {
-                    // No deleters for these UVectors, it's a reference to a resource bundle string.
-                    gSingleZoneCountries = new UVector(NULL, uhash_compareUChars, status);
-                    if (gSingleZoneCountries == NULL) {
-                        status = U_MEMORY_ALLOCATION_ERROR;
-                    }
-                    gMultiZonesCountries = new UVector(NULL, uhash_compareUChars, status);
-                    if (gMultiZonesCountries == NULL) {
-                        status = U_MEMORY_ALLOCATION_ERROR;
-                    }
-
-                    if (U_SUCCESS(status)) {
-                        gCountryInfoVectorsInitialized = TRUE;
-                        ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
-                    } else {
-                        delete gSingleZoneCountries;
-                        delete gMultiZonesCountries;
-                    }
-                }
-            }
-            umtx_unlock(&gZoneMetaLock);
-
-            if (U_FAILURE(status)) {
-                return country;
-            }
-            U_ASSERT(gSingleZoneCountries != NULL);
-            U_ASSERT(gMultiZonesCountries != NULL);
+        umtx_initOnce(gCountryInfoVectorsInitOnce, &countryInfoVectorsInit, status);
+        if (U_FAILURE(status)) {
+            return country;
         }
 
         // Check if it was already cached

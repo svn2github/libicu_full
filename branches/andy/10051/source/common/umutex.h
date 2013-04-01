@@ -195,11 +195,18 @@ inline void umtx_StoreRelease(atomic_int32_t &var, int32_t val) {
 
 struct UInitOnce {
     atomic_int32_t   fState;
-    void reset() {fState = 0;};
+    UErrorCode       fErrCode;
+    void reset() {fState = 0; fState=0;};
+    UBool isReset() {return umtx_LoadAcquire(fState) == 0;};
 };
+
+// Note: isReset() is used by service registration code.
+//                 Thread safety of this usage needs review.
+
+
 // TODO: Withdraw the initializer, document that it works with default initialization.
 //       In some contexts (arrays, members) it's awkward to use the initializer.
-#define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0)}
+#define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0), U_ZERO_ERROR}
 
 
 
@@ -230,6 +237,25 @@ inline void umtx_initOnce(UInitOnce &uio, void (*fp)()) {
     }
 }
 
+// umtx_initOnce variant with for plain functions, or static class functions.
+//            With ErrorCode, No context parameter.
+inline void umtx_initOnce(UInitOnce &uio, void (*fp)(UErrorCode &), UErrorCode &errCode) {
+    if (U_FAILURE(errCode)) {
+        return;
+    }    
+    if (umtx_LoadAcquire(uio.fState) == 2) {
+        if (U_FAILURE(uio.fErrCode)) {
+            errCode = uio.fErrCode;
+        }
+        return;
+    }
+    if (umtx_initImplPreInit(uio)) {
+        (*fp)(errCode);
+        uio.fErrCode = errCode;
+        umtx_initImplPostInit(uio, TRUE);
+    }
+}
+
 
 // umtx_initOnce variant with for plain functions, or static class functions,
 //            with a context parameter.
@@ -242,6 +268,26 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
         umtx_initImplPostInit(uio, TRUE);
     }
 }
+
+// umtx_initOnce variant with for plain functions, or static class functions,
+//            with a context parameter and an error code.
+template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &), T context, UErrorCode &errCode) {
+    if (U_FAILURE(errCode)) {
+        return;
+    }    
+    if (umtx_LoadAcquire(uio.fState) == 2) {
+        if (U_FAILURE(uio.fErrCode)) {
+            errCode = uio.fErrCode;
+        }
+        return;
+    }
+    if (umtx_initImplPreInit(uio)) {
+        (*fp)(context, errCode);
+        uio.fErrCode = errCode;
+        umtx_initImplPostInit(uio, TRUE);
+    }
+}
+
 #endif /*  U_SHOW_CPLUSPLUS_API */
 
 #if U_PLATFORM_HAS_WIN32_API

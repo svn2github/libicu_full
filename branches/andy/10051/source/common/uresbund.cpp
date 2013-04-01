@@ -44,7 +44,6 @@ TODO: This cache should probably be removed when the deprecated code is
 */
 static UHashtable *cache = NULL;
 static UInitOnce   gCacheInitOnce;
-static UErrorCode  gCacheStatus = U_ZERO_ERROR;
 
 static UMutex resbMutex = U_MUTEX_INITIALIZER;
 
@@ -269,22 +268,14 @@ static UBool U_CALLCONV ures_cleanup(void)
 }
 
 /** INTERNAL: Initializes the cache for resources */
-static void createCache() {
+static void createCache(UErrorCode &status) {
     U_ASSERT(cache == NULL);
-    gCacheStatus = U_ZERO_ERROR;
-    cache = uhash_open(hashEntry, compareEntries, NULL, &gCacheStatus);
-    if (U_FAILURE(gCacheStatus)) {
-        cache = NULL;
-    }
+    cache = uhash_open(hashEntry, compareEntries, NULL, &status);
     ucln_common_registerCleanup(UCLN_COMMON_URES, ures_cleanup);
 }
      
 static void initCache(UErrorCode *status) {
-    if (U_FAILURE(*status)) {
-        return;
-    }
-    umtx_initOnce(gCacheInitOnce, &createCache);
-    *status = gCacheStatus;
+    umtx_initOnce(gCacheInitOnce, &createCache, *status);
 }
 
 /** INTERNAL: sets the name (locale) of the resource bundle to given name */
