@@ -340,7 +340,7 @@ CollationBaseDataBuilder::buildRootElementsTable(UVector32 &table, UErrorCode &e
     for(int32_t i = 0; i < rootElements.size(); ++i) {
         int64_t ce = rootElements.elementAti(i);
         uint32_t p = (uint32_t)(ce >> 32);
-        uint32_t secTer = (uint32_t)ce & CollationRootElements::NO_CASE_NO_QUAT_MASK;
+        uint32_t secTer = (uint32_t)ce & Collation::ONLY_SEC_TER_MASK;
         if(p != prevPrimary) {
             U_ASSERT((p & 0xff) == 0);
             int32_t end;
@@ -391,7 +391,7 @@ CollationBaseDataBuilder::buildRootElementsTable(UVector32 &table, UErrorCode &e
                 // The range end was written, ending with the primary of rootElements[end].
                 ce = rootElements.elementAti(end);
                 p = (uint32_t)(ce >> 32);
-                secTer = (uint32_t)ce & CollationRootElements::NO_CASE_NO_QUAT_MASK;
+                secTer = (uint32_t)ce & Collation::ONLY_SEC_TER_MASK;
                 i = end;
             } else {
                 // Write the primary weight of a normal CE.
@@ -461,7 +461,7 @@ CollationBaseDataBuilder::writeRootElementsRange(
         // Fetch the actual next CE.
         int64_t ce = rootElements.elementAti(i);
         p = (uint32_t)(ce >> 32);
-        uint32_t secTer = (uint32_t)ce & CollationRootElements::NO_CASE_NO_QUAT_MASK;
+        uint32_t secTer = (uint32_t)ce & Collation::ONLY_SEC_TER_MASK;
         // Does this primary increase by "step" from the last one?
         if(p != nextPrimary ||
                 // Do not cross into a new lead byte if either is compressible.

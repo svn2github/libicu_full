@@ -66,6 +66,8 @@ public:
 
     /** Only the 2*6 bits for the pure tertiary weight. */
     static const uint32_t ONLY_TERTIARY_MASK = 0x3f3f;
+    /** Only the secondary & tertiary bits; no case, no quaternary. */
+    static const uint32_t ONLY_SEC_TER_MASK = 0xffff0000 | ONLY_TERTIARY_MASK;
     /** Case bits and tertiary bits. */
     static const uint32_t CASE_AND_TERTIARY_MASK = 0xff3f;
 
