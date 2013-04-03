@@ -71,13 +71,9 @@ umtx_lock(UMutex *mutex) {
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    #if U_DEBUG
-        // #if to avoid unused variable warnings in non-debug builds.
-        int sysErr = pthread_mutex_lock(&mutex->fMutex);
-        U_ASSERT(sysErr == 0);
-    #else
-        pthread_mutex_lock(&mutex->fMutex);
-    #endif
+    int sysErr = pthread_mutex_lock(&mutex->fMutex);
+    (void)sysErr;   // Suppress unused variable warnings.
+    U_ASSERT(sysErr == 0);
 }
 
 
@@ -87,13 +83,9 @@ umtx_unlock(UMutex* mutex)
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    #if U_DEBUG
-        // #if to avoid unused variable warnings in non-debug builds.
-        int sysErr = pthread_mutex_unlock(&mutex->fMutex);
-        U_ASSERT(sysErr == 0);
-    #else
-        pthread_mutex_unlock(&mutex->fMutex);
-    #endif
+    int sysErr = pthread_mutex_unlock(&mutex->fMutex);
+    (void)sysErr;   // Suppress unused variable warnings.
+    U_ASSERT(sysErr == 0);
 }
 
 static pthread_mutex_t initMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -105,35 +97,6 @@ typedef UBool (*U_PINIT_ONCE_FN) (
   void            **context
 );
 
-
-UBool u_InitOnceExecuteOnce(
-    U_INIT_ONCE     *initOnce,
-    U_PINIT_ONCE_FN initFn,
-    void            *parameter,
-    void            **context) {
-
-    (void)context;  // Unused for now.
-    pthread_mutex_lock(&initMutex);
-    while (TRUE) {
-        int32_t state = initOnce->fState;
-        if (state == 2) {
-            break;
-        }
-        if (state == 0) {
-            initOnce->fState = 1;
-            pthread_mutex_unlock(&initMutex);
-            (*initFn)(initOnce, parameter, &initOnce->fContext);
-            pthread_mutex_lock(&initMutex);
-            initOnce->fState = 2;
-            pthread_cond_broadcast(&initCondition);
-        } else if (state == 1) {
-            // Initialization in progress on another thread.
-            pthread_cond_wait(&initCondition, &initMutex);
-        }
-    }
-    pthread_mutex_unlock(&initMutex);
-    return TRUE;
-}
 
 // This function is called when a test of a UInitOnce::fState reveals that
 //   initialization has not completed, that we either need to call the
@@ -147,7 +110,7 @@ UBool umtx_initImplPreInit(UInitOnce &uio) {
     pthread_mutex_lock(&initMutex);
     int32_t state = uio.fState;
     if (state == 0) {
-        uio.fState.store(1, std::memory_order_release);
+        umtx_storeRelease(uio.fState, 1);
         pthread_mutex_unlock(&initMutex);
         return true;   // Caller will next call the init function.
     } else if (state == 2) {
@@ -167,7 +130,8 @@ UBool umtx_initImplPreInit(UInitOnce &uio) {
         if (returnVal) {
             // Initialization that was running in another thread failed.
             // We will retry it in this thread.
-	    uio.fState.store(1, std::memory_order_release);
+            // (This is only used by SimpleSingleton)
+            umtx_storeRelease(uio.fState, 1);
         }
         pthread_mutex_unlock(&initMutex);
         return returnVal;
@@ -188,13 +152,14 @@ UBool umtx_initImplPreInit(UInitOnce &uio) {
 void umtx_initImplPostInit(UInitOnce &uio, UBool success) {
     int32_t nextState = success? 2: 0;
     pthread_mutex_lock(&initMutex);
-    uio.fState.store(nextState, std::memory_order_release);
+    umtx_storeRelease(uio.fState, nextState);
     pthread_cond_broadcast(&initCondition);
     pthread_mutex_unlock(&initMutex);
 }
 
 
 void umtx_initOnceReset(UInitOnce &uio) {
+    // Not a thread safe function, we can use an ordinary assignment.
     uio.fState = 0;
 }
         

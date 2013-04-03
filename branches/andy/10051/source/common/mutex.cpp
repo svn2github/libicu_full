@@ -22,7 +22,7 @@ void *SimpleSingleton::getInstance(InstantiatorFn *instantiator, const void *con
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
-    if (umtx_LoadAcquire(fInitOnce.fState) == 2) {
+    if (umtx_loadAcquire(fInitOnce.fState) == 2) {
         return fInstance;
     }
     if (umtx_initImplPreInit(fInitOnce)) {
@@ -57,7 +57,7 @@ void *TriStateSingleton::getInstance(InstantiatorFn *instantiator, const void *c
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
-    if (umtx_LoadAcquire(fInitOnce.fState) == 2) {
+    if (umtx_loadAcquire(fInitOnce.fState) == 2) {
         errorCode = fErrorCode;
         return fInstance;
     }

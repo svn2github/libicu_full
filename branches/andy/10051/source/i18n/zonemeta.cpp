@@ -35,12 +35,12 @@ static UInitOnce   gCanonicalIDCacheInitOnce = U_INITONCE_INITIALIZER;
 
 // Metazone mapping table
 static UHashtable *gOlsonToMeta = NULL;
-static UBool gOlsonToMetaInitialized = FALSE;
+static UInitOnce   gOlsonToMetaInitOnce = U_INITONCE_INITIALIZER;
 
 // Available metazone IDs vector and table
 static icu::UVector *gMetaZoneIDs = NULL;
 static UHashtable *gMetaZoneIDTable = NULL;
-static UBool gMetaZoneIDsInitialized = FALSE;
+static UInitOnce   gMetaZoneIDsInitOnce = U_INITONCE_INITIALIZER;
 
 // Country info vectors
 static icu::UVector *gSingleZoneCountries = NULL;
@@ -65,15 +65,17 @@ static UBool U_CALLCONV zoneMeta_cleanup(void)
         uhash_close(gOlsonToMeta);
         gOlsonToMeta = NULL;
     }
-    gOlsonToMetaInitialized = FALSE;
+    gOlsonToMetaInitOnce.reset();
 
     if (gMetaZoneIDTable != NULL) {
         uhash_close(gMetaZoneIDTable);
+        gMetaZoneIDTable = NULL;
     }
     // delete after closing gMetaZoneIDTable, because it holds
     // value objects held by the hashtable
     delete gMetaZoneIDs;
-    gMetaZoneIDsInitialized = FALSE;
+    gMetaZoneIDs = NULL;
+    gMetaZoneIDsInitOnce.reset();
 
     delete gSingleZoneCountries;
     gSingleZoneCountries = NULL;
@@ -536,6 +538,19 @@ ZoneMeta::getMetazoneID(const UnicodeString &tzid, UDate date, UnicodeString &re
     return result;
 }
 
+static void U_CALLCONV olsonToMetaInit(UErrorCode &status) {
+    U_ASSERT(gOlsonToMeta == NULL);
+    ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
+    gOlsonToMeta = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
+    if (U_FAILURE(status)) {
+        gOlsonToMeta = NULL;
+    } else {
+        uhash_setKeyDeleter(gOlsonToMeta, deleteUCharString);
+        uhash_setValueDeleter(gOlsonToMeta, deleteUVector);
+    }
+}
+
+
 const UVector* U_EXPORT2
 ZoneMeta::getMetazoneMappings(const UnicodeString &tzid) {
     UErrorCode status = U_ZERO_ERROR;
@@ -545,31 +560,9 @@ ZoneMeta::getMetazoneMappings(const UnicodeString &tzid) {
         return NULL;
     }
 
-    UBool initialized;
-    UMTX_CHECK(&gZoneMetaLock, gOlsonToMetaInitialized, initialized);
-    if (!initialized) {
-        UHashtable *tmpOlsonToMeta = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
-        if (U_FAILURE(status)) {
-            return NULL;
-        }
-        uhash_setKeyDeleter(tmpOlsonToMeta, deleteUCharString);
-        uhash_setValueDeleter(tmpOlsonToMeta, deleteUVector);
-
-        umtx_lock(&gZoneMetaLock);
-        {
-            if (!gOlsonToMetaInitialized) {
-                gOlsonToMeta = tmpOlsonToMeta;
-                tmpOlsonToMeta = NULL;
-                gOlsonToMetaInitialized = TRUE;
-            }
-        }
-        umtx_unlock(&gZoneMetaLock);
-
-        // OK to call the following multiple times with the same function
-        ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
-        if (tmpOlsonToMeta != NULL) {
-            uhash_close(tmpOlsonToMeta);
-        }
+    umtx_initOnce(gOlsonToMetaInitOnce, &olsonToMetaInit, status);
+    if (U_FAILURE(status)) {
+        return NULL;
     }
 
     // get the mapping from cache
@@ -765,84 +758,78 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
 
 void
 ZoneMeta::initAvailableMetaZoneIDs () {
-    UBool initialized;
-    UMTX_CHECK(&gZoneMetaLock, gMetaZoneIDsInitialized, initialized);
-    if (!initialized) {
-        umtx_lock(&gZoneMetaLock);
-        {
-            if (!gMetaZoneIDsInitialized) {
-                UErrorCode status = U_ZERO_ERROR;
-                UHashtable *metaZoneIDTable = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, NULL, &status);
-                uhash_setKeyDeleter(metaZoneIDTable, uprv_deleteUObject);
-                // No valueDeleter, because the vector maintain the value objects
-                UVector *metaZoneIDs = NULL;
-                if (U_SUCCESS(status)) {
-                    metaZoneIDs = new UVector(NULL, uhash_compareUChars, status);
-                    if (metaZoneIDs == NULL) {
-                        status = U_MEMORY_ALLOCATION_ERROR;
-                    }
-                } else {
-                    uhash_close(metaZoneIDTable);
-                }
-                if (U_SUCCESS(status)) {
-                    U_ASSERT(metaZoneIDs != NULL);
-                    metaZoneIDs->setDeleter(uprv_free);
+    U_ASSERT(gMetaZoneIDs == NULL);
+    U_ASSERT(gMetaZoneIDTable == NULL);
+    ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
 
-                    UResourceBundle *rb = ures_openDirect(NULL, gMetaZones, &status);
-                    UResourceBundle *bundle = ures_getByKey(rb, gMapTimezonesTag, NULL, &status);
-                    UResourceBundle res;
-                    ures_initStackObject(&res);
-                    while (U_SUCCESS(status) && ures_hasNext(bundle)) {
-                        ures_getNextResource(bundle, &res, &status);
-                        if (U_FAILURE(status)) {
-                            break;
-                        }
-                        const char *mzID = ures_getKey(&res);
-                        int32_t len = uprv_strlen(mzID);
-                        UChar *uMzID = (UChar*)uprv_malloc(sizeof(UChar) * (len + 1));
-                        if (uMzID == NULL) {
-                            status = U_MEMORY_ALLOCATION_ERROR;
-                            break;
-                        }
-                        u_charsToUChars(mzID, uMzID, len);
-                        uMzID[len] = 0;
-                        UnicodeString *usMzID = new UnicodeString(uMzID);
-                        if (uhash_get(metaZoneIDTable, usMzID) == NULL) {
-                            metaZoneIDs->addElement((void *)uMzID, status);
-                            uhash_put(metaZoneIDTable, (void *)usMzID, (void *)uMzID, &status);
-                        } else {
-                            uprv_free(uMzID);
-                            delete usMzID;
-                        }
-                    }
-                    if (U_SUCCESS(status)) {
-                        gMetaZoneIDs = metaZoneIDs;
-                        gMetaZoneIDTable = metaZoneIDTable;
-                        gMetaZoneIDsInitialized = TRUE;
-                        ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);
-                    } else {
-                        uhash_close(metaZoneIDTable);
-                        delete metaZoneIDs;
-                    }
-                    ures_close(&res);
-                    ures_close(bundle);
-                    ures_close(rb);
-                }
-            }
+    UErrorCode status = U_ZERO_ERROR;
+    gMetaZoneIDTable = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, NULL, &status);
+    if (U_FAILURE(status) || gMetaZoneIDTable == NULL) {
+        gMetaZoneIDTable = NULL;
+        return;
+    }
+    uhash_setKeyDeleter(gMetaZoneIDTable, uprv_deleteUObject);
+    // No valueDeleter, because the vector maintain the value objects
+    gMetaZoneIDs = new UVector(NULL, uhash_compareUChars, status);
+    if (U_FAILURE(status) || gMetaZoneIDs == NULL) {
+        gMetaZoneIDs = NULL;
+        uhash_close(gMetaZoneIDTable);
+        gMetaZoneIDTable = NULL;
+        return;
+    }
+    gMetaZoneIDs->setDeleter(uprv_free);
+
+    UResourceBundle *rb = ures_openDirect(NULL, gMetaZones, &status);
+    UResourceBundle *bundle = ures_getByKey(rb, gMapTimezonesTag, NULL, &status);
+    UResourceBundle res;
+    ures_initStackObject(&res);
+    while (U_SUCCESS(status) && ures_hasNext(bundle)) {
+        ures_getNextResource(bundle, &res, &status);
+        if (U_FAILURE(status)) {
+            break;
         }
-        umtx_unlock(&gZoneMetaLock);
+        const char *mzID = ures_getKey(&res);
+        int32_t len = uprv_strlen(mzID);
+        UChar *uMzID = (UChar*)uprv_malloc(sizeof(UChar) * (len + 1));
+        if (uMzID == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            break;
+        }
+        u_charsToUChars(mzID, uMzID, len);
+        uMzID[len] = 0;
+        UnicodeString *usMzID = new UnicodeString(uMzID);
+        if (uhash_get(gMetaZoneIDTable, usMzID) == NULL) {
+            gMetaZoneIDs->addElement((void *)uMzID, status);
+            uhash_put(gMetaZoneIDTable, (void *)usMzID, (void *)uMzID, &status);
+        } else {
+            uprv_free(uMzID);
+            delete usMzID;
+        }
+    }
+    ures_close(&res);
+    ures_close(bundle);
+    ures_close(rb);
+
+    if (U_FAILURE(status)) {
+        uhash_close(gMetaZoneIDTable);
+        delete gMetaZoneIDs;
+        gMetaZoneIDTable = NULL;
+        gMetaZoneIDs = NULL;
     }
 }
 
 const UVector*
 ZoneMeta::getAvailableMetazoneIDs() {
-    initAvailableMetaZoneIDs();
+    umtx_initOnce(gMetaZoneIDsInitOnce, &initAvailableMetaZoneIDs);
     return gMetaZoneIDs;
 }
 
 const UChar*
 ZoneMeta::findMetaZoneID(const UnicodeString& mzid) {
-    initAvailableMetaZoneIDs();
+    umtx_initOnce(gMetaZoneIDsInitOnce, &initAvailableMetaZoneIDs);
+    if (gMetaZoneIDTable == NULL) {
+        return NULL;
+    }
     return (const UChar*)uhash_get(gMetaZoneIDTable, &mzid);
 }
 

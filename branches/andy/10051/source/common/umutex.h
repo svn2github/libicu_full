@@ -60,16 +60,6 @@
 #endif
 #endif
 
-/*
- * If we do not compile with dynamic_annotations.h then define
- * empty annotation macros.
- *  See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations
- */
-#ifndef ANNOTATE_HAPPENS_BEFORE
-# define ANNOTATE_HAPPENS_BEFORE(obj)
-# define ANNOTATE_HAPPENS_AFTER(obj)
-# define ANNOTATE_UNPROTECTED_READ(x) (x)
-#endif
 
 #ifndef UMTX_FULL_BARRIER
 # if U_HAVE_GCC_ATOMICS
@@ -174,9 +164,9 @@ typedef struct U_INIT_ONCE {
 #include <atomic>
 typedef std::atomic<int32_t> atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
-inline int32_t umtx_LoadAcquire(atomic_int32_t &var) {
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
 	return std::atomic_load_explicit(&var, std::memory_order_acquire);};
-inline void umtx_StoreRelease(atomic_int32_t &var, int32_t val) {
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 	var.store(val, std::memory_order_release);};
 
 
@@ -187,9 +177,9 @@ inline void umtx_StoreRelease(atomic_int32_t &var, int32_t val) {
 //                This is a Microsoft extension, not standard behavior.
 typedef volatile long atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
-inline int32_t umtx_LoadAcquire(atomic_int32_t &var) {
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
 	return var;};
-inline void umtx_StoreRelease(atomic_int32_t &var, int32_t val) {
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 	var = val;};
 #endif
 
@@ -197,15 +187,13 @@ struct UInitOnce {
     atomic_int32_t   fState;
     UErrorCode       fErrCode;
     void reset() {fState = 0; fState=0;};
-    UBool isReset() {return umtx_LoadAcquire(fState) == 0;};
+    UBool isReset() {return umtx_loadAcquire(fState) == 0;};
 };
 
 // Note: isReset() is used by service registration code.
 //                 Thread safety of this usage needs review.
 
 
-// TODO: Withdraw the initializer, document that it works with default initialization.
-//       In some contexts (arrays, members) it's awkward to use the initializer.
 #define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0), U_ZERO_ERROR}
 
 
@@ -215,7 +203,7 @@ UBool umtx_initImplPreInit(UInitOnce &);
 void  umtx_initImplPostInit(UInitOnce &, UBool success);
 
 template<class T> void umtx_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
-    if (umtx_LoadAcquire(uio.fState) == 2) {
+    if (umtx_loadAcquire(uio.fState) == 2) {
         return;
     }
     if (umtx_initImplPreInit(uio)) {
@@ -225,10 +213,10 @@ template<class T> void umtx_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
 }
 
 
-// umtx_initOnce variant with for plain functions, or static class functions.
-//            No context parameter.
+// umtx_initOnce variant for plain functions, or static class functions.
+//               No context parameter.
 inline void umtx_initOnce(UInitOnce &uio, void (*fp)()) {
-    if (umtx_LoadAcquire(uio.fState) == 2) {
+    if (umtx_loadAcquire(uio.fState) == 2) {
         return;
     }
     if (umtx_initImplPreInit(uio)) {
@@ -237,30 +225,30 @@ inline void umtx_initOnce(UInitOnce &uio, void (*fp)()) {
     }
 }
 
-// umtx_initOnce variant with for plain functions, or static class functions.
-//            With ErrorCode, No context parameter.
+// umtx_initOnce variant for plain functions, or static class functions.
+//               With ErrorCode, No context parameter.
 inline void umtx_initOnce(UInitOnce &uio, void (*fp)(UErrorCode &), UErrorCode &errCode) {
     if (U_FAILURE(errCode)) {
         return;
     }    
-    if (umtx_LoadAcquire(uio.fState) == 2) {
-        if (U_FAILURE(uio.fErrCode)) {
-            errCode = uio.fErrCode;
-        }
-        return;
-    }
-    if (umtx_initImplPreInit(uio)) {
+    if (umtx_loadAcquire(uio.fState) != 2 && umtx_initImplPreInit(uio)) {
+        // We run the initialization.
         (*fp)(errCode);
         uio.fErrCode = errCode;
         umtx_initImplPostInit(uio, TRUE);
+    } else {
+        // Someone else already ran the initialization.
+        if (U_FAILURE(uio.fErrCode)) {
+            errCode = uio.fErrCode;
+        }
     }
 }
 
 
-// umtx_initOnce variant with for plain functions, or static class functions,
-//            with a context parameter.
+// umtx_initOnce variant for plain functions, or static class functions,
+//               with a context parameter.
 template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
-    if (umtx_LoadAcquire(uio.fState) == 2) {
+    if (umtx_loadAcquire(uio.fState) == 2) {
         return;
     }
     if (umtx_initImplPreInit(uio)) {
@@ -269,22 +257,22 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
     }
 }
 
-// umtx_initOnce variant with for plain functions, or static class functions,
-//            with a context parameter and an error code.
+// umtx_initOnce variant for plain functions, or static class functions,
+//               with a context parameter and an error code.
 template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &), T context, UErrorCode &errCode) {
     if (U_FAILURE(errCode)) {
         return;
     }    
-    if (umtx_LoadAcquire(uio.fState) == 2) {
-        if (U_FAILURE(uio.fErrCode)) {
-            errCode = uio.fErrCode;
-        }
-        return;
-    }
-    if (umtx_initImplPreInit(uio)) {
+    if (umtx_loadAcquire(uio.fState) != 2 && umtx_initImplPreInit(uio)) {
+        // We run the initialization.
         (*fp)(context, errCode);
         uio.fErrCode = errCode;
         umtx_initImplPostInit(uio, TRUE);
+    } else {
+        // Someone else already ran the initialization.
+        if (U_FAILURE(uio.fErrCode)) {
+            errCode = uio.fErrCode;
+        }
     }
 }
 

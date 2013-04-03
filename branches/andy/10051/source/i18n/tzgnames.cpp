@@ -20,6 +20,7 @@
 
 #include "cmemory.h"
 #include "cstring.h"
+#include "mutex.h"
 #include "uhash.h"
 #include "uassert.h"
 #include "umutex.h"
@@ -1230,88 +1231,77 @@ TimeZoneGenericNames::createInstance(const Locale& locale, UErrorCode& status) {
         return NULL;
     }
 
-    UBool initialized;
-    UMTX_CHECK(&gTZGNLock, gTZGNCoreCacheInitialized, initialized);
-    if (!initialized) {
-        // Create empty hashtable
-        umtx_lock(&gTZGNLock);
-        {
-            if (!gTZGNCoreCacheInitialized) {
-                gTZGNCoreCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
-                if (U_SUCCESS(status)) {
-                    uhash_setKeyDeleter(gTZGNCoreCache, uprv_free);
-                    uhash_setValueDeleter(gTZGNCoreCache, deleteTZGNCoreRef);
-                    gTZGNCoreCacheInitialized = TRUE;
-                    ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONEGENERICNAMES, tzgnCore_cleanup);
-                }
-            }
-        }
-        umtx_unlock(&gTZGNLock);
+    Mutex lock(&gTZGNLock);
 
-        if (U_FAILURE(status)) {
-            return NULL;
+    if (!gTZGNCoreCacheInitialized) {
+        // Create empty hashtable
+        gTZGNCoreCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
+        if (U_SUCCESS(status)) {
+            uhash_setKeyDeleter(gTZGNCoreCache, uprv_free);
+            uhash_setValueDeleter(gTZGNCoreCache, deleteTZGNCoreRef);
+            gTZGNCoreCacheInitialized = TRUE;
+            ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONEGENERICNAMES, tzgnCore_cleanup);
         }
+    }
+    if (U_FAILURE(status)) {
+        return NULL;
     }
 
     // Check the cache, if not available, create new one and cache
     TZGNCoreRef *cacheEntry = NULL;
-    umtx_lock(&gTZGNLock);
-    {
-        const char *key = locale.getName();
-        cacheEntry = (TZGNCoreRef *)uhash_get(gTZGNCoreCache, key);
-        if (cacheEntry == NULL) {
-            TZGNCore *tzgnCore = NULL;
-            char *newKey = NULL;
+    const char *key = locale.getName();
+    cacheEntry = (TZGNCoreRef *)uhash_get(gTZGNCoreCache, key);
+    if (cacheEntry == NULL) {
+        TZGNCore *tzgnCore = NULL;
+        char *newKey = NULL;
 
-            tzgnCore = new TZGNCore(locale, status);
-            if (tzgnCore == NULL) {
+        tzgnCore = new TZGNCore(locale, status);
+        if (tzgnCore == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+        if (U_SUCCESS(status)) {
+            newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
+            if (newKey == NULL) {
                 status = U_MEMORY_ALLOCATION_ERROR;
+            } else {
+                uprv_strcpy(newKey, key);
             }
-            if (U_SUCCESS(status)) {
-                newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
-                if (newKey == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                } else {
-                    uprv_strcpy(newKey, key);
-                }
-            }
-            if (U_SUCCESS(status)) {
-                cacheEntry = (TZGNCoreRef *)uprv_malloc(sizeof(TZGNCoreRef));
-                if (cacheEntry == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                } else {
-                    cacheEntry->obj = tzgnCore;
-                    cacheEntry->refCount = 1;
-                    cacheEntry->lastAccess = (double)uprv_getUTCtime();
+        }
+        if (U_SUCCESS(status)) {
+            cacheEntry = (TZGNCoreRef *)uprv_malloc(sizeof(TZGNCoreRef));
+            if (cacheEntry == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+            } else {
+                cacheEntry->obj = tzgnCore;
+                cacheEntry->refCount = 1;
+                cacheEntry->lastAccess = (double)uprv_getUTCtime();
 
-                    uhash_put(gTZGNCoreCache, newKey, cacheEntry, &status);
-                }
+                uhash_put(gTZGNCoreCache, newKey, cacheEntry, &status);
             }
-            if (U_FAILURE(status)) {
-                if (tzgnCore != NULL) {
-                    delete tzgnCore;
-                }
-                if (newKey != NULL) {
-                    uprv_free(newKey);
-                }
-                if (cacheEntry != NULL) {
-                    uprv_free(cacheEntry);
-                }
-                cacheEntry = NULL;
+        }
+        if (U_FAILURE(status)) {
+            if (tzgnCore != NULL) {
+                delete tzgnCore;
             }
-        } else {
-            // Update the reference count
-            cacheEntry->refCount++;
-            cacheEntry->lastAccess = (double)uprv_getUTCtime();
+            if (newKey != NULL) {
+                uprv_free(newKey);
+            }
+            if (cacheEntry != NULL) {
+                uprv_free(cacheEntry);
+            }
+            cacheEntry = NULL;
         }
-        gAccessCount++;
-        if (gAccessCount >= SWEEP_INTERVAL) {
-            // sweep
-            sweepCache();
-            gAccessCount = 0;
-        }
+    } else {
+        // Update the reference count
+        cacheEntry->refCount++;
+        cacheEntry->lastAccess = (double)uprv_getUTCtime();
     }
-    umtx_unlock(&gTZGNLock);
+    gAccessCount++;
+    if (gAccessCount >= SWEEP_INTERVAL) {
+        // sweep
+        sweepCache();
+        gAccessCount = 0;
+    }
 
     if (cacheEntry == NULL) {
         delete instance;
