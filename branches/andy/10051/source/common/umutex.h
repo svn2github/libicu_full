@@ -47,68 +47,6 @@
 #define U_WINDOWS_CRIT_SEC_SIZE 64
 #endif  /* win32 */
 
-#if U_PLATFORM_IS_DARWIN_BASED
-#if defined(__STRICT_ANSI__)
-#define UPRV_REMAP_INLINE
-#define inline
-#endif
-#include <libkern/OSAtomic.h>
-#define USE_MAC_OS_ATOMIC_INCREMENT 1
-#if defined(UPRV_REMAP_INLINE)
-#undef inline
-#undef UPRV_REMAP_INLINE
-#endif
-#endif
-
-
-#ifndef UMTX_FULL_BARRIER
-# if U_HAVE_GCC_ATOMICS
-#  define UMTX_FULL_BARRIER __sync_synchronize();
-# elif defined(_MSC_VER) && _MSC_VER >= 1500
-    /* From MSVC intrin.h. Use _ReadWriteBarrier() only on MSVC 9 and higher. */
-#  define UMTX_FULL_BARRIER _ReadWriteBarrier();
-# elif U_PLATFORM_IS_DARWIN_BASED
-#  define UMTX_FULL_BARRIER OSMemoryBarrier();
-# else
-#  define UMTX_FULL_BARRIER \
-    { \
-        umtx_lock(NULL); \
-        umtx_unlock(NULL); \
-    }
-# endif
-#endif
-
-#ifndef UMTX_ACQUIRE_BARRIER
-# define UMTX_ACQUIRE_BARRIER UMTX_FULL_BARRIER
-#endif
-
-#ifndef UMTX_RELEASE_BARRIER
-# define UMTX_RELEASE_BARRIER UMTX_FULL_BARRIER
-#endif
-
-/**
- * \def UMTX_CHECK
- * Encapsulates a safe check of an expression
- * for use with double-checked lazy inititialization.
- * Either memory barriers or mutexes are required, to prevent both the hardware
- * and the compiler from reordering operations across the check.
- * The expression must involve only a  _single_ variable, typically
- *    a possibly null pointer or a boolean that indicates whether some service
- *    is initialized or not.
- * The setting of the variable involved in the test must be the last step of
- *    the initialization process.
- *
- * @internal
- */
-#define UMTX_CHECK(pMutex, expression, result) \
-    { \
-        (result)=(expression); \
-        UMTX_ACQUIRE_BARRIER; \
-    }
-/*
- * TODO: Replace all uses of UMTX_CHECK and surrounding code
- * with SimpleSingleton or TriStateSingleton, and remove UMTX_CHECK.
- */
 
 /*
  * Code within ICU that accesses shared static or global data should
@@ -151,13 +89,7 @@ typedef struct U_INIT_ONCE {
 #define U_INIT_ONCE_STATIC_INIT {0, NULL}
 
 #if U_SHOW_CPLUSPLUS_API
-/*
- *  Init Once, not baked yet.
- */
 
-// Win32 note:
-//   variables declared volatile are read with acquire memory semantics,
-//   and written with release.
 
 #if __cplusplus>=201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
 // C++11 definitions. 
@@ -280,8 +212,7 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
 
 #if U_PLATFORM_HAS_WIN32_API
 typedef struct UMutex {
-    U_INIT_ONCE       fInitOnce;
-    UBool             fInitialized;  /* Applies to fUserMutex only. */
+    UInitOnce         fInitOnce;
     /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
                                    * Windows.h, which would allow using CRITICAL_SECTION
                                    * directly here. */
@@ -292,16 +223,15 @@ typedef struct UMutex {
 /* Initializer for a static UMUTEX. Deliberately contains no value for the
  *  CRITICAL_SECTION.
  */
-#define U_MUTEX_INITIALIZER {U_INIT_ONCE_STATIC_INIT, FALSE}
+#define U_MUTEX_INITIALIZER {U_INITONCE_INITIALIZER}
 
 #elif U_PLATFORM_IMPLEMENTS_POSIX
 #include <pthread.h>
 
 struct UMutex {
     pthread_mutex_t  fMutex;
-    UBool            fInitialized;
 };
-#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER, FALSE}
+#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
 
 #else
 /* Unknow platform type. */
@@ -341,6 +271,62 @@ U_CAPI void U_EXPORT2 umtx_unlock (UMutex* mutex);
  */
 U_CAPI int32_t U_EXPORT2 umtx_atomic_inc(int32_t *);
 U_CAPI int32_t U_EXPORT2 umtx_atomic_dec(int32_t *);
+
+
+
+/*
+ *  UMTX_CHECK .   OBSOLETE.
+ *                 Delete this section once all uses have been replaced.
+ */
+
+#ifndef UMTX_FULL_BARRIER
+# if U_HAVE_GCC_ATOMICS
+#  define UMTX_FULL_BARRIER __sync_synchronize();
+# elif defined(_MSC_VER) && _MSC_VER >= 1500
+    /* From MSVC intrin.h. Use _ReadWriteBarrier() only on MSVC 9 and higher. */
+#  define UMTX_FULL_BARRIER _ReadWriteBarrier();
+# elif U_PLATFORM_IS_DARWIN_BASED
+#  define UMTX_FULL_BARRIER OSMemoryBarrier();
+# else
+#  define UMTX_FULL_BARRIER \
+    { \
+        umtx_lock(NULL); \
+        umtx_unlock(NULL); \
+    }
+# endif
+#endif
+
+#ifndef UMTX_ACQUIRE_BARRIER
+# define UMTX_ACQUIRE_BARRIER UMTX_FULL_BARRIER
+#endif
+
+/**
+ * \def UMTX_CHECK
+ * Encapsulates a safe check of an expression
+ * for use with double-checked lazy inititialization.
+ * Either memory barriers or mutexes are required, to prevent both the hardware
+ * and the compiler from reordering operations across the check.
+ * The expression must involve only a  _single_ variable, typically
+ *    a possibly null pointer or a boolean that indicates whether some service
+ *    is initialized or not.
+ * The setting of the variable involved in the test must be the last step of
+ *    the initialization process.
+ *
+ * @internal
+ */
+#define UMTX_CHECK(pMutex, expression, result) \
+    { \
+        (result)=(expression); \
+        UMTX_ACQUIRE_BARRIER; \
+    }
+/*
+ * TODO: Replace all uses of UMTX_CHECK and surrounding code
+ * with SimpleSingleton or TriStateSingleton, and remove UMTX_CHECK.
+ */
+
+/*
+ *   END OF OBSOLETE UMTX_CHECK
+ */
 
 #endif /*_CMUTEX*/
 /*eof*/
