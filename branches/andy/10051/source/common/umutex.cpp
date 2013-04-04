@@ -55,7 +55,7 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 //   that knows the C++ types involved. This function returns TRUE if
 //   the caller needs to call the Init function.
 //
-UBool umtx_initImplPreInit(UInitOnce &uio) {
+U_CAPI UBool U_EXPORT2 umtx_initImplPreInit(UInitOnce &uio) {
     for (;;) {
         int32_t previousState = InterlockedCompareExchange( 
             &uio.fState,     //  Destination,
@@ -75,7 +75,7 @@ UBool umtx_initImplPreInit(UInitOnce &uio) {
             // Wait until it completes.
             do {
                 Sleep(1);
-                previousState = umtx_LoadAcquire(uio.fState);
+                previousState = umtx_loadAcquire(uio.fState);
             } while (previousState == 1);
         }
     }
@@ -89,18 +89,13 @@ UBool umtx_initImplPreInit(UInitOnce &uio) {
 //            False: the initializtion failed. The next call to umtx_initOnce()
 //                   will retry the initialization.
 
-void umtx_initImplPostInit(UInitOnce &uio, UBool success) {
+U_CAPI void U_EXPORT2 umtx_initImplPostInit(UInitOnce &uio, UBool success) {
     int32_t nextState = success? 2: 0;
-    umtx_StoreRelease(uio.fState, nextState);
+    umtx_storeRelease(uio.fState, nextState);
 }
 
 
-void umtx_initOnceReset(UInitOnce &uio) {
-    uio.fState = 0;
-}
-
-
-static UBool winMutexInit(CRITICAL_SECTION *cs) {
+static void winMutexInit(CRITICAL_SECTION *cs) {
     InitializeCriticalSection(cs);
     return;
 }
@@ -110,8 +105,8 @@ umtx_lock(UMutex *mutex) {
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    CRITICAL_SECTION *cs = reinterpret_cast<CRITICAL_SECTION *>mutex->fCS;
-    u_InitOnce(mutex->fInitOnce, winMutexInit, cs);
+    CRITICAL_SECTION *cs = reinterpret_cast<CRITICAL_SECTION *>(mutex->fCS);
+    umtx_initOnce(mutex->fInitOnce, winMutexInit, cs);
     EnterCriticalSection((CRITICAL_SECTION *)cs);
 }
 

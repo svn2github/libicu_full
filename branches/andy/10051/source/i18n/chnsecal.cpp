@@ -54,7 +54,7 @@ static icu::CalendarAstronomer *gChineseCalendarAstro = NULL;
 static icu::CalendarCache *gChineseCalendarWinterSolsticeCache = NULL;
 static icu::CalendarCache *gChineseCalendarNewYearCache = NULL;
 static icu::TimeZone *gChineseCalendarZoneAstroCalc = NULL;
-static UBool gChineseCalendarZoneAstroCalcInitialized = FALSE;
+static UInitOnce gChineseCalendarZoneAstroCalcInitOnce = U_INITONCE_INITIALIZER;
 
 /**
  * The start year of the Chinese calendar, the 61st year of the reign
@@ -97,7 +97,7 @@ static UBool calendar_chinese_cleanup(void) {
         delete gChineseCalendarZoneAstroCalc;
         gChineseCalendarZoneAstroCalc = NULL;
     }
-    gChineseCalendarZoneAstroCalcInitialized = FALSE;
+    gChineseCalendarZoneAstroCalcInitOnce.reset();
     return TRUE;
 }
 U_CDECL_END
@@ -150,20 +150,13 @@ const char *ChineseCalendar::getType() const {
     return "chinese";
 }
 
+static void U_CALLCONV initChineseCalZoneAstroCalc() {
+    gChineseCalendarZoneAstroCalc = new SimpleTimeZone(CHINA_OFFSET, UNICODE_STRING_SIMPLE("CHINA_ZONE") );
+    ucln_i18n_registerCleanup(UCLN_I18N_CHINESE_CALENDAR, calendar_chinese_cleanup);
+}
+
 const TimeZone* ChineseCalendar::getChineseCalZoneAstroCalc(void) const {
-    UBool initialized;
-    UMTX_CHECK(&astroLock, gChineseCalendarZoneAstroCalcInitialized, initialized);
-    if (!initialized) {
-        umtx_lock(&astroLock);
-        {
-            if (!gChineseCalendarZoneAstroCalcInitialized) {
-                gChineseCalendarZoneAstroCalc = new SimpleTimeZone(CHINA_OFFSET, UNICODE_STRING_SIMPLE("CHINA_ZONE") );
-                gChineseCalendarZoneAstroCalcInitialized = TRUE;
-                ucln_i18n_registerCleanup(UCLN_I18N_CHINESE_CALENDAR, calendar_chinese_cleanup);
-            }
-        }
-        umtx_unlock(&astroLock);
-    }
+    umtx_initOnce(gChineseCalendarZoneAstroCalcInitOnce, &initChineseCalZoneAstroCalc);
     return gChineseCalendarZoneAstroCalc;
 }
 

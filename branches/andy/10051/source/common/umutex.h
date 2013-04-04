@@ -22,13 +22,62 @@
 #include "unicode/uclean.h"
 #include "putilimp.h"
 
-/* For _ReadWriteBarrier(). */
-#if defined(_MSC_VER) && _MSC_VER >= 1500
-# include <intrin.h>
+
+
+
+
+
+
+
+
+#if __cplusplus>=201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
+// Pure C++11 definitions. 
+
+
+#if U_SHOW_CPLUSPLUS_API
+#include <atomic>
+typedef std::atomic<int32_t> atomic_int32_t;
+#define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
+	return std::atomic_load_explicit(&var, std::memory_order_acquire);};
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
+	var.store(val, std::memory_order_release);};
 #endif
 
+
+#elif U_PLATFORM_HAS_WIN32_API
+// MSVC compiler. Reads and writes of volatile variables have
+//                acquire and release memory semantics, respectively.
+//                This is a Microsoft extension, not standard behavior.
+//   TODO: separate defs for gcc for cygwin, mingw, etc.
+
+
+typedef volatile long atomic_int32_t;
+#define ATOMIC_INT32_T_INITIALIZER(val) val
+#if __cplusplus
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
+	return var;};
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
+	var = val;};
+#endif
+
+
+struct UInitOnce {
+    atomic_int32_t   fState;
+    UErrorCode       fErrCode;
+#if __cplusplus
+    void reset() {fState = 0; fState=0;};
+    UBool isReset() {return umtx_loadAcquire(fState) == 0;};
+// Note: isReset() is used by service registration code.
+//                 Thread safety of this usage needs review.
+#endif
+};
+#define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0), U_ZERO_ERROR}
+typedef struct UInitOnce UInitOnce;
+
+
+
 /* For CRITICAL_SECTION */
-#if U_PLATFORM_HAS_WIN32_API
 #if 0  
 /* TODO(andy): Why doesn't windows.h compile in all files? It does in some.
  *             The intent was to include windows.h here, and have struct UMutex
@@ -45,94 +94,52 @@
 # include <windows.h>
 #endif  /* 0 */
 #define U_WINDOWS_CRIT_SEC_SIZE 64
-#endif  /* win32 */
 
 
-/*
- * Code within ICU that accesses shared static or global data should
- * instantiate a Mutex object while doing so.  The unnamed global mutex
- * is used throughout ICU, so keep locking short and sweet.
- *
- * For example:
- *
- * void Function(int arg1, int arg2)
- * {
- *   static Object* foo;     // Shared read-write object
- *   umtx_lock(NULL);        // Lock the ICU global mutex
- *   foo->Method();
- *   umtx_unlock(NULL);
- * }
- *
- * an alternative C++ mutex API is defined in the file common/mutex.h
+typedef struct UMutex {
+    UInitOnce         fInitOnce;
+    /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
+                                   * Windows.h, which would allow using CRITICAL_SECTION
+                                   * directly here. */
+    char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
+} UMutex;
+typedef struct UMutex UMutex;
+
+/* Initializer for a static UMUTEX. Deliberately contains no value for the
+ *  CRITICAL_SECTION.
  */
-
-/*
- * UMutex - Mutexes for use by ICU implementation code.
- *          Must be declared as static or globals. They cannot appear as members
- *          of other objects.
- *          UMutex structs must be initialized.
- *          Example:
- *            static UMutex = U_MUTEX_INITIALIZER;
- *          The declaration of struct UMutex is platform dependent.
- */
+#define U_MUTEX_INITIALIZER {U_INITONCE_INITIALIZER}
 
 
 
-/*  U_INIT_ONCE mimics the windows API INIT_ONCE, which exists on Windows Vista and newer.
- *  When ICU no longer needs to support older Windows platforms (XP) that do not have
- * a native INIT_ONCE, switch this implementation over to wrap the native Windows APIs.
- */
-typedef struct U_INIT_ONCE {
-    long               fState;
-    void              *fContext;
-} U_INIT_ONCE;
-#define U_INIT_ONCE_STATIC_INIT {0, NULL}
+#elif U_PLATFORM_IMPLEMENTS_POSIX
+#include <pthread.h>
 
-#if U_SHOW_CPLUSPLUS_API
+struct UMutex {
+    pthread_mutex_t  fMutex;
+};
+#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
 
+#else
+/* Unknow platform type. */
+struct UMutex {
+    void *fMutex;
+};
+#define U_MUTEX_INITIALIZER {NULL}
+#error Unknown Platform.
 
-#if __cplusplus>=201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
-// C++11 definitions. 
-#include <atomic>
-typedef std::atomic<int32_t> atomic_int32_t;
-#define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
-inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-	return std::atomic_load_explicit(&var, std::memory_order_acquire);};
-inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-	var.store(val, std::memory_order_release);};
-
-
-
-#elif defined(_MSC_VER)
-// MSVC compiler. Reads and writes of volatile variables have
-//                acquire and release memory semantics, respectively.
-//                This is a Microsoft extension, not standard behavior.
-typedef volatile long atomic_int32_t;
-#define ATOMIC_INT32_T_INITIALIZER(val) val
-inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-	return var;};
-inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-	var = val;};
 #endif
 
-struct UInitOnce {
-    atomic_int32_t   fState;
-    UErrorCode       fErrCode;
-    void reset() {fState = 0; fState=0;};
-    UBool isReset() {return umtx_loadAcquire(fState) == 0;};
-};
-
-// Note: isReset() is used by service registration code.
-//                 Thread safety of this usage needs review.
 
 
-#define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0), U_ZERO_ERROR}
+#if __cplusplus
+// TODO: get all ICU files using umutex converted to C++,
+//       then remove the __cpluplus conditionals from this file.
 
+// UInitOnce related declarations. Platform-neutral.
 
-
-
-UBool umtx_initImplPreInit(UInitOnce &);
-void  umtx_initImplPostInit(UInitOnce &, UBool success);
+U_CAPI UBool U_EXPORT2 umtx_initImplPreInit(UInitOnce &);
+U_CAPI void  U_EXPORT2 umtx_initImplPostInit(UInitOnce &, UBool success);
 
 template<class T> void umtx_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
     if (umtx_loadAcquire(uio.fState) == 2) {
@@ -208,44 +215,8 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
     }
 }
 
-#endif /*  U_SHOW_CPLUSPLUS_API */
+#endif /*  __cplusplus */
 
-#if U_PLATFORM_HAS_WIN32_API
-typedef struct UMutex {
-    UInitOnce         fInitOnce;
-    /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
-                                   * Windows.h, which would allow using CRITICAL_SECTION
-                                   * directly here. */
-    char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
-} UMutex;
-
-
-/* Initializer for a static UMUTEX. Deliberately contains no value for the
- *  CRITICAL_SECTION.
- */
-#define U_MUTEX_INITIALIZER {U_INITONCE_INITIALIZER}
-
-#elif U_PLATFORM_IMPLEMENTS_POSIX
-#include <pthread.h>
-
-struct UMutex {
-    pthread_mutex_t  fMutex;
-};
-#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
-
-#else
-/* Unknow platform type. */
-struct UMutex {
-    void *fMutex;
-};
-#define U_MUTEX_INITIALIZER {NULL}
-#error Unknown Platform.
-
-#endif
-
-#if (U_PLATFORM != U_PF_CYGWIN && U_PLATFORM != U_PF_MINGW) || defined(CYGWINMSVC)
-typedef struct UMutex UMutex;
-#endif
     
 /* Lock a mutex.
  * @param mutex The given mutex to be locked.  Pass NULL to specify
@@ -274,50 +245,22 @@ U_CAPI int32_t U_EXPORT2 umtx_atomic_dec(int32_t *);
 
 
 
+
+
+
+
+
 /*
  *  UMTX_CHECK .   OBSOLETE.
  *                 Delete this section once all uses have been replaced.
+ *                 Live with a crap simplified definition until we can dump it entirely.
  */
 
-#ifndef UMTX_FULL_BARRIER
-# if U_HAVE_GCC_ATOMICS
-#  define UMTX_FULL_BARRIER __sync_synchronize();
-# elif defined(_MSC_VER) && _MSC_VER >= 1500
-    /* From MSVC intrin.h. Use _ReadWriteBarrier() only on MSVC 9 and higher. */
-#  define UMTX_FULL_BARRIER _ReadWriteBarrier();
-# elif U_PLATFORM_IS_DARWIN_BASED
-#  define UMTX_FULL_BARRIER OSMemoryBarrier();
-# else
-#  define UMTX_FULL_BARRIER \
-    { \
-        umtx_lock(NULL); \
-        umtx_unlock(NULL); \
-    }
-# endif
-#endif
 
-#ifndef UMTX_ACQUIRE_BARRIER
-# define UMTX_ACQUIRE_BARRIER UMTX_FULL_BARRIER
-#endif
-
-/**
- * \def UMTX_CHECK
- * Encapsulates a safe check of an expression
- * for use with double-checked lazy inititialization.
- * Either memory barriers or mutexes are required, to prevent both the hardware
- * and the compiler from reordering operations across the check.
- * The expression must involve only a  _single_ variable, typically
- *    a possibly null pointer or a boolean that indicates whether some service
- *    is initialized or not.
- * The setting of the variable involved in the test must be the last step of
- *    the initialization process.
- *
- * @internal
- */
 #define UMTX_CHECK(pMutex, expression, result) \
     { \
         (result)=(expression); \
-        UMTX_ACQUIRE_BARRIER; \
+        umtx_lock(NULL); umtx_unlock(NULL); \
     }
 /*
  * TODO: Replace all uses of UMTX_CHECK and surrounding code
