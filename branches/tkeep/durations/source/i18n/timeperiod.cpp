@@ -16,7 +16,7 @@ TimePeriod::TimePeriod(const TimePeriod& other) {
 
 
 TimePeriod* TimePeriod::forAmounts(
-    TimeUnitAmount **timeUnitAmounts,
+    const TimeUnitAmount * const *timeUnitAmounts,
     int32_t length,
     UErrorCode& status) {
   return NULL;

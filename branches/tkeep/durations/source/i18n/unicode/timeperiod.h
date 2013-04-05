@@ -41,7 +41,7 @@ public:
      * @draft ICU 52
      */  
     static TimePeriod* forAmounts(
-        TimeUnitAmount **timeUnitAmounts, int32_t length, UErrorCode& status);
+        const TimeUnitAmount * const *timeUnitAmounts, int32_t length, UErrorCode& status);
 
     /** 
      * Destructor

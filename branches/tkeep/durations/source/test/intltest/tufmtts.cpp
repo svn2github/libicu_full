@@ -362,7 +362,7 @@ void TimeUnitTest::testTimePeriods() {
   if (U_FAILURE(status)) {
     return;
   }
-  errln(buffer);
+//  errln(buffer);
 }
 
 
