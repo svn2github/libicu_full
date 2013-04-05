@@ -70,13 +70,9 @@ public:
     /** 
      * Gets a specific field out of a time period.
      * @param field is the field to fetch
-     * @param result fetched field is stored here, if it exists.
-     * @status any error encountered is stored here. 
-     * @return true if a field in this object does exist for field or false
-         otherwise. Note that when this method returns false, no error is set 
-         in status as a missing field is part of the normal course of operation.
+     * @return The desired field or NULL if it does not exist.
      */  
-    UBool getAmount(TimeUnit::UTimeUnitFields field, TimeUnitAmount& result, UErrorCode& status) const;
+    const TimeUnitAmount* getAmount(TimeUnit::UTimeUnitFields field) const;
 
 
 private:

@@ -31,11 +31,9 @@ UBool TimePeriod::operator==(const UObject& other) const {
 UBool TimePeriod::operator!=(const UObject& other) const {
 }
 
-UBool TimePeriod::getAmount(
-    TimeUnit::UTimeUnitFields field,
-    TimeUnitAmount& result,
-    UErrorCode& status) const {
-  return true;
+const TimeUnitAmount *TimePeriod::getAmount(
+    TimeUnit::UTimeUnitFields field) const {
+  return NULL;
 }
 
 U_NAMESPACE_END

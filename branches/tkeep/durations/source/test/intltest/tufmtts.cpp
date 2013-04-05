@@ -362,7 +362,12 @@ void TimeUnitTest::testTimePeriods() {
   if (U_FAILURE(status)) {
     return;
   }
-//  errln(buffer);
+  //  errln(buffer);
+  UBool hasDay = (period->getAmount(TimeUnit::UTIMEUNIT_DAY) != NULL);
+  const TimeUnitAmount* hour = period->getAmount(TimeUnit::UTIMEUNIT_HOUR);
+  if (hour != NULL) {
+    double hoursAsDouble = hour->getNumber().getDouble();
+  }
 }
 
 
