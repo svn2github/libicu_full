@@ -27,14 +27,18 @@
 
 
 
+// Forward Declarations
+struct UMutex;
+struct UInitOnce;
 
 
-
+/*
+ *   Low Level Atomic Ops Definitions. 
+ *      Compiler dependent. Not operating system dependent.
+ */
 #if __cplusplus>=201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
-// Pure C++11 definitions. 
-
-
-#if U_SHOW_CPLUSPLUS_API
+//  C++11
+//
 #include <atomic>
 typedef std::atomic<int32_t> atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
@@ -42,26 +46,44 @@ inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
 	return std::atomic_load_explicit(&var, std::memory_order_acquire);};
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 	var.store(val, std::memory_order_release);};
-#endif
 
 
-#elif U_PLATFORM_HAS_WIN32_API
+#elif defined(_MSC_VER)
 // MSVC compiler. Reads and writes of volatile variables have
 //                acquire and release memory semantics, respectively.
 //                This is a Microsoft extension, not standard behavior.
-//   TODO: separate defs for gcc for cygwin, mingw, etc.
-
 
 typedef volatile long atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
-#if __cplusplus
+#ifdef __cpllusplus
 inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
 	return var;};
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 	var = val;};
-#endif
+#endif /* __cplusplus */
 
 
+#elif U_HAVE_GCC_ATOMICS
+typedef int32_t atomic_int32_t;
+#define ATOMIC_INT32_T_INITIALIZER(val) val
+#ifdef __cpllusplus
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
+        int32_t val = var;
+        __sync_synchronize();
+	return var;};
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
+        __sync_synchronize();
+	var = val;};
+#endif /* __cplusplus */
+
+
+#endif  /* Low Level Atomic Ops Platfrom Chain */
+
+
+/*
+ *  UInitOnce Definitions.
+ *     These are platform neutral.
+ */
 struct UInitOnce {
     atomic_int32_t   fState;
     UErrorCode       fErrCode;
@@ -72,71 +94,12 @@ struct UInitOnce {
 //                 Thread safety of this usage needs review.
 #endif
 };
-#define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0), U_ZERO_ERROR}
 typedef struct UInitOnce UInitOnce;
-
-
-
-/* For CRITICAL_SECTION */
-#if 0  
-/* TODO(andy): Why doesn't windows.h compile in all files? It does in some.
- *             The intent was to include windows.h here, and have struct UMutex
- *             have an embedded CRITICAL_SECTION when building on Windows.
- *             The workaround is to put some char[] storage in UMutex instead,
- *             avoiding the need to include windows.h everwhere this header is included.
- */
-# define WIN32_LEAN_AND_MEAN
-# define VC_EXTRALEAN
-# define NOUSER
-# define NOSERVICE
-# define NOIME
-# define NOMCX
-# include <windows.h>
-#endif  /* 0 */
-#define U_WINDOWS_CRIT_SEC_SIZE 64
-
-
-typedef struct UMutex {
-    UInitOnce         fInitOnce;
-    /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
-                                   * Windows.h, which would allow using CRITICAL_SECTION
-                                   * directly here. */
-    char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
-} UMutex;
-typedef struct UMutex UMutex;
-
-/* Initializer for a static UMUTEX. Deliberately contains no value for the
- *  CRITICAL_SECTION.
- */
-#define U_MUTEX_INITIALIZER {U_INITONCE_INITIALIZER}
-
-
-
-#elif U_PLATFORM_IMPLEMENTS_POSIX
-#include <pthread.h>
-
-struct UMutex {
-    pthread_mutex_t  fMutex;
-};
-#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
-
-#else
-/* Unknow platform type. */
-struct UMutex {
-    void *fMutex;
-};
-#define U_MUTEX_INITIALIZER {NULL}
-#error Unknown Platform.
-
-#endif
-
-
+#define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0), U_ZERO_ERROR}
 
 #if __cplusplus
 // TODO: get all ICU files using umutex converted to C++,
 //       then remove the __cpluplus conditionals from this file.
-
-// UInitOnce related declarations. Platform-neutral.
 
 U_CAPI UBool U_EXPORT2 umtx_initImplPreInit(UInitOnce &);
 U_CAPI void  U_EXPORT2 umtx_initImplPostInit(UInitOnce &, UBool success);
@@ -183,7 +146,6 @@ inline void umtx_initOnce(UInitOnce &uio, void (*fp)(UErrorCode &), UErrorCode &
     }
 }
 
-
 // umtx_initOnce variant for plain functions, or static class functions,
 //               with a context parameter.
 template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
@@ -217,7 +179,79 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
 
 #endif /*  __cplusplus */
 
+
+
+/*
+ *  Mutex Definitions. Platform Dependent.
+ *         TODO:  Add a C++11 version.
+ *                Need to convert all mutex using files to C++ first.
+ */
+
+
+#if U_PLATFORM_HAS_WIN32_API
+
+/* For CRITICAL_SECTION */
+#if 0  
+/* TODO(andy): Why doesn't windows.h compile in all files? It does in some.
+ *             The intent was to include windows.h here, and have struct UMutex
+ *             have an embedded CRITICAL_SECTION when building on Windows.
+ *             The workaround is to put some char[] storage in UMutex instead,
+ *             avoiding the need to include windows.h everwhere this header is included.
+ */
+# define WIN32_LEAN_AND_MEAN
+# define VC_EXTRALEAN
+# define NOUSER
+# define NOSERVICE
+# define NOIME
+# define NOMCX
+# include <windows.h>
+#endif  /* 0 */
+#define U_WINDOWS_CRIT_SEC_SIZE 64
+
+typedef struct UMutex {
+    UInitOnce         fInitOnce;
+    /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
+                                   * Windows.h, which would allow using CRITICAL_SECTION
+                                   * directly here. */
+    char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
+} UMutex;
+typedef struct UMutex UMutex;
+
+/* Initializer for a static UMUTEX. Deliberately contains no value for the
+ *  CRITICAL_SECTION.
+ */
+#define U_MUTEX_INITIALIZER {U_INITONCE_INITIALIZER}
+
+
+
+#elif U_PLATFORM_IMPLEMENTS_POSIX
+#include <pthread.h>
+
+struct UMutex {
+    pthread_mutex_t  fMutex;
+};
+typedef struct UMutex UMutex;
+#define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
+
+#else
+/* Unknow platform type. */
+struct UMutex {
+    void *fMutex;
+};
+typedef struct UMutex UMutex;
+#define U_MUTEX_INITIALIZER {NULL}
+#error Unknown Platform.
+
+#endif
+
+
     
+/*
+ *  Mutex Implementation function declaratations.
+ *     Declarations are platform neutral.
+ *     Implementations, in umutex.cpp, are platform specific.
+ */
+
 /* Lock a mutex.
  * @param mutex The given mutex to be locked.  Pass NULL to specify
  *              the global ICU mutex.  Recursive locks are an error
