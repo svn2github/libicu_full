@@ -55,7 +55,7 @@ inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 
 typedef volatile long atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
-#ifdef __cpllusplus
+#ifdef __cplusplus
 inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
 	return var;};
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
