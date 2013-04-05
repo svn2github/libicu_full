@@ -49,6 +49,8 @@ public:
      * As of CLDR shiped in ICU4.8, Greek is one such language.
      */
     void testGreekWithSanitization();
+
+    void testTimePeriods();
 };
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

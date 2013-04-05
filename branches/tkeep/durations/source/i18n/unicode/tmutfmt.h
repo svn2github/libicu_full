@@ -37,6 +37,8 @@ enum UTimeUnitFormatStyle {
     UTMUTFMT_FULL_STYLE,
     /** @stable ICU 4.8 */
     UTMUTFMT_ABBREVIATED_STYLE,
+    /** @draft ICU 52 */
+    UTMUTFMT_NUMERIC_STYLE,
     /** @stable ICU 4.8 */
     UTMUTFMT_FORMAT_STYLE_COUNT
 };
@@ -46,6 +48,7 @@ U_NAMESPACE_BEGIN
 
 class Hashtable;
 class UVector;
+class TimePeriod;
 
 /**
  * Format or parse a TimeUnitAmount, using plural rules for the units where available.
@@ -185,6 +188,19 @@ public:
     virtual void parseObject(const UnicodeString& source,
                              Formattable& result,
                              ParsePosition& pos) const;
+
+    /**
+      * Format a time period.
+      * @param timePeriod the time period to format.
+      * @param toAppendTo where the formatted string is stored.
+      * @param status any error is stored here
+      * @return a reference to toAppendto
+      * @draft ICU 52
+      */
+  virtual UnicodeString& formatTimePeriod(const TimePeriod &timePeriod,
+                                          UnicodeString& toAppendTo,
+                                          UErrorCode& status) const;
+
 
     /**
      * Return the class ID for this class. This is useful only for comparing to

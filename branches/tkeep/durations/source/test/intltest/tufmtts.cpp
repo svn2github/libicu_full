@@ -11,6 +11,7 @@
 #include "unicode/tmutamt.h"
 #include "unicode/tmutfmt.h"
 #include "tufmtts.h"
+#include "unicode/timeperiod.h"
 #include "unicode/ustring.h"
 
 //TODO: put as compilation flag
@@ -27,6 +28,7 @@ void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
         TESTCASE(1, testAPI);
         TESTCASE(2, testGreekWithFallback);
         TESTCASE(3, testGreekWithSanitization);
+        TESTCASE(4, testTimePeriods);
         default: name = ""; break;
     }
 }
@@ -340,6 +342,27 @@ void TimeUnitTest::testGreekWithSanitization() {
 
     delete numberFmt;
     delete timeUnitFormat;
+}
+
+void TimeUnitTest::testTimePeriods() {
+  // Print 5 days; 3 hours; 45 minutes
+  UErrorCode status = U_ZERO_ERROR;
+  TimeUnitAmount *amounts[3];
+  amounts[0] = new TimeUnitAmount(5.0, TimeUnit::UTIMEUNIT_DAY, status);
+  amounts[1] = new TimeUnitAmount(3.0, TimeUnit::UTIMEUNIT_HOUR, status);
+  amounts[2] = new TimeUnitAmount(45.0, TimeUnit::UTIMEUNIT_MINUTE, status);
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  TimePeriod *period = TimePeriod::forAmounts(amounts, len, status);
+  for (int32_t i = 0; i < len; i++) {
+    delete amounts[i];
+  }
+  TimeUnitFormat tuf(Locale::getEnglish(), status);
+  UnicodeString buffer;
+  tuf.formatTimePeriod(*period, buffer, status);
+  if (U_FAILURE(status)) {
+    return;
+  }
+  errln(buffer);
 }
 
 

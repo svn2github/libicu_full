@@ -18,6 +18,7 @@
 #include "hash.h"
 #include "uresimp.h"
 #include "unicode/msgfmt.h"
+#include "unicode/timeperiod.h"
 #include "uassert.h"
 
 #define LEFT_CURLY_BRACKET  ((UChar)0x007B)
@@ -224,7 +225,9 @@ TimeUnitFormat::format(const Formattable& obj, UnicodeString& toAppendTo,
             count.extract(0, count.length(), result, "UTF-8");
             std::cout << "number: " << number << "; format plural count: " << result << "\n";           
 #endif
-            MessageFormat* pattern = ((MessageFormat**)countToPattern->get(count))[fStyle];
+            UTimeUnitFormatStyle effectiveStyle = (fStyle == UTMUTFMT_NUMERIC_STYLE) ?
+                UTMUTFMT_ABBREVIATED_STYLE : fStyle;
+            MessageFormat* pattern = ((MessageFormat**)countToPattern->get(count))[effectiveStyle];
             Formattable formattable[1];
             formattable[0].setDouble(number);
             return pattern->format(formattable, 1, toAppendTo, pos, status);
@@ -271,6 +274,10 @@ TimeUnitFormat::parseObject(const UnicodeString& source,
             MessageFormat** patterns = (MessageFormat**)valueTok.pointer;
             for (UTimeUnitFormatStyle style = UTMUTFMT_FULL_STYLE; style < UTMUTFMT_FORMAT_STYLE_COUNT;
                  style = (UTimeUnitFormatStyle)(style + 1)) {
+                // We don't support parsing of numeric styles, so skip it.
+                if (style == UTMUTFMT_NUMERIC_STYLE) {
+                    continue;
+                }
                 MessageFormat* pattern = patterns[style];
                 pos.setErrorIndex(-1);
                 pos.setIndex(oldPos);
@@ -356,6 +363,11 @@ TimeUnitFormat::parseObject(const UnicodeString& source,
     }
 }
 
+UnicodeString& 
+TimeUnitFormat::formatTimePeriod(
+    const TimePeriod& timePeriod, UnicodeString& toAppendTo, UErrorCode& status) const {
+  return toAppendTo;
+}
 
 void
 TimeUnitFormat::create(const Locale& locale, UTimeUnitFormatStyle style, UErrorCode& status) {
