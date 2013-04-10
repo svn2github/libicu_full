@@ -50,22 +50,26 @@ public:
     virtual ~TimePeriod();
 
     /** 
-     * Equality operator.
-     * @param other the object to compare to. 
-     * @return true if this object the same TimeUnitAmount objects as the given
-     *   object.
+     * Returns true if the given TimePeriod objects are semantically equal.
+     * For two TimePeriod objects to be equal, they must contain the same
+     * units, and the amount for each unit much be equal.  For example,
+     * 5 hours, 37 minutes == 37 minutes, 5 hours,
+     * but 0 days, 5 hours != 5 hours.
+     * @param that the TimePeriod to compare with. 
+     * @return true if the given TimePeriod objects are semantically equal.
      * @draft ICU 52
      */  
-    virtual UBool operator==(const UObject& other) const;
+    UBool operator==(const TimePeriod& that) const;
 
-   /** 
-     * Not-equality operator.
-     * @param other the object to compare to. 
-     * @return true if this object has different TimeUnitAmount objects as the given
-     *   object.
+    /** 
+     * Returns true if the given TimePeriod objects are semantically
+     * unequal.
+     * @param that the TimePeriod to compare with. 
+     * @return true if the given TimePeriod objects are semantically
+     * unequal.
      * @draft ICU 52
      */  
-    virtual UBool operator!=(const UObject& other) const;
+    UBool operator!=(const TimePeriod& that) const;
 
     /** 
      * Gets a specific field out of a time period.
