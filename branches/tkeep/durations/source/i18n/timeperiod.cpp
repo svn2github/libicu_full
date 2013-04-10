@@ -25,10 +25,10 @@ TimePeriod* TimePeriod::forAmounts(
 TimePeriod::~TimePeriod() {
 }
 
-UBool TimePeriod::operator==(const UObject& other) const {
+UBool TimePeriod::operator==(const TimePeriod& other) const {
 }
 
-UBool TimePeriod::operator!=(const UObject& other) const {
+UBool TimePeriod::operator!=(const TimePeriod& other) const {
 }
 
 const TimeUnitAmount *TimePeriod::getAmount(
