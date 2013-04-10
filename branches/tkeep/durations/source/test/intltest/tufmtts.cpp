@@ -21,6 +21,13 @@
 #include <iostream>
 #endif
 
+static TimePeriod *create19m(UErrorCode &status);
+static TimePeriod *create19m28s(UErrorCode &status);
+static TimePeriod *create1h23_5s(UErrorCode &status);
+static TimePeriod *create1h0m23s(UErrorCode &status);
+static TimePeriod *create5h17m(UErrorCode &status);
+static TimePeriod *create2y5M3w4d(UErrorCode &status);
+
 void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ ) {
     if (exec) logln("TestSuite TimeUnitTest");
     switch (index) {
@@ -360,6 +367,7 @@ void TimeUnitTest::testTimePeriods() {
   UnicodeString buffer;
   tuf.formatTimePeriod(*period, buffer, status);
   if (U_FAILURE(status)) {
+    dataerrln("Unable to format time period- %s", u_errorName(status));
     return;
   }
   //  errln(buffer);
@@ -370,5 +378,72 @@ void TimeUnitTest::testTimePeriods() {
   }
 }
 
+static TimePeriod *create19m(UErrorCode &status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  TimeUnitAmount minutes(19.0, TimeUnit::UTIMEUNIT_MINUTE, status);
+  TimeUnitAmount *amounts[] = {&minutes};
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  return TimePeriod::forAmounts(amounts, len, status); 
+}
+
+static TimePeriod *create19m28s(UErrorCode &status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  TimeUnitAmount minutes(19.0, TimeUnit::UTIMEUNIT_MINUTE, status);
+  TimeUnitAmount seconds(28.0, TimeUnit::UTIMEUNIT_SECOND, status);
+  TimeUnitAmount *amounts[] = {&minutes, &seconds};
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  return TimePeriod::forAmounts(amounts, len, status); 
+}
+
+static TimePeriod *create1h23_5s(UErrorCode &status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
+  TimeUnitAmount seconds(23.5, TimeUnit::UTIMEUNIT_SECOND, status);
+  TimeUnitAmount *amounts[] = {&hours, &seconds};
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  return TimePeriod::forAmounts(amounts, len, status); 
+}
+
+static TimePeriod *create1h0m23s(UErrorCode &status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
+  TimeUnitAmount minutes(0.0, TimeUnit::UTIMEUNIT_MINUTE, status);
+  TimeUnitAmount seconds(23.0, TimeUnit::UTIMEUNIT_SECOND, status);
+  TimeUnitAmount *amounts[] = {&hours, &minutes, &seconds};
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  return TimePeriod::forAmounts(amounts, len, status); 
+}
+
+static TimePeriod *create5h17m(UErrorCode &status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  TimeUnitAmount hours(5.0, TimeUnit::UTIMEUNIT_HOUR, status);
+  TimeUnitAmount minutes(17.0, TimeUnit::UTIMEUNIT_MINUTE, status);
+  TimeUnitAmount *amounts[] = {&hours, &minutes};
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  return TimePeriod::forAmounts(amounts, len, status); 
+}
+
+static TimePeriod *create2y5M3w4d(UErrorCode &status) {
+  if (U_FAILURE(status)) {
+    return NULL;
+  }
+  TimeUnitAmount years(2.0, TimeUnit::UTIMEUNIT_YEAR, status);
+  TimeUnitAmount months(5.0, TimeUnit::UTIMEUNIT_MONTH, status);
+  TimeUnitAmount weeks(3.0, TimeUnit::UTIMEUNIT_WEEK, status);
+  TimeUnitAmount days(4.0, TimeUnit::UTIMEUNIT_DAY, status);
+  TimeUnitAmount *amounts[] = {&years, &months, &weeks, &days};
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  return TimePeriod::forAmounts(amounts, len, status); 
+}
 
 #endif
