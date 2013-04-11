@@ -835,11 +835,10 @@ ChineseCalendar::inDaylightTime(UErrorCode& status) const
 }
 
 // default century
-const UDate     ChineseCalendar::fgSystemDefaultCentury        = DBL_MIN;
-const int32_t   ChineseCalendar::fgSystemDefaultCenturyYear    = -1;
 
-UDate           ChineseCalendar::fgSystemDefaultCenturyStart       = DBL_MIN;
-int32_t         ChineseCalendar::fgSystemDefaultCenturyStartYear   = -1;
+static UDate     gSystemDefaultCenturyStart       = DBL_MIN;
+static int32_t   gSystemDefaultCenturyStartYear   = -1;
+static UInitOnce gSystemDefaultCenturyInitOnce = U_INITONCE_INITIALIZER;
 
 
 UBool ChineseCalendar::haveDefaultCentury() const
@@ -857,64 +856,37 @@ int32_t ChineseCalendar::defaultCenturyStartYear() const
     return internalGetDefaultCenturyStartYear();
 }
 
-UDate
-ChineseCalendar::internalGetDefaultCenturyStart() const
-{
-    // lazy-evaluate systemDefaultCenturyStart
-    UBool needsUpdate;
-    UMTX_CHECK(NULL, (fgSystemDefaultCenturyStart == fgSystemDefaultCentury), needsUpdate);
-
-    if (needsUpdate) {
-        initializeSystemDefaultCentury();
-    }
-
-    // use defaultCenturyStart unless it's the flag value;
-    // then use systemDefaultCenturyStart
-
-    return fgSystemDefaultCenturyStart;
-}
-
-int32_t
-ChineseCalendar::internalGetDefaultCenturyStartYear() const
-{
-    // lazy-evaluate systemDefaultCenturyStartYear
-    UBool needsUpdate;
-    UMTX_CHECK(NULL, (fgSystemDefaultCenturyStart == fgSystemDefaultCentury), needsUpdate);
-
-    if (needsUpdate) {
-        initializeSystemDefaultCentury();
-    }
-
-    // use defaultCenturyStart unless it's the flag value;
-    // then use systemDefaultCenturyStartYear
-
-    return    fgSystemDefaultCenturyStartYear;
-}
-
-void
-ChineseCalendar::initializeSystemDefaultCentury()
+static void U_CALLCONV initializeSystemDefaultCentury()
 {
     // initialize systemDefaultCentury and systemDefaultCenturyYear based
     // on the current time.  They'll be set to 80 years before
     // the current time.
     UErrorCode status = U_ZERO_ERROR;
     ChineseCalendar calendar(Locale("@calendar=chinese"),status);
-    if (U_SUCCESS(status))
-    {
+    if (U_SUCCESS(status)) {
         calendar.setTime(Calendar::getNow(), status);
         calendar.add(UCAL_YEAR, -80, status);
-        UDate    newStart =  calendar.getTime(status);
-        int32_t  newYear  =  calendar.get(UCAL_YEAR, status);
-        umtx_lock(NULL);
-        if (fgSystemDefaultCenturyStart == fgSystemDefaultCentury)
-        {
-            fgSystemDefaultCenturyStartYear = newYear;
-            fgSystemDefaultCenturyStart = newStart;
-        }
-        umtx_unlock(NULL);
+        gSystemDefaultCenturyStart     = calendar.getTime(status);
+        gSystemDefaultCenturyStartYear = calendar.get(UCAL_YEAR, status);
     }
     // We have no recourse upon failure unless we want to propagate the failure
     // out.
+}
+
+UDate
+ChineseCalendar::internalGetDefaultCenturyStart() const
+{
+    // lazy-evaluate systemDefaultCenturyStart
+    umtx_initOnce(gSystemDefaultCenturyInitOnce, &initializeSystemDefaultCentury);
+    return gSystemDefaultCenturyStart;
+}
+
+int32_t
+ChineseCalendar::internalGetDefaultCenturyStartYear() const
+{
+    // lazy-evaluate systemDefaultCenturyStartYear
+    umtx_initOnce(gSystemDefaultCenturyInitOnce, &initializeSystemDefaultCentury);
+    return    gSystemDefaultCenturyStartYear;
 }
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(ChineseCalendar)
