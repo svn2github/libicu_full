@@ -21,6 +21,11 @@
 #include <iostream>
 #endif
 
+struct TimePeriodResult {
+    TimePeriod* timePeriod;
+    const char* result;
+};
+
 static TimePeriod *create19m(UErrorCode &status);
 static TimePeriod *create19m28s(UErrorCode &status);
 static TimePeriod *create1h23_5s(UErrorCode &status);
@@ -35,7 +40,8 @@ void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
         TESTCASE(1, testAPI);
         TESTCASE(2, testGreekWithFallback);
         TESTCASE(3, testGreekWithSanitization);
-        TESTCASE(4, testTimePeriods);
+        TESTCASE(4, testFormatPeriodEn);
+        TESTCASE(5, testTimePeriodForAmounts);
         default: name = ""; break;
     }
 }
@@ -351,36 +357,135 @@ void TimeUnitTest::testGreekWithSanitization() {
     delete timeUnitFormat;
 }
 
-void TimeUnitTest::testTimePeriods() {
-  // Print 5 days; 3 hours; 45 minutes
-  UErrorCode status = U_ZERO_ERROR;
-  TimeUnitAmount *amounts[3];
-  amounts[0] = new TimeUnitAmount(5.0, TimeUnit::UTIMEUNIT_DAY, status);
-  amounts[1] = new TimeUnitAmount(3.0, TimeUnit::UTIMEUNIT_HOUR, status);
-  amounts[2] = new TimeUnitAmount(45.0, TimeUnit::UTIMEUNIT_MINUTE, status);
-  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  TimePeriod *period = TimePeriod::forAmounts(amounts, len, status);
-  for (int32_t i = 0; i < len; i++) {
-    delete amounts[i];
-  }
-  TimeUnitFormat tuf(Locale::getEnglish(), status);
-  UnicodeString buffer;
-  tuf.formatTimePeriod(*period, buffer, status);
-  if (U_FAILURE(status)) {
-    dataerrln("Unable to format time period- %s", u_errorName(status));
-    return;
-  }
-  //  errln(buffer);
-  UBool hasDay = (period->getAmount(TimeUnit::UTIMEUNIT_DAY) != NULL);
-  const TimeUnitAmount* hour = period->getAmount(TimeUnit::UTIMEUNIT_HOUR);
-  if (hour != NULL) {
-    double hoursAsDouble = hour->getNumber().getDouble();
-  }
+void TimeUnitTest::testFormatPeriodEn() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<TimePeriod> _19m(create19m(status));
+    LocalPointer<TimePeriod> _19m28s(create19m28s(status));
+    LocalPointer<TimePeriod> _1h0m23s(create1h0m23s(status));
+    LocalPointer<TimePeriod> _1h23_5s(create1h23_5s(status));
+    LocalPointer<TimePeriod> _5h17m(create5h17m(status));
+    LocalPointer<TimePeriod> _2y5M3w4d(create2y5M3w4d(status));
+    if (U_FAILURE(status)) {
+      dataerrln("Unable to alocate time periods - %s", u_errorName(status));
+      return;
+    }
+  
+    TimePeriodResult fullResults[] = {
+        {_19m.getAlias(), "19 minutes"},
+        {_1h23_5s.getAlias(), "1 hour and 23.5 seconds"},
+        {_1h0m23s.getAlias(), "1 hour, 0 minutes, and 23 seconds"},
+        {_2y5M3w4d.getAlias(), "2 years, 5 months, 3 weeks, and 4 days"}};
+  
+    TimePeriodResult abbrevResults[] = {
+        {_19m.getAlias(), "19 mins"},
+        {_1h23_5s.getAlias(), "1 hr and 23.5 secs"},
+        {_1h0m23s.getAlias(), "1 hr, 0 mins, and 23 secs"},
+        {_2y5M3w4d.getAlias(), "2 yrs, 5 mths, 3 wks, and 4 days"}};
+  
+    TimePeriodResult numericResults[] = {
+        {_19m.getAlias(), "19 mins"},
+        {_1h23_5s.getAlias(), "1:00:23.5"},
+        {_1h0m23s.getAlias(), "1:00:23"},
+        {_5h17m.getAlias(), "5:17"},
+        {_19m28s.getAlias(), "19:28"},
+        {_2y5M3w4d.getAlias(), "2 yrs, 5 mths, 3 wks, and 4 days"}};
+  
+    {
+        TimeUnitFormat tuf(Locale::getEnglish(), UTMUTFMT_FULL_STYLE, status);
+        if (U_FAILURE(status)) {
+            dataerrln("Unable to create TimeUnitFormat object - %s", u_errorName(status));
+            return;
+        }
+        verifyFormatTimePeriod(
+            tuf,
+            fullResults,
+            sizeof(fullResults) / sizeof(TimePeriodResult));
+    }
+    {
+        TimeUnitFormat tuf(Locale::getEnglish(), UTMUTFMT_ABBREVIATED_STYLE, status);
+        if (U_FAILURE(status)) {
+            dataerrln("Unable to create TimeUnitFormat object - %s", u_errorName(status));
+            return;
+        }
+        verifyFormatTimePeriod(
+            tuf,
+            abbrevResults,
+            sizeof(abbrevResults) / sizeof(TimePeriodResult));
+    }
+    {
+        TimeUnitFormat tuf(Locale::getEnglish(), UTMUTFMT_NUMERIC_STYLE, status);
+        if (U_FAILURE(status)) {
+            dataerrln("Unable to create TimeUnitFormat object - %s", u_errorName(status));
+            return;
+        }
+        verifyFormatTimePeriod(
+            tuf,
+            numericResults,
+            sizeof(numericResults) / sizeof(TimePeriodResult));
+    }
+}
+
+void TimeUnitTest::testTimePeriodForAmounts() {
+    UErrorCode status = U_ZERO_ERROR;
+    TimeUnitAmount _5h(5.0, TimeUnit::UTIMEUNIT_HOUR, status);
+    TimeUnitAmount _3_5h(3.5, TimeUnit::UTIMEUNIT_HOUR, status);
+    TimeUnitAmount _3h(3.0, TimeUnit::UTIMEUNIT_HOUR, status);
+    TimeUnitAmount _5m(5.0, TimeUnit::UTIMEUNIT_MINUTE, status);
+    if (U_FAILURE(status)) {
+      dataerrln("Unable to alocate time unit amounts - %s", u_errorName(status));
+      return;
+    }
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        TimeUnitAmount *amounts[] = {&_3h, &_5h};
+        int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+        TimePeriod::forAmounts(amounts, len, status);
+        if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+            errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+        }
+    } 
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        TimePeriod::forAmounts(NULL, 0, status);
+        if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+            errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+        }
+    } 
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        TimeUnitAmount *amounts[] = {&_3_5h, &_5m};
+        int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+        TimePeriod::forAmounts(amounts, len, status);
+        if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+            errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+        }
+    } 
+}
+
+void TimeUnitTest::verifyFormatTimePeriod(
+        const TimeUnitFormat& tuf,
+        const TimePeriodResult* timePeriodResults,
+        int32_t numResults) {
+    for (int32_t i = 0; i < numResults; i++) {
+        UnicodeString expected(timePeriodResults[i].result, -1, US_INV);
+        expected = expected.unescape();
+        UnicodeString actual;
+        UErrorCode status = U_ZERO_ERROR;
+        tuf.formatTimePeriod(*timePeriodResults[i].timePeriod, actual, status);
+        if (U_FAILURE(status)) {
+            dataerrln("Unable to format time period - %s", u_errorName(status));
+            return;
+        }
+        if (actual != expected) {
+            errln(UnicodeString("Fail: Expected: ") + expected
+                + UnicodeString(" Got: ") + actual);
+        }
+    }
 }
 
 static TimePeriod *create19m(UErrorCode &status) {
   if (U_FAILURE(status)) {
-    return NULL;
+      return NULL;
   }
   TimeUnitAmount minutes(19.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount *amounts[] = {&minutes};
@@ -390,7 +495,7 @@ static TimePeriod *create19m(UErrorCode &status) {
 
 static TimePeriod *create19m28s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-    return NULL;
+      return NULL;
   }
   TimeUnitAmount minutes(19.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount seconds(28.0, TimeUnit::UTIMEUNIT_SECOND, status);
@@ -401,7 +506,7 @@ static TimePeriod *create19m28s(UErrorCode &status) {
 
 static TimePeriod *create1h23_5s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-    return NULL;
+      return NULL;
   }
   TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount seconds(23.5, TimeUnit::UTIMEUNIT_SECOND, status);
@@ -412,7 +517,7 @@ static TimePeriod *create1h23_5s(UErrorCode &status) {
 
 static TimePeriod *create1h0m23s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-    return NULL;
+      return NULL;
   }
   TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount minutes(0.0, TimeUnit::UTIMEUNIT_MINUTE, status);
@@ -424,7 +529,7 @@ static TimePeriod *create1h0m23s(UErrorCode &status) {
 
 static TimePeriod *create5h17m(UErrorCode &status) {
   if (U_FAILURE(status)) {
-    return NULL;
+      return NULL;
   }
   TimeUnitAmount hours(5.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount minutes(17.0, TimeUnit::UTIMEUNIT_MINUTE, status);
@@ -435,7 +540,7 @@ static TimePeriod *create5h17m(UErrorCode &status) {
 
 static TimePeriod *create2y5M3w4d(UErrorCode &status) {
   if (U_FAILURE(status)) {
-    return NULL;
+      return NULL;
   }
   TimeUnitAmount years(2.0, TimeUnit::UTIMEUNIT_YEAR, status);
   TimeUnitAmount months(5.0, TimeUnit::UTIMEUNIT_MONTH, status);
