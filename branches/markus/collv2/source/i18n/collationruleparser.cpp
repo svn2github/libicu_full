@@ -15,6 +15,7 @@
 
 #include "unicode/normalizer2.h"
 #include "unicode/parseerr.h"
+#include "unicode/ucol.h"
 #include "unicode/unistr.h"
 #include "unicode/utf16.h"
 #include "collation.h"
@@ -23,6 +24,8 @@
 #include "patternprops.h"
 #include "uassert.h"
 #include "uvectr32.h"
+
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 U_NAMESPACE_BEGIN
 
@@ -347,18 +350,198 @@ CollationRuleParser::parseString(int32_t i, UErrorCode &errorCode) {
     return i;
 }
 
+namespace {
+
+static const char *const positions[] = {
+    "first tertiary ignorable",
+    "last tertiary ignorable",
+    "first secondary ignorable",
+    "last secondary ignorable",
+    "first primary ignorable",
+    "last primary ignorable",
+    "first variable",
+    "last variable",
+    "first implicit",
+    "last implicit",
+    "first regular",
+    "last regular",
+    "first trailing",
+    "last trailing"
+};
+
+}  // namespace
+
 int32_t
 CollationRuleParser::parseSpecialPosition(int32_t i, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
-    errorCode = U_UNSUPPORTED_ERROR;  // TODO
-    // TODO: store special position as contraction U+FFFE + number
+    int32_t j = readWords(i);
+    if(j > i && rules->charAt(j) == 0x5d) {  // words end with ]
+        ++j;
+        for(int32_t pos = 0; pos < LENGTHOF(positions); ++pos) {
+            if(raw == UnicodeString(positions[pos], -1, US_INV)) {
+                str.setTo((UChar)POS_LEAD).append((UChar)(POS_BASE + pos));
+                return j;
+            }
+        }
+        if(raw == UNICODE_STRING_SIMPLE("top")) {
+            str.setTo((UChar)POS_LEAD).append((UChar)(POS_BASE + LAST_REGULAR));
+            return j;
+        }
+    }
+    setError("not a valid special reset position", errorCode);
     return i;
 }
 
 void
 CollationRuleParser::parseSetting(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
+    int32_t i = ruleIndex + 1;
+    int32_t j = readWords(i);
+    if(j > i) {
+        if(rules->charAt(j) == 0x5d) {  // words end with ]
+            ++j;
+            if(raw.startsWith(UNICODE_STRING_SIMPLE("reorder "))) {
+                parseReordering(errorCode);
+                return;
+            }
+            if(raw == UNICODE_STRING_SIMPLE("backwards 2")) {
+                settings->setFlag(CollationSettings::BACKWARD_SECONDARY,
+                                  UCOL_ON, 0, errorCode);
+                ruleIndex = j;
+                return;
+            }
+            UnicodeString v;
+            int32_t valueIndex = raw.lastIndexOf((UChar)0x20);
+            if(valueIndex >= 0) {
+                v.setTo(raw, valueIndex + 1);
+                raw.truncate(valueIndex);
+            }
+            if(raw == UNICODE_STRING_SIMPLE("strength") && v.length() == 1) {
+                int32_t value = UCOL_DEFAULT;
+                UChar c = v.charAt(0);
+                if(0x31 <= c && c <= 0x34) {  // 1..4
+                    value = UCOL_PRIMARY + (c - 0x31);
+                } else if(c == 0x49) {  // 'I'
+                    value = UCOL_IDENTICAL;
+                }
+                if(value != UCOL_DEFAULT) {
+                    settings->setStrength(value, 0, errorCode);
+                    ruleIndex = j;
+                    return;
+                }
+            } else if(raw == UNICODE_STRING_SIMPLE("alternate")) {
+                UColAttributeValue value = UCOL_DEFAULT;
+                if(v == UNICODE_STRING_SIMPLE("non-ignorable")) {
+                    value = UCOL_NON_IGNORABLE;
+                } else if(v == UNICODE_STRING_SIMPLE("shifted")) {
+                    value = UCOL_SHIFTED;
+                }
+                if(value != UCOL_DEFAULT) {
+                    settings->setAlternateHandling(value, 0, errorCode);
+                    ruleIndex = j;
+                    return;
+                }
+            } else if(raw == UNICODE_STRING_SIMPLE("caseFirst")) {
+                UColAttributeValue value = UCOL_DEFAULT;
+                if(v == UNICODE_STRING_SIMPLE("off")) {
+                    value = UCOL_OFF;
+                } else if(v == UNICODE_STRING_SIMPLE("lower")) {
+                    value = UCOL_LOWER_FIRST;
+                } else if(v == UNICODE_STRING_SIMPLE("upper")) {
+                    value = UCOL_UPPER_FIRST;
+                }
+                if(value != UCOL_DEFAULT) {
+                    settings->setCaseFirst(value, 0, errorCode);
+                    ruleIndex = j;
+                    return;
+                }
+            } else if(raw == UNICODE_STRING_SIMPLE("caseLevel")) {
+                UColAttributeValue value = getOnOffValue(v);
+                if(value != UCOL_DEFAULT) {
+                    settings->setFlag(CollationSettings::CASE_LEVEL, value, 0, errorCode);
+                    ruleIndex = j;
+                    return;
+                }
+            } else if(raw == UNICODE_STRING_SIMPLE("normalization")) {
+                UColAttributeValue value = getOnOffValue(v);
+                if(value != UCOL_DEFAULT) {
+                    settings->setFlag(CollationSettings::CHECK_FCD, value, 0, errorCode);
+                    ruleIndex = j;
+                    return;
+                }
+            } else if(raw == UNICODE_STRING_SIMPLE("numericOrdering")) {
+                UColAttributeValue value = getOnOffValue(v);
+                if(value != UCOL_DEFAULT) {
+                    settings->setFlag(CollationSettings::NUMERIC, value, 0, errorCode);
+                    ruleIndex = j;
+                    return;
+                }
+            } else if(raw == UNICODE_STRING_SIMPLE("hiraganaQ")) {
+                UColAttributeValue value = getOnOffValue(v);
+                if(value != UCOL_DEFAULT) {
+                    if(value == UCOL_ON) {
+                        setError("[hiraganaQ on] is not supported", errorCode);  // TODO
+                    }
+                    // TODO
+                    ruleIndex = j;
+                    return;
+                }
+            } else if(raw == UNICODE_STRING_SIMPLE("import")) {
+                // TODO
+            }
+        } else if(rules->charAt(j) == 0x5b) {  // words end with [
+            // TODO: parseUnicodeSet()
+            if(raw == UNICODE_STRING_SIMPLE("optimize")) {
+                // TODO
+            } else if(raw == UNICODE_STRING_SIMPLE("suppressContractions")) {
+                // TODO
+            }
+        }
+    }
+    setError("not a valid setting/option", errorCode);
+}
+
+void
+CollationRuleParser::parseReordering(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
     errorCode = U_UNSUPPORTED_ERROR;  // TODO
+    int32_t i = 8;  // after "reorder "
+}
+
+UColAttributeValue
+CollationRuleParser::getOnOffValue(const UnicodeString &s) {
+    if(s == UNICODE_STRING_SIMPLE("on")) {
+        return UCOL_ON;
+    } else if(s == UNICODE_STRING_SIMPLE("off")) {
+        return UCOL_OFF;
+    } else {
+        return UCOL_DEFAULT;
+    }
+}
+
+int32_t
+CollationRuleParser::readWords(int32_t i) {
+    static const UChar sp = 0x20;
+    raw.remove();
+    i = skipWhiteSpace(i);
+    for(;;) {
+        if(i >= rules->length()) { return 0; }
+        UChar c = rules->charAt(i);
+        if(isSyntaxChar(c) && c != 0x2d && c != 0x5f) {  // syntax except -_
+            if(raw.isEmpty()) { return 0; }
+            if(raw.endsWith(&sp, 1)) {  // remove trailing space
+                raw.truncate(raw.length() - 1);
+            }
+            return i;
+        }
+        if(PatternProps::isWhiteSpace(c)) {
+            raw.append(0x20);
+            i = skipWhiteSpace(i + 1);
+        } else {
+            raw.append(c);
+            ++i;
+        }
+    }
 }
 
 int32_t

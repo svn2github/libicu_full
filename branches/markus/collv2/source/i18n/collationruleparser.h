@@ -44,6 +44,38 @@ public:
         IDENTICAL
     };
 
+    /** Special reset positions. */
+    enum Position {
+        FIRST_TERTIARY_IGNORABLE,
+        LAST_TERTIARY_IGNORABLE,
+        FIRST_SECONDARY_IGNORABLE,
+        LAST_SECONDARY_IGNORABLE,
+        FIRST_PRIMARY_IGNORABLE,
+        LAST_PRIMARY_IGNORABLE,
+        FIRST_VARIABLE,
+        LAST_VARIABLE,
+        FIRST_IMPLICIT,
+        LAST_IMPLICIT,
+        FIRST_REGULAR,
+        LAST_REGULAR,
+        FIRST_TRAILING,
+        LAST_TRAILING
+    };
+
+    /**
+     * First character of contractions that encode special reset positions.
+     * U+FFFE cannot be tailored via rule syntax.
+     *
+     * The second contraction character is POS_BASE + Position.
+     */
+    static const UChar POS_LEAD = 0xfffe;
+    /**
+     * Base for the second character of contractions that encode special reset positions.
+     * Braille characters U+28xx are printable and normalization-inert.
+     * @see POS_LEAD
+     */
+    static const UChar POS_BASE = 0x2800;
+
     CollationRuleParser(UErrorCode &errorCode);
     ~CollationRuleParser();
 
@@ -55,6 +87,19 @@ public:
     UBool modifiesSettings() const { return TRUE; }  // TODO
     UBool modifiesMappings() const { return TRUE; }  // TODO
 
+    // TODO: Random access API
+    int32_t findReset(int32_t start) const { return -1; }
+    int32_t findRelation(Relation relation, int32_t start) const { return 0; }  // up to any stronger relation
+    int32_t countMaxRelation(int32_t start) const { return 0; }  // (count << 4) | maxRelation, up to end of rule chain
+    int32_t countRelation(Relation relation, int32_t start) const { return 0; }  // up to any stronger relation
+
+    Relation getRelationAndSetStrings(int32_t i) const { return NO_RELATION; }
+    UBool hasPrefix() const { return !prefix.isEmpty(); }
+    UBool hasExpansion() const { return !expansion.isEmpty(); }
+    const UnicodeString &getPrefix() const { return prefix; }
+    const UnicodeString &getString() const { return str; }
+    const UnicodeString &getExpansion() const { return expansion; }
+
 private:
     void parse(const UnicodeString &ruleString, UErrorCode &errorCode);
     void parseRuleChain(UErrorCode &errorCode);
@@ -65,9 +110,16 @@ private:
     int32_t parseTailoringString(int32_t i, UErrorCode &errorCode);
     int32_t parseString(int32_t i, UErrorCode &errorCode);
 
+    /**
+     * Sets str to a contraction of U+FFFE and (U+2800 + Position).
+     * @return rule index after the special reset position
+     */
     int32_t parseSpecialPosition(int32_t i, UErrorCode &errorCode);
     void parseSetting(UErrorCode &errorCode);
+    void parseReordering(UErrorCode &errorCode);
+    static UColAttributeValue getOnOffValue(const UnicodeString &s);
 
+    int32_t readWords(int32_t i);
     int32_t skipComment(int32_t i) const;
 
     void makeAndInsertToken(int32_t relation, UErrorCode &errorCode);
