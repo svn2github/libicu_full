@@ -212,6 +212,12 @@ void DecimalFormatStaticSets::initSets(UErrorCode *status)
     }
 }
 
+const DecimalFormatStaticSets *DecimalFormatStaticSets::getStaticSets(UErrorCode &status) {
+    initSets(&status);
+    return gStaticSets;
+}
+
+
 const UnicodeSet *DecimalFormatStaticSets::getSimilarDecimals(UChar32 decimal, UBool strictParse)
 {
     UErrorCode status = U_ZERO_ERROR;

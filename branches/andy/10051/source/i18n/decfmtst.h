@@ -25,15 +25,20 @@ class  UnicodeSet;
 
 class DecimalFormatStaticSets : public UMemory
 {
-public:
+private:
     static DecimalFormatStaticSets *gStaticSets;  // Ptr to all lazily initialized constant
                                                   //   shared sets.
-
     DecimalFormatStaticSets(UErrorCode *status);
     ~DecimalFormatStaticSets();
 
     static void    initSets(UErrorCode *status);
+public:
     static UBool   cleanup();
+
+    /**
+      * Return a pointer to a lazy-initialized singleton instance of this class.
+      */
+    static const DecimalFormatStaticSets *getStaticSets(UErrorCode &status);
 
     static const UnicodeSet *getSimilarDecimals(UChar32 decimal, UBool strictParse);
 

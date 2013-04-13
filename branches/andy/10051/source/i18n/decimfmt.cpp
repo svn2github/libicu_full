@@ -382,8 +382,9 @@ DecimalFormat::init(UErrorCode &status) {
     data.fFastFormatStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
     data.fFastParseStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
 #endif
-    // only do this once per obj.
-    DecimalFormatStaticSets::initSets(&status);
+    // If there is going to be an error from getting the static sets, find out about it now,
+    //   not later when we are trying to use them.
+    DecimalFormatStaticSets::getStaticSets(status);
 }
 
 //------------------------------------------------------------------------------
@@ -2423,10 +2424,11 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         }
 
         if (groupingCharLength == groupingStringLength) {
+            UErrorCode status = U_ZERO_ERROR;
             if (strictParse) {
-                groupingSet = DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators;
+                groupingSet = DecimalFormatStaticSets::getStaticSets(status)->fStrictDefaultGroupingSeparators;
             } else {
-                groupingSet = DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators;
+                groupingSet = DecimalFormatStaticSets::getStaticSets(status)->fDefaultGroupingSeparators;
             }
         }
 
@@ -2829,9 +2831,10 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     int32_t inputLength = input.length();
     int32_t affixCharLength = U16_LENGTH(affixChar);
     UnicodeSet *affixSet;
+    UErrorCode status = U_ZERO_ERROR;
 
     if (!lenient) {
-        affixSet = DecimalFormatStaticSets::gStaticSets->fStrictDashEquivalents;
+        affixSet = DecimalFormatStaticSets::getStaticSets(status)->fStrictDashEquivalents;
         
         // If the affix is exactly one character long and that character
         // is in the dash set and the very next input character is also
@@ -2897,7 +2900,7 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     } else {
         UBool match = FALSE;
         
-        affixSet = DecimalFormatStaticSets::gStaticSets->fDashEquivalents;
+        affixSet = DecimalFormatStaticSets::getStaticSets(status)->fDashEquivalents;
 
         if (affixCharLength == affixLength && affixSet->contains(affixChar))  {
             pos = skipUWhiteSpace(input, pos);
