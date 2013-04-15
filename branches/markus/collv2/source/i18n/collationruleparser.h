@@ -20,29 +20,53 @@
 #include "unicode/unistr.h"
 #include "uvectr32.h"
 
+struct UParseError;
+
 U_NAMESPACE_BEGIN
 
 class Normalizer2;
 class UVector32;
 
 struct CollationSettings;
-struct UParseError;
 
 class U_I18N_API CollationRuleParser : public UMemory {
 public:
-    /** "Stronger" relations must have lower numeric values. */
-    enum Relation {
-        /** Sentinel value. The token integer should be zero. */
-        NO_RELATION,
-        /** Reset-before; its before-strength is determined by the following relation. */
-        RESET_BEFORE,
-        RESET_AT,
-        PRIMARY,
-        SECONDARY,
-        TERTIARY,
-        QUATERNARY,
-        IDENTICAL
-    };
+    /** Token bits 31..8 contain the code point or negative string index. */
+    static const int32_t VALUE_SHIFT = 8;
+    /** Maximum non-negative value (23 bits). */
+    static const int32_t MAX_VALUE = 0x7fffff;
+    // Token bit 7 is unused.
+    /** Token bit 6: The token has an expansion string (e in p|s/e). */
+    static const int32_t HAS_EXPANSION = 0x40;
+    /** Token bit 5: The token has a contraction string (s has >1 code points in p|s/e). */
+    static const int32_t HAS_CONTRACTION = 0x20;
+    /** Token bit 4: The token has a prefix string (p in p|s/e). */
+    static const int32_t HAS_PREFIX = 0x10;
+    /** Token bit 3: Difference relation, not a reset. (Reset compares lower.) */
+    static const int32_t DIFF = 8;
+    /**
+     * Token bits 2..0 contain the relation strength value.
+     * "Stronger" relations must compare lower.
+     * When DIFF is not set, this is the reset-before strength.
+     */
+    static const int32_t STRENGTH_MASK = 7;
+
+    /** DIFF & strength together define the relation. */
+    static const int32_t RELATION_MASK = DIFF | STRENGTH_MASK;
+    /** All HAS_XYZ bits. If none are set, then the token value is the code point. */
+    static const int32_t HAS_STRINGS = HAS_EXPANSION | HAS_CONTRACTION | HAS_PREFIX;
+    /** The token has a contraction and/or a prefix. */
+    static const int32_t HAS_CONTEXT = HAS_CONTRACTION | HAS_PREFIX;
+
+    /** Sentinel value. The token integer should be zero. */
+    static const int32_t NO_RELATION = 0;
+    static const int32_t PRIMARY = 1;
+    static const int32_t SECONDARY = 2;
+    static const int32_t TERTIARY = 3;
+    static const int32_t QUATERNARY = 4;
+    /** Used for reset-at (without DIFF) and identical relation (with DIFF). */
+    static const int32_t IDENTICAL = 5;
+    // Strength values 6 & 7 are unused.
 
     /** Special reset positions. */
     enum Position {
@@ -84,18 +108,18 @@ public:
                UParseError *outParseError,
                UErrorCode &errorCode);
 
+    const char *getErrorReason() const { return errorReason; }
+
     UBool modifiesSettings() const { return TRUE; }  // TODO
     UBool modifiesMappings() const { return TRUE; }  // TODO
 
     // TODO: Random access API
     int32_t findReset(int32_t start) const { return -1; }
-    int32_t findRelation(Relation relation, int32_t start) const { return 0; }  // up to any stronger relation
-    int32_t countMaxRelation(int32_t start) const { return 0; }  // (count << 4) | maxRelation, up to end of rule chain
-    int32_t countRelation(Relation relation, int32_t start) const { return 0; }  // up to any stronger relation
+    int32_t findRelation(int32_t strength, int32_t start) const { return 0; }  // up to any stronger relation
+    int32_t countRelationMaxStrength(int32_t start) const { return 0; }  // (count << 4) | maxStrength, up to end of rule chain
+    int32_t countRelation(int32_t strength, int32_t start) const { return 0; }  // up to any stronger relation
 
-    Relation getRelationAndSetStrings(int32_t i) const { return NO_RELATION; }
-    UBool hasPrefix() const { return !prefix.isEmpty(); }
-    UBool hasExpansion() const { return !expansion.isEmpty(); }
+    int32_t getTokenAndSetStrings(int32_t i) { return NO_RELATION; }
     const UnicodeString &getPrefix() const { return prefix; }
     const UnicodeString &getString() const { return str; }
     const UnicodeString &getExpansion() const { return expansion; }
@@ -105,10 +129,10 @@ private:
     void parseRuleChain(UErrorCode &errorCode);
     int32_t parseResetAndPosition(UErrorCode &errorCode);
     int32_t parseRelationOperator(UErrorCode &errorCode);
-    void parseRelationStrings(int32_t i, UErrorCode &errorCode);
-    void parseStarredCharacters(int32_t relation, int32_t i, UErrorCode &errorCode);
+    void parseRelationStrings(int32_t strength, int32_t i, UErrorCode &errorCode);
+    void parseStarredCharacters(int32_t strength, int32_t i, UErrorCode &errorCode);
     int32_t parseTailoringString(int32_t i, UErrorCode &errorCode);
-    int32_t parseString(int32_t i, UErrorCode &errorCode);
+    int32_t parseString(int32_t i, UBool allowDash, UErrorCode &errorCode);
 
     /**
      * Sets str to a contraction of U+FFFE and (U+2800 + Position).
@@ -126,19 +150,6 @@ private:
     void resetTailoringStrings();
 
     void setError(const char *reason, UErrorCode &errorCode);
-
-    /** Token bits 31..10 contain the code point or negative string index. */
-    static const int32_t VALUE_SHIFT = 10;
-    /** Maximum non-negative value (21 bits). */
-    static const int32_t MAX_VALUE = 0x1fffff;
-    /** Token bit 9 is set if the token string is followed by an expansion string. */
-    static const int32_t HAS_EXPANSION = 0x200;
-    /** Token bits 8..3 contain the sum of the lengths of prefix & contraction (max 31+31). */
-    static const int32_t LENGTHS_SUM_SHIFT = 3;
-    /** Mask after shifting. */
-    static const int32_t LENGTHS_SUM_MASK = 0x3f;
-    /** Token bits 2..0 contain the relation strength value. */
-    static const int32_t RELATION_MASK = 7;
 
     /**
      * ASCII [:P:] and [:S:]:

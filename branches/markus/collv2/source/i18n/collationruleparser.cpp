@@ -57,7 +57,12 @@ CollationRuleParser::parse(const UnicodeString &ruleString,
     if(U_FAILURE(errorCode)) { return; }
     settings = &outSettings;
     parseError = outParseError;
-    // TODO: reset parseError
+    if(parseError != NULL) {
+        parseError->line = 0;
+        parseError->offset = 0;
+        parseError->preContext[0] = 0;
+        parseError->postContext[0] = 0;
+    }
     errorReason = NULL;
     tokens.removeAllElements();
     tokens.addElement(0, errorCode);  // sentinel
@@ -122,24 +127,25 @@ CollationRuleParser::parseRuleChain(UErrorCode &errorCode) {
             }
             return;
         }
-        int32_t relation = result & RELATION_MASK;
-        if(resetStrength >= PRIMARY) {
+        int32_t strength = result & STRENGTH_MASK;
+        if(resetStrength < IDENTICAL) {
             // reset-before rule chain
             if(isFirstRelation) {
-                if(relation != resetStrength) {
+                if(strength != resetStrength) {
                     setError("reset-before strength differs from its first relation", errorCode);
                     return;
                 }
             } else {
-                if(relation < resetStrength) {
+                if(strength < resetStrength) {
                     setError("reset-before strength followed by a stronger relation", errorCode);
                     return;
                 }
             }
         }
         int32_t i = ruleIndex + (result >> 8);  // skip over the relation operator
+        int32_t relation = result & RELATION_MASK;
         if((result & 0x10) == 0) {
-            parseRelationStrings(i, errorCode);
+            parseRelationStrings(relation, i, errorCode);
         } else {
             parseStarredCharacters(relation, i, errorCode);
         }
@@ -154,7 +160,7 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
     int32_t i = skipWhiteSpace(ruleIndex + 1);
     int32_t j;
     UChar c;
-    int32_t relation, resetStrength;
+    int32_t resetStrength;
     if(rules->compare(i, BEFORE_LENGTH, BEFORE, 0, BEFORE_LENGTH) == 0 &&
             (j = i + BEFORE_LENGTH) < rules->length() &&
             PatternProps::isWhiteSpace(rules->charAt(j)) &&
@@ -162,11 +168,10 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
             0x31 <= (c = rules->charAt(j)) && c <= 0x33 &&
             rules->charAt(j + 1) == 0x5d) {
         // &[before n] with n=1 or 2 or 3
-        relation = RESET_BEFORE;
         resetStrength = PRIMARY + (c - 0x31);
         i = skipWhiteSpace(j + 2);
     } else {
-        relation = resetStrength = RESET_AT;
+        resetStrength = IDENTICAL;
     }
     if(i >= rules->length()) {
         setError("reset without position", errorCode);
@@ -179,7 +184,9 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
         i = parseTailoringString(i, errorCode);
         fcc.normalize(raw, str, errorCode);
     }
-    makeAndInsertToken(relation, errorCode);
+    // TODO: find and merge new reset into existing rule chain before makeAndInsertToken()
+    // TODO: look back from the old one: if it is in a reset-before chain, then return its before-strength
+    makeAndInsertToken(resetStrength, errorCode);
     ruleIndex = i;
     return resetStrength;
 }
@@ -187,7 +194,7 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
 int32_t
 CollationRuleParser::parseRelationOperator(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode) || ruleIndex >= rules->length()) { return NO_RELATION; }
-    int32_t relation;
+    int32_t strength;
     int32_t i = ruleIndex;
     UChar c = rules->charAt(i++);
     switch(c) {
@@ -196,39 +203,39 @@ CollationRuleParser::parseRelationOperator(UErrorCode &errorCode) {
             ++i;
             if(i < rules->length() && rules->charAt(i) == 0x3c) {  // <<<
                 ++i;
-                relation = TERTIARY;
+                strength = TERTIARY;
             } else {
-                relation = SECONDARY;
+                strength = SECONDARY;
             }
         } else {
-            relation = PRIMARY;
+            strength = PRIMARY;
         }
         if(i < rules->length() && rules->charAt(i) == 0x2a) {  // '*'
             ++i;
-            relation |= 0x10;
+            strength |= 0x10;
         }
         break;
     case 0x3b:  // ';' same as <<
-        relation = SECONDARY;
+        strength = SECONDARY;
         break;
     case 0x2c:  // ',' same as <<<
-        relation = TERTIARY;
+        strength = TERTIARY;
         break;
     case 0x3d:  // '='
-        relation = IDENTICAL;
+        strength = IDENTICAL;
         if(i < rules->length() && rules->charAt(i) == 0x2a) {  // '*'
             ++i;
-            relation |= 0x10;
+            strength |= 0x10;
         }
         break;
     default:
         return NO_RELATION;
     }
-    return relation | ((i - ruleIndex) << 8);
+    return ((i - ruleIndex) << 8) | DIFF | strength;
 }
 
 void
-CollationRuleParser::parseRelationStrings(int32_t i, UErrorCode &errorCode) {
+CollationRuleParser::parseRelationStrings(int32_t relation, int32_t i, UErrorCode &errorCode) {
     // Parse
     //     prefix | str / expansion
     // where prefix and expansion are optional.
@@ -248,30 +255,60 @@ CollationRuleParser::parseRelationStrings(int32_t i, UErrorCode &errorCode) {
         fcc.normalize(raw, expansion, errorCode);
     }
     // TODO: if(!prefix.isEmpty()) { check that prefix and str start with hasBoundaryBefore }
+    makeAndInsertToken(relation, errorCode);
     ruleIndex = i;
 }
 
 void
 CollationRuleParser::parseStarredCharacters(int32_t relation, int32_t i, UErrorCode &errorCode) {
     resetTailoringStrings();
-    i = parseString(i, errorCode);
+    i = parseString(i, TRUE, errorCode);
     if(U_FAILURE(errorCode)) { return; }
+    UChar32 prev = -1;
     for(int32_t j = 0; j < raw.length() && U_SUCCESS(errorCode);) {
         UChar32 c = raw.char32At(j);
-        if(!nfd.isInert(c)) {
-            setError("starred-relation string is not all NFD-inert", errorCode);
-            return;
+        if(c != 0x2d) {  // '-'
+            if(!nfd.isInert(c)) {
+                setError("starred-relation string is not all NFD-inert", errorCode);
+                return;
+            }
+            str.setTo(c);
+            makeAndInsertToken(relation, errorCode);
+            j += U16_LENGTH(c);
+            prev = c;
+        } else {
+            if(prev < 0) {
+                setError("range without start in starred-relation string", errorCode);
+                return;
+            }
+            if(++j == raw.length()) {
+                setError("range without end in starred-relation string", errorCode);
+                return;
+            }
+            c = raw.char32At(j);
+            if(!nfd.isInert(c)) {
+                setError("starred-relation string is not all NFD-inert", errorCode);
+                return;
+            }
+            if(c < prev) {
+                setError("range start greater than end in starred-relation string", errorCode);
+                return;
+            }
+            j += U16_LENGTH(c);
+            // range prev-c
+            while(++prev <= c) {
+                str.setTo(prev);
+                makeAndInsertToken(relation, errorCode);
+            }
+            prev = -1;
         }
-        str.setTo(c);
-        makeAndInsertToken(relation, errorCode);
-        j += U16_LENGTH(c);
     }
     ruleIndex = i;
 }
 
 int32_t
 CollationRuleParser::parseTailoringString(int32_t i, UErrorCode &errorCode) {
-    i = parseString(i, errorCode);
+    i = parseString(i, FALSE, errorCode);
     int32_t nfdLength = nfd.normalize(raw, errorCode).length();
     if(nfdLength > 31) {  // Limited by token string encoding.
         setError("tailoring string too long", errorCode);
@@ -280,7 +317,7 @@ CollationRuleParser::parseTailoringString(int32_t i, UErrorCode &errorCode) {
 }
 
 int32_t
-CollationRuleParser::parseString(int32_t i, UErrorCode &errorCode) {
+CollationRuleParser::parseString(int32_t i, UBool allowDash, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return i; }
     raw.remove();
     for(i = skipWhiteSpace(i); i < rules->length();) {
@@ -293,23 +330,23 @@ CollationRuleParser::parseString(int32_t i, UErrorCode &errorCode) {
                     ++i;
                     continue;
                 }
-                // Find the end of the quoted literal text.
+                // Quote literal text until the next single apostrophe.
                 for(;;) {
-                    int32_t j = rules->indexOf(0x27, i);
-                    if(j < 0) {
+                    if(i == rules->length()) {
                         setError("quoted literal text missing terminating apostrophe", errorCode);
                         return i;
                     }
-                    raw.append(*rules, i, j - i);
-                    i = j + 1;
-                    if(i < rules->length() && rules->charAt(i) == 0x27) {
-                        // Double apostrophe inside quoted literal text,
-                        // still encodes a single apostrophe.
-                        raw.append((UChar)0x27);
-                        ++i;
-                    } else {
-                        break;
+                    c = rules->charAt(i++);
+                    if(c == 0x27) {
+                        if(i < rules->length() && rules->charAt(i) == 0x27) {
+                            // Double apostrophe inside quoted literal text,
+                            // still encodes a single apostrophe.
+                            ++i;
+                        } else {
+                            break;
+                        }
                     }
+                    raw.append((UChar)c);
                 }
             } else if(c == 0x5c) {  // backslash
                 if(i == rules->length()) {
@@ -319,6 +356,8 @@ CollationRuleParser::parseString(int32_t i, UErrorCode &errorCode) {
                 c = rules->char32At(i);
                 raw.append(c);
                 i += U16_LENGTH(c);
+            } else if(c == 0x2d && allowDash) {  // '-'
+                raw.append((UChar)c);
             } else {
                 // Any other syntax character terminates a string.
                 break;
@@ -385,6 +424,10 @@ CollationRuleParser::parseSpecialPosition(int32_t i, UErrorCode &errorCode) {
         }
         if(raw == UNICODE_STRING_SIMPLE("top")) {
             str.setTo((UChar)POS_LEAD).append((UChar)(POS_BASE + LAST_REGULAR));
+            return j;
+        }
+        if(raw == UNICODE_STRING_SIMPLE("variable top")) {
+            str.setTo((UChar)POS_LEAD).append((UChar)(POS_BASE + LAST_VARIABLE));
             return j;
         }
     }
@@ -546,6 +589,7 @@ CollationRuleParser::readWords(int32_t i) {
 
 int32_t
 CollationRuleParser::skipComment(int32_t i) const {
+    // skip to past the newline
     while(i < rules->length()) {
         UChar c = rules->charAt(i++);
         // LF or FF or CR or NEL or LS or PS
@@ -562,20 +606,25 @@ CollationRuleParser::skipComment(int32_t i) const {
 void
 CollationRuleParser::makeAndInsertToken(int32_t relation, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    U_ASSERT(NO_RELATION < relation && relation <= IDENTICAL);
+    U_ASSERT(NO_RELATION < (relation & STRENGTH_MASK) && (relation & STRENGTH_MASK) <= IDENTICAL);
+    U_ASSERT((relation & ~RELATION_MASK) == 0);
+    U_ASSERT(!str.isEmpty());
     // Find the tailoring in a previous rule chain.
     // Merge the new relation with any existing one for prefix+str.
     // If new, then encode the relation and tailoring strings into a token word,
     // and insert the token at tokenIndex.
     int32_t token = relation;
-    U_ASSERT(!str.isEmpty());
-    UChar32 c;
-    if(prefix.isEmpty() && !str.hasMoreChar32Than(0, 0x7fffffff, 1)) {
-        c = str.char32At(0);
-    } else {
-        c = -1;
+    if(!prefix.isEmpty()) {
+        token |= HAS_PREFIX;
     }
-    if(c >= 0 && expansion.isEmpty()) {
+    if(str.hasMoreChar32Than(0, 0x7fffffff, 1)) {
+        token |= HAS_CONTRACTION;
+    }
+    if(!expansion.isEmpty()) {
+        token |= HAS_EXPANSION;
+    }
+    UChar32 c = str.char32At(0);
+    if((token & HAS_STRINGS) == 0) {
         if(tailoredSet.contains(c)) {
             // TODO: search for existing token
         } else {
@@ -583,14 +632,15 @@ CollationRuleParser::makeAndInsertToken(int32_t relation, UErrorCode &errorCode)
         }
         token |= c << VALUE_SHIFT;
     } else {
-        UnicodeString s;
-        int32_t lengthsWord = (prefix.length() << 8) | str.length();
-        s.append((UChar)lengthsWord).append(prefix).append(str);
-        int32_t lengthsSum = prefix.length() + str.length();  // need 6 bits for max 31+31
-        token |= lengthsSum << LENGTHS_SUM_SHIFT;
-        if(c >= 0 ? tailoredSet.contains(c) : tailoredSet.contains(s)) {
+        // The relation maps from str if preceded by the prefix. Look for a duplicate.
+        // We ignore the expansion because that adds to the CEs for the relation
+        // but is not part of what is being tailored (what is mapped *from*).
+        UnicodeString s(prefix);
+        s.append(str);
+        int32_t lengthsWord = prefix.length() | (str.length() << 5);
+        if((token & HAS_CONTEXT) == 0 ? tailoredSet.contains(c) : tailoredSet.contains(s)) {
             // TODO: search for existing token
-        } else if(c >= 0) {
+        } else if((token & HAS_CONTEXT) == 0) {
             tailoredSet.add(c);
         } else {
             tailoredSet.add(s);
@@ -600,14 +650,11 @@ CollationRuleParser::makeAndInsertToken(int32_t relation, UErrorCode &errorCode)
             setError("total tailoring strings overflow", errorCode);
             return;
         }
-        token |= ~value << VALUE_SHIFT;
-        tokenStrings.append(s);
-        if(!expansion.isEmpty()) {
-            token |= HAS_EXPANSION;
-            tokenStrings.append((UChar)expansion.length()).append(expansion);
-        }
+        token |= ~value << VALUE_SHIFT;  // negative
+        lengthsWord |= (expansion.length() << 10);
+        tokenStrings.append((UChar)lengthsWord).append(s).append(expansion);
     }
-    if(relation >= PRIMARY) {
+    if((relation & DIFF) != 0) {
         // Postpone insertion:
         // Insert the new relation before the next token with a relation at least as strong.
         // Stops before resets and the sentinel.
@@ -636,12 +683,35 @@ CollationRuleParser::setError(const char *reason, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     errorCode = U_PARSE_ERROR;
     errorReason = reason;
-    if(parseError != NULL) {
-        // Note: This relies on the calling code maintaining the ruleIndex
-        // at a position that is useful for debugging.
-        // For example, at the beginning of a reset or relation etc.
-        // TODO
+    if(parseError == NULL) { return; }
+
+    // Note: This relies on the calling code maintaining the ruleIndex
+    // at a position that is useful for debugging.
+    // For example, at the beginning of a reset or relation etc.
+    parseError->offset = ruleIndex;
+    parseError->line = 0;  // We are not counting line numbers.
+
+    // before ruleIndex
+    int32_t start = ruleIndex - (U_PARSE_CONTEXT_LEN - 1);
+    if(start < 0) {
+        start = 0;
+    } else if(start > 0 && U16_IS_TRAIL(rules->charAt(start))) {
+        ++start;
     }
+    int32_t length = ruleIndex - start;
+    rules->extract(start, length, parseError->preContext);
+    parseError->preContext[length] = 0;
+
+    // starting from ruleIndex
+    length = rules->length() - ruleIndex;
+    if(length >= U_PARSE_CONTEXT_LEN) {
+        length = U_PARSE_CONTEXT_LEN - 1;
+        if(U16_IS_LEAD(rules->charAt(ruleIndex + length - 1))) {
+            --length;
+        }
+    }
+    rules->extract(ruleIndex, length, parseError->postContext);
+    parseError->postContext[length] = 0;
 }
 
 UBool
