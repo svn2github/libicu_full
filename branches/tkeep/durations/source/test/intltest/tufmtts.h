@@ -59,6 +59,8 @@ public:
 
     void testTimePeriodForAmounts();
 
+    void testTimeUnitAmountSubClass();
+
     void verifyFormatTimePeriod(
         const TimeUnitFormat& tuf,
         const TimePeriodResult* timePeriodResults,

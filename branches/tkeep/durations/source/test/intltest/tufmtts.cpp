@@ -26,6 +26,27 @@ struct TimePeriodResult {
     const char* result;
 };
 
+class TimeUnitAmountSubClass : public TimeUnitAmount {
+  public:
+    TimeUnitAmountSubClass(double amount, TimeUnit::UTimeUnitFields timeUnitField, int ex, UErrorCode &status) : TimeUnitAmount(amount, timeUnitField, status), extra(ex) { }
+
+    TimeUnitAmountSubClass(const TimeUnitAmountSubClass &that)
+    : TimeUnitAmount(that), extra(that.extra) { }
+
+    TimeUnitAmountSubClass &operator=(const TimeUnitAmountSubClass &that) {
+      TimeUnitAmount::operator=(that);
+      extra = that.extra;
+      return *this;
+    }
+
+    virtual UObject* clone() const {
+      return new TimeUnitAmountSubClass(*this);
+    }
+
+    virtual ~TimeUnitAmountSubClass() { }
+    int extra;
+};
+
 static TimePeriod *create19m(UErrorCode &status);
 static TimePeriod *create19m28s(UErrorCode &status);
 static TimePeriod *create1h23_5s(UErrorCode &status);
@@ -42,6 +63,7 @@ void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
         TESTCASE(3, testGreekWithSanitization);
         TESTCASE(4, testFormatPeriodEn);
         TESTCASE(5, testTimePeriodForAmounts);
+        TESTCASE(6, testTimeUnitAmountSubClass);
         default: name = ""; break;
     }
 }
@@ -458,6 +480,25 @@ void TimeUnitTest::testTimePeriodForAmounts() {
         TimePeriod::forAmounts(amounts, len, status);
         if (status != U_ILLEGAL_ARGUMENT_ERROR) {
             errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+        }
+    } 
+}
+
+void TimeUnitTest::testTimeUnitAmountSubClass() {
+    UErrorCode status = U_ZERO_ERROR;
+    TimeUnitAmountSubClass _6h(6.0, TimeUnit::UTIMEUNIT_HOUR, 1, status);
+    TimeUnitAmountSubClass _5m(5.0, TimeUnit::UTIMEUNIT_MINUTE, 2, status);
+    if (U_FAILURE(status)) {
+      dataerrln("Unable to alocate time unit amounts - %s", u_errorName(status));
+      return;
+    }
+    {
+        UErrorCode status = U_ZERO_ERROR;
+        TimeUnitAmount *amounts[] = {&_6h, &_5m};
+        int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+        LocalPointer<TimePeriod> period(TimePeriod::forAmounts(amounts, len, status));
+        if (2 != ((const TimeUnitAmountSubClass *) period->getAmount(TimeUnit::UTIMEUNIT_MINUTE))->extra) {
+            errln("Expected polymorphic behavior.");
         }
     } 
 }
