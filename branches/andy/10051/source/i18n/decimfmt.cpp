@@ -269,7 +269,7 @@ inline int32_t _max(int32_t a, int32_t b) { return (a<b) ? b : a; }
 // Constructs a DecimalFormat instance in the default locale.
 
 DecimalFormat::DecimalFormat(UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     construct(status, parseError);
 }
@@ -280,7 +280,7 @@ DecimalFormat::DecimalFormat(UErrorCode& status) {
 
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     construct(status, parseError, &pattern);
 }
@@ -293,7 +293,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
                              UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -304,7 +304,7 @@ DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
                     DecimalFormatSymbols* symbolsToAdopt,
                     UParseError& parseErr,
                     UErrorCode& status) {
-    init(status);
+    init();
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
     construct(status,parseErr, &pattern, symbolsToAdopt);
@@ -318,7 +318,7 @@ DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              const DecimalFormatSymbols& symbols,
                              UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     construct(status, parseError, &pattern, new DecimalFormatSymbols(symbols));
 }
@@ -332,7 +332,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
                              UNumberFormatStyle style,
                              UErrorCode& status) {
-    init(status);
+    init();
     fStyle = style;
     UParseError parseError;
     construct(status, parseError, &pattern, symbolsToAdopt);
@@ -342,8 +342,10 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 // Common DecimalFormat initialization.
 //    Put all fields of an uninitialized object into a known state.
 //    Common code, shared by all constructors.
+//    Can not fail. Leave the object in good enough shape that the destructor
+//    or assignment operator can run successfully.
 void
-DecimalFormat::init(UErrorCode &status) {
+DecimalFormat::init() {
     fPosPrefixPattern = 0;
     fPosSuffixPattern = 0;
     fNegPrefixPattern = 0;
@@ -382,9 +384,7 @@ DecimalFormat::init(UErrorCode &status) {
     data.fFastFormatStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
     data.fFastParseStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
 #endif
-    // If there is going to be an error from getting the static sets, find out about it now,
-    //   not later when we are trying to use them.
-    DecimalFormatStaticSets::getStaticSets(status);
+    fStaticSets = NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -393,7 +393,7 @@ DecimalFormat::init(UErrorCode &status) {
 // created instance owns the symbols.
 
 void
-DecimalFormat::construct(UErrorCode&             status,
+DecimalFormat::construct(UErrorCode&            status,
                          UParseError&           parseErr,
                          const UnicodeString*   pattern,
                          DecimalFormatSymbols*  symbolsToAdopt)
@@ -418,11 +418,14 @@ DecimalFormat::construct(UErrorCode&             status,
     if (fSymbols == NULL)
     {
         fSymbols = new DecimalFormatSymbols(Locale::getDefault(), status);
-        /* test for NULL */
         if (fSymbols == 0) {
             status = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
+    }
+    fStaticSets = DecimalFormatStaticSets::getStaticSets(status);
+    if (U_FAILURE(status)) {
+        return;
     }
     UErrorCode nsStatus = U_ZERO_ERROR;
     NumberingSystem *ns = NumberingSystem::createInstance(nsStatus);
@@ -696,8 +699,7 @@ DecimalFormat::~DecimalFormat()
 
 DecimalFormat::DecimalFormat(const DecimalFormat &source) :
     NumberFormat(source) {
-    UErrorCode status = U_ZERO_ERROR;
-    init(status); // if this fails, 'source' isn't initialized properly either.
+    init();
     *this = source;
 }
 
@@ -730,7 +732,9 @@ DecimalFormat&
 DecimalFormat::operator=(const DecimalFormat& rhs)
 {
     if(this != &rhs) {
+        UErrorCode status = U_ZERO_ERROR;
         NumberFormat::operator=(rhs);
+        fStaticSets     = DecimalFormatStaticSets::getStaticSets(status);
         fPositivePrefix = rhs.fPositivePrefix;
         fPositiveSuffix = rhs.fPositiveSuffix;
         fNegativePrefix = rhs.fNegativePrefix;
@@ -2424,11 +2428,10 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
         }
 
         if (groupingCharLength == groupingStringLength) {
-            UErrorCode status = U_ZERO_ERROR;
             if (strictParse) {
-                groupingSet = DecimalFormatStaticSets::getStaticSets(status)->fStrictDefaultGroupingSeparators;
+                groupingSet = fStaticSets->fStrictDefaultGroupingSeparators;
             } else {
-                groupingSet = DecimalFormatStaticSets::getStaticSets(status)->fDefaultGroupingSeparators;
+                groupingSet = fStaticSets->fDefaultGroupingSeparators;
             }
         }
 
@@ -2833,8 +2836,12 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     UnicodeSet *affixSet;
     UErrorCode status = U_ZERO_ERROR;
 
+    const DecimalFormatStaticSets *staticSets = DecimalFormatStaticSets::getStaticSets(status);
+    if (U_FAILURE(status)) {
+        return -1;
+    }
     if (!lenient) {
-        affixSet = DecimalFormatStaticSets::getStaticSets(status)->fStrictDashEquivalents;
+        affixSet = staticSets->fStrictDashEquivalents;
         
         // If the affix is exactly one character long and that character
         // is in the dash set and the very next input character is also
@@ -2900,7 +2907,7 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     } else {
         UBool match = FALSE;
         
-        affixSet = DecimalFormatStaticSets::getStaticSets(status)->fDashEquivalents;
+        affixSet = staticSets->fDashEquivalents;
 
         if (affixCharLength == affixLength && affixSet->contains(affixChar))  {
             pos = skipUWhiteSpace(input, pos);

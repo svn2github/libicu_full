@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2009-2011, International Business Machines Corporation and    *
+* Copyright (C) 2009-2013, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -25,15 +25,11 @@ class  UnicodeSet;
 
 class DecimalFormatStaticSets : public UMemory
 {
-private:
-    static DecimalFormatStaticSets *gStaticSets;  // Ptr to all lazily initialized constant
-                                                  //   shared sets.
-    DecimalFormatStaticSets(UErrorCode *status);
-    ~DecimalFormatStaticSets();
-
-    static void    initSets(UErrorCode *status);
 public:
-    static UBool   cleanup();
+    // Constructor and Destructor not for general use.
+    //   Public to permit access from plain C implementation functions.
+    DecimalFormatStaticSets(UErrorCode &status);
+    ~DecimalFormatStaticSets();
 
     /**
       * Return a pointer to a lazy-initialized singleton instance of this class.

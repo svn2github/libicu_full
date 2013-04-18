@@ -806,15 +806,18 @@ private:
      */
     static const UChar* getRegion(const UnicodeString& id);
 
+  public:
     /**
      * Returns the region code associated with the given zone,
      * or NULL if the zone is not known.
      * @param id zone id string
      * @param status Status parameter
      * @return the region associated with the given zone
+     * @internal
      */
     static const UChar* getRegion(const UnicodeString& id, UErrorCode& status);
 
+  private:
     /**
      * Parses the given custom time zone identifier
      * @param id id A string of the form GMT[+-]hh:mm, GMT[+-]hhmm, or
