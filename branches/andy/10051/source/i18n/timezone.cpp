@@ -110,11 +110,12 @@ static const UChar         UNKNOWN_ZONE_ID[] = {0x45, 0x74, 0x63, 0x2F, 0x55, 0x
 static const int32_t       GMT_ID_LENGTH = 3;
 static const int32_t       UNKNOWN_ZONE_ID_LENGTH = 11;
 
-static UMutex LOCK = U_MUTEX_INITIALIZER;
-static UMutex TZSET_LOCK = U_MUTEX_INITIALIZER;
-static icu::TimeZone* DEFAULT_ZONE = NULL;
-static icu::TimeZone* _GMT = NULL;
-static icu::TimeZone* _UNKNOWN_ZONE = NULL;
+static TimeZone* DEFAULT_ZONE = NULL;
+static UInitOnce gDefaultZoneInitOnce = U_INITONCE_INITIALIZER;
+
+static TimeZone* _GMT = NULL;
+static TimeZone* _UNKNOWN_ZONE = NULL;
+static UInitOnce gStaticZonesInitOnce = U_INITONCE_INITIALIZER;
 
 static char TZDATA_VERSION[16];
 static UInitOnce gTZDataVersionInitOnce = U_INITONCE_INITIALIZER;
@@ -136,12 +137,13 @@ static UBool U_CALLCONV timeZone_cleanup(void)
 {
     delete DEFAULT_ZONE;
     DEFAULT_ZONE = NULL;
+    gDefaultZoneInitOnce.reset();
 
     delete _GMT;
     _GMT = NULL;
-
     delete _UNKNOWN_ZONE;
     _UNKNOWN_ZONE = NULL;
+    gStaticZonesInitOnce.reset();
 
     uprv_memset(TZDATA_VERSION, 0, sizeof(TZDATA_VERSION));
     gTZDataVersionInitOnce.reset();
@@ -295,31 +297,12 @@ static UResourceBundle* openOlsonResource(const UnicodeString& id,
 
 namespace {
 
-void
-ensureStaticTimeZones() {
-    UBool needsInit;
-    UMTX_CHECK(&LOCK, (_GMT == NULL), needsInit);   /* This is here to prevent race conditions. */
-
+void U_CALLCONV initStaticTimeZones() {
     // Initialize _GMT independently of other static data; it should
     // be valid even if we can't load the time zone UDataMemory.
-    if (needsInit) {
-        SimpleTimeZone *tmpUnknown =
-            new SimpleTimeZone(0, UnicodeString(TRUE, UNKNOWN_ZONE_ID, UNKNOWN_ZONE_ID_LENGTH));
-        SimpleTimeZone *tmpGMT = new SimpleTimeZone(0, UnicodeString(TRUE, GMT_ID, GMT_ID_LENGTH));
-        umtx_lock(&LOCK);
-        if (_UNKNOWN_ZONE == 0) {
-            _UNKNOWN_ZONE = tmpUnknown;
-            tmpUnknown = NULL;
-        }
-        if (_GMT == 0) {
-            _GMT = tmpGMT;
-            tmpGMT = NULL;
-        }
-        umtx_unlock(&LOCK);
-        ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
-        delete tmpUnknown;
-        delete tmpGMT;
-    }
+    ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
+    _UNKNOWN_ZONE = new SimpleTimeZone(0, UnicodeString(TRUE, UNKNOWN_ZONE_ID, UNKNOWN_ZONE_ID_LENGTH));
+    _GMT = new SimpleTimeZone(0, UnicodeString(TRUE, GMT_ID, GMT_ID_LENGTH));
 }
 
 }  // anonymous namespace
@@ -327,14 +310,14 @@ ensureStaticTimeZones() {
 const TimeZone& U_EXPORT2
 TimeZone::getUnknown()
 {
-    ensureStaticTimeZones();
+    umtx_initOnce(gStaticZonesInitOnce, &initStaticTimeZones);
     return *_UNKNOWN_ZONE;
 }
 
 const TimeZone* U_EXPORT2
 TimeZone::getGMT(void)
 {
-    ensureStaticTimeZones();
+    umtx_initOnce(gStaticZonesInitOnce, &initStaticTimeZones);
     return _GMT;
 }
 
@@ -389,43 +372,9 @@ TimeZone::operator==(const TimeZone& that) const
 
 // -------------------------------------
 
-TimeZone* U_EXPORT2
-TimeZone::createTimeZone(const UnicodeString& ID)
-{
-    /* We first try to lookup the zone ID in our system list.  If this
-     * fails, we try to parse it as a custom string GMT[+-]hh:mm.  If
-     * all else fails, we return GMT, which is probably not what the
-     * user wants, but at least is a functioning TimeZone object.
-     *
-     * We cannot return NULL, because that would break compatibility
-     * with the JDK.
-     */
-    TimeZone* result = createSystemTimeZone(ID);
-
-    if (result == 0) {
-        U_DEBUG_TZ_MSG(("failed to load system time zone with id - falling to custom"));
-        result = createCustomTimeZone(ID);
-    }
-    if (result == 0) {
-        U_DEBUG_TZ_MSG(("failed to load time zone with id - falling to Etc/Unknown(GMT)"));
-        result = getUnknown().clone();
-    }
-    return result;
-}
-
-/**
- * Lookup the given name in our system zone table.  If found,
- * instantiate a new zone of that name and return it.  If not
- * found, return 0.
- */
+namespace {
 TimeZone*
-TimeZone::createSystemTimeZone(const UnicodeString& id) {
-    UErrorCode ec = U_ZERO_ERROR;
-    return createSystemTimeZone(id, ec);
-}
-
-TimeZone*
-TimeZone::createSystemTimeZone(const UnicodeString& id, UErrorCode& ec) {
+createSystemTimeZone(const UnicodeString& id, UErrorCode& ec) {
     if (U_FAILURE(ec)) {
         return NULL;
     }
@@ -451,19 +400,60 @@ TimeZone::createSystemTimeZone(const UnicodeString& id, UErrorCode& ec) {
     return z;
 }
 
+/**
+ * Lookup the given name in our system zone table.  If found,
+ * instantiate a new zone of that name and return it.  If not
+ * found, return 0.
+ */
+TimeZone*
+createSystemTimeZone(const UnicodeString& id) {
+    UErrorCode ec = U_ZERO_ERROR;
+    return createSystemTimeZone(id, ec);
+}
+
+}
+
+TimeZone* U_EXPORT2
+TimeZone::createTimeZone(const UnicodeString& ID)
+{
+    /* We first try to lookup the zone ID in our system list.  If this
+     * fails, we try to parse it as a custom string GMT[+-]hh:mm.  If
+     * all else fails, we return GMT, which is probably not what the
+     * user wants, but at least is a functioning TimeZone object.
+     *
+     * We cannot return NULL, because that would break compatibility
+     * with the JDK.
+     */
+    TimeZone* result = createSystemTimeZone(ID);
+
+    if (result == 0) {
+        U_DEBUG_TZ_MSG(("failed to load system time zone with id - falling to custom"));
+        result = createCustomTimeZone(ID);
+    }
+    if (result == 0) {
+        U_DEBUG_TZ_MSG(("failed to load time zone with id - falling to Etc/Unknown(GMT)"));
+        result = getUnknown().clone();
+    }
+    return result;
+}
+
 // -------------------------------------
 
 /**
- * Initialize DEFAULT_ZONE from the system default time zone.  The
- * caller should confirm that DEFAULT_ZONE is NULL before calling.
+ * Initialize DEFAULT_ZONE from the system default time zone.  
  * Upon return, DEFAULT_ZONE will not be NULL, unless operator new()
  * returns NULL.
- *
- * Must be called OUTSIDE mutex.
  */
-void
-TimeZone::initDefault()
+static void U_CALLCONV initDefault()
 {
+    ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
+
+    // If setDefault() has already been called we can skip getting the
+    // default zone information from the system.
+    if (DEFAULT_ZONE != NULL) {
+        return;
+    }
+    
     // We access system timezone data through TPlatformUtilities,
     // including tzset(), timezone, and tzname[].
     int32_t rawOffset = 0;
@@ -471,38 +461,27 @@ TimeZone::initDefault()
 
     // First, try to create a system timezone, based
     // on the string ID in tzname[0].
-    {
-        // NOTE: Local mutex here. TimeZone mutex below
-        // mutexed to avoid threading issues in the platform functions.
-        // Some of the locale/timezone OS functions may not be thread safe,
-        // so the intent is that any setting from anywhere within ICU
-        // happens while the ICU mutex is held.
-        // The operating system might actually use ICU to implement timezones.
-        // So we may have ICU calling ICU here, like on AIX.
-        // In order to prevent a double lock of a non-reentrant mutex in a
-        // different part of ICU, we use TZSET_LOCK to allow only one instance
-        // of ICU to query these thread unsafe OS functions at any given time.
-        Mutex lock(&TZSET_LOCK);
 
-        ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
-        uprv_tzset(); // Initialize tz... system data
+    // NOTE:  this code is safely single threaded, being only
+    // run via umtx_initOnce().
+    //
+    // Some of the locale/timezone OS functions may not be thread safe,
+    //
+    // The operating system might actually use ICU to implement timezones.
+    // So we may have ICU calling ICU here, like on AIX.
+    // There shouldn't be a problem with this; initOnce does not hold a mutex
+    // while the init function is being run.
 
-        // Get the timezone ID from the host.  This function should do
-        // any required host-specific remapping; e.g., on Windows this
-        // function maps the Date and Time control panel setting to an
-        // ICU timezone ID.
-        hostID = uprv_tzname(0);
+    uprv_tzset(); // Initialize tz... system data
 
-        // Invert sign because UNIX semantics are backwards
-        rawOffset = uprv_timezone() * -U_MILLIS_PER_SECOND;
-    }
+    // Get the timezone ID from the host.  This function should do
+    // any required host-specific remapping; e.g., on Windows this
+    // function maps the Date and Time control panel setting to an
+    // ICU timezone ID.
+    hostID = uprv_tzname(0);
 
-    UBool initialized;
-    UMTX_CHECK(&LOCK, (DEFAULT_ZONE != NULL), initialized);
-    if (initialized) {
-        /* Hrmph? Either a race condition happened, or tzset initialized ICU. */
-        return;
-    }
+    // Invert sign because UNIX semantics are backwards
+    rawOffset = uprv_timezone() * -U_MILLIS_PER_SECOND;
 
     TimeZone* default_zone = NULL;
 
@@ -535,7 +514,7 @@ TimeZone::initDefault()
 
     // If we _still_ don't have a time zone, use GMT.
     if (default_zone == NULL) {
-        const TimeZone* temptz = getGMT();
+        const TimeZone* temptz = TimeZone::getGMT();
         // If we can't use GMT, get out.
         if (temptz == NULL) {
             return;
@@ -543,16 +522,12 @@ TimeZone::initDefault()
         default_zone = temptz->clone();
     }
 
-    // If DEFAULT_ZONE is still NULL, set it up.
-    umtx_lock(&LOCK);
-    if (DEFAULT_ZONE == NULL) {
-        DEFAULT_ZONE = default_zone;
-        default_zone = NULL;
-        ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
-    }
-    umtx_unlock(&LOCK);
+    // The only way for DEFAULT_ZONE to be non-null at this point is if the user
+    // made a thread-unsafe call to setDefault() or adoptDefault() in another
+    // thread while this thread was doing something that required getting the default.
+    U_ASSERT(DEFAULT_ZONE == NULL);
 
-    delete default_zone;
+    DEFAULT_ZONE = default_zone;
 }
 
 // -------------------------------------
@@ -560,14 +535,7 @@ TimeZone::initDefault()
 TimeZone* U_EXPORT2
 TimeZone::createDefault()
 {
-    /* This is here to prevent race conditions. */
-    UBool needsInit;
-    UMTX_CHECK(&LOCK, (DEFAULT_ZONE == NULL), needsInit);
-    if (needsInit) {
-        initDefault();
-    }
-
-    Mutex lock(&LOCK); // In case adoptDefault is called
+    umtx_initOnce(gDefaultZoneInitOnce, initDefault);
     return (DEFAULT_ZONE != NULL) ? DEFAULT_ZONE->clone() : NULL;
 }
 
@@ -578,13 +546,8 @@ TimeZone::adoptDefault(TimeZone* zone)
 {
     if (zone != NULL)
     {
-        TimeZone* old = NULL;
-
-        umtx_lock(&LOCK);
-        old = DEFAULT_ZONE;
+        TimeZone *old = DEFAULT_ZONE;
         DEFAULT_ZONE = zone;
-        umtx_unlock(&LOCK);
-
         delete old;
         ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
     }
@@ -852,7 +815,7 @@ public:
                 if (rawOffset != NULL) {
                     // Filter by raw offset
                     // Note: This is VERY inefficient
-                    TimeZone *z = TimeZone::createSystemTimeZone(id, ec);
+                    TimeZone *z = createSystemTimeZone(id, ec);
                     if (U_FAILURE(ec)) {
                         break;
                     }
