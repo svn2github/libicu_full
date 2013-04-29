@@ -100,7 +100,7 @@ public:
     public:
         virtual ~Importer();
         virtual const UnicodeString *getRules(
-                const char *localeID,
+                const char *localeID, const char *collationType,
                 const char *&errorReason, UErrorCode &errorCode) = 0;
     };
 

@@ -17,6 +17,7 @@
 #include "unicode/parseerr.h"
 #include "unicode/uchar.h"
 #include "unicode/ucol.h"
+#include "unicode/uloc.h"
 #include "unicode/unistr.h"
 #include "unicode/utf16.h"
 #include "charstr.h"
@@ -258,7 +259,15 @@ CollationRuleParser::parseRelationStrings(int32_t strength, int32_t i, UErrorCod
         i = parseTailoringString(i + 1, errorCode);
         fcc.normalize(raw, extension, errorCode);
     }
-    // TODO: if(!prefix.isEmpty()) { check that prefix and str start with hasBoundaryBefore }
+    if(!prefix.isEmpty()) {
+        UChar32 prefix0 = prefix.char32At(0);
+        UChar32 c = str.char32At(0);
+        if(!fcc.hasBoundaryBefore(prefix0) || !fcc.hasBoundaryBefore(c)) {
+            setParseError("in 'prefix|str', prefix and str must each start with an NFC boundary",
+                          errorCode);
+            return;
+        }
+    }
     sink->addRelation(strength, prefix, str, extension, errorReason, errorCode);
     ruleIndex = i;
 }
@@ -551,13 +560,23 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
                 setParseError("expected language tag in [import langTag]", errorCode);
                 return;
             }
-            // TODO: Split locale vs. collation keyword value like in ucol_tok.cpp
-            // before calling importer?
+            char collationType[ULOC_KEYWORDS_CAPACITY];
+            length = uloc_getKeywordValue(localeID, "collation",
+                                          collationType, ULOC_KEYWORDS_CAPACITY,
+                                          &errorCode);
+            if(U_FAILURE(errorCode) || length >= ULOC_KEYWORDS_CAPACITY) {
+                errorCode = U_ZERO_ERROR;
+                setParseError("expected language tag in [import langTag]", errorCode);
+                return;
+            }
+            // TODO: uloc_removeAllKeywords(localeID, errorCode);  -- ticket #8134
             if(importer == NULL) {
                 setParseError("[import langTag] is not supported", errorCode);
             } else {
                 const UnicodeString *importedRules =
-                    importer->getRules(localeID, errorReason, errorCode);
+                    importer->getRules(localeID,
+                                       length > 0 ? collationType : NULL,
+                                       errorReason, errorCode);
                 parse(*importedRules, errorCode);
                 ruleIndex = j;
             }
