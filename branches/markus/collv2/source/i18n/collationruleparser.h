@@ -24,6 +24,9 @@ struct UParseError;
 
 U_NAMESPACE_BEGIN
 
+struct CollationData;
+
+class Locale;
 class Normalizer2;
 class UVector32;
 
@@ -31,33 +34,6 @@ struct CollationSettings;
 
 class U_I18N_API CollationRuleParser : public UMemory {
 public:
-    /** Token bits 31..8 contain the code point or negative string index. */
-    static const int32_t VALUE_SHIFT = 8;
-    /** Maximum non-negative value (23 bits). */
-    static const int32_t MAX_VALUE = 0x7fffff;
-    // Token bit 7 is unused.
-    /** Token bit 6: The token has an expansion string (e in p|s/e). */
-    static const int32_t HAS_EXPANSION = 0x40;
-    /** Token bit 5: The token has a contraction string (s has >1 code points in p|s/e). */
-    static const int32_t HAS_CONTRACTION = 0x20;
-    /** Token bit 4: The token has a prefix string (p in p|s/e). */
-    static const int32_t HAS_PREFIX = 0x10;
-    /** Token bit 3: Difference relation, not a reset. (Reset compares lower.) */
-    static const int32_t DIFF = 8;
-    /**
-     * Token bits 2..0 contain the relation strength value.
-     * "Stronger" relations must compare lower.
-     * When DIFF is not set, this is the reset-before strength.
-     */
-    static const int32_t STRENGTH_MASK = 7;
-
-    /** DIFF & strength together define the relation. */
-    static const int32_t RELATION_MASK = DIFF | STRENGTH_MASK;
-    /** All HAS_XYZ bits. If none are set, then the token value is the code point. */
-    static const int32_t HAS_STRINGS = HAS_EXPANSION | HAS_CONTRACTION | HAS_PREFIX;
-    /** The token has a contraction and/or a prefix. */
-    static const int32_t HAS_CONTEXT = HAS_CONTRACTION | HAS_PREFIX;
-
     /** Sentinel value. The token integer should be zero. */
     static const int32_t NO_RELATION = 0;
     static const int32_t PRIMARY = 1;
@@ -67,6 +43,7 @@ public:
     /** Used for reset-at (without DIFF) and identical relation (with DIFF). */
     static const int32_t IDENTICAL = 5;
     // Strength values 6 & 7 are unused.
+    static const int32_t STRENGTH_MASK = 7;
 
     /** Special reset positions. */
     enum Position {
@@ -100,10 +77,58 @@ public:
      */
     static const UChar POS_BASE = 0x2800;
 
+    class U_I18N_API Sink : public UObject {
+    public:
+        virtual ~Sink();
+        /**
+         * Adds a reset.
+         * strength=IDENTICAL for &str.
+         * strength=PRIMARY/SECONDARY/TERTIARY for &[before n]str where n=1/2/3.
+         */
+        virtual void addReset(int32_t strength, const UnicodeString &str,
+                              const char *&errorReason, UErrorCode &errorCode) = 0;
+        /**
+         * Adds a relation with strength and prefix | str / extension.
+         */
+        virtual void addRelation(int32_t strength, const UnicodeString &prefix,
+                                 const UnicodeString &str, const UnicodeString &extension,
+                                 const char *&errorReason, UErrorCode &errorCode) = 0;
+    };
+
+    class U_I18N_API Importer : public UObject {
+    public:
+        virtual ~Importer();
+        virtual const UnicodeString *getRules(
+                const Locale &str,
+                const char *&errorReason, UErrorCode &errorCode) = 0;
+    };
+
+    /**
+     * Constructor.
+     * The Sink must be set before parsing.
+     * The Importer can be set, otherwise [import locale] syntax is not supported.
+     */
     CollationRuleParser(UErrorCode &errorCode);
     ~CollationRuleParser();
 
+    /**
+     * Sets the pointer to a Sink object.
+     * The pointer is aliased: Pointer copy without cloning or taking ownership.
+     */
+    void setSink(Sink *sinkAlias) {
+        sink = sinkAlias;
+    }
+
+    /**
+     * Sets the pointer to an Importer object.
+     * The pointer is aliased: Pointer copy without cloning or taking ownership.
+     */
+    void setImporter(Importer *importerAlias) {
+        importer = importerAlias;
+    }
+
     void parse(const UnicodeString &ruleString,
+               const CollationData *base,
                CollationSettings &outSettings,
                UParseError *outParseError,
                UErrorCode &errorCode);
@@ -113,16 +138,12 @@ public:
     UBool modifiesSettings() const { return TRUE; }  // TODO
     UBool modifiesMappings() const { return TRUE; }  // TODO
 
-    // TODO: Random access API
-    int32_t findReset(int32_t start) const { return -1; }
-    int32_t findRelation(int32_t strength, int32_t start) const { return 0; }  // up to any stronger relation
-    int32_t countRelationMaxStrength(int32_t start) const { return 0; }  // (count << 4) | maxStrength, up to end of rule chain
-    int32_t countRelation(int32_t strength, int32_t start) const { return 0; }  // up to any stronger relation
-
-    int32_t getTokenAndSetStrings(int32_t i) { return NO_RELATION; }
-    const UnicodeString &getPrefix() const { return prefix; }
-    const UnicodeString &getString() const { return str; }
-    const UnicodeString &getExpansion() const { return expansion; }
+    /**
+     * Gets a script or reorder code from its string representation.
+     * @return the script/reorder code, or
+     * -1==UCHAR_INVALID_CODE==USCRIPT_INVALID_CODE if not recognized
+     */
+    static int32_t getReorderCode(const char *word);
 
 private:
     void parse(const UnicodeString &ruleString, UErrorCode &errorCode);
@@ -146,10 +167,9 @@ private:
     int32_t readWords(int32_t i);
     int32_t skipComment(int32_t i) const;
 
-    void makeAndInsertToken(int32_t relation, UErrorCode &errorCode);
     void resetTailoringStrings();
 
-    void setError(const char *reason, UErrorCode &errorCode);
+    void setParseError(const char *reason, UErrorCode &errorCode);
 
     /**
      * ASCII [:P:] and [:S:]:
@@ -161,9 +181,13 @@ private:
     const Normalizer2 &nfd, &fcc;
 
     const UnicodeString *rules;
+    const CollationData *baseData;
     CollationSettings *settings;
     UParseError *parseError;
     const char *errorReason;
+
+    Sink *sink;
+    Importer *importer;
 
     int32_t ruleIndex;
 
@@ -174,13 +198,7 @@ private:
     // FCD itself is not a unique form.
     // FCC also preserves most composites which helps with storing
     // tokenized rules in a compact form.
-    UnicodeString prefix, str, expansion;
-
-    UVector32 tokens;
-    int32_t tokenIndex;
-
-    UnicodeString tokenStrings;
-    UnicodeSet tailoredSet;
+    UnicodeString prefix, str, extension;
 };
 
 U_NAMESPACE_END

@@ -29,6 +29,7 @@
 #include "collationdatabuilder.h"
 #include "collationdatareader.h"
 #include "collationrootelements.h"
+#include "collationruleparser.h"
 #include "cstring.h"
 #include "normalizer2impl.h"
 #include "toolutil.h"
@@ -212,11 +213,7 @@ static const struct {
 };
 
 int32_t getReorderCode(const char* name) {
-    int32_t code = ucol_findReorderingEntry(name);
-    if (code >= 0) {
-        return code;
-    }
-    code = u_getPropertyValueEnum(UCHAR_SCRIPT, name);
+    int32_t code = CollationRuleParser::getReorderCode(name);
     if (code >= 0) {
         return code;
     }
