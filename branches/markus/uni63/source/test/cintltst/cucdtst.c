@@ -159,7 +159,12 @@ static const char dirStrings[][5] = {
     "RLO",
     "PDF",
     "NSM",
-    "BN"
+    "BN",
+    /* new in Unicode 6.3/ICU 52 */
+    "FSI",
+    "LRI",
+    "RLI",
+    "PDI"
 };
 
 void addUnicodeTest(TestNode** root);
@@ -1214,6 +1219,8 @@ enumDefaultsRange(const void *context, UChar32 start, UChar32 limit, UCharCatego
         { 0x07C0, U_RIGHT_TO_LEFT_ARABIC },
         { 0x08A0, U_RIGHT_TO_LEFT },
         { 0x0900, U_RIGHT_TO_LEFT_ARABIC },  /* Unicode 6.1 changes U+08A0..U+08FF from R to AL */
+        { 0x20A0, U_LEFT_TO_RIGHT },
+        { 0x20D0, U_EUROPEAN_NUMBER_TERMINATOR },  /* Unicode 6.3 changes the currency symbols block U+20A0..U+20CF to default to ET not L */
         { 0xFB1D, U_LEFT_TO_RIGHT },
         { 0xFB50, U_RIGHT_TO_LEFT },
         { 0xFE00, U_RIGHT_TO_LEFT_ARABIC },
@@ -1567,7 +1574,7 @@ static int32_t MakeProp(char* str)
 static int32_t MakeDir(char* str) 
 {
     int32_t pos = 0;
-    for (pos = 0; pos < 19; pos++) {
+    for (pos = 0; pos < U_CHAR_DIRECTION_COUNT; pos++) {
         if (strcmp(str, dirStrings[pos]) == 0) {
             return pos;
         }
@@ -2782,8 +2789,6 @@ TestNumericProperties(void) {
         int32_t type;
         double numValue;
     } values[]={
-        { 0x12456, U_NT_NUMERIC, -1. },
-        { 0x12457, U_NT_NUMERIC, -1. },
         { 0x0F33, U_NT_NUMERIC, -1./2. },
         { 0x0C66, U_NT_DECIMAL, 0 },
         { 0x96f6, U_NT_NUMERIC, 0 },

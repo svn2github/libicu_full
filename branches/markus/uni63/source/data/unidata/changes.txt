@@ -78,6 +78,17 @@ http://www.unicode.org/reports/tr44/tr44-11.html
   WB ; DQ                               ; Double_Quote
   -> uchar.h & UCharacter.WordBreak
   -> first time Word_Break numeric constants exceed 4 bits (now 17 values)
+- 2 new script codes from ISO 15924 http://www.unicode.org/iso15924/codechanges.html
+  (added 2012-10-16)
+  Aghb  239     Caucasian Albanian
+  Mahj  314     Mahajani
+  -> uscript.h
+  -> com.ibm.icu.lang.UScript
+    find     USCRIPT_([^ ]+) *= ([0-9]+),(.+)
+    replace  public static final int \1 = \2;\3
+  -> preparseucd.py _scripts_only_in_iso15924
+  -> add to expectedLong and expectedShort names in cintltst/cucdapi.c/TestUScriptCodeAPI()
+      and in com.ibm.icu.dev.test.lang.TestUScript.java
 
 * generate normalization data files
 - ~/svn.icu/uni63/dbg$ export LD_LIBRARY_PATH=~/svn.icu/uni63/dbg/lib
@@ -182,6 +193,11 @@ TODO
   fix the conformance test before looking into the multi-thread test
 
 * test ICU, fix test code where necessary
+
+TODO
+- add invariant tests for bpt and bpb
+- bpt is a subset of Bidi_M and of bc=On
+- bpb invariant see builder code
 
 * When refreshing all of ICU4J data from ICU4C
 - ~/svn.icu/uni63/dbg$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install

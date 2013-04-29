@@ -776,6 +776,7 @@ value;SB;ST;STerm
 value;SB;UP;Upper
 value;SB;XX;Other
 value;sc;Afak;Afak
+value;sc;Aghb;Aghb
 value;sc;Arab;Arabic
 value;sc;Armi;Imperial_Aramaic
 value;sc;Armn;Armenian
@@ -855,6 +856,7 @@ value;sc;Lisu;Lisu
 value;sc;Loma;Loma
 value;sc;Lyci;Lycian
 value;sc;Lydi;Lydian
+value;sc;Mahj;Mahj
 value;sc;Mand;Mandaic
 value;sc;Mani;Mani
 value;sc;Maya;Maya
