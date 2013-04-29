@@ -18,7 +18,6 @@
 
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
-#include "uvectr32.h"
 
 struct UParseError;
 
@@ -28,7 +27,6 @@ struct CollationData;
 
 class Locale;
 class Normalizer2;
-class UVector32;
 
 struct CollationSettings;
 
@@ -93,13 +91,16 @@ public:
         virtual void addRelation(int32_t strength, const UnicodeString &prefix,
                                  const UnicodeString &str, const UnicodeString &extension,
                                  const char *&errorReason, UErrorCode &errorCode) = 0;
+
+        virtual void suppressContractions(const UnicodeSet &set,
+                                          const char *&errorReason, UErrorCode &errorCode) = 0;
     };
 
     class U_I18N_API Importer : public UObject {
     public:
         virtual ~Importer();
         virtual const UnicodeString *getRules(
-                const Locale &str,
+                const char *localeID,
                 const char *&errorReason, UErrorCode &errorCode) = 0;
     };
 
@@ -138,6 +139,8 @@ public:
     UBool modifiesSettings() const { return TRUE; }  // TODO
     UBool modifiesMappings() const { return TRUE; }  // TODO
 
+    const UnicodeSet &getOptimizeSet() const { return optimizeSet; }
+
     /**
      * Gets a script or reorder code from its string representation.
      * @return the script/reorder code, or
@@ -164,6 +167,7 @@ private:
     void parseReordering(UErrorCode &errorCode);
     static UColAttributeValue getOnOffValue(const UnicodeString &s);
 
+    int32_t parseUnicodeSet(int32_t i, UnicodeSet &set, UErrorCode &errorCode);
     int32_t readWords(int32_t i);
     int32_t skipComment(int32_t i) const;
 
@@ -199,6 +203,8 @@ private:
     // FCC also preserves most composites which helps with storing
     // tokenized rules in a compact form.
     UnicodeString prefix, str, extension;
+
+    UnicodeSet optimizeSet;
 };
 
 U_NAMESPACE_END

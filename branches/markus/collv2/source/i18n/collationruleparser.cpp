@@ -28,7 +28,6 @@
 #include "cstring.h"
 #include "patternprops.h"
 #include "uassert.h"
-#include "uvectr32.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -419,7 +418,7 @@ int32_t
 CollationRuleParser::parseSpecialPosition(int32_t i, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
     int32_t j = readWords(i);
-    if(j > i && rules->charAt(j) == 0x5d) {  // words end with ]
+    if(j > i && rules->charAt(j) == 0x5d && !raw.isEmpty()) {  // words end with ]
         ++j;
         for(int32_t pos = 0; pos < LENGTHOF(positions); ++pos) {
             if(raw == UnicodeString(positions[pos], -1, US_INV)) {
@@ -453,6 +452,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
         if(raw.startsWith(UNICODE_STRING_SIMPLE("reorder")) &&
                 (raw.length() == 7 || raw.charAt(7) == 0x20)) {
             parseReordering(errorCode);
+            ruleIndex = j;
             return;
         }
         if(raw == UNICODE_STRING_SIMPLE("backwards 2")) {
@@ -538,14 +538,42 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
                 return;
             }
         } else if(raw == UNICODE_STRING_SIMPLE("import")) {
-            // TODO
+            CharString lang;
+            lang.appendInvariantChars(v, errorCode);
+            if(errorCode == U_MEMORY_ALLOCATION_ERROR) { return; }
+            char localeID[ULOC_FULLNAME_CAPACITY];
+            int32_t parsedLength;
+            int32_t length = uloc_forLanguageTag(lang.data(), localeID, ULOC_FULLNAME_CAPACITY,
+                                                 &parsedLength, &errorCode);
+            if(U_FAILURE(errorCode) ||
+                    parsedLength != lang.length() || length >= ULOC_FULLNAME_CAPACITY) {
+                errorCode = U_ZERO_ERROR;
+                setParseError("expected language tag in [import langTag]", errorCode);
+                return;
+            }
+            // TODO: Split locale vs. collation keyword value like in ucol_tok.cpp
+            // before calling importer?
+            if(importer == NULL) {
+                setParseError("[import langTag] is not supported", errorCode);
+            } else {
+                const UnicodeString *importedRules =
+                    importer->getRules(localeID, errorReason, errorCode);
+                parse(*importedRules, errorCode);
+                ruleIndex = j;
+            }
+            return;
         }
     } else if(rules->charAt(j) == 0x5b) {  // words end with [
-        // TODO: parseUnicodeSet()
+        UnicodeSet set;
+        j = parseUnicodeSet(j, set, errorCode);
         if(raw == UNICODE_STRING_SIMPLE("optimize")) {
-            // TODO
+            optimizeSet.addAll(set);
+            ruleIndex = j;
+            return;
         } else if(raw == UNICODE_STRING_SIMPLE("suppressContractions")) {
-            // TODO
+            sink->suppressContractions(set, errorReason, errorCode);
+            ruleIndex = j;
+            return;
         }
     }
     setParseError("not a valid setting/option", errorCode);
@@ -640,6 +668,37 @@ CollationRuleParser::getOnOffValue(const UnicodeString &s) {
 }
 
 int32_t
+CollationRuleParser::parseUnicodeSet(int32_t i, UnicodeSet &set, UErrorCode &errorCode) {
+    // Collect a UnicodeSet pattern between a balanced pair of [brackets].
+    int32_t level = 0;
+    int32_t j = i;
+    for(;;) {
+        if(j == raw.length()) {
+            setParseError("unbalanced UnicodeSet pattern brackets", errorCode);
+            return j;
+        }
+        UChar c = raw.charAt(j++);
+        if(c == 0x5b) {  // '['
+            ++level;
+        } else if(c == 0x5c) {  // ']'
+            if(--level == 0) { break; }
+        }
+    }
+    set.applyPattern(raw.tempSubStringBetween(i, j), errorCode);
+    if(U_FAILURE(errorCode)) {
+        errorCode = U_ZERO_ERROR;
+        setParseError("not a valid UnicodeSet pattern", errorCode);
+        return j;
+    }
+    j = skipWhiteSpace(j);
+    if(j == raw.length() || raw.charAt(j) != 0x5d) {
+        setParseError("missing option-terminating ']' after UnicodeSet pattern", errorCode);
+        return j;
+    }
+    return ++j;
+}
+
+int32_t
 CollationRuleParser::readWords(int32_t i) {
     static const UChar sp = 0x20;
     raw.remove();
@@ -648,7 +707,7 @@ CollationRuleParser::readWords(int32_t i) {
         if(i >= rules->length()) { return 0; }
         UChar c = rules->charAt(i);
         if(isSyntaxChar(c) && c != 0x2d && c != 0x5f) {  // syntax except -_
-            if(raw.isEmpty()) { return 0; }
+            if(raw.isEmpty()) { return i; }
             if(raw.endsWith(&sp, 1)) {  // remove trailing space
                 raw.truncate(raw.length() - 1);
             }
