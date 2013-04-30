@@ -1986,6 +1986,19 @@ TestMirroring() {
                 if(c3!=start) {
                     log_err("u_charMirror() does not roundtrip: U+%04lx->U+%04lx->U+%04lx\n", (long)start, (long)c2, (long)c3);
                 }
+                /* actual & expected bpb mapping */
+                c3=u_getBidiPairedBracket(start);
+                if(u_getIntPropertyValue(start, UCHAR_BIDI_PAIRED_BRACKET_TYPE)==U_BPT_NONE) {
+                    if(c3!=start) {
+                        log_err("u_getBidiPairedBracket(U+%04lx) != self for bpt(c)==None\n",
+                                (long)start);
+                    }
+                } else {
+                    if(c3!=c2) {
+                        log_err("u_getBidiPairedBracket(U+%04lx) != U+%04lx = bmg(c)'\n",
+                                (long)start, (long)c2);
+                    }
+                }
             } while(++start<=end);
         }
     }
@@ -2621,6 +2634,20 @@ TestAdditionalProperties() {
         /* unassigned code points in new/changed default Bidi AL blocks */
         { 0x08ba, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT_ARABIC },
         { 0x1eee4, UCHAR_BIDI_CLASS, U_RIGHT_TO_LEFT_ARABIC },
+
+        { -1, 0x630, 0 }, /* version break for Unicode 6.3 */
+
+        /* unassigned code points in the currency symbols block now default to ET */
+        { 0x20C0, UCHAR_BIDI_CLASS, U_EUROPEAN_NUMBER_TERMINATOR },
+        { 0x20CF, UCHAR_BIDI_CLASS, U_EUROPEAN_NUMBER_TERMINATOR },
+
+        /* new property in Unicode 6.3 */
+        { 0x0027, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_NONE },
+        { 0x0028, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_OPEN },
+        { 0x0029, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_CLOSE },
+        { 0xFF5C, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_NONE },
+        { 0xFF5B, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_OPEN },
+        { 0xFF5D, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_CLOSE },
 
         /* undefined UProperty values */
         { 0x61, 0x4a7, 0 },

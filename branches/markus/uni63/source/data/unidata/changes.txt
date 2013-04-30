@@ -33,6 +33,9 @@ http://www.unicode.org/reports/tr44/tr44-11.html
 - com.ibm.icu.util.VersionInfo
 - com.ibm.icu.dev.test.lang.UCharacterTest.VERSION_
 
+- Run ICU4C "configure" _after_ updating the Unicode version number in uchar.h
+  so that the makefiles see the new version number.
+
 *** data files & enums & parser code
 
 * file preparation
@@ -51,6 +54,11 @@ http://www.unicode.org/reports/tr44/tr44-11.html
 * PropertyAliases.txt changes
 - 1 new Enumerated Property
   bpt                      ; Bidi_Paired_Bracket_Type
+  -> uchar.h & UProperty.java & UCharacter.BidiPairedBracketType
+  -> ubidi_props.h & .c & UBiDiProps.java
+  -> remember to write the max value at UBIDI_MAX_VALUES_INDEX
+  -> uprops.cpp
+  -> change ubidi.icu format version from 2.0 to 2.1
 - 1 new Miscellaneous Property
   bpb                      ; Bidi_Paired_Bracket
   -> uchar.h & UProperty.java

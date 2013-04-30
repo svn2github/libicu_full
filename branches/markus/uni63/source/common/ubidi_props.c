@@ -121,6 +121,8 @@ ubidi_getMaxValue(const UBiDiProps *bdp, UProperty which) {
         return (max&UBIDI_MAX_JG_MASK)>>UBIDI_MAX_JG_SHIFT;
     case UCHAR_JOINING_TYPE:
         return (max&UBIDI_JT_MASK)>>UBIDI_JT_SHIFT;
+    case UCHAR_BIDI_PAIRED_BRACKET_TYPE:
+        return (max&UBIDI_BPT_MASK)>>UBIDI_BPT_SHIFT;
     default:
         return -1; /* undefined */
     }

@@ -1056,7 +1056,7 @@ cp;0023;bc=ET;gc=Po;na=NUMBER SIGN;Pat_Syn
 cp;0024;bc=ET;gc=Sc;lb=PR;na=DOLLAR SIGN;Pat_Syn
 cp;0025;bc=ET;gc=Po;lb=PO;na=PERCENT SIGN;Pat_Syn
 cp;0026;bc=ON;gc=Po;na=AMPERSAND;Pat_Syn
-cp;0027;bc=ON;gc=Po;lb=QU;na=APOSTROPHE;Pat_Syn;QMark;SB=CL;WB=SQ
+cp;0027;bc=ON;CI;gc=Po;lb=QU;na=APOSTROPHE;Pat_Syn;QMark;SB=CL;WB=SQ
 cp;0028;bc=ON;Bidi_M;bmg=0029;bpb=0029;bpt=o;gc=Ps;lb=OP;na=LEFT PARENTHESIS;Pat_Syn;SB=CL
 cp;0029;bc=ON;Bidi_M;bmg=0028;bpb=0028;bpt=c;gc=Pe;lb=CP;na=RIGHT PARENTHESIS;Pat_Syn;SB=CL
 cp;002A;bc=ON;gc=Po;na=ASTERISK;Pat_Syn
