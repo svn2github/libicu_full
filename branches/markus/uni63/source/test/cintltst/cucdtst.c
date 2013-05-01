@@ -2728,6 +2728,9 @@ TestAdditionalProperties() {
     if(u_getIntPropertyMaxValue(UCHAR_WORD_BREAK)!=(int32_t)U_WB_COUNT-1) {
         log_err("error: u_getIntPropertyMaxValue(UCHAR_WORD_BREAK) wrong\n");
     }
+    if(u_getIntPropertyMaxValue(UCHAR_BIDI_PAIRED_BRACKET_TYPE)!=(int32_t)U_BPT_COUNT-1) {
+        log_err("error: u_getIntPropertyMaxValue(UCHAR_BIDI_PAIRED_BRACKET_TYPE) wrong\n");
+    }
     /*JB#2410*/
     if( u_getIntPropertyMaxValue(0x2345)!=-1) {
         log_err("error: u_getIntPropertyMaxValue(0x2345) wrong\n");

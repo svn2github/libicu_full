@@ -202,11 +202,6 @@ TODO
 
 * test ICU, fix test code where necessary
 
-TODO
-- add invariant tests for bpt and bpb
-- bpt is a subset of Bidi_M and of bc=On
-- bpb invariant see builder code
-
 * When refreshing all of ICU4J data from ICU4C
 - ~/svn.icu/uni63/dbg$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
 - cp /tmp/icu4j/main/shared/data/icudata.jar ~/svn.icu4j/trunk/src/main/shared/data
