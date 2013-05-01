@@ -911,6 +911,10 @@ en{
         }
     }
     listPattern{
+        duration-short{
+            2{"{0}, {1}"}
+            end{"{0}, {1}"}
+        }
         standard{
             2{"{0} and {1}"}
             end{"{0}, and {1}"}

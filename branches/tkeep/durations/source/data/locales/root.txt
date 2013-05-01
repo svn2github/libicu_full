@@ -1812,6 +1812,11 @@ root{
         quotationEnd{"”"}
         quotationStart{"“"}
     }
+    durationUnits{
+        hm{"h:mm"}
+        hms{"h:mm:ss"}
+        ms{"m:ss"}
+    }
     fields{
         day{
             dn{"Day"}
@@ -1857,6 +1862,8 @@ root{
         lines{"top-to-bottom"}
     }
     listPattern{
+        duration-short:alias{"/LOCALE/listPattern/standard"}
+        duration:alias{"/LOCALE/listPattern/standard"}
         standard{
             2{"{0}, {1}"}
             end{"{0}, {1}"}
