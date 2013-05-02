@@ -1986,7 +1986,6 @@ TestMirroring() {
                 if(c3!=start) {
                     log_err("u_charMirror() does not roundtrip: U+%04lx->U+%04lx->U+%04lx\n", (long)start, (long)c2, (long)c3);
                 }
-                /* actual & expected bpb mapping */
                 c3=u_getBidiPairedBracket(start);
                 if(u_getIntPropertyValue(start, UCHAR_BIDI_PAIRED_BRACKET_TYPE)==U_BPT_NONE) {
                     if(c3!=start) {
