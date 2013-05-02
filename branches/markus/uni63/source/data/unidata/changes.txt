@@ -26,6 +26,8 @@ http://www.unicode.org/reports/tr44/tr44-11.html
 - C++ branches/markus/uni63 at r33552 from trunk at r33551
 - Java branches/markus/uni63 at r33550 from trunk at r33553
 
+- ticket 10142: implement Unicode 6.3 bidi algorithm additions
+
 *** Unicode version numbers
 - makedata.mak
 - uchar.h
@@ -97,6 +99,8 @@ http://www.unicode.org/reports/tr44/tr44-11.html
   -> preparseucd.py _scripts_only_in_iso15924
   -> add to expectedLong and expectedShort names in cintltst/cucdapi.c/TestUScriptCodeAPI()
       and in com.ibm.icu.dev.test.lang.TestUScript.java
+  -> update Script metadata: SCRIPT_PROPS[] in uscript_props.cpp & UScript.ScriptMetadata
+     (not strictly necessary for NOT_ENCODED scripts)
 
 * generate normalization data files
 - ~/svn.icu/uni63/dbg$ export LD_LIBRARY_PATH=~/svn.icu/uni63/dbg/lib
@@ -137,8 +141,6 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni63/src)
 - Unicode 6.0..6.3: U+2260, U+226E, U+226F
 - nothing new in 6.3, no test file to update
 
-TODO
-
 * update Java data files
 - refresh just the UCD-related files, just to be safe
 - see (ICU4C)/source/data/icu4j-readme.txt
@@ -158,7 +160,7 @@ TODO
     jar cf ./out/icu4j/icutzdata.jar -C ./out/icu4j/tzdata com/ibm/icu/impl/data/icudt51b/
     mkdir -p /tmp/icu4j/main/shared/data
     cp ./out/icu4j/icutzdata.jar /tmp/icu4j/main/shared/data
-    make[1]: Leaving directory `/home/mscherer/svn.icu/uni62/dbg/data'
+    make[1]: Leaving directory `/home/mscherer/svn.icu/uni63/dbg/data'
 - copy the big-endian Unicode data files to another location,
   separate from the other data files
     mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt51b/coll
@@ -174,7 +176,7 @@ TODO
 * refresh Java test .txt files
 - copy new .txt files into ICU4J's main/tests/core/src/com/ibm/icu/dev/data/unicode
 
-* UCA
+* UCA -- TODO: mostly skipped for ICU 52m1 / Unicode 6.3 beta, except update coll/* files
 
 - get output from Mark's tools; look in http://www.unicode.org/Public/UCA/<beta version>/
 - CLDR root files for ICU are in CollationAuxiliary.zip; unpack that
@@ -191,10 +193,10 @@ TODO
 - rebuild ICU4C
 - refresh ICU4J collation data:
   (subset of instructions above for properties data refresh, except copies all coll/*)
-    ~/svn.icu/uni63/bld$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
-    ~/svn.icu/uni63/bld$ mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt51b/coll
-    ~/svn.icu/uni63/bld/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt51b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt51b/coll
-    ~/svn.icu/uni63/bld/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt51b
+    ~/svn.icu/uni63/dbg$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
+    ~/svn.icu/uni63/dbg$ mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt51b/coll
+    ~/svn.icu/uni63/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt51b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt51b/coll
+    ~/svn.icu/uni63/dbg/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt51b
 - run all tests with the *_SHORT.txt or the full files (the full ones have comments, useful for debugging)
 - note on intltest: if collate/UCAConformanceTest fails, then
   utility/MultithreadTest/TestCollators will fail as well;

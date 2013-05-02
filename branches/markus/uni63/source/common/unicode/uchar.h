@@ -515,7 +515,7 @@ typedef enum UProperty {
     UCHAR_AGE=0x4000,
     /** First constant for string Unicode properties. @stable ICU 2.4 */
     UCHAR_STRING_START=UCHAR_AGE,
-    /** Miscellaneous property Bidi_Mirroring_Glyph.
+    /** String property Bidi_Mirroring_Glyph.
         Corresponds to u_charMirror. @stable ICU 2.4 */
     UCHAR_BIDI_MIRRORING_GLYPH=0x4001,
     /** String property Case_Folding.
@@ -553,7 +553,7 @@ typedef enum UProperty {
     /** String property Uppercase_Mapping.
         Corresponds to u_strToUpper in ustring.h. @stable ICU 2.4 */
     UCHAR_UPPERCASE_MAPPING=0x400C,
-    /** Miscellaneous property Bidi_Paired_Bracket (new in Unicode 6.3).
+    /** String property Bidi_Paired_Bracket (new in Unicode 6.3).
         Corresponds to u_getBidiPairedBracket. @stable ICU 52 */
     UCHAR_BIDI_PAIRED_BRACKET=0x400D,
     /** One more than the last constant for string Unicode properties. @stable ICU 2.4 */

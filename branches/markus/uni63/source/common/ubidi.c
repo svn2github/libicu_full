@@ -2368,7 +2368,7 @@ ubidi_getCustomizedClass(UBiDi *pBiDi, UChar32 c)
     }
     if(dir > 18) {
         // TODO: Implement Unicode 6.3 BiDi isolates in the ICU BiDi code.
-        dir = U_OTHER_NEUTRAL;
+        dir = ON;
     }
     return dir;
 }

@@ -218,7 +218,7 @@ ubidi_getPairedBracketType(const UBiDiProps *bdp, UChar32 c) {
 U_CFUNC UChar32
 ubidi_getPairedBracket(const UBiDiProps *bdp, UChar32 c) {
     uint16_t props=UTRIE2_GET16(&bdp->trie, c);
-    if(((props&UBIDI_BPT_MASK)>>UBIDI_BPT_SHIFT)==0) {
+    if((props&UBIDI_BPT_MASK)==0) {
         return c;
     } else {
         return getMirror(bdp, c, props);
