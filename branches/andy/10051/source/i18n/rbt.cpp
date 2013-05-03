@@ -248,8 +248,11 @@ RuleBasedTransliterator::handleTransliterate(Replaceable& text, UTransPosition& 
         //   some other transliteration that is still in progress and holding the 
         //   transliteration mutex.  If so, do not lock the transliteration
         //    mutex again.
+        // TODO(andy): Need a better scheme for handling this.
         UBool needToLock;
-        UMTX_CHECK(NULL, (&text != gLockedText), needToLock);
+        umtx_lock(NULL);
+        needToLock = (&text != gLockedText);
+        umtx_unlock(NULL);
         if (needToLock) {
             umtx_lock(&transliteratorDataMutex);
             gLockedText = &text;

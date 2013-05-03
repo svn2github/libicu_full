@@ -143,6 +143,7 @@ static UMutex nscacheMutex = U_MUTEX_INITIALIZER;
 
 #if !UCONFIG_NO_SERVICE
 static icu::ICULocaleService* gService = NULL;
+static UInitOnce gServiceInitOnce = U_INITONCE_INITIALIZER;
 #endif
 
 /**
@@ -156,6 +157,7 @@ deleteNumberingSystem(void *obj) {
 
 static UBool U_CALLCONV numfmt_cleanup(void) {
 #if !UCONFIG_NO_SERVICE
+    gServiceInitOnce.reset();
     if (gService) {
         delete gService;
         gService = NULL;
@@ -902,28 +904,16 @@ ICUNumberFormatService::~ICUNumberFormatService() {}
 
 // -------------------------------------
 
+static void U_CALLCONV initNumberFormatService() {
+    U_ASSERT(gService == NULL);
+    ucln_i18n_registerCleanup(UCLN_I18N_NUMFMT, numfmt_cleanup);
+    gService = new ICUNumberFormatService();
+}
+
 static ICULocaleService*
 getNumberFormatService(void)
 {
-    UBool needInit;
-    UMTX_CHECK(NULL, (UBool)(gService == NULL), needInit);
-    if (needInit) {
-        ICULocaleService * newservice = new ICUNumberFormatService();
-        if (newservice) {
-            umtx_lock(NULL);
-            if (gService == NULL) {
-                gService = newservice;
-                newservice = NULL;
-            }
-            umtx_unlock(NULL);
-        }
-        if (newservice) {
-            delete newservice;
-        } else {
-            // we won the contention, this thread can register cleanup.
-            ucln_i18n_registerCleanup(UCLN_I18N_NUMFMT, numfmt_cleanup);
-        }
-    }
+    umtx_initOnce(gServiceInitOnce, &initNumberFormatService);
     return gService;
 }
 
@@ -945,18 +935,25 @@ NumberFormat::registerFactory(NumberFormatFactory* toAdopt, UErrorCode& status)
 
 // -------------------------------------
 
+static UBool haveService() {
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
+    return !gServiceInitOnce.isReset() && (gService != NULL);
+}
+
 UBool U_EXPORT2
 NumberFormat::unregister(URegistryKey key, UErrorCode& status)
 {
-    if (U_SUCCESS(status)) {
-        UBool haveService;
-        UMTX_CHECK(NULL, gService != NULL, haveService);
-        if (haveService) {
-            return gService->unregister(key, status);
-        }
-        status = U_ILLEGAL_ARGUMENT_ERROR;
+    if (U_FAILURE(status)) {
+        return FALSE;
     }
-    return FALSE;
+    if (haveService()) {
+        return gService->unregister(key, status);
+    } else {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return FALSE;
+    }
 }
 
 // -------------------------------------

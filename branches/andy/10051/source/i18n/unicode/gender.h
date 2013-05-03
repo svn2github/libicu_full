@@ -26,6 +26,7 @@
 #include "unicode/uobject.h"
 
 class GenderInfoTest;
+void GenderInfo_initCache(UErrorCode &status);
 
 U_NAMESPACE_BEGIN
 
@@ -96,7 +97,10 @@ private:
     static const GenderInfo* getMaleTaintsInstance();
 
     static const GenderInfo* loadInstance(const Locale& locale, UErrorCode& status);
+
+    static void initCache();
     friend class ::GenderInfoTest;
+    friend void ::GenderInfo_initCache(UErrorCode &status);
 };
 
 U_NAMESPACE_END

@@ -28,10 +28,10 @@ class  UnicodeSet;
 class SimpleDateFormatStaticSets : public UMemory
 {
 public:
-    static SimpleDateFormatStaticSets *gStaticSets;  // Ptr to all lazily initialized constant
+    // static SimpleDateFormatStaticSets *gStaticSets;  // Ptr to all lazily initialized constant
     //   shared sets.
     
-    SimpleDateFormatStaticSets(UErrorCode *status);
+    SimpleDateFormatStaticSets(UErrorCode &status);
     ~SimpleDateFormatStaticSets();
     
     static void    initSets(UErrorCode *status);

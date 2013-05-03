@@ -1224,6 +1224,8 @@ static CurrencyNameCacheEntry* currCache[CURRENCY_NAME_CACHE_NUM] = {NULL};
 // It is a simple round-robin replacement strategy.
 static int8_t currentCacheEntryIndex = 0;
 
+static UMutex gCurrencyCacheMutex = U_MUTEX_INITIALIZER;
+
 // Cache deletion
 static void
 deleteCurrencyNames(CurrencyNameStruct* currencyNames, int32_t count) {
@@ -1277,9 +1279,9 @@ uprv_parseCurrency(const char* locale,
     CurrencyNameStruct* currencySymbols = NULL;
     CurrencyNameCacheEntry* cacheEntry = NULL;
 
-    umtx_lock(NULL);
+    umtx_lock(&gCurrencyCacheMutex);
     // in order to handle racing correctly,
-    // not putting 'search' in a separate function and using UMTX.
+    // not putting 'search' in a separate function.
     int8_t  found = -1;
     for (int8_t i = 0; i < CURRENCY_NAME_CACHE_NUM; ++i) {
         if (currCache[i]!= NULL &&
@@ -1296,13 +1298,13 @@ uprv_parseCurrency(const char* locale,
         total_currency_symbol_count = cacheEntry->totalCurrencySymbolCount;
         ++(cacheEntry->refCount);
     }
-    umtx_unlock(NULL);
+    umtx_unlock(&gCurrencyCacheMutex);
     if (found == -1) {
         collectCurrencyNames(locale, &currencyNames, &total_currency_name_count, &currencySymbols, &total_currency_symbol_count, ec);
         if (U_FAILURE(ec)) {
             return;
         }
-        umtx_lock(NULL);
+        umtx_lock(&gCurrencyCacheMutex);
         // check again.
         int8_t  found = -1;
         for (int8_t i = 0; i < CURRENCY_NAME_CACHE_NUM; ++i) {
@@ -1347,7 +1349,7 @@ uprv_parseCurrency(const char* locale,
             total_currency_symbol_count = cacheEntry->totalCurrencySymbolCount;
             ++(cacheEntry->refCount);
         }
-        umtx_unlock(NULL);
+        umtx_unlock(&gCurrencyCacheMutex);
     }
 
     int32_t start = pos.getIndex();
@@ -1391,12 +1393,12 @@ uprv_parseCurrency(const char* locale,
     } 
 
     // decrease reference count
-    umtx_lock(NULL);
+    umtx_lock(&gCurrencyCacheMutex);
     --(cacheEntry->refCount);
     if (cacheEntry->refCount == 0) {  // remove 
         deleteCacheEntry(cacheEntry);
     }
-    umtx_unlock(NULL);
+    umtx_unlock(&gCurrencyCacheMutex);
 }
 
 
