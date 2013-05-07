@@ -45,10 +45,10 @@ CollationRuleParser::Sink::~Sink() {}
 
 CollationRuleParser::Importer::~Importer() {}
 
-CollationRuleParser::CollationRuleParser(UErrorCode &errorCode)
+CollationRuleParser::CollationRuleParser(const CollationData *base, UErrorCode &errorCode)
         : nfd(*Normalizer2::getNFDInstance(errorCode)),
           fcc(*Normalizer2::getInstance(NULL, "nfc", UNORM2_COMPOSE_CONTIGUOUS, errorCode)),
-          rules(NULL), settings(NULL),
+          rules(NULL), baseData(base), settings(NULL),
           parseError(NULL), errorReason(NULL),
           sink(NULL), importer(NULL),
           ruleIndex(0) {
@@ -59,12 +59,10 @@ CollationRuleParser::~CollationRuleParser() {
 
 void
 CollationRuleParser::parse(const UnicodeString &ruleString,
-                           const CollationData *base,
                            CollationSettings &outSettings,
                            UParseError *outParseError,
                            UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    baseData = base;
     settings = &outSettings;
     parseError = outParseError;
     if(parseError != NULL) {
@@ -124,7 +122,7 @@ CollationRuleParser::parseRuleChain(UErrorCode &errorCode) {
     for(;;) {
         int32_t result = parseRelationOperator(errorCode);
         if(U_FAILURE(errorCode)) { return; }
-        if(result == NO_RELATION) {
+        if(result < 0) {
             if(ruleIndex < rules->length() && rules->charAt(ruleIndex) == 0x23) {
                 // '#' starts a comment, until the end of the line
                 ruleIndex = skipWhiteSpace(skipComment(ruleIndex + 1));
@@ -136,7 +134,7 @@ CollationRuleParser::parseRuleChain(UErrorCode &errorCode) {
             return;
         }
         int32_t strength = result & STRENGTH_MASK;
-        if(resetStrength < IDENTICAL) {
+        if(resetStrength < UCOL_IDENTICAL) {
             // reset-before rule chain
             if(isFirstRelation) {
                 if(strength != resetStrength) {
@@ -150,8 +148,8 @@ CollationRuleParser::parseRuleChain(UErrorCode &errorCode) {
                 }
             }
         }
-        int32_t i = ruleIndex + (result >> 8);  // skip over the relation operator
-        if((result & 0x10) == 0) {
+        int32_t i = ruleIndex + (result >> OFFSET_SHIFT);  // skip over the relation operator
+        if((result & STARRED_FLAG) == 0) {
             parseRelationStrings(strength, i, errorCode);
         } else {
             parseStarredCharacters(strength, i, errorCode);
@@ -163,7 +161,7 @@ CollationRuleParser::parseRuleChain(UErrorCode &errorCode) {
 
 int32_t
 CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return NO_RELATION; }
+    if(U_FAILURE(errorCode)) { return UCOL_DEFAULT; }
     int32_t i = skipWhiteSpace(ruleIndex + 1);
     int32_t j;
     UChar c;
@@ -175,14 +173,14 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
             0x31 <= (c = rules->charAt(j)) && c <= 0x33 &&
             rules->charAt(j + 1) == 0x5d) {
         // &[before n] with n=1 or 2 or 3
-        resetStrength = PRIMARY + (c - 0x31);
+        resetStrength = UCOL_PRIMARY + (c - 0x31);
         i = skipWhiteSpace(j + 2);
     } else {
-        resetStrength = IDENTICAL;
+        resetStrength = UCOL_IDENTICAL;
     }
     if(i >= rules->length()) {
         setParseError("reset without position", errorCode);
-        return NO_RELATION;
+        return UCOL_DEFAULT;
     }
     resetTailoringStrings();
     if(rules->charAt(i) == 0x5b) {  // '['
@@ -198,7 +196,7 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
 
 int32_t
 CollationRuleParser::parseRelationOperator(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode) || ruleIndex >= rules->length()) { return NO_RELATION; }
+    if(U_FAILURE(errorCode) || ruleIndex >= rules->length()) { return UCOL_DEFAULT; }
     int32_t strength;
     int32_t i = ruleIndex;
     UChar c = rules->charAt(i++);
@@ -208,35 +206,35 @@ CollationRuleParser::parseRelationOperator(UErrorCode &errorCode) {
             ++i;
             if(i < rules->length() && rules->charAt(i) == 0x3c) {  // <<<
                 ++i;
-                strength = TERTIARY;
+                strength = UCOL_TERTIARY;
             } else {
-                strength = SECONDARY;
+                strength = UCOL_SECONDARY;
             }
         } else {
-            strength = PRIMARY;
+            strength = UCOL_PRIMARY;
         }
         if(i < rules->length() && rules->charAt(i) == 0x2a) {  // '*'
             ++i;
-            strength |= 0x10;
+            strength |= STARRED_FLAG;
         }
         break;
     case 0x3b:  // ';' same as <<
-        strength = SECONDARY;
+        strength = UCOL_SECONDARY;
         break;
     case 0x2c:  // ',' same as <<<
-        strength = TERTIARY;
+        strength = UCOL_TERTIARY;
         break;
     case 0x3d:  // '='
-        strength = IDENTICAL;
+        strength = UCOL_IDENTICAL;
         if(i < rules->length() && rules->charAt(i) == 0x2a) {  // '*'
             ++i;
-            strength |= 0x10;
+            strength |= STARRED_FLAG;
         }
         break;
     default:
-        return NO_RELATION;
+        return UCOL_DEFAULT;
     }
-    return ((i - ruleIndex) << 8) | strength;
+    return ((i - ruleIndex) << OFFSET_SHIFT) | strength;
 }
 
 void
@@ -550,6 +548,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
             CharString lang;
             lang.appendInvariantChars(v, errorCode);
             if(errorCode == U_MEMORY_ALLOCATION_ERROR) { return; }
+            // BCP 47 language tag -> ICU locale ID
             char localeID[ULOC_FULLNAME_CAPACITY];
             int32_t parsedLength;
             int32_t length = uloc_forLanguageTag(lang.data(), localeID, ULOC_FULLNAME_CAPACITY,
@@ -560,6 +559,15 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
                 setParseError("expected language tag in [import langTag]", errorCode);
                 return;
             }
+            // localeID minus all keywords
+            char baseID[ULOC_FULLNAME_CAPACITY];
+            length = uloc_getBaseName(localeID, baseID, ULOC_FULLNAME_CAPACITY, &errorCode);
+            if(U_FAILURE(errorCode) || length >= ULOC_KEYWORDS_CAPACITY) {
+                errorCode = U_ZERO_ERROR;
+                setParseError("expected language tag in [import langTag]", errorCode);
+                return;
+            }
+            // @collation=type, or length=0 if not specified
             char collationType[ULOC_KEYWORDS_CAPACITY];
             length = uloc_getKeywordValue(localeID, "collation",
                                           collationType, ULOC_KEYWORDS_CAPACITY,
@@ -569,15 +577,16 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
                 setParseError("expected language tag in [import langTag]", errorCode);
                 return;
             }
-            // TODO: uloc_removeAllKeywords(localeID, errorCode);  -- ticket #8134
             if(importer == NULL) {
                 setParseError("[import langTag] is not supported", errorCode);
             } else {
                 const UnicodeString *importedRules =
-                    importer->getRules(localeID,
+                    importer->getRules(baseID,
                                        length > 0 ? collationType : NULL,
                                        errorReason, errorCode);
+                const UnicodeString *outerRules = rules;
                 parse(*importedRules, errorCode);
+                rules = outerRules;
                 ruleIndex = j;
             }
             return;
@@ -757,77 +766,6 @@ CollationRuleParser::skipComment(int32_t i) const {
     }
     return i;
 }
-
-#if 0
-// TODO: move to Sink (CollationBuilder)
-void
-CollationRuleParser::makeAndInsertToken(int32_t relation, UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return; }
-    U_ASSERT(NO_RELATION < (relation & STRENGTH_MASK) && (relation & STRENGTH_MASK) <= IDENTICAL);
-    U_ASSERT((relation & ~RELATION_MASK) == 0);
-    U_ASSERT(!str.isEmpty());
-    // Find the tailoring in a previous rule chain.
-    // Merge the new relation with any existing one for prefix+str.
-    // If new, then encode the relation and tailoring strings into a token word,
-    // and insert the token at tokenIndex.
-    int32_t token = relation;
-    if(!prefix.isEmpty()) {
-        token |= HAS_PREFIX;
-    }
-    if(str.hasMoreChar32Than(0, 0x7fffffff, 1)) {
-        token |= HAS_CONTRACTION;
-    }
-    if(!extension.isEmpty()) {
-        token |= HAS_EXTENSION;
-    }
-    UChar32 c = str.char32At(0);
-    if((token & HAS_STRINGS) == 0) {
-        if(tailoredSet.contains(c)) {
-            // TODO: search for existing token
-        } else {
-            tailoredSet.add(c);
-        }
-        token |= c << VALUE_SHIFT;
-    } else {
-        // The relation maps from str if preceded by the prefix. Look for a duplicate.
-        // We ignore the extension because that adds to the CEs for the relation
-        // but is not part of what is being tailored (what is mapped *from*).
-        UnicodeString s(prefix);
-        s.append(str);
-        int32_t lengthsWord = prefix.length() | (str.length() << 5);
-        if((token & HAS_CONTEXT) == 0 ? tailoredSet.contains(c) : tailoredSet.contains(s)) {
-            // TODO: search for existing token
-        } else if((token & HAS_CONTEXT) == 0) {
-            tailoredSet.add(c);
-        } else {
-            tailoredSet.add(s);
-        }
-        int32_t value = tokenStrings.length();
-        if(value > MAX_VALUE) {
-            setParseError("total tailoring strings overflow", errorCode);
-            return;
-        }
-        token |= ~value << VALUE_SHIFT;  // negative
-        lengthsWord |= (extension.length() << 10);
-        tokenStrings.append((UChar)lengthsWord).append(s).append(extension);
-    }
-    if((relation & DIFF) != 0) {
-        // Postpone insertion:
-        // Insert the new relation before the next token with a relation at least as strong.
-        // Stops before resets and the sentinel.
-        for(;;) {
-            int32_t t = tokens.elementAti(tokenIndex);
-            if((t & RELATION_MASK) <= relation) { break; }
-            ++tokenIndex;
-        }
-    } else {
-        // Append a new reset at the end of the token list,
-        // before the sentinel, starting a new rule chain.
-        tokenIndex = tokens.size() - 1;
-    }
-    tokens.insertElementAt(token, tokenIndex++, errorCode);
-}
-#endif
 
 void
 CollationRuleParser::resetTailoringStrings() {

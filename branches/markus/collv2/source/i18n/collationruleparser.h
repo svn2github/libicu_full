@@ -32,17 +32,6 @@ struct CollationSettings;
 
 class U_I18N_API CollationRuleParser : public UMemory {
 public:
-    /** Sentinel value. The token integer should be zero. */
-    static const int32_t NO_RELATION = 0;
-    static const int32_t PRIMARY = 1;
-    static const int32_t SECONDARY = 2;
-    static const int32_t TERTIARY = 3;
-    static const int32_t QUATERNARY = 4;
-    /** Used for reset-at (without DIFF) and identical relation (with DIFF). */
-    static const int32_t IDENTICAL = 5;
-    // Strength values 6 & 7 are unused.
-    static const int32_t STRENGTH_MASK = 7;
-
     /** Special reset positions. */
     enum Position {
         FIRST_TERTIARY_IGNORABLE,
@@ -109,7 +98,7 @@ public:
      * The Sink must be set before parsing.
      * The Importer can be set, otherwise [import locale] syntax is not supported.
      */
-    CollationRuleParser(UErrorCode &errorCode);
+    CollationRuleParser(const CollationData *base, UErrorCode &errorCode);
     ~CollationRuleParser();
 
     /**
@@ -129,7 +118,6 @@ public:
     }
 
     void parse(const UnicodeString &ruleString,
-               const CollationData *base,
                CollationSettings &outSettings,
                UParseError *outParseError,
                UErrorCode &errorCode);
@@ -149,6 +137,11 @@ public:
     static int32_t getReorderCode(const char *word);
 
 private:
+    /** UCOL_PRIMARY=0 .. UCOL_IDENTICAL=15 */
+    static const int32_t STRENGTH_MASK = 0xf;
+    static const int32_t STARRED_FLAG = 0x10;
+    static const int32_t OFFSET_SHIFT = 8;
+
     void parse(const UnicodeString &ruleString, UErrorCode &errorCode);
     void parseRuleChain(UErrorCode &errorCode);
     int32_t parseResetAndPosition(UErrorCode &errorCode);

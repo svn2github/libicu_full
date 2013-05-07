@@ -25,7 +25,7 @@ U_NAMESPACE_BEGIN
 
 CollationTailoring::CollationTailoring()
         : data(NULL),
-          refCount(0),
+          refCount(1),
           isDataOwned(FALSE) {
     version[0] = version[1] = version[2] = version[3] = 0;
 }

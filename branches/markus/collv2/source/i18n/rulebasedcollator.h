@@ -583,6 +583,13 @@ public:
             UnicodeSet *contractions, UnicodeSet *expansions,
             UBool addPrefixes, UErrorCode &errorCode) const;
 
+    /**
+     * Implements from-rule constructors, and ucol_openRules().
+     * @internal
+     */
+    void buildTailoring(const UnicodeString &rules, UParseError *outParseError,
+                        UErrorCode &errorCode);
+
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationDataReader &r);
     RuleBasedCollator2(CollationTailoring *t);
