@@ -45,6 +45,7 @@
 #include "ucln_in.h"
 #include "cstring.h"
 #include "putilimp.h"
+#include "uassert.h"
 #include "umutex.h"
 #include "mutex.h"
 #include "digitlst.h"
@@ -138,8 +139,8 @@ static const char *gFormatKeys[UNUM_FORMAT_STYLE_COUNT] = {
 
 // Static hashtable cache of NumberingSystem objects used by NumberFormat
 static UHashtable * NumberingSystem_cache = NULL;
-
 static UMutex nscacheMutex = U_MUTEX_INITIALIZER;
+static UInitOnce gNSCacheInitOnce = U_INITONCE_INITIALIZER;
 
 #if !UCONFIG_NO_SERVICE
 static icu::ICULocaleService* gService = NULL;
@@ -163,6 +164,7 @@ static UBool U_CALLCONV numfmt_cleanup(void) {
         gService = NULL;
     }
 #endif
+    gNSCacheInitOnce.reset();
     if (NumberingSystem_cache) {
         // delete NumberingSystem_cache;
         uhash_close(NumberingSystem_cache);
@@ -917,6 +919,10 @@ getNumberFormatService(void)
     return gService;
 }
 
+static UBool haveService() {
+    return !gServiceInitOnce.isReset() && (getNumberFormatService() != NULL);
+}
+
 // -------------------------------------
 
 URegistryKey U_EXPORT2
@@ -934,13 +940,6 @@ NumberFormat::registerFactory(NumberFormatFactory* toAdopt, UErrorCode& status)
 }
 
 // -------------------------------------
-
-static UBool haveService() {
-    if (U_FAILURE(status)) {
-        return FALSE;
-    }
-    return !gServiceInitOnce.isReset() && (gService != NULL);
-}
 
 UBool U_EXPORT2
 NumberFormat::unregister(URegistryKey key, UErrorCode& status)
@@ -962,7 +961,7 @@ NumberFormat::getAvailableLocales(void)
 {
   ICULocaleService *service = getNumberFormatService();
   if (service) {
-    return service->getAvailableLocales();
+      return service->getAvailableLocales();
   }
   return NULL; // no way to return error condition
 }
@@ -970,19 +969,13 @@ NumberFormat::getAvailableLocales(void)
 // -------------------------------------
 
 NumberFormat* U_EXPORT2
-NumberFormat::createInstance(const Locale& loc, UNumberFormatStyle kind, UErrorCode& status)
-{
+NumberFormat::createInstance(const Locale& loc, UNumberFormatStyle kind, UErrorCode& status) {
 #if !UCONFIG_NO_SERVICE
-    UBool haveService;
-    UMTX_CHECK(NULL, gService != NULL, haveService);
-    if (haveService) {
+    if (haveService()) {
         return (NumberFormat*)gService->get(loc, kind, status);
     }
-    else
 #endif
-    {
-        return makeInstance(loc, kind, status);
-    }
+    return makeInstance(loc, kind, status);
 }
 
 
@@ -1129,6 +1122,22 @@ void NumberFormat::getEffectiveCurrency(UChar* result, UErrorCode& ec) const {
 // Creates the NumberFormat instance of the specified style (number, currency,
 // or percent) for the desired locale.
 
+static void U_CALLCONV nscacheInit() {
+    U_ASSERT(NumberingSystem_cache == NULL);
+    ucln_i18n_registerCleanup(UCLN_I18N_NUMFMT, numfmt_cleanup);
+    UErrorCode status = U_ZERO_ERROR;
+    NumberingSystem_cache = uhash_open(uhash_hashLong,
+                                       uhash_compareLong,
+                                       NULL,
+                                       &status);
+    if (U_FAILURE(status)) {
+        // Number Format code will run with no cache if creation fails.
+        NumberingSystem_cache = NULL;
+        return;
+    }
+    uhash_setValueDeleter(NumberingSystem_cache, deleteNumberingSystem);
+}
+
 UBool
 NumberFormat::isStyleSupported(UNumberFormatStyle style) {
     return gLastResortNumberPatterns[style] != NULL;
@@ -1197,48 +1206,20 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
     }
 #endif
     // Use numbering system cache hashtable
-    UHashtable *cache;
-    UMTX_CHECK(&nscacheMutex, NumberingSystem_cache, cache);
-
-    // Check cache we got, create if non-existant
-    if (cache == NULL) {
-        cache = uhash_open(uhash_hashLong,
-                           uhash_compareLong,
-                           NULL,
-                           &status);
-
-        if (U_FAILURE(status)) {
-            // cache not created - out of memory
-            status = U_ZERO_ERROR;  // work without the cache
-            cache = NULL;
-        } else {
-            // cache created
-            uhash_setValueDeleter(cache, deleteNumberingSystem);
-
-            // set final NumberingSystem_cache value
-            Mutex lock(&nscacheMutex);
-            if (NumberingSystem_cache == NULL) {
-                NumberingSystem_cache = cache;
-                ucln_i18n_registerCleanup(UCLN_I18N_NUMFMT, numfmt_cleanup);
-            } else {
-                uhash_close(cache);
-                cache = NumberingSystem_cache;
-            }
-        }
-    }
+    umtx_initOnce(gNSCacheInitOnce, &nscacheInit);
 
     // Get cached numbering system
     LocalPointer<NumberingSystem> ownedNs;
     NumberingSystem *ns = NULL;
-    if (cache != NULL) {
+    if (NumberingSystem_cache != NULL) {
         // TODO: Bad hash key usage, see ticket #8504.
         int32_t hashKey = desiredLocale.hashCode();
 
         Mutex lock(&nscacheMutex);
-        ns = (NumberingSystem *)uhash_iget(cache, hashKey);
+        ns = (NumberingSystem *)uhash_iget(NumberingSystem_cache, hashKey);
         if (ns == NULL) {
             ns = NumberingSystem::createInstance(desiredLocale,status);
-            uhash_iput(cache, hashKey, (void*)ns, &status);
+            uhash_iput(NumberingSystem_cache, hashKey, (void*)ns, &status);
         }
     } else {
         ownedNs.adoptInstead(NumberingSystem::createInstance(desiredLocale,status));
