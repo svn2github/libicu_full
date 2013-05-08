@@ -290,7 +290,7 @@ static UBool U_CALLCONV breakiterator_cleanup(void) {
 U_CDECL_END
 U_NAMESPACE_BEGIN
 
-static void
+static void U_CALLCONV 
 initService(void) {
     gService = new ICUBreakIteratorService();
     ucln_common_registerCleanup(UCLN_COMMON_BREAKITERATOR, breakiterator_cleanup);
@@ -309,7 +309,7 @@ getService(void)
 static inline UBool
 hasService(void)
 {
-    return gService != NULL;
+    return !gInitOnce.isReset() && getService() != NULL;
 }
 
 // -------------------------------------

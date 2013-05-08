@@ -36,6 +36,9 @@
 #include "unicode/uloc.h"
 #include "unicode/strenum.h"
 
+// Forward Declarations
+void locale_available_init();
+
 /**
  * \file
  * \brief C++ API: Locale ID object.
@@ -732,13 +735,14 @@ private:
     UBool fIsBogus;
 
     static const Locale &getLocale(int locid);
-    static void initLocales();
 
     /**
      * A friend to allow the default locale to be set by either the C or C++ API.
      * @internal
      */
     friend Locale *locale_set_default_internal(const char *, UErrorCode& status);
+
+    friend void ::locale_available_init();
 };
 
 inline UBool

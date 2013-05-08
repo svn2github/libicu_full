@@ -20,6 +20,10 @@
  * \brief C++ API: Unicode Set
  */
 
+// Forward Declarations.
+void UnicodeSet_initInclusion(int32_t src, UErrorCode &status);
+
+
 U_NAMESPACE_BEGIN
 
 class BMPSet;
@@ -1586,7 +1590,7 @@ private:
                               UnicodeString& rebuiltPat,
                               UErrorCode& ec);
 
-    static void initInclusion(int32_t src, UErrorCode &status);
+    friend void ::UnicodeSet_initInclusion(int32_t src, UErrorCode &status);
     static const UnicodeSet* getInclusions(int32_t src, UErrorCode &status);
 
     /**

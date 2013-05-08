@@ -277,30 +277,6 @@ U_CAPI void U_EXPORT2 umtx_unlock (UMutex* mutex);
 U_CAPI int32_t U_EXPORT2 umtx_atomic_inc(int32_t *);
 U_CAPI int32_t U_EXPORT2 umtx_atomic_dec(int32_t *);
 
-
-
-
-
-
-
-
-/*
- *  UMTX_CHECK .   OBSOLETE.
- *                 Delete this section once all uses have been replaced.
- *                 Live with a crap simplified definition until we can dump it entirely.
- */
-
-
-#define UMTX_CHECK(pMutex, expression, result) \
-    { \
-        (result)=(expression); \
-        umtx_lock(NULL); umtx_unlock(NULL); \
-    }
-/*
- * TODO: Replace all uses of UMTX_CHECK and surrounding code
- * with SimpleSingleton or TriStateSingleton, and remove UMTX_CHECK.
- */
-
 /*
  *   END OF OBSOLETE UMTX_CHECK
  */

@@ -227,8 +227,7 @@ static UBool U_CALLCONV ucnv_io_cleanup(void)
     return TRUE;                   /* Everything was cleaned up */
 }
 
-static void initAliasData(UErrorCode &errCode) {
-
+static void U_CALLCONV initAliasData(UErrorCode &errCode) {
     UDataMemory *data;
     const uint16_t *table;
     const uint32_t *sectionSizes;

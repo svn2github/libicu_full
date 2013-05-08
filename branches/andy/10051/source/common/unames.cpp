@@ -189,7 +189,7 @@ isAcceptable(void * /*context*/,
         pInfo->formatVersion[0]==1);
 }
 
-static void
+static void U_CALLCONV
 loadCharNames(UErrorCode &status) {
     U_ASSERT(uCharNamesData == NULL);
     U_ASSERT(uCharNames == NULL);

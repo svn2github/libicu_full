@@ -203,7 +203,7 @@ U_CDECL_END
 
 
 /** Initializes the cache for resources */
-static void
+static void U_CALLCONV
 createCache(UErrorCode &status) {
     SHARED_DATA_HASHTABLE = uhash_open(hashEntry, compareEntries, NULL, &status);
     if (U_FAILURE(status)) {

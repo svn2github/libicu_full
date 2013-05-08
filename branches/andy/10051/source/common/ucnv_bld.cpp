@@ -1116,7 +1116,7 @@ ucnv_flushCache ()
 
 /* available converters list --------------------------------------------------- */
 
-static void initAvailableConvertersList(UErrorCode &errCode) {
+static void U_CALLCONV initAvailableConvertersList(UErrorCode &errCode) {
     U_ASSERT(gAvailableConverterCount == 0);
     U_ASSERT(gAvailableConverters == NULL);
 

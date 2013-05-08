@@ -171,10 +171,6 @@ static UBool U_CALLCONV uset_cleanup(void) {
     return TRUE;
 }
 
-U_CDECL_END
-
-U_NAMESPACE_BEGIN
-
 /*
 Reduce excessive reallocation, and make it easier to detect initialization
 problems.
@@ -182,7 +178,10 @@ Usually you don't see smaller sets than this for Unicode 5.0.
 */
 #define DEFAULT_INCLUSION_CAPACITY 3072
 
-void UnicodeSet::initInclusion(int32_t src, UErrorCode &status) {
+void U_CALLCONV UnicodeSet_initInclusion(int32_t src, UErrorCode &status) {
+    // This function is invoked only via umtx_initOnce().
+    // This function is a friend of class UnicodeSet.
+
     U_ASSERT(src >=0 && src<UPROPS_SRC_COUNT);
     UnicodeSet * &incl = gInclusions[src].fSet;
     U_ASSERT(incl == NULL);
@@ -272,11 +271,14 @@ void UnicodeSet::initInclusion(int32_t src, UErrorCode &status) {
     ucln_common_registerCleanup(UCLN_COMMON_USET, uset_cleanup);
 }
 
+U_CDECL_END
+
+U_NAMESPACE_BEGIN
 
 const UnicodeSet* UnicodeSet::getInclusions(int32_t src, UErrorCode &status) {
     U_ASSERT(src >=0 && src<UPROPS_SRC_COUNT);
     Inclusion &i = gInclusions[src];
-    umtx_initOnce(i.fInitOnce, &initInclusion, src, status);
+    umtx_initOnce(i.fInitOnce, &UnicodeSet_initInclusion, src, status);
     return i.fSet;
 }
 

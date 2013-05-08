@@ -49,15 +49,13 @@ static UBool U_CALLCONV locale_available_cleanup(void)
     return TRUE;
 }
 
-U_CDECL_END
 
-U_NAMESPACE_BEGIN
-
-// Available Locales List initialization function.
-//    It will be called exactly once.
-
-void Locale::initLocales() {
+void U_CALLCONV locale_available_init() {
+    // This function is a friend of class Locale.
+    // This function is only invoked via umtx_initOnce().
+    
     // for now, there is a hardcoded list, so just walk through that list and set it up.
+    //  Note: this function is a friend of class Locale.
     availableLocaleListCount = uloc_countAvailable();
     if(availableLocaleListCount) {
        availableLocaleList = new Locale[availableLocaleListCount];
@@ -71,10 +69,15 @@ void Locale::initLocales() {
     ucln_common_registerCleanup(UCLN_COMMON_LOCALE_AVAILABLE, locale_available_cleanup);
 }
 
+U_CDECL_END
+
+U_NAMESPACE_BEGIN
+
+
 const Locale* U_EXPORT2
 Locale::getAvailableLocales(int32_t& count)
 {
-    umtx_initOnce(gInitOnce, &initLocales);
+    umtx_initOnce(gInitOnce, &locale_available_init);
     count = availableLocaleListCount;
     return availableLocaleList;
 }
@@ -117,7 +120,7 @@ static UBool U_CALLCONV uloc_cleanup(void) {
 // Load Installed Locales. This function will be called exactly once
 //   via the initOnce mechanism.
 
-static void loadInstalledLocales() {
+static void U_CALLCONV loadInstalledLocales() {
     UResourceBundle *indexLocale = NULL;
     UResourceBundle installed;
     UErrorCode status = U_ZERO_ERROR;

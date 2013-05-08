@@ -1816,7 +1816,7 @@ static void U_CALLCONV _deleteFactory(void *obj) {
 U_CDECL_END
 U_NAMESPACE_BEGIN
 
-static void initLanguageFactories() {
+static void U_CALLCONV initLanguageFactories() {
     UErrorCode status = U_ZERO_ERROR;
     U_ASSERT(gLanguageBreakFactories == NULL);
     gLanguageBreakFactories = new UStack(_deleteFactory, NULL, status);
