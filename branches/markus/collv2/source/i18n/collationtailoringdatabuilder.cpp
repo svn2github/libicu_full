@@ -68,8 +68,8 @@ CollationTailoringDataBuilder::build(CollationData &data, UErrorCode &errorCode)
 }
 
 int32_t
-CollationTailoringDataBuilder::appendCEs(const UnicodeString &s,
-                                         int64_t ces[], int32_t cesLength) const {
+CollationTailoringDataBuilder::getCEs(const UnicodeString &s,
+                                      int64_t ces[], int32_t cesLength) const {
     // Modified copy of CollationIterator::nextCE() and CollationIterator::nextCEFromSpecialCE32().
 
     // Track which input code points have been consumed,

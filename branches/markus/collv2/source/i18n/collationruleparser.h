@@ -69,8 +69,8 @@ public:
         virtual ~Sink();
         /**
          * Adds a reset.
-         * strength=IDENTICAL for &str.
-         * strength=PRIMARY/SECONDARY/TERTIARY for &[before n]str where n=1/2/3.
+         * strength=UCOL_IDENTICAL for &str.
+         * strength=UCOL_PRIMARY/UCOL_SECONDARY/UCOL_TERTIARY for &[before n]str where n=1/2/3.
          */
         virtual void addReset(int32_t strength, const UnicodeString &str,
                               const char *&errorReason, UErrorCode &errorCode) = 0;
@@ -167,6 +167,7 @@ private:
     void resetTailoringStrings();
 
     void setParseError(const char *reason, UErrorCode &errorCode);
+    void setErrorContext();
 
     /**
      * ASCII [:P:] and [:S:]:

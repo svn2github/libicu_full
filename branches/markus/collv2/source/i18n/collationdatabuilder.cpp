@@ -284,7 +284,7 @@ CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
     if(U_FAILURE(errorCode)) { return; }
     // cesLength must be limited (e.g., to 31) so that the CollationIterator
     // can work with a fixed initial CEArray capacity for most cases.
-    if(s.isEmpty() || cesLength <= 0 || cesLength > 31) {
+    if(s.isEmpty() || cesLength < 0 || cesLength > Collation::MAX_EXPANSION_LENGTH) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
@@ -434,7 +434,11 @@ CollationDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength,
                                 UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
     // TODO: Check CEs for validity.
-    if(cesLength == 1) {
+    if(cesLength == 0) {
+        // Convenience: We cannot map to nothing, but we can map to a completely ignorable CE.
+        // Do this here so that callers need not do it.
+        return encodeOneCE(0);
+    } else if(cesLength == 1) {
         // Try to encode one CE as one CE32.
         int64_t ce = ces[0];
         uint32_t ce32 = encodeOneCE(ce);

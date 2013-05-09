@@ -190,6 +190,7 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
         fcc.normalize(raw, str, errorCode);
     }
     sink->addReset(resetStrength, str, errorReason, errorCode);
+    if(U_FAILURE(errorCode)) { setErrorContext(); }
     ruleIndex = i;
     return resetStrength;
 }
@@ -267,6 +268,7 @@ CollationRuleParser::parseRelationStrings(int32_t strength, int32_t i, UErrorCod
         }
     }
     sink->addRelation(strength, prefix, str, extension, errorReason, errorCode);
+    if(U_FAILURE(errorCode)) { setErrorContext(); }
     ruleIndex = i;
 }
 
@@ -314,6 +316,7 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
             prev = -1;
         }
     }
+    if(U_FAILURE(errorCode)) { setErrorContext(); }
     ruleIndex = i;
 }
 
@@ -579,8 +582,18 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
                     importer->getRules(baseID,
                                        length > 0 ? collationType : NULL,
                                        errorReason, errorCode);
+                if(U_FAILURE(errorCode)) {
+                    setErrorContext();
+                    return;
+                }
                 const UnicodeString *outerRules = rules;
+                int32_t outerRuleIndex = ruleIndex;
                 parse(*importedRules, errorCode);
+                if(U_FAILURE(errorCode)) {
+                    if(parseError != NULL) {
+                        parseError->offset = outerRuleIndex;
+                    }
+                }
                 rules = outerRules;
                 ruleIndex = j;
             }
@@ -595,6 +608,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
             return;
         } else if(raw == UNICODE_STRING_SIMPLE("suppressContractions")) {
             sink->suppressContractions(set, errorReason, errorCode);
+            if(U_FAILURE(errorCode)) { setErrorContext(); }
             ruleIndex = j;
             return;
         }
@@ -774,6 +788,11 @@ CollationRuleParser::setParseError(const char *reason, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     errorCode = U_PARSE_ERROR;
     errorReason = reason;
+    if(parseError != NULL) { setErrorContext(); }
+}
+
+void
+CollationRuleParser::setErrorContext() {
     if(parseError == NULL) { return; }
 
     // Note: This relies on the calling code maintaining the ruleIndex

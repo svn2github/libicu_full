@@ -18,6 +18,7 @@
 
 #include "unicode/unistr.h"
 #include "collationruleparser.h"
+#include "collationtailoringdatabuilder.h"
 #include "uvectr32.h"
 #include "uvectr64.h"
 
@@ -27,6 +28,8 @@ U_NAMESPACE_BEGIN
 
 struct CollationData;
 struct CollationTailoring;
+
+class Normalizer2;
 
 class U_I18N_API CollationBuilder : public CollationRuleParser::Sink {
 public:
@@ -54,11 +57,14 @@ private:
                              const UnicodeString &str, const UnicodeString &extension,
                              const char *&errorReason, UErrorCode &errorCode);
 
+    void modifyCEs(int32_t strength, UErrorCode &errorCode);
+    int32_t findOrInsertNodeForRootCE(int64_t ce, UErrorCode &errorCode);
+    int32_t insertNodeAfter(int32_t index, int32_t weight24,
+                            int32_t type, int32_t strength, UErrorCode &errorCode);
+
     /** Implements CollationRuleParser::Sink. */
     virtual void suppressContractions(const UnicodeSet &set,
                                       const char *&errorReason, UErrorCode &errorCode);
-
-    void setParseError(const char *reason, UErrorCode &errorCode);
 
     /**
      * Encodes "temporary CE" data into a CE that fits into the CE32 data structure,
@@ -90,6 +96,11 @@ private:
     static inline int32_t strengthFromTempCE(int64_t tempCE) {
         return ((int32_t)tempCE >> 8) & 3;
     }
+    static inline UBool isTempCE(int64_t ce) {
+        return ((uint32_t)ce & 0xc000) == 0xc000;
+    }
+
+    static int32_t ceStrength(int64_t ce);
 
     static inline int64_t nodeFromWeight24(int32_t weight24) {
         return (int64_t)weight24 << 40;
@@ -136,11 +147,14 @@ private:
     static const int32_t DEFAULT_NODE = 1;
     static const int32_t TAILORED_NODE = 2;
 
-    // TODO: const Normalizer2 &nfd, &fcc;
+    const Normalizer2 &nfd;
 
     const CollationData *baseData;
-    // TODO: CollationSettings *settings;
+    CollationTailoringDataBuilder dataBuilder;
     const char *errorReason;
+
+    int64_t ces[Collation::MAX_EXPANSION_LENGTH];
+    int32_t cesLength;
 
     /**
      * Indexes of nodes with primary root weights, sorted by primary.

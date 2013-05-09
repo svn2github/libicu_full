@@ -44,7 +44,7 @@ public:
      * Does not write beyond Collation::MAX_EXPANSION_LENGTH.
      * @return incremented cesLength
      */
-    int32_t appendCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const;
+    int32_t getCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const;
 
 private:
     uint32_t getCE32FromBasePrefix(const UnicodeString &s, uint32_t ce32, int32_t i) const;

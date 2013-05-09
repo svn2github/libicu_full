@@ -25,6 +25,7 @@
 #include "collationruleparser.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
+#include "collationtailoringdatabuilder.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
 
@@ -108,7 +109,7 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
     tailoring->rules = rules;
     data = tailoring->data;
     settings = &tailoring->settings;
-    // TODO: tailoring->version
+    // TODO: tailoring->version: maybe root version xor rules.hashCode() xor strength xor decomp (if not default)
     // TODO: tailoring->isDataOwned
     if(strength != UCOL_DEFAULT) {
         tailoring->settings.setStrength(strength, 0, errorCode);
@@ -117,6 +118,8 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
         tailoring->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
     }
 }
+
+// CollationBuilder implementation ----------------------------------------- ***
 
 namespace {
 
@@ -127,10 +130,11 @@ namespace {
 }  // namespace
 
 CollationBuilder::CollationBuilder(const CollationData *base, UErrorCode &errorCode)
-        : // TODO: nfd(*Normalizer2::getNFDInstance(errorCode)),
-          // TODO: fcc(*Normalizer2::getInstance(NULL, "nfc", UNORM2_COMPOSE_CONTIGUOUS, errorCode)),
+        : nfd(*Normalizer2::getNFDInstance(errorCode)),
           baseData(base),
+          dataBuilder(errorCode),
           errorReason(NULL),
+          cesLength(0),
           rootPrimaryIndexes(errorCode), nodes(errorCode) {
     // Preset some sentinel nodes so that we need not check for end-of-list indexes.
     // node 0: root/primary=0
@@ -149,6 +153,10 @@ CollationBuilder::CollationBuilder(const CollationData *base, UErrorCode &errorC
 
     rootPrimaryIndexes.addElement(0, errorCode);
     rootPrimaryIndexes.addElement(3, errorCode);
+
+    if(U_FAILURE(errorCode)) {
+        errorReason = "CollationBuilder initialization failed";
+    }
 }
 
 CollationBuilder::~CollationBuilder() {
@@ -171,15 +179,133 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
 
 void
 CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
-                           const char *&errorReason, UErrorCode &errorCode) {
-    // TODO
+                           const char *&parserErrorReason, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    UnicodeString nfdString = nfd.normalize(str, errorCode);
+    if(U_FAILURE(errorCode)) {
+        parserErrorReason = "NFD(reset position)";
+        return;
+    }
+    cesLength = dataBuilder.getCEs(nfdString, ces, 0);
+    if(cesLength > Collation::MAX_EXPANSION_LENGTH) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        parserErrorReason = "reset position maps to too many collation elements (more than 31)";
+        return;
+    }
+    if(strength != UCOL_IDENTICAL) {
+        errorCode = U_UNSUPPORTED_ERROR;  // TODO
+        parserErrorReason = "TODO: support &[before n]";
+        return;
+    }
 }
 
 void
 CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
                               const UnicodeString &str, const UnicodeString &extension,
-                              const char *&errorReason, UErrorCode &errorCode) {
-    // TODO
+                              const char *&parserErrorReason, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    UnicodeString nfdPrefix;
+    if(!prefix.isEmpty()) {
+        nfd.normalize(prefix, nfdPrefix, errorCode);
+        if(U_FAILURE(errorCode)) {
+            parserErrorReason = "NFD(prefix)";
+            return;
+        }
+    }
+    UnicodeString nfdString = nfd.normalize(str, errorCode);
+    if(U_FAILURE(errorCode)) {
+        parserErrorReason = "NFD(string)";
+        return;
+    }
+    if(strength != UCOL_IDENTICAL) {
+        modifyCEs(strength, errorCode);
+        if(U_FAILURE(errorCode)) {
+            parserErrorReason = "modifying collation elements";
+            return;
+        }
+    }
+    int32_t totalLength = cesLength;
+    if(!extension.isEmpty()) {
+        UnicodeString nfdExtension = nfd.normalize(extension, errorCode);
+        if(U_FAILURE(errorCode)) {
+            parserErrorReason = "NFD(extension)";
+            return;
+        }
+        totalLength = dataBuilder.getCEs(nfdExtension, ces, cesLength);
+        if(totalLength > Collation::MAX_EXPANSION_LENGTH) {
+            errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+            parserErrorReason =
+                "extension string adds too many collation elements (more than 31 total)";
+            return;
+        }
+    }
+    // Map from the NFD input to the CEs.
+    dataBuilder.add(nfdPrefix, nfdString, ces, cesLength, errorCode);
+    if(prefix != nfdPrefix || str != nfdString) {
+        // Also right away map from the FCC input to the CEs.
+        dataBuilder.add(prefix, str, ces, cesLength, errorCode);
+    }
+    if(U_FAILURE(errorCode)) {
+        parserErrorReason = "writing collation elements";
+        return;
+    }
+}
+
+int32_t
+CollationBuilder::ceStrength(int64_t ce) {
+    return
+        isTempCE(ce) ? strengthFromTempCE(ce) :
+        (ce & 0xff00000000000000) != 0 ? UCOL_PRIMARY :
+        ((uint32_t)ce & 0xff000000) != 0 ? UCOL_SECONDARY :
+        ce != 0 ? UCOL_TERTIARY :
+        UCOL_IDENTICAL;
+}
+
+void
+CollationBuilder::modifyCEs(int32_t strength, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    U_ASSERT(UCOL_PRIMARY <= strength && strength <= UCOL_QUATERNARY);
+
+    // Find the last CE that is at least as "strong" as the requested difference.
+    // Note: Stronger is smaller (UCOL_PRIMARY=0).
+    int64_t ce;
+    for(;; --cesLength) {
+        if(cesLength == 0) {
+            ce = ces[0] = 0;
+            cesLength = 1;
+            break;
+        } else {
+            ce = ces[cesLength - 1];
+        }
+        if(ceStrength(ce) <= strength) {
+            break;
+        }
+    }
+
+    // Find the node index after which we insert the new tailored node.
+    int32_t index;
+    if(isTempCE(ce)) {
+        index = indexFromTempCE(ce);
+    } else {
+        index = findOrInsertNodeForRootCE(ce, errorCode);
+    }
+
+    // Insert the new tailored node.
+    index = insertNodeAfter(index, 0, TAILORED_NODE, strength, errorCode);
+    ces[cesLength - 1] = tempCEFromIndexAndStrength(index, strength);
+}
+
+int32_t
+CollationBuilder::findOrInsertNodeForRootCE(int64_t ce, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    return 0;  // TODO
+}
+
+int32_t
+CollationBuilder::insertNodeAfter(int32_t index, int32_t weight24,
+                                  int32_t type, int32_t strength, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    return 0;  // TODO
 }
 
 #if 0
@@ -255,46 +381,14 @@ CollationBuilder::makeAndInsertToken(int32_t relation, UErrorCode &errorCode) {
 
 void
 CollationBuilder::suppressContractions(const UnicodeSet &set,
-                                       const char *&errorReason, UErrorCode &errorCode) {
-    // TODO
-}
-
-void
-CollationBuilder::setParseError(const char *reason, UErrorCode &errorCode) {
+                                       const char *&parserErrorReason, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    errorCode = U_PARSE_ERROR;
-    errorReason = reason;
-#if 0  // TODO
-    if(parseError == NULL) { return; }
-
-    // Note: This relies on the calling code maintaining the ruleIndex
-    // at a position that is useful for debugging.
-    // For example, at the beginning of a reset or relation etc.
-    parseError->offset = ruleIndex;
-    parseError->line = 0;  // We are not counting line numbers.
-
-    // before ruleIndex
-    int32_t start = ruleIndex - (U_PARSE_CONTEXT_LEN - 1);
-    if(start < 0) {
-        start = 0;
-    } else if(start > 0 && U16_IS_TRAIL(rules->charAt(start))) {
-        ++start;
+    if(!set.isEmpty()) {
+        errorCode = U_UNSUPPORTED_ERROR;  // TODO
+        parserErrorReason = "TODO: support [suppressContractions [set]]";
+        return;
     }
-    int32_t length = ruleIndex - start;
-    rules->extract(start, length, parseError->preContext);
-    parseError->preContext[length] = 0;
-
-    // starting from ruleIndex
-    length = rules->length() - ruleIndex;
-    if(length >= U_PARSE_CONTEXT_LEN) {
-        length = U_PARSE_CONTEXT_LEN - 1;
-        if(U16_IS_LEAD(rules->charAt(ruleIndex + length - 1))) {
-            --length;
-        }
-    }
-    rules->extract(ruleIndex, length, parseError->postContext);
-    parseError->postContext[length] = 0;
-#endif
+    // TODO
 }
 
 U_NAMESPACE_END
