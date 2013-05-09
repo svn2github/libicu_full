@@ -80,6 +80,9 @@ public:
 
 
 private:
+    int32_t fSize;
+    TimeUnitAmount *fFields[TimeUnit::UTIMEUNIT_FIELD_COUNT];
+
     // Clients use forAmount and never use ctor directly.
     TimePeriod() {
     }   
@@ -88,6 +91,8 @@ private:
      * No assignment operator needed because class is immutable.
      */  
     TimePeriod& operator=(const TimePeriod& other);
+
+    void validate(UErrorCode& status) const;
 };
 
 U_NAMESPACE_END

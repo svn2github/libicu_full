@@ -463,14 +463,14 @@ void TimeUnitTest::testTimePeriodForAmounts() {
         int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
         TimePeriod::forAmounts(amounts, len, status);
         if (status != U_ILLEGAL_ARGUMENT_ERROR) {
-            errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+            errln("Expected U_ILLEGAL_ARGUMENT_ERROR for 3h + 5h, got %s", u_errorName(status));
         }
     } 
     {
         UErrorCode status = U_ZERO_ERROR;
         TimePeriod::forAmounts(NULL, 0, status);
         if (status != U_ILLEGAL_ARGUMENT_ERROR) {
-            errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+            errln("Expected U_ILLEGAL_ARGUMENT_ERROR for empty time period, got %s", u_errorName(status));
         }
     } 
     {
@@ -479,7 +479,7 @@ void TimeUnitTest::testTimePeriodForAmounts() {
         int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
         TimePeriod::forAmounts(amounts, len, status);
         if (status != U_ILLEGAL_ARGUMENT_ERROR) {
-            errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+            errln("Expected U_ILLEGAL_ARGUMENT_ERROR for 3.5h + 5m, got %s", u_errorName(status));
         }
     } 
 }
