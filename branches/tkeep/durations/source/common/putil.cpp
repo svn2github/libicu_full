@@ -681,6 +681,7 @@ extern U_IMPORT char *U_TZNAME[];
 #elif U_PLATFORM == U_PF_SOLARIS
 #define TZDEFAULT       "/etc/localtime"
 #define TZZONEINFO      "/usr/share/lib/zoneinfo/"
+#define TZZONEINFO2     "../usr/share/lib/zoneinfo/"
 #define TZ_ENV_CHECK    "localtime"
 #else
 #define TZDEFAULT       "/etc/localtime"
@@ -1041,6 +1042,17 @@ uprv_tzname(int n)
             {
                 return (gTimeZoneBufferPtr = gTimeZoneBuffer + tzZoneInfoLen);
             }
+#if U_PLATFORM == U_PF_SOLARIS
+            else
+            {
+                tzZoneInfoLen = uprv_strlen(TZZONEINFO2);
+                if (uprv_strncmp(gTimeZoneBuffer, TZZONEINFO2, tzZoneInfoLen) == 0
+                                && isValidOlsonID(gTimeZoneBuffer + tzZoneInfoLen))
+                {
+                    return (gTimeZoneBufferPtr = gTimeZoneBuffer + tzZoneInfoLen);
+                }
+            }
+#endif
         } else {
 #if defined(SEARCH_TZFILE)
             DefaultTZInfo* tzInfo = (DefaultTZInfo*)uprv_malloc(sizeof(DefaultTZInfo));
@@ -1120,7 +1132,7 @@ uprv_tzname(int n)
 /* Get and set the ICU data directory --------------------------------------- */
 
 static char *gDataDirectory = NULL;
-#if U_POSIX_LOCALE
+#if U_POSIX_LOCALE || U_PLATFORM_USES_ONLY_WIN32_API
  static char *gCorrectedPOSIXLocale = NULL; /* Heap allocated */
 #endif
 
@@ -1130,7 +1142,7 @@ static UBool U_CALLCONV putil_cleanup(void)
         uprv_free(gDataDirectory);
     }
     gDataDirectory = NULL;
-#if U_POSIX_LOCALE
+#if U_POSIX_LOCALE || U_PLATFORM_USES_ONLY_WIN32_API
     if (gCorrectedPOSIXLocale) {
         uprv_free(gCorrectedPOSIXLocale);
         gCorrectedPOSIXLocale = NULL;
@@ -1600,14 +1612,31 @@ The leftmost codepage (.xxx) wins.
     return posixID;
 
 #elif U_PLATFORM_USES_ONLY_WIN32_API
+#define POSIX_LOCALE_CAPACITY 64
     UErrorCode status = U_ZERO_ERROR;
-    LCID id = GetThreadLocale();
-    const char* locID = uprv_convertToPosix(id, &status);
+    char *correctedPOSIXLocale = 0;
 
-    if (U_FAILURE(status)) {
-        locID = "en_US";
+    if (gCorrectedPOSIXLocale != NULL) {
+        return gCorrectedPOSIXLocale;
     }
-    return locID;
+
+    LCID id = GetThreadLocale();
+    correctedPOSIXLocale = static_cast<char *>(uprv_malloc(POSIX_LOCALE_CAPACITY + 1));
+    if (correctedPOSIXLocale) {
+        int32_t posixLen = uprv_convertToPosix(id, correctedPOSIXLocale, POSIX_LOCALE_CAPACITY, &status);
+        if (U_SUCCESS(status)) {
+            *(correctedPOSIXLocale + posixLen) = 0;
+            gCorrectedPOSIXLocale = correctedPOSIXLocale;
+            ucln_common_registerCleanup(UCLN_COMMON_PUTIL, putil_cleanup);
+        } else {
+            uprv_free(correctedPOSIXLocale);
+        }
+    }
+
+    if (gCorrectedPOSIXLocale == NULL) {
+        return "en_US";
+    }
+    return gCorrectedPOSIXLocale;
 
 #elif U_PLATFORM == U_PF_CLASSIC_MACOS
     int32_t script = MAC_LC_INIT_NUMBER;
