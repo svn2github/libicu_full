@@ -18,16 +18,9 @@
 
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
-#include "unicode/uversion.h"
 #include "collation.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
-#include "collationsettings.h"
-#include "normalizer2impl.h"
-#include "utrie2.h"
-#include "uvectr32.h"
-#include "uvectr64.h"
-#include "uvector.h"
 
 U_NAMESPACE_BEGIN
 
@@ -44,7 +37,31 @@ public:
 
     virtual void build(CollationData &data, UErrorCode &errorCode);
 
+    /**
+     * Looks up CEs for s and appends them to the ces array.
+     * s must be in NFD form.
+     * Does not write completely ignorable CEs.
+     * Does not write beyond Collation::MAX_EXPANSION_LENGTH.
+     * @return incremented cesLength
+     */
+    int32_t appendCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const;
+
 private:
+    uint32_t getCE32FromBasePrefix(const UnicodeString &s, uint32_t ce32, int32_t i) const;
+
+    uint32_t getCE32FromBaseContraction(const UnicodeString &s,
+                                        uint32_t ce32, int32_t sIndex,
+                                        UnicodeSet &consumed) const;
+
+    static int32_t appendCE(int64_t ces[], int32_t cesLength, int64_t ce) {
+        if(ce != 0) {
+            if(cesLength < Collation::MAX_EXPANSION_LENGTH) {
+                ces[cesLength] = ce;
+            }
+            ++cesLength;
+        }
+        return cesLength;
+    }
 };
 
 U_NAMESPACE_END

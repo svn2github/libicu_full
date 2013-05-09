@@ -587,8 +587,10 @@ public:
      * Implements from-rule constructors, and ucol_openRules().
      * @internal
      */
-    void buildTailoring(const UnicodeString &rules, UParseError *outParseError,
-                        UErrorCode &errorCode);
+    void buildTailoring(const UnicodeString &rules,
+                        int32_t strength,
+                        UColAttributeValue decompositionMode,
+                        UParseError *outParseError, UErrorCode &errorCode);
 
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationDataReader &r);

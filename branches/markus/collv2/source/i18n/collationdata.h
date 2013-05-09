@@ -54,20 +54,6 @@ struct U_I18N_API CollationData : public UMemory {
         return UTRIE2_GET32_FROM_SUPP(trie, c);
     }
 
-#if 0
-    // TODO: Try v1 approach of building a runtime CollationData instance for canonical closure,
-    // rather than using the builder and its dynamic data structures for lookups.
-    // If this is acceptable, then we can revert the BUILDER_CONTEXT_TAG to a RESERVED_TAG.
-    /**
-     * Resolves the ce32 with a BUILDER_CONTEXT_TAG into another CE32.
-     */
-    virtual uint32_t nextCE32FromBuilderContext(CollationIterator &iter, uint32_t ce32,
-                                                UErrorCode &errorCode) const {
-        if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
-        return 0;
-    }
-#endif
-
     UBool isUnsafeBackward(UChar32 c) const {
         return unsafeBackwardSet->contains(c);
     }

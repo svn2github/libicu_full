@@ -232,13 +232,6 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             }
             break;
         }
-#if 0  // TODO
-        case Collation::BUILDER_CONTEXT_TAG:
-            // Used only in the collation data builder.
-            // Data bits point into a builder-specific data structure with non-final data.
-            ce32 = 0;  // TODO: ?? d->nextCE32FromBuilderContext(*this, ce32, errorCode);
-            break;
-#endif
         case Collation::DIGIT_TAG:
             if(isNumeric) {
                 // Collect digits.
@@ -589,11 +582,8 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
         int32_t tag = Collation::getSpecialCE32Tag(ce32);
         if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
             U_ASSERT(ce32 != Collation::MIN_SPECIAL_CE32);
-            cesLength = forwardCEs.append(cesLength,
-                ((int64_t)(ce32 & 0xff0000) << 40) |
-                Collation::COMMON_SECONDARY_CE |
-                (ce32 & 0xff00), errorCode);
-            ce = ((ce32 & 0xff) << 24) | Collation::COMMON_TERTIARY_CE;
+            cesLength = forwardCEs.append(cesLength, Collation::getLatinCE0(ce32), errorCode);
+            ce = Collation::getLatinCE1(ce32);
             break;
         // if-else-if rather than switch so that "break;" leaves the loop.
         } else if(tag == Collation::EXPANSION32_TAG) {
@@ -642,7 +632,6 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             break;
         } else {
         // case Collation::PREFIX_TAG:
-        // TODO: case Collation::BUILDER_CONTEXT_TAG:
         // case Collation::DIGIT_TAG:
         // case Collation::RESERVED_TAG_11:
         // case Collation::HANGUL_TAG:
@@ -799,9 +788,8 @@ CollationIterator::setHangulExpansion(UChar32 c) {
 
 void
 CollationIterator::setLatinExpansion(uint32_t ce32) {
-    forwardCEs[0] = ((int64_t)(ce32 & 0xff0000) << 40) |
-                    Collation::COMMON_SECONDARY_CE | (ce32 & 0xff00);
-    forwardCEs[1] = ((ce32 & 0xff) << 24) | Collation::COMMON_TERTIARY_CE;
+    forwardCEs[0] = Collation::getLatinCE0(ce32);
+    forwardCEs[1] = Collation::getLatinCE1(ce32);
     ces = forwardCEs.getBuffer();
     cesIndex = cesMaxIndex = 1;
 }
@@ -886,12 +874,6 @@ CollationIterator::previousCEFromSpecialCE32(
             // Must not occur. Backward contractions are handled by previousCEUnsafe().
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
             return 0;
-#if 0  // TODO
-        case Collation::BUILDER_CONTEXT_TAG:
-            // Backward iteration does not support builder data.
-            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
-            return 0;
-#endif
         case Collation::DIGIT_TAG:
             if(isNumeric) {
                 // Collect digits.

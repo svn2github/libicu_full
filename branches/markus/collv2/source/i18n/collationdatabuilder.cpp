@@ -634,10 +634,10 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
         errorCode = U_INTERNAL_PROGRAM_ERROR;
         return;
     }
-    // Default for no context match.
-    uint32_t defaultCE32 = cond->ce32;
     // Entry for an empty prefix, to be stored before the trie.
-    uint32_t emptyPrefixCE32 = defaultCE32;
+    // Starts with the no-context CE32.
+    // If there are no-prefix contractions, then this changes to their CE32.
+    uint32_t emptyPrefixCE32 = cond->ce32;
     UCharsTrieBuilder prefixBuilder(errorCode);
     UCharsTrieBuilder contractionBuilder(errorCode);
     do {
@@ -668,10 +668,18 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             uint32_t emptySuffixCE32;
             cond = firstCond;
             if(cond->context.length() == suffixStart) {
+                // There is a mapping for the prefix and the single character c. (p|c)
+                // If no other suffix matches, then we return this value.
                 emptySuffixCE32 = cond->ce32;
                 cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
             } else {
-                emptySuffixCE32 = defaultCE32;
+                // There is no mapping for the prefix and just the single character.
+                // (There is no p|c, only p|cd, p|ce etc.)
+                // When the prefix matches but none of the prefix-specific suffixes,
+                // we fall back to no prefix, which might be another set of contractions.
+                // For example, if there are mappings for ch, p|cd, p|ce, but not for p|c,
+                // then in text "pch" we find the ch contraction.
+                emptySuffixCE32 = emptyPrefixCE32;
             }
             // Latin optimization: Flags bit 1 indicates whether
             // the first character of every contraction suffix is >=U+0300.
@@ -736,6 +744,146 @@ CollationDataBuilder::addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &tr
         contexts.append(context);
     }
     return index;
+}
+
+uint32_t
+CollationDataBuilder::getCE32FromContext(const UnicodeString &s, uint32_t ce32,
+                                         int32_t sIndex, UnicodeSet &consumed) const {
+    U_ASSERT(isContractionCE32(ce32));
+    ConditionalCE32 *cond = static_cast<ConditionalCE32 *>(conditionalCE32s[ce32 & 0xfffff]);
+    int32_t cpStart = sIndex - U16_LENGTH(s.char32At(sIndex - 1));
+    if(cpStart == 0 && sIndex == s.length()) { return cond->ce32; }  // single-character string
+
+    // Find the longest matching prefix.
+    int32_t matchingPrefixLength = 0;
+    ConditionalCE32 *firstNoPrefixCond = cond;
+    ConditionalCE32 *lastNoPrefixCond = cond;
+    ConditionalCE32 *firstPrefixCond = NULL;
+    ConditionalCE32 *lastPrefixCond = NULL;
+    U_ASSERT(cond->next >= 0);
+    do {
+        cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
+        // The prefix or suffix can be empty, but not both.
+        U_ASSERT(cond->context.length() > 1);
+        int32_t prefixLength = cond->context[0];
+        if(prefixLength == 0) {
+            lastNoPrefixCond = cond;
+        } else if(prefixLength == matchingPrefixLength) {
+            if(cond->context.compare(1, prefixLength,
+                                     firstPrefixCond->context, 1, prefixLength) == 0) {
+                lastPrefixCond = cond;
+            }
+        } else if(prefixLength > matchingPrefixLength && prefixLength <= cpStart &&
+                s.compare(cpStart - prefixLength, prefixLength,
+                          cond->context, 1, prefixLength) == 0) {
+            firstPrefixCond = lastPrefixCond = cond;
+            matchingPrefixLength = prefixLength;
+        }
+    } while(cond->next >= 0);
+
+    if(firstPrefixCond != NULL) {
+        // Try the contractions for the longest matching prefix.
+        uint32_t contractionCE32 =
+            getCE32FromContraction(s, sIndex, consumed, firstPrefixCond, lastPrefixCond);
+        if(contractionCE32 != Collation::UNASSIGNED_CE32) {
+            return contractionCE32;
+        }
+    }
+
+    // Try the no-prefix contractions.
+    // Falls back to the no-context value.
+    return getCE32FromContraction(s, sIndex, consumed, firstNoPrefixCond, lastNoPrefixCond);
+}
+
+uint32_t
+CollationDataBuilder::getCE32FromContraction(const UnicodeString &s,
+                                             int32_t sIndex, UnicodeSet &consumed,
+                                             ConditionalCE32 *firstCond,
+                                             ConditionalCE32 *lastCond) const {
+    int32_t matchLength = 1 + firstCond->context.charAt(0);
+    UnicodeString match(firstCond->context, 0, matchLength);
+    uint32_t ce32;
+    if(firstCond->context.length() == matchLength) {
+        ce32 = firstCond->ce32;
+    } else {
+        ce32 = Collation::UNASSIGNED_CE32;
+    }
+
+    // Find the longest contiguous match.
+    int32_t i = sIndex;
+    while(i < s.length()) {
+        UChar32 c = s.char32At(i);
+        int32_t nextIndex = i + U16_LENGTH(c);
+        if(consumed.contains(i)) {
+            i = nextIndex;
+            continue;
+        }
+        match.append(c);
+        if(match > lastCond->context) { break; }
+        ConditionalCE32 *cond = firstCond;
+        while(match > cond->context) {
+            cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
+        }
+        if(match == cond->context) {
+            // contiguous match
+            consumed.add(sIndex, nextIndex - 1);
+            sIndex = nextIndex;
+            matchLength = match.length();
+            ce32 = cond->ce32;
+            firstCond = cond;
+        } else if(!cond->context.startsWith(match)) {
+            // not even a partial match
+            break;
+        }
+        // partial match, continue
+        i = nextIndex;
+    }
+    match.truncate(matchLength);
+
+    // Look for a discontiguous match.
+    // Mark matching combining marks as consumed, rather than removing them,
+    // so that we do not disturb later prefix matching.
+    uint8_t prevCC = 0;
+    i = sIndex;
+    while(i < s.length()) {
+        UChar32 c = s.char32At(i);
+        int32_t nextIndex = i + U16_LENGTH(c);
+        if(consumed.contains(i)) {
+            i = nextIndex;
+            continue;
+        }
+        uint8_t cc = nfcImpl.getCC(nfcImpl.getNorm16(c));
+        if(cc == 0) { break; }
+        if(cc == prevCC) {
+            // c is blocked
+            i = nextIndex;
+            continue;
+        }
+        prevCC = cc;
+        match.append(c);
+        if(match > lastCond->context) {
+            match.truncate(matchLength);
+            i = nextIndex;
+            continue;
+        }
+        ConditionalCE32 *cond = firstCond;
+        while(match > cond->context) {
+            cond = static_cast<ConditionalCE32 *>(conditionalCE32s[cond->next]);
+        }
+        if(match == cond->context) {
+            // extend the match by c
+            consumed.add(i);
+            matchLength = match.length();
+            ce32 = cond->ce32;
+            firstCond = cond;
+        } else {
+            // no match for c
+            match.truncate(matchLength);
+        }
+        i = nextIndex;
+    }
+
+    return ce32;
 }
 
 int32_t

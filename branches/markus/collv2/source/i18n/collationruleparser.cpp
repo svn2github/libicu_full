@@ -319,12 +319,7 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
 
 int32_t
 CollationRuleParser::parseTailoringString(int32_t i, UErrorCode &errorCode) {
-    i = parseString(i, FALSE, errorCode);
-    int32_t nfdLength = nfd.normalize(raw, errorCode).length();
-    if(nfdLength > 31) {  // Limited by token string encoding.
-        setParseError("tailoring string too long", errorCode);
-    }
-    return i;
+    return parseString(i, FALSE, errorCode);
 }
 
 int32_t

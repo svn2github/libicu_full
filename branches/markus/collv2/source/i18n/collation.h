@@ -173,13 +173,6 @@ public:
          * Bit      0: Set if any contraction suffix ends with cc != 0.
          */
         CONTRACTION_TAG = 9,
-#if 0  // TODO
-        /**
-         * Used only in the collation data builder.
-         * Data bits point into a builder-specific data structure with non-final data.
-         */
-        BUILDER_CONTEXT_TAG = 10,
-#endif
         /**
          * Decimal digit.
          * Bits 19..4: Index into uint32_t table for non-numeric-collation CE32.
@@ -224,6 +217,12 @@ public:
         IMPLICIT_TAG = 15
     };
 
+    /**
+     * We limit the number of CEs in an expansion
+     * so that we can copy them at runtime without growing the destination buffer.
+     */
+    static const int32_t MAX_EXPANSION_LENGTH = 31;
+
     static uint32_t makeSpecialCE32(uint32_t tag, int32_t value) {
         return makeSpecialCE32(tag, (uint32_t)value);
     }
@@ -243,6 +242,23 @@ public:
 
     static inline UBool hasCE32Tag(uint32_t ce32, int32_t tag) {
         return isSpecialCE32(ce32) && getSpecialCE32Tag(ce32) == tag;
+    }
+
+    /**
+     * Get the first of the two Latin-expansion CEs encoded in ce32.
+     * @see MAX_LATIN_EXPANSION_TAG
+     */
+    static inline int64_t getLatinCE0(uint32_t ce32) {
+        return ((int64_t)(ce32 & 0xff0000) << 40) |
+                Collation::COMMON_SECONDARY_CE | (ce32 & 0xff00);
+    }
+
+    /**
+     * Get the second of the two Latin-expansion CEs encoded in ce32.
+     * @see MAX_LATIN_EXPANSION_TAG
+     */
+    static inline int64_t getLatinCE1(uint32_t ce32) {
+        return ((ce32 & 0xff) << 24) | Collation::COMMON_TERTIARY_CE;
     }
 
     /**

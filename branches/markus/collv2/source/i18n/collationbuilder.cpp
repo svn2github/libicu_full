@@ -32,6 +32,14 @@
 
 U_NAMESPACE_BEGIN
 
+// RuleBasedCollator implementation ---------------------------------------- ***
+
+// These methods are here, rather than in rulebasedcollator.cpp,
+// for modularization:
+// Most code using Collator does not need to build a Collator from rules.
+// By moving these constructors and helper methods to a separate file,
+// most code will not have a static dependency on the builder code.
+
 RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
@@ -40,7 +48,7 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, UErrorCode &e
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0) {
-    buildTailoring(rules, NULL, errorCode);
+    buildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, errorCode);
 }
 
 RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, ECollationStrength strength,
@@ -52,10 +60,7 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, ECollationStr
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0) {
-    buildTailoring(rules, NULL, errorCode);
-    if(U_SUCCESS(errorCode)) {
-        tailoring->settings.setStrength(strength, 0, errorCode);
-    }
+    buildTailoring(rules, strength, UCOL_DEFAULT, NULL, errorCode);
 }
 
 RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
@@ -68,10 +73,7 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0) {
-    buildTailoring(rules, NULL, errorCode);
-    if(U_SUCCESS(errorCode) && decompositionMode != UCOL_DEFAULT) {
-        tailoring->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
-    }
+    buildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, errorCode);
 }
 
 RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
@@ -85,18 +87,14 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0) {
-    buildTailoring(rules, NULL, errorCode);
-    if(U_SUCCESS(errorCode)) {
-        tailoring->settings.setStrength(strength, 0, errorCode);
-        if(decompositionMode != UCOL_DEFAULT) {
-            tailoring->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
-        }
-    }
+    buildTailoring(rules, strength, decompositionMode, NULL, errorCode);
 }
 
 void
-RuleBasedCollator2::buildTailoring(const UnicodeString &rules, UParseError *outParseError,
-                                   UErrorCode &errorCode) {
+RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
+                                   int32_t strength,
+                                   UColAttributeValue decompositionMode,
+                                   UParseError *outParseError, UErrorCode &errorCode) {
     const CollationData *baseData = CollationRoot::getBaseData(errorCode);
     if(U_FAILURE(errorCode)) { return; }
     tailoring = new CollationTailoring();
@@ -106,11 +104,18 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules, UParseError *outP
     }
     CollationBuilder builder(baseData, errorCode);
     builder.parseAndBuild(rules, NULL /* TODO: importer */, *tailoring, outParseError, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
     tailoring->rules = rules;
     data = tailoring->data;
     settings = &tailoring->settings;
     // TODO: tailoring->version
     // TODO: tailoring->isDataOwned
+    if(strength != UCOL_DEFAULT) {
+        tailoring->settings.setStrength(strength, 0, errorCode);
+    }
+    if(decompositionMode != UCOL_DEFAULT) {
+        tailoring->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
+    }
 }
 
 namespace {

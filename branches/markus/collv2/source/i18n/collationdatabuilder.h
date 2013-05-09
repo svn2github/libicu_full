@@ -30,6 +30,8 @@
 
 U_NAMESPACE_BEGIN
 
+struct ConditionalCE32;
+
 class UCharsTrieBuilder;
 
 /**
@@ -143,6 +145,13 @@ protected:
     int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
                            UErrorCode &errorCode);
 
+    uint32_t getCE32FromContext(const UnicodeString &s, uint32_t ce32,
+                                int32_t sIndex, UnicodeSet &consumed) const;
+    uint32_t getCE32FromContraction(const UnicodeString &s,
+                                    int32_t sIndex, UnicodeSet &consumed,
+                                    ConditionalCE32 *firstCond,
+                                    ConditionalCE32 *lastCond) const;
+
     const Normalizer2Impl &nfcImpl;
     const CollationData *base;
     const CollationSettings *baseSettings;
@@ -158,26 +167,6 @@ protected:
     UnicodeSet unsafeBackwardSet;
     UBool modified;
 };
-
-#if 0
-// TODO: Try v1 approach of building a runtime CollationData instance for canonical closure,
-// rather than using the builder and its dynamic data structures for lookups.
-// If this is acceptable, then we can revert the BUILDER_CONTEXT_TAG to a RESERVED_TAG.
-class CollationDataBuilder : public CollationData {
-public:
-    virtual uint32_t nextCE32FromBuilderContext(CollationIterator &iter, uint32_t ce32,
-                                                UErrorCode &errorCode) {
-        // TODO:
-        // Build & cache runtime-format prefix/contraction data and return
-        // a normal PREFIX_TAG or CONTRACTION_TAG CE32.
-        // Then let normal runtime code handle it.
-        // This avoids having to prebuild all runtime structures all of the time,
-        // and avoids having to provide three versions (get/next/previous)
-        // with modified copies of the runtime matching code.
-        return 0;
-    }
-};
-#endif
 
 U_NAMESPACE_END
 

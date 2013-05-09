@@ -55,9 +55,14 @@ private:
 
     int32_t doAppend(int32_t length, int64_t ce, UErrorCode &errorCode);
 
+    /**
+     * Array of CEs.
+     * Its initial length must be at least Collation::MAX_EXPANSION_LENGTH
+     * so that we need not grow this buffer,
+     * except in the slower code path mapping combining marks
+     * that were skipped in discontiguous contraction matching.
+     */
     MaybeStackArray<int64_t, 40> buffer;
-    // TODO: In the builder, limit the maximum expansion length to no more than
-    // the initial length of this buffer. For example, length<=31.
 };
 
 /**
