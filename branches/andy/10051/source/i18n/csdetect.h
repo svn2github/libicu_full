@@ -27,7 +27,6 @@ private:
     UBool fStripTags;   // If true, setText() will strip tags from input text.
     UBool fFreshTextSet;
     static void setRecognizers(UErrorCode &status);
-    static void initRecognizers(UErrorCode &status);
 
 public:
     CharsetDetector(UErrorCode &status);

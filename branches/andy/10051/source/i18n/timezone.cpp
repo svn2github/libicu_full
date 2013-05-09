@@ -110,11 +110,11 @@ static const UChar         UNKNOWN_ZONE_ID[] = {0x45, 0x74, 0x63, 0x2F, 0x55, 0x
 static const int32_t       GMT_ID_LENGTH = 3;
 static const int32_t       UNKNOWN_ZONE_ID_LENGTH = 11;
 
-static TimeZone* DEFAULT_ZONE = NULL;
+static icu::TimeZone* DEFAULT_ZONE = NULL;
 static UInitOnce gDefaultZoneInitOnce = U_INITONCE_INITIALIZER;
 
-static TimeZone* _GMT = NULL;
-static TimeZone* _UNKNOWN_ZONE = NULL;
+static icu::TimeZone* _GMT = NULL;
+static icu::TimeZone* _UNKNOWN_ZONE = NULL;
 static UInitOnce gStaticZonesInitOnce = U_INITONCE_INITIALIZER;
 
 static char TZDATA_VERSION[16];
@@ -135,6 +135,7 @@ static UInitOnce gCanonicalLocationZonesInitOnce = U_INITONCE_INITIALIZER;
 U_CDECL_BEGIN
 static UBool U_CALLCONV timeZone_cleanup(void)
 {
+    U_NAMESPACE_USE
     delete DEFAULT_ZONE;
     DEFAULT_ZONE = NULL;
     gDefaultZoneInitOnce.reset();

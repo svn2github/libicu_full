@@ -217,7 +217,7 @@ parseDate (const UChar *text, UErrorCode &status) {
     return 0;
 }
 
-static void initCanonicalIDCache(UErrorCode &status) {
+static void U_CALLCONV initCanonicalIDCache(UErrorCode &status) {
     gCanonicalIDCache = uhash_open(uhash_hashUChars, uhash_compareUChars, NULL, &status);
     if (gCanonicalIDCache == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -393,7 +393,7 @@ ZoneMeta::getCanonicalCLDRID(const TimeZone& tz) {
     return getCanonicalCLDRID(tz.getID(tzID), status);
 }
 
-static void countryInfoVectorsInit(UErrorCode &status) {
+static void U_CALLCONV countryInfoVectorsInit(UErrorCode &status) {
     // Create empty vectors
     // No deleters for these UVectors, it's a reference to a resource bundle string.
     gSingleZoneCountries = new UVector(NULL, uhash_compareUChars, status);
@@ -756,8 +756,7 @@ ZoneMeta::getZoneIdByMetazone(const UnicodeString &mzid, const UnicodeString &re
     return result;
 }
 
-void
-ZoneMeta::initAvailableMetaZoneIDs () {
+static void U_CALLCONV initAvailableMetaZoneIDs () {
     U_ASSERT(gMetaZoneIDs == NULL);
     U_ASSERT(gMetaZoneIDTable == NULL);
     ucln_i18n_registerCleanup(UCLN_I18N_ZONEMETA, zoneMeta_cleanup);

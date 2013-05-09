@@ -1253,7 +1253,7 @@ ucnv_getDefaultName() {
     but ucnv_setDefaultName is not thread safe.
     */
     {
-        Mutex lock(&cnvCacheMutex);
+        icu::Mutex lock(&cnvCacheMutex);
         name = gDefaultConverterName;
     }
     if(name==NULL) {

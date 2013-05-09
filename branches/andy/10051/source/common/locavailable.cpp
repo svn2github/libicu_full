@@ -51,6 +51,7 @@ static UBool U_CALLCONV locale_available_cleanup(void)
 
 
 void U_CALLCONV locale_available_init() {
+    U_NAMESPACE_USE
     // This function is a friend of class Locale.
     // This function is only invoked via umtx_initOnce().
     

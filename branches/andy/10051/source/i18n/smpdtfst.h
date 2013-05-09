@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2009-2011, International Business Machines Corporation and    *
+* Copyright (C) 2009-2013, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -28,9 +28,6 @@ class  UnicodeSet;
 class SimpleDateFormatStaticSets : public UMemory
 {
 public:
-    // static SimpleDateFormatStaticSets *gStaticSets;  // Ptr to all lazily initialized constant
-    //   shared sets.
-    
     SimpleDateFormatStaticSets(UErrorCode &status);
     ~SimpleDateFormatStaticSets();
     

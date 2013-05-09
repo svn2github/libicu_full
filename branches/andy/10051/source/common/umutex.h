@@ -277,9 +277,5 @@ U_CAPI void U_EXPORT2 umtx_unlock (UMutex* mutex);
 U_CAPI int32_t U_EXPORT2 umtx_atomic_inc(int32_t *);
 U_CAPI int32_t U_EXPORT2 umtx_atomic_dec(int32_t *);
 
-/*
- *   END OF OBSOLETE UMTX_CHECK
- */
-
 #endif /*_CMUTEX*/
 /*eof*/

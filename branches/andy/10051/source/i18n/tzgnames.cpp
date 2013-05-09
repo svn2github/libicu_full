@@ -1231,77 +1231,79 @@ TimeZoneGenericNames::createInstance(const Locale& locale, UErrorCode& status) {
         return NULL;
     }
 
-    Mutex lock(&gTZGNLock);
-
-    if (!gTZGNCoreCacheInitialized) {
-        // Create empty hashtable
-        gTZGNCoreCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
-        if (U_SUCCESS(status)) {
-            uhash_setKeyDeleter(gTZGNCoreCache, uprv_free);
-            uhash_setValueDeleter(gTZGNCoreCache, deleteTZGNCoreRef);
-            gTZGNCoreCacheInitialized = TRUE;
-            ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONEGENERICNAMES, tzgnCore_cleanup);
-        }
-    }
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-
-    // Check the cache, if not available, create new one and cache
     TZGNCoreRef *cacheEntry = NULL;
-    const char *key = locale.getName();
-    cacheEntry = (TZGNCoreRef *)uhash_get(gTZGNCoreCache, key);
-    if (cacheEntry == NULL) {
-        TZGNCore *tzgnCore = NULL;
-        char *newKey = NULL;
+    {
+        Mutex lock(&gTZGNLock);
 
-        tzgnCore = new TZGNCore(locale, status);
-        if (tzgnCore == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-        }
-        if (U_SUCCESS(status)) {
-            newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
-            if (newKey == NULL) {
-                status = U_MEMORY_ALLOCATION_ERROR;
-            } else {
-                uprv_strcpy(newKey, key);
-            }
-        }
-        if (U_SUCCESS(status)) {
-            cacheEntry = (TZGNCoreRef *)uprv_malloc(sizeof(TZGNCoreRef));
-            if (cacheEntry == NULL) {
-                status = U_MEMORY_ALLOCATION_ERROR;
-            } else {
-                cacheEntry->obj = tzgnCore;
-                cacheEntry->refCount = 1;
-                cacheEntry->lastAccess = (double)uprv_getUTCtime();
-
-                uhash_put(gTZGNCoreCache, newKey, cacheEntry, &status);
+        if (!gTZGNCoreCacheInitialized) {
+            // Create empty hashtable
+            gTZGNCoreCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
+            if (U_SUCCESS(status)) {
+                uhash_setKeyDeleter(gTZGNCoreCache, uprv_free);
+                uhash_setValueDeleter(gTZGNCoreCache, deleteTZGNCoreRef);
+                gTZGNCoreCacheInitialized = TRUE;
+                ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONEGENERICNAMES, tzgnCore_cleanup);
             }
         }
         if (U_FAILURE(status)) {
-            if (tzgnCore != NULL) {
-                delete tzgnCore;
-            }
-            if (newKey != NULL) {
-                uprv_free(newKey);
-            }
-            if (cacheEntry != NULL) {
-                uprv_free(cacheEntry);
-            }
-            cacheEntry = NULL;
+            return NULL;
         }
-    } else {
-        // Update the reference count
-        cacheEntry->refCount++;
-        cacheEntry->lastAccess = (double)uprv_getUTCtime();
-    }
-    gAccessCount++;
-    if (gAccessCount >= SWEEP_INTERVAL) {
-        // sweep
-        sweepCache();
-        gAccessCount = 0;
-    }
+
+        // Check the cache, if not available, create new one and cache
+        const char *key = locale.getName();
+        cacheEntry = (TZGNCoreRef *)uhash_get(gTZGNCoreCache, key);
+        if (cacheEntry == NULL) {
+            TZGNCore *tzgnCore = NULL;
+            char *newKey = NULL;
+
+            tzgnCore = new TZGNCore(locale, status);
+            if (tzgnCore == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+            }
+            if (U_SUCCESS(status)) {
+                newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
+                if (newKey == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                } else {
+                    uprv_strcpy(newKey, key);
+                }
+            }
+            if (U_SUCCESS(status)) {
+                cacheEntry = (TZGNCoreRef *)uprv_malloc(sizeof(TZGNCoreRef));
+                if (cacheEntry == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                } else {
+                    cacheEntry->obj = tzgnCore;
+                    cacheEntry->refCount = 1;
+                    cacheEntry->lastAccess = (double)uprv_getUTCtime();
+
+                    uhash_put(gTZGNCoreCache, newKey, cacheEntry, &status);
+                }
+            }
+            if (U_FAILURE(status)) {
+                if (tzgnCore != NULL) {
+                    delete tzgnCore;
+                }
+                if (newKey != NULL) {
+                    uprv_free(newKey);
+                }
+                if (cacheEntry != NULL) {
+                    uprv_free(cacheEntry);
+                }
+                cacheEntry = NULL;
+            }
+        } else {
+            // Update the reference count
+            cacheEntry->refCount++;
+            cacheEntry->lastAccess = (double)uprv_getUTCtime();
+        }
+        gAccessCount++;
+        if (gAccessCount >= SWEEP_INTERVAL) {
+            // sweep
+            sweepCache();
+            gAccessCount = 0;
+        }
+    }  // End of mutex locked block
 
     if (cacheEntry == NULL) {
         delete instance;

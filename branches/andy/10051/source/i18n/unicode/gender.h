@@ -98,7 +98,6 @@ private:
 
     static const GenderInfo* loadInstance(const Locale& locale, UErrorCode& status);
 
-    static void initCache();
     friend class ::GenderInfoTest;
     friend void ::GenderInfo_initCache(UErrorCode &status);
 };

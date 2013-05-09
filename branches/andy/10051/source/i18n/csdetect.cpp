@@ -32,14 +32,14 @@
 #define NEW_ARRAY(type,count) (type *) uprv_malloc((count) * sizeof(type))
 #define DELETE_ARRAY(array) uprv_free((void *) (array))
 
-U_CDECL_BEGIN
 static icu::CharsetRecognizer **fCSRecognizers = NULL;
 static UInitOnce gCSRecognizersInitOnce;
-
 static int32_t fCSRecognizers_size = 0;
 
+U_CDECL_BEGIN
 static UBool U_CALLCONV csdet_cleanup(void)
 {
+    U_NAMESPACE_USE
     if (fCSRecognizers != NULL) {
         for(int32_t r = 0; r < fCSRecognizers_size; r += 1) {
             delete fCSRecognizers[r];
@@ -67,11 +67,8 @@ charsetMatchComparator(const void * /*context*/, const void *left, const void *r
     return (*csm_r)->getConfidence() - (*csm_l)->getConfidence();
 }
 
-U_CDECL_END
-
-U_NAMESPACE_BEGIN
-
-void CharsetDetector::initRecognizers(UErrorCode &status) {
+static void U_CALLCONV initRecognizers(UErrorCode &status) {
+    U_NAMESPACE_USE
     ucln_i18n_registerCleanup(UCLN_I18N_CSDET, csdet_cleanup);
     CharsetRecognizer *tempArray[] = {
         new CharsetRecog_UTF8(),
@@ -124,9 +121,13 @@ void CharsetDetector::initRecognizers(UErrorCode &status) {
     }
 }
 
+U_CDECL_END
+
+U_NAMESPACE_BEGIN
+
 void CharsetDetector::setRecognizers(UErrorCode &status)
 {
-    umtx_initOnce(gCSRecognizersInitOnce, &CharsetDetector::initRecognizers, status);
+    umtx_initOnce(gCSRecognizersInitOnce, &initRecognizers, status);
 }
 
 CharsetDetector::CharsetDetector(UErrorCode &status)

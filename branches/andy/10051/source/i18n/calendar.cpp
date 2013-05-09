@@ -519,12 +519,12 @@ CalendarService::~CalendarService() {}
 
 static inline UBool
 isCalendarServiceUsed() {
-    return gServiceInitOnce.isReset();
+    return !gServiceInitOnce.isReset();
 }
 
 // -------------------------------------
 
-static void 
+static void U_CALLCONV
 initCalendarService(UErrorCode &status)
 {
 #ifdef U_DEBUG_CALSVC

@@ -57,6 +57,7 @@ static UBool U_CALLCONV gender_cleanup(void) {
 }
 
 void U_CALLCONV GenderInfo_initCache(UErrorCode &status) {
+  U_NAMESPACE_USE
   ucln_i18n_registerCleanup(UCLN_I18N_GENDERINFO, gender_cleanup);
   U_ASSERT(gGenderInfoCache == NULL);
   if (U_FAILURE(status)) {

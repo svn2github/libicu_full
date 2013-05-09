@@ -178,6 +178,7 @@ static void U_CALLCONV initSets(UErrorCode &status) {
     ucln_i18n_registerCleanup(UCLN_I18N_DECFMT, decimfmt_cleanup);
     gStaticSets = new DecimalFormatStaticSets(status);
     if (U_FAILURE(status)) {
+        delete gStaticSets;
         gStaticSets = NULL;
         return;
     }
