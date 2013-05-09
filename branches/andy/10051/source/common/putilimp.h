@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2012, International Business Machines
+*   Copyright (C) 1997-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -194,6 +194,28 @@ typedef size_t uintptr_t;
 #endif
 
 /** @} */
+
+
+/**
+ * \def U_HAVE_STD_ATOMICS
+ * Defines whether the standard C++11 <atomic> is available.
+ * @internal
+ */
+#ifdef U_HAVE_STD_ATOMICS
+    /* Use the predefined value. */
+#elif defined(__cplusplus) && __cplusplus>=201103L
+    /* C++11, so we should have atomics, except for specific platforms or compilers. */
+#if __clang__ && defined(__apple_build_version__) && __clang_major__==4 && __clang_minor__<=1
+#   define U_HAVE_STD_ATOMICS 0
+#else
+#   define U_HAVE_STD_ATOMICS 1
+#endif
+#else
+    /* Not C++ 11 */
+#   define U_HAVE_CPP_ATOMICS 0
+#endif
+
+
 
 /*===========================================================================*/
 /** @{ Code alignment                                                        */
