@@ -564,9 +564,11 @@ void TimeUnitTest::verifyFormatTimePeriod(
     for (int32_t i = 0; i < numResults; i++) {
         UnicodeString expected(timePeriodResults[i].result, -1, US_INV);
         expected = expected.unescape();
-        UnicodeString actual;
         UErrorCode status = U_ZERO_ERROR;
-        tuf.formatTimePeriod(timePeriodResults[i].timePeriod, actual, status);
+        Formattable formattable(new TimePeriod(timePeriodResults[i].timePeriod));
+        UnicodeString actual;
+        FieldPosition pos(0);
+        tuf.format(formattable, actual, pos, status);
         if (U_FAILURE(status)) {
             dataerrln("Unable to format time period - %s", u_errorName(status));
             return;
