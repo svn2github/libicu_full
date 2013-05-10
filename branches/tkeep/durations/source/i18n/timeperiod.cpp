@@ -15,7 +15,11 @@ U_NAMESPACE_BEGIN
 
 TimePeriod::TimePeriod(const TimePeriod& other) : fSize(other.fSize) {
     for (int32_t i = 0; i < sizeof(fFields) / sizeof(fFields[0]); ++i) {
-        fFields[i] = (TimeUnitAmount *) other.fFields[i]->clone();
+        if (other.fFields[i] == NULL) {
+            fFields[i] = NULL;
+        } else {
+            fFields[i] = (TimeUnitAmount *) other.fFields[i]->clone();
+        }
     }
 }
 

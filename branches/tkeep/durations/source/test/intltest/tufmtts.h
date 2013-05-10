@@ -16,6 +16,7 @@
 
 U_NAMESPACE_BEGIN
 class TimeUnitFormat;
+class TimePeriod;
 U_NAMESPACE_END
 struct TimePeriodResult;
 
@@ -57,14 +58,22 @@ public:
 
     void testFormatPeriodEn();
 
+    void testEquals();
+
     void testTimePeriodForAmounts();
 
     void testTimeUnitAmountSubClass();
+
+    void verifyEquals(const TimePeriod&, const TimePeriod&);
+
+    void verifyNotEqual(const TimePeriod&, const TimePeriod&);
 
     void verifyFormatTimePeriod(
         const TimeUnitFormat& tuf,
         const TimePeriodResult* timePeriodResults,
         int32_t numResults);
+
+
 };
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
