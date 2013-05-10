@@ -190,19 +190,6 @@ public:
                              ParsePosition& pos) const;
 
     /**
-      * Format a time period.
-      * @param timePeriod the time period to format.
-      * @param toAppendTo where the formatted string is stored.
-      * @param status any error is stored here
-      * @return a reference to toAppendto
-      * @draft ICU 52
-      */
-  virtual UnicodeString& formatTimePeriod(const TimePeriod &timePeriod,
-                                          UnicodeString& toAppendTo,
-                                          UErrorCode& status) const;
-
-
-    /**
      * Return the class ID for this class. This is useful only for comparing to
      * a return value from getDynamicClassID(). For example:
      * <pre>
@@ -234,6 +221,11 @@ private:
     Hashtable*    fTimeUnitToCountToPatterns[TimeUnit::UTIMEUNIT_FIELD_COUNT];
     PluralRules*  fPluralRules;
     UTimeUnitFormatStyle fStyle;
+
+  UnicodeString& formatTimePeriod(const TimePeriod &timePeriod,
+                                          UnicodeString& toAppendTo,
+                                          UErrorCode& status) const;
+
 
     void create(const Locale& locale, UTimeUnitFormatStyle style, UErrorCode& status);
 

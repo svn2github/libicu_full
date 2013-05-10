@@ -232,6 +232,10 @@ TimeUnitFormat::format(const Formattable& obj, UnicodeString& toAppendTo,
             formattable[0].setDouble(number);
             return pattern->format(formattable, 1, toAppendTo, pos, status);
         }
+        const TimePeriod* period = dynamic_cast<const TimePeriod*>(formatObj);
+        if (period != NULL) {
+            return formatTimePeriod(*period, toAppendTo, status);
+        }
     }
     status = U_ILLEGAL_ARGUMENT_ERROR;
     return toAppendTo;
