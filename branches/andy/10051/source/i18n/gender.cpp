@@ -56,8 +56,11 @@ static UBool U_CALLCONV gender_cleanup(void) {
   return TRUE;
 }
 
+U_CDECL_END
+
+U_NAMESPACE_BEGIN
+
 void U_CALLCONV GenderInfo_initCache(UErrorCode &status) {
-  U_NAMESPACE_USE
   ucln_i18n_registerCleanup(UCLN_I18N_GENDERINFO, gender_cleanup);
   U_ASSERT(gGenderInfoCache == NULL);
   if (U_FAILURE(status)) {
@@ -79,9 +82,6 @@ void U_CALLCONV GenderInfo_initCache(UErrorCode &status) {
   uhash_setKeyDeleter(gGenderInfoCache, uprv_free);
 }
 
-U_CDECL_END
-
-U_NAMESPACE_BEGIN
 
 GenderInfo::GenderInfo() {
 }

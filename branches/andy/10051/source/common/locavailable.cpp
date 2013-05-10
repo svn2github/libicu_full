@@ -49,9 +49,11 @@ static UBool U_CALLCONV locale_available_cleanup(void)
     return TRUE;
 }
 
+U_CDECL_END
+
+U_NAMESPACE_BEGIN
 
 void U_CALLCONV locale_available_init() {
-    U_NAMESPACE_USE
     // This function is a friend of class Locale.
     // This function is only invoked via umtx_initOnce().
     
@@ -69,11 +71,6 @@ void U_CALLCONV locale_available_init() {
     }
     ucln_common_registerCleanup(UCLN_COMMON_LOCALE_AVAILABLE, locale_available_cleanup);
 }
-
-U_CDECL_END
-
-U_NAMESPACE_BEGIN
-
 
 const Locale* U_EXPORT2
 Locale::getAvailableLocales(int32_t& count)

@@ -36,15 +36,15 @@
 #include "unicode/uloc.h"
 #include "unicode/strenum.h"
 
-// Forward Declarations
-void locale_available_init();
-
 /**
  * \file
  * \brief C++ API: Locale ID object.
  */
 
 U_NAMESPACE_BEGIN
+
+// Forward Declarations
+void U_CALLCONV locale_available_init();
 
 /**
  * A <code>Locale</code> object represents a specific geographical, political,
@@ -742,7 +742,7 @@ private:
      */
     friend Locale *locale_set_default_internal(const char *, UErrorCode& status);
 
-    friend void ::locale_available_init();
+    friend void locale_available_init();
 };
 
 inline UBool
