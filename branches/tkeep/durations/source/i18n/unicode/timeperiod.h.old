@@ -8,6 +8,10 @@
 #ifndef __TIMEPERIOD_H__
 #define __TIMEPERIOD_H__
 
+// TODO:
+// 1. Add size() method and test.
+// 2. testEquals() -> testTimePeriodEquals()
+
 #include "unicode/utypes.h"
 
 /**
