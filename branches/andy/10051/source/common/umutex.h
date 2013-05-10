@@ -36,9 +36,10 @@ struct UInitOnce;
  *   Low Level Atomic Ops Definitions. 
  *      Compiler dependent. Not operating system dependent.
  */
-#if __cplusplus>=201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
-//  C++11
-//
+#if U_HAVE_STD_ATOMICS
+
+//  C++11 atomics are available.
+
 #include <atomic>
 typedef std::atomic<int32_t> atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
@@ -66,16 +67,23 @@ inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 #elif U_HAVE_GCC_ATOMICS
 typedef int32_t atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
-#ifdef __cpllusplus
+#ifdef __cplusplus
 inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
         int32_t val = var;
         __sync_synchronize();
-	return var;};
+	return val;};
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
         __sync_synchronize();
 	var = val;};
 #endif /* __cplusplus */
 
+#elif
+
+/*
+ * Unknown Platform. Use mutexes for atomic operations.
+ */
+
+#error No Platform Atomics.
 
 #endif  /* Low Level Atomic Ops Platfrom Chain */
 
