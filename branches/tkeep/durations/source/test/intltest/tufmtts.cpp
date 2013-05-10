@@ -69,8 +69,8 @@ void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
         TESTCASE(4, testFormatPeriodEn);
         TESTCASE(5, testTimePeriodForAmounts);
         TESTCASE(6, testTimeUnitAmountSubClass);
-        TESTCASE(7, testEquals);
-        TESTCASE(8, testSize);
+        TESTCASE(7, testTimePeriodEquals);
+        TESTCASE(8, testTimePeriodSize);
         default: name = ""; break;
     }
 }
@@ -452,7 +452,7 @@ void TimeUnitTest::testFormatPeriodEn() {
     }
 }
 
-void TimeUnitTest::testSize() {
+void TimeUnitTest::testTimePeriodSize() {
    UErrorCode status = U_ZERO_ERROR;
    int32_t actual = create1h23_5m(status).size();
    if (actual != 2) {
@@ -512,7 +512,7 @@ void TimeUnitTest::testTimePeriodForAmounts() {
     } 
 }
 
-void TimeUnitTest::testEquals() {
+void TimeUnitTest::testTimePeriodEquals() {
     UErrorCode status = U_ZERO_ERROR;
     // Doing this in two statements forces the assignment operator to be invoked.
     TimePeriod _1h23s = create19m29s(status);

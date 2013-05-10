@@ -58,9 +58,9 @@ public:
 
     void testFormatPeriodEn();
 
-    void testSize();
+    void testTimePeriodSize();
 
-    void testEquals();
+    void testTimePeriodEquals();
 
     void testTimePeriodForAmounts();
 
