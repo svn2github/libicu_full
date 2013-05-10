@@ -22,7 +22,7 @@
 #endif
 
 struct TimePeriodResult {
-    TimePeriod timePeriod;
+    TimePeriod* timePeriod;
     const char* result;
 };
 
@@ -47,17 +47,17 @@ class TimeUnitAmountSubClass : public TimeUnitAmount {
     int extra;
 };
 
-static TimePeriod create19m(UErrorCode &status);
-static TimePeriod create19m28s(UErrorCode &status);
-static TimePeriod create19m29s(UErrorCode &status);
-static TimePeriod create1h23_5s(UErrorCode &status);
-static TimePeriod create1h23s(UErrorCode &status);
-static TimePeriod create1h23_5m(UErrorCode &status);
-static TimePeriod create1h0m23s(UErrorCode &status);
-static TimePeriod create5h17m(UErrorCode &status);
-static TimePeriod create2y5M3w4d(UErrorCode &status);
-static TimePeriod create0h0m17s(UErrorCode &status);
-static TimePeriod create6h56_92m(UErrorCode &status);
+static TimePeriod *create19m(UErrorCode &status);
+static TimePeriod *create19m28s(UErrorCode &status);
+static TimePeriod *create19m29s(UErrorCode &status);
+static TimePeriod *create1h23_5s(UErrorCode &status);
+static TimePeriod *create1h23s(UErrorCode &status);
+static TimePeriod *create1h23_5m(UErrorCode &status);
+static TimePeriod *create1h0m23s(UErrorCode &status);
+static TimePeriod *create5h17m(UErrorCode &status);
+static TimePeriod *create2y5M3w4d(UErrorCode &status);
+static TimePeriod *create0h0m17s(UErrorCode &status);
+static TimePeriod *create6h56_92m(UErrorCode &status);
 
 void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ ) {
     if (exec) logln("TestSuite TimeUnitTest");
@@ -70,7 +70,6 @@ void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
         TESTCASE(5, testTimePeriodForAmounts);
         TESTCASE(6, testTimeUnitAmountSubClass);
         TESTCASE(7, testEquals);
-        TESTCASE(8, testSize);
         default: name = ""; break;
     }
 }
@@ -388,35 +387,44 @@ void TimeUnitTest::testGreekWithSanitization() {
 
 void TimeUnitTest::testFormatPeriodEn() {
     UErrorCode status = U_ZERO_ERROR;
-  
-    TimePeriodResult fullResults[] = {
-        {create19m(status), "19 minutes"},
-        {create1h23_5s(status), "1 hour and 23.5 seconds"},
-        {create1h23_5m(status), "1 hour and 23.5 minutes"},
-        {create1h0m23s(status), "1 hour, 0 minutes, and 23 seconds"},
-        {create2y5M3w4d(status), "2 years, 5 months, 3 weeks, and 4 days"}};
-  
-    TimePeriodResult abbrevResults[] = {
-        {create19m(status), "19 mins"},
-        {create1h23_5s(status), "1 hr and 23.5 secs"},
-        {create1h23_5m(status), "1 hr, 23.5 mins"},
-        {create1h0m23s(status), "1 hr, 0 mins, and 23 secs"},
-        {create2y5M3w4d(status), "2 yrs, 5 mths, 3 wks, and 4 days"}};
-  
-    TimePeriodResult numericResults[] = {
-        {create19m(status), "19 mins"},
-        {create1h23_5s(status), "1:00:23.5"},
-        {create1h0m23s(status), "1:00:23"},
-        {create5h17m(status), "5:17"},
-        {create19m28s(status), "19:28"},
-        {create2y5M3w4d(status), "2 yrs, 5 mths, 3 wks, and 4 days"},
-        {create0h0m17s(status), "0:00:17"},
-        {create6h56_92m(status), "6:56.92"}};
-  
+    LocalPointer<TimePeriod> _19m(create19m(status));
+    LocalPointer<TimePeriod> _19m28s(create19m28s(status));
+    LocalPointer<TimePeriod> _1h0m23s(create1h0m23s(status));
+    LocalPointer<TimePeriod> _1h23_5s(create1h23_5s(status));
+    LocalPointer<TimePeriod> _1h23_5m(create1h23_5m(status));
+    LocalPointer<TimePeriod> _5h17m(create5h17m(status));
+    LocalPointer<TimePeriod> _2y5M3w4d(create2y5M3w4d(status));
+    LocalPointer<TimePeriod> _0h0m17s(create0h0m17s(status));
+    LocalPointer<TimePeriod> _6h56_92m(create6h56_92m(status));
     if (U_FAILURE(status)) {
-      dataerrln("Unable to create time periods - %s", u_errorName(status));
+      dataerrln("Unable to alocate time periods - %s", u_errorName(status));
       return;
     }
+  
+    TimePeriodResult fullResults[] = {
+        {_19m.getAlias(), "19 minutes"},
+        {_1h23_5s.getAlias(), "1 hour and 23.5 seconds"},
+        {_1h23_5m.getAlias(), "1 hour and 23.5 minutes"},
+        {_1h0m23s.getAlias(), "1 hour, 0 minutes, and 23 seconds"},
+        {_2y5M3w4d.getAlias(), "2 years, 5 months, 3 weeks, and 4 days"}};
+  
+    TimePeriodResult abbrevResults[] = {
+        {_19m.getAlias(), "19 mins"},
+        {_1h23_5s.getAlias(), "1 hr and 23.5 secs"},
+        {_1h23_5m.getAlias(), "1 hr, 23.5 mins"},
+        {_1h0m23s.getAlias(), "1 hr, 0 mins, and 23 secs"},
+        {_2y5M3w4d.getAlias(), "2 yrs, 5 mths, 3 wks, and 4 days"}};
+  
+    TimePeriodResult numericResults[] = {
+        {_19m.getAlias(), "19 mins"},
+        {_1h23_5s.getAlias(), "1:00:23.5"},
+        {_1h0m23s.getAlias(), "1:00:23"},
+        {_5h17m.getAlias(), "5:17"},
+        {_19m28s.getAlias(), "19:28"},
+        {_2y5M3w4d.getAlias(), "2 yrs, 5 mths, 3 wks, and 4 days"},
+        {_0h0m17s.getAlias(), "0:00:17"},
+        {_6h56_92m.getAlias(), "6:56.92"}};
+  
     {
         TimeUnitFormat tuf(Locale::getEnglish(), UTMUTFMT_FULL_STYLE, status);
         if (U_FAILURE(status)) {
@@ -452,14 +460,6 @@ void TimeUnitTest::testFormatPeriodEn() {
     }
 }
 
-void TimeUnitTest::testSize() {
-   UErrorCode status = U_ZERO_ERROR;
-   int32_t actual = create1h23_5m(status).size();
-   if (actual != 2) {
-       errln("Expected 2, got %d", actual);
-    }
-}
-
 void TimeUnitTest::testTimePeriodForAmounts() {
     UErrorCode status = U_ZERO_ERROR;
     TimeUnitAmount _5h(5.0, TimeUnit::UTIMEUNIT_HOUR, status);
@@ -471,71 +471,50 @@ void TimeUnitTest::testTimePeriodForAmounts() {
       return;
     }
     {
-        TimePeriod period;
-        if (!period.isBogus()) {
-            errln("Expected time period to be bogus.");
-        }
-    }
-    {
         UErrorCode status = U_ZERO_ERROR;
         TimeUnitAmount *amounts[] = {&_3h, &_5h};
         int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-        TimePeriod period(amounts, len, status);
+        TimePeriod::forAmounts(amounts, len, status);
         if (status != U_ILLEGAL_ARGUMENT_ERROR) {
             errln("Expected U_ILLEGAL_ARGUMENT_ERROR for 3h + 5h, got %s", u_errorName(status));
-        }
-        if (!period.isBogus()) {
-            errln("Expected period to be bogus.");
         }
     } 
     {
         UErrorCode status = U_ZERO_ERROR;
-        TimePeriod period(NULL, 0, status);
+        TimePeriod::forAmounts(NULL, 0, status);
         if (status != U_ILLEGAL_ARGUMENT_ERROR) {
             errln("Expected U_ILLEGAL_ARGUMENT_ERROR for empty time period, got %s", u_errorName(status));
-        }
-        if (!period.isBogus()) {
-            errln("Expected period to be bogus.");
         }
     } 
     {
         UErrorCode status = U_ZERO_ERROR;
         TimeUnitAmount *amounts[] = {&_3_5h, &_5m};
         int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-        TimePeriod period(amounts, len, status);
+        TimePeriod::forAmounts(amounts, len, status);
         if (status != U_ILLEGAL_ARGUMENT_ERROR) {
             errln("Expected U_ILLEGAL_ARGUMENT_ERROR for 3.5h + 5m, got %s", u_errorName(status));
-        }
-        if (!period.isBogus()) {
-            errln("Expected period to be bogus.");
         }
     } 
 }
 
 void TimeUnitTest::testEquals() {
     UErrorCode status = U_ZERO_ERROR;
-    // Doing this in two statements forces the assignment operator to be invoked.
-    TimePeriod _1h23s = create19m29s(status);
-    _1h23s = create1h23s(status);
-    TimePeriod _1h0m23s = create1h0m23s(status);
-    TimePeriod _19m28s = create19m28s(status);
-    TimePeriod _19m29s = create19m29s(status);
-
-    if (U_FAILURE(status)) {
-        errln("Failure creating TimePeriods, got %s", u_errorName(status));
-    }
+    LocalPointer<TimePeriod> _1h23s(create1h23s(status));
+    LocalPointer<TimePeriod> _1h0m23s(create1h0m23s(status));
+    LocalPointer<TimePeriod> _19m28s(create19m28s(status));
+    LocalPointer<TimePeriod> _19m29s(create19m29s(status));
 
     // Same variable
-    verifyEquals(_1h23s, _1h23s);
+    verifyEquals(*_1h23s.getAlias(), *_1h23s.getAlias());
 
     // Different variables same value
-    verifyEquals(_1h23s, TimePeriod(_1h23s));
+    verifyEquals(*_1h23s.getAlias(), TimePeriod(*_1h23s.getAlias()));
 
     // Different fields
-    verifyNotEqual(_1h23s, _1h0m23s);
+    verifyNotEqual(*_1h23s.getAlias(), *_1h0m23s.getAlias());
 
     // Same fields different values
-    verifyNotEqual(_19m28s, _19m29s);
+    verifyNotEqual(*_19m28s.getAlias(), *_19m29s.getAlias());
 }
 
 void TimeUnitTest::testTimeUnitAmountSubClass() {
@@ -550,8 +529,8 @@ void TimeUnitTest::testTimeUnitAmountSubClass() {
         UErrorCode status = U_ZERO_ERROR;
         TimeUnitAmount *amounts[] = {&_6h, &_5m};
         int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-        TimePeriod period(amounts, len, status);
-        if (2 != ((const TimeUnitAmountSubClass *) period.getAmount(TimeUnit::UTIMEUNIT_MINUTE))->extra) {
+        LocalPointer<TimePeriod> period(TimePeriod::forAmounts(amounts, len, status));
+        if (2 != ((const TimeUnitAmountSubClass *) period->getAmount(TimeUnit::UTIMEUNIT_MINUTE))->extra) {
             errln("Expected polymorphic behavior.");
         }
     } 
@@ -566,7 +545,7 @@ void TimeUnitTest::verifyFormatTimePeriod(
         expected = expected.unescape();
         UnicodeString actual;
         UErrorCode status = U_ZERO_ERROR;
-        tuf.formatTimePeriod(timePeriodResults[i].timePeriod, actual, status);
+        tuf.formatTimePeriod(*timePeriodResults[i].timePeriod, actual, status);
         if (U_FAILURE(status)) {
             dataerrln("Unable to format time period - %s", u_errorName(status));
             return;
@@ -598,97 +577,97 @@ void TimeUnitTest::verifyNotEqual(const TimePeriod& lhs, const TimePeriod& rhs) 
   }
 }
 
-static TimePeriod create19m(UErrorCode &status) {
+static TimePeriod *create19m(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount minutes(19.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount *amounts[] = {&minutes};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create19m28s(UErrorCode &status) {
+static TimePeriod *create19m28s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount minutes(19.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount seconds(28.0, TimeUnit::UTIMEUNIT_SECOND, status);
   TimeUnitAmount *amounts[] = {&minutes, &seconds};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create19m29s(UErrorCode &status) {
+static TimePeriod *create19m29s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount minutes(19.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount seconds(29.0, TimeUnit::UTIMEUNIT_SECOND, status);
   TimeUnitAmount *amounts[] = {&minutes, &seconds};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create1h23_5s(UErrorCode &status) {
+static TimePeriod *create1h23_5s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount seconds(23.5, TimeUnit::UTIMEUNIT_SECOND, status);
   TimeUnitAmount *amounts[] = {&hours, &seconds};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create1h23_5m(UErrorCode &status) {
+static TimePeriod *create1h23_5m(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount seconds(23.5, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount *amounts[] = {&hours, &seconds};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create1h0m23s(UErrorCode &status) {
+static TimePeriod *create1h0m23s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount minutes(0.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount seconds(23.0, TimeUnit::UTIMEUNIT_SECOND, status);
   TimeUnitAmount *amounts[] = {&hours, &minutes, &seconds};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create1h23s(UErrorCode &status) {
+static TimePeriod *create1h23s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount hours(1.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount seconds(23.0, TimeUnit::UTIMEUNIT_SECOND, status);
   TimeUnitAmount *amounts[] = {&hours, &seconds};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create5h17m(UErrorCode &status) {
+static TimePeriod *create5h17m(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount hours(5.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount minutes(17.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount *amounts[] = {&hours, &minutes};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create2y5M3w4d(UErrorCode &status) {
+static TimePeriod *create2y5M3w4d(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount years(2.0, TimeUnit::UTIMEUNIT_YEAR, status);
   TimeUnitAmount months(5.0, TimeUnit::UTIMEUNIT_MONTH, status);
@@ -696,30 +675,30 @@ static TimePeriod create2y5M3w4d(UErrorCode &status) {
   TimeUnitAmount days(4.0, TimeUnit::UTIMEUNIT_DAY, status);
   TimeUnitAmount *amounts[] = {&years, &months, &weeks, &days};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create0h0m17s(UErrorCode &status) {
+static TimePeriod *create0h0m17s(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount hours(0.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount minutes(0.0, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount seconds(17.0, TimeUnit::UTIMEUNIT_SECOND, status);
   TimeUnitAmount *amounts[] = {&hours, &minutes, &seconds};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
-static TimePeriod create6h56_92m(UErrorCode &status) {
+static TimePeriod *create6h56_92m(UErrorCode &status) {
   if (U_FAILURE(status)) {
-      return TimePeriod();
+      return NULL;
   }
   TimeUnitAmount hours(6.0, TimeUnit::UTIMEUNIT_HOUR, status);
   TimeUnitAmount minutes(56.92, TimeUnit::UTIMEUNIT_MINUTE, status);
   TimeUnitAmount *amounts[] = {&hours, &minutes};
   int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
-  return TimePeriod(amounts, len, status); 
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
 #endif
