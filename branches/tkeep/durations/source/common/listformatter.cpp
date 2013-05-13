@@ -29,6 +29,7 @@ static Hashtable* listPatternHash = NULL;
 static UMutex listFormatterMutex = U_MUTEX_INITIALIZER;
 static UChar FIRST_PARAMETER[] = { 0x7b, 0x30, 0x7d };  // "{0}"
 static UChar SECOND_PARAMETER[] = { 0x7b, 0x31, 0x7d };  // "{0}"
+static const char *STANDARD_STYLE = "standard";
 
 U_CDECL_BEGIN
 static UBool U_CALLCONV uprv_listformatter_cleanup() {
@@ -44,7 +45,7 @@ uprv_deleteListFormatData(void *obj) {
 
 U_CDECL_END
 
-static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& errorCode);
+static ListFormatData* loadListFormatData(const Locale& locale, const char* style, UErrorCode& errorCode);
 static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString& result, UErrorCode& errorCode);
 
 void ListFormatter::initializeHash(UErrorCode& errorCode) {
@@ -64,11 +65,13 @@ void ListFormatter::initializeHash(UErrorCode& errorCode) {
 }
 
 const ListFormatData* ListFormatter::getListFormatData(
-        const Locale& locale, UErrorCode& errorCode) {
+        const Locale& locale, const char *style, UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
-    UnicodeString key(locale.getName(), -1, US_INV);
+    CharString keyBuffer(locale.getName(), errorCode);
+    keyBuffer.append(':', errorCode).append(style, errorCode);
+    UnicodeString key(keyBuffer.data(), -1, US_INV);
     ListFormatData* result = NULL;
     {
         Mutex m(&listFormatterMutex);
@@ -83,7 +86,7 @@ const ListFormatData* ListFormatter::getListFormatData(
     if (result != NULL) {
         return result;
     }
-    result = loadListFormatData(locale, errorCode);
+    result = loadListFormatData(locale, style, errorCode);
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
@@ -104,14 +107,15 @@ const ListFormatData* ListFormatter::getListFormatData(
     return result;
 }
 
-static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& errorCode) {
+static ListFormatData* loadListFormatData(
+        const Locale& locale, const char * style, UErrorCode& errorCode) {
     UResourceBundle* rb = ures_open(NULL, locale.getName(), &errorCode);
     if (U_FAILURE(errorCode)) {
         ures_close(rb);
         return NULL;
     }
     rb = ures_getByKeyWithFallback(rb, "listPattern", rb, &errorCode);
-    rb = ures_getByKeyWithFallback(rb, "standard", rb, &errorCode);
+    rb = ures_getByKeyWithFallback(rb, style, rb, &errorCode);
     if (U_FAILURE(errorCode)) {
         ures_close(rb);
         return NULL;
@@ -148,8 +152,12 @@ ListFormatter* ListFormatter::createInstance(UErrorCode& errorCode) {
 }
 
 ListFormatter* ListFormatter::createInstance(const Locale& locale, UErrorCode& errorCode) {
+    return createInstance(locale, STANDARD_STYLE, errorCode);
+}
+
+ListFormatter* ListFormatter::createInstance(const Locale& locale, const char *style, UErrorCode& errorCode) {
     Locale tempLocale = locale;
-    const ListFormatData* listFormatData = getListFormatData(tempLocale, errorCode);
+    const ListFormatData* listFormatData = getListFormatData(tempLocale, style, errorCode);
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
@@ -160,6 +168,7 @@ ListFormatter* ListFormatter::createInstance(const Locale& locale, UErrorCode& e
     }
     return p;
 }
+
 
 ListFormatter::ListFormatter(const ListFormatData& listFormatterData) : data(listFormatterData) {
 }

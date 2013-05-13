@@ -81,6 +81,17 @@ class U_COMMON_API ListFormatter : public UObject{
      */
     static ListFormatter* createInstance(const Locale& locale, UErrorCode& errorCode);
 
+    /**
+     * Creates a ListFormatter appropriate for a locale and style.
+     *
+     * @param locale The locale.
+     * @param style the style, either "standard", "duration", or "duration-short"
+     * @param errorCode ICU error code, set if no data available for the given locale.
+     * @return A ListFormatter object created from internal data derived from
+     *     CLDR data.
+     * @internal
+     */
+    static ListFormatter* createInstance(const Locale& locale, const char* style, UErrorCode& errorCode);
 
     /**
      * Destructor.
@@ -110,7 +121,7 @@ class U_COMMON_API ListFormatter : public UObject{
 
   private:
     static void initializeHash(UErrorCode& errorCode);
-    static const ListFormatData* getListFormatData(const Locale& locale, UErrorCode& errorCode);
+    static const ListFormatData* getListFormatData(const Locale& locale, const char *style, UErrorCode& errorCode);
 
     ListFormatter();
     ListFormatter(const ListFormatter&);
