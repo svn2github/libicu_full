@@ -48,6 +48,23 @@ U_CDECL_END
 static ListFormatData* loadListFormatData(const Locale& locale, const char* style, UErrorCode& errorCode);
 static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString& result, UErrorCode& errorCode);
 
+ListFormatter::ListFormatter(UErrorCode& errorCode) {
+    Locale locale;
+    data = getListFormatData(locale, "standard" , errorCode);
+}
+
+ListFormatter::ListFormatter(const Locale& locale, UErrorCode& errorCode) {
+    data = getListFormatData(locale, "standard" , errorCode);
+}
+
+ListFormatter::ListFormatter(const ListFormatter& other) : data(other.data) {
+}
+
+ListFormatter& ListFormatter::operator=(const ListFormatter& other) {
+    data = other.data;
+    return *this;
+}
+
 void ListFormatter::initializeHash(UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
         return;
@@ -161,7 +178,7 @@ ListFormatter* ListFormatter::createInstance(const Locale& locale, const char *s
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
-    ListFormatter* p = new ListFormatter(*listFormatData);
+    ListFormatter* p = new ListFormatter(listFormatData);
     if (p == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
@@ -170,7 +187,7 @@ ListFormatter* ListFormatter::createInstance(const Locale& locale, const char *s
 }
 
 
-ListFormatter::ListFormatter(const ListFormatData& listFormatterData) : data(listFormatterData) {
+ListFormatter::ListFormatter(const ListFormatData* listFormatterData) : data(listFormatterData) {
 }
 
 ListFormatter::~ListFormatter() {}
@@ -180,18 +197,22 @@ UnicodeString& ListFormatter::format(const UnicodeString items[], int32_t nItems
     if (U_FAILURE(errorCode)) {
         return appendTo;
     }
+    if (data == NULL) {
+        errorCode = U_INVALID_STATE_ERROR;
+        return appendTo;
+    }
 
     if (nItems > 0) {
         UnicodeString newString = items[0];
         if (nItems == 2) {
-            addNewString(data.twoPattern, newString, items[1], errorCode);
+            addNewString(data->twoPattern, newString, items[1], errorCode);
         } else if (nItems > 2) {
-            addNewString(data.startPattern, newString, items[1], errorCode);
+            addNewString(data->startPattern, newString, items[1], errorCode);
             int32_t i;
             for (i = 2; i < nItems - 1; ++i) {
-                addNewString(data.middlePattern, newString, items[i], errorCode);
+                addNewString(data->middlePattern, newString, items[i], errorCode);
             }
-            addNewString(data.endPattern, newString, items[nItems - 1], errorCode);
+            addNewString(data->endPattern, newString, items[nItems - 1], errorCode);
         }
         if (U_SUCCESS(errorCode)) {
             appendTo += newString;
