@@ -378,7 +378,7 @@ TimeUnitFormat::create(const Locale& locale, UTimeUnitFormatStyle style, UErrorC
     if (U_FAILURE(status)) {
         return;
     }
-    if (style < UTMUTFMT_FULL_STYLE || style > UTMUTFMT_ABBREVIATED_STYLE) {
+    if (style < UTMUTFMT_FULL_STYLE || style >= UTMUTFMT_FORMAT_STYLE_COUNT) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
