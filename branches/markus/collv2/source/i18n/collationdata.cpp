@@ -19,6 +19,7 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
+#include "collationsettings.h"
 #include "uassert.h"
 #include "utrie2.h"
 
@@ -30,9 +31,19 @@ CollationData::getVariableTopForMaxVariable(CollationSettings::MaxVariable maxVa
     if(index < 0) {
         return 0;
     }
-    int32_t head = scripts[index];
-    int32_t lastByte = head & 0xff;
-    return (((uint32_t)lastByte + 1) << 24) - 1;
+    uint32_t head = scripts[index];
+    uint32_t lastByte = head & 0xff;
+    return ((lastByte + 1) << 24) - 1;
+}
+
+uint32_t
+CollationData::getFirstPrimaryForGroup(int32_t script) const {
+    int32_t index = findScript(script);
+    if(index < 0) {
+        return 0;
+    }
+    uint32_t head = scripts[index];
+    return (head & 0xff00) << 16;
 }
 
 int32_t

@@ -20,6 +20,8 @@ U_NAMESPACE_BEGIN
 
 struct CollationData;
 struct CollationDataReader;
+struct CollationSettings;
+
 class Collator;
 
 /**
@@ -28,6 +30,7 @@ class Collator;
 class U_I18N_API CollationRoot {  // purely static
 public:
     static const CollationData *getBaseData(UErrorCode &errorCode);
+    static const CollationSettings *getBaseSettings(UErrorCode &errorCode);
     static Collator *createCollator(UErrorCode &errorCode);
 
 private:

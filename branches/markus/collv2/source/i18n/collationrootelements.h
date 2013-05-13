@@ -125,6 +125,18 @@ public:
     }
 
     /**
+     * Returns the last root CE with a primary weight before p.
+     * Intended only for reordering group boundaries.
+     */
+    int64_t lastCEWithPrimaryBefore(uint32_t p) const;
+
+    /**
+     * Returns the first root CE with a primary weight of at least p.
+     * Intended only for reordering group boundaries.
+     */
+    int64_t firstCEWithPrimaryAtLeast(uint32_t p) const;
+
+    /**
      * Returns lower and upper primary weight limits for the input ce.
      * @return ce's primary in upper 32 bits, next primary in lower 32
      */
@@ -154,11 +166,45 @@ private:
     int32_t findCE(int64_t ce) const;
     /**
      * Finds the largest index i where elements[i]<=p.
-     * The primary must occur in a root CE.
-     * Requires first primary<=p<0xff000000 (SPECIAL_BYTE<<24).
+     * Requires first primary<=p<0xff000000 (SPECIAL_PRIMARY).
      */
     int32_t findPrimary(uint32_t p) const;
 
+    /**
+     * Data structure:
+     *
+     * The first few entries are indexes, up to elements[IX_FIRST_TERTIARY_INDEX].
+     * See the comments on the IX_ constants.
+     *
+     * All other elements are a compact form of the root collator CEs
+     * in collation order.
+     *
+     * Primary weights have the SEC_TER_DELTA_FLAG flag not set.
+     * A primary-weight element by itself represents a root CE
+     * with Collation::COMMON_SEC_AND_TER_CE.
+     *
+     * If there are root CEs with the same primary but other secondary/tertiary weights,
+     * then for each such CE there is an element with those secondary and tertiary weights,
+     * and with the SEC_TER_DELTA_FLAG flag set.
+     *
+     * A range of only-primary CEs with a consistent "step" increment
+     * from each primary to the next may be stored as a range.
+     * Only the first and last primary are stored, and the last has the step
+     * value in the low bits (PRIMARY_STEP_MASK).
+     *
+     * An range-end element may also either start a new range or be followed by
+     * elements with secondary/tertiary deltas.
+     *
+     * A primary element that is not a range end has zero step bits.
+     *
+     * There is no element for the completely ignorable CE (all weights 0).
+     *
+     * Before elements[IX_FIRST_PRIMARY_INDEX], all elements are secondary/tertiary deltas,
+     * for all of the ignorable root CEs.
+     *
+     * There are no elements for unassigned-implicit primary CEs.
+     * All primaries stored here are at most 3 bytes long.
+     */
     const uint32_t *elements;
     int32_t length;
 };

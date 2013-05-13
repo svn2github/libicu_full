@@ -37,7 +37,7 @@ U_NAMESPACE_BEGIN
  * and saves memory, when a Collator is cloned.
  */
 struct U_I18N_API CollationTailoring : public UMemory {
-    CollationTailoring();
+    CollationTailoring(const CollationSettings &baseSettings);
     ~CollationTailoring();
 
     /**

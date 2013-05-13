@@ -17,6 +17,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/unistr.h"
+#include "collationrootelements.h"
 #include "collationruleparser.h"
 #include "collationtailoringdatabuilder.h"
 #include "uvectr32.h"
@@ -57,10 +58,29 @@ private:
                              const UnicodeString &str, const UnicodeString &extension,
                              const char *&errorReason, UErrorCode &errorCode);
 
-    void modifyCEs(int32_t strength, UErrorCode &errorCode);
-    int32_t findOrInsertNodeForRootCE(int64_t ce, UErrorCode &errorCode);
-    int32_t insertNodeAfter(int32_t index, int32_t weight24,
-                            int32_t type, int32_t strength, UErrorCode &errorCode);
+    /**
+     * Picks one of the current CEs and finds or inserts a node in the graph
+     * for the CE + strength.
+     */
+    int32_t findOrInsertNodeForCEs(int32_t strength, const char *&parserErrorReason,
+                                   UErrorCode &errorCode);
+    int32_t findOrInsertNodeForRootCE(int64_t ce, int32_t strength, UErrorCode &errorCode);
+
+    /**
+     * Makes and inserts a new tailored node into the list, after the one at index.
+     * Skips over nodes of weaker strength to maintain collation order
+     * ("postpone insertion").
+     * @return the new node's index
+     */
+    int32_t insertTailoredNodeAfter(int32_t index, int32_t strength, UErrorCode &errorCode);
+
+    /**
+     * Inserts a new node into the list, between list-adjacent items.
+     * The node's previous and next indexes must not be set yet.
+     * @return the new node's index
+     */
+    int32_t insertNodeBetween(int32_t index, int32_t nextIndex, int64_t node,
+                              UErrorCode &errorCode);
 
     /** Implements CollationRuleParser::Sink. */
     virtual void suppressContractions(const UnicodeSet &set,
@@ -102,54 +122,60 @@ private:
 
     static int32_t ceStrength(int64_t ce);
 
-    static inline int64_t nodeFromWeight24(int32_t weight24) {
-        return (int64_t)weight24 << 40;
+    /** At most 1M nodes, limited by the 20 bits in node bit fields. */
+    static const int32_t MAX_INDEX = 0xfffff;
+    /**
+     * Node bit 3 distinguishes a tailored node, which has no weight value,
+     * from a node with a root or default weight.
+     */
+    static const int32_t TAILORED_NODE = 8;
+
+    static inline int64_t nodeFromWeight32(uint32_t weight32) {
+        return (int64_t)weight32 << 32;
+    }
+    static inline int64_t nodeFromWeight16(uint32_t weight16) {
+        return (int64_t)weight16 << 48;
     }
     static inline int64_t nodeFromPreviousIndex(int32_t previous) {
-        return (int64_t)previous << 22;
+        return (int64_t)previous << 24;
     }
     static inline int64_t nodeFromNextIndex(int32_t next) {
         return next << 4;
-    }
-    static inline int64_t nodeFromType(int32_t type) {
-        return type << 2;
     }
     static inline int64_t nodeFromStrength(int32_t strength) {
         return strength;
     }
 
-    static inline int32_t weight24FromNode(int64_t node) {
-        return (int32_t)(node >> 40) & 0xffffff;
+    static inline uint32_t weight32FromNode(int64_t node) {
+        return (uint32_t)(node >> 32);
+    }
+    static inline uint32_t weight16FromNode(int64_t node) {
+        return (uint32_t)(node >> 48) & 0xffff;
     }
     static inline int32_t previousIndexFromNode(int64_t node) {
-        return (int32_t)(node >> 22) & MAX_INDEX;
+        return (int32_t)(node >> 24) & MAX_INDEX;
     }
     static inline int32_t nextIndexFromNode(int64_t node) {
         return ((int32_t)node >> 4) & MAX_INDEX;
-    }
-    static inline int32_t typeFromNode(int64_t node) {
-        return ((int32_t)node >> 2) & 3;
     }
     static inline int32_t strengthFromNode(int64_t node) {
         return (int32_t)node & 3;
     }
 
     static inline int64_t changeNodePreviousIndex(int64_t node, int32_t previous) {
-        return (node & 0xffffff00003fffff) | nodeFromPreviousIndex(previous);
+        return (node & 0xfffff00000ffffff) | nodeFromPreviousIndex(previous);
     }
     static inline int64_t changeNodeNextIndex(int64_t node, int32_t next) {
-        return (node & 0xffffffffffc0000f) | nodeFromNextIndex(next);
+        return (node & 0xffffffffff00000f) | nodeFromNextIndex(next);
     }
-
-    /** At most 256k nodes, limited by the 18 bits in node bit fields. */
-    static const int32_t MAX_INDEX = 0x3ffff;
-    static const int32_t ROOT_NODE = 0;
-    static const int32_t DEFAULT_NODE = 1;
-    static const int32_t TAILORED_NODE = 2;
 
     const Normalizer2 &nfd;
 
     const CollationData *baseData;
+    const CollationRootElements rootElements;
+    uint32_t variableTop;
+    int64_t firstImplicitCE;
+
     CollationTailoringDataBuilder dataBuilder;
     const char *errorReason;
 
@@ -157,39 +183,56 @@ private:
     int32_t cesLength;
 
     /**
-     * Indexes of nodes with primary root weights, sorted by primary.
+     * Indexes of nodes with root primary weights, sorted by primary.
      * Compact form of a TreeMap from root primary to node index.
      *
      * This is a performance optimization for finding reset positions.
      * Without this, we would have to search through the entire nodes list.
+     * It also allows storing root primary weights as list heads,
+     * without previous index, leaving room for 32-bit primary weights.
      */
     UVector32 rootPrimaryIndexes;
     /**
      * Data structure for assigning tailored weights and CEs.
-     * Doubly-linked list of nodes in mostly collation order.
+     * Doubly-linked lists of nodes in mostly collation order.
+     * Each list starts with a root primary node,
+     * which does not have a previous index,
+     * and ends with a nextIndex of 0.
      *
-     * "Root" nodes store root collator weights.
-     * "Default" nodes store default weak weights (e.g., secondary 02 or 05)
+     * Nodes with real weights store root collator weights,
+     * or default weak weights (e.g., secondary 02 or 05)
      * for stronger nodes (e.g., primary difference).
-     * "Tailored" nodes create a difference of a certain strength from
-     * the preceding node.
+     * "Tailored" nodes, with the TAILORED_NODE bit set,
+     * create a difference of a certain strength from the preceding node.
      *
      * Tailored CEs are initially represented in CollationData as temporary CEs
-     * which point to a stable index in this list.
+     * which point to stable indexes in this list.
      * At the end, the tailored weights are allocated as necessary,
      * then the tailored nodes are replaced with final CEs,
      * and the CollationData is rewritten by replacing temporary CEs with final ones.
      *
-     * We cannot simply insert new nodes in the middle of the list
+     * We cannot simply insert new nodes in the middle of the array
      * because that would invalidate the indexes stored in existing temporary CEs.
      * We need to use a linked graph with stable indexes to existing nodes.
      * A doubly-linked list seems easiest to maintain.
      *
      * Each node is stored as an int64_t, with its fields stored as bit fields.
-     * - a weight (if it is a root or default node): 24 bits 63..40
-     * - index to the previous node: 18 bits 39..22
-     * - index to the next node: 18 bits 21..4
-     * - the type (root/default/tailored): 2 bits 3..2
+     *
+     * Root primary node:
+     * - primary weight: 32 bits 63..32
+     * - reserved/unused/zero: 8 bits 31..24
+     *
+     * Weaker root nodes & tailored nodes:
+     * - a weight: 16 bits 63..48
+     *   + a root or default weight
+     *   + unused/zero for a tailored node
+     * - reserved/unused/zero: 4 bits 47..44
+     * - index to the previous node: 20 bits 43..24
+     *
+     * All types of nodes:
+     * - index to the next node: 20 bits 23..4
+     * - TAILORED_NODE: bit 3
+     * - reserved/unused/zero: bit 2
      * - the difference strength (primary/secondary/tertiary/quaternary): 2 bits 1..0
      *
      * We could allocate structs with pointers, but we would have to store them

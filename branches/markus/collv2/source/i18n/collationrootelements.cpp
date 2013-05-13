@@ -20,6 +20,100 @@
 U_NAMESPACE_BEGIN
 
 int64_t
+CollationRootElements::lastCEWithPrimaryBefore(uint32_t p) const {
+    if(p == 0) { return 0; }
+    U_ASSERT(p > elements[elements[IX_FIRST_PRIMARY_INDEX]]);
+    int32_t index = findPrimary(p);
+    uint32_t q = elements[index];
+    uint32_t secTer;
+    if(p == (q & 0xffffff00)) {
+        // p == elements[index] is a root primary. Find the CE before it.
+        // We must not be in a primary range.
+        U_ASSERT((q & PRIMARY_STEP_MASK) == 0);
+        secTer = elements[index - 1];
+        if((secTer & SEC_TER_DELTA_FLAG) == 0) {
+            // Primary CE just before p.
+            p = secTer & 0xffffff00;
+            secTer = Collation::COMMON_SEC_AND_TER_CE;
+        } else {
+            // secTer = last secondary & tertiary for the previous primary
+            index -= 2;
+            for(;;) {
+                p = elements[index];
+                if((p & SEC_TER_DELTA_FLAG) == 0) {
+                    p &= 0xffffff00;
+                    break;
+                }
+                --index;
+            }
+        }
+    } else {
+        // p > elements[index] which is the previous primary.
+        // Find the last secondary & tertiary weights for it.
+        p = q & 0xffffff00;
+        secTer = Collation::COMMON_SEC_AND_TER_CE;
+        for(;;) {
+            q = elements[++index];
+            if((q & SEC_TER_DELTA_FLAG) == 0) {
+                // We must not be in a primary range.
+                U_ASSERT((q & PRIMARY_STEP_MASK) == 0);
+                break;
+            }
+            secTer = q;
+        }
+    }
+    return ((int64_t)p << 32) | secTer;
+}
+
+int64_t
+CollationRootElements::firstCEWithPrimaryAtLeast(uint32_t p) const {
+    if(p == 0) { return 0; }
+    int32_t index = findPrimary(p);
+    if(p != (elements[index] & 0xffffff00)) {
+        for(;;) {
+            p = elements[++index];
+            if((p & SEC_TER_DELTA_FLAG) == 0) {
+                // First primary after p. We must not be in a primary range.
+                U_ASSERT((p & PRIMARY_STEP_MASK) == 0);
+                break;
+            }
+        }
+    }
+    return ((int64_t)p << 32) | Collation::COMMON_SEC_AND_TER_CE;
+}
+
+#if 0  // TODO
+uint32_t
+CollationRootElements::getPrimaryBefore(int64_t ce, UBool isCompressible) const {
+    uint32_t p = (uint32_t)(ce >> 32);
+    if(p <= elements[elements[IX_FIRST_PRIMARY_INDEX]]) {
+        // No primary before [first space].
+        return 0;
+    }
+    int32_t indexAndStep = findCE(ce);
+    int32_t step = indexAndStep & 0xff;
+    uint32_t q;  // next primary
+    if(step != 0) {
+        if((p & 0xffff) == 0) {
+            q = Collation::incTwoBytePrimaryByOffset(p, isCompressible, step);
+        } else {
+            q = Collation::incThreeBytePrimaryByOffset(p, isCompressible, step);
+        }
+    } else {
+        int32_t index = indexAndStep >> 8;
+        for(;;) {
+            q = elements[++index];
+            if((q & SEC_TER_DELTA_FLAG) == 0) {
+                U_ASSERT((q & PRIMARY_STEP_MASK) == 0);
+                break;
+            }
+        }
+    }
+    return ((int64_t)p << 32) | q;
+}
+#endif
+
+int64_t
 CollationRootElements::getPrimaryLimitsAt(int64_t ce, UBool isCompressible) const {
     uint32_t p = (uint32_t)(ce >> 32);
     if(p == 0) {
@@ -123,6 +217,7 @@ CollationRootElements::findCE(int64_t ce) const {
     if(p == 0) {
         index = (int32_t)elements[IX_FIRST_TERTIARY_INDEX];
     } else {
+        U_ASSERT((p & 0xff) == 0);  // at most a 3-byte primary
         index = findPrimary(p);
         uint32_t nextElement = elements[index + 1];
         if((nextElement & SEC_TER_DELTA_FLAG) != 0) {
@@ -158,15 +253,12 @@ CollationRootElements::findCE(int64_t ce) const {
 
 int32_t
 CollationRootElements::findPrimary(uint32_t p) const {
-    U_ASSERT((p & 0xff) == 0);  // at most a 3-byte primary
-    U_ASSERT(p >= elements[elements[IX_FIRST_PRIMARY_INDEX]]);
     U_ASSERT((p >> 24) != Collation::UNASSIGNED_IMPLICIT_BYTE);
-    U_ASSERT((p >> 24) != Collation::SPECIAL_BYTE);
     // modified binary search
     int32_t start = (int32_t)elements[IX_FIRST_PRIMARY_INDEX];
     U_ASSERT(p >= elements[start]);
     int32_t limit = length - 1;
-    U_ASSERT(elements[limit] >= ((uint32_t)Collation::SPECIAL_BYTE << 24));
+    U_ASSERT(elements[limit] >= Collation::SPECIAL_PRIMARY);
     U_ASSERT(p < elements[limit]);
     while((start + 1) < limit) {
         // Invariant: elements[start] and elements[limit] are primaries,

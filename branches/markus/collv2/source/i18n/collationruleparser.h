@@ -42,10 +42,10 @@ public:
         LAST_PRIMARY_IGNORABLE,
         FIRST_VARIABLE,
         LAST_VARIABLE,
-        FIRST_IMPLICIT,
-        LAST_IMPLICIT,
         FIRST_REGULAR,
         LAST_REGULAR,
+        FIRST_IMPLICIT,
+        LAST_IMPLICIT,
         FIRST_TRAILING,
         LAST_TRAILING
     };

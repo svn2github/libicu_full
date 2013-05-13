@@ -89,10 +89,13 @@ public:
 
     // CE32 value for U+FFFD as well as illegal UTF-8 byte sequences (which behave like U+FFFD).
     // We use the third-highest primary weight for U+FFFD (as in UCA 6.3+).
+    static const uint32_t FFFD_PRIMARY = MAX_PRIMARY - 0x20000;
     static const uint32_t FFFD_CE32 = MAX_REGULAR_CE32 - 0x20000;
 
     /** Primary lead byte for special tags, not used as a primary lead byte in resolved CEs. */
     static const uint8_t SPECIAL_BYTE = 0xff;
+    /** SPECIAL_BYTE<<24 = SPECIAL_BYTE.000000 */
+    static const uint32_t SPECIAL_PRIMARY = 0xff000000;
 
     /**
      * The lowest "special" CE32 value.

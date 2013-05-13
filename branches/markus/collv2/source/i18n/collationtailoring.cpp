@@ -23,10 +23,12 @@
 
 U_NAMESPACE_BEGIN
 
-CollationTailoring::CollationTailoring()
+CollationTailoring::CollationTailoring(const CollationSettings &baseSettings)
         : data(NULL),
           refCount(1),
           isDataOwned(FALSE) {
+    settings.options = baseSettings.options;
+    settings.variableTop = baseSettings.variableTop;
     version[0] = version[1] = version[2] = version[3] = 0;
 }
 

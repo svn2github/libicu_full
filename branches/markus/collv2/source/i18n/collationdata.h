@@ -79,6 +79,13 @@ struct U_I18N_API CollationData : public UMemory {
      */
     uint32_t getVariableTopForMaxVariable(CollationSettings::MaxVariable maxVariable) const;
 
+    /**
+     * Returns the first primary for the script's reordering group.
+     * @return the primary with only the first primary lead byte of the group
+     *         (not necessarily an actual root collator primary weight)
+     */
+    uint32_t getFirstPrimaryForGroup(int32_t script) const;
+
     int32_t getEquivalentScripts(int32_t script,
                                  int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;
 
@@ -147,7 +154,7 @@ struct U_I18N_API CollationData : public UMemory {
 
     /**
      * Collation elements in the root collator.
-     * Used by the CollationRootElements class.
+     * Used by the CollationRootElements class. The data structure is described there.
      * NULL in a tailoring.
      */
     const uint32_t *rootElements;

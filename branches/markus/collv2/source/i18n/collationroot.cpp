@@ -19,6 +19,7 @@
 #include "collationdata.h"
 #include "collationdatareader.h"
 #include "collationroot.h"
+#include "collationsettings.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
 #include "rulebasedcollator.h"
@@ -78,6 +79,13 @@ CollationRoot::getBaseData(UErrorCode &errorCode) {
     const CollationDataReader *reader = getReader(errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     return &reader->data;
+}
+
+const CollationSettings *
+CollationRoot::getBaseSettings(UErrorCode &errorCode) {
+    const CollationDataReader *reader = getReader(errorCode);
+    if(U_FAILURE(errorCode)) { return NULL; }
+    return &reader->settings;
 }
 
 Collator *

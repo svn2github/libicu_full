@@ -411,9 +411,9 @@ CollationBaseDataBuilder::buildRootElementsTable(UVector32 &table, UErrorCode &e
         }
     }
 
-    // SPECIAL_BYTE.000000 as the limit sentinel for root elements.
+    // Limit sentinel for root elements.
     // This allows us to reduce range checks at runtime.
-    table.addElement((uint32_t)Collation::SPECIAL_BYTE << 24, errorCode);
+    table.addElement(Collation::SPECIAL_PRIMARY, errorCode);
 }
 
 int32_t

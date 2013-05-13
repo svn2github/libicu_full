@@ -409,10 +409,10 @@ static const char *const positions[] = {
     "last primary ignorable",
     "first variable",
     "last variable",
-    "first implicit",
-    "last implicit",
     "first regular",
     "last regular",
+    "first implicit",
+    "last implicit",
     "first trailing",
     "last trailing"
 };
@@ -497,6 +497,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
                 ruleIndex = j;
                 return;
             }
+        // TODO: maxVariable
         } else if(raw == UNICODE_STRING_SIMPLE("caseFirst")) {
             UColAttributeValue value = UCOL_DEFAULT;
             if(v == UNICODE_STRING_SIMPLE("off")) {
