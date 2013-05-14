@@ -49,6 +49,7 @@ U_NAMESPACE_BEGIN
 class Hashtable;
 class UVector;
 class TimePeriod;
+class ListFormatter;
 
 /**
  * Format or parse a TimeUnitAmount, using plural rules for the units where available.
@@ -220,12 +221,15 @@ private:
     Locale        fLocale;
     Hashtable*    fTimeUnitToCountToPatterns[TimeUnit::UTIMEUNIT_FIELD_COUNT];
     PluralRules*  fPluralRules;
+    ListFormatter *fListFormatter;
     UTimeUnitFormatStyle fStyle;
 
   UnicodeString& formatTimePeriod(const TimePeriod &timePeriod,
                                           UnicodeString& toAppendTo,
                                           UErrorCode& status) const;
 
+    UBool formatTimePeriodAsNumeric(
+            const TimePeriod& timePeriod, UnicodeString& toAppendTo, UErrorCode& status) const;
 
     void create(const Locale& locale, UTimeUnitFormatStyle style, UErrorCode& status);
 

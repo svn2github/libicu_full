@@ -17,6 +17,7 @@
 #include "cstring.h"
 #include "hash.h"
 #include "uresimp.h"
+#include "unicode/listformatter.h"
 #include "unicode/msgfmt.h"
 #include "unicode/timeperiod.h"
 #include "uassert.h"
@@ -77,24 +78,36 @@ static const UChar PLURAL_COUNT_ZERO[] = {LOW_Z, LOW_E, LOW_R, LOW_O, 0};
 static const UChar PLURAL_COUNT_ONE[] = {LOW_O, LOW_N, LOW_E, 0};
 static const UChar PLURAL_COUNT_TWO[] = {LOW_T, LOW_W, LOW_O, 0};
 
+static const TimeUnit::UTimeUnitFields FIELDS_BY_DURATION[] = {
+        TimeUnit::UTIMEUNIT_YEAR,
+        TimeUnit::UTIMEUNIT_MONTH,
+        TimeUnit::UTIMEUNIT_WEEK,
+        TimeUnit::UTIMEUNIT_DAY,
+        TimeUnit::UTIMEUNIT_HOUR,
+        TimeUnit::UTIMEUNIT_MINUTE,
+        TimeUnit::UTIMEUNIT_SECOND,
+        TimeUnit::UTIMEUNIT_FIELD_COUNT};
 
 TimeUnitFormat::TimeUnitFormat(UErrorCode& status)
 :   fNumberFormat(NULL),
-    fPluralRules(NULL) {
+    fPluralRules(NULL),
+    fListFormatter(NULL) {
     create(Locale::getDefault(), UTMUTFMT_FULL_STYLE, status);
 }
 
 
 TimeUnitFormat::TimeUnitFormat(const Locale& locale, UErrorCode& status)
 :   fNumberFormat(NULL),
-    fPluralRules(NULL) {
+    fPluralRules(NULL),
+    fListFormatter(NULL) {
     create(locale, UTMUTFMT_FULL_STYLE, status);
 }
 
 
 TimeUnitFormat::TimeUnitFormat(const Locale& locale, UTimeUnitFormatStyle style, UErrorCode& status)
 :   fNumberFormat(NULL),
-    fPluralRules(NULL) {
+    fPluralRules(NULL),
+    fListFormatter(NULL) {
     create(locale, style, status);
 }
 
@@ -103,6 +116,7 @@ TimeUnitFormat::TimeUnitFormat(const TimeUnitFormat& other)
 :   MeasureFormat(other),
     fNumberFormat(NULL),
     fPluralRules(NULL),
+    fListFormatter(NULL),
     fStyle(UTMUTFMT_FULL_STYLE)
 {
     for (TimeUnit::UTimeUnitFields i = TimeUnit::UTIMEUNIT_YEAR;
@@ -125,6 +139,8 @@ TimeUnitFormat::~TimeUnitFormat() {
     }
     delete fPluralRules;
     fPluralRules = NULL;
+    delete fListFormatter;
+    fListFormatter = NULL;
 }
 
 
@@ -151,6 +167,12 @@ TimeUnitFormat::operator=(const TimeUnitFormat& other) {
         fNumberFormat = (NumberFormat*)other.fNumberFormat->clone();
     } else {
         fNumberFormat = NULL;
+    }
+    delete fListFormatter;
+    if (other.fListFormatter) {
+        fListFormatter = new ListFormatter(*other.fListFormatter);
+    } else {
+        fListFormatter = NULL;
     }
     fLocale = other.fLocale;
     for (TimeUnit::UTimeUnitFields i = TimeUnit::UTIMEUNIT_YEAR;
@@ -369,8 +391,50 @@ TimeUnitFormat::parseObject(const UnicodeString& source,
 
 UnicodeString& 
 TimeUnitFormat::formatTimePeriod(
-    const TimePeriod& timePeriod, UnicodeString& toAppendTo, UErrorCode& status) const {
-  return toAppendTo;
+        const TimePeriod& timePeriod, UnicodeString& toAppendTo, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return toAppendTo;
+    }
+    if (timePeriod.isBogus()) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return toAppendTo;
+    }
+    if (fStyle == UTMUTFMT_NUMERIC_STYLE && formatTimePeriodAsNumeric(timePeriod, toAppendTo, status)) {
+        return toAppendTo;
+    }
+    UnicodeString *items = new UnicodeString[timePeriod.size()];
+    if (items == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return toAppendTo;
+    }
+    int32_t idx = 0;
+    for (int32_t fieldIndex = 0; FIELDS_BY_DURATION[fieldIndex] != TimeUnit::UTIMEUNIT_FIELD_COUNT; ++fieldIndex) {
+        const TimeUnitAmount *amount = timePeriod.getAmount(FIELDS_BY_DURATION[fieldIndex]);
+        if (amount == NULL) {
+            continue;
+        }
+        TimeUnitAmount *timeUnitAmountCopy = new TimeUnitAmount(*amount);
+        if (timeUnitAmountCopy == NULL) {
+            status = U_ILLEGAL_ARGUMENT_ERROR;
+            delete [] items;
+            return toAppendTo;
+        }
+        format(Formattable(timeUnitAmountCopy), items[idx], status);
+        if (U_FAILURE(status)) {
+            delete [] items;
+            return toAppendTo;
+        }
+        ++idx;
+    }
+    UnicodeString& result = fListFormatter->format(items, timePeriod.size(), toAppendTo, status);
+    delete [] items;
+    return result;
+}
+
+UBool
+TimeUnitFormat::formatTimePeriodAsNumeric(
+        const TimePeriod& timePeriod, UnicodeString& toAppendTo, UErrorCode& status) const {
+    return FALSE;
 }
 
 void
@@ -431,6 +495,12 @@ TimeUnitFormat::initDataMembers(UErrorCode& err){
     }
     delete fPluralRules;
     fPluralRules = PluralRules::forLocale(fLocale, err);
+    delete fListFormatter;
+    if (fStyle == UTMUTFMT_FULL_STYLE) {
+        fListFormatter = ListFormatter::createInstance(fLocale, "duration", err);
+    } else {
+        fListFormatter = ListFormatter::createInstance(fLocale, "duration-short", err);
+    }
     for (TimeUnit::UTimeUnitFields i = TimeUnit::UTIMEUNIT_YEAR;
          i < TimeUnit::UTIMEUNIT_FIELD_COUNT;
          i = (TimeUnit::UTimeUnitFields)(i+1)) {

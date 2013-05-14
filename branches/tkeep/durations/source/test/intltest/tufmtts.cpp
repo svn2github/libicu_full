@@ -398,10 +398,10 @@ void TimeUnitTest::testFormatPeriodEn() {
   
     TimePeriodResult abbrevResults[] = {
         {create19m(status), "19 mins"},
-        {create1h23_5s(status), "1 hr and 23.5 secs"},
+        {create1h23_5s(status), "1 hr, 23.5 secs"},
         {create1h23_5m(status), "1 hr, 23.5 mins"},
-        {create1h0m23s(status), "1 hr, 0 mins, and 23 secs"},
-        {create2y5M3w4d(status), "2 yrs, 5 mths, 3 wks, and 4 days"}};
+        {create1h0m23s(status), "1 hr, 0 mins, 23 secs"},
+        {create2y5M3w4d(status), "2 yrs, 5 mths, 3 wks, 4 days"}};
   
     TimePeriodResult numericResults[] = {
         {create19m(status), "19 mins"},
@@ -409,7 +409,7 @@ void TimeUnitTest::testFormatPeriodEn() {
         {create1h0m23s(status), "1:00:23"},
         {create5h17m(status), "5:17"},
         {create19m28s(status), "19:28"},
-        {create2y5M3w4d(status), "2 yrs, 5 mths, 3 wks, and 4 days"},
+        {create2y5M3w4d(status), "2 yrs, 5 mths, 3 wks, 4 days"},
         {create0h0m17s(status), "0:00:17"},
         {create6h56_92m(status), "6:56.92"}};
   
