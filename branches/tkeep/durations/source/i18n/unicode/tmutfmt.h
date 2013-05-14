@@ -46,6 +46,7 @@ typedef enum UTimeUnitFormatStyle UTimeUnitFormatStyle; /**< @stable ICU 4.8 */
 
 U_NAMESPACE_BEGIN
 
+class DateFormat;
 class Hashtable;
 class UVector;
 class TimePeriod;
@@ -222,6 +223,9 @@ private:
     Hashtable*    fTimeUnitToCountToPatterns[TimeUnit::UTIMEUNIT_FIELD_COUNT];
     PluralRules*  fPluralRules;
     ListFormatter *fListFormatter;
+    DateFormat *fHourMinute;
+    DateFormat *fHourMinuteSecond;
+    DateFormat *fMinuteSecond;
     UTimeUnitFormatStyle fStyle;
 
   UnicodeString& formatTimePeriod(const TimePeriod &timePeriod,
@@ -264,6 +268,19 @@ private:
     // get time unit name, such as "year", from time unit field enum, such as
     // UTIMEUNIT_YEAR.
     static const char* getTimeUnitName(TimeUnit::UTimeUnitFields field, UErrorCode& status);
+
+    void numericFormat(
+            double date,
+            const DateFormat &dateFormat,
+            int32_t smallestField,
+            const Formattable& smallestAmount,
+            UnicodeString& toAppendto,
+            UErrorCode& status) const;
+
+    DateFormat *loadNumericDurationFormat(
+            const char *pattern,
+            UErrorCode& status) const;
+
 };
 
 

@@ -17,9 +17,12 @@
 #include "cstring.h"
 #include "hash.h"
 #include "uresimp.h"
+#include "unicode/datefmt.h"
 #include "unicode/listformatter.h"
 #include "unicode/msgfmt.h"
+#include "unicode/smpdtfmt.h"
 #include "unicode/timeperiod.h"
+#include "unicode/udat.h"
 #include "uassert.h"
 
 #define LEFT_CURLY_BRACKET  ((UChar)0x007B)
@@ -88,10 +91,16 @@ static const TimeUnit::UTimeUnitFields FIELDS_BY_DURATION[] = {
         TimeUnit::UTIMEUNIT_SECOND,
         TimeUnit::UTIMEUNIT_FIELD_COUNT};
 
+static void cloneDateFormat(DateFormat *&, const DateFormat *);
+static double getAmountOrZero(const TimePeriod& timePeriod, TimeUnit::UTimeUnitFields field);
+
 TimeUnitFormat::TimeUnitFormat(UErrorCode& status)
 :   fNumberFormat(NULL),
     fPluralRules(NULL),
-    fListFormatter(NULL) {
+    fListFormatter(NULL),
+    fHourMinute(NULL),
+    fHourMinuteSecond(NULL),
+    fMinuteSecond(NULL) {
     create(Locale::getDefault(), UTMUTFMT_FULL_STYLE, status);
 }
 
@@ -99,7 +108,10 @@ TimeUnitFormat::TimeUnitFormat(UErrorCode& status)
 TimeUnitFormat::TimeUnitFormat(const Locale& locale, UErrorCode& status)
 :   fNumberFormat(NULL),
     fPluralRules(NULL),
-    fListFormatter(NULL) {
+    fListFormatter(NULL),
+    fHourMinute(NULL),
+    fHourMinuteSecond(NULL),
+    fMinuteSecond(NULL) {
     create(locale, UTMUTFMT_FULL_STYLE, status);
 }
 
@@ -107,7 +119,10 @@ TimeUnitFormat::TimeUnitFormat(const Locale& locale, UErrorCode& status)
 TimeUnitFormat::TimeUnitFormat(const Locale& locale, UTimeUnitFormatStyle style, UErrorCode& status)
 :   fNumberFormat(NULL),
     fPluralRules(NULL),
-    fListFormatter(NULL) {
+    fListFormatter(NULL),
+    fHourMinute(NULL),
+    fHourMinuteSecond(NULL),
+    fMinuteSecond(NULL) {
     create(locale, style, status);
 }
 
@@ -117,8 +132,10 @@ TimeUnitFormat::TimeUnitFormat(const TimeUnitFormat& other)
     fNumberFormat(NULL),
     fPluralRules(NULL),
     fListFormatter(NULL),
-    fStyle(UTMUTFMT_FULL_STYLE)
-{
+    fHourMinute(NULL),
+    fHourMinuteSecond(NULL),
+    fMinuteSecond(NULL),
+    fStyle(UTMUTFMT_FULL_STYLE) {
     for (TimeUnit::UTimeUnitFields i = TimeUnit::UTIMEUNIT_YEAR;
          i < TimeUnit::UTIMEUNIT_FIELD_COUNT;
          i = (TimeUnit::UTimeUnitFields)(i+1)) {
@@ -141,6 +158,12 @@ TimeUnitFormat::~TimeUnitFormat() {
     fPluralRules = NULL;
     delete fListFormatter;
     fListFormatter = NULL;
+    delete fHourMinute;
+    fHourMinute = NULL;
+    delete fHourMinuteSecond;
+    fHourMinuteSecond = NULL;
+    delete fMinuteSecond;
+    fMinuteSecond = NULL;
 }
 
 
@@ -174,6 +197,10 @@ TimeUnitFormat::operator=(const TimeUnitFormat& other) {
     } else {
         fListFormatter = NULL;
     }
+    cloneDateFormat(fHourMinute, other.fHourMinute);
+    cloneDateFormat(fHourMinuteSecond, other.fHourMinuteSecond);
+    cloneDateFormat(fMinuteSecond, other.fMinuteSecond);
+
     fLocale = other.fLocale;
     for (TimeUnit::UTimeUnitFields i = TimeUnit::UTIMEUNIT_YEAR;
          i < TimeUnit::UTIMEUNIT_FIELD_COUNT;
@@ -415,7 +442,7 @@ TimeUnitFormat::formatTimePeriod(
         }
         TimeUnitAmount *timeUnitAmountCopy = new TimeUnitAmount(*amount);
         if (timeUnitAmountCopy == NULL) {
-            status = U_ILLEGAL_ARGUMENT_ERROR;
+            status = U_MEMORY_ALLOCATION_ERROR;
             delete [] items;
             return toAppendTo;
         }
@@ -434,7 +461,57 @@ TimeUnitFormat::formatTimePeriod(
 UBool
 TimeUnitFormat::formatTimePeriodAsNumeric(
         const TimePeriod& timePeriod, UnicodeString& toAppendTo, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return TRUE;
+    }
+    TimeUnit::UTimeUnitFields biggestUnit = TimeUnit::UTIMEUNIT_FIELD_COUNT;
+    TimeUnit::UTimeUnitFields smallestUnit = TimeUnit::UTIMEUNIT_FIELD_COUNT;
+    const TimeUnitAmount *smallestAmount = NULL;
+    for (int32_t fieldIndex = 0; FIELDS_BY_DURATION[fieldIndex] != TimeUnit::UTIMEUNIT_FIELD_COUNT; ++fieldIndex) {
+        const TimeUnitAmount *amount = timePeriod.getAmount(FIELDS_BY_DURATION[fieldIndex]);
+        if (amount == NULL) {
+            continue;
+        }
+        if (biggestUnit == TimeUnit::UTIMEUNIT_FIELD_COUNT) {
+            biggestUnit = FIELDS_BY_DURATION[fieldIndex];
+        }
+        smallestUnit = FIELDS_BY_DURATION[fieldIndex];
+        smallestAmount = amount;
+    }
+    U_ASSERT(biggestUnit != TimeUnit::UTIMEUNIT_FIELD_COUNT);
+    U_ASSERT(smallestUnit != TimeUnit::UTIMEUNIT_FIELD_COUNT);
+    U_ASSERT(smallestAmount != NULL);
+    
+    double millis = ((getAmountOrZero(timePeriod, TimeUnit::UTIMEUNIT_HOUR) * 60.0
+            + getAmountOrZero(timePeriod, TimeUnit::UTIMEUNIT_MINUTE)) * 60.0
+            + getAmountOrZero(timePeriod, TimeUnit::UTIMEUNIT_SECOND)) * 1000.0;
+    if (biggestUnit == TimeUnit::UTIMEUNIT_HOUR && smallestUnit == TimeUnit::UTIMEUNIT_SECOND) {
+        numericFormat(millis, *fHourMinuteSecond, UDAT_SECOND_FIELD, smallestAmount->getNumber(), toAppendTo, status);
+        return TRUE;
+    }
+    if (biggestUnit == TimeUnit::UTIMEUNIT_MINUTE && smallestUnit == TimeUnit::UTIMEUNIT_SECOND) {
+        numericFormat(millis, *fMinuteSecond, UDAT_SECOND_FIELD, smallestAmount->getNumber(), toAppendTo, status);
+        return TRUE;
+    }
+    if (biggestUnit == TimeUnit::UTIMEUNIT_HOUR && smallestUnit == TimeUnit::UTIMEUNIT_MINUTE) {
+        numericFormat(millis, *fHourMinute, UDAT_MINUTE_FIELD, smallestAmount->getNumber(), toAppendTo, status);
+        return TRUE;
+    }
     return FALSE;
+}
+
+void
+TimeUnitFormat::numericFormat(
+        double date,
+        const DateFormat &dateFormat,
+        int32_t smallestField,
+        const Formattable& smallestAmount,
+        UnicodeString& toAppendTo,
+        UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    dateFormat.format(Formattable(date, Formattable::kIsDate), toAppendTo, NULL, status);
 }
 
 void
@@ -501,6 +578,12 @@ TimeUnitFormat::initDataMembers(UErrorCode& err){
     } else {
         fListFormatter = ListFormatter::createInstance(fLocale, "duration-short", err);
     }
+    delete fHourMinute;
+    fHourMinute = loadNumericDurationFormat("hm", err);
+    delete fHourMinuteSecond;
+    fHourMinuteSecond = loadNumericDurationFormat("hms", err);
+    delete fMinuteSecond;
+    fMinuteSecond = loadNumericDurationFormat("ms", err);
     for (TimeUnit::UTimeUnitFields i = TimeUnit::UTIMEUNIT_YEAR;
          i < TimeUnit::UTIMEUNIT_FIELD_COUNT;
          i = (TimeUnit::UTimeUnitFields)(i+1)) {
@@ -509,7 +592,23 @@ TimeUnitFormat::initDataMembers(UErrorCode& err){
     }
 }
 
-
+DateFormat *
+TimeUnitFormat::loadNumericDurationFormat(const char *pattern, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    DateFormat *result = new SimpleDateFormat(UnicodeString("H:mm:ss"), status);
+    if (result == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    if (U_FAILURE(status)) {
+        delete result;
+        return NULL;
+    }
+    result->setTimeZone(*TimeZone::getGMT());
+    return result;
+}
 
 
 void
@@ -984,6 +1083,25 @@ TimeUnitFormat::getTimeUnitName(TimeUnit::UTimeUnitFields unitField,
         return NULL;
     }
 }
+
+void cloneDateFormat(DateFormat *&dest, const DateFormat *src) {
+    delete dest;
+    if (src) {
+        dest = (DateFormat *) src->clone();
+    } else {
+        dest = NULL;
+    }
+}
+
+double getAmountOrZero(const TimePeriod& timePeriod, TimeUnit::UTimeUnitFields field) {
+    const TimeUnitAmount *amount = timePeriod.getAmount(field);
+    if (amount == NULL) {
+        return 0.0;
+    }
+    UErrorCode status = U_ZERO_ERROR;
+    return amount->getNumber().getDouble(status);
+}
+
 
 U_NAMESPACE_END
 
