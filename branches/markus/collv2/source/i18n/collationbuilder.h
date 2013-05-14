@@ -53,6 +53,9 @@ private:
     virtual void addReset(int32_t strength, const UnicodeString &str,
                           const char *&errorReason, UErrorCode &errorCode);
 
+    int64_t getSpecialResetPosition(const UnicodeString &str,
+                                    const char *&parserErrorReason, UErrorCode &errorCode);
+
     /** Implements CollationRuleParser::Sink. */
     virtual void addRelation(int32_t strength, const UnicodeString &prefix,
                              const UnicodeString &str, const UnicodeString &extension,
@@ -231,6 +234,7 @@ private:
      *
      * All types of nodes:
      * - index to the next node: 20 bits 23..4
+     *   + nextIndex=0 in last node per root-primary list
      * - TAILORED_NODE: bit 3
      * - reserved/unused/zero: bit 2
      * - the difference strength (primary/secondary/tertiary/quaternary): 2 bits 1..0

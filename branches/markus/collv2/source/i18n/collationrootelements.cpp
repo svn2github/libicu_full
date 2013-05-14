@@ -82,36 +82,41 @@ CollationRootElements::firstCEWithPrimaryAtLeast(uint32_t p) const {
     return ((int64_t)p << 32) | Collation::COMMON_SEC_AND_TER_CE;
 }
 
-#if 0  // TODO
 uint32_t
-CollationRootElements::getPrimaryBefore(int64_t ce, UBool isCompressible) const {
-    uint32_t p = (uint32_t)(ce >> 32);
-    if(p <= elements[elements[IX_FIRST_PRIMARY_INDEX]]) {
-        // No primary before [first space].
-        return 0;
-    }
-    int32_t indexAndStep = findCE(ce);
-    int32_t step = indexAndStep & 0xff;
-    uint32_t q;  // next primary
-    if(step != 0) {
-        if((p & 0xffff) == 0) {
-            q = Collation::incTwoBytePrimaryByOffset(p, isCompressible, step);
-        } else {
-            q = Collation::incThreeBytePrimaryByOffset(p, isCompressible, step);
-        }
-    } else {
-        int32_t index = indexAndStep >> 8;
-        for(;;) {
-            q = elements[++index];
-            if((q & SEC_TER_DELTA_FLAG) == 0) {
-                U_ASSERT((q & PRIMARY_STEP_MASK) == 0);
-                break;
+CollationRootElements::getPrimaryBefore(uint32_t p, UBool isCompressible) const {
+    // Requirement: p must occur as a root primary.
+    U_ASSERT(p > elements[elements[IX_FIRST_PRIMARY_INDEX]]);
+    U_ASSERT((p & 0xff) == 0);  // at most a 3-byte primary
+    int32_t index = findPrimary(p);
+    uint32_t q = elements[index];
+    int32_t step;
+    if(p == (q & 0xffffff00)) {
+        // Found p itself. Return the previous primary.
+        step = (int32_t)q & PRIMARY_STEP_MASK;
+        if(step == 0) {
+            // Look for the previous primary.
+            for(;;) {
+                p = elements[--index];
+                if((p & SEC_TER_DELTA_FLAG) == 0) {
+                    return p & 0xffffff00;
+                }
             }
         }
+        // else: p is at the end of a range.
+    } else {
+        // p > q must be a range primary.
+        q = elements[index + 1];
+        U_ASSERT((q & SEC_TER_DELTA_FLAG) == 0);
+        step = (int32_t)q & PRIMARY_STEP_MASK;
+        U_ASSERT(step != 0);
     }
-    return ((int64_t)p << 32) | q;
+    // Return the previous range primary.
+    if((p & 0xffff) == 0) {
+        return Collation::decTwoBytePrimaryByOneStep(p, isCompressible, step);
+    } else {
+        return Collation::decThreeBytePrimaryByOneStep(p, isCompressible, step);
+    }
 }
-#endif
 
 int64_t
 CollationRootElements::getPrimaryLimitsAt(int64_t ce, UBool isCompressible) const {

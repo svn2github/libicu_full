@@ -14,6 +14,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "collation.h"
+#include "uassert.h"
 
 U_NAMESPACE_BEGIN
 
@@ -59,6 +60,56 @@ Collation::incThreeBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressibl
     }
     // First byte, assume no further overflow.
     return primary | ((basePrimary & 0xff000000) + (uint32_t)(offset << 24));
+}
+
+uint32_t
+Collation::decTwoBytePrimaryByOneStep(uint32_t basePrimary, UBool isCompressible, int32_t step) {
+    // Extract the second byte, minus the minimum byte value,
+    // minus the step, modulo the number of usable byte values, plus the minimum.
+    // Reserve the PRIMARY_COMPRESSION_LOW_BYTE and high byte if necessary.
+    // Assume no further underflow for the first byte.
+    U_ASSERT(0 < step && step <= 0x7f);
+    int32_t byte2 = ((int32_t)(basePrimary >> 16) & 0xff) - step;
+    if(isCompressible) {
+        if(byte2 < 4) {
+            byte2 += 251;
+            basePrimary -= 0x1000000;
+        }
+    } else {
+        if(byte2 < 2) {
+            byte2 += 254;
+            basePrimary -= 0x1000000;
+        }
+    }
+    return (basePrimary & 0xff000000) | ((uint32_t)byte2 << 16);
+}
+
+uint32_t
+Collation::decThreeBytePrimaryByOneStep(uint32_t basePrimary, UBool isCompressible, int32_t step) {
+    // Extract the third byte, minus the minimum byte value,
+    // minus the step, modulo the number of usable byte values, plus the minimum.
+    U_ASSERT(0 < step && step <= 0x7f);
+    int32_t byte3 = ((int32_t)(basePrimary >> 8) & 0xff) - step;
+    if(byte3 >= 2) {
+        return (basePrimary & 0xffff0000) | ((uint32_t)byte3 << 8);
+    }
+    byte3 += 254;
+    // Same with the second byte,
+    // but reserve the PRIMARY_COMPRESSION_LOW_BYTE and high byte if necessary.
+    int32_t byte2 = ((int32_t)(basePrimary >> 16) & 0xff) - 1;
+    if(isCompressible) {
+        if(byte2 < 4) {
+            byte2 = 0xfe;
+            basePrimary -= 0x1000000;
+        }
+    } else {
+        if(byte2 < 2) {
+            byte2 = 0xff;
+            basePrimary -= 0x1000000;
+        }
+    }
+    // First byte, assume no further underflow.
+    return (basePrimary & 0xff000000) | ((uint32_t)byte2 << 16) | ((uint32_t)byte3 << 8);
 }
 
 uint32_t

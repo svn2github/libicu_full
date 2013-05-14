@@ -118,9 +118,16 @@ public:
     }
 
     /**
+     * Returns the first assigned primary weight.
+     */
+    uint32_t getFirstPrimary() const {
+        return elements[elements[IX_FIRST_PRIMARY_INDEX]];
+    }
+
+    /**
      * Returns the first assigned primary CE.
      */
-    uint32_t getFirstPrimaryCE() const {
+    int64_t getFirstPrimaryCE() const {
         return Collation::makeCE(elements[elements[IX_FIRST_PRIMARY_INDEX]]);
     }
 
@@ -135,6 +142,12 @@ public:
      * Intended only for reordering group boundaries.
      */
     int64_t firstCEWithPrimaryAtLeast(uint32_t p) const;
+
+    /**
+     * Returns the primary weight before p.
+     * p must be greater than the first root primary.
+     */
+    uint32_t getPrimaryBefore(uint32_t p, UBool isCompressible) const;
 
     /**
      * Returns lower and upper primary weight limits for the input ce.

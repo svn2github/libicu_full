@@ -179,63 +179,9 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
     if(U_FAILURE(errorCode)) { return; }
     U_ASSERT(!str.isEmpty());
     if(str.charAt(0) == CollationRuleParser::POS_LEAD) {
-        // special reset position
-        U_ASSERT(str.length() == 2);
-        UChar32 pos = str.charAt(1) - CollationRuleParser::POS_BASE;
-        U_ASSERT(0 <= pos && pos <= CollationRuleParser::LAST_TRAILING);
-        int64_t ce = 0;
-        switch(pos) {
-        case CollationRuleParser::FIRST_TERTIARY_IGNORABLE:
-            // ce = 0;
-            break;
-        case CollationRuleParser::LAST_TERTIARY_IGNORABLE:
-            // ce = 0;
-            break;
-        case CollationRuleParser::FIRST_SECONDARY_IGNORABLE:
-            ce = rootElements.getFirstTertiaryCE();
-            break;
-        case CollationRuleParser::LAST_SECONDARY_IGNORABLE:
-            ce = rootElements.getLastTertiaryCE();
-            break;
-        case CollationRuleParser::FIRST_PRIMARY_IGNORABLE:
-            ce = rootElements.getFirstSecondaryCE();
-            break;
-        case CollationRuleParser::LAST_PRIMARY_IGNORABLE:
-            ce = rootElements.getLastSecondaryCE();
-            break;
-        case CollationRuleParser::FIRST_VARIABLE:
-            ce = rootElements.getFirstPrimaryCE();
-            break;
-        case CollationRuleParser::LAST_VARIABLE:
-            ce = rootElements.lastCEWithPrimaryBefore(variableTop + 1);
-            break;
-        case CollationRuleParser::FIRST_REGULAR:
-            ce = rootElements.firstCEWithPrimaryAtLeast(variableTop + 1);
-            break;
-        case CollationRuleParser::LAST_REGULAR:
-            // Use [first Hani] rather than the actual last "regular" CE before it,
-            // for backward compatibility with behavior before the introduction of
-            // script-first primary CEs in the root collator.
-            ce = rootElements.firstCEWithPrimaryAtLeast(
-                baseData->getFirstPrimaryForGroup(USCRIPT_HAN));
-            break;
-        case CollationRuleParser::FIRST_IMPLICIT:
-            ce = firstImplicitCE;
-            break;
-        case CollationRuleParser::LAST_IMPLICIT:
-            // We do not support tailoring to an unassigned-implicit CE.
-            errorCode = U_UNSUPPORTED_ERROR;
-            parserErrorReason = "reset to [last implicit] not supported";
-            return;
-        case CollationRuleParser::FIRST_TRAILING:
-            ce = Collation::makeCE(Collation::FIRST_TRAILING_PRIMARY);
-            break;
-        case CollationRuleParser::LAST_TRAILING:
-            ce = rootElements.lastCEWithPrimaryBefore(Collation::FFFD_PRIMARY);
-            break;
-        }
-        ces[0] = ce;
+        ces[0] = getSpecialResetPosition(str, parserErrorReason, errorCode);
         cesLength = 1;
+        if(U_FAILURE(errorCode)) { return; }
     } else {
         // normal reset to a character or string
         UnicodeString nfdString = nfd.normalize(str, errorCode);
@@ -255,21 +201,98 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
     // &[before strength]position
     U_ASSERT(UCOL_PRIMARY <= strength && strength <= UCOL_TERTIARY);
     int32_t index = findOrInsertNodeForCEs(strength, parserErrorReason, errorCode);
-    int64_t ce = ces[cesLength - 1];
-    if(strength == UCOL_PRIMARY && ce == rootElements.getFirstPrimaryCE()) {
-        // There is no primary gap between ignorables and [first space].
-        errorCode = U_UNSUPPORTED_ERROR;
-        parserErrorReason = "reset primary-before first non-ignorable not supported";
-        return;
+    if(strength == UCOL_PRIMARY) {
+        // If we are on a "weak" node, then go back and find its primary.
+        int64_t node;
+        for(;;) {
+            node = nodes.elementAti(index);
+            if(strengthFromNode(node) == UCOL_PRIMARY) { break; }
+            index = previousIndexFromNode(node);
+        }
+        if((node & TAILORED_NODE) != 0) {
+            // Find the previous primary before this one.
+            do {
+                index = previousIndexFromNode(node);
+                node = nodes.elementAti(index);
+            } while(strengthFromNode(node) > UCOL_PRIMARY);
+        } else {
+            // root primary node
+            uint32_t p = weight32FromNode(node);
+            if(p == 0) {
+                errorCode = U_UNSUPPORTED_ERROR;
+                parserErrorReason = "reset before completely ignorable not possible";
+                return;
+            }
+            if(p <= rootElements.getFirstPrimary()) {
+                // There is no primary gap between ignorables and [first space].
+                errorCode = U_UNSUPPORTED_ERROR;
+                parserErrorReason = "reset primary-before first non-ignorable not supported";
+                return;
+            }
+            if(p == Collation::FIRST_TRAILING_PRIMARY) {
+                // We do not support tailoring to an unassigned-implicit CE.
+                errorCode = U_UNSUPPORTED_ERROR;
+                parserErrorReason = "reset primary-before [first trailing] not supported";
+                return;
+            }
+            p = rootElements.getPrimaryBefore(p, baseData->isCompressiblePrimary(p));
+            index = findOrInsertNodeForRootCE(Collation::makeCE(p), UCOL_PRIMARY, errorCode);
+        }
+    } else {
+        // &[before 2] or &[before 3]
+        errorCode = U_UNSUPPORTED_ERROR;  // TODO
+        parserErrorReason = "TODO: support &[before 2/3]";
     }
-    if(strength == UCOL_PRIMARY && ce == Collation::makeCE(Collation::FIRST_TRAILING_PRIMARY)) {
+    if(U_FAILURE(errorCode)) { return; }
+    ces[cesLength - 1] = tempCEFromIndexAndStrength(index, strength);
+}
+
+int64_t
+CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
+                                          const char *&parserErrorReason, UErrorCode &errorCode) {
+    U_ASSERT(str.length() == 2);
+    UChar32 pos = str.charAt(1) - CollationRuleParser::POS_BASE;
+    U_ASSERT(0 <= pos && pos <= CollationRuleParser::LAST_TRAILING);
+    switch(pos) {
+    case CollationRuleParser::FIRST_TERTIARY_IGNORABLE:
+        return 0;
+    case CollationRuleParser::LAST_TERTIARY_IGNORABLE:
+        return 0;
+    case CollationRuleParser::FIRST_SECONDARY_IGNORABLE:
+        return rootElements.getFirstTertiaryCE();
+    case CollationRuleParser::LAST_SECONDARY_IGNORABLE:
+        return rootElements.getLastTertiaryCE();
+    case CollationRuleParser::FIRST_PRIMARY_IGNORABLE:
+        return rootElements.getFirstSecondaryCE();
+    case CollationRuleParser::LAST_PRIMARY_IGNORABLE:
+        return rootElements.getLastSecondaryCE();
+    case CollationRuleParser::FIRST_VARIABLE:
+        return rootElements.getFirstPrimaryCE();
+    case CollationRuleParser::LAST_VARIABLE:
+        return rootElements.lastCEWithPrimaryBefore(variableTop + 1);
+    case CollationRuleParser::FIRST_REGULAR:
+        return rootElements.firstCEWithPrimaryAtLeast(variableTop + 1);
+    case CollationRuleParser::LAST_REGULAR:
+        // Use [first Hani] rather than the actual last "regular" CE before it,
+        // for backward compatibility with behavior before the introduction of
+        // script-first primary CEs in the root collator.
+        return rootElements.firstCEWithPrimaryAtLeast(
+            baseData->getFirstPrimaryForGroup(USCRIPT_HAN));
+    case CollationRuleParser::FIRST_IMPLICIT:
+        return firstImplicitCE;
+    case CollationRuleParser::LAST_IMPLICIT:
         // We do not support tailoring to an unassigned-implicit CE.
         errorCode = U_UNSUPPORTED_ERROR;
-        parserErrorReason = "reset primary-before [first trailing] not supported";
-        return;
+        parserErrorReason = "reset to [last implicit] not supported";
+        return 0;
+    case CollationRuleParser::FIRST_TRAILING:
+        return Collation::makeCE(Collation::FIRST_TRAILING_PRIMARY);
+    case CollationRuleParser::LAST_TRAILING:
+        return rootElements.lastCEWithPrimaryBefore(Collation::FFFD_PRIMARY);
+    default:
+        U_ASSERT(FALSE);
+        return 0;
     }
-    errorCode = U_UNSUPPORTED_ERROR;  // TODO
-    parserErrorReason = "TODO: support &[before n]";
 }
 
 void

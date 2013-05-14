@@ -357,6 +357,16 @@ public:
                                                 int32_t offset);
 
     /**
+     * Decrements a 2-byte primary by one range step (1..0x7f).
+     */
+    static uint32_t decTwoBytePrimaryByOneStep(uint32_t basePrimary, UBool isCompressible, int32_t step);
+
+    /**
+     * Decrements a 3-byte primary by one range step (1..0x7f).
+     */
+    static uint32_t decThreeBytePrimaryByOneStep(uint32_t basePrimary, UBool isCompressible, int32_t step);
+
+    /**
      * Computes a 3-byte primary for c's OFFSET_TAG data "CE".
      */
     static uint32_t getThreeBytePrimaryForOffsetData(UChar32 c, int64_t dataCE);
