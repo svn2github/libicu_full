@@ -32,66 +32,115 @@ struct UMutex;
 struct UInitOnce;
 
 
-/*
+/****************************************************************************
+ *
  *   Low Level Atomic Ops Definitions. 
  *      Compiler dependent. Not operating system dependent.
- */
+ *
+ ****************************************************************************/
 #if U_HAVE_STD_ATOMICS
 
 //  C++11 atomics are available.
 
 #include <atomic>
+
 typedef std::atomic<int32_t> atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
-inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-	return std::atomic_load_explicit(&var, std::memory_order_acquire);};
-inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-	var.store(val, std::memory_order_release);};
 
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
+    return std::atomic_load_explicit(&var, std::memory_order_acquire);
+};
+
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
+    var.store(val, std::memory_order_release);
+};
+
+inline void umtx_atomic_inc(atomic_int32_t &var) {
+    return var.atomic_fetch_add(1) + 1;
+}
+     
+inline void umtx_atomic_dec(atomic_int32_t &var) {
+    return var.atomic_fetch_sub(1) - 1;
+}
+     
 
 #elif defined(_MSC_VER)
 // MSVC compiler. Reads and writes of volatile variables have
 //                acquire and release memory semantics, respectively.
-//                This is a Microsoft extension, not standard behavior.
+//                This is a Microsoft extension, not standard C++ behavior.
 
 typedef volatile long atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
+
 #ifdef __cplusplus
 inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-	return var;};
+    return var;
+};
+
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-	var = val;};
+    var = val;
+};
 #endif /* __cplusplus */
+
 
 
 #elif U_HAVE_GCC_ATOMICS
+/*
+ * gcc atomic ops. These are available on several other compilers as well.
+ */
 typedef int32_t atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
+
 #ifdef __cplusplus
 inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-        int32_t val = var;
-        __sync_synchronize();
-	return val;};
+    int32_t val = var;
+    __sync_synchronize();
+    return val;
+};
+
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-        __sync_synchronize();
-	var = val;};
+    __sync_synchronize();
+    var = val;
+};
+
 #endif /* __cplusplus */
+
+
 
 #elif
 
 /*
- * Unknown Platform. Use mutexes for atomic operations.
+ * Unknown Platform. Use mutexes for atomic operations. Slow but correct.
  */
 
-#error No Platform Atomics.
+typedef int32_t atomic_int32_t;
+#define ATOMIC_INT32_T_INITIALIZER(val) val
+
+U_INTERNAL void U_EXPORT2 umtx_barrier(); 
+
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
+    int32_t val = var;
+    umtx_barrier();
+    return val;
+};
+
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
+    umtx_barrier();
+    var = val;
+};
+#endif /* __cplusplus */
 
 #endif  /* Low Level Atomic Ops Platfrom Chain */
 
 
-/*
+
+/*************************************************************************************************
+ *
  *  UInitOnce Definitions.
  *     These are platform neutral.
- */
+ *
+ *************************************************************************************************/
+
 struct UInitOnce {
     atomic_int32_t   fState;
     UErrorCode       fErrCode;
@@ -189,14 +238,21 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
 
 
 
-/*
- *  Mutex Definitions. Platform Dependent.
+/*************************************************************************************************
+ *
+ *  Mutex Definitions. Platform Dependent, #if platform chain follows.
  *         TODO:  Add a C++11 version.
  *                Need to convert all mutex using files to C++ first.
- */
-
+ *
+ *************************************************************************************************/
 
 #if U_PLATFORM_HAS_WIN32_API
+
+/* Windows Definitions.
+ *    Windows comes first in the platform chain.
+ *    Cygwin (and possibly others) have both WIN32 and POSIX APIs. Prefer Win32 in this case.
+ */
+
 
 /* For CRITICAL_SECTION */
 #if 0  
@@ -233,6 +289,11 @@ typedef struct UMutex UMutex;
 
 
 #elif U_PLATFORM_IMPLEMENTS_POSIX
+
+/*
+ *  POSIX platform
+ */
+
 #include <pthread.h>
 
 struct UMutex {
@@ -241,37 +302,40 @@ struct UMutex {
 typedef struct UMutex UMutex;
 #define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
 
+
 #else
-/* Unknow platform type. */
-struct UMutex {
-    void *fMutex;
-};
-typedef struct UMutex UMutex;
-#define U_MUTEX_INITIALIZER {NULL}
+
+/* 
+ *  Unknow platform type. 
+ *      This is an error condition. ICU requires mutexes.
+ */
+
 #error Unknown Platform.
 
 #endif
 
 
     
-/*
+/**************************************************************************************
+ *
  *  Mutex Implementation function declaratations.
  *     Declarations are platform neutral.
  *     Implementations, in umutex.cpp, are platform specific.
- */
+ *
+ ************************************************************************************/
 
 /* Lock a mutex.
  * @param mutex The given mutex to be locked.  Pass NULL to specify
  *              the global ICU mutex.  Recursive locks are an error
  *              and may cause a deadlock on some platforms.
  */
-U_CAPI void U_EXPORT2 umtx_lock(UMutex* mutex); 
+U_INTERNAL void U_EXPORT2 umtx_lock(UMutex* mutex); 
 
 /* Unlock a mutex.
  * @param mutex The given mutex to be unlocked.  Pass NULL to specify
  *              the global ICU mutex.
  */
-U_CAPI void U_EXPORT2 umtx_unlock (UMutex* mutex);
+U_INTERNAL void U_EXPORT2 umtx_unlock (UMutex* mutex);
 
 /*
  * Atomic Increment and Decrement of an int32_t value.
@@ -282,8 +346,8 @@ U_CAPI void U_EXPORT2 umtx_unlock (UMutex* mutex);
  *      is the same as the sign of the result, but the returned value itself may
  *      be different from the result of the operation.
  */
-U_CAPI int32_t U_EXPORT2 umtx_atomic_inc(int32_t *);
-U_CAPI int32_t U_EXPORT2 umtx_atomic_dec(int32_t *);
+U_INTERNAL int32_t U_EXPORT2 umtx_atomic_inc(int32_t *);
+U_INTERNAL int32_t U_EXPORT2 umtx_atomic_dec(int32_t *);
 
 #endif /*_CMUTEX*/
 /*eof*/
