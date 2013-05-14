@@ -1862,8 +1862,18 @@ root{
         lines{"top-to-bottom"}
     }
     listPattern{
-        duration-short:alias{"/LOCALE/listPattern/standard"}
-        duration:alias{"/LOCALE/listPattern/standard"}
+        duration{
+            2:alias{"/LOCALE/listPattern/standard/2"}
+            end:alias{"/LOCALE/listPattern/standard/end"}
+            middle:alias{"/LOCALE/listPattern/standard/middle"}
+            start:alias{"/LOCALE/listPattern/standard/start"}
+        }
+        duration-short{
+            2:alias{"/LOCALE/listPattern/standard/2"}
+            end:alias{"/LOCALE/listPattern/standard/end"}
+            middle:alias{"/LOCALE/listPattern/standard/middle"}
+            start:alias{"/LOCALE/listPattern/standard/start"}
+        }
         standard{
             2{"{0}, {1}"}
             end{"{0}, {1}"}
