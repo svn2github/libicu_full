@@ -34,9 +34,15 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;
  */
 
 #if U_PLATFORM_HAS_WIN32_API
-// Note: Cygwin (and possibly others) have both WIN32 and POSIX.
-//       Prefer Win32 in these cases.  (Win32 comes ahead in the #if chain)
 
+//-------------------------------------------------------------------------------------------
+//
+//    Windows Specific Definitions
+//
+//        Note: Cygwin (and possibly others) have both WIN32 and POSIX.
+//              Prefer Win32 in these cases.  (Win32 comes ahead in the #if chain)
+//
+//-------------------------------------------------------------------------------------------
 
 # define WIN32_LEAN_AND_MEAN
 # define VC_EXTRALEAN
@@ -132,10 +138,16 @@ umtx_atomic_dec(int32_t *p) {
 }
 
 
+
 #elif U_PLATFORM_IMPLEMENTS_POSIX
 
+//-------------------------------------------------------------------------------------------
+//
+//  POSIX specific definitions
+//
+//-------------------------------------------------------------------------------------------
 
-# include <pthread.h> /* must be first, so that we get the multithread versions of things. */
+# include <pthread.h> 
 
 // Each UMutex consists of a pthread_mutex_t.
 // All are statically initialized and ready for use.
