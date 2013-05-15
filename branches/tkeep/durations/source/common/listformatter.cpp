@@ -48,15 +48,6 @@ U_CDECL_END
 static ListFormatData* loadListFormatData(const Locale& locale, const char* style, UErrorCode& errorCode);
 static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString& result, UErrorCode& errorCode);
 
-ListFormatter::ListFormatter(UErrorCode& errorCode) {
-    Locale locale;
-    data = getListFormatData(locale, "standard" , errorCode);
-}
-
-ListFormatter::ListFormatter(const Locale& locale, UErrorCode& errorCode) {
-    data = getListFormatData(locale, "standard" , errorCode);
-}
-
 ListFormatter::ListFormatter(const ListFormatter& other) : data(other.data) {
 }
 

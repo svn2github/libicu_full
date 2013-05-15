@@ -60,17 +60,6 @@ struct ListFormatData : public UMemory {
 class U_COMMON_API ListFormatter : public UObject{
 
   public:
-    /**
-     * Creates a ListFormatter appropriate for the default locale.
-     * @draft ICU 52
-     */
-    ListFormatter(UErrorCode& errorCode);
-
-    /**
-     * Creates a ListFormatter appropriate for given locale.
-     * @draft ICU 52
-     */
-    ListFormatter(const Locale& locale, UErrorCode& errorCode);
 
     /**
      * Copy constructor.
