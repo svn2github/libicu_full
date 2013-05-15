@@ -2472,6 +2472,7 @@ FF41..FF5A    ; Cased
 #    Word_Break(C) = MidLetter or MidNumLet, or
 #    General_Category(C) = Nonspacing_Mark (Mn), Enclosing_Mark (Me), Format (Cf), Modifier_Letter (Lm), or Modifier_Symbol (Sk).
 
+0027          ; Case_Ignorable  # patch to make tests pass; derivation should add WB=SQ
 002E          ; Case_Ignorable
 005E          ; Case_Ignorable
 0060          ; Case_Ignorable
