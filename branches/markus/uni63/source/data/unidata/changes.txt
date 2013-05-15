@@ -22,7 +22,8 @@ http://www.unicode.org/reports/tr44/tr44-11.html
 
 *** ICU Trac
 
-- ticket 10128: update ICU to Unicode 6.3
+- ticket 10128: update ICU to Unicode 6.3 beta
+- ticket 10168: update ICU to Unicode 6.3 final
 - C++ branches/markus/uni63 at r33552 from trunk at r33551
 - Java branches/markus/uni63 at r33550 from trunk at r33553
 
