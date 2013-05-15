@@ -24,9 +24,6 @@
 
 
 
-
-
-
 // Forward Declarations
 struct UMutex;
 struct UInitOnce;
@@ -34,7 +31,7 @@ struct UInitOnce;
 
 /****************************************************************************
  *
- *   Low Level Atomic Ops Definitions. 
+ *   Low Level Atomic Operations. 
  *      Compiler dependent. Not operating system dependent.
  *
  ****************************************************************************/
@@ -48,19 +45,19 @@ typedef std::atomic<int32_t> atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) ATOMIC_VAR_INIT(val)
 
 inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-    return std::atomic_load_explicit(&var, std::memory_order_acquire);
+    return var.load(std::memory_order_acquire);
 };
 
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
     var.store(val, std::memory_order_release);
 };
 
-inline void umtx_atomic_inc(atomic_int32_t &var) {
-    return var.atomic_fetch_add(1) + 1;
+inline int32_t umtx_atomic_inc(atomic_int32_t *var) {
+    return var->fetch_add(1) + 1;
 }
      
-inline void umtx_atomic_dec(atomic_int32_t &var) {
-    return var.atomic_fetch_sub(1) - 1;
+inline int32_t umtx_atomic_dec(atomic_int32_t *var) {
+    return var->fetch_sub(1) - 1;
 }
      
 
@@ -80,6 +77,15 @@ inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
     var = val;
 };
+
+#include "windows.h"  // TODO: fix the include problems.
+inline int32_t umtx_atomic_inc(atomic_int32_t *var) {
+    return InterlockedIncrement((LONG *)var);
+}
+
+inline int32_t umtx_atomic_dec(atomic_int32_t *var) {
+    return InterlockedDecrement((LONG *)var);
+}
 #endif /* __cplusplus */
 
 
@@ -103,32 +109,35 @@ inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
     var = val;
 };
 
+inline int32_t umtx_atomic_inc(atomic_int32_t *p)  {
+   return __sync_add_and_fetch(p, 1);
+}
+
+inline int32_t umtx_atomic_dec(atomic_int32_t *p)  {
+   return __sync_sub_and_fetch(p, 1);
+}
+
 #endif /* __cplusplus */
-
-
 
 #elif
 
 /*
- * Unknown Platform. Use mutexes for atomic operations. Slow but correct.
+ * Unknown Platform. Use out-of-line functions, which in turn use mutexes.
+ *                   Slow but correct.
  */
+
+#define U_NO_PLATFORM_ATOMICS
 
 typedef int32_t atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
 
-U_INTERNAL void U_EXPORT2 umtx_barrier(); 
+U_INTERNAL void U_EXPORT2 umtx_loadAcquire(atomic_int32_t &var);
 
-inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-    int32_t val = var;
-    umtx_barrier();
-    return val;
-};
+U_INTERNAL void U_EXPORT2 umtx_storeRelease(atomic_int32_t &var);
 
-inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-    umtx_barrier();
-    var = val;
-};
-#endif /* __cplusplus */
+U_INTERNAL int32_t U_EXPORT2 umtx_atomic_inc(atomic_int32_t *p);
+
+U_INTERNAL int32_t U_EXPORT2 umtx_atomic_dec(atomic_int32_t *p);
 
 #endif  /* Low Level Atomic Ops Platfrom Chain */
 
@@ -270,6 +279,7 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
 # define NOMCX
 # include <windows.h>
 #endif  /* 0 */
+
 #define U_WINDOWS_CRIT_SEC_SIZE 64
 
 typedef struct UMutex {
@@ -337,17 +347,5 @@ U_INTERNAL void U_EXPORT2 umtx_lock(UMutex* mutex);
  */
 U_INTERNAL void U_EXPORT2 umtx_unlock (UMutex* mutex);
 
-/*
- * Atomic Increment and Decrement of an int32_t value.
- *
- * Return Values:
- *   If the result of the operation is zero, the return zero.
- *   If the result of the operation is not zero, the sign of returned value
- *      is the same as the sign of the result, but the returned value itself may
- *      be different from the result of the operation.
- */
-U_INTERNAL int32_t U_EXPORT2 umtx_atomic_inc(int32_t *);
-U_INTERNAL int32_t U_EXPORT2 umtx_atomic_dec(int32_t *);
-
-#endif /*_CMUTEX*/
+#endif /* UMUTEX_H */
 /*eof*/

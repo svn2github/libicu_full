@@ -44,6 +44,11 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 //
 //-------------------------------------------------------------------------------------------
 
+#if defined U_NO_PLATFORM_ATOMICS
+#error ICU on Win32 requires compiler support for low level atomic operations.
+// Visual Studio, gcc, clang are OK. Shouldn't get here.
+#endif
+
 # define WIN32_LEAN_AND_MEAN
 # define VC_EXTRALEAN
 # define NOUSER
@@ -124,20 +129,6 @@ umtx_unlock(UMutex* mutex)
     }
     LeaveCriticalSection((CRITICAL_SECTION *)mutex->fCS);
 }
-
-U_CAPI int32_t U_EXPORT2
-umtx_atomic_inc(int32_t *p)  {
-    int32_t retVal = InterlockedIncrement((LONG*)p);
-    return retVal;
-}
-
-U_CAPI int32_t U_EXPORT2
-umtx_atomic_dec(int32_t *p) {
-    int32_t retVal = InterlockedDecrement((LONG*)p);
-    return retVal;
-}
-
-
 
 #elif U_PLATFORM_IMPLEMENTS_POSIX
 
@@ -244,44 +235,61 @@ void umtx_initOnceReset(UInitOnce &uio) {
     uio.fState = 0;
 }
         
-#if U_HAVE_GCC_ATOMICS == 0
-static UMutex   gIncDecMutex = U_MUTEX_INITIALIZER;
-#endif
-
-U_CAPI int32_t U_EXPORT2
-umtx_atomic_inc(int32_t *p)  {
-    int32_t retVal;
-    #if (U_HAVE_GCC_ATOMICS == 1)
-        retVal = __sync_add_and_fetch(p, 1);
-    #else
-        umtx_lock(&gIncDecMutex);
-        retVal = ++(*p);
-        umtx_unlock(&gIncDecMutex);
-    #endif
-    return retVal;
-}
-
-
-U_CAPI int32_t U_EXPORT2
-umtx_atomic_dec(int32_t *p) {
-    int32_t retVal;
-    #if (U_HAVE_GCC_ATOMICS == 1)
-        retVal = __sync_sub_and_fetch(p, 1);
-    #else
-        umtx_lock(&gIncDecMutex);
-        retVal = --(*p);
-        umtx_unlock(&gIncDecMutex);
-    #endif
-    return retVal;
-}
-
-
 // End of POSIX specific umutex implementation.
 
-#else
+#else  // Platform #define chain.
 
 #error Unknown Platform
 
 #endif  // Platform #define chain.
 
+
+//-------------------------------------------------------------------------------
+//
+//   Atomic Operations, out-of-line versions.
+//                      These are conditional, only defined if better versions
+//                      were not available for the platform.
+//
+//                      These versions are platform neutral.
+//
+//--------------------------------------------------------------------------------
+
+#if defined U_NO_PLATFORM_ATOMICS
+static UMutex   gIncDecMutex = U_MUTEX_INITIALIZER;
+
+U_INTERNAL int32_t U_EXPORT2
+umtx_atomic_inc(int32_t *p)  {
+    int32_t retVal;
+    umtx_lock(&gIncDecMutex);
+    retVal = ++(*p);
+    umtx_unlock(&gIncDecMutex);
+    return retVal;
+}
+
+
+U_INTERNAL int32_t U_EXPORT2
+umtx_atomic_dec(int32_t *p) {
+    int32_t retVal;
+    umtx_lock(&gIncDecMutex);
+    retVal = --(*p);
+    umtx_unlock(&gIncDecMutex);
+    return retVal;
+}
+
+U_INTERNAL int32_t U_EXPORT2
+umtx_loadAcquire(atomic_int32_t &var) {
+    int32_t val = var;
+    umtx_lock(gIncDecMutex);
+    umtx_unlick(gIncDecMutex);
+    return val;
+};
+
+U_INTERNAL void U_EXPORT2
+umtx_storeRelease(atomic_int32_t &var, int32_t val) {
+    umtx_lock(gIncDecMutex);
+    umtx_unlick(gIncDecMutex);
+    var = val;
+};
+
+#endif
 
