@@ -422,10 +422,6 @@ TimeUnitFormat::formatTimePeriod(
     if (U_FAILURE(status)) {
         return toAppendTo;
     }
-    if (timePeriod.isBogus()) {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-        return toAppendTo;
-    }
     if (fStyle == UTMUTFMT_NUMERIC_STYLE && formatTimePeriodAsNumeric(timePeriod, toAppendTo, status)) {
         return toAppendTo;
     }
