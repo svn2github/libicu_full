@@ -1682,7 +1682,10 @@ UnicodeString::cloneArrayIfNeeded(int32_t newCapacity,
         atomic_int32_t *pRefCount = ((atomic_int32_t *)oldArray - 1);
         if(umtx_atomic_dec(pRefCount) == 0) {
           if(pBufferToDelete == 0) {
-            uprv_free(pRefCount);
+              // Note: cast to (void *) is needed with MSVC, where atomic_int32_t
+              // is defined as volatile. (Volatile has useful non-standard behavior
+              //   with this compiler.)
+            uprv_free((void *)pRefCount);
           } else {
             // the caller requested to delete it himself
             *pBufferToDelete = (int32_t *)pRefCount;

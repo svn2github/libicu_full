@@ -337,7 +337,7 @@ static uint32_t getTagNumber(const char *tagname) {
 
 /* character types relevant for ucnv_compareNames() */
 enum {
-    IGNORE,
+    UIGNORE,
     ZERO,
     NONZERO,
     MINLETTER /* any values from here on are lowercase letter mappings */
@@ -355,7 +355,7 @@ static const uint8_t asciiTypes[128] = {
     0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0, 0, 0, 0, 0
 };
 
-#define GET_ASCII_TYPE(c) ((int8_t)(c) >= 0 ? asciiTypes[(uint8_t)c] : (uint8_t)IGNORE)
+#define GET_ASCII_TYPE(c) ((int8_t)(c) >= 0 ? asciiTypes[(uint8_t)c] : (uint8_t)UIGNORE)
 
 /* character types for EBCDIC 80..FF */
 static const uint8_t ebcdicTypes[128] = {
@@ -369,7 +369,7 @@ static const uint8_t ebcdicTypes[128] = {
     ZERO, NONZERO, NONZERO, NONZERO, NONZERO, NONZERO, NONZERO, NONZERO, NONZERO, NONZERO, 0, 0, 0, 0, 0, 0
 };
 
-#define GET_EBCDIC_TYPE(c) ((int8_t)(c) < 0 ? ebcdicTypes[(c)&0x7f] : (uint8_t)IGNORE)
+#define GET_EBCDIC_TYPE(c) ((int8_t)(c) < 0 ? ebcdicTypes[(c)&0x7f] : (uint8_t)UIGNORE)
 
 #if U_CHARSET_FAMILY==U_ASCII_FAMILY
 #   define GET_CHAR_TYPE(c) GET_ASCII_TYPE(c)
@@ -390,7 +390,7 @@ ucnv_io_stripASCIIForCompare(char *dst, const char *name) {
     while ((c1 = *name++) != 0) {
         type = GET_ASCII_TYPE(c1);
         switch (type) {
-        case IGNORE:
+        case UIGNORE:
             afterDigit = FALSE;
             continue; /* ignore all but letters and digits */
         case ZERO:
@@ -425,7 +425,7 @@ ucnv_io_stripEBCDICForCompare(char *dst, const char *name) {
     while ((c1 = *name++) != 0) {
         type = GET_EBCDIC_TYPE(c1);
         switch (type) {
-        case IGNORE:
+        case UIGNORE:
             afterDigit = FALSE;
             continue; /* ignore all but letters and digits */
         case ZERO:
@@ -482,7 +482,7 @@ ucnv_compareNames(const char *name1, const char *name2) {
         while ((c1 = *name1++) != 0) {
             type = GET_CHAR_TYPE(c1);
             switch (type) {
-            case IGNORE:
+            case UIGNORE:
                 afterDigit1 = FALSE;
                 continue; /* ignore all but letters and digits */
             case ZERO:
@@ -506,7 +506,7 @@ ucnv_compareNames(const char *name1, const char *name2) {
         while ((c2 = *name2++) != 0) {
             type = GET_CHAR_TYPE(c2);
             switch (type) {
-            case IGNORE:
+            case UIGNORE:
                 afterDigit2 = FALSE;
                 continue; /* ignore all but letters and digits */
             case ZERO:
