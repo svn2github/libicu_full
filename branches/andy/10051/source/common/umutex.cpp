@@ -279,17 +279,17 @@ umtx_atomic_dec(int32_t *p) {
 U_INTERNAL int32_t U_EXPORT2
 umtx_loadAcquire(atomic_int32_t &var) {
     int32_t val = var;
-    umtx_lock(gIncDecMutex);
-    umtx_unlick(gIncDecMutex);
+    umtx_lock(&gIncDecMutex);
+    umtx_unlock(&gIncDecMutex);
     return val;
-};
+}
 
 U_INTERNAL void U_EXPORT2
 umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-    umtx_lock(gIncDecMutex);
-    umtx_unlick(gIncDecMutex);
+    umtx_lock(&gIncDecMutex);
+    umtx_unlock(&gIncDecMutex);
     var = val;
-};
+}
 
 #endif
 

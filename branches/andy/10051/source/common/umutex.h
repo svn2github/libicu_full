@@ -78,7 +78,7 @@ inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
     var = val;
 };
 
-#include <windows.h>  // TODO: fix the include problems.
+#include <windows.h> 
 inline int32_t umtx_atomic_inc(atomic_int32_t *var) {
     return InterlockedIncrement((LONG *)var);
 }
@@ -102,12 +102,12 @@ inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
     int32_t val = var;
     __sync_synchronize();
     return val;
-};
+}
 
 inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
     __sync_synchronize();
     var = val;
-};
+}
 
 inline int32_t umtx_atomic_inc(atomic_int32_t *p)  {
    return __sync_add_and_fetch(p, 1);
@@ -119,7 +119,7 @@ inline int32_t umtx_atomic_dec(atomic_int32_t *p)  {
 
 #endif /* __cplusplus */
 
-#elif
+#else
 
 /*
  * Unknown Platform. Use out-of-line functions, which in turn use mutexes.
@@ -131,9 +131,9 @@ inline int32_t umtx_atomic_dec(atomic_int32_t *p)  {
 typedef int32_t atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
 
-U_INTERNAL void U_EXPORT2 umtx_loadAcquire(atomic_int32_t &var);
+U_INTERNAL int32_t U_EXPORT2 umtx_loadAcquire(atomic_int32_t &var);
 
-U_INTERNAL void U_EXPORT2 umtx_storeRelease(atomic_int32_t &var);
+U_INTERNAL void U_EXPORT2 umtx_storeRelease(atomic_int32_t &var, int32_t val);
 
 U_INTERNAL int32_t U_EXPORT2 umtx_atomic_inc(atomic_int32_t *p);
 
