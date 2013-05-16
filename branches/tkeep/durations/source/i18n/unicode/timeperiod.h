@@ -83,8 +83,9 @@ public:
     const TimeUnitAmount* getAmount(TimeUnit::UTimeUnitFields field) const;
 
     /**
-      Returns the number of time units in this object.
-    */
+     * Returns the number of time units in this object.
+     * @internal
+     */
     inline int32_t size() const {
         return fSize;
     }
