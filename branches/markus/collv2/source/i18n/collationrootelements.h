@@ -149,6 +149,12 @@ public:
      */
     uint32_t getPrimaryBefore(uint32_t p, UBool isCompressible) const;
 
+    /** Returns the secondary weight before [p, s]. */
+    uint32_t getSecondaryBefore(uint32_t p, uint32_t s) const;
+
+    /** Returns the tertiary weight before [p, s, t]. */
+    uint32_t getTertiaryBefore(uint32_t p, uint32_t s, uint32_t t) const;
+
     /**
      * Returns lower and upper primary weight limits for the input ce.
      * @return ce's primary in upper 32 bits, next primary in lower 32

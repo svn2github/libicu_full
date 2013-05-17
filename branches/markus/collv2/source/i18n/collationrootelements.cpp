@@ -118,6 +118,16 @@ CollationRootElements::getPrimaryBefore(uint32_t p, UBool isCompressible) const 
     }
 }
 
+uint32_t
+CollationRootElements::getSecondaryBefore(uint32_t p, uint32_t s) const {
+    return 0;  // TODO
+}
+
+uint32_t
+CollationRootElements::getTertiaryBefore(uint32_t p, uint32_t s, uint32_t t) const {
+    return 0;  // TODO
+}
+
 int64_t
 CollationRootElements::getPrimaryLimitsAt(int64_t ce, UBool isCompressible) const {
     uint32_t p = (uint32_t)(ce >> 32);

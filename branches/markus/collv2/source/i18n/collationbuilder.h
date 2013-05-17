@@ -85,6 +85,15 @@ private:
     int32_t insertNodeBetween(int32_t index, int32_t nextIndex, int64_t node,
                               UErrorCode &errorCode);
 
+    /**
+     * Finds the node which implies or contains a common=05 weight of the given strength
+     * (secondary or tertiary).
+     * Skips weaker nodes and tailored nodes if the current node is stronger
+     * and is followed by an explicit-common-weight node.
+     * Always returns the input index if that node is no stronger than the given strength.
+     */
+    int32_t findCommonNode(int32_t index, int32_t strength) const;
+
     /** Implements CollationRuleParser::Sink. */
     virtual void suppressContractions(const UnicodeSet &set,
                                       const char *&errorReason, UErrorCode &errorCode);
@@ -125,13 +134,28 @@ private:
 
     static int32_t ceStrength(int64_t ce);
 
+    /** The secondary/tertiary lower limit for tailoring before the common weight. */
+    static const uint32_t BEFORE_WEIGHT16 = Collation::MERGE_SEPARATOR_WEIGHT16;
+
     /** At most 1M nodes, limited by the 20 bits in node bit fields. */
     static const int32_t MAX_INDEX = 0xfffff;
     /**
-     * Node bit 3 distinguishes a tailored node, which has no weight value,
-     * from a node with a root or default weight.
+     * Node bit 6 is set on a primary node if there are tailored nodes
+     * with secondary values below the common secondary weight (05),
+     * from a reset-secondary-before (&[before 2]).
      */
-    static const int32_t TAILORED_NODE = 8;
+    static const int32_t HAS_BEFORE2 = 0x40;
+    /**
+     * Node bit 5 is set on a primary or secondary node if there are tailored nodes
+     * with tertiary values below the common tertiary weight (05),
+     * from a reset-tertiary-before (&[before 3]).
+     */
+    static const int32_t HAS_BEFORE3 = 0x20;
+    /**
+     * Node bit 3 distinguishes a tailored node, which has no weight value,
+     * from a node with an explicit (root or default) weight.
+     */
+    static const int32_t IS_TAILORED = 8;
 
     static inline int64_t nodeFromWeight32(uint32_t weight32) {
         return (int64_t)weight32 << 32;
@@ -140,10 +164,10 @@ private:
         return (int64_t)weight16 << 48;
     }
     static inline int64_t nodeFromPreviousIndex(int32_t previous) {
-        return (int64_t)previous << 24;
+        return (int64_t)previous << 28;
     }
     static inline int64_t nodeFromNextIndex(int32_t next) {
-        return next << 4;
+        return next << 8;
     }
     static inline int64_t nodeFromStrength(int32_t strength) {
         return strength;
@@ -156,20 +180,30 @@ private:
         return (uint32_t)(node >> 48) & 0xffff;
     }
     static inline int32_t previousIndexFromNode(int64_t node) {
-        return (int32_t)(node >> 24) & MAX_INDEX;
+        return (int32_t)(node >> 28) & MAX_INDEX;
     }
     static inline int32_t nextIndexFromNode(int64_t node) {
-        return ((int32_t)node >> 4) & MAX_INDEX;
+        return ((int32_t)node >> 8) & MAX_INDEX;
     }
     static inline int32_t strengthFromNode(int64_t node) {
         return (int32_t)node & 3;
     }
 
+    static inline int32_t nodeHasBefore2(int64_t node) {
+        return (node & HAS_BEFORE2) != 0;
+    }
+    static inline int32_t nodeHasBefore3(int64_t node) {
+        return (node & HAS_BEFORE3) != 0;
+    }
+    static inline int32_t isTailoredNode(int64_t node) {
+        return (node & IS_TAILORED) != 0;
+    }
+
     static inline int64_t changeNodePreviousIndex(int64_t node, int32_t previous) {
-        return (node & 0xfffff00000ffffff) | nodeFromPreviousIndex(previous);
+        return (node & 0xffff00000fffffff) | nodeFromPreviousIndex(previous);
     }
     static inline int64_t changeNodeNextIndex(int64_t node, int32_t next) {
-        return (node & 0xffffffffff00000f) | nodeFromNextIndex(next);
+        return (node & 0xfffffffff00000ff) | nodeFromNextIndex(next);
     }
 
     const Normalizer2 &nfd;
@@ -198,18 +232,41 @@ private:
     /**
      * Data structure for assigning tailored weights and CEs.
      * Doubly-linked lists of nodes in mostly collation order.
-     * Each list starts with a root primary node,
-     * which does not have a previous index,
-     * and ends with a nextIndex of 0.
      *
-     * Nodes with real weights store root collator weights,
-     * or default weak weights (e.g., secondary 02 or 05)
-     * for stronger nodes (e.g., primary difference).
-     * "Tailored" nodes, with the TAILORED_NODE bit set,
+     * Each list starts with a root primary node.
+     * Each list ends with either a nextIndex of 0, or with a root primary node
+     * which contains the primary weight limit for this list.
+     *
+     * Root primary nodes do not have previous indexes.
+     * All other nodes do.
+     *
+     * Nodes with explicit weights store root collator weights,
+     * or default weak weights (e.g., secondary 05) for stronger nodes.
+     * "Tailored" nodes, with the IS_TAILORED bit set,
      * create a difference of a certain strength from the preceding node.
      *
+     * A root node is followed by either
+     * - a root/default node of the same strength, or
+     * - a root/default node of the next-weaker strength, or
+     * - a tailored node of the same strength.
+     *
+     * A node of a given strength normally implies "common" weights on weaker levels.
+     *
+     * A node with HAS_BEFORE2 must be immediately followed by
+     * a secondary node with BEFORE_WEIGHT16, then a secondary tailored node,
+     * and later an explicit common-secondary node.
+     * All secondary tailored nodes between these explicit ones
+     * will be assigned lower-than-common secondary weights.
+     * If the flag is not set, then there are no explicit secondary node
+     * with the common or lower weights.
+     *
+     * Same for HAS_BEFORE3 for tertiary nodes and weights.
+     * A node must not have both flags set.
+     *
      * Tailored CEs are initially represented in CollationData as temporary CEs
-     * which point to stable indexes in this list.
+     * which point to stable indexes in this list,
+     * and temporary CEs only point to tailored nodes.
+     *
      * At the end, the tailored weights are allocated as necessary,
      * then the tailored nodes are replaced with final CEs,
      * and the CollationData is rewritten by replacing temporary CEs with final ones.
@@ -223,21 +280,23 @@ private:
      *
      * Root primary node:
      * - primary weight: 32 bits 63..32
-     * - reserved/unused/zero: 8 bits 31..24
+     * - reserved/unused/zero: 4 bits 31..28
      *
      * Weaker root nodes & tailored nodes:
      * - a weight: 16 bits 63..48
      *   + a root or default weight
      *   + unused/zero for a tailored node
-     * - reserved/unused/zero: 4 bits 47..44
-     * - index to the previous node: 20 bits 43..24
+     * - index to the previous node: 20 bits 47..28
      *
      * All types of nodes:
-     * - index to the next node: 20 bits 23..4
+     * - index to the next node: 20 bits 27..8
      *   + nextIndex=0 in last node per root-primary list
-     * - TAILORED_NODE: bit 3
-     * - reserved/unused/zero: bit 2
+     * - HAS_BEFORE2: bit 6
+     * - HAS_BEFORE3: bit 5
+     * - IS_TAILORED: bit 3
      * - the difference strength (primary/secondary/tertiary/quaternary): 2 bits 1..0
+     *
+     * - reserved/unused/zero bits: bits 7, 4, 2
      *
      * We could allocate structs with pointers, but we would have to store them
      * in a pointer list so that they can be indexed from temporary CEs,
