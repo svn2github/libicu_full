@@ -65,7 +65,7 @@ RegularExpression::~RegularExpression() {
     if (fPatRefCount!=NULL && umtx_atomic_dec(fPatRefCount)==0) {
         delete fPat;
         uprv_free(fPatString);
-        uprv_free(fPatRefCount);
+        uprv_free((void *)fPatRefCount);
     }
     if (fOwnsText && fText!=NULL) {
         uprv_free((void *)fText);
@@ -128,7 +128,7 @@ uregex_open( const  UChar          *pattern,
     if (re == NULL || refC == NULL || patBuf == NULL) {
         *status = U_MEMORY_ALLOCATION_ERROR;
         delete re;
-        uprv_free(refC);
+        uprv_free((void *)refC);
         uprv_free(patBuf);
         return NULL;
     }
@@ -212,7 +212,7 @@ uregex_openUText(UText          *pattern,
     if (re == NULL || refC == NULL || patBuf == NULL) {
         *status = U_MEMORY_ALLOCATION_ERROR;
         delete re;
-        uprv_free(refC);
+        uprv_free((void *)refC);
         uprv_free(patBuf);
         return NULL;
     }

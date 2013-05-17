@@ -78,7 +78,20 @@ inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
     var = val;
 };
 
-#include <windows.h> 
+# define WIN32_LEAN_AND_MEAN
+# define VC_EXTRALEAN
+# define NOUSER
+# define NOSERVICE
+# define NOIME
+# define NOMCX
+#include <windows.h>
+
+#if defined max
+/* Undo unfortunate definitions from windows.h */
+#undef max
+#undef min
+#endif
+
 inline int32_t umtx_atomic_inc(atomic_int32_t *var) {
     return InterlockedIncrement((LONG *)var);
 }
