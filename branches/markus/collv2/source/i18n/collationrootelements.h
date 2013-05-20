@@ -20,13 +20,27 @@
 
 U_NAMESPACE_BEGIN
 
+/**
+ * Container and access methods for collation elements and weights
+ * that occur in the root collator.
+ * Needed for finding boundaries for building a tailoring.
+ *
+ * This class takes and returns 16-bit secondary and tertiary weights.
+ */
 class U_I18N_API CollationRootElements : public UMemory {
 public:
     CollationRootElements(const uint32_t *rootElements, int32_t rootElementsLength)
             : elements(rootElements), length(rootElementsLength) {}
 
+    /**
+     * Flag in a root element, set if the element contains secondary & tertiary weights,
+     * rather than a primary.
+     */
     static const uint32_t SEC_TER_DELTA_FLAG = 0x80;
-    static const uint32_t PRIMARY_STEP_MASK = 0x7f;
+    /**
+     * Mask for getting the primary range step value from a primary-range-end element.
+     */
+    static const uint8_t PRIMARY_STEP_MASK = 0x7f;
 
     enum {
         /**
@@ -156,38 +170,38 @@ public:
     uint32_t getTertiaryBefore(uint32_t p, uint32_t s, uint32_t t) const;
 
     /**
-     * Returns lower and upper primary weight limits for the input ce.
-     * @return ce's primary in upper 32 bits, next primary in lower 32
+     * Finds the index of the input primary.
+     * p must occur as a root primary, and must not be 0.
      */
-    int64_t getPrimaryLimitsAt(int64_t ce, UBool isCompressible) const;
+    int32_t findPrimary(uint32_t p) const;
+
     /**
-     * Returns lower and upper secondary weight limits for the input ce.
-     * @return ce's secondary in upper 32 bits, next secondary in lower 32
+     * Returns the primary weight after p where index=findPrimary(p).
+     * p must be at least the first root primary.
      */
-    int64_t getSecondaryLimitsAt(int64_t ce) const;
+    uint32_t getPrimaryAfter(uint32_t p, int32_t index, UBool isCompressible) const;
     /**
-     * Returns lower and upper tertiary weight limits for the input ce.
-     * @return ce's tertiary in upper 32 bits, next tertiary in lower 32
+     * Returns the secondary weight after [p, s] where index=findPrimary(p)
+     * except use index=0 for p=0.
      */
-    int64_t getTertiaryLimitsAt(int64_t ce) const;
+    uint32_t getSecondaryAfter(int32_t index, uint32_t s) const;
+    /**
+     * Returns the tertiary weight after [p, s, t] where index=findPrimary(p)
+     * except use index=0 for p=0.
+     */
+    uint32_t getTertiaryAfter(int32_t index, uint32_t s, uint32_t t) const;
 
 private:
     /**
-     * Finds the index i for the input CE. The CE must occur as a root CE.
-     * It must not be 0.
-     *
-     * If the CE has non-common secondary/tertiary weights, then the index is on the sec/ter delta.
-     * Otherwise, if the primary element is followed by a range end,
-     * then the non-zero step value is included in the return value.
-     *
-     * @return (i<<8) | step
-     */
-    int32_t findCE(int64_t ce) const;
-    /**
      * Finds the largest index i where elements[i]<=p.
      * Requires first primary<=p<0xff000000 (SPECIAL_PRIMARY).
+     * Does not require that p is a root collator primary.
      */
-    int32_t findPrimary(uint32_t p) const;
+    int32_t findP(uint32_t p) const;
+
+    static inline UBool isEndOfPrimaryRange(uint32_t q) {
+        return (q & SEC_TER_DELTA_FLAG) == 0 && (q & PRIMARY_STEP_MASK) != 0;
+    }
 
     /**
      * Data structure:
