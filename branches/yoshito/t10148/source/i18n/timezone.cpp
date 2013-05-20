@@ -1586,6 +1586,11 @@ TimeZone::getCanonicalID(const UnicodeString& id, UnicodeString& canonicalID, UB
 #ifndef U_HIDE_DRAFT_API
 UnicodeString&
 TimeZone::getWindowsID(const UnicodeString& id, UnicodeString& winid, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        winid.setToBogus();
+        return winid;
+    }
+
     // canonicalize the input ID
     UnicodeString canonicalID;
     UBool isSystemID = FALSE;
@@ -1660,6 +1665,11 @@ TimeZone::getWindowsID(const UnicodeString& id, UnicodeString& winid, UErrorCode
 
 UnicodeString&
 TimeZone::getIDByWindowsID(const UnicodeString& winid, const char* region, UnicodeString& id, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        id.setToBogus();
+        return id;
+    }
+
     UResourceBundle *zones = ures_openDirect(NULL, "windowsZones", &status);
     ures_getByKey(zones, "mapTimezones", zones, &status);
     if (U_FAILURE(status)) {

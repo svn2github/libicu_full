@@ -2317,6 +2317,7 @@ void TimeZoneTest::TestGetWindowsID(void) {
         {"America/Indianapolis",    "US Eastern Standard Time"},            // CLDR canonical name
         {"America/Indiana/Indianapolis",    "US Eastern Standard Time"},    // tzdb canonical name
         {"Asia/Khandyga",           "Yakutsk Standard Time"},
+        {"Australia/Eucla",         0}, // No Windows ID mapping
         {"Bogus",                   0},
         {0,                         0},
     };
@@ -2349,6 +2350,7 @@ void TimeZoneTest::TestGetIDByWindowsID(void) {
         {"China Standard Time",     0,      "Asia/Shanghai"},
         {"China Standard Time",     "CN",   "Asia/Shanghai"},
         {"China Standard Time",     "HK",   "Asia/Hong_Kong"},
+        {"Mid-Atlantic Standard Time",  0,  0}, // No tz database mapping
         {"Bogus",                   0,      0},
         {0,                         0,      0},
     };
