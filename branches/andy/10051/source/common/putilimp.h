@@ -205,14 +205,20 @@ typedef size_t uintptr_t;
     /* Use the predefined value. */
 #elif defined(__cplusplus) && __cplusplus>=201103L
     /* C++11, so we should have atomics, except for specific platforms or compilers. */
+
 #if __clang__ && defined(__apple_build_version__) && __clang_major__==4 && __clang_minor__<=1
+    /* Apple Clang 4.1, based on public llvm 3.1.  Atomics are not fully implemented. */
 #   define U_HAVE_STD_ATOMICS 0
-#else
+#elif __clang__ && __clang_major__==3 && __clang_minor__<=1
+    /* Clang 3.1. Atomics not fully implemented. */
+#   define U_HAVE_STD_ATOMICS 0
+#else 
 #   define U_HAVE_STD_ATOMICS 1
 #endif
+
 #else
     /* Not C++ 11 */
-#   define U_HAVE_CPP_ATOMICS 0
+#   define U_HAVE_STD_ATOMICS 0
 #endif
 
 

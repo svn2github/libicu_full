@@ -66,12 +66,15 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 //   that knows the C++ types involved. This function returns TRUE if
 //   the caller needs to call the Init function.
 //
+// Note: the underlying type of uio.fState depends on the compiler (see umutex.h).
+//       An cast is needed when passing it to Windows APIs and building with gcc for MinGW.
+
 U_CAPI UBool U_EXPORT2 umtx_initImplPreInit(UInitOnce &uio) {
     for (;;) {
         int32_t previousState = InterlockedCompareExchange( 
-            &uio.fState,     //  Destination,
-            1,               //  Exchange Value
-            0);              //  Compare value
+            (volatile LONG *)&uio.fState,  //  Destination
+            1,                       //  Exchange Value
+            0);                      //  Compare value
 
         if (previousState == 0) {
             return true;   // Caller will next call the init function.

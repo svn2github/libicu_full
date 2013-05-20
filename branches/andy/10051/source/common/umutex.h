@@ -144,9 +144,11 @@ inline int32_t umtx_atomic_dec(atomic_int32_t *p)  {
 typedef int32_t atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
 
+#ifdef __cplusplus
 U_INTERNAL int32_t U_EXPORT2 umtx_loadAcquire(atomic_int32_t &var);
 
 U_INTERNAL void U_EXPORT2 umtx_storeRelease(atomic_int32_t &var, int32_t val);
+#endif /* __cplusplus */
 
 U_INTERNAL int32_t U_EXPORT2 umtx_atomic_inc(atomic_int32_t *p);
 
@@ -166,7 +168,7 @@ U_INTERNAL int32_t U_EXPORT2 umtx_atomic_dec(atomic_int32_t *p);
 struct UInitOnce {
     atomic_int32_t   fState;
     UErrorCode       fErrCode;
-#if __cplusplus
+#ifdef __cplusplus
     void reset() {fState = 0; fState=0;};
     UBool isReset() {return umtx_loadAcquire(fState) == 0;};
 // Note: isReset() is used by service registration code.
@@ -176,7 +178,7 @@ struct UInitOnce {
 typedef struct UInitOnce UInitOnce;
 #define U_INITONCE_INITIALIZER {ATOMIC_INT32_T_INITIALIZER(0), U_ZERO_ERROR}
 
-#if __cplusplus
+#ifdef __cplusplus
 // TODO: get all ICU files using umutex converted to C++,
 //       then remove the __cpluplus conditionals from this file.
 
