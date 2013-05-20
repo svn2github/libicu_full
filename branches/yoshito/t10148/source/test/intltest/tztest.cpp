@@ -71,6 +71,8 @@ void TimeZoneTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
     TESTCASE_AUTO(TestGetRegion);
     TESTCASE_AUTO(TestGetAvailableIDsNew);
     TESTCASE_AUTO(TestGetUnknown);
+    TESTCASE_AUTO(TestGetWindowsID);
+    TESTCASE_AUTO(TestGetIDByWindowsID);
     TESTCASE_AUTO_END;
 }
 
@@ -2299,6 +2301,73 @@ void TimeZoneTest::TestGetUnknown() {
     assertEquals("getUnknown() wrong ID", expectedID, unknown.getID(id));
     assertTrue("getUnknown() wrong offset", 0 == unknown.getRawOffset());
     assertFalse("getUnknown() uses DST", unknown.useDaylightTime());
+}
+
+void TimeZoneTest::TestGetWindowsID(void) {
+    static const struct {
+        const char *id;
+        const char *winid;
+    } TESTDATA[] = {
+        {"America/New_York",        "Eastern Standard Time"},
+        {"America/Montreal",        "Eastern Standard Time"},
+        {"America/Los_Angeles",     "Pacific Standard Time"},
+        {"America/Vancouver",       "Pacific Standard Time"},
+        {"Asia/Shanghai",           "China Standard Time"},
+        {"Asia/Chongqing",          "China Standard Time"},
+        {"America/Indianapolis",    "US Eastern Standard Time"},            // CLDR canonical name
+        {"America/Indiana/Indianapolis",    "US Eastern Standard Time"},    // tzdb canonical name
+        {"Asia/Khandyga",           "Yakutsk Standard Time"},
+        {"Bogus",                   0},
+        {0,                         0},
+    };
+
+    for (int32_t i = 0; TESTDATA[i].id != 0; i++) {
+        UErrorCode sts = U_ZERO_ERROR;
+        UnicodeString windowsID;
+
+        TimeZone::getWindowsID(UnicodeString(TESTDATA[i].id), windowsID, sts);
+        assertSuccess(TESTDATA[i].id, sts);
+
+        if (TESTDATA[i].winid) {
+            assertEquals(TESTDATA[i].id, UnicodeString(TESTDATA[i].winid), windowsID);
+        } else if (!windowsID.isBogus()) {
+            errln(UnicodeString("FAIL: ") + TESTDATA[i].id + "; got " + windowsID + "; expected [bogus]");
+        }
+    }
+}
+
+void TimeZoneTest::TestGetIDByWindowsID(void) {
+    static const struct {
+        const char *winid;
+        const char *region;
+        const char *id;
+    } TESTDATA[] = {
+        {"Eastern Standard Time",   0,      "America/New_York"},
+        {"Eastern Standard Time",   "US",   "America/New_York"},
+        {"Eastern Standard Time",   "CA",   "America/Toronto"},
+        {"Eastern Standard Time",   "CN",   "America/New_York"},
+        {"China Standard Time",     0,      "Asia/Shanghai"},
+        {"China Standard Time",     "CN",   "Asia/Shanghai"},
+        {"China Standard Time",     "HK",   "Asia/Hong_Kong"},
+        {"Bogus",                   0,      0},
+        {0,                         0,      0},
+    };
+
+    for (int32_t i = 0; TESTDATA[i].winid != 0; i++) {
+        UErrorCode sts = U_ZERO_ERROR;
+        UnicodeString id;
+
+        TimeZone::getIDByWindowsID(UnicodeString(TESTDATA[i].winid), TESTDATA[i].region,
+                                    id, sts);
+        assertSuccess(UnicodeString(TESTDATA[i].winid) + "/" + TESTDATA[i].region, sts);
+
+        if (TESTDATA[i].id) {
+            assertEquals(UnicodeString(TESTDATA[i].winid) + "/" + TESTDATA[i].region, TESTDATA[i].id, id);
+        } else if (!id.isBogus()) {
+            errln(UnicodeString("FAIL: ") + TESTDATA[i].winid + "/" + TESTDATA[i].region
+                + "; got " + id + "; expected [bogus]");
+        }
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

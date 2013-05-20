@@ -97,6 +97,9 @@ public:
     void TestGetRegion(void);
     void TestGetUnknown();
 
+    void TestGetWindowsID(void);
+    void TestGetIDByWindowsID(void);
+
     static const UDate INTERVAL;
 
 private:

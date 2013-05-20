@@ -767,4 +767,19 @@ ucal_getTimeZoneTransitionDate(const UCalendar* cal, UTimeZoneTransitionType typ
     return FALSE;
 }
 
+#ifndef U_HIDE_DRAFT_API
+U_CAPI int32_t U_EXPORT2
+ucal_getWindowsTimeZoneID(const UChar* id, int32_t len, UChar* winid, int32_t winidCapacity, UErrorCode* status) {
+    //TODO
+    return 0;
+}
+
+U_CAPI int32_t U_EXPORT2
+ucal_getTimeZoneIDByWindowsID(const UChar* winid, int32_t len, const char* region, UChar* id, int32_t idCapacity, UErrorCode* status) {
+    //TODO
+    return 0;
+}
+
+#endif /* U_HIDE_DRAFT_API */
+
 #endif /* #if !UCONFIG_NO_FORMATTING */
