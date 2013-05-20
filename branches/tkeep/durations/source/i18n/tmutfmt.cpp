@@ -507,7 +507,30 @@ TimeUnitFormat::numericFormat(
     if (U_FAILURE(status)) {
         return;
     }
-    dateFormat.format(Formattable(date, Formattable::kIsDate), toAppendTo, NULL, status);
+    UnicodeString smallestAmountFormatted;
+    fNumberFormat->format(smallestAmount, smallestAmountFormatted, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    FieldPositionIterator fpi;
+    int32_t prevLength = toAppendTo.length();
+    dateFormat.format(Formattable(date, Formattable::kIsDate), toAppendTo, &fpi, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    FieldPosition fp;
+    UBool substituted = FALSE;
+    while (fpi.next(fp)) {
+        if (fp.getField() == smallestField) {
+            toAppendTo.replace(
+                prevLength + fp.getBeginIndex(),
+                fp.getEndIndex() - fp.getBeginIndex(),
+                smallestAmountFormatted);
+            substituted = TRUE;
+            break;
+        }
+    }
+    U_ASSERT(substituted);
 }
 
 void
@@ -593,9 +616,26 @@ TimeUnitFormat::loadNumericDurationFormat(const char *pattern, UErrorCode& statu
     if (U_FAILURE(status)) {
         return NULL;
     }
-    DateFormat *result = new SimpleDateFormat(UnicodeString("H:mm:ss"), status);
+    UResourceBundle *rb, *unitsRes;
+    rb = ures_open(NULL, fLocale.getName(), &status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    CharString path("durationUnits", status);
+    path.append('/', status).append(pattern, status);
+
+    int32_t fullPatternSize;
+    const UChar *fullPatternChars = ures_getStringByKeyWithFallback(rb, path.data(), &fullPatternSize, &status); 
+    if (U_FAILURE(status)) {
+        ures_close(rb);
+        return NULL;
+    }
+    UnicodeString fullPattern(FALSE, fullPatternChars, fullPatternSize);
+    fullPattern.findAndReplace(UnicodeString("h"), UnicodeString("H"));
+    DateFormat *result = new SimpleDateFormat(fullPattern, status);
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
+        ures_close(rb);
         return NULL;
     }
     if (U_FAILURE(status)) {
@@ -605,7 +645,6 @@ TimeUnitFormat::loadNumericDurationFormat(const char *pattern, UErrorCode& statu
     result->setTimeZone(*TimeZone::getGMT());
     return result;
 }
-
 
 void
 TimeUnitFormat::readFromCurrentLocale(UTimeUnitFormatStyle style, const char* key,

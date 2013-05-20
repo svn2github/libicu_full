@@ -16426,6 +16426,18 @@ structLocale:table(nofallback){
         lines{""}
     }
     listPattern{
+        duration{
+            2{""}
+            end{""}
+            middle{""}
+            start{""}
+        }
+        duration-short{
+            2{""}
+            end{""}
+            middle{""}
+            start{""}
+        }
         standard{
             2{""}
             end{""}
