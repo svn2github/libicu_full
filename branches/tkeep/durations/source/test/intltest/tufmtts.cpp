@@ -47,6 +47,7 @@ class TimeUnitAmountSubClass : public TimeUnitAmount {
     int extra;
 };
 
+static TimePeriod* create1m59_9996s(UErrorCode &status);
 static TimePeriod* create19m(UErrorCode &status);
 static TimePeriod* create19m28s(UErrorCode &status);
 static TimePeriod* create19m29s(UErrorCode &status);
@@ -388,6 +389,7 @@ void TimeUnitTest::testGreekWithSanitization() {
 
 void TimeUnitTest::testFormatPeriodEn() {
     UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<TimePeriod> _1m59_9996s(create1m59_9996s(status));
     LocalPointer<TimePeriod> _19m(create19m(status));
     LocalPointer<TimePeriod> _19m28s(create19m28s(status));
     LocalPointer<TimePeriod> _1h0m23s(create1h0m23s(status));
@@ -404,6 +406,7 @@ void TimeUnitTest::testFormatPeriodEn() {
     }
 
     TimePeriodResult fullResults[] = {
+        {_1m59_9996s.getAlias(), "1 minute and 59.9996 seconds"},
         {_19m.getAlias(), "19 minutes"},
         {_1h23_5s.getAlias(), "1 hour and 23.5 seconds"},
         {_1h23_5m.getAlias(), "1 hour and 23.5 minutes"},
@@ -411,6 +414,7 @@ void TimeUnitTest::testFormatPeriodEn() {
         {_2y5M3w4d.getAlias(), "2 years, 5 months, 3 weeks, and 4 days"}};
   
     TimePeriodResult abbrevResults[] = {
+        {_1m59_9996s.getAlias(), "1 min, 59.9996 secs"},
         {_19m.getAlias(), "19 mins"},
         {_1h23_5s.getAlias(), "1 hr, 23.5 secs"},
         {_1h23_5m.getAlias(), "1 hr, 23.5 mins"},
@@ -418,6 +422,7 @@ void TimeUnitTest::testFormatPeriodEn() {
         {_2y5M3w4d.getAlias(), "2 yrs, 5 mths, 3 wks, 4 days"}};
   
     TimePeriodResult numericResults[] = {
+        {_1m59_9996s.getAlias(), "1:59.9996"},
         {_19m.getAlias(), "19 mins"},
         {_1h23_5s.getAlias(), "1:00:23.5"},
         {_1h0m23s.getAlias(), "1:00:23"},
@@ -426,9 +431,16 @@ void TimeUnitTest::testFormatPeriodEn() {
         {_2y5M3w4d.getAlias(), "2 yrs, 5 mths, 3 wks, 4 days"},
         {_0h0m17s.getAlias(), "0:00:17"},
         {_6h56_92m.getAlias(), "6:56.92"}};
-  
+
+    LocalPointer<NumberFormat> nf(NumberFormat::createInstance(Locale::getEnglish(), status));
+    if (U_FAILURE(status)) {
+        dataerrln("Unable to create NumberFormat object - %s", u_errorName(status));
+        return;
+    }
+    nf->setMaximumFractionDigits(4);
     {
         TimeUnitFormat tuf(Locale::getEnglish(), UTMUTFMT_FULL_STYLE, status);
+        tuf.setNumberFormat(*nf, status);
         if (U_FAILURE(status)) {
             dataerrln("Unable to create TimeUnitFormat object - %s", u_errorName(status));
             return;
@@ -440,6 +452,7 @@ void TimeUnitTest::testFormatPeriodEn() {
     }
     {
         TimeUnitFormat tuf(Locale::getEnglish(), UTMUTFMT_ABBREVIATED_STYLE, status);
+        tuf.setNumberFormat(*nf, status);
         if (U_FAILURE(status)) {
             dataerrln("Unable to create TimeUnitFormat object - %s", u_errorName(status));
             return;
@@ -451,6 +464,7 @@ void TimeUnitTest::testFormatPeriodEn() {
     }
     {
         TimeUnitFormat tuf(Locale::getEnglish(), UTMUTFMT_NUMERIC_STYLE, status);
+        tuf.setNumberFormat(*nf, status);
         if (U_FAILURE(status)) {
             dataerrln("Unable to create TimeUnitFormat object - %s", u_errorName(status));
             return;
@@ -593,6 +607,17 @@ void TimeUnitTest::verifyNotEqual(const TimePeriod& lhs, const TimePeriod& rhs) 
   if (!(lhs != rhs)) {
     errln("Expected not not not equal.");
   }
+}
+
+static TimePeriod *create1m59_9996s(UErrorCode &status) {
+  if (U_FAILURE(status)) {
+      return NULL;
+  }
+  TimeUnitAmount minutes(1.0, TimeUnit::UTIMEUNIT_MINUTE, status);
+  TimeUnitAmount seconds(59.9996, TimeUnit::UTIMEUNIT_SECOND, status);
+  TimeUnitAmount *amounts[] = {&minutes, &seconds};
+  int32_t len = sizeof(amounts) / sizeof(TimeUnitAmount*);
+  return TimePeriod::forAmounts(amounts, len, status); 
 }
 
 static TimePeriod *create19m(UErrorCode &status) {
