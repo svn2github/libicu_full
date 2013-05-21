@@ -217,7 +217,8 @@
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <CompileAs>Default</CompileAs> </ClCompile>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
@@ -237,12 +238,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <C1Compile Include="cal.c">
+    <ClCompile Include="cal.c">
 	    <DisableLanguageExtensions>false</DisableLanguageExtensions>
-    </C1Compile>
-    <C1Compile Include="uprint.c">
+    </ClCompile>
+    <ClCompile Include="uprint.c">
 	    <DisableLanguageExtensions>false</DisableLanguageExtensions>
-    </C1Compile>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="uprint.h" />

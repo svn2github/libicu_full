@@ -84,13 +84,8 @@ inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 # define NOSERVICE
 # define NOIME
 # define NOMCX
+# define NOMINMAX
 #include <windows.h>
-
-#if defined max
-/* Undo unfortunate definitions from windows.h */
-#undef max
-#undef min
-#endif
 
 inline int32_t umtx_atomic_inc(atomic_int32_t *var) {
     return InterlockedIncrement((LONG *)var);
@@ -292,6 +287,7 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
 # define NOSERVICE
 # define NOIME
 # define NOMCX
+# define NOMINMAX
 # include <windows.h>
 #endif  /* 0 */
 
@@ -304,7 +300,6 @@ typedef struct UMutex {
                                    * directly here. */
     char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
 } UMutex;
-typedef struct UMutex UMutex;
 
 /* Initializer for a static UMUTEX. Deliberately contains no value for the
  *  CRITICAL_SECTION.

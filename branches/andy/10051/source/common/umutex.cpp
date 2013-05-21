@@ -55,6 +55,7 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 # define NOSERVICE
 # define NOIME
 # define NOMCX
+# define NOMINMAX
 # include <windows.h>
 
 
