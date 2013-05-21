@@ -343,6 +343,13 @@ public:
     static inline int64_t makeCE(uint32_t p) {
         return ((int64_t)p << 32) | COMMON_SEC_AND_TER_CE;
     }
+    /**
+     * Creates a CE from a primary weight,
+     * 16-bit secondary/tertiary weights, and a 2-bit quaternary.
+     */
+    static inline int64_t makeCE(uint32_t p, uint32_t s, uint32_t t, uint32_t q) {
+        return ((int64_t)p << 32) | (s << 16) | t | (q << 6);
+    }
 
     /**
      * Increments a 2-byte primary by a code point offset.

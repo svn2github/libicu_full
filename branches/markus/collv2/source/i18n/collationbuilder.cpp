@@ -27,6 +27,7 @@
 #include "collationsettings.h"
 #include "collationtailoring.h"
 #include "collationtailoringdatabuilder.h"
+#include "collationweights.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
 
@@ -175,6 +176,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     parser.setImporter(importer);
     parser.parse(ruleString, tailoring.settings, outParseError, errorCode);
     errorReason = parser.getErrorReason();
+    makeTailoredCEs(errorCode);
     if(U_FAILURE(errorCode)) { return; }
     // TODO
 }
@@ -241,17 +243,8 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
             parserErrorReason = "reset primary-before [first trailing] not supported";
             return;
         }
-        int32_t limitIndex = index;
         p = rootElements.getPrimaryBefore(p, baseData->isCompressiblePrimary(p));
         index = findOrInsertNodeForRootCE(Collation::makeCE(p), UCOL_PRIMARY, errorCode);
-        if(U_FAILURE(errorCode)) { return; }
-        node = nodes.elementAti(index);
-        if(nextIndexFromNode(node) == 0) {
-            // Small optimization:
-            // Terminate this new list with the node for the next root primary,
-            // so that we need not look up the limit later.
-            nodes.setElementAt(index, node | nodeFromNextIndex(limitIndex));
-        }
     } else {
         // &[before 2] or &[before 3]
         index = findCommonNode(index, UCOL_SECONDARY);
@@ -703,6 +696,157 @@ CollationBuilder::suppressContractions(const UnicodeSet &set,
         return;
     }
     // TODO
+}
+
+void
+CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+
+    CollationWeights primaries, secondaries, tertiaries;
+    int64_t *nodesArray = nodes.getBuffer();
+
+    for(int32_t rpi = 0; rpi < rootPrimaryIndexes.size(); ++rpi) {
+        int32_t i = rootPrimaryIndexes.elementAti(rpi);
+        int64_t node = nodesArray[i];
+        uint32_t p = weight32FromNode(node);
+        uint32_t s = Collation::COMMON_WEIGHT16;
+        uint32_t t = Collation::COMMON_WEIGHT16;
+        uint32_t q = 0;
+        UBool pIsTailored = FALSE;
+        UBool sIsTailored = FALSE;
+        UBool tIsTailored = FALSE;
+        int32_t pIndex = p == 0 ? 0 : rootElements.findPrimary(p);
+        int32_t nextIndex = nextIndexFromNode(node);
+        while(nextIndex != 0) {
+            i = nextIndex;
+            node = nodesArray[i];
+            nextIndex = nextIndexFromNode(node);
+            int32_t strength = strengthFromNode(node);
+            if(strength == UCOL_QUATERNARY) {
+                U_ASSERT(isTailoredNode(node));
+                if(q == 3) {
+                    errorCode = U_BUFFER_OVERFLOW_ERROR;
+                    errorReason = "quaternary tailoring gap too small";
+                    return;
+                }
+                ++q;
+            } else {
+                q = 0;
+                if(strength == UCOL_TERTIARY) {
+                    if(isTailoredNode(node)) {
+                        if(!tIsTailored) {
+                            // First tailored tertiary node for [p, s].
+                            int32_t tCount = countTailoredNodes(nodesArray, nextIndex,
+                                                                UCOL_TERTIARY) + 1;
+                            uint32_t tLimit;
+                            if(t == BEFORE_WEIGHT16) {
+                                tLimit = Collation::COMMON_WEIGHT16;
+                            } else if(!pIsTailored && !sIsTailored) {
+                                // p and s are root weights.
+                                tLimit = rootElements.getTertiaryAfter(pIndex, s, t);
+                            } else {
+                                // [p, s] is tailored.
+                                U_ASSERT(t == Collation::COMMON_WEIGHT16);
+                                tLimit = rootElements.getTertiaryBoundary();
+                            }
+                            tertiaries.initForTertiary();
+                            if(!tertiaries.allocWeights(t, tLimit, tCount)) {
+                                errorCode = U_BUFFER_OVERFLOW_ERROR;
+                                errorReason = "tertiary tailoring gap too small";
+                                return;
+                            }
+                            tIsTailored = TRUE;
+                        }
+                        t = tertiaries.nextWeight();
+                    } else {
+                        t = weight16FromNode(node);
+                        tIsTailored = FALSE;
+                    }
+                } else {
+                    t = Collation::COMMON_WEIGHT16;
+                    tIsTailored = FALSE;
+                    if(strength == UCOL_SECONDARY) {
+                        if(isTailoredNode(node)) {
+                            if(!sIsTailored) {
+                                // First tailored secondary node for p.
+                                int32_t sCount = countTailoredNodes(nodesArray, nextIndex,
+                                                                    UCOL_SECONDARY) + 1;
+                                uint32_t sLimit;
+                                if(s == BEFORE_WEIGHT16) {
+                                    sLimit = Collation::COMMON_WEIGHT16;
+                                } else if(!pIsTailored) {
+                                    // p is a root primary.
+                                    sLimit = rootElements.getSecondaryAfter(pIndex, s);
+                                } else {
+                                    // p is a tailored primary.
+                                    U_ASSERT(s == Collation::COMMON_WEIGHT16);
+                                    sLimit = rootElements.getSecondaryBoundary();
+                                }
+                                if(s == Collation::COMMON_WEIGHT16) {
+                                    // Do not tailor into the getSortKey() range of
+                                    // compressed common secondaries.
+                                    s = rootElements.getLastCommonSecondary();
+                                }
+                                secondaries.initForSecondary();
+                                if(!secondaries.allocWeights(s, sLimit, sCount)) {
+                                    errorCode = U_BUFFER_OVERFLOW_ERROR;
+                                    errorReason = "secondary tailoring gap too small";
+                                    return;
+                                }
+                                sIsTailored = TRUE;
+                            }
+                            s = secondaries.nextWeight();
+                        } else {
+                            s = weight16FromNode(node);
+                            sIsTailored = FALSE;
+                        }
+                    } else /* UCOL_PRIMARY */ {
+                        U_ASSERT(isTailoredNode(node));
+                        s = Collation::COMMON_WEIGHT16;
+                        sIsTailored = FALSE;
+                        if(!pIsTailored) {
+                            // First tailored primary node in this list.
+                            int32_t pCount = countTailoredNodes(nodesArray, nextIndex,
+                                                                UCOL_PRIMARY) + 1;
+                            UBool isCompressible = baseData->isCompressiblePrimary(p);
+                            uint32_t pLimit =
+                                rootElements.getPrimaryAfter(p, pIndex, isCompressible);
+                            primaries.initForPrimary(isCompressible);
+                            if(!primaries.allocWeights(p, pLimit, pCount)) {
+                                errorCode = U_BUFFER_OVERFLOW_ERROR;  // TODO: introduce a more specific UErrorCode?
+                                errorReason = "primary tailoring gap too small";
+                                return;
+                            }
+                            pIsTailored = TRUE;
+                        }
+                        p = primaries.nextWeight();
+                    }
+                }
+            }
+            if(isTailoredNode(node)) {
+                nodesArray[i] = Collation::makeCE(p, s, t, q);
+            }
+        }
+    }
+}
+
+int32_t
+CollationBuilder::countTailoredNodes(const int64_t *nodesArray, int32_t i, int32_t strength) {
+    int32_t count = 0;
+    for(;;) {
+        if(i == 0) { break; }
+        int64_t node = nodesArray[i];
+        if(strengthFromNode(node) < strength) { break; }
+        if(strengthFromNode(node) == strength) {
+            if(isTailoredNode(node)) {
+                ++count;
+            } else {
+                break;
+            }
+        }
+        i = nextIndexFromNode(node);
+    }
+    return count;
 }
 
 U_NAMESPACE_END

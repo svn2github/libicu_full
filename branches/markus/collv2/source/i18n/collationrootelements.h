@@ -103,7 +103,7 @@ public:
      * Returns the last common secondary weight.
      * This is the lower limit for secondaries of primary CEs.
      */
-    uint32_t getLastCommonSecondaryWeight() const {
+    uint32_t getLastCommonSecondary() const {
         return (elements[IX_SEC_TER_BOUNDARIES] >> 16) & 0xff00;
     }
 

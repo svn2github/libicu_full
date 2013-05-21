@@ -99,6 +99,18 @@ private:
                                       const char *&errorReason, UErrorCode &errorCode);
 
     /**
+     * Walks the tailoring graph and overwrites tailored nodes with new CEs.
+     * After this, the graph is destroyed.
+     * The nodes array can then be used only as a source of tailored CEs.
+     */
+    void makeTailoredCEs(UErrorCode &errorCode);
+    /**
+     * Counts the tailored nodes of the given strength up to the next node
+     * which is either stronger or has an explicit weight of this strength.
+     */
+    static int32_t countTailoredNodes(const int64_t *nodesArray, int32_t i, int32_t strength);
+
+    /**
      * Encodes "temporary CE" data into a CE that fits into the CE32 data structure,
      * with 2-byte primary, 1-byte secondary and 6-bit tertiary,
      * with valid CE byte values.
@@ -232,10 +244,7 @@ private:
     /**
      * Data structure for assigning tailored weights and CEs.
      * Doubly-linked lists of nodes in mostly collation order.
-     *
-     * Each list starts with a root primary node.
-     * Each list ends with either a nextIndex of 0, or with a root primary node
-     * which contains the primary weight limit for this list.
+     * Each list starts with a root primary node and ends with a nextIndex of 0.
      *
      * Root primary nodes do not have previous indexes.
      * All other nodes do.
@@ -255,7 +264,12 @@ private:
      * A node with HAS_BEFORE2 must be immediately followed by
      * a secondary node with BEFORE_WEIGHT16, then a secondary tailored node,
      * and later an explicit common-secondary node.
-     * All secondary tailored nodes between these explicit ones
+     * (&[before 2] resets to the BEFORE_WEIGHT16 node so that
+     * the following addRelation(secondary) tailors right after that.
+     * If we did not have this node and instead were to reset on the primary node,
+     * then addRelation(seconary) would skip forward to the the COMMON_WEIGHT16 node.)
+     *
+     * All secondary tailored nodes between these two explicit ones
      * will be assigned lower-than-common secondary weights.
      * If the flag is not set, then there are no explicit secondary node
      * with the common or lower weights.
