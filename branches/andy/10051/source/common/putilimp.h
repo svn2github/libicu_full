@@ -183,6 +183,8 @@ typedef size_t uintptr_t;
  */
 #ifdef U_HAVE_GCC_ATOMICS
     /* Use the predefined value. */
+#elif U_PLATFORM == U_PF_MINGW
+    #define U_HAVE_GCC_ATOMICS 0
 #elif U_GCC_MAJOR_MINOR >= 404 || defined(__clang__)
     /* TODO: Intel icc and IBM xlc on AIX also support gcc atomics.  (Intel originated them.)
      *       Add them for these compilers.
