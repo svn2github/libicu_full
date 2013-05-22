@@ -72,7 +72,7 @@ void TimeZoneTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
     TESTCASE_AUTO(TestGetAvailableIDsNew);
     TESTCASE_AUTO(TestGetUnknown);
     TESTCASE_AUTO(TestGetWindowsID);
-    TESTCASE_AUTO(TestGetIDByWindowsID);
+    TESTCASE_AUTO(TestGetIDForWindowsID);
     TESTCASE_AUTO_END;
 }
 
@@ -2317,8 +2317,8 @@ void TimeZoneTest::TestGetWindowsID(void) {
         {"America/Indianapolis",    "US Eastern Standard Time"},            // CLDR canonical name
         {"America/Indiana/Indianapolis",    "US Eastern Standard Time"},    // tzdb canonical name
         {"Asia/Khandyga",           "Yakutsk Standard Time"},
-        {"Australia/Eucla",         0}, // No Windows ID mapping
-        {"Bogus",                   0},
+        {"Australia/Eucla",         ""}, // No Windows ID mapping
+        {"Bogus",                   ""},
         {0,                         0},
     };
 
@@ -2328,16 +2328,11 @@ void TimeZoneTest::TestGetWindowsID(void) {
 
         TimeZone::getWindowsID(UnicodeString(TESTDATA[i].id), windowsID, sts);
         assertSuccess(TESTDATA[i].id, sts);
-
-        if (TESTDATA[i].winid) {
-            assertEquals(TESTDATA[i].id, UnicodeString(TESTDATA[i].winid), windowsID);
-        } else if (!windowsID.isBogus()) {
-            errln(UnicodeString("FAIL: ") + TESTDATA[i].id + "; got " + windowsID + "; expected [bogus]");
-        }
+        assertEquals(TESTDATA[i].id, UnicodeString(TESTDATA[i].winid), windowsID);
     }
 }
 
-void TimeZoneTest::TestGetIDByWindowsID(void) {
+void TimeZoneTest::TestGetIDForWindowsID(void) {
     static const struct {
         const char *winid;
         const char *region;
@@ -2350,8 +2345,8 @@ void TimeZoneTest::TestGetIDByWindowsID(void) {
         {"China Standard Time",     0,      "Asia/Shanghai"},
         {"China Standard Time",     "CN",   "Asia/Shanghai"},
         {"China Standard Time",     "HK",   "Asia/Hong_Kong"},
-        {"Mid-Atlantic Standard Time",  0,  0}, // No tz database mapping
-        {"Bogus",                   0,      0},
+        {"Mid-Atlantic Standard Time",  0,  ""}, // No tz database mapping
+        {"Bogus",                   0,      ""},
         {0,                         0,      0},
     };
 
@@ -2359,16 +2354,10 @@ void TimeZoneTest::TestGetIDByWindowsID(void) {
         UErrorCode sts = U_ZERO_ERROR;
         UnicodeString id;
 
-        TimeZone::getIDByWindowsID(UnicodeString(TESTDATA[i].winid), TESTDATA[i].region,
+        TimeZone::getIDForWindowsID(UnicodeString(TESTDATA[i].winid), TESTDATA[i].region,
                                     id, sts);
         assertSuccess(UnicodeString(TESTDATA[i].winid) + "/" + TESTDATA[i].region, sts);
-
-        if (TESTDATA[i].id) {
-            assertEquals(UnicodeString(TESTDATA[i].winid) + "/" + TESTDATA[i].region, TESTDATA[i].id, id);
-        } else if (!id.isBogus()) {
-            errln(UnicodeString("FAIL: ") + TESTDATA[i].winid + "/" + TESTDATA[i].region
-                + "; got " + id + "; expected [bogus]");
-        }
+        assertEquals(UnicodeString(TESTDATA[i].winid) + "/" + TESTDATA[i].region, TESTDATA[i].id, id);
     }
 }
 

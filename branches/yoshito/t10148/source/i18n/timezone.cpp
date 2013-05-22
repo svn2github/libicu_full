@@ -1586,8 +1586,8 @@ TimeZone::getCanonicalID(const UnicodeString& id, UnicodeString& canonicalID, UB
 #ifndef U_HIDE_DRAFT_API
 UnicodeString&
 TimeZone::getWindowsID(const UnicodeString& id, UnicodeString& winid, UErrorCode& status) {
+    winid.remove();
     if (U_FAILURE(status)) {
-        winid.setToBogus();
         return winid;
     }
 
@@ -1598,7 +1598,6 @@ TimeZone::getWindowsID(const UnicodeString& id, UnicodeString& winid, UErrorCode
     getCanonicalID(id, canonicalID, isSystemID, status);
     if (U_FAILURE(status) || !isSystemID) {
         // mapping data is only applicable to tz database IDs
-        winid.setToBogus();
         return winid;
     }
 
@@ -1606,7 +1605,6 @@ TimeZone::getWindowsID(const UnicodeString& id, UnicodeString& winid, UErrorCode
     ures_getByKey(mapTimezones, "mapTimezones", mapTimezones, &status);
 
     if (U_FAILURE(status)) {
-        winid.setToBogus();
         return winid;
     }
 
@@ -1655,25 +1653,21 @@ TimeZone::getWindowsID(const UnicodeString& id, UnicodeString& winid, UErrorCode
     }
     ures_close(winzone);
 
-    if (!found) {
-        winid.setToBogus();
-    }
     return winid;
 }
 
 #define MAX_WINDOWS_ID_SIZE 128
 
 UnicodeString&
-TimeZone::getIDByWindowsID(const UnicodeString& winid, const char* region, UnicodeString& id, UErrorCode& status) {
+TimeZone::getIDForWindowsID(const UnicodeString& winid, const char* region, UnicodeString& id, UErrorCode& status) {
+    id.remove();
     if (U_FAILURE(status)) {
-        id.setToBogus();
         return id;
     }
 
     UResourceBundle *zones = ures_openDirect(NULL, "windowsZones", &status);
     ures_getByKey(zones, "mapTimezones", zones, &status);
     if (U_FAILURE(status)) {
-        id.setToBogus();
         return id;
     }
 
@@ -1682,7 +1676,6 @@ TimeZone::getIDByWindowsID(const UnicodeString& winid, const char* region, Unico
     int32_t winKeyLen = winid.extract(0, winid.length(), winidKey, sizeof(winidKey) - 1);
 
     if (winKeyLen == 0 || winKeyLen >= sizeof(winidKey)) {
-        id.setToBogus();
         return id;
     }
     winidKey[winKeyLen] = 0;
@@ -1690,7 +1683,6 @@ TimeZone::getIDByWindowsID(const UnicodeString& winid, const char* region, Unico
     ures_getByKey(zones, winidKey, zones, &tmperr); // use tmperr, because windows mapping might not
                                                     // be avaiable by design
     if (U_FAILURE(tmperr)) {
-        id.setToBogus();
         return id;
     }
 
@@ -1716,8 +1708,6 @@ TimeZone::getIDByWindowsID(const UnicodeString& winid, const char* region, Unico
                                                                 // available at this point
     if (U_SUCCESS(status)) {
         id.setTo(tzid, len);
-    } else {
-        id.setToBogus();
     }
 
     return id;

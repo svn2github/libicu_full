@@ -98,7 +98,7 @@ public:
     void TestGetUnknown();
 
     void TestGetWindowsID(void);
-    void TestGetIDByWindowsID(void);
+    void TestGetIDForWindowsID(void);
 
     static const UDate INTERVAL;
 

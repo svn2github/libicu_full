@@ -2406,7 +2406,7 @@ void TestGetTimeZoneIDByWindowsID() {
 
     {
         status = U_ZERO_ERROR;
-        len = ucal_getTimeZoneIDByWindowsID(winEastern, -1, NULL, tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
+        len = ucal_getTimeZoneIDForWindowsID(winEastern, -1, NULL, tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
         if (U_FAILURE(status)) {
             log_data_err("FAIL: TZ ID for Eastern Standard Time, status %s\n", u_errorName(status)); 
         } else if (len != u_strlen(tzNewYork) || u_strncmp(tzID, tzNewYork, len) != 0) {
@@ -2415,7 +2415,7 @@ void TestGetTimeZoneIDByWindowsID() {
     }
     {
         status = U_ZERO_ERROR;
-        len = ucal_getTimeZoneIDByWindowsID(winEastern, u_strlen(winEastern), "US", tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
+        len = ucal_getTimeZoneIDForWindowsID(winEastern, u_strlen(winEastern), "US", tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
         if (U_FAILURE(status)) {
             log_data_err("FAIL: TZ ID for Eastern Standard Time - US, status %s\n", u_errorName(status)); 
         } else if (len != u_strlen(tzNewYork) || u_strncmp(tzID, tzNewYork, len) != 0) {
@@ -2424,7 +2424,7 @@ void TestGetTimeZoneIDByWindowsID() {
     }
     {
         status = U_ZERO_ERROR;
-        len = ucal_getTimeZoneIDByWindowsID(winEastern, u_strlen(winEastern), "CA", tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
+        len = ucal_getTimeZoneIDForWindowsID(winEastern, u_strlen(winEastern), "CA", tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
         if (U_FAILURE(status)) {
             log_data_err("FAIL: TZ ID for Eastern Standard Time - CA, status %s\n", u_errorName(status)); 
         } else if (len != u_strlen(tzTronto) || u_strncmp(tzID, tzTronto, len) != 0) {
@@ -2434,7 +2434,7 @@ void TestGetTimeZoneIDByWindowsID() {
 
     {
         status = U_ZERO_ERROR;
-        len = ucal_getTimeZoneIDByWindowsID(sBogus, -1, NULL, tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
+        len = ucal_getTimeZoneIDForWindowsID(sBogus, -1, NULL, tzID, sizeof(tzID)/sizeof(tzID[0]), &status);
         if (U_FAILURE(status)) {
             log_data_err("FAIL: TZ ID for Bogus, status %s\n", u_errorName(status)); 
         } else if (len != 0) {

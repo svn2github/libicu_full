@@ -778,7 +778,7 @@ ucal_getWindowsTimeZoneID(const UChar* id, int32_t len, UChar* winid, int32_t wi
     UnicodeString resultWinID;
 
     TimeZone::getWindowsID(UnicodeString(id, len), resultWinID, *status);
-    if (U_SUCCESS(*status) && !resultWinID.isBogus()) {
+    if (U_SUCCESS(*status) && resultWinID.length() > 0) {
         resultLen = resultWinID.length();
         resultWinID.extract(winid, winidCapacity, *status);
     }
@@ -787,7 +787,7 @@ ucal_getWindowsTimeZoneID(const UChar* id, int32_t len, UChar* winid, int32_t wi
 }
 
 U_CAPI int32_t U_EXPORT2
-ucal_getTimeZoneIDByWindowsID(const UChar* winid, int32_t len, const char* region, UChar* id, int32_t idCapacity, UErrorCode* status) {
+ucal_getTimeZoneIDForWindowsID(const UChar* winid, int32_t len, const char* region, UChar* id, int32_t idCapacity, UErrorCode* status) {
     if (U_FAILURE(*status)) {
         return 0;
     }
@@ -795,8 +795,8 @@ ucal_getTimeZoneIDByWindowsID(const UChar* winid, int32_t len, const char* regio
     int32_t resultLen = 0;
     UnicodeString resultID;
 
-    TimeZone::getIDByWindowsID(UnicodeString(winid, len), region, resultID, *status);
-    if (U_SUCCESS(*status) && !resultID.isBogus()) {
+    TimeZone::getIDForWindowsID(UnicodeString(winid, len), region, resultID, *status);
+    if (U_SUCCESS(*status) && resultID.length() > 0) {
         resultLen = resultID.length();
         resultID.extract(id, idCapacity, *status);
     }
