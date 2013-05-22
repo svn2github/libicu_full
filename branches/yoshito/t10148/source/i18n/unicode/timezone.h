@@ -362,7 +362,7 @@ public:
     * empty, but the operation itself remains successful (no error status set on return).
     *
     * <p>This implementation utilizes <a href="http://unicode.org/cldr/charts/supplemental/zone_tzid.html">
-    * Zone-Tzid mapping data<a>. The mapping data is updated time to time. To get the latest changes,
+    * Zone-Tzid mapping data</a>. The mapping data is updated time to time. To get the latest changes,
     * please read the ICU user guide section <a href="http://userguide.icu-project.org/datetime/timezone#TOC-Updating-the-Time-Zone-Data">
     * Updating the Time Zone Data</a>.
     *
@@ -390,7 +390,7 @@ public:
     * will be empty, but the operation itself remains successful (no error status set on return).
     *
     * <p>This implementation utilizes <a href="http://unicode.org/cldr/charts/supplemental/zone_tzid.html">
-    * Zone-Tzid mapping data<a>. The mapping data is updated time to time. To get the latest changes,
+    * Zone-Tzid mapping data</a>. The mapping data is updated time to time. To get the latest changes,
     * please read the ICU user guide section <a href="http://userguide.icu-project.org/datetime/timezone#TOC-Updating-the-Time-Zone-Data">
     * Updating the Time Zone Data</a>.
     *
