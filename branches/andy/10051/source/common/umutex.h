@@ -61,22 +61,14 @@ inline int32_t umtx_atomic_dec(atomic_int32_t *var) {
 }
      
 
-#elif defined(_MSC_VER)
+#elif defined(U_PLATFORM_HAS_WIN32_API)
 // MSVC compiler. Reads and writes of volatile variables have
 //                acquire and release memory semantics, respectively.
 //                This is a Microsoft extension, not standard C++ behavior.
-
-typedef volatile long atomic_int32_t;
-#define ATOMIC_INT32_T_INITIALIZER(val) val
-
-#ifdef __cplusplus
-inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
-    return var;
-};
-
-inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
-    var = val;
-};
+//
+//   Update:      can't use this because of MinGW, built with gcc.
+//                Original plan was to use gcc atomics for MinGW, but they
+//                aren't supported, so we fold MinGW into this path.
 
 # define WIN32_LEAN_AND_MEAN
 # define VC_EXTRALEAN
@@ -84,15 +76,30 @@ inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 # define NOSERVICE
 # define NOIME
 # define NOMCX
-# define NOMINMAX
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 
+typedef volatile LONG atomic_int32_t;
+#define ATOMIC_INT32_T_INITIALIZER(val) val
+
+#ifdef __cplusplus
+inline int32_t umtx_loadAcquire(atomic_int32_t &var) {
+    return InterlockedCompareExchange(&var, 0, 0);
+}
+
+inline void umtx_storeRelease(atomic_int32_t &var, int32_t val) {
+    InterlockedExchange(&var, val);
+}
+
+
 inline int32_t umtx_atomic_inc(atomic_int32_t *var) {
-    return InterlockedIncrement((LONG *)var);
+    return InterlockedIncrement(var);
 }
 
 inline int32_t umtx_atomic_dec(atomic_int32_t *var) {
-    return InterlockedDecrement((LONG *)var);
+    return InterlockedDecrement(var);
 }
 #endif /* __cplusplus */
 

@@ -45,18 +45,9 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 //-------------------------------------------------------------------------------------------
 
 #if defined U_NO_PLATFORM_ATOMICS
-#error ICU on Win32 requires compiler support for low level atomic operations.
+#error ICU on Win32 requires support for low level atomic operations.
 // Visual Studio, gcc, clang are OK. Shouldn't get here.
 #endif
-
-# define WIN32_LEAN_AND_MEAN
-# define VC_EXTRALEAN
-# define NOUSER
-# define NOSERVICE
-# define NOIME
-# define NOMCX
-# define NOMINMAX
-# include <windows.h>
 
 
 // This function is called when a test of a UInitOnce::fState reveals that
@@ -67,15 +58,13 @@ static UMutex   globalMutex = U_MUTEX_INITIALIZER;
 //   that knows the C++ types involved. This function returns TRUE if
 //   the caller needs to call the Init function.
 //
-// Note: the underlying type of uio.fState depends on the compiler (see umutex.h).
-//       An cast is needed when passing it to Windows APIs and building with gcc for MinGW.
 
 U_CAPI UBool U_EXPORT2 umtx_initImplPreInit(UInitOnce &uio) {
     for (;;) {
         int32_t previousState = InterlockedCompareExchange( 
-            (volatile LONG *)&uio.fState,  //  Destination
-            1,                       //  Exchange Value
-            0);                      //  Compare value
+            &uio.fState,  //  Destination
+            1,            //  Exchange Value
+            0);           //  Compare value
 
         if (previousState == 0) {
             return true;   // Caller will next call the init function.
