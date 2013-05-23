@@ -389,8 +389,8 @@ CollationRuleParser::parseString(int32_t i, UBool allowDash, UErrorCode &errorCo
             setParseError("string contains an unpaired surrogate", errorCode);
             return i;
         }
-        if(c == 0xfffe || c == 0xffff) {
-            setParseError("string contains U+FFFE or U+FFFF", errorCode);
+        if(0xfffd <= c && c <= 0xffff) {
+            setParseError("string contains U+FFFD, U+FFFE or U+FFFF", errorCode);
             return i;
         }
         j += U16_LENGTH(c);

@@ -150,8 +150,8 @@ CollationTailoringDataBuilder::getCEs(const UnicodeString &s,
             case Collation::OFFSET_TAG: {
                 U_ASSERT(fromBase);
                 int64_t dataCE = base->ces[Collation::getOffsetIndex(ce32)];
-                int64_t ce = Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(c, dataCE));
-                cesLength = appendCE(ces, cesLength, ce);
+                uint32_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
+                cesLength = appendCE(ces, cesLength, Collation::makeCE(p));
                 break;
             }
             case Collation::IMPLICIT_TAG:

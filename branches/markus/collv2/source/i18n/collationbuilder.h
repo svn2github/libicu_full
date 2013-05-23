@@ -19,7 +19,6 @@
 #include "unicode/unistr.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
-#include "collationtailoringdatabuilder.h"
 #include "uvectr32.h"
 #include "uvectr64.h"
 
@@ -30,6 +29,8 @@ U_NAMESPACE_BEGIN
 struct CollationData;
 struct CollationTailoring;
 
+class CEFinalizer;
+class CollationTailoringDataBuilder;
 class Normalizer2;
 
 class U_I18N_API CollationBuilder : public CollationRuleParser::Sink {
@@ -49,6 +50,8 @@ public:
     UBool modifiesMappings() const { return TRUE; }  // TODO
 
 private:
+    friend class CEFinalizer;
+
     /** Implements CollationRuleParser::Sink. */
     virtual void addReset(int32_t strength, const UnicodeString &str,
                           const char *&errorReason, UErrorCode &errorCode);
@@ -110,38 +113,61 @@ private:
      */
     static int32_t countTailoredNodes(const int64_t *nodesArray, int32_t i, int32_t strength);
 
+    /** Replaces temporary CEs with the final CEs they point to. */
+    void finalizeCEs(UErrorCode &errorCode);
+
     /**
      * Encodes "temporary CE" data into a CE that fits into the CE32 data structure,
      * with 2-byte primary, 1-byte secondary and 6-bit tertiary,
      * with valid CE byte values.
      *
-     * The impossible case bits combination 11 is used to distinguish
-     * temporary CEs from real CEs.
+     * The index must not exceed 20 bits (0xfffff).
+     * The strength must fit into 2 bits (UCOL_PRIMARY..UCOL_QUATERNARY).
+     *
+     * Temporary CEs are distinguished from real CEs by their use of
+     * secondary weights 06..45 which are otherwise reserved for compressed sort keys.
+     *
+     * The case bits are unused and available.
      */
     static inline int64_t tempCEFromIndexAndStrength(int32_t index, int32_t strength) {
         return
             // CE byte offsets, to ensure valid CE bytes, and case bits 11
-            0x808000008000e000 |
-            // index bits 17..12 -> primary byte 1 = CE bits 63..56 (byte values 80..BF)
-            ((int64_t)(index & 0x3f000) << 44) |
-            // index bits 11..6 -> primary byte 2 = CE bits 55..48 (byte values 80..BF)
-            ((int64_t)(index & 0xfc0) << 42) |
-            // index bits 5..0 -> seconary byte 1 = CE bits 31..24 (byte values 80..BF)
-            ((index & 0x3f) << 24) |
+            0x4040000006002000 +
+            // index bits 19..13 -> primary byte 1 = CE bits 63..56 (byte values 40..BF)
+            ((int64_t)(index & 0xfe000) << 43) +
+            // index bits 12..6 -> primary byte 2 = CE bits 55..48 (byte values 40..BF)
+            ((int64_t)(index & 0x1fc0) << 42) +
+            // index bits 5..0 -> seconary byte 1 = CE bits 31..24 (byte values 06..45)
+            ((index & 0x3f) << 24) +
             // strength bits 1..0 -> tertiary byte 1 = CE bits 13..8 (byte values 20..23)
             (strength << 8);
     }
     static inline int32_t indexFromTempCE(int64_t tempCE) {
+        tempCE -= 0x4040000006002000;
         return
-            ((int32_t)(tempCE >> 44) & 0x3f000) |
-            ((int32_t)(tempCE >> 42) & 0xfc0) |
+            ((int32_t)(tempCE >> 43) & 0xfe000) |
+            ((int32_t)(tempCE >> 42) & 0x1fc0) |
             ((int32_t)(tempCE >> 24) & 0x3f);
     }
     static inline int32_t strengthFromTempCE(int64_t tempCE) {
         return ((int32_t)tempCE >> 8) & 3;
     }
     static inline UBool isTempCE(int64_t ce) {
-        return ((uint32_t)ce & 0xc000) == 0xc000;
+        uint32_t sec = (uint32_t)ce >> 24;
+        return 6 <= sec && sec <= 0x45;
+    }
+
+    static inline int32_t indexFromTempCE32(uint32_t tempCE32) {
+        tempCE32 -= 0x40400620;
+        return
+            ((int32_t)(tempCE32 >> 11) & 0xfe000) |
+            ((int32_t)(tempCE32 >> 10) & 0x1fc0) |
+            ((int32_t)(tempCE32 >> 8) & 0x3f);
+    }
+    static inline UBool isTempCE32(uint32_t ce32) {
+        return
+            (ce32 & 0xff) >= 2 &&  // not a long-primary/long-secondary CE32
+            6 <= ((ce32 >> 8) & 0xff) && ((ce32 >> 8) & 0xff) <= 0x45;
     }
 
     static int32_t ceStrength(int64_t ce);
@@ -225,7 +251,7 @@ private:
     uint32_t variableTop;
     int64_t firstImplicitCE;
 
-    CollationTailoringDataBuilder dataBuilder;
+    CollationTailoringDataBuilder *dataBuilder;
     const char *errorReason;
 
     int64_t ces[Collation::MAX_EXPANSION_LENGTH];

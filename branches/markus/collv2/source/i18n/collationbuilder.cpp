@@ -21,6 +21,7 @@
 #include "collation.h"
 #include "collationbuilder.h"
 #include "collationdata.h"
+#include "collationdatabuilder.h"
 #include "collationroot.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
@@ -130,16 +131,22 @@ CollationBuilder::CollationBuilder(const CollationData *base, UErrorCode &errorC
           rootElements(base->rootElements, base->rootElementsLength),
           variableTop(0),
           firstImplicitCE(0),
-          dataBuilder(errorCode),
+          dataBuilder(new CollationTailoringDataBuilder(errorCode)),
           errorReason(NULL),
           cesLength(0),
           rootPrimaryIndexes(errorCode), nodes(errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    if(dataBuilder == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+
     // Preset node 0 as the start of a list for root primary 0.
     nodes.addElement(0, errorCode);
     rootPrimaryIndexes.addElement(0, errorCode);
 
     // Look up [first implicit] before tailoring the relevant character.
-    int32_t length = dataBuilder.getCEs(UnicodeString((UChar)0x4e00), ces, 0);
+    int32_t length = dataBuilder->getCEs(UnicodeString((UChar)0x4e00), ces, 0);
     U_ASSERT(length == 1);
     firstImplicitCE = ces[0];
 
@@ -176,9 +183,11 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     parser.setImporter(importer);
     parser.parse(ruleString, tailoring.settings, outParseError, errorCode);
     errorReason = parser.getErrorReason();
+    // TODO: shortcuts if !dataBuilder->hasMappings()?
     makeTailoredCEs(errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-    // TODO
+    // TODO: canonical closure
+    finalizeCEs(errorCode);
+    // TODO: build to tailoring
 }
 
 void
@@ -197,7 +206,7 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
             parserErrorReason = "NFD(reset position)";
             return;
         }
-        cesLength = dataBuilder.getCEs(nfdString, ces, 0);
+        cesLength = dataBuilder->getCEs(nfdString, ces, 0);
         if(cesLength > Collation::MAX_EXPANSION_LENGTH) {
             errorCode = U_ILLEGAL_ARGUMENT_ERROR;
             parserErrorReason = "reset position maps to too many collation elements (more than 31)";
@@ -441,7 +450,7 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
             parserErrorReason = "NFD(extension)";
             return;
         }
-        totalLength = dataBuilder.getCEs(nfdExtension, ces, cesLength);
+        totalLength = dataBuilder->getCEs(nfdExtension, ces, cesLength);
         if(totalLength > Collation::MAX_EXPANSION_LENGTH) {
             errorCode = U_ILLEGAL_ARGUMENT_ERROR;
             parserErrorReason =
@@ -450,25 +459,15 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         }
     }
     // Map from the NFD input to the CEs.
-    dataBuilder.add(nfdPrefix, nfdString, ces, cesLength, errorCode);
+    dataBuilder->add(nfdPrefix, nfdString, ces, cesLength, errorCode);
     if(prefix != nfdPrefix || str != nfdString) {
         // Also right away map from the FCC input to the CEs.
-        dataBuilder.add(prefix, str, ces, cesLength, errorCode);
+        dataBuilder->add(prefix, str, ces, cesLength, errorCode);
     }
     if(U_FAILURE(errorCode)) {
         parserErrorReason = "writing collation elements";
         return;
     }
-}
-
-int32_t
-CollationBuilder::ceStrength(int64_t ce) {
-    return
-        isTempCE(ce) ? strengthFromTempCE(ce) :
-        (ce & 0xff00000000000000) != 0 ? UCOL_PRIMARY :
-        ((uint32_t)ce & 0xff000000) != 0 ? UCOL_SECONDARY :
-        ce != 0 ? UCOL_TERTIARY :
-        UCOL_IDENTICAL;
 }
 
 int32_t
@@ -488,9 +487,7 @@ CollationBuilder::findOrInsertNodeForCEs(int32_t strength, const char *&parserEr
         } else {
             ce = ces[cesLength - 1];
         }
-        if(ceStrength(ce) <= strength) {
-            break;
-        }
+        if(ceStrength(ce) <= strength) { break; }
     }
 
     if(isTempCE(ce)) { return indexFromTempCE(ce); }
@@ -847,6 +844,53 @@ CollationBuilder::countTailoredNodes(const int64_t *nodesArray, int32_t i, int32
         i = nextIndexFromNode(node);
     }
     return count;
+}
+
+class CEFinalizer : public CollationDataBuilder::CEModifier {
+public:
+    CEFinalizer(const int64_t *ces) : finalCEs(ces) {}
+    virtual ~CEFinalizer();
+    virtual int64_t modifyCE32(uint32_t ce32) const {
+        U_ASSERT(!Collation::isSpecialCE32(ce32));
+        return CollationBuilder::isTempCE32(ce32) ?
+                finalCEs[CollationBuilder::indexFromTempCE32(ce32)] : Collation::NO_CE;
+    }
+    virtual int64_t modifyCE(int64_t ce) const {
+        return CollationBuilder::isTempCE(ce) ?
+                finalCEs[CollationBuilder::indexFromTempCE(ce)] : Collation::NO_CE;
+    }
+
+private:
+    const int64_t *finalCEs;
+};
+
+CEFinalizer::~CEFinalizer() {}
+
+void
+CollationBuilder::finalizeCEs(UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    LocalPointer<CollationTailoringDataBuilder> newBuilder(
+            new CollationTailoringDataBuilder(errorCode));
+    if(U_FAILURE(errorCode)) { return; }
+    if(newBuilder.isNull()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    CEFinalizer finalizer(nodes.getBuffer());
+    newBuilder->copyFrom(*dataBuilder, finalizer, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+    delete dataBuilder;
+    dataBuilder = newBuilder.orphan();
+}
+
+int32_t
+CollationBuilder::ceStrength(int64_t ce) {
+    return
+        isTempCE(ce) ? strengthFromTempCE(ce) :
+        (ce & 0xff00000000000000) != 0 ? UCOL_PRIMARY :
+        ((uint32_t)ce & 0xff000000) != 0 ? UCOL_SECONDARY :
+        ce != 0 ? UCOL_TERTIARY :
+        UCOL_IDENTICAL;
 }
 
 U_NAMESPACE_END

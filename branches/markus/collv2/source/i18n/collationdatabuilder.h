@@ -32,6 +32,7 @@ U_NAMESPACE_BEGIN
 
 struct ConditionalCE32;
 
+class CopyHelper;
 class UCharsTrieBuilder;
 
 /**
@@ -41,6 +42,20 @@ class UCharsTrieBuilder;
  */
 class U_I18N_API CollationDataBuilder : public UObject {
 public:
+    /**
+     * Collation element modifier. Interface class for a modifier
+     * that changes a tailoring builder's temporary CEs to final CEs.
+     * Called for every non-special CE32 and every expansion CE.
+     */
+    class CEModifier : public UObject {
+    public:
+        virtual ~CEModifier();
+        /** Returns a new CE to replace the non-special input CE32, or else Collation::NO_CE. */
+        virtual int64_t modifyCE32(uint32_t ce32) const = 0;
+        /** Returns a new CE to replace the input CE, or else Collation::NO_CE. */
+        virtual int64_t modifyCE(int64_t ce) const = 0;
+    };
+
     CollationDataBuilder(UErrorCode &errorCode);
 
     virtual ~CollationDataBuilder();
@@ -109,6 +124,13 @@ public:
                                           uint32_t primary, int32_t step,
                                           UErrorCode &errorCode);
 
+    /**
+     * Copies all mappings from the src builder, with modifications.
+     * This builder here must not be built yet, and should be empty.
+     */
+    void copyFrom(const CollationDataBuilder &src, const CEModifier &modifier,
+                  UErrorCode &errorCode);
+
     virtual void build(CollationData &data, UErrorCode &errorCode) = 0;
 
     int32_t lengthOfCE32s() const { return ce32s.size(); }
@@ -121,6 +143,8 @@ public:
     UTrie2 *orphanTrie();
 
 protected:
+    friend class CopyHelper;
+
     UBool setJamoCEs(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);
 
@@ -131,12 +155,23 @@ protected:
     uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
 
     int32_t addCE(int64_t ce, UErrorCode &errorCode);
-    int32_t addCE32(uint32_t ce32, UErrorCode &errorCode);
     int32_t addConditionalCE32(const UnicodeString &context, uint32_t ce32, UErrorCode &errorCode);
 
-    static uint32_t encodeOneCE(int64_t ce);
-    uint32_t encodeCEsAsCE32s(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
+    inline ConditionalCE32 *getConditionalCE32(int32_t index) const {
+        return static_cast<ConditionalCE32 *>(conditionalCE32s[index]);
+    }
+    inline ConditionalCE32 *getConditionalCE32ForCE32(uint32_t ce32) const {
+        return getConditionalCE32((int32_t)ce32 & 0xfffff);
+    }
+
+    void addCE32(const UnicodeString &prefix, const UnicodeString &s,
+                 uint32_t ce32, UErrorCode &errorCode);
+
+    static uint32_t encodeOneCEAsCE32(int64_t ce);
+    uint32_t encodeOneCE(int64_t ce, UErrorCode &errorCode);
     uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
+    uint32_t encodeExpansion(const int64_t ces[], int32_t length, UErrorCode &errorCode);
+    uint32_t encodeExpansion32(const int32_t newCE32s[], int32_t length, UErrorCode &errorCode);
 
     void buildMappings(CollationData &data, UErrorCode &errorCode);
 
