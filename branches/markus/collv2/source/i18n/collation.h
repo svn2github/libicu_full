@@ -247,6 +247,20 @@ public:
         return isSpecialCE32(ce32) && getSpecialCE32Tag(ce32) == tag;
     }
 
+    static inline UBool isPrefixCE32(uint32_t ce32) {
+        return hasCE32Tag(ce32, PREFIX_TAG);
+    }
+
+    static inline UBool isContractionCE32(uint32_t ce32) {
+        return hasCE32Tag(ce32, CONTRACTION_TAG);
+    }
+
+    static inline UBool ce32HasContext(uint32_t ce32) {
+        return isSpecialCE32(ce32) &&
+                (getSpecialCE32Tag(ce32) == PREFIX_TAG ||
+                getSpecialCE32Tag(ce32) == CONTRACTION_TAG);
+    }
+
     /**
      * Get the first of the two Latin-expansion CEs encoded in ce32.
      * @see MAX_LATIN_EXPANSION_TAG

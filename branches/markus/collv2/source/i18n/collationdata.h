@@ -67,6 +67,17 @@ struct U_I18N_API CollationData : public UMemory {
     }
 
     /**
+     * Returns the CE32 for an indirect special CE32 (e.g., with DIGIT_TAG).
+     * Requires that ce32 is special.
+     */
+    uint32_t getIndirectCE32(uint32_t ce32) const;
+    /**
+     * Returns the CE32 for an indirect special CE32 (e.g., with DIGIT_TAG),
+     * if ce32 is special.
+     */
+    uint32_t getFinalCE32(uint32_t ce32) const;
+
+    /**
      * Returns the FCD16 value for code point c. c must be >= 0.
      */
     uint16_t getFCD16(UChar32 c) const {

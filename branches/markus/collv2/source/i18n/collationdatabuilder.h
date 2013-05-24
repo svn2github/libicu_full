@@ -131,6 +131,8 @@ public:
     void copyFrom(const CollationDataBuilder &src, const CEModifier &modifier,
                   UErrorCode &errorCode);
 
+    void optimize(const UnicodeSet &set, UErrorCode &errorCode);
+
     virtual void build(CollationData &data, UErrorCode &errorCode) = 0;
 
     int32_t lengthOfCE32s() const { return ce32s.size(); }
@@ -145,16 +147,10 @@ public:
 protected:
     friend class CopyHelper;
 
-    UBool setJamoCEs(UErrorCode &errorCode);
-    void setLeadSurrogates(UErrorCode &errorCode);
-
-    static inline UBool isContractionCE32(uint32_t ce32) {
-        return Collation::hasCE32Tag(ce32, Collation::CONTRACTION_TAG);
-    }
-
-    uint32_t getCE32FromOffsetCE32(UChar32 c, uint32_t ce32) const;
+    uint32_t getCE32FromOffsetCE32(UBool fromBase, UChar32 c, uint32_t ce32) const;
 
     int32_t addCE(int64_t ce, UErrorCode &errorCode);
+    int32_t addCE32(uint32_t ce32, UErrorCode &errorCode);
     int32_t addConditionalCE32(const UnicodeString &context, uint32_t ce32, UErrorCode &errorCode);
 
     inline ConditionalCE32 *getConditionalCE32(int32_t index) const {
@@ -172,6 +168,19 @@ protected:
     uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
     uint32_t encodeExpansion(const int64_t ces[], int32_t length, UErrorCode &errorCode);
     uint32_t encodeExpansion32(const int32_t newCE32s[], int32_t length, UErrorCode &errorCode);
+
+    uint32_t copyFromBaseCE32(UChar32 c, uint32_t ce32, UErrorCode &errorCode);
+    /**
+     * Copies base contractions to a list of ConditionalCE32.
+     * Sets cond->next to the index of the first new item
+     * and returns the index of the last new item.
+     */
+    int32_t copyContractionsFromBaseCE32(UnicodeString &context, UChar32 c, uint32_t ce32,
+                                         ConditionalCE32 *cond, UErrorCode &errorCode);
+
+    UBool setJamoCEs(UErrorCode &errorCode);
+    void setDigitTags(UErrorCode &errorCode);
+    void setLeadSurrogates(UErrorCode &errorCode);
 
     void buildMappings(CollationData &data, UErrorCode &errorCode);
 

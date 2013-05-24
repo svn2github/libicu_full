@@ -52,9 +52,6 @@ public:
 
     void handleCE32(UChar32 start, UChar32 end, uint32_t ce32);
 
-    uint32_t getIndirectCE32(const CollationData *d, uint32_t ce32);
-    uint32_t getFinalCE32(const CollationData *d, uint32_t ce32);
-
     void compare(UChar32 c, uint32_t ce32, uint32_t baseCE32);
     void comparePrefixes(UChar32 c, const UChar *p, const UChar *q);
     void compareContractions(UChar32 c, const UChar *p, const UChar *q);

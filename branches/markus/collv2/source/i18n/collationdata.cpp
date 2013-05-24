@@ -26,6 +26,30 @@
 U_NAMESPACE_BEGIN
 
 uint32_t
+CollationData::getIndirectCE32(uint32_t ce32) const {
+    U_ASSERT(Collation::isSpecialCE32(ce32));
+    int32_t tag = Collation::getSpecialCE32Tag(ce32);
+    if(tag == Collation::DIGIT_TAG) {
+        // Fetch the non-numeric-collation CE32.
+        ce32 = ce32s[Collation::getDigitIndex(ce32)];
+    } else if(tag == Collation::LEAD_SURROGATE_TAG) {
+        ce32 = Collation::UNASSIGNED_CE32;
+    } else if(tag == Collation::IMPLICIT_TAG && (ce32 & 1) == 0) {
+        // Fetch the normal ce32 for U+0000.
+        ce32 = ce32s[0];
+    }
+    return ce32;
+}
+
+uint32_t
+CollationData::getFinalCE32(uint32_t ce32) const {
+    if(Collation::isSpecialCE32(ce32)) {
+        ce32 = getIndirectCE32(ce32);
+    }
+    return ce32;
+}
+
+uint32_t
 CollationData::getVariableTopForMaxVariable(CollationSettings::MaxVariable maxVariable) const {
     int32_t index = findScript(UCOL_REORDER_CODE_FIRST + maxVariable);
     if(index < 0) {

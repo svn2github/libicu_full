@@ -186,6 +186,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     // TODO: shortcuts if !dataBuilder->hasMappings()?
     makeTailoredCEs(errorCode);
     // TODO: canonical closure
+    dataBuilder->optimize(parser.getOptimizeSet(), errorCode);
     finalizeCEs(errorCode);
     // TODO: build to tailoring
 }
