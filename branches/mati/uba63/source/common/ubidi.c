@@ -11,7 +11,7 @@
 *   indentation:4
 *
 *   created on: 1999jul27
-*   created by: Markus W. Scherer, updated by Matitiahu Allouche
+*   created by: Markus W. Scherer, updated by Matitiahu (Mati) Allouche
 */
 
 #include "cmemory.h"
