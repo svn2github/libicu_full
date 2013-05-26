@@ -19,8 +19,8 @@
 U_NAMESPACE_BEGIN
 
 struct CollationData;
-struct CollationDataReader;
 struct CollationSettings;
+struct CollationTailoring;
 
 class Collator;
 
@@ -29,14 +29,14 @@ class Collator;
  */
 class U_I18N_API CollationRoot {  // purely static
 public:
-    static const CollationData *getBaseData(UErrorCode &errorCode);
-    static const CollationSettings *getBaseSettings(UErrorCode &errorCode);
+    static const CollationTailoring *getRoot(UErrorCode &errorCode);
+    static const CollationData *getData(UErrorCode &errorCode);
+    static const CollationSettings *getSettings(UErrorCode &errorCode);
     static Collator *createCollator(UErrorCode &errorCode);
 
 private:
-    static CollationDataReader *load(UErrorCode &errorCode);
+    static CollationTailoring *load(UErrorCode &errorCode);
     static void *createInstance(const void *context, UErrorCode &errorCode);
-    static const CollationDataReader *getReader(UErrorCode &errorCode);
 };
 
 U_NAMESPACE_END

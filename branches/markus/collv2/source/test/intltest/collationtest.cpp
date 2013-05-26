@@ -196,7 +196,7 @@ void CollationTest::TestMinMax() {
 void CollationTest::TestImplicits() {
     IcuTestErrorCode errorCode(*this, "TestImplicits");
 
-    const CollationData *cd = CollationRoot::getBaseData(errorCode);
+    const CollationData *cd = CollationRoot::getData(errorCode);
     if(errorCode.logIfFailureAndReset("CollationRoot::getBaseData()")) {
         return;
     }
@@ -861,7 +861,7 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
 
 void CollationTest::replaceCollator(IcuTestErrorCode &errorCode) {
     // TODO: if we always replaceCollator() after buildBase() then we can merge this into that
-    const CollationSettings *baseSettings = CollationRoot::getBaseSettings(errorCode);
+    const CollationSettings *baseSettings = CollationRoot::getSettings(errorCode);
     if(errorCode.isFailure()) { return; }
     LocalPointer<CollationTailoring> tailoring(new CollationTailoring(*baseSettings));
     if(tailoring.isNull()) {

@@ -24,6 +24,7 @@ struct UParseError;
 U_NAMESPACE_BEGIN
 
 struct CollationData;
+struct CollationTailoring;
 
 class Locale;
 class Normalizer2;
@@ -118,7 +119,7 @@ public:
     }
 
     void parse(const UnicodeString &ruleString,
-               CollationSettings &outSettings,
+               CollationTailoring &outTailoring,
                UParseError *outParseError,
                UErrorCode &errorCode);
 
@@ -180,6 +181,7 @@ private:
 
     const UnicodeString *rules;
     const CollationData *baseData;
+    CollationTailoring *tailoring;
     CollationSettings *settings;
     UParseError *parseError;
     const char *errorReason;

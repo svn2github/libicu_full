@@ -16,34 +16,16 @@
 
 #if !UCONFIG_NO_COLLATION
 
-#include "unicode/uniset.h"
-#include "unicode/unistr.h"
-#include "unicode/uversion.h"
-#include "collation.h"
-#include "collationdata.h"
-#include "collationsettings.h"
-#include "normalizer2impl.h"
-#include "utrie2.h"
-
 struct UDataMemory;
 
 U_NAMESPACE_BEGIN
 
+struct CollationTailoring;
+
 /**
- * Collation data reader.
- * Reads bindary data and stores collation data and settings.
- * Owns deserialized, heap-allocated objects.
+ * Collation binary data reader.
  */
 struct U_I18N_API CollationDataReader : public UMemory {
-    CollationDataReader(const Normalizer2Impl &nfc)
-            : data(nfc),
-              memory(NULL),
-              trie(NULL), unsafeBackwardSet(NULL) {
-        version[0] = version[1] = version[2] = version[3] = 0;
-    }
-
-    ~CollationDataReader();
-
     enum {
         /**
          * Number of int32_t indexes.
@@ -109,19 +91,11 @@ struct U_I18N_API CollationDataReader : public UMemory {
         IX_TOTAL_SIZE
     };
 
-    void setData(const CollationData *baseData, const uint8_t *inBytes, UErrorCode &errorCode);
+    static void read(const CollationTailoring *base, const uint8_t *inBytes,
+                     CollationTailoring &tailoring, UErrorCode &errorCode);
 
     static UBool U_CALLCONV
     isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
-
-    CollationData data;
-    CollationSettings settings;
-    UnicodeString rules;
-    UVersionInfo version;
-
-    UDataMemory *memory;
-    UTrie2 *trie;
-    UnicodeSet *unsafeBackwardSet;
 };
 
 /**

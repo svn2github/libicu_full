@@ -26,6 +26,7 @@
 #include "collationdata.h"
 #include "collationruleparser.h"
 #include "collationsettings.h"
+#include "collationtailoring.h"
 #include "cstring.h"
 #include "patternprops.h"
 #include "uassert.h"
@@ -59,11 +60,12 @@ CollationRuleParser::~CollationRuleParser() {
 
 void
 CollationRuleParser::parse(const UnicodeString &ruleString,
-                           CollationSettings &outSettings,
+                           CollationTailoring &outTailoring,
                            UParseError *outParseError,
                            UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    settings = &outSettings;
+    tailoring = &outTailoring;
+    settings = &outTailoring.settings;
     parseError = outParseError;
     if(parseError != NULL) {
         parseError->line = 0;
@@ -207,7 +209,12 @@ CollationRuleParser::parseRelationOperator(UErrorCode &errorCode) {
             ++i;
             if(i < rules->length() && rules->charAt(i) == 0x3c) {  // <<<
                 ++i;
-                strength = UCOL_TERTIARY;
+                if(i < rules->length() && rules->charAt(i) == 0x3c) {  // <<<<
+                    ++i;
+                    strength = UCOL_QUATERNARY;
+                } else {
+                    strength = UCOL_TERTIARY;
+                }
             } else {
                 strength = UCOL_SECONDARY;
             }
@@ -620,9 +627,6 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
 void
 CollationRuleParser::parseReordering(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    uprv_free(const_cast<int32_t *>(settings->reorderCodes));
-    settings->reorderCodes = NULL;
-    settings->reorderCodesLength = 0;
     int32_t i = 7;  // after "reorder"
     if(i == raw.length()) {
         // empty [reorder] with no codes
@@ -635,12 +639,11 @@ CollationRuleParser::parseReordering(UErrorCode &errorCode) {
     for(int32_t j = i; j < raw.length(); ++j) {
         if(raw.charAt(j) == 0x20) { ++length; }
     }
-    int32_t *newReorderCodes = (int32_t *)uprv_malloc(length * 4);
-    if(newReorderCodes == NULL) {
+    LocalMemory<int32_t> newReorderCodes((int32_t *)uprv_malloc(length * 4));
+    if(newReorderCodes.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    settings->reorderCodes = newReorderCodes;
     int32_t codeIndex = 0;
     CharString word;
     while(i < raw.length()) {
@@ -658,26 +661,21 @@ CollationRuleParser::parseReordering(UErrorCode &errorCode) {
         i = limit;
     }
     U_ASSERT(codeIndex == length);
-    uint8_t *reorderTable = const_cast<uint8_t *>(settings->reorderTable);
     if(length == 1 && newReorderCodes[0] == UCOL_REORDER_CODE_DEFAULT) {
         // The root collator does not have a reordering, by definition.
-        uprv_free(newReorderCodes);
-        settings->reorderCodes = NULL;
+        uprv_free(tailoring->reorderCodes);
+        settings->reorderCodes = tailoring->reorderCodes = NULL;
         settings->reorderCodesLength = 0;
-        uprv_free(reorderTable);
         settings->reorderTable = NULL;
         return;
     }
-    if(reorderTable == NULL) {
-        reorderTable = (uint8_t *)uprv_malloc(256);
-        if(reorderTable == NULL) {
-            errorCode = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-        settings->reorderTable = reorderTable;
-    }
-    baseData->makeReorderTable(settings->reorderCodes, length, reorderTable, errorCode);
+    baseData->makeReorderTable(newReorderCodes.getAlias(), length,
+                               tailoring->reorderTable, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+    uprv_free(tailoring->reorderCodes);
+    settings->reorderCodes = tailoring->reorderCodes = newReorderCodes.orphan();
     settings->reorderCodesLength = length;
+    settings->reorderTable = tailoring->reorderTable;
 }
 
 static const char *const gSpecialReorderCodes[] = {

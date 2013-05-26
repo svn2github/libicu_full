@@ -33,7 +33,7 @@ status(U_ZERO_ERROR)
         dataerrln("Error - UCAConformanceTest: Unable to open UCA collator! - %s", u_errorName(status));
     }
 
-    CollationRoot::getBaseData(status);
+    CollationRoot::getData(status);
     if(U_FAILURE(status)) {
         errln("ERROR - UCAConformanceTest: Unable to open CLDR root collator!");
     }

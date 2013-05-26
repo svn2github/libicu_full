@@ -28,7 +28,6 @@
 #include "collation.h"
 #include "collationcompare.h"
 #include "collationdata.h"
-#include "collationdatareader.h"
 #include "collationiterator.h"
 #include "collationkeys.h"
 #include "collationroot.h"
@@ -126,19 +125,9 @@ CollationKeyByteSink2::Resize(int32_t appendCapacity, int32_t length) {
 
 // TODO: Add UTRACE_... calls back in.
 
-RuleBasedCollator2::RuleBasedCollator2(const CollationDataReader &r)
-        : data(&r.data),
-          settings(&r.settings),
-          reader(&r),
-          tailoring(NULL),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
-          explicitlySetAttributes(0) {}
-
-RuleBasedCollator2::RuleBasedCollator2(CollationTailoring *t)
+RuleBasedCollator2::RuleBasedCollator2(const CollationTailoring *t)
         : data(t->data),
           settings(&t->settings),
-          reader(NULL),
           tailoring(t),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
@@ -164,12 +153,7 @@ RuleBasedCollator2::~RuleBasedCollator2() {
 
 Collator *
 RuleBasedCollator2::clone() const {
-    LocalPointer<RuleBasedCollator2> newCollator;
-    if(reader != NULL) {
-        newCollator.adoptInstead(new RuleBasedCollator2(*reader));
-    } else {
-        newCollator.adoptInstead(new RuleBasedCollator2(tailoring));
-    }
+    LocalPointer<RuleBasedCollator2> newCollator(new RuleBasedCollator2(tailoring));
     if(newCollator.isNull()) { return NULL; }
     if(ownedSettings != NULL) {
         LocalPointer<CollationSettings> newSettings(new CollationSettings(*newCollator->settings));
@@ -223,24 +207,20 @@ RuleBasedCollator2::hashCode() const {
 
 Locale
 RuleBasedCollator2::getLocale(ULocDataLocaleType type, UErrorCode& errorCode) const {
-    if(U_FAILURE(errorCode) || reader == NULL) {
+    if(U_FAILURE(errorCode)) {
         return Locale::getRoot();
     }
     if(type != ULOC_ACTUAL_LOCALE && type != ULOC_VALID_LOCALE) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return Locale::getRoot();
     }
-    // TODO: return either locale from the reader
+    // TODO: return either locale from the tailoring
     return Locale::getRoot();
 }
 
 const UnicodeString&
 RuleBasedCollator2::getRules() const {
-    if(reader != NULL) {
-        return reader->rules;
-    } else {
-        return tailoring->rules;
-    }
+    return tailoring->rules;
 }
 
 // TODO: void getRules(UColRuleOption delta, UnicodeString &buffer);
@@ -251,13 +231,9 @@ RuleBasedCollator2::getRules() const {
 
 void
 RuleBasedCollator2::getVersion(UVersionInfo version) const {
-    if(reader != NULL) {
-        // TODO: add UCA version, builder version, ...
-        uprv_memcpy(version, reader->version, 4);
-    } else {
-        // TODO: memset to 0?
-        uprv_memcpy(version, tailoring->version, 4);
-    }
+    // TODO: add UCA version, builder version, ...
+    // TODO: memset to 0?
+    uprv_memcpy(version, tailoring->version, 4);
 }
 
 // TODO: int32_t getMaxExpansion(int32_t order) const;
@@ -296,11 +272,7 @@ RuleBasedCollator2::getContractionsAndExpansions(
 
 const CollationSettings &
 RuleBasedCollator2::getDefaultSettings() const {
-    if(reader != NULL) {
-        return reader->settings;
-    } else {
-        return tailoring->settings;
-    }
+    return tailoring->settings;
 }
 
 UBool
@@ -567,7 +539,7 @@ RuleBasedCollator2::getEquivalentReorderCodes(int32_t reorderCode,
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
-    const CollationData *baseData = CollationRoot::getBaseData(errorCode);
+    const CollationData *baseData = CollationRoot::getData(errorCode);
     if(U_FAILURE(errorCode)) { return 0; }
     return baseData->getEquivalentScripts(reorderCode, dest, capacity, errorCode);
 }

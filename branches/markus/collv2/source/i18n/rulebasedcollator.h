@@ -26,7 +26,6 @@
 U_NAMESPACE_BEGIN
 
 struct CollationData;
-struct CollationDataReader;
 struct CollationSettings;
 struct CollationTailoring;
 class CollationElementIterator;
@@ -593,8 +592,7 @@ public:
                         UParseError *outParseError, UErrorCode &errorCode);
 
 public:  // TODO: Public only for testing.
-    RuleBasedCollator2(const CollationDataReader &r);
-    RuleBasedCollator2(CollationTailoring *t);
+    RuleBasedCollator2(const CollationTailoring *t);
 
 private:
     /**
@@ -636,10 +634,8 @@ private:
     }
 
     const CollationData *data;
-    const CollationSettings *settings;  // == defaultSettings or ownedSettings
-    // Either reader!=NULL or ownedBuilder!=NULL.
-    const CollationDataReader *reader;
-    CollationTailoring *tailoring;
+    const CollationSettings *settings;  // == &tailoring->settings or ownedSettings
+    const CollationTailoring *tailoring;
     CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
     int32_t ownedReorderCodesCapacity;
     uint32_t explicitlySetAttributes;

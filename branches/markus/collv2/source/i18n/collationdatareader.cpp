@@ -23,16 +23,11 @@
 #include "collationkeys.h"
 #include "collationrootelements.h"
 #include "collationsettings.h"
+#include "collationtailoring.h"
 #include "uassert.h"
 #include "utrie2.h"
 
 U_NAMESPACE_BEGIN
-
-CollationDataReader::~CollationDataReader() {
-    udata_close(memory);
-    utrie2_close(trie);
-    delete unsafeBackwardSet;
-}
 
 namespace {
 
@@ -43,8 +38,8 @@ int32_t getIndex(const int32_t *indexes, int32_t length, int32_t i) {
 }  // namespace
 
 void
-CollationDataReader::setData(const CollationData *baseData, const uint8_t *inBytes,
-                             UErrorCode &errorCode) {
+CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes,
+                          CollationTailoring &tailoring, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     const int32_t *inIndexes = reinterpret_cast<const int32_t *>(inBytes);
     int32_t indexesLength = inIndexes[IX_INDEXES_LENGTH];
@@ -53,6 +48,11 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
         return;
     }
 
+    if(!tailoring.ensureOwnedData(errorCode)) { return; }
+    CollationData &data = *tailoring.ownedData;
+    CollationSettings &settings = tailoring.settings;
+
+    const CollationData *baseData = base == NULL ? NULL : base->data;
     data.base = baseData;
     int32_t options = inIndexes[IX_OPTIONS];
     data.numericPrimary = options & 0xff000000;
@@ -78,7 +78,7 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
 
     // There should be a reorder table only if there are reorder codes.
     // However, when there are reorder codes the reorder table may be omitted to reduce
-    // the data size, and then the caller needs to allocate and build the reorder table.
+    // the data size.
     index = IX_REORDER_TABLE_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
@@ -86,18 +86,20 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
         settings.reorderTable = inBytes + offset;
     } else {
         settings.reorderTable = NULL;
+        // If we have reorder codes, then build the reorderTable at the end,
+        // when the CollationData is otherwise complete.
     }
 
     index = IX_TRIE_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 8) {
-        data.trie = trie = utrie2_openFromSerialized(
+        data.trie = tailoring.trie = utrie2_openFromSerialized(
             UTRIE2_32_VALUE_BITS, inBytes + offset, length, NULL,
             &errorCode);
         if(U_FAILURE(errorCode)) { return; }
     } else if(baseData != NULL) {
-        // Copy all mappings from the baseData.
+        // Copy all mappings from the base data.
         // The trie value indexes into the arrays must match those arrays.
         data.trie = baseData->trie;
         data.ce32s = baseData->ce32s;
@@ -203,14 +205,14 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
             // the corresponding new Unicode Character Database.
             // TODO: Optimize, and reduce dependencies,
             // by enumerating the Normalizer2Impl data more directly.
-            unsafeBackwardSet = new UnicodeSet(
+            tailoring.unsafeBackwardSet = new UnicodeSet(
                 UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
             if(U_FAILURE(errorCode)) { return; }
         } else {
             // Clone the root collator's set.
-            unsafeBackwardSet = new UnicodeSet(*baseData->unsafeBackwardSet);
+            tailoring.unsafeBackwardSet = new UnicodeSet(*baseData->unsafeBackwardSet);
         }
-        if(unsafeBackwardSet == NULL) {
+        if(tailoring.unsafeBackwardSet == NULL) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
@@ -225,18 +227,18 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
         for(int32_t i = 0; i < count; ++i) {
             UChar32 start, end;
             uset_getSerializedRange(&sset, i, &start, &end);
-            unsafeBackwardSet->add(start, end);
+            tailoring.unsafeBackwardSet->add(start, end);
         }
         // Mark each lead surrogate as "unsafe"
         // if any of its 1024 associated supplementary code points is "unsafe".
         UChar32 c = 0x10000;
         for(UChar lead = 0xd800; lead < 0xdc00; ++lead, c += 0x400) {
-            if(!unsafeBackwardSet->containsNone(c, c + 0x3ff)) {
-                unsafeBackwardSet->add(lead);
+            if(!tailoring.unsafeBackwardSet->containsNone(c, c + 0x3ff)) {
+                tailoring.unsafeBackwardSet->add(lead);
             }
         }
-        unsafeBackwardSet->freeze();
-        data.unsafeBackwardSet = unsafeBackwardSet;
+        tailoring.unsafeBackwardSet->freeze();
+        data.unsafeBackwardSet = tailoring.unsafeBackwardSet;
     } else if(baseData != NULL) {
         // No tailoring-specific data: Alias the root collator's set.
         data.unsafeBackwardSet = baseData->unsafeBackwardSet;
@@ -279,6 +281,13 @@ CollationDataReader::setData(const CollationData *baseData, const uint8_t *inByt
     if(settings.variableTop == 0) {
         errorCode = U_INVALID_FORMAT_ERROR;
         return;
+    }
+
+    if(settings.reorderCodes != NULL && settings.reorderTable == NULL) {
+        data.makeReorderTable(settings.reorderCodes, settings.reorderCodesLength,
+                              tailoring.reorderTable, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        settings.reorderTable = tailoring.reorderTable;
     }
 }
 

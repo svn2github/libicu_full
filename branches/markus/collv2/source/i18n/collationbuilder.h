@@ -35,19 +35,15 @@ class Normalizer2;
 
 class U_I18N_API CollationBuilder : public CollationRuleParser::Sink {
 public:
-    CollationBuilder(const CollationData *base, UErrorCode &errorCode);
+    CollationBuilder(const CollationTailoring *base, UErrorCode &errorCode);
     virtual ~CollationBuilder();
 
-    void parseAndBuild(const UnicodeString &ruleString,
-                       CollationRuleParser::Importer *importer,
-                       CollationTailoring &tailoring,
-                       UParseError *outParseError,
-                       UErrorCode &errorCode);
+    CollationTailoring *parseAndBuild(const UnicodeString &ruleString,
+                                      CollationRuleParser::Importer *importer,
+                                      UParseError *outParseError,
+                                      UErrorCode &errorCode);
 
     const char *getErrorReason() const { return errorReason; }
-
-    UBool modifiesSettings() const { return TRUE; }  // TODO
-    UBool modifiesMappings() const { return TRUE; }  // TODO
 
 private:
     friend class CEFinalizer;
@@ -246,6 +242,7 @@ private:
 
     const Normalizer2 &nfd;
 
+    const CollationTailoring *base;
     const CollationData *baseData;
     const CollationRootElements rootElements;
     uint32_t variableTop;

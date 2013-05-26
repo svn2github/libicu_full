@@ -47,7 +47,6 @@ U_NAMESPACE_BEGIN
 RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
-          reader(NULL),
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
@@ -59,7 +58,6 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, ECollationStr
                                        UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
-          reader(NULL),
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
@@ -72,7 +70,6 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
                                        UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
-          reader(NULL),
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
@@ -86,7 +83,6 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
                                        UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
-          reader(NULL),
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
@@ -99,36 +95,31 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
                                    int32_t strength,
                                    UColAttributeValue decompositionMode,
                                    UParseError *outParseError, UErrorCode &errorCode) {
-    const CollationData *baseData = CollationRoot::getBaseData(errorCode);
-    const CollationSettings *baseSettings = CollationRoot::getBaseSettings(errorCode);
     if(U_FAILURE(errorCode)) { return; }
-    tailoring = new CollationTailoring(*baseSettings);
-    if(tailoring == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    CollationBuilder builder(baseData, errorCode);
-    builder.parseAndBuild(rules, NULL /* TODO: importer */, *tailoring, outParseError, errorCode);
+    CollationBuilder builder(CollationRoot::getRoot(errorCode), errorCode);
+    LocalPointer<CollationTailoring> t(builder.parseAndBuild(rules, NULL /* TODO: importer */,
+                                                             outParseError, errorCode));
     if(U_FAILURE(errorCode)) { return; }
-    tailoring->rules = rules;
-    data = tailoring->data;
-    settings = &tailoring->settings;
-    // TODO: tailoring->version: maybe root version xor rules.hashCode() xor strength xor decomp (if not default)
-    // TODO: tailoring->isDataOwned
     if(strength != UCOL_DEFAULT) {
-        tailoring->settings.setStrength(strength, 0, errorCode);
+        t->settings.setStrength(strength, 0, errorCode);
     }
     if(decompositionMode != UCOL_DEFAULT) {
-        tailoring->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
+        t->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
     }
+    if(U_FAILURE(errorCode)) { return; }
+    data = t->data;
+    settings = &t->settings;
+    t->addRef();
+    tailoring = t.orphan();
 }
 
 // CollationBuilder implementation ----------------------------------------- ***
 
-CollationBuilder::CollationBuilder(const CollationData *base, UErrorCode &errorCode)
+CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &errorCode)
         : nfd(*Normalizer2::getNFDInstance(errorCode)),
-          baseData(base),
-          rootElements(base->rootElements, base->rootElementsLength),
+          base(b),
+          baseData(b->data),
+          rootElements(b->data->rootElements, b->data->rootElementsLength),
           variableTop(0),
           firstImplicitCE(0),
           dataBuilder(new CollationTailoringDataBuilder(errorCode)),
@@ -158,37 +149,54 @@ CollationBuilder::CollationBuilder(const CollationData *base, UErrorCode &errorC
 CollationBuilder::~CollationBuilder() {
 }
 
-void
+CollationTailoring *
 CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
                                 CollationRuleParser::Importer *importer,
-                                CollationTailoring &tailoring,
                                 UParseError *outParseError,
                                 UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return; }
-    if(baseData->rootElements) {
+    if(U_FAILURE(errorCode)) { return NULL; }
+    if(baseData->rootElements == NULL) {
         errorCode = U_MISSING_RESOURCE_ERROR;
         errorReason = "missing root elements data, tailoring not supported";
-        return;
+        return NULL;
+    }
+    LocalPointer<CollationTailoring> tailoring(new CollationTailoring(base->settings));
+    if(tailoring.isNull()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
     }
     CollationRuleParser parser(baseData, errorCode);
-    if(U_FAILURE(errorCode)) { return; }
+    if(U_FAILURE(errorCode)) { return NULL; }
     // TODO: This always bases &[last variable] and &[first regular]
     // on the root collator's maxVariable/variableTop.
     // Discuss whether we would want this to change after [maxVariable x],
     // in which case we would keep the tailoring.settings pointer here
     // and read its variableTop when we need it.
     // See http://unicode.org/cldr/trac/ticket/6070
-    variableTop = tailoring.settings.variableTop;
+    variableTop = tailoring->settings.variableTop;
     parser.setSink(this);
     parser.setImporter(importer);
-    parser.parse(ruleString, tailoring.settings, outParseError, errorCode);
+    parser.parse(ruleString, *tailoring, outParseError, errorCode);
     errorReason = parser.getErrorReason();
-    // TODO: shortcuts if !dataBuilder->hasMappings()?
-    makeTailoredCEs(errorCode);
-    // TODO: canonical closure
-    dataBuilder->optimize(parser.getOptimizeSet(), errorCode);
-    finalizeCEs(errorCode);
-    // TODO: build to tailoring
+    if(dataBuilder->hasMappings()) {
+        makeTailoredCEs(errorCode);
+        // TODO: canonical closure
+        dataBuilder->optimize(parser.getOptimizeSet(), errorCode);
+        finalizeCEs(errorCode);
+        tailoring->ensureOwnedData(errorCode);
+        if(U_FAILURE(errorCode)) { return NULL; }
+        dataBuilder->build(*tailoring->ownedData, errorCode);
+        tailoring->builder = dataBuilder;
+        dataBuilder = NULL;
+    } else {
+        tailoring->data = baseData;
+    }
+    // TODO: remember if any settings were modified, if useful for suppressing them in writing .res file data
+    // (otherwise just detect that they are the same as the root collator settings)
+    if(U_FAILURE(errorCode)) { return NULL; }
+    tailoring->rules = ruleString;
+    // TODO: tailoring->version: maybe root version xor rules.hashCode() xor strength xor decomp (if not default)
+    return tailoring.orphan();
 }
 
 void
@@ -434,6 +442,14 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
             // There is no primary gap between ignorables and the space-first-primary.
             errorCode = U_UNSUPPORTED_ERROR;
             parserErrorReason = "tailoring primary after ignorables not supported";
+            return;
+        }
+        U_ASSERT(cesLength > 0);
+        if(strength == UCOL_QUATERNARY && ces[cesLength - 1] == 0) {
+            // The CE data structure does not support non-zero quaternary weights
+            // on tertiary ignorables.
+            errorCode = U_UNSUPPORTED_ERROR;
+            parserErrorReason = "tailoring quaternary after completely ignorables not supported";
             return;
         }
         // Insert the new tailored node.

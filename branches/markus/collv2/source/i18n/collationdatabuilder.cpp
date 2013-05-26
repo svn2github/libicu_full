@@ -794,6 +794,7 @@ CollationDataBuilder::optimize(const UnicodeSet &set, UErrorCode &errorCode) {
             utrie2_set32(trie, c, ce32, &errorCode);
         }
     }
+    modified = TRUE;
 }
 
 UBool
