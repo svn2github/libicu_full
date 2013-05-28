@@ -62,10 +62,6 @@ CollationTailoringDataBuilder::init(const CollationData *b, UErrorCode &errorCod
 
 void
 CollationTailoringDataBuilder::build(CollationData &data, UErrorCode &errorCode) {
-    // Copy all of ASCII, and Latin-1 letters, into each tailoring.
-    UnicodeSet latin1(0, 0x7f);
-    latin1.add(0xc0, 0xff);
-    optimize(latin1, errorCode);
     buildMappings(data, errorCode);
     data.numericPrimary = base->numericPrimary;
     data.compressibleBytes = base->compressibleBytes;

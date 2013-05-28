@@ -44,6 +44,12 @@ const int32_t BEFORE_LENGTH = 7;
 
 CollationRuleParser::Sink::~Sink() {}
 
+void
+CollationRuleParser::Sink::suppressContractions(const UnicodeSet &, const char *&, UErrorCode &) {}
+
+void
+CollationRuleParser::Sink::optimize(const UnicodeSet &, const char *&, UErrorCode &) {}
+
 CollationRuleParser::Importer::~Importer() {}
 
 CollationRuleParser::CollationRuleParser(const CollationData *base, UErrorCode &errorCode)
@@ -69,7 +75,7 @@ CollationRuleParser::parse(const UnicodeString &ruleString,
     parseError = outParseError;
     if(parseError != NULL) {
         parseError->line = 0;
-        parseError->offset = 0;
+        parseError->offset = -1;
         parseError->preContext[0] = 0;
         parseError->postContext[0] = 0;
     }
@@ -376,6 +382,7 @@ CollationRuleParser::parseString(int32_t i, UBool allowDash, UErrorCode &errorCo
                 raw.append((UChar)c);
             } else {
                 // Any other syntax character terminates a string.
+                --i;
                 break;
             }
         } else if(PatternProps::isWhiteSpace(c)) {
@@ -610,8 +617,10 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
     } else if(rules->charAt(j) == 0x5b) {  // words end with [
         UnicodeSet set;
         j = parseUnicodeSet(j, set, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
         if(raw == UNICODE_STRING_SIMPLE("optimize")) {
-            optimizeSet.addAll(set);
+            sink->optimize(set, errorReason, errorCode);
+            if(U_FAILURE(errorCode)) { setErrorContext(); }
             ruleIndex = j;
             return;
         } else if(raw == UNICODE_STRING_SIMPLE("suppressContractions")) {

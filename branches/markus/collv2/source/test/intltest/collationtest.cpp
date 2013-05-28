@@ -26,6 +26,7 @@
 #include "charstr.h"
 #include "collation.h"
 #include "collationbasedatabuilder.h"
+#include "collationbuilder.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
 #include "collationiterator.h"
@@ -55,14 +56,10 @@ public:
     CollationTest()
             : fcd(NULL),
               fileLineNumber(0),
-              baseBuilder(NULL),
               collData(NULL),
-              ownedData(NULL),
               coll(NULL) {}
 
     ~CollationTest() {
-        delete baseBuilder;
-        delete ownedData;
         delete coll;
     }
 
@@ -104,7 +101,7 @@ private:
     void parseAndSetAttribute(IcuTestErrorCode &errorCode);
     void parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &errorCode);
     void buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode);
-    void replaceCollator(IcuTestErrorCode &errorCode);
+    void buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode);
     void setRootCollator(IcuTestErrorCode &errorCode);
 
     UBool needsNormalization(const UnicodeString &s, UErrorCode &errorCode) const;
@@ -136,9 +133,7 @@ private:
     UnicodeString fileLine;
     int32_t fileLineNumber;
     UnicodeString fileTestName;
-    CollationBaseDataBuilder *baseBuilder;
     const CollationData *collData;
-    CollationData *ownedData;
     Collator *coll;
 };
 
@@ -814,8 +809,7 @@ void CollationTest::parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &err
 }
 
 void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
-    delete baseBuilder;
-    baseBuilder = new CollationBaseDataBuilder(errorCode);
+    LocalPointer<CollationBaseDataBuilder> baseBuilder(new CollationBaseDataBuilder(errorCode));
     if(errorCode.isFailure()) {
         errln(fileTestName);
         errln("new CollationBaseDataBuilder() failed");
@@ -845,30 +839,19 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         }
     }
     if(errorCode.isFailure()) { return; }
-    delete ownedData;
-    ownedData = new CollationData(*Normalizer2Factory::getNFCImpl(errorCode));
-    if(ownedData == NULL) {
-        errorCode.set(U_MEMORY_ALLOCATION_ERROR);
-        return;
-    }
-    baseBuilder->build(*ownedData, errorCode);
-    if(errorCode.isFailure()) {
-        errln(fileTestName);
-        errln("CollationBaseDataBuilder.build() failed");
-    }
-    collData = ownedData;
-}
-
-void CollationTest::replaceCollator(IcuTestErrorCode &errorCode) {
-    // TODO: if we always replaceCollator() after buildBase() then we can merge this into that
-    const CollationSettings *baseSettings = CollationRoot::getSettings(errorCode);
-    if(errorCode.isFailure()) { return; }
-    LocalPointer<CollationTailoring> tailoring(new CollationTailoring(*baseSettings));
+    LocalPointer<CollationTailoring> tailoring(new CollationTailoring(NULL));
     if(tailoring.isNull()) {
         errorCode.set(U_MEMORY_ALLOCATION_ERROR);
         return;
     }
-    tailoring->data = collData;
+    if(!tailoring->ensureOwnedData(errorCode)) { return; }
+    baseBuilder->build(*tailoring->ownedData, errorCode);
+    if(errorCode.isFailure()) {
+        errln(fileTestName);
+        errln("CollationBaseDataBuilder.build() failed");
+    }
+    tailoring->builder = baseBuilder.orphan();
+    collData = tailoring->data;
     Collator *newColl = new RuleBasedCollator2(tailoring.getAlias());
     if(newColl == NULL) {
         errln("unable to allocate a new collator");
@@ -877,6 +860,43 @@ void CollationTest::replaceCollator(IcuTestErrorCode &errorCode) {
     }
     tailoring.orphan();  // newColl adopted the tailoring.
     delete coll;
+    coll = newColl;
+}
+
+void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
+    UnicodeString rules;
+    while(readLine(f, errorCode)) {
+        if(fileLine.isEmpty()) { continue; }
+        if(isSectionStarter(fileLine[0])) { break; }
+        rules.append(fileLine);
+    }
+    if(errorCode.isFailure()) { return; }
+    // Duplicate of RuleBasedCollator2::buildTailoring(),
+    // to get more error information.
+    CollationBuilder builder(CollationRoot::getRoot(errorCode), errorCode);
+    UParseError parseError;
+    LocalPointer<CollationTailoring> tailoring(
+            builder.parseAndBuild(rules, NULL, &parseError, errorCode));
+    if(errorCode.isFailure()) {
+        errln("CollationBuilder.parseAndBuild() failed - %s", errorCode.errorName());
+        const char *reason = builder.getErrorReason();
+        if(reason != NULL) { errln("  reason: %s", reason); }
+        if(parseError.offset >= 0) { errln("  rules offset: %d", (int)parseError.offset); }
+        if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
+            errln(UnicodeString("  snippet: ...") +
+                parseError.preContext + "(!)" + parseError.postContext + "...");
+        }
+        return;
+    }
+    Collator *newColl = new RuleBasedCollator2(tailoring.getAlias());
+    if(newColl == NULL) {
+        errln("unable to allocate a new collator");
+        errorCode.set(U_MEMORY_ALLOCATION_ERROR);
+        return;
+    }
+    tailoring.orphan();  // newColl adopted the tailoring.
+    delete coll;
+    collData = NULL;
     coll = newColl;
 }
 
@@ -1399,7 +1419,8 @@ void CollationTest::TestDataDriven() {
             fileLine.remove();
         } else if(fileLine == UNICODE_STRING("@ rawbase", 9)) {
             buildBase(f.getAlias(), errorCode);
-            replaceCollator(errorCode);
+        } else if(fileLine == UNICODE_STRING("@ rules", 7)) {
+            buildTailoring(f.getAlias(), errorCode);
         } else if(fileLine[0] == 0x25 && isSpace(fileLine[1])) {  // %
             parseAndSetAttribute(errorCode);
         } else if(fileLine == UNICODE_STRING("* CEs", 5)) {

@@ -82,6 +82,7 @@ private:
      */
     UBool getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit);
 
+    int32_t middleLength;
     uint32_t minBytes[5];  // for byte 1, 2, 3, 4
     uint32_t maxBytes[5];
     WeightRange ranges[7];

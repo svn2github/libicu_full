@@ -16,13 +16,15 @@
 
 #if !UCONFIG_NO_COLLATION
 
-#include "unicode/uniset.h"
-#include "unicode/unistr.h"
 #include "collation.h"
-#include "collationdata.h"
 #include "collationdatabuilder.h"
 
 U_NAMESPACE_BEGIN
+
+struct CollationData;
+
+class UnicodeSet;
+class UnicodeString;
 
 /**
  * Low-level tailoring CollationData builder.

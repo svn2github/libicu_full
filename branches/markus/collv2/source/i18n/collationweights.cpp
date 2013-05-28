@@ -107,7 +107,7 @@ decWeightTrail(uint32_t weight, int32_t length) {
 }
 
 CollationWeights::CollationWeights()
-        : rangeCount(0) {
+        : middleLength(0), rangeCount(0) {
     for(int32_t i = 0; i < 5; ++i) {
         minBytes[i] = maxBytes[i] = 0;
     }
@@ -115,6 +115,7 @@ CollationWeights::CollationWeights()
 
 void
 CollationWeights::initForPrimary(UBool compressible) {
+    middleLength=1;
     minBytes[1] = Collation::MERGE_SEPARATOR_BYTE + 1;
     maxBytes[1] = Collation::TRAIL_WEIGHT_BYTE;
     if(compressible) {
@@ -133,6 +134,7 @@ CollationWeights::initForPrimary(UBool compressible) {
 void
 CollationWeights::initForSecondary() {
     // We use only the lower 16 bits for secondary weights.
+    middleLength=3;
     minBytes[1] = 0;
     maxBytes[1] = 0;
     minBytes[2] = 0;
@@ -146,6 +148,7 @@ CollationWeights::initForSecondary() {
 void
 CollationWeights::initForTertiary() {
     // We use only the lower 16 bits for tertiary weights.
+    middleLength=3;
     minBytes[1] = 0;
     maxBytes[1] = 0;
     minBytes[2] = 0;
@@ -211,6 +214,8 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
     printf("length of lower limit 0x%08lx is %ld\n", lowerLimit, lowerLength);
     printf("length of upper limit 0x%08lx is %ld\n", upperLimit, upperLength);
 #endif
+    U_ASSERT(lowerLength>=middleLength);
+    U_ASSERT(upperLength>=middleLength);
 
     if(lowerLimit>=upperLimit) {
 #ifdef UCOL_DEBUG
@@ -250,7 +255,7 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
      * Some of them will typically overlap, so we will then have to merge and eliminate ranges.
      */
     uint32_t weight=lowerLimit;
-    for(int32_t length=lowerLength; length>=2; --length) {
+    for(int32_t length=lowerLength; length>middleLength; --length) {
         uint32_t trail=getWeightTrail(weight, length);
         if(trail<maxBytes[length]) {
             lower[length].start=incWeightTrail(weight, length);
@@ -260,10 +265,10 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
         }
         weight=truncateWeight(weight, length-1);
     }
-    middle.start=incWeightTrail(weight, 1);
+    middle.start=incWeightTrail(weight, middleLength);
 
     weight=upperLimit;
-    for(int32_t length=upperLength; length>=2; --length) {
+    for(int32_t length=upperLength; length>middleLength; --length) {
         uint32_t trail=getWeightTrail(weight, length);
         if(trail>minBytes[length]) {
             upper[length].start=setWeightTrail(weight, length, minBytes[length]);
@@ -273,12 +278,12 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
         }
         weight=truncateWeight(weight, length-1);
     }
-    middle.end=decWeightTrail(weight, 1);
+    middle.end=decWeightTrail(weight, middleLength);
 
     /* set the middle range */
-    middle.length=1;
+    middle.length=middleLength;
     if(middle.end>=middle.start) {
-        middle.count=(int32_t)((middle.end-middle.start)>>24)+1;
+        middle.count=(int32_t)((middle.end-middle.start)>>(8*(4-middleLength)))+1;
     } else {
         /* eliminate overlaps */
 
@@ -286,7 +291,7 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
         middle.count=0;
 
         /* reduce or remove the lower ranges that go beyond upperLimit */
-        for(int32_t length=4; length>=2; --length) {
+        for(int32_t length=4; length>middleLength; --length) {
             if(lower[length].count>0 && upper[length].count>0) {
                 uint32_t start=upper[length].start;
                 uint32_t end=lower[length].end;
@@ -303,7 +308,7 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
                         (int32_t)(getWeightTrail(end, length)-getWeightTrail(start, length)+1+
                                   countBytes(length)*(getWeightByte(end, length-1)-getWeightByte(start, length-1)));
                     upper[length].count=0;
-                    while(--length>=2) {
+                    while(--length>middleLength) {
                         lower[length].count=upper[length].count=0;
                     }
                     break;
@@ -335,7 +340,7 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
         uprv_memcpy(ranges, &middle, sizeof(WeightRange));
         rangeCount=1;
     }
-    for(int32_t length=2; length<=4; ++length) {
+    for(int32_t length=middleLength+1; length<=4; ++length) {
         /* copy upper first so that later the middle range is more likely the first one to use */
         if(upper[length].count>0) {
             uprv_memcpy(ranges+rangeCount, upper+length, sizeof(WeightRange));

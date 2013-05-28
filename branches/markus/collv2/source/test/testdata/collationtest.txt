@@ -338,6 +338,30 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <3 a\uFFF1a
 <3 a\uFFF2a
 
+** test: empty rules
+@ rules
+* compare
+<1 a
+<2 ä
+<3 Ä
+<1 b
+
+** test: very simple rules
+@ rules
+&a=e<<<<q<<<<r<x<<<X<<y<<<Y;z,Z
+% strength=quaternary
+* compare
+<1 a
+=  e
+<4 q
+<4 r
+<1 x
+<3 X
+<2 y
+<3 Y
+<2 z
+<3 Z
+
 
 ** test: this is a description
 @ rawbase

@@ -245,7 +245,7 @@ int32_t
 CollationRootElements::findPrimary(uint32_t p) const {
     // Requirement: p must occur as a root primary.
     U_ASSERT((p & 0xff) == 0);  // at most a 3-byte primary
-    int32_t index = findPrimary(p);
+    int32_t index = findP(p);
     // If p is in a range, then we just assume that p is an actual primary in this range.
     // (Too cumbersome/expensive to check.)
     // Otherwise, it must be an exact match.

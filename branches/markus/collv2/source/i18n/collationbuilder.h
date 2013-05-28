@@ -16,6 +16,7 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
@@ -94,8 +95,12 @@ private:
     int32_t findCommonNode(int32_t index, int32_t strength) const;
 
     /** Implements CollationRuleParser::Sink. */
-    virtual void suppressContractions(const UnicodeSet &set,
-                                      const char *&errorReason, UErrorCode &errorCode);
+    virtual void suppressContractions(const UnicodeSet &set, const char *&parserErrorReason,
+                                      UErrorCode &errorCode);
+
+    /** Implements CollationRuleParser::Sink. */
+    virtual void optimize(const UnicodeSet &set, const char *&parserErrorReason,
+                          UErrorCode &errorCode);
 
     /**
      * Walks the tailoring graph and overwrites tailored nodes with new CEs.
@@ -249,6 +254,7 @@ private:
     int64_t firstImplicitCE;
 
     CollationTailoringDataBuilder *dataBuilder;
+    UnicodeSet optimizeSet;
     const char *errorReason;
 
     int64_t ces[Collation::MAX_EXPANSION_LENGTH];
@@ -300,9 +306,12 @@ private:
      * Same for HAS_BEFORE3 for tertiary nodes and weights.
      * A node must not have both flags set.
      *
-     * Tailored CEs are initially represented in CollationData as temporary CEs
+     * Tailored CEs are initially represented in a CollationDataBuilder as temporary CEs
      * which point to stable indexes in this list,
-     * and temporary CEs only point to tailored nodes.
+     * and temporary CEs stored in a CollationDataBuilder only point to tailored nodes.
+     *
+     * A temporary CE in the ces[] array may point to a non-tailored reset-before-position node,
+     * until the next relation is added.
      *
      * At the end, the tailored weights are allocated as necessary,
      * then the tailored nodes are replaced with final CEs,

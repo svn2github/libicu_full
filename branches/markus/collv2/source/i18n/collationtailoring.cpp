@@ -21,28 +21,24 @@
 #include "collationsettings.h"
 #include "collationtailoring.h"
 #include "normalizer2impl.h"
+#include "uassert.h"
 #include "umutex.h"
 #include "utrie2.h"
 
 U_NAMESPACE_BEGIN
 
-CollationTailoring::CollationTailoring()
+CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
         : data(NULL), ownedData(NULL),
           builder(NULL), memory(NULL),
           trie(NULL), unsafeBackwardSet(NULL),
           reorderCodes(NULL),
           refCount(0) {
-    version[0] = version[1] = version[2] = version[3] = 0;
-}
-
-CollationTailoring::CollationTailoring(const CollationSettings &baseSettings)
-        : data(NULL), ownedData(NULL),
-          builder(NULL), memory(NULL),
-          trie(NULL), unsafeBackwardSet(NULL),
-          reorderCodes(NULL),
-          refCount(0) {
-    settings.options = baseSettings.options;
-    settings.variableTop = baseSettings.variableTop;
+    if(baseSettings != NULL) {
+        settings.options = baseSettings->options;
+        settings.variableTop = baseSettings->variableTop;
+        U_ASSERT(baseSettings->reorderCodesLength == 0);
+        U_ASSERT(baseSettings->reorderTable == NULL);
+    }
     version[0] = version[1] = version[2] = version[3] = 0;
 }
 
@@ -73,12 +69,13 @@ CollationTailoring::ensureOwnedData(UErrorCode &errorCode) {
     if(ownedData == NULL) {
         const Normalizer2Impl *nfcImpl = Normalizer2Factory::getNFCImpl(errorCode);
         if(U_FAILURE(errorCode)) { return FALSE; }
-        data = ownedData = new CollationData(*nfcImpl);
+        ownedData = new CollationData(*nfcImpl);
         if(ownedData == NULL) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;
             return FALSE;
         }
     }
+    data = ownedData;
     return TRUE;
 }
 

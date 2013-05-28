@@ -9,6 +9,11 @@
 * created by: Markus W. Scherer
 */
 
+#define DEBUG_COLLATION_BUILDER  // TODO: remove
+#ifdef DEBUG_COLLATION_BUILDER
+#include <stdio.h>
+#endif
+
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_COLLATION
@@ -131,10 +136,12 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
+    dataBuilder->init(baseData, errorCode);
 
     // Preset node 0 as the start of a list for root primary 0.
     nodes.addElement(0, errorCode);
     rootPrimaryIndexes.addElement(0, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
 
     // Look up [first implicit] before tailoring the relevant character.
     int32_t length = dataBuilder->getCEs(UnicodeString((UChar)0x4e00), ces, 0);
@@ -160,7 +167,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
         errorReason = "missing root elements data, tailoring not supported";
         return NULL;
     }
-    LocalPointer<CollationTailoring> tailoring(new CollationTailoring(base->settings));
+    LocalPointer<CollationTailoring> tailoring(new CollationTailoring(&base->settings));
     if(tailoring.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
@@ -173,7 +180,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     // in which case we would keep the tailoring.settings pointer here
     // and read its variableTop when we need it.
     // See http://unicode.org/cldr/trac/ticket/6070
-    variableTop = tailoring->settings.variableTop;
+    variableTop = base->settings.variableTop;
     parser.setSink(this);
     parser.setImporter(importer);
     parser.parse(ruleString, *tailoring, outParseError, errorCode);
@@ -181,8 +188,11 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     if(dataBuilder->hasMappings()) {
         makeTailoredCEs(errorCode);
         // TODO: canonical closure
-        dataBuilder->optimize(parser.getOptimizeSet(), errorCode);
         finalizeCEs(errorCode);
+        // Copy all of ASCII, and Latin-1 letters, into each tailoring.
+        optimizeSet.add(0, 0x7f);
+        optimizeSet.add(0xc0, 0xff);
+        dataBuilder->optimize(optimizeSet, errorCode);
         tailoring->ensureOwnedData(errorCode);
         if(U_FAILURE(errorCode)) { return NULL; }
         dataBuilder->build(*tailoring->ownedData, errorCode);
@@ -360,6 +370,10 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
                     nodeFromStrength(strength);
             insertNodeBetween(index, nextIndex, node, errorCode);
         }
+        // Strength of the temporary CE:
+        // A reset-before cannot yield a stronger CE than its reset position.
+        // For example, we cannot reset secondary-before a tertiary CE.
+        strength = ceStrength(ces[cesLength - 1]);
     }
     if(U_FAILURE(errorCode)) {
         parserErrorReason = "inserting reset position for &[before n]";
@@ -458,7 +472,11 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
             parserErrorReason = "modifying collation elements";
             return;
         }
-        ces[cesLength - 1] = tempCEFromIndexAndStrength(index, strength);
+        // Strength of the temporary CE:
+        // The new relation may yield a stronger CE but not a weaker one.
+        int32_t tempStrength = ceStrength(ces[cesLength - 1]);
+        if(strength < tempStrength) { tempStrength = strength; }
+        ces[cesLength - 1] = tempCEFromIndexAndStrength(index, tempStrength);
     }
     int32_t totalLength = cesLength;
     if(!extension.isEmpty()) {
@@ -701,8 +719,8 @@ CollationBuilder::findCommonNode(int32_t index, int32_t strength) const {
 }
 
 void
-CollationBuilder::suppressContractions(const UnicodeSet &set,
-                                       const char *&parserErrorReason, UErrorCode &errorCode) {
+CollationBuilder::suppressContractions(const UnicodeSet &set, const char *&parserErrorReason,
+                                       UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     if(!set.isEmpty()) {
         errorCode = U_UNSUPPORTED_ERROR;  // TODO
@@ -711,6 +729,25 @@ CollationBuilder::suppressContractions(const UnicodeSet &set,
     }
     // TODO
 }
+
+void
+CollationBuilder::optimize(const UnicodeSet &set, const char *& /* parserErrorReason */,
+                           UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    optimizeSet.addAll(set);
+}
+
+#ifdef DEBUG_COLLATION_BUILDER
+
+uint32_t
+alignWeightRight(uint32_t w) {
+    if(w != 0) {
+        while((w & 0xff) == 0) { w >>= 8; }
+    }
+    return w;
+}
+
+#endif
 
 void
 CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
@@ -729,6 +766,9 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
         UBool pIsTailored = FALSE;
         UBool sIsTailored = FALSE;
         UBool tIsTailored = FALSE;
+#ifdef DEBUG_COLLATION_BUILDER
+        printf("\nroot primary %lx\n", (long)alignWeightRight(p));
+#endif
         int32_t pIndex = p == 0 ? 0 : rootElements.findPrimary(p);
         int32_t nextIndex = nextIndexFromNode(node);
         while(nextIndex != 0) {
@@ -738,6 +778,9 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
             int32_t strength = strengthFromNode(node);
             if(strength == UCOL_QUATERNARY) {
                 U_ASSERT(isTailoredNode(node));
+#ifdef DEBUG_COLLATION_BUILDER
+                printf("      +quat     ");
+#endif
                 if(q == 3) {
                     errorCode = U_BUFFER_OVERFLOW_ERROR;
                     errorReason = "quaternary tailoring gap too small";
@@ -748,6 +791,9 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                 q = 0;
                 if(strength == UCOL_TERTIARY) {
                     if(isTailoredNode(node)) {
+#ifdef DEBUG_COLLATION_BUILDER
+                        printf("    +ter        ");
+#endif
                         if(!tIsTailored) {
                             // First tailored tertiary node for [p, s].
                             int32_t tCount = countTailoredNodes(nodesArray, nextIndex,
@@ -775,12 +821,18 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                     } else {
                         t = weight16FromNode(node);
                         tIsTailored = FALSE;
+#ifdef DEBUG_COLLATION_BUILDER
+                        printf("    ter     %lx\n", (long)alignWeightRight(t));
+#endif
                     }
                 } else {
                     t = Collation::COMMON_WEIGHT16;
                     tIsTailored = FALSE;
                     if(strength == UCOL_SECONDARY) {
                         if(isTailoredNode(node)) {
+#ifdef DEBUG_COLLATION_BUILDER
+                            printf("  +sec          ");
+#endif
                             if(!sIsTailored) {
                                 // First tailored secondary node for p.
                                 int32_t sCount = countTailoredNodes(nodesArray, nextIndex,
@@ -813,11 +865,17 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                         } else {
                             s = weight16FromNode(node);
                             sIsTailored = FALSE;
+#ifdef DEBUG_COLLATION_BUILDER
+                        printf("  sec       %lx\n", (long)alignWeightRight(s));
+#endif
                         }
                     } else /* UCOL_PRIMARY */ {
                         U_ASSERT(isTailoredNode(node));
                         s = Collation::COMMON_WEIGHT16;
                         sIsTailored = FALSE;
+#ifdef DEBUG_COLLATION_BUILDER
+                        printf("+pri            ");
+#endif
                         if(!pIsTailored) {
                             // First tailored primary node in this list.
                             int32_t pCount = countTailoredNodes(nodesArray, nextIndex,
@@ -839,6 +897,9 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
             }
             if(isTailoredNode(node)) {
                 nodesArray[i] = Collation::makeCE(p, s, t, q);
+#ifdef DEBUG_COLLATION_BUILDER
+                printf("%016llx\n", (long long)nodesArray[i]);
+#endif
             }
         }
     }
@@ -888,11 +949,11 @@ CollationBuilder::finalizeCEs(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     LocalPointer<CollationTailoringDataBuilder> newBuilder(
             new CollationTailoringDataBuilder(errorCode));
-    if(U_FAILURE(errorCode)) { return; }
     if(newBuilder.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
+    newBuilder->init(baseData, errorCode);
     CEFinalizer finalizer(nodes.getBuffer());
     newBuilder->copyFrom(*dataBuilder, finalizer, errorCode);
     if(U_FAILURE(errorCode)) { return; }

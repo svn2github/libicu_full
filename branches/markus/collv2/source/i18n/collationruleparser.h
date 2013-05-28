@@ -82,8 +82,11 @@ public:
                                  const UnicodeString &str, const UnicodeString &extension,
                                  const char *&errorReason, UErrorCode &errorCode) = 0;
 
-        virtual void suppressContractions(const UnicodeSet &set,
-                                          const char *&errorReason, UErrorCode &errorCode) = 0;
+        virtual void suppressContractions(const UnicodeSet &set, const char *&errorReason,
+                                          UErrorCode &errorCode);
+
+        virtual void optimize(const UnicodeSet &set, const char *&errorReason,
+                              UErrorCode &errorCode);
     };
 
     class U_I18N_API Importer : public UObject {
@@ -124,11 +127,6 @@ public:
                UErrorCode &errorCode);
 
     const char *getErrorReason() const { return errorReason; }
-
-    UBool modifiesSettings() const { return TRUE; }  // TODO
-    UBool modifiesMappings() const { return TRUE; }  // TODO
-
-    const UnicodeSet &getOptimizeSet() const { return optimizeSet; }
 
     /**
      * Gets a script or reorder code from its string representation.
@@ -199,8 +197,6 @@ private:
     // FCC also preserves most composites which helps with storing
     // tokenized rules in a compact form.
     UnicodeString prefix, str, extension;
-
-    UnicodeSet optimizeSet;
 };
 
 U_NAMESPACE_END

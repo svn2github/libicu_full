@@ -46,7 +46,7 @@ U_CDECL_END
 CollationTailoring *
 CollationRoot::load(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return NULL; }
-    LocalPointer<CollationTailoring> t(new CollationTailoring());
+    LocalPointer<CollationTailoring> t(new CollationTailoring(NULL));
     if(t.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;

@@ -39,8 +39,7 @@ struct CollationData;
  * The constructors initialize refCount to 0.
  */
 struct U_I18N_API CollationTailoring : public UMemory {
-    CollationTailoring();
-    CollationTailoring(const CollationSettings &baseSettings);
+    CollationTailoring(const CollationSettings *baseSettings);
     ~CollationTailoring();
 
     /**
