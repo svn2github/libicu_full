@@ -476,15 +476,15 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         if(strength < tempStrength) { tempStrength = strength; }
         ces[cesLength - 1] = tempCEFromIndexAndStrength(index, tempStrength);
     }
-    int32_t totalLength = cesLength;
+    int32_t cesLengthBeforeExtension = cesLength;
     if(!extension.isEmpty()) {
         UnicodeString nfdExtension = nfd.normalize(extension, errorCode);
         if(U_FAILURE(errorCode)) {
             parserErrorReason = "NFD(extension)";
             return;
         }
-        totalLength = dataBuilder->getCEs(nfdExtension, ces, cesLength);
-        if(totalLength > Collation::MAX_EXPANSION_LENGTH) {
+        cesLength = dataBuilder->getCEs(nfdExtension, ces, cesLength);
+        if(cesLength > Collation::MAX_EXPANSION_LENGTH) {
             errorCode = U_ILLEGAL_ARGUMENT_ERROR;
             parserErrorReason =
                 "extension string adds too many collation elements (more than 31 total)";
@@ -501,6 +501,7 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         parserErrorReason = "writing collation elements";
         return;
     }
+    cesLength = cesLengthBeforeExtension;
 }
 
 int32_t

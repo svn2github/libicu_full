@@ -479,6 +479,74 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <2 t
 <1 n
 
+** test: reset on expansion, ICU tickets 9415 & 9593
+@ rules
+&æ<x    # tailor the last primary CE so that x sorts between ae and af
+&æb=bæ  # copy all reset CEs to make bæ sort the same
+&각<h    # copy/tailor 3 CEs to make h sort before the next Hangul syllable 갂
+&⒀<<y   # copy/tailor 4 CEs to make y sort with only a secondary difference
+&l·=z   # handle the pre-context for · when fetching reset CEs
+   <<u  # copy/tailor 2 CEs
+
+* compare
+<1 ae
+<2 æ
+<1 x
+<1 af
+
+* compare
+<1 aeb
+<2 æb
+=  bæ
+
+* compare
+<1 각
+<1 h
+<1 갂
+<1 갃
+
+* compare
+<1 ·    # by itself: primary CE
+<1 l
+<2 l·   # l+middle dot has only a secondary difference from l
+=  z
+<2 u
+
+* compare
+<1 (13)
+<3 ⒀  # DUCET sets special tertiary weights in all CEs
+<2 y
+<1 (13[
+
+% alternate=shifted
+* compare
+<1 (13)
+=  13
+<3 ⒀
+=  y  # alternate=shifted removes the tailoring difference on the last CE
+<1 14
+
+** test: contraction inside extension, ICU ticket 9378
+@ rules
+&а<<х/й     # all letters are Cyrillic
+* compare
+<1 ай
+<2 х
+
+** test: no duplicate tailored CEs for different reset positions with same CEs
+@ rules
+&t<x &ᵀ<y           # same primary weights
+&q<u &[before 1]ꝗ<v # q and ꝗ are primary adjacent
+* compare
+<1 q
+<1 v
+<1 u
+<1 ꝗ
+<1 t
+<3 ᵀ
+<1 y
+<1 x
+
 
 #** test: this is a description
 #@ rawbase
