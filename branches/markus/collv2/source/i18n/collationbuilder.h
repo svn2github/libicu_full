@@ -67,7 +67,11 @@ private:
      */
     int32_t findOrInsertNodeForCEs(int32_t strength, const char *&parserErrorReason,
                                    UErrorCode &errorCode);
-    int32_t findOrInsertNodeForRootCE(int64_t ce, int32_t strength, UErrorCode &errorCode);
+    /** Finds or inserts the node for a root CE's primary weight. */
+    int32_t findOrInsertNodeForPrimary(uint32_t p, UErrorCode &errorCode);
+    /** Finds or inserts the node for a secondary or tertiary weight. */
+    int32_t findOrInsertWeakNode(int32_t index, uint32_t weight16, int32_t level,
+                                 UErrorCode &errorCode);
 
     /**
      * Makes and inserts a new tailored node into the list, after the one at index.
@@ -251,7 +255,6 @@ private:
     const CollationData *baseData;
     const CollationRootElements rootElements;
     uint32_t variableTop;
-    int64_t firstImplicitCE;
 
     CollationTailoringDataBuilder *dataBuilder;
     UnicodeSet optimizeSet;
@@ -266,8 +269,8 @@ private:
      *
      * This is a performance optimization for finding reset positions.
      * Without this, we would have to search through the entire nodes list.
-     * It also allows storing root primary weights as list heads,
-     * without previous index, leaving room for 32-bit primary weights.
+     * It also allows storing root primary weights in list head nodes,
+     * without previous index, leaving room in root primary nodes for 32-bit primary weights.
      */
     UVector32 rootPrimaryIndexes;
     /**
@@ -275,12 +278,16 @@ private:
      * Doubly-linked lists of nodes in mostly collation order.
      * Each list starts with a root primary node and ends with a nextIndex of 0.
      *
-     * Root primary nodes do not have previous indexes.
-     * All other nodes do.
+     * When there are any nodes in the list, then there is always a root primary node at index 0.
+     * This allows some code not to have to check explicitly for nextIndex==0.
+     *
+     * Root primary nodes have 32-bit weights but do not have previous indexes.
+     * All other nodes have at most 16-bit weights and do have previous indexes.
      *
      * Nodes with explicit weights store root collator weights,
      * or default weak weights (e.g., secondary 05) for stronger nodes.
      * "Tailored" nodes, with the IS_TAILORED bit set,
+     * do not store explicit weights but rather
      * create a difference of a certain strength from the preceding node.
      *
      * A root node is followed by either
@@ -330,19 +337,18 @@ private:
      *
      * Weaker root nodes & tailored nodes:
      * - a weight: 16 bits 63..48
-     *   + a root or default weight
+     *   + a root or default weight for a non-tailored node
      *   + unused/zero for a tailored node
      * - index to the previous node: 20 bits 47..28
      *
      * All types of nodes:
      * - index to the next node: 20 bits 27..8
      *   + nextIndex=0 in last node per root-primary list
+     * - reserved/unused/zero bits: bits 7, 4, 2
      * - HAS_BEFORE2: bit 6
      * - HAS_BEFORE3: bit 5
      * - IS_TAILORED: bit 3
      * - the difference strength (primary/secondary/tertiary/quaternary): 2 bits 1..0
-     *
-     * - reserved/unused/zero bits: bits 7, 4, 2
      *
      * We could allocate structs with pointers, but we would have to store them
      * in a pointer list so that they can be indexed from temporary CEs,

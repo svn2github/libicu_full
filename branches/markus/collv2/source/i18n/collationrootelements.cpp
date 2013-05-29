@@ -62,7 +62,7 @@ CollationRootElements::lastCEWithPrimaryBefore(uint32_t p) const {
             secTer = q;
         }
     }
-    return ((int64_t)p << 32) | secTer;
+    return ((int64_t)p << 32) | (secTer & ~SEC_TER_DELTA_FLAG);
 }
 
 int64_t
@@ -120,7 +120,7 @@ CollationRootElements::getSecondaryBefore(uint32_t p, uint32_t s) const {
     if(p == 0) {
         index = (int32_t)elements[IX_FIRST_SECONDARY_INDEX];
         // Gap at the beginning of the secondary CE range.
-        previousSec = getSecondaryBoundary() - 0x100;
+        previousSec = 0;
         sec = elements[index] >> 16;
     } else {
         index = findPrimary(p) + 1;
@@ -146,12 +146,12 @@ CollationRootElements::getTertiaryBefore(uint32_t p, uint32_t s, uint32_t t) con
         if(s == 0) {
             index = (int32_t)elements[IX_FIRST_TERTIARY_INDEX];
             // Gap at the beginning of the tertiary CE range.
-            previousTer = getTertiaryBoundary() - 0x100;
+            previousTer = 0;
         } else {
             index = (int32_t)elements[IX_FIRST_SECONDARY_INDEX];
             previousTer = Collation::MERGE_SEPARATOR_WEIGHT16;
         }
-        secTer = elements[index];
+        secTer = elements[index] & ~SEC_TER_DELTA_FLAG;
     } else {
         index = findPrimary(p) + 1;
         previousTer = Collation::MERGE_SEPARATOR_WEIGHT16;
@@ -159,9 +159,9 @@ CollationRootElements::getTertiaryBefore(uint32_t p, uint32_t s, uint32_t t) con
     }
     uint32_t st = (s << 16) | t;
     while(st > secTer) {
-        if((secTer >> 16) == s) { previousTer = secTer & 0xffff; }
+        if((secTer >> 16) == s) { previousTer = secTer; }
         U_ASSERT((elements[index] & SEC_TER_DELTA_FLAG) != 0);
-        secTer = elements[index++];
+        secTer = elements[index++] & ~SEC_TER_DELTA_FLAG;
     }
     U_ASSERT(secTer == st);
     return previousTer & 0xffff;
@@ -236,6 +236,7 @@ CollationRootElements::getTertiaryAfter(int32_t index, uint32_t s, uint32_t t) c
         uint32_t secTer = elements[index];
         // No tertiary greater than t for this primary+secondary.
         if((secTer & SEC_TER_DELTA_FLAG) == 0 || (secTer >> 16) > s) { return terLimit; }
+        secTer &= ~SEC_TER_DELTA_FLAG;
         if(secTer > st) { return secTer & 0xffff; }
         ++index;
     }

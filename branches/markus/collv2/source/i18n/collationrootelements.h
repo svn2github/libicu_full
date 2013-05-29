@@ -89,14 +89,14 @@ public:
      * Returns the first assigned tertiary CE.
      */
     uint32_t getFirstTertiaryCE() const {
-        return elements[elements[IX_FIRST_TERTIARY_INDEX]];
+        return elements[elements[IX_FIRST_TERTIARY_INDEX]] & ~SEC_TER_DELTA_FLAG;
     }
 
     /**
      * Returns the last assigned tertiary CE.
      */
     uint32_t getLastTertiaryCE() const {
-        return elements[elements[IX_FIRST_SECONDARY_INDEX] - 1];
+        return elements[elements[IX_FIRST_SECONDARY_INDEX] - 1] & ~SEC_TER_DELTA_FLAG;
     }
 
     /**
@@ -121,21 +121,21 @@ public:
      * Returns the first assigned secondary CE.
      */
     uint32_t getFirstSecondaryCE() const {
-        return elements[elements[IX_FIRST_SECONDARY_INDEX]];
+        return elements[elements[IX_FIRST_SECONDARY_INDEX]] & ~SEC_TER_DELTA_FLAG;
     }
 
     /**
      * Returns the last assigned secondary CE.
      */
     uint32_t getLastSecondaryCE() const {
-        return elements[elements[IX_FIRST_PRIMARY_INDEX] - 1];
+        return elements[elements[IX_FIRST_PRIMARY_INDEX] - 1] & ~SEC_TER_DELTA_FLAG;
     }
 
     /**
      * Returns the first assigned primary weight.
      */
     uint32_t getFirstPrimary() const {
-        return elements[elements[IX_FIRST_PRIMARY_INDEX]];
+        return elements[elements[IX_FIRST_PRIMARY_INDEX]];  // step=0: cannot be a range end
     }
 
     /**

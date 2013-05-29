@@ -126,28 +126,19 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
           baseData(b->data),
           rootElements(b->data->rootElements, b->data->rootElementsLength),
           variableTop(0),
-          firstImplicitCE(0),
           dataBuilder(new CollationTailoringDataBuilder(errorCode)),
           errorReason(NULL),
           cesLength(0),
           rootPrimaryIndexes(errorCode), nodes(errorCode) {
-    if(U_FAILURE(errorCode)) { return; }
+    if(U_FAILURE(errorCode)) {
+        errorReason = "CollationBuilder fields initialization failed";
+        return;
+    }
     if(dataBuilder == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
     dataBuilder->init(baseData, errorCode);
-
-    // Preset node 0 as the start of a list for root primary 0.
-    nodes.addElement(0, errorCode);
-    rootPrimaryIndexes.addElement(0, errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-
-    // Look up [first implicit] before tailoring the relevant character.
-    int32_t length = dataBuilder->getCEs(UnicodeString((UChar)0x4e00), ces, 0);
-    U_ASSERT(length == 1);
-    firstImplicitCE = ces[0];
-
     if(U_FAILURE(errorCode)) {
         errorReason = "CollationBuilder initialization failed";
     }
@@ -218,6 +209,7 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
         ces[0] = getSpecialResetPosition(str, parserErrorReason, errorCode);
         cesLength = 1;
         if(U_FAILURE(errorCode)) { return; }
+        U_ASSERT((ces[0] & Collation::CASE_AND_QUATERNARY_MASK) == 0);
     } else {
         // normal reset to a character or string
         UnicodeString nfdString = nfd.normalize(str, errorCode);
@@ -256,7 +248,7 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
         uint32_t p = weight32FromNode(node);
         if(p == 0) {
             errorCode = U_UNSUPPORTED_ERROR;
-            parserErrorReason = "reset before completely-ignorable not possible";
+            parserErrorReason = "reset primary-before ignorable not possible";
             return;
         }
         if(p <= rootElements.getFirstPrimary()) {
@@ -272,7 +264,7 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
             return;
         }
         p = rootElements.getPrimaryBefore(p, baseData->isCompressiblePrimary(p));
-        index = findOrInsertNodeForRootCE(Collation::makeCE(p), UCOL_PRIMARY, errorCode);
+        index = findOrInsertNodeForPrimary(p, errorCode);
     } else {
         // &[before 2] or &[before 3]
         index = findCommonNode(index, UCOL_SECONDARY);
@@ -339,6 +331,7 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
                     }
                     p = weight32FromNode(node);
                     weight16 = rootElements.getTertiaryBefore(p, s, weight16);
+                    U_ASSERT((weight16 & ~Collation::ONLY_TERTIARY_MASK) == 0);
                 }
                 // Find or insert the new explicit weight before the current one.
                 if(previousWeightIndex >= 0 && weight16 == previousWeight16) {
@@ -361,7 +354,7 @@ CollationBuilder::addReset(int32_t strength, const UnicodeString &str,
                 U_ASSERT(!nodeHasBefore3(node));
                 node |= HAS_BEFORE3;
             }
-            nodes.setElementAt(index, node);
+            nodes.setElementAt(node, index);
             int32_t nextIndex = nextIndexFromNode(node);
             // Insert default nodes with weights 02 and 05, reset to the 02 node.
             node = nodeFromWeight16(BEFORE_WEIGHT16) | nodeFromStrength(strength);
@@ -414,8 +407,12 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
         // script-first-primary CEs in the root collator.
         return rootElements.firstCEWithPrimaryAtLeast(
             baseData->getFirstPrimaryForGroup(USCRIPT_HAN));
-    case CollationRuleParser::FIRST_IMPLICIT:
-        return firstImplicitCE;
+    case CollationRuleParser::FIRST_IMPLICIT: {
+        uint32_t ce32 = baseData->getCE32(0x4e00);
+        U_ASSERT(Collation::hasCE32Tag(ce32, Collation::OFFSET_TAG));
+        int64_t dataCE = baseData->ces[Collation::getOffsetIndex(ce32)];
+        return Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(0x4e00, dataCE));
+    }
     case CollationRuleParser::LAST_IMPLICIT:
         // We do not support tailoring to an unassigned-implicit CE.
         errorCode = U_UNSUPPORTED_ERROR;
@@ -452,18 +449,19 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
     if(strength != UCOL_IDENTICAL) {
         // Find the node index after which we insert the new tailored node.
         int32_t index = findOrInsertNodeForCEs(strength, parserErrorReason, errorCode);
-        if(index == 0) {
+        U_ASSERT(cesLength > 0);
+        int64_t ce = ces[cesLength - 1];
+        if(strength == UCOL_PRIMARY && !isTempCE(ce) && (uint32_t)(ce >> 32) == 0) {
             // There is no primary gap between ignorables and the space-first-primary.
             errorCode = U_UNSUPPORTED_ERROR;
             parserErrorReason = "tailoring primary after ignorables not supported";
             return;
         }
-        U_ASSERT(cesLength > 0);
-        if(strength == UCOL_QUATERNARY && ces[cesLength - 1] == 0) {
+        if(strength == UCOL_QUATERNARY && ce == 0) {
             // The CE data structure does not support non-zero quaternary weights
             // on tertiary ignorables.
             errorCode = U_UNSUPPORTED_ERROR;
-            parserErrorReason = "tailoring quaternary after completely ignorables not supported";
+            parserErrorReason = "tailoring quaternary after tertiary ignorables not supported";
             return;
         }
         // Insert the new tailored node.
@@ -474,7 +472,7 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         }
         // Strength of the temporary CE:
         // The new relation may yield a stronger CE but not a weaker one.
-        int32_t tempStrength = ceStrength(ces[cesLength - 1]);
+        int32_t tempStrength = ceStrength(ce);
         if(strength < tempStrength) { tempStrength = strength; }
         ces[cesLength - 1] = tempCEFromIndexAndStrength(index, tempStrength);
     }
@@ -525,14 +523,33 @@ CollationBuilder::findOrInsertNodeForCEs(int32_t strength, const char *&parserEr
         if(ceStrength(ce) <= strength) { break; }
     }
 
-    if(isTempCE(ce)) { return indexFromTempCE(ce); }
+    if(isTempCE(ce)) {
+        // No need to findCommonNode() here for lower levels
+        // because insertTailoredNodeAfter() will do that anyway.
+        return indexFromTempCE(ce);
+    }
 
+    // root CE
     if((uint8_t)(ce >> 56) == Collation::UNASSIGNED_IMPLICIT_BYTE) {
         errorCode = U_UNSUPPORTED_ERROR;
         parserErrorReason = "tailoring relative to an unassigned code point not supported";
         return 0;
     }
-    return findOrInsertNodeForRootCE(ce, strength, errorCode);
+
+    // Find or insert the node for each of the root CE's weights,
+    // down to the requested level/strength.
+    // Root CEs must have common=zero quaternary weights (for which we never insert any nodes).
+    U_ASSERT((ce & 0xc0) == 0);
+    int32_t index = findOrInsertNodeForPrimary((uint32_t)(ce >> 32) , errorCode);
+    if(strength >= UCOL_SECONDARY) {
+        uint32_t lower32 = (uint32_t)ce;
+        index = findOrInsertWeakNode(index, lower32 >> 16, UCOL_SECONDARY, errorCode);
+        if(strength >= UCOL_TERTIARY) {
+            index = findOrInsertWeakNode(index, lower32 & Collation::ONLY_TERTIARY_MASK,
+                                         UCOL_TERTIARY, errorCode);
+        }
+    }
+    return index;
 }
 
 namespace {
@@ -547,7 +564,7 @@ namespace {
 int32_t
 binarySearchForRootPrimaryNode(const int32_t *rootPrimaryIndexes, int32_t length,
                                const int64_t *nodes, uint32_t p) {
-    U_ASSERT(length > 0);
+    if(length == 0) { return ~0; }
     int32_t start = 0;
     int32_t limit = length;
     for (;;) {
@@ -573,93 +590,77 @@ binarySearchForRootPrimaryNode(const int32_t *rootPrimaryIndexes, int32_t length
 }  // namespace
 
 int32_t
-CollationBuilder::findOrInsertNodeForRootCE(int64_t ce, int32_t strength, UErrorCode &errorCode) {
+CollationBuilder::findOrInsertNodeForPrimary(uint32_t p, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
 
-    // Find or insert the node for the root CE's primary weight.
-    uint32_t p = (uint32_t)(ce >> 32);
     int32_t rootIndex = binarySearchForRootPrimaryNode(
         rootPrimaryIndexes.getBuffer(), rootPrimaryIndexes.size(), nodes.getBuffer(), p);
-    int32_t index;
     if(rootIndex >= 0) {
-        index = rootPrimaryIndexes.elementAti(rootIndex);
+        return rootPrimaryIndexes.elementAti(rootIndex);
     } else {
         // Start a new list of nodes with this primary.
-        index = nodes.size();
+        int32_t index = nodes.size();
         nodes.addElement(nodeFromWeight32(p), errorCode);
         rootPrimaryIndexes.insertElementAt(index, ~rootIndex, errorCode);
-        if(U_FAILURE(errorCode)) { return 0; }
+        return index;
     }
+}
 
-    // Find or insert the node for each of the root CE's lower-level weights,
-    // down to the requested level/strength.
-    // Root CEs must have common=zero quaternary weights (for which we never insert any nodes).
-    U_ASSERT((ce & 0xc0) == 0);
-    for(int32_t level = UCOL_SECONDARY; level <= strength && level <= UCOL_TERTIARY; ++level) {
-        uint32_t lower32 = (uint32_t)ce;
-        uint32_t weight16 =
-            level == UCOL_SECONDARY ? lower32 >> 16 :
-            lower32 & Collation::ONLY_TERTIARY_MASK;
-        U_ASSERT(weight16 >= Collation::COMMON_WEIGHT16);
-        // Only reset-before inserts common weights.
-        if(weight16 == Collation::COMMON_WEIGHT16) {
-            index = findCommonNode(index, level);
-            continue;
-        }
-        // Find the root CE's weight for this level.
-        // Postpone insertion if not found:
-        // Insert the new root node before the next stronger node,
-        // or before the next root node with the same strength and a larger weight.
-        int64_t node = nodes.elementAti(index);
-        int32_t nextIndex;
-        for(;;) {
-            nextIndex = nextIndexFromNode(node);
-            node = nodes.elementAti(nextIndex);
-            int32_t nextStrength = strengthFromNode(node);
-            if(nextStrength <= strength) {
-                // Insert before a stronger node.
-                if(nextStrength < strength) { break; }
-                // nextStrength == strength
-                if(isTailoredNode(node)) {
-                    uint32_t nextWeight16 = weight16FromNode(node);
-                    if(nextWeight16 == weight16) {
-                        // Found the node for the root CE up to this level.
-                        index = nextIndex;
-                        nextIndex = -1;  // no insertion (continue outer loop)
-                        break;
-                    }
-                    // Insert before a node with a larger same-strength weight.
-                    if(nextWeight16 > weight16) { break; }
-                }
-            }
-            // Skip the next node.
-            index = nextIndex;
-        }
-        if(nextIndex >= 0) {
-            node = nodeFromWeight16(weight16) | nodeFromStrength(level);
-            index = insertNodeBetween(index, nextIndex, node, errorCode);
-            if(U_FAILURE(errorCode)) { return 0; }
-        }
+int32_t
+CollationBuilder::findOrInsertWeakNode(int32_t index, uint32_t weight16, int32_t level, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    U_ASSERT(0 <= index && index < nodes.size());
+
+    U_ASSERT(weight16 == 0 || weight16 >= Collation::COMMON_WEIGHT16);
+    // Only reset-before inserts common weights.
+    if(weight16 == Collation::COMMON_WEIGHT16) {
+        return findCommonNode(index, level);
     }
-    return index;
+    // Find the root CE's weight for this level.
+    // Postpone insertion if not found:
+    // Insert the new root node before the next stronger node,
+    // or before the next root node with the same strength and a larger weight.
+    int64_t node = nodes.elementAti(index);
+    int32_t nextIndex;
+    while((nextIndex = nextIndexFromNode(node)) != 0) {
+        node = nodes.elementAti(nextIndex);
+        int32_t nextStrength = strengthFromNode(node);
+        if(nextStrength <= level) {
+            // Insert before a stronger node.
+            if(nextStrength < level) { break; }
+            // nextStrength == level
+            if(!isTailoredNode(node)) {
+                uint32_t nextWeight16 = weight16FromNode(node);
+                if(nextWeight16 == weight16) {
+                    // Found the node for the root CE up to this level.
+                    return nextIndex;
+                }
+                // Insert before a node with a larger same-strength weight.
+                if(nextWeight16 > weight16) { break; }
+            }
+        }
+        // Skip the next node.
+        index = nextIndex;
+    }
+    node = nodeFromWeight16(weight16) | nodeFromStrength(level);
+    return insertNodeBetween(index, nextIndex, node, errorCode);
 }
 
 int32_t
 CollationBuilder::insertTailoredNodeAfter(int32_t index, int32_t strength, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
+    U_ASSERT(0 <= index && index < nodes.size());
     if(strength >= UCOL_SECONDARY) {
         index = findCommonNode(index, UCOL_SECONDARY);
-    }
-    if(strength >= UCOL_TERTIARY) {
-        index = findCommonNode(index, UCOL_TERTIARY);
+        if(strength >= UCOL_TERTIARY) {
+            index = findCommonNode(index, UCOL_TERTIARY);
+        }
     }
     // Postpone insertion:
     // Insert the new node before the next one with a strength at least as strong.
     int64_t node = nodes.elementAti(index);
     int32_t nextIndex;
-    for(;;) {
-        nextIndex = nextIndexFromNode(node);
-        if(nextIndex == 0) { break; }
+    while((nextIndex = nextIndexFromNode(node)) != 0) {
         node = nodes.elementAti(nextIndex);
         if(strengthFromNode(node) <= strength) { break; }
         // Skip the next node which has a weaker (larger) strength than the new one.
@@ -760,14 +761,14 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
         int32_t i = rootPrimaryIndexes.elementAti(rpi);
         int64_t node = nodesArray[i];
         uint32_t p = weight32FromNode(node);
-        uint32_t s = Collation::COMMON_WEIGHT16;
-        uint32_t t = Collation::COMMON_WEIGHT16;
+        uint32_t s = p == 0 ? 0 : Collation::COMMON_WEIGHT16;
+        uint32_t t = s;
         uint32_t q = 0;
         UBool pIsTailored = FALSE;
         UBool sIsTailored = FALSE;
         UBool tIsTailored = FALSE;
 #ifdef DEBUG_COLLATION_BUILDER
-        printf("\nroot primary %lx\n", (long)alignWeightRight(p));
+        printf("\nprimary     %lx\n", (long)alignWeightRight(p));
 #endif
         int32_t pIndex = p == 0 ? 0 : rootElements.findPrimary(p);
         int32_t nextIndex = nextIndexFromNode(node);
@@ -779,7 +780,7 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
             if(strength == UCOL_QUATERNARY) {
                 U_ASSERT(isTailoredNode(node));
 #ifdef DEBUG_COLLATION_BUILDER
-                printf("      +quat     ");
+                printf("      quat+     ");
 #endif
                 if(q == 3) {
                     errorCode = U_BUFFER_OVERFLOW_ERROR;
@@ -788,18 +789,21 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                 }
                 ++q;
             } else {
-                q = 0;
                 if(strength == UCOL_TERTIARY) {
                     if(isTailoredNode(node)) {
 #ifdef DEBUG_COLLATION_BUILDER
-                        printf("    +ter        ");
+                        printf("    ter+        ");
 #endif
                         if(!tIsTailored) {
                             // First tailored tertiary node for [p, s].
                             int32_t tCount = countTailoredNodes(nodesArray, nextIndex,
                                                                 UCOL_TERTIARY) + 1;
                             uint32_t tLimit;
-                            if(t == BEFORE_WEIGHT16) {
+                            if(t == 0) {
+                                // Gap at the beginning of the tertiary CE range.
+                                t = rootElements.getTertiaryBoundary() - 0x100;
+                                tLimit = rootElements.getFirstTertiaryCE() & Collation::ONLY_TERTIARY_MASK;
+                            } else if(t == BEFORE_WEIGHT16) {
                                 tLimit = Collation::COMMON_WEIGHT16;
                             } else if(!pIsTailored && !sIsTailored) {
                                 // p and s are root weights.
@@ -809,6 +813,7 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                                 U_ASSERT(t == Collation::COMMON_WEIGHT16);
                                 tLimit = rootElements.getTertiaryBoundary();
                             }
+                            U_ASSERT(tLimit == 0x4000 || (tLimit & ~Collation::ONLY_TERTIARY_MASK) == 0);
                             tertiaries.initForTertiary();
                             if(!tertiaries.allocWeights(t, tLimit, tCount)) {
                                 errorCode = U_BUFFER_OVERFLOW_ERROR;
@@ -826,19 +831,21 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
 #endif
                     }
                 } else {
-                    t = Collation::COMMON_WEIGHT16;
-                    tIsTailored = FALSE;
                     if(strength == UCOL_SECONDARY) {
                         if(isTailoredNode(node)) {
 #ifdef DEBUG_COLLATION_BUILDER
-                            printf("  +sec          ");
+                            printf("  sec+          ");
 #endif
                             if(!sIsTailored) {
                                 // First tailored secondary node for p.
                                 int32_t sCount = countTailoredNodes(nodesArray, nextIndex,
                                                                     UCOL_SECONDARY) + 1;
                                 uint32_t sLimit;
-                                if(s == BEFORE_WEIGHT16) {
+                                if(s == 0) {
+                                    // Gap at the beginning of the secondary CE range.
+                                    s = rootElements.getSecondaryBoundary() - 0x100;
+                                    sLimit = rootElements.getFirstSecondaryCE() >> 16;
+                                } else if(s == BEFORE_WEIGHT16) {
                                     sLimit = Collation::COMMON_WEIGHT16;
                                 } else if(!pIsTailored) {
                                     // p is a root primary.
@@ -866,15 +873,13 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                             s = weight16FromNode(node);
                             sIsTailored = FALSE;
 #ifdef DEBUG_COLLATION_BUILDER
-                        printf("  sec       %lx\n", (long)alignWeightRight(s));
+                            printf("  sec       %lx\n", (long)alignWeightRight(s));
 #endif
                         }
                     } else /* UCOL_PRIMARY */ {
                         U_ASSERT(isTailoredNode(node));
-                        s = Collation::COMMON_WEIGHT16;
-                        sIsTailored = FALSE;
 #ifdef DEBUG_COLLATION_BUILDER
-                        printf("+pri            ");
+                        printf("pri+            ");
 #endif
                         if(!pIsTailored) {
                             // First tailored primary node in this list.
@@ -892,8 +897,13 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                             pIsTailored = TRUE;
                         }
                         p = primaries.nextWeight();
+                        s = Collation::COMMON_WEIGHT16;
+                        sIsTailored = FALSE;
                     }
+                    t = s == 0 ? 0 : Collation::COMMON_WEIGHT16;
+                    tIsTailored = FALSE;
                 }
+                q = 0;
             }
             if(isTailoredNode(node)) {
                 nodesArray[i] = Collation::makeCE(p, s, t, q);

@@ -215,7 +215,7 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
     printf("length of upper limit 0x%08lx is %ld\n", upperLimit, upperLength);
 #endif
     U_ASSERT(lowerLength>=middleLength);
-    U_ASSERT(upperLength>=middleLength);
+    // Permit upperLength<middleLength: The upper limit for secondaries is 0x10000.
 
     if(lowerLimit>=upperLimit) {
 #ifdef UCOL_DEBUG

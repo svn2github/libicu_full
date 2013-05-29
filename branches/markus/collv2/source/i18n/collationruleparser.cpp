@@ -436,7 +436,7 @@ static const char *const positions[] = {
 int32_t
 CollationRuleParser::parseSpecialPosition(int32_t i, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
-    int32_t j = readWords(i);
+    int32_t j = readWords(i + 1);
     if(j > i && rules->charAt(j) == 0x5d && !raw.isEmpty()) {  // words end with ]
         ++j;
         for(int32_t pos = 0; pos < LENGTHOF(positions); ++pos) {

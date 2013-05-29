@@ -70,6 +70,8 @@ public:
     static const uint32_t ONLY_SEC_TER_MASK = 0xffff0000 | ONLY_TERTIARY_MASK;
     /** Case bits and tertiary bits. */
     static const uint32_t CASE_AND_TERTIARY_MASK = 0xff3f;
+    /** Case bits and quaternary bits. */
+    static const uint32_t CASE_AND_QUATERNARY_MASK = 0xc0c0;
 
     static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible
     /**

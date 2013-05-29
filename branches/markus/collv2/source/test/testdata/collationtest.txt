@@ -362,16 +362,133 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <2 z
 <3 Z
 
+** test: tailor after completely ignorable
+@ rules
+&\x00<<<x<<y
+* compare
+= \x00
+= \x1F
+<3 x
+<2 y
 
-** test: this is a description
-@ rawbase
+** test: secondary tailoring gaps, ICU ticket 9362
+@ rules
+&[before 2]s<<'_'
+&s<<r  # secondary between s and ſ (long s)
+&ſ<<*a-q  # more than 15 between ſ and secondary CE boundary
+&[before 2][first primary ignorable]<<u<<v  # between secondary CE boundary & lowest secondary CE
+&[last primary ignorable]<<y<<z
+
+* compare
+<2 u
+<2 v
+<2 \u0332  # lowest secondary CE
+<2 \u0308
+<2 y
+<2 z
+<1 s_
+<2 ss
+<2 sr
+<2 sſ
+<2 sa
+<2 sb
+<2 sp
+<2 sq
+<2 sus
+<2 svs
+<2 rs
+
+** test: tertiary tailoring gaps, ICU ticket 9362
+@ rules
+&[before 3]t<<<'_'
+&t<<<r  # tertiary between t and fullwidth t
+&ᵀ<<<*a-q  # more than 15 between ᵀ (modifier letter T) and tertiary CE boundary
+&[before 3][first secondary ignorable]<<<u<<<v  # between tertiary CE boundary & lowest tertiary CE
+&[last secondary ignorable]<<<y<<<z
+
+* compare
+<3 u
+<3 v
+# Note: The root collator currently does not map any characters to tertiary CEs.
+<3 y
+<3 z
+<1 t_
+<3 tt
+<3 tr
+<3 tｔ
+<3 tᵀ
+<3 ta
+<3 tb
+<3 tp
+<3 tq
+<3 tut
+<3 tvt
+<3 rt
+
+** test: secondary & tertiary around root character
+@ rules
+&[before 2]m<<r
+&m<<s
+&[before 3]m<<<u
+&m<<<v
+* compare
+<1 l
+<1 r
+<2 u
+<3 m
+<3 v
+<2 s
+<1 n
+
+** test: secondary & tertiary around tailored item
+@ rules
+&m<x
+&[before 2]x<<r
+&x<<s
+&[before 3]x<<<u
+&x<<<v
+* compare
+<1 m
+<1 r
+<2 u
+<3 x
+<3 v
+<2 s
+<1 n
+
+** test: more nesting of secondary & tertiary before
+@ rules
+&[before 3]m<<<u
+&[before 2]m<<r
+&[before 3]r<<<q
+&m<<<w
+&m<<t
+&[before 3]w<<<v
+&w<<<x
+&w<<s
+* compare
+<1 l
+<1 q
+<3 r
+<2 u
+<3 m
+<3 v
+<3 w
+<3 x
+<2 s
+<2 t
+<1 n
+
+
+#** test: this is a description
+#@ rawbase
 # string then list of CEs; empty leading weight=0, other empty=common
-a 20..
-b 2233.44.5506
-c 11223344.5566.07
+#a 20..
+#b 2233.44.5506
+#c 11223344.5566.07
 # ch 30..20
 # l|\xb7 ..   # prefix
-\u3041 74..
+#\u3041 74..
 
 # rawbase could be combined with rules
 # each test has rawbase? rules? (attributes (compare | CEs | sortkey))*
@@ -388,15 +505,5 @@ c 11223344.5566.07
 #* sortkey
 #abch 202230.(syntax for compressed common?).(?)20
 
-** test: from rules
-#@ rules
-#&z < a <<< A
-# allow comments
-#< b <<< B
-
-** test: German phonebook rules
-
+#** test: German phonebook rules
 #@ locale de-u-co-phonebk
-
-# * compare
-#...

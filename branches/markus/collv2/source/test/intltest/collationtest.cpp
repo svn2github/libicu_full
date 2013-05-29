@@ -868,9 +868,10 @@ void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     while(readLine(f, errorCode)) {
         if(fileLine.isEmpty()) { continue; }
         if(isSectionStarter(fileLine[0])) { break; }
-        rules.append(fileLine);
+        rules.append(fileLine.unescape());
     }
     if(errorCode.isFailure()) { return; }
+    logln(rules);
     // Duplicate of RuleBasedCollator2::buildTailoring(),
     // to get more error information.
     CollationBuilder builder(CollationRoot::getRoot(errorCode), errorCode);
