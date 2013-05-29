@@ -83,6 +83,7 @@ public:
 
     /**
      * Returns the number of time units in this object.
+     * @draft ICU 52
      */
     inline int32_t length() const {
         return fSize;
