@@ -13,7 +13,7 @@
 
 U_NAMESPACE_BEGIN
 
-TimePeriod::TimePeriod(const TimePeriod& other) : fSize(other.fSize) {
+TimePeriod::TimePeriod(const TimePeriod& other) : fLength(other.fLength) {
     for (int32_t i = 0; i < sizeof(fFields) / sizeof(fFields[0]); ++i) {
         if (other.fFields[i] == NULL) {
             fFields[i] = NULL;
@@ -27,7 +27,7 @@ TimePeriod::TimePeriod(const TimePeriod& other) : fSize(other.fSize) {
 TimePeriod::TimePeriod(
         const TimeUnitAmount * const *timeUnitAmounts,
         int32_t length,
-        UErrorCode& status) : fSize(0) {
+        UErrorCode& status) : fLength(0) {
     int32_t fieldCount = sizeof(fFields) / sizeof(fFields[0]);
     for (int32_t i = 0; i < fieldCount; ++i) {
         fFields[i] = NULL;
@@ -43,7 +43,7 @@ TimePeriod::TimePeriod(
             return;
         }
         fFields[idx] = (TimeUnitAmount *) tua->clone();
-        ++fSize;
+        ++fLength;
     }
     validate(status);
     if (U_FAILURE(status)) {
@@ -55,7 +55,7 @@ void TimePeriod::validate(UErrorCode& status) const {
     if (U_FAILURE(status)) {
         return;
     }
-    if (fSize == 0) {
+    if (fLength == 0) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }  

@@ -86,11 +86,11 @@ public:
      * @draft ICU 52
      */
     inline int32_t length() const {
-        return fSize;
+        return fLength;
     }
 
 private:
-    int32_t fSize;
+    int32_t fLength;
     TimeUnitAmount *fFields[TimeUnit::UTIMEUNIT_FIELD_COUNT];
 
     // Clients use forAmount and never use ctor directly.
