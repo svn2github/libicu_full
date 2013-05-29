@@ -33,7 +33,7 @@ public:
     TimePeriod(const TimePeriod& other);
 
     /** 
-     * Factory method.
+     * Constructor.
      * @param timeUnitAmounts an array of TimeUnitAmounts pointers. TimePeriod copies the
      * data in this array. The caller is responsible for freeing the TimeUnitAmount objects
      * and the array.
@@ -41,10 +41,9 @@ public:
      * @param status error returned here if timeUnitAmounts is empty;
      *    timeUnitAmounts has duplicate time units; or any timeUnitAmount except the 
      *    smallest has a non-integer value.
-     * @return pointer to newly created TimePeriod object or NULL on error.
      * @draft ICU 52
      */  
-    static TimePeriod* forAmounts(
+    TimePeriod(
         const TimeUnitAmount * const *timeUnitAmounts, int32_t length, UErrorCode& status);
 
     /** 
@@ -84,9 +83,8 @@ public:
 
     /**
      * Returns the number of time units in this object.
-     * @internal
      */
-    inline int32_t size() const {
+    inline int32_t length() const {
         return fSize;
     }
 

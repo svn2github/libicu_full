@@ -425,7 +425,7 @@ TimeUnitFormat::formatTimePeriod(
     if (fStyle == UTMUTFMT_NUMERIC_STYLE && formatTimePeriodAsNumeric(timePeriod, toAppendTo, status)) {
         return toAppendTo;
     }
-    UnicodeString *items = new UnicodeString[timePeriod.size()];
+    UnicodeString *items = new UnicodeString[timePeriod.length()];
     if (items == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return toAppendTo;
@@ -449,7 +449,7 @@ TimeUnitFormat::formatTimePeriod(
         }
         ++idx;
     }
-    UnicodeString& result = fListFormatter->format(items, timePeriod.size(), toAppendTo, status);
+    UnicodeString& result = fListFormatter->format(items, timePeriod.length(), toAppendTo, status);
     delete [] items;
     return result;
 }
