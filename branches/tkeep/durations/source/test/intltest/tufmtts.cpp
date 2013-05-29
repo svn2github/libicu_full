@@ -71,7 +71,7 @@ void TimeUnitTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
         TESTCASE(5, testTimePeriodForAmounts);
         TESTCASE(6, testTimeUnitAmountSubClass);
         TESTCASE(7, testTimePeriodEquals);
-        TESTCASE(8, testTimePeriodSize);
+        TESTCASE(8, testTimePeriodLength);
         default: name = ""; break;
     }
 }
@@ -466,7 +466,7 @@ void TimeUnitTest::testFormatPeriodEn() {
     }
 }
 
-void TimeUnitTest::testTimePeriodSize() {
+void TimeUnitTest::testTimePeriodLength() {
    UErrorCode status = U_ZERO_ERROR;
    int32_t actual = create1h23_5m(status).length();
     if (U_FAILURE(status)) {

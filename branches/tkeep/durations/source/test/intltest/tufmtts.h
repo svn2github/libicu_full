@@ -58,7 +58,7 @@ public:
 
     void testFormatPeriodEn();
 
-    void testTimePeriodSize();
+    void testTimePeriodLength();
 
     void testTimePeriodEquals();
 
