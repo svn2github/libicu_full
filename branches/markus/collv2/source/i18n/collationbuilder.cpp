@@ -122,6 +122,7 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
 
 CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &errorCode)
         : nfd(*Normalizer2::getNFDInstance(errorCode)),
+          fcc(*Normalizer2::getInstance(NULL, "nfc", UNORM2_COMPOSE_CONTIGUOUS, errorCode)),
           base(b),
           baseData(b->data),
           rootElements(b->data->rootElements, b->data->rootElementsLength),
@@ -433,17 +434,19 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
                               const UnicodeString &str, const UnicodeString &extension,
                               const char *&parserErrorReason, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    UnicodeString nfdPrefix;
+    UnicodeString nfdPrefix, fccPrefix;
     if(!prefix.isEmpty()) {
         nfd.normalize(prefix, nfdPrefix, errorCode);
+        fcc.normalize(prefix, fccPrefix, errorCode);
         if(U_FAILURE(errorCode)) {
-            parserErrorReason = "NFD(prefix)";
+            parserErrorReason = "normalizing the relation prefix";
             return;
         }
     }
     UnicodeString nfdString = nfd.normalize(str, errorCode);
+    UnicodeString fccString = fcc.normalize(str, errorCode);
     if(U_FAILURE(errorCode)) {
-        parserErrorReason = "NFD(string)";
+        parserErrorReason = "normalizing the relation string";
         return;
     }
     if(strength != UCOL_IDENTICAL) {
@@ -480,7 +483,7 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
     if(!extension.isEmpty()) {
         UnicodeString nfdExtension = nfd.normalize(extension, errorCode);
         if(U_FAILURE(errorCode)) {
-            parserErrorReason = "NFD(extension)";
+            parserErrorReason = "normalizing the relation extension";
             return;
         }
         cesLength = dataBuilder->getCEs(nfdExtension, ces, cesLength);
@@ -493,9 +496,10 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
     }
     // Map from the NFD input to the CEs.
     dataBuilder->add(nfdPrefix, nfdString, ces, cesLength, errorCode);
-    if(prefix != nfdPrefix || str != nfdString) {
+    if(fccPrefix != nfdPrefix || fccString != nfdString) {
         // Also right away map from the FCC input to the CEs.
-        dataBuilder->add(prefix, str, ces, cesLength, errorCode);
+        // Do not map from un-normalized strings that may not pass the FCD check.
+        dataBuilder->add(fccPrefix, fccString, ces, cesLength, errorCode);
     }
     if(U_FAILURE(errorCode)) {
         parserErrorReason = "writing collation elements";

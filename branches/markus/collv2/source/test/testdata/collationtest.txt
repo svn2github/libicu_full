@@ -533,7 +533,7 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <1 ай
 <2 х
 
-** test: no duplicate tailored CEs for different reset positions with same CEs
+** test: no duplicate tailored CEs for different reset positions with same CEs, ICU ticket 10104
 @ rules
 &t<x &ᵀ<y           # same primary weights
 &q<u &[before 1]ꝗ<v # q and ꝗ are primary adjacent
@@ -546,6 +546,67 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <3 ᵀ
 <1 y
 <1 x
+
+# Principle: Each rule builds on the state of preceding rules and ignores following rules.
+
+** test: later rule does not affect earlier reset position, ICU ticket 10105
+@ rules
+&a < u < v < w  &ov < x  &b < v
+* compare
+<1 oa
+<1 ou
+<1 x    # CE(o) followed by CE between u and w
+<1 ow
+<1 ob
+<1 ov
+
+** test: later rule does not affect earlier extension (1), ICU ticket 10105
+@ rules
+&a=x/b &v=b
+% strength=secondary
+* compare
+<1 B
+<1 c
+<1 v
+=  b
+* compare
+<1 AB
+=  x
+<1 ac
+<1 av
+=  ab
+
+** test: later rule does not affect earlier extension (2), ICU ticket 10105
+@ rules
+&a <<< c / e &g <<< e / l
+% strength=secondary
+* compare
+<1 AE
+=  c
+<2 æ
+<1 agl
+=  ae
+
+** test: later rule does not affect earlier extension (3), ICU ticket 10105
+@ rules
+&a = b / c  &d = c / e
+% strength=secondary
+* compare
+<1 AC
+=  b
+<2 aç
+<1 ade
+=  ac
+
+** test: extension contains tailored character, ICU ticket 10105
+@ rules
+&a=e &b=u/e
+* compare
+<1 a
+=  e
+<1 ba
+=  be
+=  u
 
 
 #** test: this is a description

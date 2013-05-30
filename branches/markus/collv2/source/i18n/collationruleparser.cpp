@@ -190,12 +190,11 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
         setParseError("reset without position", errorCode);
         return UCOL_DEFAULT;
     }
-    resetTailoringStrings();
+    UnicodeString str;
     if(rules->charAt(i) == 0x5b) {  // '['
-        i = parseSpecialPosition(i, errorCode);
+        i = parseSpecialPosition(i, str, errorCode);
     } else {
-        i = parseTailoringString(i, errorCode);
-        fcc.normalize(raw, str, errorCode);
+        i = parseTailoringString(i, str, errorCode);
     }
     sink->addReset(resetStrength, str, errorReason, errorCode);
     if(U_FAILURE(errorCode)) { setErrorContext(); }
@@ -256,20 +255,18 @@ CollationRuleParser::parseRelationStrings(int32_t strength, int32_t i, UErrorCod
     // Parse
     //     prefix | str / extension
     // where prefix and extension are optional.
-    resetTailoringStrings();
-    i = parseTailoringString(i, errorCode);
+    UnicodeString prefix, str, extension;
+    i = parseTailoringString(i, str, errorCode);
     if(U_FAILURE(errorCode)) { return; }
     UChar next = (i < rules->length()) ? rules->charAt(i) : 0;
     if(next == 0x7c) {  // '|' separates the context prefix from the string.
-        fcc.normalize(raw, prefix, errorCode);
-        i = parseTailoringString(i + 1, errorCode);
+        prefix = str;
+        i = parseTailoringString(i + 1, str, errorCode);
         if(U_FAILURE(errorCode)) { return; }
         next = (i < rules->length()) ? rules->charAt(i) : 0;
     }
-    fcc.normalize(raw, str, errorCode);
     if(next == 0x2f) {  // '/' separates the string from the extension.
-        i = parseTailoringString(i + 1, errorCode);
-        fcc.normalize(raw, extension, errorCode);
+        i = parseTailoringString(i + 1, extension, errorCode);
     }
     if(!prefix.isEmpty()) {
         UChar32 prefix0 = prefix.char32At(0);
@@ -287,8 +284,8 @@ CollationRuleParser::parseRelationStrings(int32_t strength, int32_t i, UErrorCod
 
 void
 CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorCode &errorCode) {
-    resetTailoringStrings();
-    i = parseString(i, TRUE, errorCode);
+    UnicodeString empty, raw;
+    i = parseString(i, TRUE, raw, errorCode);
     if(U_FAILURE(errorCode)) { return; }
     UChar32 prev = -1;
     for(int32_t j = 0; j < raw.length() && U_SUCCESS(errorCode);) {
@@ -298,8 +295,7 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
                 setParseError("starred-relation string is not all NFD-inert", errorCode);
                 return;
             }
-            str.setTo(c);
-            sink->addRelation(strength, prefix, str, extension, errorReason, errorCode);
+            sink->addRelation(strength, empty, UnicodeString(c), empty, errorReason, errorCode);
             j += U16_LENGTH(c);
             prev = c;
         } else {
@@ -323,8 +319,7 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
             j += U16_LENGTH(c);
             // range prev-c
             while(++prev <= c) {
-                str.setTo(prev);
-                sink->addRelation(strength, prefix, str, extension, errorReason, errorCode);
+                sink->addRelation(strength, empty, UnicodeString(prev), empty, errorReason, errorCode);
             }
             prev = -1;
         }
@@ -334,12 +329,13 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
 }
 
 int32_t
-CollationRuleParser::parseTailoringString(int32_t i, UErrorCode &errorCode) {
-    return parseString(i, FALSE, errorCode);
+CollationRuleParser::parseTailoringString(int32_t i, UnicodeString &raw, UErrorCode &errorCode) {
+    return parseString(i, FALSE, raw, errorCode);
 }
 
 int32_t
-CollationRuleParser::parseString(int32_t i, UBool allowDash, UErrorCode &errorCode) {
+CollationRuleParser::parseString(int32_t i, UBool allowDash, UnicodeString &raw,
+                                 UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return i; }
     raw.remove();
     for(i = skipWhiteSpace(i); i < rules->length();) {
@@ -434,9 +430,10 @@ static const char *const positions[] = {
 }  // namespace
 
 int32_t
-CollationRuleParser::parseSpecialPosition(int32_t i, UErrorCode &errorCode) {
+CollationRuleParser::parseSpecialPosition(int32_t i, UnicodeString &str, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
-    int32_t j = readWords(i + 1);
+    UnicodeString raw;
+    int32_t j = readWords(i + 1, raw);
     if(j > i && rules->charAt(j) == 0x5d && !raw.isEmpty()) {  // words end with ]
         ++j;
         for(int32_t pos = 0; pos < LENGTHOF(positions); ++pos) {
@@ -461,8 +458,9 @@ CollationRuleParser::parseSpecialPosition(int32_t i, UErrorCode &errorCode) {
 void
 CollationRuleParser::parseSetting(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
+    UnicodeString raw;
     int32_t i = ruleIndex + 1;
-    int32_t j = readWords(i);
+    int32_t j = readWords(i, raw);
     if(j <= i || raw.isEmpty()) {
         setParseError("expected a setting/option at '['", errorCode);
     }
@@ -470,7 +468,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
         ++j;
         if(raw.startsWith(UNICODE_STRING_SIMPLE("reorder")) &&
                 (raw.length() == 7 || raw.charAt(7) == 0x20)) {
-            parseReordering(errorCode);
+            parseReordering(raw, errorCode);
             ruleIndex = j;
             return;
         }
@@ -616,7 +614,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
         }
     } else if(rules->charAt(j) == 0x5b) {  // words end with [
         UnicodeSet set;
-        j = parseUnicodeSet(j, set, errorCode);
+        j = parseUnicodeSet(raw, j, set, errorCode);
         if(U_FAILURE(errorCode)) { return; }
         if(raw == UNICODE_STRING_SIMPLE("optimize")) {
             sink->optimize(set, errorReason, errorCode);
@@ -634,7 +632,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
 }
 
 void
-CollationRuleParser::parseReordering(UErrorCode &errorCode) {
+CollationRuleParser::parseReordering(const UnicodeString &raw, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     int32_t i = 7;  // after "reorder"
     if(i == raw.length()) {
@@ -713,7 +711,8 @@ CollationRuleParser::getOnOffValue(const UnicodeString &s) {
 }
 
 int32_t
-CollationRuleParser::parseUnicodeSet(int32_t i, UnicodeSet &set, UErrorCode &errorCode) {
+CollationRuleParser::parseUnicodeSet(const UnicodeString &raw, int32_t i, UnicodeSet &set,
+                                     UErrorCode &errorCode) {
     // Collect a UnicodeSet pattern between a balanced pair of [brackets].
     int32_t level = 0;
     int32_t j = i;
@@ -744,7 +743,7 @@ CollationRuleParser::parseUnicodeSet(int32_t i, UnicodeSet &set, UErrorCode &err
 }
 
 int32_t
-CollationRuleParser::readWords(int32_t i) {
+CollationRuleParser::readWords(int32_t i, UnicodeString &raw) const {
     static const UChar sp = 0x20;
     raw.remove();
     i = skipWhiteSpace(i);
@@ -782,13 +781,6 @@ CollationRuleParser::skipComment(int32_t i) const {
         }
     }
     return i;
-}
-
-void
-CollationRuleParser::resetTailoringStrings() {
-    prefix.remove();
-    str.remove();
-    extension.remove();
 }
 
 void

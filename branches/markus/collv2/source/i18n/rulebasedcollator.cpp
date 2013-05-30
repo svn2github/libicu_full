@@ -136,9 +136,6 @@ RuleBasedCollator2::RuleBasedCollator2(const CollationTailoring *t)
 }
 
 RuleBasedCollator2::~RuleBasedCollator2() {
-    if(tailoring != NULL) {
-        tailoring->removeRef();
-    }
     if(ownedSettings != NULL) {
         const CollationSettings &defaultSettings = getDefaultSettings();
         if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
@@ -148,6 +145,9 @@ RuleBasedCollator2::~RuleBasedCollator2() {
             uprv_free(const_cast<int32_t *>(ownedSettings->reorderCodes));
         }
         delete ownedSettings;
+    }
+    if(tailoring != NULL) {
+        tailoring->removeRef();
     }
 }
 

@@ -147,23 +147,22 @@ private:
     int32_t parseRelationOperator(UErrorCode &errorCode);
     void parseRelationStrings(int32_t strength, int32_t i, UErrorCode &errorCode);
     void parseStarredCharacters(int32_t strength, int32_t i, UErrorCode &errorCode);
-    int32_t parseTailoringString(int32_t i, UErrorCode &errorCode);
-    int32_t parseString(int32_t i, UBool allowDash, UErrorCode &errorCode);
+    int32_t parseTailoringString(int32_t i, UnicodeString &raw, UErrorCode &errorCode);
+    int32_t parseString(int32_t i, UBool allowDash, UnicodeString &raw, UErrorCode &errorCode);
 
     /**
      * Sets str to a contraction of U+FFFE and (U+2800 + Position).
      * @return rule index after the special reset position
      */
-    int32_t parseSpecialPosition(int32_t i, UErrorCode &errorCode);
+    int32_t parseSpecialPosition(int32_t i, UnicodeString &str, UErrorCode &errorCode);
     void parseSetting(UErrorCode &errorCode);
-    void parseReordering(UErrorCode &errorCode);
+    void parseReordering(const UnicodeString &raw, UErrorCode &errorCode);
     static UColAttributeValue getOnOffValue(const UnicodeString &s);
 
-    int32_t parseUnicodeSet(int32_t i, UnicodeSet &set, UErrorCode &errorCode);
-    int32_t readWords(int32_t i);
+    int32_t parseUnicodeSet(const UnicodeString &raw, int32_t i, UnicodeSet &set,
+                            UErrorCode &errorCode);
+    int32_t readWords(int32_t i, UnicodeString &raw) const;
     int32_t skipComment(int32_t i) const;
-
-    void resetTailoringStrings();
 
     void setParseError(const char *reason, UErrorCode &errorCode);
     void setErrorContext();
@@ -178,7 +177,7 @@ private:
     const Normalizer2 &nfd, &fcc;
 
     const UnicodeString *rules;
-    const CollationData *baseData;
+    const CollationData *const baseData;
     CollationTailoring *tailoring;
     CollationSettings *settings;
     UParseError *parseError;
@@ -188,15 +187,6 @@ private:
     Importer *importer;
 
     int32_t ruleIndex;
-
-    UnicodeString raw;
-    // Tailoring strings are normalized to FCC:
-    // We need a canonical form so that we can find duplicates,
-    // and we want to tailor only strings that pass the FCD test.
-    // FCD itself is not a unique form.
-    // FCC also preserves most composites which helps with storing
-    // tokenized rules in a compact form.
-    UnicodeString prefix, str, extension;
 };
 
 U_NAMESPACE_END

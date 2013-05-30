@@ -249,7 +249,7 @@ private:
         return (node & 0xfffffffff00000ff) | nodeFromNextIndex(next);
     }
 
-    const Normalizer2 &nfd;
+    const Normalizer2 &nfd, &fcc;
 
     const CollationTailoring *base;
     const CollationData *baseData;
