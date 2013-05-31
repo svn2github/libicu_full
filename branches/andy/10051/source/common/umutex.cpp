@@ -286,3 +286,29 @@ umtx_storeRelease(atomic_int32_t &var, int32_t val) {
 
 #endif
 
+//--------------------------------------------------------------------------
+//
+//  Deprecated functions for setting user mutexes.
+//
+//--------------------------------------------------------------------------
+
+U_DEPRECATED void U_EXPORT2 
+u_setMutexFunctions(const void * /*context */, UMtxInitFn *, UMtxFn *, 
+                    UMtxFn *,  UMtxFn *, UErrorCode *status) {
+    if (U_SUCCESS(*status)) {
+        *status = U_UNSUPPORTED_ERROR;
+    }
+    return;
+}
+
+
+
+U_DEPRECATED void U_EXPORT2
+u_setAtomicIncDecFunctions(const void * /*context */, UMtxAtomicFn *, UMtxAtomicFn *,
+                           UErrorCode *status) {
+    if (U_SUCCESS(*status)) {
+        *status = U_UNSUPPORTED_ERROR;
+    }
+    return;
+}
+

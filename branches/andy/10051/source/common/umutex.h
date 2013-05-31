@@ -62,6 +62,7 @@ inline int32_t umtx_atomic_dec(atomic_int32_t *var) {
      
 
 #elif U_PLATFORM_HAS_WIN32_API
+
 // MSVC compiler. Reads and writes of volatile variables have
 //                acquire and release memory semantics, respectively.
 //                This is a Microsoft extension, not standard C++ behavior.
