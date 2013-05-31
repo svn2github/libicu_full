@@ -262,6 +262,8 @@ public:
      * @param status    output param set to success/failure code on exit
      * @return          a date time interval formatter which the caller owns.
      * @stable ICU 4.0
+	 * sample code
+	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtPreDefined
      */
 
     static DateIntervalFormat* U_EXPORT2 createInstance(
@@ -283,7 +285,7 @@ public:
      * @param status    output param set to success/failure code on exit
      * @return          a date time interval formatter which the caller owns.
      * @stable ICU 4.0
-     */
+	 */
     static DateIntervalFormat* U_EXPORT2 createInstance(
                                               const UnicodeString& skeleton,
                                               const DateIntervalInfo& dtitvinf,
@@ -323,6 +325,8 @@ public:
      * @param status    output param set to success/failure code on exit
      * @return          a date time interval formatter which the caller owns.
      * @stable ICU 4.0
+	 * sample code
+	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtCustomized
      */
     static DateIntervalFormat* U_EXPORT2 createInstance(
                                               const UnicodeString& skeleton,

@@ -1,13 +1,12 @@
 ﻿
 #include <iostream>
-
 #include "unicode/dtitvfmt.h"
 #include "unicode/ustdio.h"
 
 using namespace std;
 
 static void dtitvfmtPreDefined() {
-	   
+	//! [dtitvfmtPreDefined]   
 	u_printf("===============================================================================\n");
 	u_printf(" dtitvfmtPreDefined()\n");
     u_printf("\n");
@@ -65,8 +64,6 @@ static void dtitvfmtPreDefined() {
          i++;
         }
 	u_fclose(out);
-}
-
 /** output of the sample code:
     *********************************************************************************************************************************************************
      Skeleton       from                               to                                 Date Interval in en_US             Date Interval in Ja
@@ -75,9 +72,11 @@ static void dtitvfmtPreDefined() {
      jm             2008-11-10 10:10:10			       2008-11-10 15:10:10			      10:10 AM – 3:10 PM                 10:10～15:10
 
     *********************************************************************************************************************************************************/
+	//! [dtitvfmtPreDefined]
+}
 
 static void dtitvfmtCustomized() {
-	    
+	//! [dtitvfmtCustomized]    
 	u_printf("===============================================================================\n");
 	u_printf("\n");
 	u_printf(" dtitvfmtCustomized()\n");
@@ -132,7 +131,6 @@ static void dtitvfmtCustomized() {
             }
        }
 	u_fclose(out);
-}
 /** output of the sample code:
     *********************************************************************************************************************************************************
      Skeleton       from                      to                        Date Interval in en_US                       Date Interval in Ja
@@ -141,8 +139,12 @@ static void dtitvfmtCustomized() {
 	 Hm             2007-10-10 10:10:10       2007-11-10 10:10:10       10/10/2007, 10:10 ~~~ 11/10/2007, 10:10      2007/10/10 10:10 ~~~ 2007/11/10 10:10
      Hm             2007-11-10 10:10:10       2007-11-10 22:10:10       2007 Nov 10 10:10 ~ 22:10                    2007 11月 10 10:10 ~ 22:10
     *********************************************************************************************************************************************************/
-void main (int argc, char* argv[])
+	//! [dtitvfmtCustomized]
+}
+
+int main (int argc, char* argv[])
 {
 	dtitvfmtPreDefined();
 	dtitvfmtCustomized();
+	return 0;
 }

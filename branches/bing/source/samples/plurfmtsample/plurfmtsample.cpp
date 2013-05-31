@@ -6,7 +6,7 @@
 
 using namespace std;
 static void PluralFormatExample() {
-	   
+	//! [PluralFormatExample]   
 	u_printf("=============================================================================\n");
 	u_printf(" PluralFormatExample()\n");
     u_printf("\n");
@@ -77,13 +77,14 @@ static void PluralFormatExample() {
         102             102 dogs        102 psa
 
        *******************************************************************/
-    system("pause");
-	delete msgfmtEn;
+ 	delete msgfmtEn;
 	delete msgfmtSl;
 	delete altMsgfmtEn;
 	delete altMsgfmtSl;
+	//! [PluralFormatExample]
 }
-void main (int argc, char* argv[])
+int main (int argc, char* argv[])
 {
 	PluralFormatExample();
+	return 0;
 }
