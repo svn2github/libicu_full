@@ -27,6 +27,7 @@ static void getBestPatternExample() {
         UnicodeString("MMMMd"), // full name of month + day of the month, i.e., October 25
         UnicodeString("hhmm"),  // 12-hour-cycle format, i.e., 1:32 PM
         UnicodeString("jjmm"), // preferred hour format for the given locale, i.e., 24-hour-cycle format for fr_FR
+		0,
 	};
 
 	Locale locales[] = {
@@ -44,7 +45,7 @@ static void getBestPatternExample() {
 	cal->set (1999,9,13,23,58,59);
 	UDate date = cal->getTime(status);
 	u_fprintf(f, "%-20S%-20S%-20S%-20S\n", UnicodeString("Skeleton").getTerminatedBuffer(),UnicodeString("en_US").getTerminatedBuffer(),UnicodeString("fr_FR").getTerminatedBuffer(),UnicodeString("zh_CN").getTerminatedBuffer());
-	for (int i=0;skeletons[i].length()>0;i++) {
+	for (int i=0;skeletons[i]!=NULL;i++) {
 		u_fprintf(f, "%-20S",skeletons[i].getTerminatedBuffer());
 		for (int j=0;j<sizeof(locales)/sizeof(locales[0]);j++) {
 			// create a DateTimePatternGenerator instance for given locale
