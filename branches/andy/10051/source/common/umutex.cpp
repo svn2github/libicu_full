@@ -109,9 +109,9 @@ umtx_lock(UMutex *mutex) {
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    CRITICAL_SECTION *cs = reinterpret_cast<CRITICAL_SECTION *>(mutex->fCS);
+    CRITICAL_SECTION *cs = &mutex->fCS;
     umtx_initOnce(mutex->fInitOnce, winMutexInit, cs);
-    EnterCriticalSection((CRITICAL_SECTION *)cs);
+    EnterCriticalSection(cs);
 }
 
 U_CAPI void  U_EXPORT2
@@ -120,7 +120,7 @@ umtx_unlock(UMutex* mutex)
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
-    LeaveCriticalSection((CRITICAL_SECTION *)mutex->fCS);
+    LeaveCriticalSection(&mutex->fCS);
 }
 
 #elif U_PLATFORM_IMPLEMENTS_POSIX

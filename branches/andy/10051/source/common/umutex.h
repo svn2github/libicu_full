@@ -76,10 +76,10 @@ inline int32_t umtx_atomic_dec(atomic_int32_t *var) {
 # define NOSERVICE
 # define NOIME
 # define NOMCX
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
+# ifndef NOMINMAX
+# define NOMINMAX
+# endif
+# include <windows.h>
 
 typedef volatile LONG atomic_int32_t;
 #define ATOMIC_INT32_T_INITIALIZER(val) val
@@ -281,31 +281,29 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
 
 
 /* For CRITICAL_SECTION */
-#if 0  
-/* TODO(andy): Why doesn't windows.h compile in all files? It does in some.
- *             The intent was to include windows.h here, and have struct UMutex
- *             have an embedded CRITICAL_SECTION when building on Windows.
- *             The workaround is to put some char[] storage in UMutex instead,
- *             avoiding the need to include windows.h everwhere this header is included.
+
+/*
+ *   Note: there is an earlier include of windows.h in this file, but it is in 
+ *         different conditionals.
+ *         This one is needed if we are using C++11 for atomic ops, but
+ *         win32 APIs for Critical Sections.
  */
+ 
 # define WIN32_LEAN_AND_MEAN
 # define VC_EXTRALEAN
 # define NOUSER
 # define NOSERVICE
 # define NOIME
 # define NOMCX
+# ifndef NOMINMAX
 # define NOMINMAX
+# endif
 # include <windows.h>
-#endif  /* 0 */
 
-#define U_WINDOWS_CRIT_SEC_SIZE 64
 
 typedef struct UMutex {
     UInitOnce         fInitOnce;
-    /* CRITICAL_SECTION  fCS; */  /* See note above. Unresolved problems with including
-                                   * Windows.h, which would allow using CRITICAL_SECTION
-                                   * directly here. */
-    char              fCS[U_WINDOWS_CRIT_SEC_SIZE];
+    CRITICAL_SECTION  fCS;
 } UMutex;
 
 /* Initializer for a static UMUTEX. Deliberately contains no value for the
