@@ -31,9 +31,9 @@ U_NAMESPACE_BEGIN
 class U_I18N_API UTF8CollationIterator : public CollationIterator {
 public:
     UTF8CollationIterator(const CollationData *d, UBool numeric,
-                          const uint8_t *s, int32_t len)
+                          const uint8_t *s, int32_t p, int32_t len)
             : CollationIterator(d, numeric),
-              u8(s), pos(0), length(len) {}
+              u8(s), pos(p), length(len) {}
 
     virtual void resetToStart();
 
@@ -82,9 +82,9 @@ protected:
 class U_I18N_API FCDUTF8CollationIterator : public UTF8CollationIterator {
 public:
     FCDUTF8CollationIterator(const CollationData *data, UBool numeric,
-                             const uint8_t *s, int32_t len)
-            : UTF8CollationIterator(data, numeric, s, len),
-              state(CHECK_FWD), start(0),
+                             const uint8_t *s, int32_t p, int32_t len)
+            : UTF8CollationIterator(data, numeric, s, p, len),
+              state(CHECK_FWD), start(p),
               nfcImpl(data->nfcImpl) {}
 
     virtual void resetToStart();

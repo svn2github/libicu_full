@@ -608,6 +608,25 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  be
 =  u
 
+** test: add mappings around characters with root context
+@ rules
+&z=·h   # middle dot has a prefix mapping in the CLDR root
+&n=ә|и  # и (U+0438) has contractions in the root
+* compare
+<1 l
+<2 l·   # root mapping for l|· still works
+<1 z
+=  ·h
+* compare
+<1 и
+<3 И
+<1 и\u0306  # root mapping for й=и\u0306 still works
+=  й
+* compare
+<1 әn
+=  әи
+<1 әo
+
 
 #** test: this is a description
 #@ rawbase

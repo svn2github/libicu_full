@@ -596,11 +596,13 @@ CollationDataBuilder::copyFromBaseCE32(UChar32 c, uint32_t ce32, UErrorCode &err
             cond = getConditionalCE32(index);
         }
         ce32 = Collation::makeSpecialCE32(Collation::CONTRACTION_TAG, head.next);
+        contextChars.add(c);
     } else if(tag == Collation::CONTRACTION_TAG) {
         ConditionalCE32 head(UnicodeString(), 0);
         UnicodeString context((UChar)0);
         copyContractionsFromBaseCE32(context, c, ce32, &head, errorCode);
         ce32 = Collation::makeSpecialCE32(Collation::CONTRACTION_TAG, head.next);
+        contextChars.add(c);
     } else {
         U_ASSERT(FALSE);  // require ce32 == base->getFinalCE32(ce32)
     }
@@ -634,6 +636,8 @@ CollationDataBuilder::copyContractionsFromBaseCE32(UnicodeString &context, UChar
         ce32 = copyFromBaseCE32(c, (uint32_t)suffixes.getValue(), errorCode);
         cond->next = index = addConditionalCE32(context, ce32, errorCode);
         if(U_FAILURE(errorCode)) { return 0; }
+        // No need to update the unsafeBackwardSet because the tailoring set
+        // is already a copy of the base set.
         cond = getConditionalCE32(index);
         context.truncate(suffixStart);
     }
@@ -651,6 +655,9 @@ public:
     UBool copyRangeCE32(UChar32 start, UChar32 end, uint32_t ce32) {
         ce32 = copyCE32(ce32);
         utrie2_setRange32(dest.trie, start, end, ce32, TRUE, &errorCode);
+        if(Collation::isContractionCE32(ce32)) {
+            dest.contextChars.add(start, end);
+        }
         return U_SUCCESS(errorCode);
     }
 
@@ -735,6 +742,8 @@ public:
                     ConditionalCE32 *prevDestCond = dest.getConditionalCE32(destIndex);
                     destIndex = dest.addConditionalCE32(
                             cond->context, copyCE32(cond->ce32), errorCode);
+                    int32_t suffixStart = cond->context.charAt(0) + 1;
+                    dest.unsafeBackwardSet.addAll(cond->context.tempSubString(suffixStart));
                     prevDestCond->next = destIndex;
                 }
             } else {
@@ -775,8 +784,9 @@ CollationDataBuilder::copyFrom(const CollationDataBuilder &src, const CEModifier
     CopyHelper helper(src, *this, modifier, errorCode);
     utrie2_enum(src.trie, NULL, enumRangeForCopy, &helper);
     errorCode = helper.errorCode;
-    contextChars.addAll(src.contextChars);
-    unsafeBackwardSet.addAll(src.unsafeBackwardSet);
+    // Update the contextChars and the unsafeBackwardSet while copying,
+    // in case a character had conditional mappings in the source builder
+    // and they were removed later.
     modified |= src.modified;
 }
 
@@ -916,7 +926,7 @@ CollationDataBuilder::buildMappings(CollationData &data, UErrorCode &errorCode) 
     // if any of its 1024 associated supplementary code points is "unsafe".
     UChar32 c = 0x10000;
     for(UChar lead = 0xd800; lead < 0xdc00; ++lead, c += 0x400) {
-        if(!unsafeBackwardSet.containsNone(c, c + 0x3ff)) {
+        if(unsafeBackwardSet.containsSome(c, c + 0x3ff)) {
             unsafeBackwardSet.add(lead);
         }
     }

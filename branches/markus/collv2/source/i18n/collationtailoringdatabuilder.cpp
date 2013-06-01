@@ -54,7 +54,9 @@ CollationTailoringDataBuilder::init(const CollationData *b, UErrorCode &errorCod
     // For a tailoring, the default is to fall back to the base.
     trie = utrie2_open(Collation::MIN_SPECIAL_CE32, Collation::FFFD_CE32, &errorCode);
 
-    unsafeBackwardSet = *b->unsafeBackwardSet;
+    // Copy the set contents but don't copy/clone the set as a whole because
+    // that would copy the isFrozen state too.
+    unsafeBackwardSet.addAll(*b->unsafeBackwardSet);
 
     if(U_FAILURE(errorCode)) { return; }
     // TODO

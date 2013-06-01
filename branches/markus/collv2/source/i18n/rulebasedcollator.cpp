@@ -402,11 +402,11 @@ RuleBasedCollator2::setVariableTop(const UChar *varTop, int32_t len, UErrorCode 
     UBool numeric = settings->isNumeric();
     int64_t ce1, ce2;
     if(settings->dontCheckFCD()) {
-        UTF16CollationIterator ci(data, numeric, varTop, varTop + len);
+        UTF16CollationIterator ci(data, numeric, varTop, varTop, varTop + len);
         ce1 = ci.nextCE(errorCode);
         ce2 = ci.nextCE(errorCode);
     } else {
-        FCDUTF16CollationIterator ci(data, numeric, varTop, varTop + len);
+        FCDUTF16CollationIterator ci(data, numeric, varTop, varTop, varTop + len);
         ce1 = ci.nextCE(errorCode);
         ce2 = ci.nextCE(errorCode);
     }
@@ -745,7 +745,7 @@ protected:
 class FCDUTF8NFDIterator : public NFDIterator {
 public:
     FCDUTF8NFDIterator(const CollationData *data, const uint8_t *text, int32_t textLength)
-            : u8ci(data, FALSE, text, textLength) {}
+            : u8ci(data, FALSE, text, 0, textLength) {}
 protected:
     virtual UChar32 nextRawCodePoint() {
         UErrorCode errorCode = U_ZERO_ERROR;
@@ -861,19 +861,24 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
         } else if(equalPrefixLength == rightLength) {
             return UCOL_GREATER;
         }
-        left += equalPrefixLength;
-        right += equalPrefixLength;
+        // Pass the actual start of each string into the CollationIterators,
+        // plus the equalPrefixLength position,
+        // so that prefix matches back into the equal prefix work.
     }
 
     UBool numeric = settings->isNumeric();
     UCollationResult result;
     if(settings->dontCheckFCD()) {
-        UTF16CollationIterator leftIter(data, numeric, left, leftLimit);
-        UTF16CollationIterator rightIter(data, numeric, right, rightLimit);
+        UTF16CollationIterator leftIter(data, numeric,
+                                        left, left + equalPrefixLength, leftLimit);
+        UTF16CollationIterator rightIter(data, numeric,
+                                         right, right + equalPrefixLength, rightLimit);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     } else {
-        FCDUTF16CollationIterator leftIter(data, numeric, left, leftLimit);
-        FCDUTF16CollationIterator rightIter(data, numeric, right, rightLimit);
+        FCDUTF16CollationIterator leftIter(data, numeric,
+                                           left, left + equalPrefixLength, leftLimit);
+        FCDUTF16CollationIterator rightIter(data, numeric,
+                                            right, right + equalPrefixLength, rightLimit);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     }
     if(result != UCOL_EQUAL || settings->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
@@ -884,6 +889,8 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
 
     // Compare identical level.
     const Normalizer2Impl &nfcImpl = data->nfcImpl;
+    left += equalPrefixLength;
+    right += equalPrefixLength;
     if(settings->dontCheckFCD()) {
         UTF16NFDIterator leftIter(left, leftLimit);
         UTF16NFDIterator rightIter(right, rightLimit);
@@ -943,7 +950,7 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
         if(!unsafe && equalPrefixLength != rightLength) {
             int32_t i = equalPrefixLength;
             UChar32 c;
-            U8_NEXT_OR_FFFD(left, i, leftLength, c);
+            U8_NEXT_OR_FFFD(right, i, rightLength, c);
             unsafe = data->isUnsafeBackward(c);
         }
         if(unsafe) {
@@ -959,23 +966,20 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
         } else if(equalPrefixLength == rightLength) {
             return UCOL_GREATER;
         }
-        left += equalPrefixLength;
-        right += equalPrefixLength;
-        if(leftLength > 0) {
-            leftLength -= equalPrefixLength;
-            rightLength -= equalPrefixLength;
-        }
+        // Pass the actual start of each string into the CollationIterators,
+        // plus the equalPrefixLength position,
+        // so that prefix matches back into the equal prefix work.
     }
 
     UBool numeric = settings->isNumeric();
     UCollationResult result;
     if(settings->dontCheckFCD()) {
-        UTF8CollationIterator leftIter(data, numeric, left, leftLength);
-        UTF8CollationIterator rightIter(data, numeric, right, rightLength);
+        UTF8CollationIterator leftIter(data, numeric, left, equalPrefixLength, leftLength);
+        UTF8CollationIterator rightIter(data, numeric, right, equalPrefixLength, rightLength);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     } else {
-        FCDUTF8CollationIterator leftIter(data, numeric, left, leftLength);
-        FCDUTF8CollationIterator rightIter(data, numeric, right, rightLength);
+        FCDUTF8CollationIterator leftIter(data, numeric, left, equalPrefixLength, leftLength);
+        FCDUTF8CollationIterator rightIter(data, numeric, right, equalPrefixLength, rightLength);
         result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
     }
     if(result != UCOL_EQUAL || settings->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
@@ -986,6 +990,12 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
 
     // Compare identical level.
     const Normalizer2Impl &nfcImpl = data->nfcImpl;
+    left += equalPrefixLength;
+    right += equalPrefixLength;
+    if(leftLength > 0) {
+        leftLength -= equalPrefixLength;
+        rightLength -= equalPrefixLength;
+    }
     if(settings->dontCheckFCD()) {
         UTF8NFDIterator leftIter(left, leftLength);
         UTF8NFDIterator rightIter(right, rightLength);
@@ -1125,12 +1135,12 @@ RuleBasedCollator2::writeSortKey(const UChar *s, int32_t length,
     UBool numeric = settings->isNumeric();
     CollationKeys::LevelCallback callback;
     if(settings->dontCheckFCD()) {
-        UTF16CollationIterator iter(data, numeric, s, limit);
+        UTF16CollationIterator iter(data, numeric, s, s, limit);
         CollationKeys::writeSortKeyUpToQuaternary(iter, data->compressibleBytes, *settings,
                                                   sink, Collation::PRIMARY_LEVEL,
                                                   callback, errorCode);
     } else {
-        FCDUTF16CollationIterator iter(data, numeric, s, limit);
+        FCDUTF16CollationIterator iter(data, numeric, s, s, limit);
         CollationKeys::writeSortKeyUpToQuaternary(iter, data->compressibleBytes, *settings,
                                                   sink, Collation::PRIMARY_LEVEL,
                                                   callback, errorCode);

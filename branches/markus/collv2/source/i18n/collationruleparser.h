@@ -174,7 +174,7 @@ private:
     static UBool isSyntaxChar(UChar32 c);
     int32_t skipWhiteSpace(int32_t i) const;
 
-    const Normalizer2 &nfd, &fcc;
+    const Normalizer2 &nfd, &nfc;
 
     const UnicodeString *rules;
     const CollationData *const baseData;

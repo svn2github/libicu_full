@@ -54,7 +54,7 @@ CollationRuleParser::Importer::~Importer() {}
 
 CollationRuleParser::CollationRuleParser(const CollationData *base, UErrorCode &errorCode)
         : nfd(*Normalizer2::getNFDInstance(errorCode)),
-          fcc(*Normalizer2::getInstance(NULL, "nfc", UNORM2_COMPOSE_CONTIGUOUS, errorCode)),
+          nfc(*Normalizer2::getNFCInstance(errorCode)),
           rules(NULL), baseData(base), settings(NULL),
           parseError(NULL), errorReason(NULL),
           sink(NULL), importer(NULL),
@@ -271,7 +271,7 @@ CollationRuleParser::parseRelationStrings(int32_t strength, int32_t i, UErrorCod
     if(!prefix.isEmpty()) {
         UChar32 prefix0 = prefix.char32At(0);
         UChar32 c = str.char32At(0);
-        if(!fcc.hasBoundaryBefore(prefix0) || !fcc.hasBoundaryBefore(c)) {
+        if(!nfc.hasBoundaryBefore(prefix0) || !nfc.hasBoundaryBefore(c)) {
             setParseError("in 'prefix|str', prefix and str must each start with an NFC boundary",
                           errorCode);
             return;
