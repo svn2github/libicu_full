@@ -386,16 +386,21 @@ CollationDataBuilder::addCE32(const UnicodeString &prefix, const UnicodeString &
 uint32_t
 CollationDataBuilder::encodeOneCEAsCE32(int64_t ce) {
     uint32_t p = (uint32_t)(ce >> 32);
+    uint32_t lower32 = (uint32_t)ce;
     uint32_t t = (uint32_t)(ce & 0xffff);
     if((ce & 0xffff00ff00ff) == 0 && t > 0x100) {
         // normal form ppppsstt
-        return p | ((uint32_t)(ce >> 16) & 0xff00u) | (t >> 8);
+        return p | (lower32 >> 16) | (t >> 8);
     } else if((ce & 0xffffffffff) == Collation::COMMON_SEC_AND_TER_CE) {
         // long-primary form pppppp01
         return p | 1u;
-    } else if(p == 0 && (t & 0xff) == 0) {
+    } else if(p == 0 && (t & 0xff) == 0 && (lower32 < Collation::MIN_SPECIAL_CE32)) {
         // long-secondary form sssstt00
-        return (uint32_t)ce;
+        // Must be < MIN_SPECIAL_CE32 so that it does not look like a special CE32.
+        // TODO: If the addition of the long-secondary form costs any performance,
+        // for probably a small data size improvement,
+        // then remove it and just test t!=0 for the normal form vs. long-primary.
+        return lower32;
     }
     return Collation::UNASSIGNED_CE32;
 }

@@ -828,6 +828,7 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                             tIsTailored = TRUE;
                         }
                         t = tertiaries.nextWeight();
+                        U_ASSERT(t != 0xffffffff);
                     } else {
                         t = weight16FromNode(node);
                         tIsTailored = FALSE;
@@ -874,6 +875,7 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                                 sIsTailored = TRUE;
                             }
                             s = secondaries.nextWeight();
+                            U_ASSERT(s != 0xffffffff);
                         } else {
                             s = weight16FromNode(node);
                             sIsTailored = FALSE;
@@ -902,6 +904,7 @@ CollationBuilder::makeTailoredCEs(UErrorCode &errorCode) {
                             pIsTailored = TRUE;
                         }
                         p = primaries.nextWeight();
+                        U_ASSERT(p != 0xffffffff);
                         s = Collation::COMMON_WEIGHT16;
                         sIsTailored = FALSE;
                     }

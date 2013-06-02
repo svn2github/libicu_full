@@ -608,7 +608,24 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  be
 =  u
 
-** test: add mappings around characters with root context
+** test: add simple mappings for characters with root context
+@ rules
+&z=·    # middle dot has a prefix mapping in the CLDR root
+&n=и    # и (U+0438) has contractions in the root
+* compare
+<1 l
+<2 l·   # root mapping for l|· still works
+<1 z
+=  ·
+* compare
+<1 n
+=  и
+<1 И
+<1 и\u0306  # root mapping for й=и\u0306 still works
+=  й
+<3 Й
+
+** test: add context mappings around characters with root context
 @ rules
 &z=·h   # middle dot has a prefix mapping in the CLDR root
 &n=ә|и  # и (U+0438) has contractions in the root
@@ -626,6 +643,36 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <1 әn
 =  әи
 <1 әo
+
+** test: many secondary CEs at the top of their range
+@ rules
+&[last primary ignorable]<<*\u2801-\u28ff
+* compare
+<2 \u0308
+<2 \u2801
+<2 \u2802
+<2 \u2803
+<2 \u2804
+<2 \u28fd
+<2 \u28fe
+<2 \u28ff
+<1 \x20
+
+** test: many tertiary CEs at the top of their range
+@ rules
+&[last secondary ignorable]<<<*a-l  # TODO: make this a-z when the artificial tailorings of FFF1 and FFF2 are gone
+* compare
+<3 a
+<3 b
+<3 c
+<3 d
+# e..w
+<3 k
+<3 l
+# <3 x  -- see TODO above
+# <3 y
+# <3 z
+<2 \u0308
 
 
 #** test: this is a description
