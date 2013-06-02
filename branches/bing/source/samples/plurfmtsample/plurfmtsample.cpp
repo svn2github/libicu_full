@@ -6,7 +6,7 @@
 
 using namespace std;
 static void PluralFormatExample() {
-	//! [PluralFormatExample]   
+	  
 	u_printf("=============================================================================\n");
 	u_printf(" PluralFormatExample()\n");
     u_printf("\n");
@@ -14,8 +14,8 @@ static void PluralFormatExample() {
     u_printf(" English, Slovenian\n");
     u_printf("=============================================================================\n");
 	
+	//! [PluralFormatExample] 
 	UErrorCode status =U_ZERO_ERROR; 
-
 	Locale locEn = Locale("en");
     Locale locSl = Locale("sl");
 

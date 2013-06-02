@@ -189,7 +189,8 @@ public:
      * @param status  output param set to success/failure code on exit, which
      *                must not indicate a failure before the function call.
      * @stable ICU 4.0
-	 * Sample code
+	 * <br></br>
+	 * <h4>Sample code</h4>
 	 * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample
      */
     PluralFormat(const Locale& locale, const PluralRules& rules, UErrorCode& status);

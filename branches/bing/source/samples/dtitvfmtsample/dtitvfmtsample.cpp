@@ -6,7 +6,7 @@
 using namespace std;
 
 static void dtitvfmtPreDefined() {
-	//! [dtitvfmtPreDefined]   
+	  
 	u_printf("===============================================================================\n");
 	u_printf(" dtitvfmtPreDefined()\n");
     u_printf("\n");
@@ -14,10 +14,10 @@ static void dtitvfmtPreDefined() {
     u_printf(" yMMMd, MMMMd, jm per locale\n");
     u_printf("===============================================================================\n");
 	
+	//! [dtitvfmtPreDefined] 
 	UFILE *out = u_finit(stdout, NULL, "UTF-8");
 	UErrorCode status =U_ZERO_ERROR;
-
-// create 3 Date Intervals
+	// create 3 Date Intervals
 	UnicodeString data[] = {
 		UnicodeString("2007-10-10 10:10:10"),
 		UnicodeString("2008-10-10 10:10:10"),
@@ -64,6 +64,7 @@ static void dtitvfmtPreDefined() {
          i++;
         }
 	u_fclose(out);
+	//! [dtitvfmtPreDefined]
 /** output of the sample code:
     *********************************************************************************************************************************************************
      Skeleton       from                               to                                 Date Interval in en_US             Date Interval in Ja
@@ -72,11 +73,10 @@ static void dtitvfmtPreDefined() {
      jm             2008-11-10 10:10:10			       2008-11-10 15:10:10			      10:10 AM – 3:10 PM                 10:10～15:10
 
     *********************************************************************************************************************************************************/
-	//! [dtitvfmtPreDefined]
 }
 
 static void dtitvfmtCustomized() {
-	//! [dtitvfmtCustomized]    
+	   
 	u_printf("===============================================================================\n");
 	u_printf("\n");
 	u_printf(" dtitvfmtCustomized()\n");
@@ -84,6 +84,7 @@ static void dtitvfmtCustomized() {
     u_printf(" Use DateIntervalFormat to create customized date interval format for yMMMd, Hm");
 	u_printf("\n");
     u_printf("================================================================================\n");
+	//! [dtitvfmtCustomized]
 	UFILE *out = u_finit(stdout, NULL, "UTF-8");
 	UErrorCode status =U_ZERO_ERROR;
 	UnicodeString data[] = {
@@ -131,6 +132,7 @@ static void dtitvfmtCustomized() {
             }
        }
 	u_fclose(out);
+	//! [dtitvfmtCustomized]
 /** output of the sample code:
     *********************************************************************************************************************************************************
      Skeleton       from                      to                        Date Interval in en_US                       Date Interval in Ja
@@ -139,7 +141,6 @@ static void dtitvfmtCustomized() {
 	 Hm             2007-10-10 10:10:10       2007-11-10 10:10:10       10/10/2007, 10:10 ~~~ 11/10/2007, 10:10      2007/10/10 10:10 ~~~ 2007/11/10 10:10
      Hm             2007-11-10 10:10:10       2007-11-10 22:10:10       2007 Nov 10 10:10 ~ 22:10                    2007 11月 10 10:10 ~ 22:10
     *********************************************************************************************************************************************************/
-	//! [dtitvfmtCustomized]
 }
 
 int main (int argc, char* argv[])

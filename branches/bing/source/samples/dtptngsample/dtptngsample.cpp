@@ -86,12 +86,13 @@ static void getBestPatternExample() {
 }
 
 static void addPatternExample() {
-		//! [addPatternExample]
+		
 		u_printf("========================================================================\n");
         u_printf(" addPatternExample()\n");
 		u_printf("\n");
         u_printf(" Use addPattern API to add new '. von' to existing pattern\n");
         u_printf("========================================================================\n");
+		//! [addPatternExample]
 		UErrorCode status =U_ZERO_ERROR;
 		UnicodeString conflictingPattern,dateReturned, pattern;
 		Locale locale=Locale::getFrance();
@@ -125,13 +126,13 @@ static void addPatternExample() {
  	}
 
 static void replaceFieldTypesExample() {
-	//! [replaceFieldTypesExample]
-	// Use repalceFieldTypes API to replace zone 'zzzz' with 'vvvv'
+		// Use repalceFieldTypes API to replace zone 'zzzz' with 'vvvv'
        u_printf("========================================================================\n");
        u_printf(" replaceFieldTypeExample()\n");
        u_printf("\n");
        u_printf(" Use replaceFieldTypes API to replace zone 'zzzz' with 'vvvv'\n");
        u_printf("========================================================================\n");
+	   //! [replaceFieldTypesExample]
 		UFILE *out = u_finit(stdout, NULL, "UTF-8");
 		UErrorCode status =U_ZERO_ERROR;
 		UnicodeString pattern,dateReturned;
