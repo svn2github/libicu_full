@@ -152,6 +152,7 @@ public:
      * @stable ICU 3.8
 	 * <p>
 	 * <h4>Sample code</h4>
+	 * \snippet samples/dtptngsample/dtptngsample.cpp getBestPatternExample1
 	 * \snippet samples/dtptngsample/dtptngsample.cpp addPatternExample
 	 * <p>
      */
@@ -255,6 +256,7 @@ public:
      * @stable ICU 3.8
 	 * <p>
 	 * <h4>Sample code</h4>
+	 * \snippet samples/dtptngsample/dtptngsample.cpp getBestPatternExample1
 	 * \snippet samples/dtptngsample/dtptngsample.cpp getBestPatternExample
 	 * <p>
      */
@@ -302,6 +304,7 @@ public:
      * @stable ICU 3.8
 	 * <p>
 	 * <h4>Sample code</h4>
+	 * \snippet samples/dtptngsample/dtptngsample.cpp getBestPatternExample1
 	 * \snippet samples/dtptngsample/dtptngsample.cpp replaceFieldTypesExample
 	 * <p>
      */

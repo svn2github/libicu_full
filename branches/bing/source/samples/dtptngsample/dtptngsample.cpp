@@ -3,12 +3,12 @@
  * Copyright (c) 2008-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
-//! [getBestPatternExample]
+//! [getBestPatternExample1]
 #include <iostream>
 #include "unicode/smpdtfmt.h"
 #include "unicode/dtptngen.h"
 #include "unicode/ustdio.h"
-//! [getBestPatternExample]
+//! [getBestPatternExample1]
 
 using namespace std;
 

@@ -191,6 +191,7 @@ public:
      * @stable ICU 4.0
 	 * <p>
 	 * <h4>Sample code</h4>
+	 * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample1
 	 * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample
 	 * <p>
      */
