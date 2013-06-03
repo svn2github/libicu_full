@@ -674,6 +674,90 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 # <3 z
 <2 \u0308
 
+** test: reset position with prefix (pre-context), ICU ticket 10102
+@ rules
+&a=p|x &px=y
+* compare
+<1 pa
+=  px
+=  y
+<3 pA
+<1 q
+<1 x
+
+** test: prefix+contraction together (1), ICU ticket 10071
+@ rules
+&x=a|bc
+* compare
+<1 ab
+<1 Abc
+<1 abd
+<1 ac
+<1 aw
+<1 ax
+=  abc
+<3 aX
+<3 Ax
+<1 b
+<1 bb
+<1 bc
+<3 bC
+<3 Bc
+<1 bd
+
+** test: prefix+contraction together (2), ICU ticket 10071
+@ rules
+&w=bc &x=a|b
+* compare
+<1 w
+=  bc
+<3 W
+* compare
+<1 aw
+<1 ax
+=  ab
+<3 aX
+<1 axb
+<1 axc
+=  abc  # prefix match a|b takes precedence over contraction match bc
+<3 abC
+<1 abd
+<1 ay
+
+** test: prefix+contraction together (3), ICU ticket 10071
+@ rules
+&x=a|b &w=bc    # reverse order of rules as previous test, order should not matter here
+* compare       # same "compare" sequences as previous test
+<1 w
+=  bc
+<3 W
+* compare
+<1 aw
+<1 ax
+=  ab
+<3 aX
+<1 axb
+<1 axc
+=  abc  # prefix match a|b takes precedence over contraction match bc
+<3 abC
+<1 abd
+<1 ay
+
+** test: no mapping p|c, falls back to contraction ch, CLDR ticket 5962
+@ rules
+&d=ch &v=p|ci
+* compare
+<1 pc
+<3 pC
+<1 pcH
+<1 pcI
+<1 pd
+=  pch  # no-prefix contraction ch matches
+<3 pD
+<1 pv
+=  pci  # prefix+contraction p|ci matches
+<3 pV
+
 
 #** test: this is a description
 #@ rawbase
