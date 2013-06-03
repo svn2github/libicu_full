@@ -265,6 +265,7 @@ public:
 	 * <p>
 	 * <h4>Sample code</h4>
 	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtPreDefined
+	 * <p>
      */
 
     static DateIntervalFormat* U_EXPORT2 createInstance(
@@ -329,6 +330,7 @@ public:
 	 * <p>
 	 * <h4>Sample code</h4>
 	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtCustomized
+	 * <p>
      */
     static DateIntervalFormat* U_EXPORT2 createInstance(
                                               const UnicodeString& skeleton,

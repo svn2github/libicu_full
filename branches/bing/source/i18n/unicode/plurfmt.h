@@ -192,6 +192,7 @@ public:
 	 * <p>
 	 * <h4>Sample code</h4>
 	 * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample
+	 * <p>
      */
     PluralFormat(const Locale& locale, const PluralRules& rules, UErrorCode& status);
 

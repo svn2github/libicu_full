@@ -3,12 +3,12 @@
  * Copyright (c) 2008-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
-
+//! [getBestPatternExample]
 #include <iostream>
-
 #include "unicode/smpdtfmt.h"
 #include "unicode/dtptngen.h"
 #include "unicode/ustdio.h"
+//! [getBestPatternExample]
 
 using namespace std;
 
@@ -67,21 +67,21 @@ static void getBestPatternExample() {
 	/* close the file resource */
 	u_fclose(f);
 	delete cal;
-	 /** output of the sample code:
-     *************************************************************************************************************
-        Skeleton            en_US                              fr_FR                              zh_CN
+	 // output of the sample code:
+     //***********************************************************************************************************
+     // Skeleton            en_US                              fr_FR                              zh_CN
 
-        yQQQQ               4th quarter 1999                   4e trimestre 1999                  1999年第四季度
+     // yQQQQ               4th quarter 1999                   4e trimestre 1999                  1999年第四季度
 
-        yMMMM               October 1999                       octobre 1999                       1999年10月 
+     // yMMMM               October 1999                       octobre 1999                       1999年10月 
 
-        MMMMd               October 13                         13 octobre                         10月13日
+     // MMMMd               October 13                         13 octobre                         10月13日
            
-        hhmm                11:58 PM                           11:58 PM                           下午11:58
+     // hhmm                11:58 PM                           11:58 PM                           下午11:58
 
-        jjmm                11:58 PM                           23:58                              下午11:58
+     // jjmm                11:58 PM                           23:58                              下午11:58
 
-     *************************************************************************************************************/
+     //************************************************************************************************************
 	//! [getBestPatternExample]
 }
 
@@ -116,12 +116,12 @@ static void addPatternExample() {
 		delete sdf;
 		delete cal;
 
-        /** output of the sample code:
-        **************************************************************************************************
-         New Pattern for FRENCH: dd. 'von' MMMM HH:mm
-         Date Time in new Pattern: 13. von octobre 23:58
+        // output of the sample code:
+        //************************************************************************************************
+        // New Pattern for FRENCH: dd. 'von' MMMM HH:mm
+        // Date Time in new Pattern: 13. von octobre 23:58
      
-        *************************************************************************************************/
+        //*************************************************************************************************
 		//! [addPatternExample]
  	}
 
@@ -166,18 +166,18 @@ static void replaceFieldTypesExample() {
 		delete zone;
 		delete cal;
 		u_fclose(out);     
-		/** output of the sample code:
-        ***************************************************************************************************
-         Pattern before replacement:
-         EEEE d MMMM y HH:mm:ss zzzz
-         Date/Time format in fr_FR:
-         jeudi 14 octobre 1999 05:58:59 heure avancée d’Europe centrale
-         Pattern after replacement:
-         EEEE d MMMM y HH:mm:ss vvvv
-         Date/Time format in fr_FR:
-         jeudi 14 octobre 1999 05:58:59 heure de l’Europe centrale
+		// output of the sample code:
+        //*************************************************************************************************
+        // Pattern before replacement:
+        // EEEE d MMMM y HH:mm:ss zzzz
+        // Date/Time format in fr_FR:
+        // jeudi 14 octobre 1999 05:58:59 heure avancée d’Europe centrale
+        // Pattern after replacement:
+        // EEEE d MMMM y HH:mm:ss vvvv
+        // Date/Time format in fr_FR:
+        // jeudi 14 octobre 1999 05:58:59 heure de l’Europe centrale
 
-        **************************************************************************************************/
+        //*************************************************************************************************
 		//! [replaceFieldTypesExample]
     }
 

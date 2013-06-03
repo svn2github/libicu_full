@@ -153,6 +153,7 @@ public:
 	 * <p>
 	 * <h4>Sample code</h4>
 	 * \snippet samples/dtptngsample/dtptngsample.cpp addPatternExample
+	 * <p>
      */
     UDateTimePatternConflict addPattern(const UnicodeString& pattern, 
                                         UBool override, 
@@ -255,6 +256,7 @@ public:
 	 * <p>
 	 * <h4>Sample code</h4>
 	 * \snippet samples/dtptngsample/dtptngsample.cpp getBestPatternExample
+	 * <p>
      */
      UnicodeString getBestPattern(const UnicodeString& skeleton, UErrorCode& status);
 
@@ -301,6 +303,7 @@ public:
 	 * <p>
 	 * <h4>Sample code</h4>
 	 * \snippet samples/dtptngsample/dtptngsample.cpp replaceFieldTypesExample
+	 * <p>
      */
      UnicodeString replaceFieldTypes(const UnicodeString& pattern, 
                                      const UnicodeString& skeleton, 
