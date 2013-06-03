@@ -1,8 +1,7 @@
-﻿//! [dtitvfmtPreDefined1]
+﻿
 #include <iostream>
 #include "unicode/dtitvfmt.h"
 #include "unicode/ustdio.h"
-//! [dtitvfmtPreDefined1]
 
 using namespace std;
 

@@ -1,9 +1,8 @@
 #include <iostream>
-//! [PluralFormatExample1] 
+
 #include "unicode/plurfmt.h"
 #include "unicode/msgfmt.h"
 #include "unicode/ustdio.h"
-//! [PluralFormatExample1] 
 
 using namespace std;
 static void PluralFormatExample() {

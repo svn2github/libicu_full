@@ -264,7 +264,6 @@ public:
      * @stable ICU 4.0
 	 * <p>
 	 * <h4>Sample code</h4>
-	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtPreDefined1
 	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtPreDefined
 	 * <p>
      */
@@ -330,7 +329,6 @@ public:
      * @stable ICU 4.0
 	 * <p>
 	 * <h4>Sample code</h4>
-	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtPreDefined1
 	 * \snippet samples/dtitvfmtsample/dtitvfmtsample.cpp dtitvfmtCustomized
 	 * <p>
      */
