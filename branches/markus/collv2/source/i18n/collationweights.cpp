@@ -393,48 +393,25 @@ UBool
 CollationWeights::allocWeightsInMinLengthRanges(int32_t n, int32_t minLength) {
     // See if the minLength ranges have enough weights
     // when we split one and lengthen the following ones.
-    int32_t minLengthCount = 0;
+    int32_t count = 0;
     int32_t minLengthRangeCount;
     for(minLengthRangeCount = 0;
             minLengthRangeCount < rangeCount &&
                 ranges[minLengthRangeCount].length == minLength;
             ++minLengthRangeCount) {
-        minLengthCount += ranges[minLengthRangeCount].count;
+        count += ranges[minLengthRangeCount].count;
     }
 
     int32_t nextCountBytes = countBytes(minLength + 1);
-    if(n > minLengthCount * nextCountBytes) { return FALSE; }
+    if(n > count * nextCountBytes) { return FALSE; }
 
-    // Use the minLength ranges. Some as is, one split, the rest lengthened.
-    rangeCount = minLengthRangeCount;
-    if(rangeCount > 1) {
-        /* sort the ranges by weight values */
-        UErrorCode errorCode = U_ZERO_ERROR;
-        uprv_sortArray(ranges, rangeCount, sizeof(WeightRange),
-                        compareRanges, NULL, FALSE, &errorCode);
-        /* ignore error code: we know that the internal sort function will not fail here */
+    // Use the minLength ranges. Merge them, and then split again as necessary.
+    uint32_t start = ranges[0].start;
+    uint32_t end = ranges[0].end;
+    for(int32_t i = 1; i < minLengthRangeCount; ++i) {
+        if(ranges[i].start < start) { start = ranges[i].start; }
+        if(ranges[i].end > end) { end = ranges[i].end; }
     }
-
-    // Find the last range in weight order that we need to split.
-    // Reduce n to just the number of weights that we need to cover by that one range.
-    int32_t splitRange = rangeCount;
-    // Number of weights in the splitRange before lengthening.
-    int32_t count;
-    for(;;) {
-        count = ranges[--splitRange].count;
-        // Number of weights in the preceding (lower) un-lengthened ranges.
-        minLengthCount -= count;
-        // Number of weights to be covered by the preceding ranges
-        // after lengthening this one.
-        int32_t n2 = n - count * nextCountBytes;
-        // Will the preceding ranges have enough weights without lengthening them too?
-        if(n2 <= minLengthCount) { break; }
-        // This whole range needs to be lengthened, and a preceding one split or lengthened.
-        n = n2;
-        U_ASSERT(splitRange > 0);
-    }
-    // Subtract the number of weights in the preceding ranges.
-    n -= minLengthCount;
 
     // Calculate how to split the range between minLength (count1) and minLength+1 (count2).
     // Goal:
@@ -452,34 +429,31 @@ CollationWeights::allocWeightsInMinLengthRanges(int32_t n, int32_t minLength) {
         U_ASSERT((count1 + count2 * nextCountBytes) >= n);
     }
 
-    if(count1 > 0) {
-        /* split the range */
+    ranges[0].start = start;
+
+    if(count1 == 0) {
+        // Make one long range.
+        ranges[0].end = end;
+        ranges[0].count = count;
+        lengthenRange(ranges[0]);
+        rangeCount = 1;
+    } else {
+        // Split the range, lengthen the second part.
 #ifdef UCOL_DEBUG
         printf("split the range number %ld (out of %ld minLength ranges) by %ld:%ld\n",
                splitRange, rangeCount, count1, count2);
 #endif
-        int32_t newRange = splitRange + 1;
-        if(newRange < rangeCount) {
-            uprv_memmove(ranges + newRange + 1, ranges + newRange,
-                         (rangeCount - newRange) * sizeof(WeightRange));
-        }
-        ++rangeCount;
-        ranges[newRange].end = ranges[splitRange].end;
 
-        // New start = old start + count1. Old end = 1 before that.
-        ranges[splitRange].end = incWeightByOffset(ranges[splitRange].start,
-                                                   minLength, count1 - 1);
-        ranges[splitRange].count = count1;
+        // Next start = start + count1. First end = 1 before that.
+        ranges[0].end = incWeightByOffset(start, minLength, count1 - 1);
+        ranges[0].count = count1;
 
-        ranges[newRange].start = incWeight(ranges[splitRange].end, minLength);
-        ranges[newRange].length = minLength;  // +1 when lengthened
-        ranges[newRange].count = count2;  // *countBytes when lengthened
-
-        ++splitRange;
-    }
-    // Lengthen the higher ranges and the new range (if there is a new one) to minLength+1.
-    while(splitRange < rangeCount) {
-        lengthenRange(ranges[splitRange++]);
+        ranges[1].start = incWeight(ranges[0].end, minLength);
+        ranges[1].end = end;
+        ranges[1].length = minLength;  // +1 when lengthened
+        ranges[1].count = count2;  // *countBytes when lengthened
+        lengthenRange(ranges[1]);
+        rangeCount = 2;
     }
     return TRUE;
 }
