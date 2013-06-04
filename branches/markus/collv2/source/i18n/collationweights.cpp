@@ -38,19 +38,6 @@ U_NAMESPACE_BEGIN
 
 /* helper functions for CE weights */
 
-static inline int32_t
-lengthOfWeight(uint32_t weight) {
-    if((weight&0xffffff)==0) {
-        return 1;
-    } else if((weight&0xffff)==0) {
-        return 2;
-    } else if((weight&0xff)==0) {
-        return 3;
-    } else {
-        return 4;
-    }
-}
-
 static inline uint32_t
 getWeightTrail(uint32_t weight, int32_t length) {
     return (uint32_t)(weight>>(8*(4-length)))&0xff;
@@ -162,7 +149,7 @@ CollationWeights::initForTertiary() {
 }
 
 uint32_t
-CollationWeights::incWeight(uint32_t weight, int32_t length) {
+CollationWeights::incWeight(uint32_t weight, int32_t length) const {
     for(;;) {
         uint32_t byte=getWeightByte(weight, length);
         if(byte<maxBytes[length]) {
@@ -171,18 +158,35 @@ CollationWeights::incWeight(uint32_t weight, int32_t length) {
             // Roll over, set this byte to the minimum and increment the previous one.
             weight=setWeightByte(weight, length, minBytes[length]);
             --length;
+            U_ASSERT(length > 0);
         }
     }
 }
 
-int32_t
-CollationWeights::lengthenRange(WeightRange &range) {
-    int32_t length=range.length2+1;
+uint32_t
+CollationWeights::incWeightByOffset(uint32_t weight, int32_t length, int32_t offset) const {
+    for(;;) {
+        offset += getWeightByte(weight, length);
+        if((uint32_t)offset <= maxBytes[length]) {
+            return setWeightByte(weight, length, offset);
+        } else {
+            // Split the offset between this byte and the previous one.
+            offset -= minBytes[length];
+            weight = setWeightByte(weight, length, minBytes[length] + offset % countBytes(length));
+            offset /= countBytes(length);
+            --length;
+            U_ASSERT(length > 0);
+        }
+    }
+}
+
+void
+CollationWeights::lengthenRange(WeightRange &range) const {
+    int32_t length=range.length+1;
     range.start=setWeightTrail(range.start, length, minBytes[length]);
     range.end=setWeightTrail(range.end, length, maxBytes[length]);
-    range.count2*=countBytes(length);
-    range.length2=length;
-    return length;
+    range.count*=countBytes(length);
+    range.length=length;
 }
 
 /* for uprv_sortArray: sort ranges in weight order */
@@ -354,6 +358,132 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
     return rangeCount>0;
 }
 
+UBool
+CollationWeights::allocWeightsInShortRanges(int32_t n, int32_t minLength) {
+    // See if the first few minLength and minLength+1 ranges have enough weights.
+    for(int32_t i = 0; i < rangeCount && ranges[i].length <= (minLength + 1); ++i) {
+        if(n <= ranges[i].count) {
+            // Use the first few minLength and minLength+1 ranges.
+            if(ranges[i].length > minLength) {
+                // Reduce the number of weights from the last minLength+1 range
+                // which might sort before some minLength ranges,
+                // so that we use all weights in the minLength ranges.
+                ranges[i].count = n;
+            }
+            rangeCount = i + 1;
+#ifdef UCOL_DEBUG
+            printf("take first %ld ranges\n", rangeCount);
+#endif
+
+            if(rangeCount>1) {
+                /* sort the ranges by weight values */
+                UErrorCode errorCode=U_ZERO_ERROR;
+                uprv_sortArray(ranges, rangeCount, sizeof(WeightRange),
+                               compareRanges, NULL, FALSE, &errorCode);
+                /* ignore error code: we know that the internal sort function will not fail here */
+            }
+            return TRUE;
+        }
+        n -= ranges[i].count;  // still >0
+    }
+    return FALSE;
+}
+
+UBool
+CollationWeights::allocWeightsInMinLengthRanges(int32_t n, int32_t minLength) {
+    // See if the minLength ranges have enough weights
+    // when we split one and lengthen the following ones.
+    int32_t minLengthCount = 0;
+    int32_t minLengthRangeCount;
+    for(minLengthRangeCount = 0;
+            minLengthRangeCount < rangeCount &&
+                ranges[minLengthRangeCount].length == minLength;
+            ++minLengthRangeCount) {
+        minLengthCount += ranges[minLengthRangeCount].count;
+    }
+
+    int32_t nextCountBytes = countBytes(minLength + 1);
+    if(n > minLengthCount * nextCountBytes) { return FALSE; }
+
+    // Use the minLength ranges. Some as is, one split, the rest lengthened.
+    rangeCount = minLengthRangeCount;
+    if(rangeCount > 1) {
+        /* sort the ranges by weight values */
+        UErrorCode errorCode = U_ZERO_ERROR;
+        uprv_sortArray(ranges, rangeCount, sizeof(WeightRange),
+                        compareRanges, NULL, FALSE, &errorCode);
+        /* ignore error code: we know that the internal sort function will not fail here */
+    }
+
+    // Find the last range in weight order that we need to split.
+    // Reduce n to just the number of weights that we need to cover by that one range.
+    int32_t splitRange = rangeCount;
+    // Number of weights in the splitRange before lengthening.
+    int32_t count;
+    for(;;) {
+        count = ranges[--splitRange].count;
+        // Number of weights in the preceding (lower) un-lengthened ranges.
+        minLengthCount -= count;
+        // Number of weights to be covered by the preceding ranges
+        // after lengthening this one.
+        int32_t n2 = n - count * nextCountBytes;
+        // Will the preceding ranges have enough weights without lengthening them too?
+        if(n2 <= minLengthCount) { break; }
+        // This whole range needs to be lengthened, and a preceding one split or lengthened.
+        n = n2;
+        U_ASSERT(splitRange > 0);
+    }
+    // Subtract the number of weights in the preceding ranges.
+    n -= minLengthCount;
+
+    // Calculate how to split the range between minLength (count1) and minLength+1 (count2).
+    // Goal:
+    //   count1 + count2 * nextCountBytes = n
+    //   count1 + count2 = count
+    // These turn into
+    //   (count - count2) + count2 * nextCountBytes = n
+    // and then into the following count1 & count2 computations.
+    int32_t count2 = (n - count) / (nextCountBytes - 1);  // number of weights to be lengthened
+    int32_t count1 = count - count2;  // number of minLength weights
+    if(count2 == 0 || (count1 + count2 * nextCountBytes) < n) {
+        // round up
+        ++count2;
+        --count1;
+        U_ASSERT((count1 + count2 * nextCountBytes) >= n);
+    }
+
+    if(count1 > 0) {
+        /* split the range */
+#ifdef UCOL_DEBUG
+        printf("split the range number %ld (out of %ld minLength ranges) by %ld:%ld\n",
+               splitRange, rangeCount, count1, count2);
+#endif
+        int32_t newRange = splitRange + 1;
+        if(newRange < rangeCount) {
+            uprv_memmove(ranges + newRange + 1, ranges + newRange,
+                         (rangeCount - newRange) * sizeof(WeightRange));
+        }
+        ++rangeCount;
+        ranges[newRange].end = ranges[splitRange].end;
+
+        // New start = old start + count1. Old end = 1 before that.
+        ranges[splitRange].end = incWeightByOffset(ranges[splitRange].start,
+                                                   minLength, count1 - 1);
+        ranges[splitRange].count = count1;
+
+        ranges[newRange].start = incWeight(ranges[splitRange].end, minLength);
+        ranges[newRange].length = minLength;  // +1 when lengthened
+        ranges[newRange].count = count2;  // *countBytes when lengthened
+
+        ++splitRange;
+    }
+    // Lengthen the higher ranges and the new range (if there is a new one) to minLength+1.
+    while(splitRange < rangeCount) {
+        lengthenRange(ranges[splitRange++]);
+    }
+    return TRUE;
+}
+
 /*
  * call getWeightRanges and then determine heuristically
  * which ranges to use for a given number of weights between (excluding)
@@ -372,162 +502,28 @@ CollationWeights::allocWeights(uint32_t lowerLimit, uint32_t upperLimit, int32_t
         return FALSE;
     }
 
-    /* set the length2 and count2 fields */
-    for(int32_t i=0; i<rangeCount; ++i) {
-        ranges[i].length2=ranges[i].length;
-        ranges[i].count2=ranges[i].count;
-    }
-
     /* try until we find suitably large ranges */
     for(;;) {
         /* get the smallest number of bytes in a range */
-        int32_t minLength=ranges[0].length2;
-        int32_t minLengthCount = 0;
+        int32_t minLength=ranges[0].length;
 
-        // See if the first few minLength and minLength+1 ranges have enough weights.
-        int32_t remainder = n;
-        for(int32_t i = 0; i < rangeCount && ranges[i].length2 <= (minLength + 1); ++i) {
-            if(remainder <= ranges[i].count2) {
-                // Use the first few minLength and minLength+1 ranges.
-                if(ranges[i].length2 > minLength) {
-                    // Reduce the number of weights from the last minLength+1 range
-                    // which might sort before some minLength ranges,
-                    // so that we use all weights in the minLength ranges.
-                    ranges[i].count2 = remainder;
-                }
-                remainder = 0;
-                rangeCount = i + 1;
-                break;
-            }
-            remainder -= ranges[i].count2;  // still >0
-            if(ranges[i].length2 == minLength) {
-                minLengthCount += ranges[i].count2;
-            }
-        }
+        if(allocWeightsInShortRanges(n, minLength)) { break; }
 
-        if(remainder <= 0) {
-#ifdef UCOL_DEBUG
-            printf("take first %ld ranges\n", rangeCount);
-#endif
-
-            if(rangeCount>1) {
-                /* sort the ranges by weight values */
-                UErrorCode errorCode=U_ZERO_ERROR;
-                uprv_sortArray(ranges, rangeCount, sizeof(WeightRange), compareRanges, NULL, FALSE, &errorCode);
-                /* ignore error code: we know that the internal sort function will not fail here */
-            }
-            break;
-        } else if(minLength == 4) {
+        if(minLength == 4) {
 #ifdef UCOL_DEBUG
             printf("error: the maximum number of %ld weights is insufficient for n=%ld\n",
                    minLengthCount, n);
 #endif
             return FALSE;
-        } else if(n <= minLengthCount * countBytes(minLength + 1)) {
-            // Use the minLength ranges. Some as is, one split, the rest lengthened.
-            while(ranges[rangeCount - 1].length2 > minLength) {
-                --rangeCount;
-            }
-            if(rangeCount > 1) {
-                /* sort the ranges by weight values */
-                UErrorCode errorCode = U_ZERO_ERROR;
-                uprv_sortArray(ranges, rangeCount, sizeof(WeightRange),
-                               compareRanges, NULL, FALSE, &errorCode);
-                /* ignore error code: we know that the internal sort function will not fail here */
-            }
-
-            // Find the last range in weight order that we need to split.
-            int32_t splitRange = rangeCount;
-            int32_t weightCount = minLengthCount;
-            do {
-                // Increase the count according to lengthening this range
-                // and see if it is sufficient.
-                weightCount += ranges[--splitRange].count2 * (countBytes(minLength + 1) - 1);
-            } while(n > weightCount);
-
-            /* calculate how to split the range between minLength (count1) and minLength+1 (count2) */
-            int32_t perPrefix1 = 1;  // number of weights per ranges[0] prefix
-            for(int32_t j = ranges[splitRange].length + 1; j <= minLength; ++j) {
-                perPrefix1 *= countBytes(j);
-            }
-            int32_t perPrefix2 = perPrefix1 * countBytes(minLength + 1);
-            int32_t count2=(n+perPrefix2-1)/perPrefix2;  // number of prefixes with longer weights
-            int32_t count1=ranges[splitRange].count-count2;  // number of prefixes with minLength weights
-            if(((n - count1) + perPrefix2 - 1) / perPrefix2 < count2) {
-                // With count1 minLength weights, we need one fewer minLength+1 prefix.
-                --count2;
-                ++count1;
-                U_ASSERT((count1 * perPrefix1 + count2 * perPrefix2) >= n);
-            }
-
-            /* split the range */
-#ifdef UCOL_DEBUG
-            printf("split the minLength range number %ld by %ld:%ld\n", splitRange, count1, count2);
-#endif
-            if(count1<1) {
-                /* lengthen the entire range to minLength+1 */
-            } else {
-                /* really split the range */
-
-                /* create a new range with the end and initial and current length of the old one */
-                int32_t newRange = splitRange + 1;
-                if(newRange < rangeCount) {
-                    uprv_memmove(ranges + newRange + 1, ranges + newRange,
-                                 (rangeCount - newRange) * sizeof(WeightRange));
-                }
-                ++rangeCount;
-                ranges[newRange].end=ranges[splitRange].end;
-                ranges[newRange].length=ranges[splitRange].length;
-                ranges[newRange].length2=minLength;
-
-                /* set the end of the old range according to count1 */
-                int32_t i=ranges[splitRange].length;
-                uint32_t byte=getWeightByte(ranges[splitRange].start, i)+count1-1;
-
-                /*
-                 * ranges[splitRange].count and count1 may be >countBytes
-                 * from merging adjacent ranges;
-                 * byte>maxByte is possible
-                 */
-                if(byte<=maxBytes[i]) {
-                    ranges[splitRange].end=setWeightByte(ranges[splitRange].start, i, byte);
-                } else /* byte>maxByte */ {
-                    ranges[splitRange].end = setWeightByte(
-                            incWeight(ranges[splitRange].start, i - 1),
-                            i, byte - countBytes(i));
-                }
-
-                // Set the start of the new range to immediately follow the end of the old one.
-                ranges[newRange].start=incWeight(ranges[splitRange].end, i);
-
-                // Set the bytes in the end weight at length+1..length2 to maxByte,
-                // and in the following start weight to minByte
-                for(int32_t j = i + 1; j <= minLength; ++j) {
-                    ranges[splitRange].end = setWeightByte(ranges[splitRange].end, j, maxBytes[j]);
-                    ranges[newRange].start = setWeightByte(ranges[newRange].start, j, minBytes[j]);
-                }
-
-                /* set the count values */
-                ranges[splitRange].count=count1;
-                ranges[newRange].count=count2;
-
-                ranges[splitRange].count2 = count1 * perPrefix1;
-                ranges[newRange].count2 = count2 * perPrefix1;  // will be *countBytes when lengthened
-
-                ++splitRange;
-            }
-            // Lengthen the higher ranges and the new range (if there is a new one) to minLength+1.
-            while(splitRange<rangeCount) {
-                lengthenRange(ranges[splitRange++]);
-            }
-            break;
         }
+
+        if(allocWeightsInMinLengthRanges(n, minLength)) { break; }
 
         /* no good match, lengthen all minLength ranges and iterate */
 #ifdef UCOL_DEBUG
         printf("lengthen the short ranges from %ld bytes to %ld and iterate\n", minLength, minLength+1);
 #endif
-        for(int32_t i=0; ranges[i].length2==minLength; ++i) {
+        for(int32_t i=0; ranges[i].length==minLength; ++i) {
             lengthenRange(ranges[i]);
         }
     }
@@ -535,12 +531,12 @@ CollationWeights::allocWeights(uint32_t lowerLimit, uint32_t upperLimit, int32_t
 #ifdef UCOL_DEBUG
     puts("final ranges:");
     for(int32_t i=0; i<rangeCount; ++i) {
-        printf("ranges[%ld] .start=0x%08lx .end=0x%08lx .length=%ld .length2=%ld .count=%ld .count2=%lu\n",
-               i, ranges[i].start, ranges[i].end, ranges[i].length, ranges[i].length2, ranges[i].count, ranges[i].count2);
+        printf("ranges[%ld] .start=0x%08lx .end=0x%08lx .length=%ld .count=%ld\n",
+               i, ranges[i].start, ranges[i].end, ranges[i].length, ranges[i].count);
     }
 #endif
 
-    return rangeCount;
+    return TRUE;
 }
 
 uint32_t
@@ -550,14 +546,14 @@ CollationWeights::nextWeight() {
     } else {
         /* get the next weight */
         uint32_t weight=ranges[0].start;
-        if(--ranges[0].count2 == 0) {
+        if(--ranges[0].count == 0) {
             /* this range is finished, remove it and move the following ones up */
             if(--rangeCount>0) {
                 uprv_memmove(ranges, ranges+1, rangeCount*sizeof(WeightRange));
             }
         } else {
             /* increment the weight for the next value */
-            ranges[0].start=incWeight(weight, ranges[0].length2);
+            ranges[0].start=incWeight(weight, ranges[0].length);
             U_ASSERT(ranges[0].start <= ranges[0].end);
         }
 
@@ -566,59 +562,5 @@ CollationWeights::nextWeight() {
 }
 
 U_NAMESPACE_END
-
-#if 0 // #ifdef UCOL_DEBUG
-
-// TODO: move to collationtest.cpp
-static void
-testAlloc(uint32_t lowerLimit, uint32_t upperLimit, uint32_t n, UBool enumerate) {
-    WeightRange ranges[8];
-    int32_t rangeCount;
-
-    rangeCount=ucol_allocWeights(lowerLimit, upperLimit, n, ranges);
-    if(enumerate) {
-        uint32_t weight;
-
-        while(n>0) {
-            weight=ucol_nextWeight(ranges, &rangeCount);
-            if(weight==0xffffffff) {
-                printf("error: 0xffffffff with %lu more weights to go\n", n);
-                break;
-            }
-            printf("    0x%08lx\n", weight);
-            --n;
-        }
-    }
-}
-
-extern int
-main(int argc, const char *argv[]) {
-#if 0
-#endif
-    testAlloc(0x364214fc, 0x44b87d23, 5, FALSE);
-    testAlloc(0x36421500, 0x44b87d23, 5, FALSE);
-    testAlloc(0x36421500, 0x44b87d23, 20, FALSE);
-    testAlloc(0x36421500, 0x44b87d23, 13700, FALSE);
-    testAlloc(0x36421500, 0x38b87d23, 1, FALSE);
-    testAlloc(0x36421500, 0x38b87d23, 20, FALSE);
-    testAlloc(0x36421500, 0x38b87d23, 200, TRUE);
-    testAlloc(0x36421500, 0x38b87d23, 13700, FALSE);
-    testAlloc(0x36421500, 0x37b87d23, 13700, FALSE);
-    testAlloc(0x36ef1500, 0x37b87d23, 13700, FALSE);
-    testAlloc(0x36421500, 0x36b87d23, 13700, FALSE);
-    testAlloc(0x36b87122, 0x36b87d23, 13700, FALSE);
-    testAlloc(0x49000000, 0x4a600000, 13700, FALSE);
-    testAlloc(0x9fffffff, 0xd0000000, 13700, FALSE);
-    testAlloc(0x9fffffff, 0xd0000000, 67400, FALSE);
-    testAlloc(0x9fffffff, 0xa0030000, 67400, FALSE);
-    testAlloc(0x9fffffff, 0xa0030000, 40000, FALSE);
-    testAlloc(0xa0000000, 0xa0030000, 40000, FALSE);
-    testAlloc(0xa0031100, 0xa0030000, 40000, FALSE);
-#if 0
-#endif
-    return 0;
-}
-
-#endif
 
 #endif /* #if !UCONFIG_NO_COLLATION */

@@ -33,6 +33,18 @@ class U_I18N_API CollationWeights : public UMemory {
 public:
     CollationWeights();
 
+    static inline int32_t lengthOfWeight(uint32_t weight) {
+        if((weight&0xffffff)==0) {
+            return 1;
+        } else if((weight&0xffff)==0) {
+            return 2;
+        } else if((weight&0xff)==0) {
+            return 3;
+        } else {
+            return 4;
+        }
+    }
+
     void initForPrimary(UBool compressible);
     void initForSecondary();
     void initForTertiary();
@@ -65,22 +77,25 @@ public:
     struct WeightRange {
         uint32_t start, end;
         int32_t length, count;
-        int32_t length2;
-        int32_t count2;
     };
 
 private:
     /** @return number of usable byte values for byte idx */
-    inline int32_t countBytes(int32_t idx) { return (int32_t)(maxBytes[idx] - minBytes[idx] + 1); }
+    inline int32_t countBytes(int32_t idx) const {
+        return (int32_t)(maxBytes[idx] - minBytes[idx] + 1);
+    }
 
-    uint32_t incWeight(uint32_t weight, int32_t length);
-    int32_t lengthenRange(WeightRange &range);
+    uint32_t incWeight(uint32_t weight, int32_t length) const;
+    uint32_t incWeightByOffset(uint32_t weight, int32_t length, int32_t offset) const;
+    void lengthenRange(WeightRange &range) const;
     /**
      * Takes two CE weights and calculates the
      * possible ranges of weights between the two limits, excluding them.
      * For weights with up to 4 bytes there are up to 2*4-1=7 ranges.
      */
     UBool getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit);
+    UBool allocWeightsInShortRanges(int32_t n, int32_t minLength);
+    UBool allocWeightsInMinLengthRanges(int32_t n, int32_t minLength);
 
     int32_t middleLength;
     uint32_t minBytes[5];  // for byte 1, 2, 3, 4

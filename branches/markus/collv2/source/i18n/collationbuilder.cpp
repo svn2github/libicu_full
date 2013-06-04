@@ -9,7 +9,6 @@
 * created by: Markus W. Scherer
 */
 
-#define DEBUG_COLLATION_BUILDER  // TODO: remove
 #ifdef DEBUG_COLLATION_BUILDER
 #include <stdio.h>
 #endif

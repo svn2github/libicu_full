@@ -32,6 +32,7 @@
 #include "collationiterator.h"
 #include "collationroot.h"
 #include "collationtailoring.h"
+#include "collationweights.h"
 #include "cstring.h"
 #include "intltest.h"
 #include "normalizer2impl.h"
@@ -70,10 +71,14 @@ public:
     void TestNulTerminated();
     void TestIllegalUTF8();
     void TestFCD();
+    void TestCollationWeights();
     void TestDataDriven();
 
 private:
     void checkFCD(const char *name, CollationIterator &ci, CodePointIterator &cpi);
+    void checkAllocWeights(CollationWeights &cw,
+                           uint32_t lowerLimit, uint32_t upperLimit, int32_t n,
+                           int32_t someLength, int32_t minCount);
 
     static UnicodeString printSortKey(const uint8_t *p, int32_t length);
     static UnicodeString printCollationKey(const CollationKey &key);
@@ -151,6 +156,7 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestNulTerminated);
     TESTCASE_AUTO(TestIllegalUTF8);
     TESTCASE_AUTO(TestFCD);
+    TESTCASE_AUTO(TestCollationWeights);
     TESTCASE_AUTO(TestDataDriven);
     TESTCASE_AUTO_END;
 }
@@ -447,6 +453,90 @@ void CollationTest::TestFCD() {
         return;
     }
     checkFCD("FCDUIterCollationIterator", uici, cpi);
+}
+
+void CollationTest::checkAllocWeights(CollationWeights &cw,
+                                      uint32_t lowerLimit, uint32_t upperLimit, int32_t n,
+                                      int32_t someLength, int32_t minCount) {
+    if(!cw.allocWeights(lowerLimit, upperLimit, n)) {
+        errln("CollationWeights::allocWeights(%lx, %lx, %ld) = FALSE",
+              (long)lowerLimit, (long)upperLimit, (long)n);
+        return;
+    }
+    uint32_t previous = lowerLimit;
+    int32_t count = 0;  // number of weights that have someLength
+    for(int32_t i = 0; i < n; ++i) {
+        uint32_t w = cw.nextWeight();
+        if(w == 0xffffffff) {
+            errln("CollationWeights::allocWeights(%lx, %lx, %ld).nextWeight() "
+                  "returns only %ld weights",
+                  (long)lowerLimit, (long)upperLimit, (long)n, (long)i);
+            return;
+        }
+        if(!(previous < w && w < upperLimit)) {
+            errln("CollationWeights::allocWeights(%lx, %lx, %ld).nextWeight() "
+                  "number %ld -> %lx not between %lx and %lx",
+                  (long)lowerLimit, (long)upperLimit, (long)n,
+                  (long)(i + 1), (long)w, (long)previous, (long)upperLimit);
+            return;
+        }
+        if(CollationWeights::lengthOfWeight(w) == someLength) { ++count; }
+    }
+    if(count < minCount) {
+        errln("CollationWeights::allocWeights(%lx, %lx, %ld).nextWeight() "
+              "returns only %ld < %ld weights of length %d",
+              (long)lowerLimit, (long)upperLimit, (long)n,
+              (long)count, (long)minCount, (int)someLength);
+    }
+}
+
+void CollationTest::TestCollationWeights() {
+    CollationWeights cw;
+
+    // Non-compressible primaries use 254 second bytes 02..FF.
+    logln("CollationWeights.initForPrimary(non-compressible)");
+    cw.initForPrimary(FALSE);
+    // Expect 1 weight 11 and 254 weights 12xx.
+    checkAllocWeights(cw, 0x10000000, 0x13000000, 255, 1, 1);
+    checkAllocWeights(cw, 0x10000000, 0x13000000, 255, 2, 254);
+    // Expect 255 two-byte weights from the ranges 10ff, 11xx, 1202.
+    checkAllocWeights(cw, 0x10fefe40, 0x12030300, 260, 2, 255);
+    // Expect 254 two-byte weights from the ranges 10ff and 11xx.
+    checkAllocWeights(cw, 0x10fefe40, 0x12030300, 600, 2, 254);
+    // Expect 254^2=64516 three-byte weights.
+    // During computation, there should be 3 three-byte ranges
+    // 10ffff, 11xxxx, 120202.
+    // The middle one should be split 64515:1,
+    // and the newly-split-off range and the last ranged lengthened.
+    checkAllocWeights(cw, 0x10fffe00, 0x12020300, 1 + 64516 + 254 + 1, 3, 64516);
+    // Expect weights 1102 & 1103.
+    checkAllocWeights(cw, 0x10ff0000, 0x11040000, 2, 2, 2);
+    // Expect weights 102102 & 102103.
+    checkAllocWeights(cw, 0x1020ff00, 0x10210400, 2, 3, 2);
+
+    // Compressible primaries use 251 second bytes 04..FE.
+    logln("CollationWeights.initForPrimary(compressible)");
+    cw.initForPrimary(TRUE);
+    // Expect 1 weight 11 and 251 weights 12xx.
+    checkAllocWeights(cw, 0x10000000, 0x13000000, 252, 1, 1);
+    checkAllocWeights(cw, 0x10000000, 0x13000000, 252, 2, 251);
+    // Expect 252 two-byte weights from the ranges 10fe, 11xx, 1204.
+    checkAllocWeights(cw, 0x10fdfe40, 0x12050300, 260, 2, 252);
+    // Expect weights 1104 & 1105.
+    checkAllocWeights(cw, 0x10fe0000, 0x11060000, 2, 2, 2);
+    // Expect weights 102102 & 102103.
+    checkAllocWeights(cw, 0x1020ff00, 0x10210400, 2, 3, 2);
+
+    // Secondary and tertiary weights use only bytes 3 & 4.
+    logln("CollationWeights.initForSecondary()");
+    cw.initForSecondary();
+    // Expect weights fbxx and all four fc..ff.
+    checkAllocWeights(cw, 0xfb20, 0x10000, 20, 3, 4);
+
+    logln("CollationWeights.initForTertiary()");
+    cw.initForTertiary();
+    // Expect weights 3dxx and both 3e & 3f.
+    checkAllocWeights(cw, 0x3d02, 0x4000, 10, 3, 2);
 }
 
 UnicodeString CollationTest::printSortKey(const uint8_t *p, int32_t length) {
