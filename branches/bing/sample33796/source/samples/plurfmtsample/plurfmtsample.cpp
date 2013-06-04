@@ -65,17 +65,17 @@ static void PluralFormatExample() {
       }
       //  output of the sample code:
       // ********************************************************************
-      //  Number          English         Slovenian
-      //  0               0 dogs          0 psov
-      //  1               1 dog           1 pes
-      //  2               2 dogs          2 psa
-      //  3               3 dogs          3 psi
-      //  4               4 dogs          4 psi
-      //  5               5 dogs          5 psov
-      //  10              10 dogs         10 psov
-      //  100             100 dogs        100 psov
-      //  101             101 dogs        101 pes
-      //  102             102 dogs        102 psa
+      //  Number			English			Slovenian
+      //  0					0 dogs			0 psov
+      //  1					1 dog			1 pes
+      //  2					2 dogs			2 psa
+      //  3					3 dogs			3 psi
+      //  4					4 dogs			4 psi
+      //  5					5 dogs			5 psov
+      //  10				10 dogs			10 psov
+      //  100				100 dogs		100 psov
+      //  101				101 dogs		101 pes
+      //  102				102 dogs		102 psa
 
       // *********************************************************************
  	delete msgfmtEn;

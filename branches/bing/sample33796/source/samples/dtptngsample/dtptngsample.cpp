@@ -69,17 +69,17 @@ static void getBestPatternExample() {
 	delete cal;
 	 // output of the sample code:
      //***********************************************************************************************************
-     // Skeleton            en_US                              fr_FR                              zh_CN
+     // Skeleton			en_US							fr_FR							zh_CN
 
-     // yQQQQ               4th quarter 1999                   4e trimestre 1999                  1999年第四季度
+     // yQQQQ				4th quarter 1999				4e trimestre 1999				1999年第四季度
 
-     // yMMMM               October 1999                       octobre 1999                       1999年10月 
+     // yMMMM				October 1999					octobre 1999					1999年10月 
 
-     // MMMMd               October 13                         13 octobre                         10月13日
-           
-     // hhmm                11:58 PM                           11:58 PM                           下午11:58
+     // MMMMd				October 13						13 octobre						10月13日
 
-     // jjmm                11:58 PM                           23:58                              下午11:58
+	 // hhmm				11:58 PM						11:58 PM						下午11:58
+
+     // jjmm				11:58 PM						23:58							下午11:58
 
      //************************************************************************************************************
 	//! [getBestPatternExample]
