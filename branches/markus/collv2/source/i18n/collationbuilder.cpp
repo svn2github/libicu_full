@@ -31,7 +31,6 @@
 #include "collationruleparser.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
-#include "collationtailoringdatabuilder.h"
 #include "collationweights.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
@@ -126,7 +125,7 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
           baseData(b->data),
           rootElements(b->data->rootElements, b->data->rootElementsLength),
           variableTop(0),
-          dataBuilder(new CollationTailoringDataBuilder(errorCode)),
+          dataBuilder(new CollationDataBuilder(errorCode)),
           errorReason(NULL),
           cesLength(0),
           rootPrimaryIndexes(errorCode), nodes(errorCode) {
@@ -138,7 +137,7 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    dataBuilder->init(baseData, errorCode);
+    dataBuilder->initForTailoring(baseData, errorCode);
     if(U_FAILURE(errorCode)) {
         errorReason = "CollationBuilder initialization failed";
     }
@@ -964,13 +963,12 @@ CEFinalizer::~CEFinalizer() {}
 void
 CollationBuilder::finalizeCEs(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    LocalPointer<CollationTailoringDataBuilder> newBuilder(
-            new CollationTailoringDataBuilder(errorCode));
+    LocalPointer<CollationDataBuilder> newBuilder(new CollationDataBuilder(errorCode));
     if(newBuilder.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    newBuilder->init(baseData, errorCode);
+    newBuilder->initForTailoring(baseData, errorCode);
     CEFinalizer finalizer(nodes.getBuffer());
     newBuilder->copyFrom(*dataBuilder, finalizer, errorCode);
     if(U_FAILURE(errorCode)) { return; }

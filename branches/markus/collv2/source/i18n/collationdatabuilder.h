@@ -60,6 +60,8 @@ public:
 
     virtual ~CollationDataBuilder();
 
+    void initForTailoring(const CollationData *b, UErrorCode &errorCode);
+
     virtual UBool isCompressibleLeadByte(uint32_t b) const;
 
     inline UBool isCompressiblePrimary(uint32_t p) const {
@@ -133,7 +135,16 @@ public:
 
     void optimize(const UnicodeSet &set, UErrorCode &errorCode);
 
-    virtual void build(CollationData &data, UErrorCode &errorCode) = 0;
+    virtual void build(CollationData &data, UErrorCode &errorCode);
+
+    /**
+     * Looks up CEs for s and appends them to the ces array.
+     * s must be in NFD form.
+     * Does not write completely ignorable CEs.
+     * Does not write beyond Collation::MAX_EXPANSION_LENGTH.
+     * @return incremented cesLength
+     */
+    int32_t getCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const;
 
     int32_t lengthOfCE32s() const { return ce32s.size(); }
     int32_t lengthOfCEs() const { return ce64s.size(); }
@@ -195,6 +206,22 @@ protected:
                                     int32_t sIndex, UnicodeSet &consumed,
                                     ConditionalCE32 *firstCond,
                                     ConditionalCE32 *lastCond) const;
+
+    uint32_t getCE32FromBasePrefix(const UnicodeString &s, uint32_t ce32, int32_t i) const;
+
+    uint32_t getCE32FromBaseContraction(const UnicodeString &s,
+                                        uint32_t ce32, int32_t sIndex,
+                                        UnicodeSet &consumed) const;
+
+    static int32_t appendCE(int64_t ces[], int32_t cesLength, int64_t ce) {
+        if(ce != 0) {
+            if(cesLength < Collation::MAX_EXPANSION_LENGTH) {
+                ces[cesLength] = ce;
+            }
+            ++cesLength;
+        }
+        return cesLength;
+    }
 
     const Normalizer2Impl &nfcImpl;
     const CollationData *base;

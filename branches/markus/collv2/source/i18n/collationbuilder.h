@@ -31,7 +31,7 @@ struct CollationData;
 struct CollationTailoring;
 
 class CEFinalizer;
-class CollationTailoringDataBuilder;
+class CollationDataBuilder;
 class Normalizer2;
 
 class U_I18N_API CollationBuilder : public CollationRuleParser::Sink {
@@ -256,7 +256,7 @@ private:
     const CollationRootElements rootElements;
     uint32_t variableTop;
 
-    CollationTailoringDataBuilder *dataBuilder;
+    CollationDataBuilder *dataBuilder;
     UnicodeSet optimizeSet;
     const char *errorReason;
 
