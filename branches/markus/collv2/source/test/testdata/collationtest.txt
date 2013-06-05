@@ -758,6 +758,39 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  pci  # prefix+contraction p|ci matches
 <3 pV
 
+** test: tailor in & around compact ranges of root primaries
+# The Ogham characters U+1681..U+169A are in simple ascending order of primary CEs
+# which should be reliably encoded as one range in the root elements data.
+@ rules
+&[before 1]ᚁ<a
+&ᚁ<c
+&[before 1]ᚂ<b
+&ᚂ<d
+&[before 1]ᚚ<y
+&ᚚ<z
+&[before 2]ᚁ<<r
+&ᚁ<<s
+&[before 3]ᚚ<<<t
+&ᚚ<<<u
+* compare
+<1 ᣵ    # U+18F5 last Canadian Aboriginal
+<1 a
+<1 r
+<2 ᚁ
+<2 s
+<1 b
+<1 c
+<1 ᚂ
+<1 d
+<1 ᚃ
+<1 ᚙ
+<1 y
+<1 t
+<3 ᚚ
+<3 u
+<1 z
+<1 ᚠ    # U+16A0 first Runic
+
 
 #** test: this is a description
 #@ rawbase

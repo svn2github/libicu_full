@@ -94,7 +94,7 @@ decWeightTrail(uint32_t weight, int32_t length) {
 }
 
 CollationWeights::CollationWeights()
-        : middleLength(0), rangeCount(0) {
+        : middleLength(0), rangeIndex(0), rangeCount(0) {
     for(int32_t i = 0; i < 5; ++i) {
         minBytes[i] = maxBytes[i] = 0;
     }
@@ -510,25 +510,25 @@ CollationWeights::allocWeights(uint32_t lowerLimit, uint32_t upperLimit, int32_t
     }
 #endif
 
+    rangeIndex = 0;
     return TRUE;
 }
 
 uint32_t
 CollationWeights::nextWeight() {
-    if(rangeCount<=0) {
+    if(rangeIndex >= rangeCount) {
         return 0xffffffff;
     } else {
         /* get the next weight */
-        uint32_t weight=ranges[0].start;
-        if(--ranges[0].count == 0) {
-            /* this range is finished, remove it and move the following ones up */
-            if(--rangeCount>0) {
-                uprv_memmove(ranges, ranges+1, rangeCount*sizeof(WeightRange));
-            }
+        WeightRange &range = ranges[rangeIndex];
+        uint32_t weight = range.start;
+        if(--range.count == 0) {
+            /* this range is finished */
+            ++rangeIndex;
         } else {
             /* increment the weight for the next value */
-            ranges[0].start=incWeight(weight, ranges[0].length);
-            U_ASSERT(ranges[0].start <= ranges[0].end);
+            range.start = incWeight(weight, range.length);
+            U_ASSERT(range.start <= range.end);
         }
 
         return weight;

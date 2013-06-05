@@ -101,6 +101,7 @@ private:
     uint32_t minBytes[5];  // for byte 1, 2, 3, 4
     uint32_t maxBytes[5];
     WeightRange ranges[7];
+    int32_t rangeIndex;
     int32_t rangeCount;
 };
 
