@@ -191,6 +191,12 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     } else {
         tailoring->data = baseData;
     }
+    CollationSettings::MaxVariable maxVariable = tailoring->settings.getMaxVariable();
+    if(maxVariable != base->settings.getMaxVariable()) {
+        uint32_t variableTop = tailoring->data->getVariableTopForMaxVariable(maxVariable);
+        U_ASSERT(variableTop != 0);  // The rule parser should enforce valid settings.
+        tailoring->settings.variableTop = variableTop;
+    }
     // TODO: remember if any settings were modified, if useful for suppressing them in writing .res file data
     // (otherwise just detect that they are the same as the root collator settings)
     if(U_FAILURE(errorCode)) { return NULL; }

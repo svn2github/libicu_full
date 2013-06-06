@@ -134,6 +134,10 @@ struct U_I18N_API CollationSettings : public UMemory {
         return ((options & ALTERNATE_MASK) == 0) ? UCOL_NON_IGNORABLE : UCOL_SHIFTED;
     }
 
+    MaxVariable getMaxVariable() const {
+        return (MaxVariable)((options & MAX_VARIABLE_MASK) >> MAX_VARIABLE_SHIFT);
+    }
+
     static uint32_t getTertiaryMask(int32_t options) {
         // Remove the case bits from the tertiary weight when caseLevel is on or caseFirst is off.
         return ((options & (CASE_LEVEL | CASE_FIRST)) == CASE_FIRST) ?

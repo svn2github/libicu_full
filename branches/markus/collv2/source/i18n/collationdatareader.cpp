@@ -273,11 +273,8 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         return;
     }
 
-    // Set variableTop from options & ALTERNATE_MASK + MAX_VARIABLE_MASK and scripts data.
-    int32_t maxVariable =
-        (options & CollationSettings::MAX_VARIABLE_MASK) >> CollationSettings::MAX_VARIABLE_SHIFT;
-    settings.variableTop =
-        data.getVariableTopForMaxVariable((CollationSettings::MaxVariable)maxVariable);
+    // Set variableTop from options and scripts data.
+    settings.variableTop = data.getVariableTopForMaxVariable(settings.getMaxVariable());
     if(settings.variableTop == 0) {
         errorCode = U_INVALID_FORMAT_ERROR;
         return;
