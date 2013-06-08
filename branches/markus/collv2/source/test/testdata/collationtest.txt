@@ -674,6 +674,22 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 # <3 z
 <2 \u0308
 
+** test: tailor contraction together with nearly equivalent prefix, ICU ticket 10101
+@ rules
+&a=p|x &b=px &c=op
+* compare
+<1 b
+=  px
+<3 B
+<1 c
+=  op
+<3 C
+* compare
+<1 ca
+=  opx  # first contraction op, then prefix p|x
+<3 cA
+<3 Ca
+
 ** test: reset position with prefix (pre-context), ICU ticket 10102
 @ rules
 &a=p|x &px=y
