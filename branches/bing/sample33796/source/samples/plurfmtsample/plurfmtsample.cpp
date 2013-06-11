@@ -1,5 +1,5 @@
+//! [PluralFormatExample1]
 #include <iostream>
-//! [PluralFormatExample1] 
 #include "unicode/plurfmt.h"
 #include "unicode/msgfmt.h"
 #include "unicode/ustdio.h"
@@ -63,26 +63,28 @@ static void PluralFormatExample() {
           altMsgfmtSl->format(arg, 1, msgSl, fPos,status);
           u_printf("%-16d%-16S%-16S\n", numbers[i], msgEn.getTerminatedBuffer(), msgSl.getTerminatedBuffer());
       }
-      //  output of the sample code:
-      // ********************************************************************
-      //  Number			English			Slovenian
-      //  0					0 dogs			0 psov
-      //  1					1 dog			1 pes
-      //  2					2 dogs			2 psa
-      //  3					3 dogs			3 psi
-      //  4					4 dogs			4 psi
-      //  5					5 dogs			5 psov
-      //  10				10 dogs			10 psov
-      //  100				100 dogs		100 psov
-      //  101				101 dogs		101 pes
-      //  102				102 dogs		102 psa
 
-      // *********************************************************************
  	delete msgfmtEn;
 	delete msgfmtSl;
 	delete altMsgfmtEn;
 	delete altMsgfmtSl;
 	//! [PluralFormatExample]
+
+	  /*  output of the sample code:
+       ********************************************************************
+        Number			English			Slovenian
+        0				0 dogs			0 psov
+        1				1 dog			1 pes
+        2				2 dogs			2 psa
+        3				3 dogs			3 psi
+        4				4 dogs			4 psi
+        5				5 dogs			5 psov
+        10				10 dogs			10 psov
+        100				100 dogs		100 psov
+        101				101 dogs		101 pes
+        102				102 dogs		102 psa
+
+      *********************************************************************/
 }
 int main (int argc, char* argv[])
 {

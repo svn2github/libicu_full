@@ -67,22 +67,22 @@ static void getBestPatternExample() {
 	/* close the file resource */
 	u_fclose(f);
 	delete cal;
-	 // output of the sample code:
-     //***********************************************************************************************************
-     // Skeleton			en_US							fr_FR							zh_CN
-
-     // yQQQQ				4th quarter 1999				4e trimestre 1999				1999年第四季度
-
-     // yMMMM				October 1999					octobre 1999					1999年10月 
-
-     // MMMMd				October 13						13 octobre						10月13日
-
-	 // hhmm				11:58 PM						11:58 PM						下午11:58
-
-     // jjmm				11:58 PM						23:58							下午11:58
-
-     //************************************************************************************************************
 	//! [getBestPatternExample]
+	 /* output of the sample code:
+     ***********************************************************************************************************
+      Skeleton			en_US							fr_FR							zh_CN
+
+      yQQQQ				4th quarter 1999				4e trimestre 1999				1999年第四季度
+
+      yMMMM				October 1999					octobre 1999					1999年10月 
+
+      MMMMd				October 13						13 octobre						10月13日
+
+	  hhmm				11:58 PM						11:58 PM						下午11:58
+
+      jjmm				11:58 PM						23:58							下午11:58
+
+     ************************************************************************************************************/	
 }
 
 static void addPatternExample() {
@@ -116,13 +116,13 @@ static void addPatternExample() {
 		delete sdf;
 		delete cal;
 
-        // output of the sample code:
-        //************************************************************************************************
-        // New Pattern for FRENCH: dd. 'von' MMMM HH:mm
-        // Date Time in new Pattern: 13. von octobre 23:58
-     
-        //*************************************************************************************************
 		//! [addPatternExample]
+        /* output of the sample code:
+        ************************************************************************************************
+         New Pattern for FRENCH: dd. 'von' MMMM HH:mm
+         Date Time in new Pattern: 13. von octobre 23:58
+     
+        *************************************************************************************************/
  	}
 
 static void replaceFieldTypesExample() {
@@ -165,20 +165,21 @@ static void replaceFieldTypesExample() {
 		delete dtfg;
 		delete zone;
 		delete cal;
-		u_fclose(out);     
-		// output of the sample code:
-        //*************************************************************************************************
-        // Pattern before replacement:
-        // EEEE d MMMM y HH:mm:ss zzzz
-        // Date/Time format in fr_FR:
-        // jeudi 14 octobre 1999 05:58:59 heure avancée d’Europe centrale
-        // Pattern after replacement:
-        // EEEE d MMMM y HH:mm:ss vvvv
-        // Date/Time format in fr_FR:
-        // jeudi 14 octobre 1999 05:58:59 heure de l’Europe centrale
+		u_fclose(out);
 
-        //*************************************************************************************************
 		//! [replaceFieldTypesExample]
+		/* output of the sample code:
+        *************************************************************************************************
+         Pattern before replacement:
+         EEEE d MMMM y HH:mm:ss zzzz
+         Date/Time format in fr_FR:
+         jeudi 14 octobre 1999 05:58:59 heure avancée d’Europe centrale
+         Pattern after replacement:
+         EEEE d MMMM y HH:mm:ss vvvv
+         Date/Time format in fr_FR:
+         jeudi 14 octobre 1999 05:58:59 heure de l’Europe centrale
+
+        *************************************************************************************************/
     }
 
 int main (int argc, char* argv[])
