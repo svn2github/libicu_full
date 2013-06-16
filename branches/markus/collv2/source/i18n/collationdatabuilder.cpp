@@ -142,7 +142,7 @@ CollationDataBuilder::maybeSetPrimaryRange(UChar32 start, UChar32 end,
         if(isCompressiblePrimary(primary)) { dataCE |= 0x80; }
         int32_t index = addCE(dataCE, errorCode);
         if(U_FAILURE(errorCode)) { return 0; }
-        if(index > 0xfffff) {
+        if(index > Collation::MAX_SPECIAL_VALUE) {
             errorCode = U_BUFFER_OVERFLOW_ERROR;
             return 0;
         }
@@ -297,7 +297,7 @@ CollationDataBuilder::addConditionalCE32(const UnicodeString &context, uint32_t 
     if(U_FAILURE(errorCode)) { return -1; }
     U_ASSERT(!context.isEmpty());
     int32_t index = conditionalCE32s.size();
-    if(index > 0xfffff) {
+    if(index > Collation::MAX_SPECIAL_VALUE) {
         errorCode = U_BUFFER_OVERFLOW_ERROR;
         return -1;
     }
@@ -436,7 +436,7 @@ CollationDataBuilder::encodeOneCE(int64_t ce, UErrorCode &errorCode) {
     if(ce32 != Collation::UNASSIGNED_CE32) { return ce32; }
     int32_t index = addCE(ce, errorCode);
     if(U_FAILURE(errorCode)) { return 0; }
-    if(index > 0x1ffff) {
+    if(index > Collation::MAX_EXPANSION_INDEX) {
         errorCode = U_BUFFER_OVERFLOW_ERROR;
         return 0;
     }
@@ -500,7 +500,7 @@ CollationDataBuilder::encodeExpansion(const int64_t ces[], int32_t length, UErro
     int32_t ce64sMax = ce64s.size() - length - offset;
     for(int32_t i = 0; i <= ce64sMax; ++i) {
         if(first == ce64s.elementAti(i)) {
-            if(i > 0x1ffff) {
+            if(i > Collation::MAX_EXPANSION_INDEX) {
                 errorCode = U_BUFFER_OVERFLOW_ERROR;
                 return 0;
             }
@@ -514,7 +514,7 @@ CollationDataBuilder::encodeExpansion(const int64_t ces[], int32_t length, UErro
     }
     // Store the new sequence.
     int32_t i = ce64s.size();
-    if(i > 0x1ffff) {
+    if(i > Collation::MAX_EXPANSION_INDEX) {
         errorCode = U_BUFFER_OVERFLOW_ERROR;
         return 0;
     }
@@ -545,7 +545,7 @@ CollationDataBuilder::encodeExpansion32(const int32_t newCE32s[], int32_t length
     int32_t ce32sMax = ce32s.size() - length - offset;
     for(int32_t i = 0; i <= ce32sMax; ++i) {
         if(first == ce32s.elementAti(i)) {
-            if(i > 0x1ffff) {
+            if(i > Collation::MAX_EXPANSION_INDEX) {
                 errorCode = U_BUFFER_OVERFLOW_ERROR;
                 return 0;
             }
@@ -559,7 +559,7 @@ CollationDataBuilder::encodeExpansion32(const int32_t newCE32s[], int32_t length
     }
     // Store the new sequence.
     int32_t i = ce32s.size();
-    if(i > 0x1ffff) {
+    if(i > Collation::MAX_EXPANSION_INDEX) {
         errorCode = U_BUFFER_OVERFLOW_ERROR;
         return 0;
     }
@@ -870,7 +870,7 @@ CollationDataBuilder::setDigitTags(UErrorCode &errorCode) {
         uint32_t ce32 = utrie2_get32(trie, c);
         if(ce32 != Collation::MIN_SPECIAL_CE32 && ce32 != Collation::UNASSIGNED_CE32) {
             int32_t index = addCE32(ce32, errorCode);
-            if(index > 0xffff) {
+            if(index > Collation::MAX_DIGIT_INDEX) {
                 // Note: If we overflow with digit CE32s due to their few index bits,
                 // then we can either try to reserve as many low-index slots as we have tailored Nd
                 // (in CollationBuilder::finalizeCEs() where we copy from
@@ -892,17 +892,17 @@ static UBool U_CALLCONV
 enumRangeLeadValue(const void *context, UChar32 /*start*/, UChar32 /*end*/, uint32_t value) {
     int32_t *pValue = (int32_t *)context;
     if(value == Collation::UNASSIGNED_CE32) {
-        value = 0;
+        value = Collation::LEAD_ALL_UNASSIGNED;
     } else if(value == Collation::MIN_SPECIAL_CE32) {
-        value = 1;
+        value = Collation::LEAD_ALL_FALLBACK;
     } else {
-        *pValue = 2;
+        *pValue = Collation::LEAD_MIXED;
         return FALSE;
     }
     if(*pValue < 0) {
         *pValue = (int32_t)value;
     } else if(*pValue != (int32_t)value) {
-        *pValue = 2;
+        *pValue = Collation::LEAD_MIXED;
         return FALSE;
     }
     return TRUE;
@@ -1056,15 +1056,15 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             // Latin optimization: Flags bit 1 indicates whether
             // the first character of every contraction suffix is >=U+0300.
             // Short-circuits contraction matching when a normal Latin letter follows.
-            int32_t flags = 0;
-            if(cond->context[suffixStart] >= 0x300) { flags |= 2; }
+            uint32_t flags = 0;
+            if(cond->context[suffixStart] >= 0x300) { flags |= Collation::CONTRACT_MIN_0300; }
             // Add all of the non-empty suffixes into the contraction trie.
             for(;;) {
                 UnicodeString suffix(cond->context, suffixStart);
                 uint16_t fcd16 = nfcImpl.getFCD16(suffix.char32At(suffix.length() - 1));
                 if(fcd16 > 0xff) {
                     // The last suffix character has lccc!=0, allowing for discontiguous contractions.
-                    flags |= 1;
+                    flags |= Collation::CONTRACT_TRAILING_CCC;
                 }
                 contractionBuilder.add(suffix, (int32_t)cond->ce32, errorCode);
                 if(cond == lastCond) { break; }
@@ -1072,7 +1072,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             }
             int32_t index = addContextTrie(emptySuffixCE32, contractionBuilder, errorCode);
             if(U_FAILURE(errorCode)) { return; }
-            if(index > 0x3ffff) {
+            if(index > Collation::MAX_CONTRACTION_INDEX) {
                 errorCode = U_BUFFER_OVERFLOW_ERROR;
                 return;
             }
@@ -1095,7 +1095,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
     } while(cond->next >= 0);
     int32_t index = addContextTrie(emptyPrefixCE32, prefixBuilder, errorCode);
     if(U_FAILURE(errorCode)) { return; }
-    if(index > 0xfffff) {
+    if(index > Collation::MAX_SPECIAL_VALUE) {
         errorCode = U_BUFFER_OVERFLOW_ERROR;
         return;
     }
@@ -1383,7 +1383,7 @@ uint32_t
 CollationDataBuilder::getCE32FromBaseContraction(const UnicodeString &s,
                                                  uint32_t ce32, int32_t sIndex,
                                                  UnicodeSet &consumed) const {
-    UBool maybeDiscontiguous = (ce32 & 1) != 0;
+    UBool maybeDiscontiguous = (ce32 & Collation::CONTRACT_TRAILING_CCC) != 0;
     const UChar *p = base->contexts + Collation::getContractionIndex(ce32);
     ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
     UCharsTrie suffixes(p + 2);

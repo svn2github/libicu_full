@@ -216,7 +216,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             if(nextCp < 0) {
                 // No more text.
                 ce32 = defaultCE32;
-            } else if(nextCp < 0x300 && (ce32 & 2) != 0) {
+            } else if(nextCp < 0x300 && (ce32 & Collation::CONTRACT_MIN_0300) != 0) {
                 // The next code point is below U+0300
                 // but all contraction suffixes start with characters >=U+0300.
                 backwardNumCodePoints(1, errorCode);
@@ -224,7 +224,8 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             } else {
                 if(numCpFwd > 0) { --numCpFwd; }
                 ce32 = nextCE32FromContraction(d, c, p + 2, defaultCE32,
-                                               (ce32 & 1) != 0, nextCp, errorCode);
+                                               (ce32 & Collation::CONTRACT_TRAILING_CCC) != 0,
+                                               nextCp, errorCode);
                 if(ce32 == 0x100) {
                     // CEs from a discontiguous contraction plus the skipped combining marks.
                     return ces[0];
@@ -272,10 +273,10 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             UChar trail;
             if(U16_IS_TRAIL(trail = handleGetTrailSurrogate())) {
                 c = U16_GET_SUPPLEMENTARY(c, trail);
-                ce32 &= 3;
-                if(ce32 == 0) {
+                ce32 &= Collation::LEAD_TYPE_MASK;
+                if(ce32 == Collation::LEAD_ALL_UNASSIGNED) {
                     ce32 = Collation::UNASSIGNED_CE32;  // unassigned-implicit
-                } else if(ce32 == 1 ||
+                } else if(ce32 == Collation::LEAD_ALL_FALLBACK ||
                         (ce32 = d->getCE32FromSupplementary(c)) == Collation::MIN_SPECIAL_CE32) {
                     // fall back to the base data
                     d = d->base;
@@ -611,14 +612,15 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             if(nextCp < 0) {
                 // No more text.
                 ce32 = defaultCE32;
-            } else if(nextCp < 0x300 && (ce32 & 2) != 0) {
+            } else if(nextCp < 0x300 && (ce32 & Collation::CONTRACT_MIN_0300) != 0) {
                 // The next code point is below U+0300
                 // but all contraction suffixes start with characters >=U+0300.
                 backwardNumSkipped(1, errorCode);
                 ce32 = defaultCE32;
             } else {
                 ce32 = nextCE32FromContraction(d, c, p + 2, defaultCE32,
-                                               (ce32 & 1) != 0, nextCp, errorCode);
+                                               (ce32 & Collation::CONTRACT_TRAILING_CCC) != 0,
+                                               nextCp, errorCode);
                 U_ASSERT(ce32 != 0x100);
             }
             // continue

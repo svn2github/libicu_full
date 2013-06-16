@@ -217,7 +217,7 @@ public:
          * Also used for U+0000, for moving the NUL-termination handling
          * from the regular fastpath into specials-handling code.
          *
-         * The data bits are 0 for U+0000, otherwise 0xfffff (UNASSIGNED_CE32=0xffffffff).
+         * The data bits are 0 for U+0000, otherwise all bits are set (UNASSIGNED_CE32=0xffffffff).
          */
         IMPLICIT_TAG = 15
     };
@@ -227,6 +227,20 @@ public:
      * so that we can copy them at runtime without growing the destination buffer.
      */
     static const int32_t MAX_EXPANSION_LENGTH = 31;
+    static const int32_t MAX_EXPANSION_INDEX = 0x1ffff;
+    static const int32_t MAX_CONTRACTION_INDEX = 0x3ffff;
+    static const int32_t MAX_DIGIT_INDEX = 0xffff;
+    static const int32_t MAX_SPECIAL_VALUE = 0xfffff;
+
+    /** Set if the first character of every contraction suffix is >=U+0300. */
+    static const uint32_t CONTRACT_MIN_0300 = 2;
+    /** Set if any contraction suffix ends with cc != 0. */
+    static const uint32_t CONTRACT_TRAILING_CCC = 1;
+
+    static const uint32_t LEAD_ALL_UNASSIGNED = 0;
+    static const uint32_t LEAD_ALL_FALLBACK = 1;
+    static const uint32_t LEAD_MIXED = 2;
+    static const uint32_t LEAD_TYPE_MASK = 3;
 
     static uint32_t makeSpecialCE32(uint32_t tag, int32_t value) {
         return makeSpecialCE32(tag, (uint32_t)value);
@@ -268,8 +282,7 @@ public:
      * @see MAX_LATIN_EXPANSION_TAG
      */
     static inline int64_t getLatinCE0(uint32_t ce32) {
-        return ((int64_t)(ce32 & 0xff0000) << 40) |
-                Collation::COMMON_SECONDARY_CE | (ce32 & 0xff00);
+        return ((int64_t)(ce32 & 0xff0000) << 40) | COMMON_SECONDARY_CE | (ce32 & 0xff00);
     }
 
     /**
@@ -277,7 +290,7 @@ public:
      * @see MAX_LATIN_EXPANSION_TAG
      */
     static inline int64_t getLatinCE1(uint32_t ce32) {
-        return ((ce32 & 0xff) << 24) | Collation::COMMON_TERTIARY_CE;
+        return ((ce32 & 0xff) << 24) | COMMON_TERTIARY_CE;
     }
 
     /**
@@ -285,7 +298,7 @@ public:
      * EXPANSION32_TAG or EXPANSION_TAG.
      */
     static inline int32_t getExpansionIndex(uint32_t ce32) {
-        return (ce32 >> 3) & 0x1ffff;
+        return (ce32 >> 3) & MAX_EXPANSION_INDEX;
     }
 
     /**
@@ -301,28 +314,28 @@ public:
      * Returns the prefix data index from a ce32 with PREFIX_TAG.
      */
     static inline int32_t getPrefixIndex(uint32_t ce32) {
-        return ce32 & 0xfffff;
+        return ce32 & MAX_SPECIAL_VALUE;
     }
 
     /**
      * Returns the contraction data index from a ce32 with CONTRACTION_TAG.
      */
     static inline int32_t getContractionIndex(uint32_t ce32) {
-        return (ce32 >> 2) & 0x3ffff;
+        return (ce32 >> 2) & MAX_CONTRACTION_INDEX;
     }
 
     /**
      * Returns the index of the real CE32 from a ce32 with DIGIT_TAG.
      */
     static inline int32_t getDigitIndex(uint32_t ce32) {
-        return (ce32 >> 4) & 0xffff;
+        return (ce32 >> 4) & MAX_DIGIT_INDEX;
     }
 
     /**
      * Returns the index of the offset data "CE" from a ce32 with OFFSET_TAG.
      */
     static inline int32_t getOffsetIndex(uint32_t ce32) {
-        return ce32 & 0xfffff;
+        return ce32 & MAX_SPECIAL_VALUE;
     }
 
     /** Returns a 64-bit CE from a non-special CE32. */
