@@ -198,6 +198,9 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         skipFlags |= FROM_RULES;
     }
 
+    logln("-prop:ucaconfnosortkeys=1 turns off getSortKey() in UCAConformanceTest");
+    UBool withSortKeys = getProperty("ucaconfnosortkeys") == NULL;
+
     int32_t line = 0;
 
     UChar b1[1024], b2[1024];
@@ -239,11 +242,11 @@ void UCAConformanceTest::testConformance(const Collator *coll)
             continue;
         }
 
-        int32_t resLen = coll->getSortKey(buffer, buflen, newSk, 1024);
+        int32_t resLen = withSortKeys ? coll->getSortKey(buffer, buflen, newSk, 1024) : 0;
 
         if(oldSk != NULL) {
             UBool ok=TRUE;
-            int32_t skres = strcmp((char *)oldSk, (char *)newSk);
+            int32_t skres = withSortKeys ? strcmp((char *)oldSk, (char *)newSk) : 0;
             int32_t cmpres = coll->compare(oldB, oldBlen, buffer, buflen, status);
             int32_t cmpres2 = coll->compare(buffer, buflen, oldB, oldBlen, status);
 
@@ -256,7 +259,7 @@ void UCAConformanceTest::testConformance(const Collator *coll)
 
             // TODO: Compare with normalization turned off if the input passes the FCD test.
 
-            if(cmpres != normalizeResult(skres)) {
+            if(withSortKeys && cmpres != normalizeResult(skres)) {
                 errln("Difference between coll->compare (%d) and sortkey compare (%d) on line %i",
                       cmpres, skres, line);
                 ok = FALSE;
@@ -279,11 +282,13 @@ void UCAConformanceTest::testConformance(const Collator *coll)
             if(!ok) {
                 errln("  Previous data line %s", oldLineB);
                 errln("  Current data line  %s", lineB);
-                UnicodeString oldS, newS;
-                prettify(CollationKey(oldSk, oldLen), oldS);
-                prettify(CollationKey(newSk, resLen), newS);
-                errln("  Previous key: "+oldS);
-                errln("  Current key:  "+newS);
+                if(withSortKeys) {
+                    UnicodeString oldS, newS;
+                    prettify(CollationKey(oldSk, oldLen), oldS);
+                    prettify(CollationKey(newSk, resLen), newS);
+                    errln("  Previous key: "+oldS);
+                    errln("  Current key:  "+newS);
+                }
             }
         }
 
