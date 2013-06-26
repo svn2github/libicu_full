@@ -415,7 +415,7 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
     case CollationRuleParser::FIRST_IMPLICIT: {
         uint32_t ce32 = baseData->getCE32(0x4e00);
         U_ASSERT(Collation::hasCE32Tag(ce32, Collation::OFFSET_TAG));
-        int64_t dataCE = baseData->ces[Collation::getOffsetIndex(ce32)];
+        int64_t dataCE = baseData->ces[Collation::indexFromCE32(ce32)];
         return Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(0x4e00, dataCE));
     }
     case CollationRuleParser::LAST_IMPLICIT:

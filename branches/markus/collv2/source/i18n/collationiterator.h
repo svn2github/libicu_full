@@ -107,29 +107,32 @@ public:
         }
         UChar32 c;
         uint32_t ce32 = handleNextCE32(c, errorCode);
-        // Java: Emulate unsigned-int less-than comparison.
-        // int xce32 = ce32 ^ 0x80000000;
-        // if(xce32 < 0x7f000000) { special }
-        // if(xce32 == 0x7f000000) { fallback }
-        if(ce32 < Collation::MIN_SPECIAL_CE32) {  // Forced-inline of isSpecialCE32(ce32).
+        uint32_t t = ce32 & 0xff;
+        if(t < Collation::SPECIAL_CE32_LOW_BYTE) {  // Forced-inline of isSpecialCE32(ce32).
             // Normal CE from the main data.
-            return Collation::ceFromCE32(ce32);
+            // Forced-inline of ceFromSimpleCE32(ce32).
+            return ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (t << 8);
         }
         const CollationData *d;
         // The compiler should be able to optimize the previous and the following
-        // comparisons of ce32 with the same constant.
-        if(ce32 == Collation::MIN_SPECIAL_CE32) {
+        // comparisons of t with the same constant.
+        if(t == Collation::SPECIAL_CE32_LOW_BYTE) {
             if(c < 0) {
                 return Collation::NO_CE;
             }
             d = data->base;
             ce32 = d->getCE32(c);
-            if(!Collation::isSpecialCE32(ce32)) {
+            t = ce32 & 0xff;
+            if(t < Collation::SPECIAL_CE32_LOW_BYTE) {
                 // Normal CE from the base data.
-                return Collation::ceFromCE32(ce32);
+                return ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (t << 8);
             }
         } else {
             d = data;
+        }
+        if(t == Collation::LONG_PRIMARY_CE32_LOW_BYTE) {
+            // Forced-inline of ceFromLongPrimaryCE32(ce32).
+            return ((int64_t)(ce32 - t) << 32) | Collation::COMMON_SEC_AND_TER_CE;
         }
         return nextCEFromSpecialCE32(d, c, ce32, errorCode);
     }
@@ -161,7 +164,7 @@ protected:
 
     /**
      * Returns the next code point and its local CE32 value.
-     * Returns Collation::MIN_SPECIAL_CE32 at the end of the text (c<0)
+     * Returns Collation::FALLBACK_CE32 at the end of the text (c<0)
      * or when c's CE32 value is to be looked up in the base data (fallback).
      *
      * The code point is used for fallbacks, context and implicit weights.

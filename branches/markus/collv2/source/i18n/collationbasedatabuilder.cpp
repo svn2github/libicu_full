@@ -127,7 +127,7 @@ CollationBaseDataBuilder::init(UErrorCode &errorCode) {
     // We could fix this in a complicated way in the from-rule-string builder,
     // but omitting this special element from the root elements is simple and effective.
 
-    uint32_t hangulCE32 = Collation::makeSpecialCE32(Collation::HANGUL_TAG, 0u);
+    uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
     utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
 
     // Add a tailoring boundary, but not a mapping, for [first trailing].
@@ -145,12 +145,12 @@ CollationBaseDataBuilder::init(UErrorCode &errorCode) {
     // for predictable handling of ill-formed UTF-8.
     uint32_t ce32 = Collation::FFFD_CE32;
     utrie2_set32(trie, 0xfffd, ce32, &errorCode);
-    addRootElement(Collation::ceFromCE32(ce32), errorCode);
+    addRootElement(Collation::ceFromSimpleCE32(ce32), errorCode);
 
     // U+FFFF maps to a CE with the highest primary weight.
     ce32 = Collation::MAX_REGULAR_CE32;
     utrie2_set32(trie, 0xffff, ce32, &errorCode);
-    addRootElement(Collation::ceFromCE32(ce32), errorCode);
+    addRootElement(Collation::ceFromSimpleCE32(ce32), errorCode);
 }
 
 void
@@ -413,7 +413,7 @@ CollationBaseDataBuilder::buildRootElementsTable(UVector32 &table, UErrorCode &e
 
     // Limit sentinel for root elements.
     // This allows us to reduce range checks at runtime.
-    table.addElement(Collation::SPECIAL_PRIMARY, errorCode);
+    table.addElement(CollationRootElements::PRIMARY_SENTINEL, errorCode);
 }
 
 int32_t

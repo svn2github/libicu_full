@@ -28,13 +28,13 @@ U_NAMESPACE_BEGIN
 uint32_t
 CollationData::getIndirectCE32(uint32_t ce32) const {
     U_ASSERT(Collation::isSpecialCE32(ce32));
-    int32_t tag = Collation::getSpecialCE32Tag(ce32);
+    int32_t tag = Collation::tagFromCE32(ce32);
     if(tag == Collation::DIGIT_TAG) {
         // Fetch the non-numeric-collation CE32.
-        ce32 = ce32s[Collation::getDigitIndex(ce32)];
+        ce32 = ce32s[Collation::indexFromCE32(ce32)];
     } else if(tag == Collation::LEAD_SURROGATE_TAG) {
         ce32 = Collation::UNASSIGNED_CE32;
-    } else if(tag == Collation::IMPLICIT_TAG && (ce32 & 1) == 0) {
+    } else if(tag == Collation::U0000_TAG) {
         // Fetch the normal ce32 for U+0000.
         ce32 = ce32s[0];
     }

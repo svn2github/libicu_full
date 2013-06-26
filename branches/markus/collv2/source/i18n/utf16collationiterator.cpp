@@ -35,7 +35,7 @@ uint32_t
 UTF16CollationIterator::handleNextCE32(UChar32 &c, UErrorCode & /*errorCode*/) {
     if(pos == limit) {
         c = U_SENTINEL;
-        return Collation::MIN_SPECIAL_CE32;
+        return Collation::FALLBACK_CE32;
     }
     c = *pos++;
     return UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, c);
@@ -139,7 +139,7 @@ FCDUTF16CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
         if(checkDir > 0) {
             if(pos == limit) {
                 c = U_SENTINEL;
-                return Collation::MIN_SPECIAL_CE32;
+                return Collation::FALLBACK_CE32;
             }
             c = *pos++;
             if(CollationFCD::hasTccc(c)) {
@@ -148,7 +148,7 @@ FCDUTF16CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
                     --pos;
                     if(!nextSegment(errorCode)) {
                         c = U_SENTINEL;
-                        return Collation::MIN_SPECIAL_CE32;
+                        return Collation::FALLBACK_CE32;
                     }
                     c = *pos++;
                 }

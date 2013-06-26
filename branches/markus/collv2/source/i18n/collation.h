@@ -73,7 +73,7 @@ public:
     /** Case bits and quaternary bits. */
     static const uint32_t CASE_AND_QUATERNARY_MASK = 0xc0c0;
 
-    static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfd;  // compressible
+    static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfe;  // compressible
     /**
      * First unassigned: AlphabeticIndex overflow boundary.
      * We want a 3-byte primary so that it fits into the root elements table.
@@ -82,30 +82,29 @@ public:
      * any unassigned-implicit 4-byte primaries because
      * the first few hundred Unicode code points all have real mappings.
      */
-    static const uint32_t FIRST_UNASSIGNED_PRIMARY = 0xfd040200;
+    static const uint32_t FIRST_UNASSIGNED_PRIMARY = 0xfe040200;
 
-    static const uint8_t TRAIL_WEIGHT_BYTE = 0xfe;  // not compressible
-    static const uint32_t FIRST_TRAILING_PRIMARY = 0xfe020200;  // [first trailing]
-    static const uint32_t MAX_PRIMARY = 0xfeff0000;  // U+FFFF
-    static const uint32_t MAX_REGULAR_CE32 = 0xfeff0505;  // U+FFFF
+    static const uint8_t TRAIL_WEIGHT_BYTE = 0xff;  // not compressible
+    static const uint32_t FIRST_TRAILING_PRIMARY = 0xff020200;  // [first trailing]
+    static const uint32_t MAX_PRIMARY = 0xffff0000;  // U+FFFF
+    static const uint32_t MAX_REGULAR_CE32 = 0xffff0505;  // U+FFFF
 
     // CE32 value for U+FFFD as well as illegal UTF-8 byte sequences (which behave like U+FFFD).
     // We use the third-highest primary weight for U+FFFD (as in UCA 6.3+).
     static const uint32_t FFFD_PRIMARY = MAX_PRIMARY - 0x20000;
     static const uint32_t FFFD_CE32 = MAX_REGULAR_CE32 - 0x20000;
 
-    /** Primary lead byte for special tags, not used as a primary lead byte in resolved CEs. */
-    static const uint8_t SPECIAL_BYTE = 0xff;
-    /** SPECIAL_BYTE<<24 = SPECIAL_BYTE.000000 */
-    static const uint32_t SPECIAL_PRIMARY = 0xff000000;
-
     /**
-     * The lowest "special" CE32 value.
-     * This value itself is used to indicate a fallback to the base collator,
-     * regardless of the semantics of its tag bit field,
-     * to minimize the fastpath lookup code.
+     * A CE32 is special if its low byte is this or greater.
+     * Impossible case bits 11 mark special CE32s.
+     * This value itself is used to indicate a fallback to the base collator.
      */
-    static const uint32_t MIN_SPECIAL_CE32 = 0xff000000;
+    static const uint8_t SPECIAL_CE32_LOW_BYTE = 0xc0;
+    static const uint32_t FALLBACK_CE32 = SPECIAL_CE32_LOW_BYTE;
+    /**
+     * Low byte of a long-primary special CE32.
+     */
+    static const uint8_t LONG_PRIMARY_CE32_LOW_BYTE = 0xc1;  // SPECIAL_CE32_LOW_BYTE | LONG_PRIMARY_TAG
 
     static const uint32_t UNASSIGNED_CE32 = 0xffffffff;  // Compute an unassigned-implicit CE.
 
@@ -142,68 +141,102 @@ public:
     static const uint32_t ZERO_LEVEL_FLAG = 0x80;
 
     /**
-     * Special-CE32 tags, from bits 23..20 of a special 32-bit CE.
-     * Bits 19..0 are used for data.
+     * Special-CE32 tags, from bits 3..0 of a special 32-bit CE.
+     * Bits 31..8 are available for data.
+     * Bits 5..4 are reserved. They may be used to indicate lccc!=0 and tccc!=0.
      */
     enum {
         /**
-         * Tags 0..5 are used for Latin mini expansions
-         * of two simple CEs [pp, 05, tt] [00, ss, 05].
-         * Bits 23..16: Single-byte primary weight pp=00..5F of the first CE.
-         * Bits 15.. 8: Tertiary weight tt of the first CE.
-         * Bits  7.. 0: Secondary weight ss of the second CE.
+         * Fall back to the base collator.
+         * This is the tag value in SPECIAL_CE32_LOW_BYTE and FALLBACK_CE32.
+         * Bits 31..8: Unused, 0.
          */
-        MAX_LATIN_EXPANSION_TAG = 5,
+        FALLBACK_TAG = 0,
         /**
-         * Points to one or more non-special 32-bit CE32s.
-         * Bits 19..3: Index into uint32_t table.
-         * Bits  2..0: Length. If length==0 then the actual length is in the first unit.
+         * Long-primary CE with COMMON_SEC_AND_TER_CE.
+         * Bits 31..8: Three-byte primary.
          */
-        EXPANSION32_TAG = 6,
+        LONG_PRIMARY_TAG = 1,
+        /**
+         * Long-secondary CE with zero primary.
+         * Bits 31..16: Secondary weight.
+         * Bits 15.. 8: Tertiary weight.
+         */
+        LONG_SECONDARY_TAG = 2,
+        /**
+         * Unused.
+         * May be used for single-byte secondary CEs (SHORT_SECONDARY_TAG),
+         * storing the ccc in CE32 bits 23..16.
+         */
+        RESERVED_TAG_3 = 3,
+        /**
+         * Latin mini expansions of two simple CEs [pp, 05, tt] [00, ss, 05].
+         * Bits 31..24: Single-byte primary weight pp of the first CE.
+         * Bits 23..16: Tertiary weight tt of the first CE.
+         * Bits 15.. 8: Secondary weight ss of the second CE.
+         */
+        LATIN_EXPANSION_TAG = 4,
+        /**
+         * Points to one or more simple/long-primary/long-secondary 32-bit CE32s.
+         * Bits 31..13: Index into uint32_t table.
+         * Bits 12.. 8: Length=1..31.
+         */
+        EXPANSION32_TAG = 5,
         /**
          * Points to one or more 64-bit CEs.
-         * Bits 19..3: Index into CE table.
-         * Bits  2..0: Length. If length==0 then the actual length is in the first unit.
+         * Bits 31..13: Index into CE table.
+         * Bits 12.. 8: Length=1..31.
          */
-        EXPANSION_TAG = 7,
+        EXPANSION_TAG = 6,
+        /**
+         * Unused.
+         */
+        RESERVED_TAG_7 = 7,
         /**
          * Points to prefix trie.
-         * Bits 19..0: Index into prefix/contraction data.
+         * Bits 31..13: Index into prefix/contraction data.
+         * Bits 12.. 8: Unused, 0.
          */
         PREFIX_TAG = 8,
         /**
          * Points to contraction data.
-         * Bits 19..2: Index into prefix/contraction data.
-         * Bit      1: Set if the first character of every contraction suffix is >=U+0300.
-         * Bit      0: Set if any contraction suffix ends with cc != 0.
+         * Bits 31..13: Index into prefix/contraction data.
+         * Bits 12..10: Unused, 0.
+         * Bit       9: Set if the first character of every contraction suffix is >=U+0300.
+         * Bit       8: Set if any contraction suffix ends with cc != 0.
          */
         CONTRACTION_TAG = 9,
         /**
          * Decimal digit.
-         * Bits 19..4: Index into uint32_t table for non-numeric-collation CE32.
-         * Bits  3..0: Digit value 0..9.
+         * Bits 31..13: Index into uint32_t table for non-numeric-collation CE32.
+         * Bit      12: Unused, 0.
+         * Bits 11.. 8: Digit value 0..9.
          */
         DIGIT_TAG = 10,
         /**
-         * Unused.
+         * Tag for U+0000, for moving the NUL-termination handling
+         * from the regular fastpath into specials-handling code.
+         * Bits 31..8: Unused, 0.
          */
-        RESERVED_TAG_11 = 11,
+        U0000_TAG = 11,
         /**
          * Tag for a Hangul syllable.
+         * Bits 31..8: Unused, 0.
          */
         HANGUL_TAG = 12,
         /**
          * Tag for a lead surrogate code unit.
          * Optional optimization for UTF-16 string processing.
-         * Bits 19..2: Unused, 0.
-         *       1..0: =0: All associated supplementary code points are unassigned-implict.
-         *             =1: All associated supplementary code points fall back to the base data.
-         *           else: (Normally 2) Look up the data for the supplementary code point.
+         * Bits 31..10: Unused, 0.
+         *       9.. 8: =0: All associated supplementary code points are unassigned-implict.
+         *              =1: All associated supplementary code points fall back to the base data.
+         *              else: (Normally 2) Look up the data for the supplementary code point.
          */
         LEAD_SURROGATE_TAG = 13,
         /**
          * Tag for CEs with primary weights in code point order.
-         * Bits 19..0: Index into CE table, for one data "CE".
+         * Bits 31..13: Index into CE table, for one data "CE".
+         * Bits 12.. 8: Unused, 0.
          *
          * This data "CE" has the following bit fields:
          * Bits 63..32: Three-byte primary pppppp00.
@@ -214,10 +247,7 @@ public:
         OFFSET_TAG = 14,
         /**
          * Implicit CE tag. Compute an unassigned-implicit CE.
-         * Also used for U+0000, for moving the NUL-termination handling
-         * from the regular fastpath into specials-handling code.
-         *
-         * The data bits are 0 for U+0000, otherwise all bits are set (UNASSIGNED_CE32=0xffffffff).
+         * All bits are set (UNASSIGNED_CE32=0xffffffff).
          */
         IMPLICIT_TAG = 15
     };
@@ -227,40 +257,64 @@ public:
      * so that we can copy them at runtime without growing the destination buffer.
      */
     static const int32_t MAX_EXPANSION_LENGTH = 31;
-    static const int32_t MAX_EXPANSION_INDEX = 0x1ffff;
-    static const int32_t MAX_CONTRACTION_INDEX = 0x3ffff;
-    static const int32_t MAX_DIGIT_INDEX = 0xffff;
-    static const int32_t MAX_SPECIAL_VALUE = 0xfffff;
+    static const int32_t MAX_INDEX = 0x7ffff;
 
     /** Set if the first character of every contraction suffix is >=U+0300. */
-    static const uint32_t CONTRACT_MIN_0300 = 2;
+    static const uint32_t CONTRACT_MIN_0300 = 0x200;
     /** Set if any contraction suffix ends with cc != 0. */
-    static const uint32_t CONTRACT_TRAILING_CCC = 1;
+    static const uint32_t CONTRACT_TRAILING_CCC = 0x100;
 
     static const uint32_t LEAD_ALL_UNASSIGNED = 0;
-    static const uint32_t LEAD_ALL_FALLBACK = 1;
-    static const uint32_t LEAD_MIXED = 2;
-    static const uint32_t LEAD_TYPE_MASK = 3;
+    static const uint32_t LEAD_ALL_FALLBACK = 0x100;
+    static const uint32_t LEAD_MIXED = 0x200;
+    static const uint32_t LEAD_TYPE_MASK = 0x300;
 
-    static uint32_t makeSpecialCE32(uint32_t tag, int32_t value) {
-        return makeSpecialCE32(tag, (uint32_t)value);
+    static uint32_t makeLongPrimaryCE32(uint32_t p) { return p | LONG_PRIMARY_CE32_LOW_BYTE; }
+
+    /** Turns the long-primary CE32 into a primary weight pppppp00. */
+    static inline uint32_t primaryFromLongPrimaryCE32(uint32_t ce32) {
+        return ce32 & 0xffffff00;
     }
-    static uint32_t makeSpecialCE32(uint32_t tag, uint32_t value) {
-        return Collation::MIN_SPECIAL_CE32 | (tag << 20) | value;
+    static inline int64_t ceFromLongPrimaryCE32(uint32_t ce32) {
+        return ((int64_t)(ce32 & 0xffffff00) << 32) | COMMON_SEC_AND_TER_CE;
+    }
+
+    static uint32_t makeLongSecondaryCE32(uint32_t lower32) {
+        return lower32 | SPECIAL_CE32_LOW_BYTE | LONG_SECONDARY_TAG;
+    }
+    static inline int64_t ceFromLongSecondaryCE32(uint32_t ce32) {
+        return ce32 & 0xffffff00;
+    }
+
+    /** Makes a special CE32 with tag, index and length. */
+    static uint32_t makeCE32FromTagIndexAndLength(int32_t tag, int32_t index, int32_t length) {
+        return (index << 13) | (length << 8) | SPECIAL_CE32_LOW_BYTE | tag;
+    }
+    /** Makes a special CE32 with only tag and index. */
+    static uint32_t makeCE32FromTagAndIndex(int32_t tag, int32_t index) {
+        return (index << 13) | SPECIAL_CE32_LOW_BYTE | tag;
     }
 
     static inline UBool isSpecialCE32(uint32_t ce32) {
-        // Java: Emulate unsigned-int less-than comparison.
-        // return (ce32^0x80000000)>=0x7f000000;
-        return ce32 >= MIN_SPECIAL_CE32;
+        return (ce32 & 0xff) >= SPECIAL_CE32_LOW_BYTE;
     }
 
-    static inline int32_t getSpecialCE32Tag(uint32_t ce32) {
-        return (int32_t)((ce32 >> 20) & 0xf);
+    static inline int32_t tagFromCE32(uint32_t ce32) {
+        return (int32_t)(ce32 & 0xf);
     }
 
     static inline UBool hasCE32Tag(uint32_t ce32, int32_t tag) {
-        return isSpecialCE32(ce32) && getSpecialCE32Tag(ce32) == tag;
+        return isSpecialCE32(ce32) && tagFromCE32(ce32) == tag;
+    }
+
+    static inline UBool isLongPrimaryCE32(uint32_t ce32) {
+        return hasCE32Tag(ce32, LONG_PRIMARY_TAG);
+    }
+
+    static UBool isSimpleOrLongCE32(uint32_t ce32) {
+        return !isSpecialCE32(ce32) ||
+                tagFromCE32(ce32) == LONG_PRIMARY_TAG ||
+                tagFromCE32(ce32) == LONG_SECONDARY_TAG;
     }
 
     static inline UBool isPrefixCE32(uint32_t ce32) {
@@ -273,99 +327,71 @@ public:
 
     static inline UBool ce32HasContext(uint32_t ce32) {
         return isSpecialCE32(ce32) &&
-                (getSpecialCE32Tag(ce32) == PREFIX_TAG ||
-                getSpecialCE32Tag(ce32) == CONTRACTION_TAG);
+                (tagFromCE32(ce32) == PREFIX_TAG ||
+                tagFromCE32(ce32) == CONTRACTION_TAG);
     }
 
     /**
      * Get the first of the two Latin-expansion CEs encoded in ce32.
-     * @see MAX_LATIN_EXPANSION_TAG
+     * @see LATIN_EXPANSION_TAG
      */
-    static inline int64_t getLatinCE0(uint32_t ce32) {
-        return ((int64_t)(ce32 & 0xff0000) << 40) | COMMON_SECONDARY_CE | (ce32 & 0xff00);
+    static inline int64_t latinCE0FromCE32(uint32_t ce32) {
+        return ((int64_t)(ce32 & 0xff000000) << 32) | COMMON_SECONDARY_CE | ((ce32 & 0xff0000) >> 8);
     }
 
     /**
      * Get the second of the two Latin-expansion CEs encoded in ce32.
-     * @see MAX_LATIN_EXPANSION_TAG
+     * @see LATIN_EXPANSION_TAG
      */
-    static inline int64_t getLatinCE1(uint32_t ce32) {
-        return ((ce32 & 0xff) << 24) | COMMON_TERTIARY_CE;
+    static inline int64_t latinCE1FromCE32(uint32_t ce32) {
+        return ((ce32 & 0xff00) << 16) | COMMON_TERTIARY_CE;
     }
 
     /**
-     * Returns the expansion data index from a ce32 with
-     * EXPANSION32_TAG or EXPANSION_TAG.
+     * Returns the data index from a special CE32.
      */
-    static inline int32_t getExpansionIndex(uint32_t ce32) {
-        return (ce32 >> 3) & MAX_EXPANSION_INDEX;
+    static inline int32_t indexFromCE32(uint32_t ce32) {
+        return (int32_t)(ce32 >> 13);
     }
 
     /**
-     * Returns the expansion data length from a ce32 with
-     * EXPANSION32_TAG or EXPANSION_TAG.
-     * If the length is 0, then the actual length is stored in the first data unit.
+     * Returns the data length from a ce32.
      */
-    static inline int32_t getExpansionLength(uint32_t ce32) {
-        return ce32 & 7;
+    static inline int32_t lengthFromCE32(uint32_t ce32) {
+        return (ce32 >> 8) & 31;
     }
 
     /**
-     * Returns the prefix data index from a ce32 with PREFIX_TAG.
+     * Returns the digit value from a DIGIT_TAG ce32.
      */
-    static inline int32_t getPrefixIndex(uint32_t ce32) {
-        return ce32 & MAX_SPECIAL_VALUE;
+    static inline char digitFromCE32(uint32_t ce32) {
+        return (char)((ce32 >> 8) & 0xf);
     }
 
-    /**
-     * Returns the contraction data index from a ce32 with CONTRACTION_TAG.
-     */
-    static inline int32_t getContractionIndex(uint32_t ce32) {
-        return (ce32 >> 2) & MAX_CONTRACTION_INDEX;
+    /** Returns a 64-bit CE from a simple CE32 (not special). */
+    static inline int64_t ceFromSimpleCE32(uint32_t ce32) {
+        // normal form ppppsstt -> pppp0000ss00tt00
+        // assert (ce32 & 0xff) < SPECIAL_CE32_LOW_BYTE
+        return ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | ((ce32 & 0xff) << 8);
     }
 
-    /**
-     * Returns the index of the real CE32 from a ce32 with DIGIT_TAG.
-     */
-    static inline int32_t getDigitIndex(uint32_t ce32) {
-        return (ce32 >> 4) & MAX_DIGIT_INDEX;
-    }
-
-    /**
-     * Returns the index of the offset data "CE" from a ce32 with OFFSET_TAG.
-     */
-    static inline int32_t getOffsetIndex(uint32_t ce32) {
-        return ce32 & MAX_SPECIAL_VALUE;
-    }
-
-    /** Returns a 64-bit CE from a non-special CE32. */
+    /** Returns a 64-bit CE from a simple/long-primary/long-secondary CE32. */
     static inline int64_t ceFromCE32(uint32_t ce32) {
         uint32_t tertiary = ce32 & 0xff;
-        if(tertiary > 1) {
+        if(tertiary < SPECIAL_CE32_LOW_BYTE) {
             // normal form ppppsstt -> pppp0000ss00tt00
             return ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (tertiary << 8);
-        } else if(tertiary == 1) {
-            // long-primary form pppppp01 -> pppppp00050000500
-            return ((int64_t)(ce32 - 1) << 32) | COMMON_SEC_AND_TER_CE;
-        } else /* tertiary == 0 */ {
-            // long-secondary form sssstt00 -> 00000000sssstt00,
-            // including the tertiary-ignorable, all-zero CE
-            // Java: Use a mask to work around sign extension.
-            // return (long)ce32 & 0xffffffff;
-            return ce32;
+        } else {
+            ce32 -= tertiary;
+            if((tertiary & 0xf) == LONG_PRIMARY_TAG) {
+                // long-primary form ppppppC1 -> pppppp00050000500
+                return ((int64_t)ce32 << 32) | COMMON_SEC_AND_TER_CE;
+            } else {
+                // long-secondary form ssssttC2 -> 00000000sssstt00
+                // assert (tertiary & 0xf) == LONG_SECONDARY_TAG
+                return ce32;
+            }
         }
-    }
-
-    static uint32_t makeLongPrimaryCE32(uint32_t p) { return p + 1; }
-
-    /** Is ce32 a long-primary pppppp01? */
-    static inline UBool isLongPrimaryCE32(uint32_t ce32) {
-        return !isSpecialCE32(ce32) && (ce32 & 0xff) == 1;
-    }
-
-    /** Turns the long-primary CE32 into a primary weight pppppp00. */
-    static inline uint32_t primaryFromLongPrimaryCE32(uint32_t ce32) {
-        return ce32 - 1;
     }
 
     /** Creates a CE from a primary weight. */

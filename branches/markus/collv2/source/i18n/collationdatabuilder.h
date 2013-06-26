@@ -168,7 +168,7 @@ protected:
         return static_cast<ConditionalCE32 *>(conditionalCE32s[index]);
     }
     inline ConditionalCE32 *getConditionalCE32ForCE32(uint32_t ce32) const {
-        return getConditionalCE32((int32_t)ce32 & Collation::MAX_SPECIAL_VALUE);
+        return getConditionalCE32(Collation::indexFromCE32(ce32));
     }
 
     void addCE32(const UnicodeString &prefix, const UnicodeString &s,

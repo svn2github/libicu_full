@@ -33,6 +33,11 @@ public:
             : elements(rootElements), length(rootElementsLength) {}
 
     /**
+     * Higher than any root primary.
+     */
+    static const uint32_t PRIMARY_SENTINEL = 0xffffff00;
+
+    /**
      * Flag in a root element, set if the element contains secondary & tertiary weights,
      * rather than a primary.
      */
@@ -194,7 +199,7 @@ public:
 private:
     /**
      * Finds the largest index i where elements[i]<=p.
-     * Requires first primary<=p<0xff000000 (SPECIAL_PRIMARY).
+     * Requires first primary<=p<0xffffff00 (PRIMARY_SENTINEL).
      * Does not require that p is a root collator primary.
      */
     int32_t findP(uint32_t p) const;

@@ -263,7 +263,7 @@ CollationRootElements::findP(uint32_t p) const {
     int32_t start = (int32_t)elements[IX_FIRST_PRIMARY_INDEX];
     U_ASSERT(p >= elements[start]);
     int32_t limit = length - 1;
-    U_ASSERT(elements[limit] >= Collation::SPECIAL_PRIMARY);
+    U_ASSERT(elements[limit] >= PRIMARY_SENTINEL);
     U_ASSERT(p < elements[limit]);
     while((start + 1) < limit) {
         // Invariant: elements[start] and elements[limit] are primaries,

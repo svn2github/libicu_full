@@ -36,7 +36,7 @@ uint32_t
 UTF8CollationIterator::handleNextCE32(UChar32 &c, UErrorCode & /*errorCode*/) {
     if(pos == length) {
         c = U_SENTINEL;
-        return Collation::MIN_SPECIAL_CE32;
+        return Collation::FALLBACK_CE32;
     }
     // Optimized combination of U8_NEXT_OR_FFFD() and UTRIE2_U8_NEXT32().
     c = u8[pos++];
@@ -135,7 +135,7 @@ FCDUTF8CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
             // Combination of UTF8CollationIterator::handleNextCE32() with FCD check fastpath.
             if(pos == length) {
                 c = U_SENTINEL;
-                return Collation::MIN_SPECIAL_CE32;
+                return Collation::FALLBACK_CE32;
             }
             c = u8[pos++];
             if(c < 0xc0) {
@@ -185,7 +185,7 @@ FCDUTF8CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
             }
             if(!nextSegment(errorCode)) {
                 c = U_SENTINEL;
-                return Collation::MIN_SPECIAL_CE32;
+                return Collation::FALLBACK_CE32;
             }
             continue;
         } else if(state == IN_FCD_SEGMENT && pos != limit) {

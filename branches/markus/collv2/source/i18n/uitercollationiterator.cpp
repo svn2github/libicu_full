@@ -38,7 +38,7 @@ uint32_t
 UIterCollationIterator::handleNextCE32(UChar32 &c, UErrorCode & /*errorCode*/) {
     c = iter.next(&iter);
     if(c < 0) {
-        return Collation::MIN_SPECIAL_CE32;
+        return Collation::FALLBACK_CE32;
     }
     return UTRIE2_GET32_FROM_U16_SINGLE_LEAD(trie, c);
 }
@@ -101,7 +101,7 @@ FCDUIterCollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
         if(state == ITER_CHECK_FWD) {
             c = iter.next(&iter);
             if(c < 0) {
-                return Collation::MIN_SPECIAL_CE32;
+                return Collation::FALLBACK_CE32;
             }
             if(CollationFCD::hasTccc(c)) {
                 if(CollationFCD::maybeTibetanCompositeVowel(c) ||
@@ -109,7 +109,7 @@ FCDUIterCollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
                     iter.previous(&iter);
                     if(!nextSegment(errorCode)) {
                         c = U_SENTINEL;
-                        return Collation::MIN_SPECIAL_CE32;
+                        return Collation::FALLBACK_CE32;
                     }
                     continue;
                 }

@@ -156,7 +156,7 @@ CollationIterator::reset() {  // Needed as a separate function?
 uint32_t
 CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
     c = nextCodePoint(errorCode);
-    return (c < 0) ? Collation::MIN_SPECIAL_CE32 : data->getCE32(c);
+    return (c < 0) ? Collation::FALLBACK_CE32 : data->getCE32(c);
 }
 
 UChar
@@ -178,25 +178,28 @@ int64_t
 CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                          UErrorCode &errorCode) {
     for(;;) {  // Loop while ce32 is special.
-        int32_t tag = Collation::getSpecialCE32Tag(ce32);
-        if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
-            U_ASSERT(ce32 != Collation::MIN_SPECIAL_CE32);
+        switch(Collation::tagFromCE32(ce32)) {
+        case Collation::FALLBACK_TAG:
+        case Collation::RESERVED_TAG_3:
+        case Collation::RESERVED_TAG_7:
+            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+            return 0;
+        case Collation::LONG_PRIMARY_TAG:
+            return Collation::ceFromLongPrimaryCE32(ce32);
+        case Collation::LONG_SECONDARY_TAG:
+            return Collation::ceFromLongSecondaryCE32(ce32);
+        case Collation::LATIN_EXPANSION_TAG:
             setLatinExpansion(ce32);
             return ces[0];
-        }
-        switch(tag) {
         case Collation::EXPANSION32_TAG:
-            setCE32s(d, Collation::getExpansionIndex(ce32), Collation::getExpansionLength(ce32));
+            setCE32s(d, Collation::indexFromCE32(ce32), Collation::lengthFromCE32(ce32));
             cesIndex = (cesMaxIndex > 0) ? 1 : -1;
             return ces[0];
-        case Collation::EXPANSION_TAG: {
-            ces = d->ces + Collation::getExpansionIndex(ce32);
-            int32_t length = Collation::getExpansionLength(ce32);
-            if(length == 0) { length = (int32_t)*ces++; }
-            cesMaxIndex = length - 1;
+        case Collation::EXPANSION_TAG:
+            ces = d->ces + Collation::indexFromCE32(ce32);
+            cesMaxIndex = Collation::lengthFromCE32(ce32) - 1;
             cesIndex = (cesMaxIndex > 0) ? 1 : -1;
             return ces[0];
-        }
         case Collation::PREFIX_TAG:
             backwardNumCodePoints(1, errorCode);
             ce32 = getCE32FromPrefix(d, ce32, errorCode);
@@ -205,7 +208,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
         case Collation::CONTRACTION_TAG: {
             // Some portion of nextCE32FromContraction() pulled out here as an ASCII fast path,
             // avoiding the function call and the nextSkippedCodePoint() overhead.
-            const UChar *p = d->contexts + Collation::getContractionIndex(ce32);
+            const UChar *p = d->contexts + Collation::indexFromCE32(ce32);
             uint32_t defaultCE32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
             if(numCpFwd == 0) {
                 // Reached the temporary limit.
@@ -238,13 +241,13 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 // Collect digits.
                 CharString digits;
                 for(;;) {
-                    char digit = (char)(ce32 & 0xf);
+                    char digit = Collation::digitFromCE32(ce32);
                     digits.append(digit, errorCode);
                     if(numCpFwd == 0) { break; }
                     c = nextCodePoint(errorCode);
                     if(c < 0) { break; }
                     ce32 = data->getCE32(c);
-                    if(ce32 == Collation::MIN_SPECIAL_CE32) {
+                    if(ce32 == Collation::FALLBACK_CE32) {
                         ce32 = data->base->getCE32(c);
                     }
                     if(!Collation::hasCE32Tag(ce32, Collation::DIGIT_TAG)) {
@@ -258,12 +261,19 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 return ces[0];
             } else {
                 // Fetch the non-numeric-collation CE32 and continue.
-                ce32 = d->ce32s[Collation::getDigitIndex(ce32)];
+                ce32 = d->ce32s[Collation::indexFromCE32(ce32)];
                 break;
             }
-        case Collation::RESERVED_TAG_11:
-            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
-            return 0;
+        case Collation::U0000_TAG:
+            U_ASSERT(c == 0);
+            if(foundNULTerminator()) {
+                // Handle NUL-termination. (Not needed in Java.)
+                return Collation::NO_CE;
+            } else {
+                // Fetch the normal ce32 for U+0000 and continue.
+                ce32 = d->ce32s[0];
+                break;
+            }
         case Collation::HANGUL_TAG:
             setHangulExpansion(c);
             cesIndex = 1;
@@ -277,7 +287,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
                 if(ce32 == Collation::LEAD_ALL_UNASSIGNED) {
                     ce32 = Collation::UNASSIGNED_CE32;  // unassigned-implicit
                 } else if(ce32 == Collation::LEAD_ALL_FALLBACK ||
-                        (ce32 = d->getCE32FromSupplementary(c)) == Collation::MIN_SPECIAL_CE32) {
+                        (ce32 = d->getCE32FromSupplementary(c)) == Collation::FALLBACK_CE32) {
                     // fall back to the base data
                     d = d->base;
                     ce32 = d->getCE32FromSupplementary(c);
@@ -290,17 +300,7 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
         case Collation::OFFSET_TAG:
             return getCEFromOffsetCE32(d, c, ce32);
         case Collation::IMPLICIT_TAG:
-            if((ce32 & 1) == 0) {
-                U_ASSERT(c == 0);
-                if(foundNULTerminator()) {
-                    // Handle NUL-termination. (Not needed in Java.)
-                    return Collation::NO_CE;
-                } else {
-                    // Fetch the normal ce32 for U+0000 and continue.
-                    ce32 = d->ce32s[0];
-                    break;
-                }
-            } else if(U_IS_SURROGATE(c) && forbidSurrogateCodePoints()) {
+            if(U_IS_SURROGATE(c) && forbidSurrogateCodePoints()) {
                 ce32 = Collation::FFFD_CE32;
                 break;
             } else {
@@ -308,21 +308,21 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
             }
         }
         if(!Collation::isSpecialCE32(ce32)) {
-            return Collation::ceFromCE32(ce32);
+            return Collation::ceFromSimpleCE32(ce32);
         }
     }
 }
 
 int64_t
 CollationIterator::getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32) {
-    int64_t dataCE = d->ces[Collation::getOffsetIndex(ce32)];
+    int64_t dataCE = d->ces[Collation::indexFromCE32(ce32)];
     return Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(c, dataCE));
 }
 
 uint32_t
 CollationIterator::getCE32FromPrefix(const CollationData *d, uint32_t ce32,
                                      UErrorCode &errorCode) {
-    const UChar *p = d->contexts + Collation::getPrefixIndex(ce32);
+    const UChar *p = d->contexts + Collation::indexFromCE32(ce32);
     ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no prefix match.
     p += 2;
     // Number of code points read before the original code point.
@@ -554,7 +554,7 @@ void
 CollationIterator::appendCEsFromCp(UChar32 c, UErrorCode &errorCode) {
     const CollationData *d;
     uint32_t ce32 = data->getCE32(c);
-    if(ce32 == Collation::MIN_SPECIAL_CE32) {
+    if(ce32 == Collation::FALLBACK_CE32) {
         d = data->base;
         ce32 = d->getCE32(c);
     } else {
@@ -577,36 +577,39 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
     int64_t ce;
     for(;;) {  // Loop while ce32 is special.
         if(!Collation::isSpecialCE32(ce32)) {
-            ce = Collation::ceFromCE32(ce32);
+            ce = Collation::ceFromSimpleCE32(ce32);
             break;
         }
-        int32_t tag = Collation::getSpecialCE32Tag(ce32);
-        if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
-            U_ASSERT(ce32 != Collation::MIN_SPECIAL_CE32);
-            cesLength = forwardCEs.append(cesLength, Collation::getLatinCE0(ce32), errorCode);
-            ce = Collation::getLatinCE1(ce32);
-            break;
         // if-else-if rather than switch so that "break;" leaves the loop.
+        int32_t tag = Collation::tagFromCE32(ce32);
+        if(tag == Collation::LONG_PRIMARY_TAG) {
+            ce = Collation::ceFromLongPrimaryCE32(ce32);
+            break;
+        } else if(tag == Collation::LONG_SECONDARY_TAG) {
+            ce = Collation::ceFromLongSecondaryCE32(ce32);
+            break;
+        } else if(tag == Collation::LATIN_EXPANSION_TAG) {
+            cesLength = forwardCEs.append(cesLength, Collation::latinCE0FromCE32(ce32), errorCode);
+            ce = Collation::latinCE1FromCE32(ce32);
+            break;
         } else if(tag == Collation::EXPANSION32_TAG) {
-            const uint32_t *ce32s = d->ce32s + Collation::getExpansionIndex(ce32);
-            int32_t length = Collation::getExpansionLength(ce32);
-            if(length == 0) { length = (int32_t)*ce32s++; }
+            const uint32_t *ce32s = d->ce32s + Collation::indexFromCE32(ce32);
+            int32_t length = Collation::lengthFromCE32(ce32);
             for(int32_t i = 0; i < length; ++i) {
                 cesLength = forwardCEs.append(cesLength, Collation::ceFromCE32(ce32s[i]), errorCode);
             }
             cesMaxIndex = cesLength - 1;
             return;
         } else if(tag == Collation::EXPANSION_TAG) {
-            const int64_t *expCEs = d->ces + Collation::getExpansionIndex(ce32);
-            int32_t length = Collation::getExpansionLength(ce32);
-            if(length == 0) { length = (int32_t)*expCEs++; }
+            const int64_t *expCEs = d->ces + Collation::indexFromCE32(ce32);
+            int32_t length = Collation::lengthFromCE32(ce32);
             for(int32_t i = 0; i < length; ++i) {
                 cesLength = forwardCEs.append(cesLength, expCEs[i], errorCode);
             }
             cesMaxIndex = cesLength - 1;
             return;
         } else if(tag == Collation::CONTRACTION_TAG) {
-            const UChar *p = d->contexts + Collation::getContractionIndex(ce32);
+            const UChar *p = d->contexts + Collation::indexFromCE32(ce32);
             uint32_t defaultCE32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
             UChar32 nextCp = nextSkippedCodePoint(errorCode);
             if(nextCp < 0) {
@@ -628,14 +631,16 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             ce = getCEFromOffsetCE32(d, c, ce32);
             break;
         } else if(tag == Collation::IMPLICIT_TAG) {
-            U_ASSERT((ce32 & 1) != 0);
             U_ASSERT(!U_IS_SURROGATE(c));
             ce = Collation::unassignedCEFromCodePoint(c);
             break;
         } else {
+        // case Collation::FALLBACK_TAG:
+        // case Collation::RESERVED_TAG_3:
+        // case Collation::RESERVED_TAG_7:
         // case Collation::PREFIX_TAG:
         // case Collation::DIGIT_TAG:
-        // case Collation::RESERVED_TAG_11:
+        // case Collation::U0000_TAG:
         // case Collation::HANGUL_TAG:
         // case Collation::LEAD_SURROGATE_TAG:
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
@@ -790,8 +795,8 @@ CollationIterator::setHangulExpansion(UChar32 c) {
 
 void
 CollationIterator::setLatinExpansion(uint32_t ce32) {
-    forwardCEs[0] = Collation::getLatinCE0(ce32);
-    forwardCEs[1] = Collation::getLatinCE1(ce32);
+    forwardCEs[0] = Collation::latinCE0FromCE32(ce32);
+    forwardCEs[1] = Collation::latinCE1FromCE32(ce32);
     ces = forwardCEs.getBuffer();
     cesIndex = cesMaxIndex = 1;
 }
@@ -800,7 +805,6 @@ void
 CollationIterator::setCE32s(const CollationData *d, int32_t expIndex, int32_t length) {
     ces = forwardCEs.getBuffer();
     const uint32_t *ce32s = d->ce32s + expIndex;
-    if(length == 0) { length = (int32_t)*ce32s++; }
     cesMaxIndex = length - 1;
     for(int32_t i = 0; i < length; ++i) {
         forwardCEs[i] = Collation::ceFromCE32(ce32s[i]);
@@ -827,17 +831,17 @@ CollationIterator::previousCE(CEArray &backwardCEs, UErrorCode &errorCode) {
     uint32_t ce32 = data->getCE32(c);
     // Simple, safe-backwards iteration:
     // Get a CE going backwards, handle prefixes but no contractions.
-    if(ce32 < Collation::MIN_SPECIAL_CE32) {  // Forced-inline of isSpecialCE32(ce32).
+    if(!Collation::isSpecialCE32(ce32)) {
         // Normal CE from the main data.
-        return Collation::ceFromCE32(ce32);
+        return Collation::ceFromSimpleCE32(ce32);
     }
     const CollationData *d;
-    if(ce32 == Collation::MIN_SPECIAL_CE32) {
+    if(ce32 == Collation::FALLBACK_CE32) {
         d = data->base;
         ce32 = d->getCE32(c);
         if(!Collation::isSpecialCE32(ce32)) {
             // Normal CE from the base data.
-            return Collation::ceFromCE32(ce32);
+            return Collation::ceFromSimpleCE32(ce32);
         }
     } else {
         d = data;
@@ -850,25 +854,27 @@ CollationIterator::previousCEFromSpecialCE32(
         const CollationData *d, UChar32 c, uint32_t ce32,
         UErrorCode &errorCode) {
     for(;;) {  // Loop while ce32 is special.
-        int32_t tag = Collation::getSpecialCE32Tag(ce32);
-        if(tag <= Collation::MAX_LATIN_EXPANSION_TAG) {
-            U_ASSERT(ce32 != Collation::MIN_SPECIAL_CE32);
+        switch(Collation::tagFromCE32(ce32)) {
+        case Collation::FALLBACK_TAG:
+        case Collation::RESERVED_TAG_3:
+        case Collation::RESERVED_TAG_7:
+            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+            return 0;
+        case Collation::LONG_PRIMARY_TAG:
+            return Collation::ceFromLongPrimaryCE32(ce32);
+        case Collation::LONG_SECONDARY_TAG:
+            return Collation::ceFromLongSecondaryCE32(ce32);
+        case Collation::LATIN_EXPANSION_TAG:
             setLatinExpansion(ce32);
             return ces[1];
-        }
-        switch(tag) {
         case Collation::EXPANSION32_TAG:
-            setCE32s(d, Collation::getExpansionIndex(ce32), Collation::getExpansionLength(ce32));
+            setCE32s(d, Collation::indexFromCE32(ce32), Collation::lengthFromCE32(ce32));
             cesIndex = cesMaxIndex;
             return ces[cesMaxIndex];
-        case Collation::EXPANSION_TAG: {
-            ces = d->ces + Collation::getExpansionIndex(ce32);
-            int32_t length = Collation::getExpansionLength(ce32);
-            if(length == 0) { length = (int32_t)*ces++; }
-            cesMaxIndex = length - 1;
-            cesIndex = cesMaxIndex;
+        case Collation::EXPANSION_TAG:
+            ces = d->ces + Collation::indexFromCE32(ce32);
+            cesIndex = cesMaxIndex = Collation::lengthFromCE32(ce32) - 1;
             return ces[cesMaxIndex];
-        }
         case Collation::PREFIX_TAG:
             ce32 = getCE32FromPrefix(d, ce32, errorCode);
             break;
@@ -881,12 +887,12 @@ CollationIterator::previousCEFromSpecialCE32(
                 // Collect digits.
                 CharString digits;
                 for(;;) {
-                    char digit = (char)(ce32 & 0xf);
+                    char digit = Collation::digitFromCE32(ce32);
                     digits.append(digit, errorCode);
                     c = previousCodePoint(errorCode);
                     if(c < 0) { break; }
                     ce32 = data->getCE32(c);
-                    if(ce32 == Collation::MIN_SPECIAL_CE32) {
+                    if(ce32 == Collation::FALLBACK_CE32) {
                         ce32 = data->base->getCE32(c);
                     }
                     if(!Collation::hasCE32Tag(ce32, Collation::DIGIT_TAG)) {
@@ -907,12 +913,14 @@ CollationIterator::previousCEFromSpecialCE32(
                 return ces[cesMaxIndex];
             } else {
                 // Fetch the non-numeric-collation CE32 and continue.
-                ce32 = d->ce32s[Collation::getDigitIndex(ce32)];
+                ce32 = d->ce32s[Collation::indexFromCE32(ce32)];
                 break;
             }
-        case Collation::RESERVED_TAG_11:
-            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
-            return 0;
+        case Collation::U0000_TAG:
+            U_ASSERT(c == 0);
+            // Fetch the normal ce32 for U+0000 and continue.
+            ce32 = d->ce32s[0];
+            break;
         case Collation::HANGUL_TAG:
             setHangulExpansion(c);
             cesIndex = cesMaxIndex;
@@ -924,12 +932,7 @@ CollationIterator::previousCEFromSpecialCE32(
         case Collation::OFFSET_TAG:
             return CollationIterator::getCEFromOffsetCE32(d, c, ce32);
         case Collation::IMPLICIT_TAG:
-            if((ce32 & 1) == 0) {
-                U_ASSERT(c == 0);
-                // Fetch the normal ce32 for U+0000 and continue.
-                ce32 = d->ce32s[0];
-                break;
-            } else if(U_IS_SURROGATE(c) && forbidSurrogateCodePoints()) {
+            if(U_IS_SURROGATE(c) && forbidSurrogateCodePoints()) {
                 ce32 = Collation::FFFD_CE32;
                 break;
             } else {
@@ -937,7 +940,7 @@ CollationIterator::previousCEFromSpecialCE32(
             }
         }
         if(!Collation::isSpecialCE32(ce32)) {
-            return Collation::ceFromCE32(ce32);
+            return Collation::ceFromSimpleCE32(ce32);
         }
     }
 }
