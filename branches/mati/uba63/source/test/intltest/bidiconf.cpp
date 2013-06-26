@@ -289,11 +289,6 @@ UBool BiDiConformanceTest::parseInputStringFromBiDiClasses(const char *&start) {
 }
 
 void BiDiConformanceTest::TestBidiTest() {
-//    if(isICUVersionBefore(52, 1)) {
-        // TODO: Update the ICU BiDi code to implement the additions in the Unicode 6.3 BiDi Algorithm,
-        // and reenable the BiDi conformance test.
-//        return;
-//    }
     IcuTestErrorCode errorCode(*this, "TestBidiTest");
     const char *sourceTestDataPath=getSourceTestData(errorCode);
     if(errorCode.logIfFailureAndReset("unable to find the source/test/testdata "
