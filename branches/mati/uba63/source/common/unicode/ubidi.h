@@ -387,7 +387,7 @@ typedef uint8_t UBiDiLevel;
  * (The maximum resolved level can be up to <code>UBIDI_MAX_EXPLICIT_LEVEL+1</code>).
  * @stable ICU 2.0
  */
-#define UBIDI_MAX_EXPLICIT_LEVEL 61
+#define UBIDI_MAX_EXPLICIT_LEVEL 125
 
 /** Bit flag for level input.
  *  Overrides directional properties.
