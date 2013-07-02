@@ -254,7 +254,8 @@ public:
 
     /**
      * We limit the number of CEs in an expansion
-     * so that we can copy them at runtime without growing the destination buffer.
+     * so that we can use a small number of length bits in the data structure,
+     * and so that an implementation can copy CEs at runtime without growing a destination buffer.
      */
     static const int32_t MAX_EXPANSION_LENGTH = 31;
     static const int32_t MAX_INDEX = 0x7ffff;

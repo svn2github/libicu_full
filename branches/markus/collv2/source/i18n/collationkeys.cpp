@@ -265,6 +265,8 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
     UBool anyMergeSeparators = FALSE;
 
     for(;;) {
+        // No need to keep all CEs in the buffer when we write a sort key.
+        iter.clearCEsIfNoneRemaining();
         int64_t ce = iter.nextCE(errorCode);
         uint32_t p = (uint32_t)(ce >> 32);
         uint32_t p1 = p >> 24;

@@ -27,58 +27,63 @@ class SkippedState;
 class UCharsTrie;
 
 /**
- * Buffer for CEs.
- * Rather than its own position and length fields,
- * we share the cesIndex and cesMaxIndex of the CollationIterator.
- */
-class CEArray {
-public:
-    CEArray() {}
-    ~CEArray();
-
-    inline int32_t append(int32_t length, int64_t ce, UErrorCode &errorCode) {
-        if(length < buffer.getCapacity()) {
-            buffer[length++] = ce;
-            return length;
-        } else {
-            return doAppend(length, ce, errorCode);
-        }
-    }
-
-    inline int64_t &operator[](ptrdiff_t i) { return buffer[i]; }
-
-    inline const int64_t *getBuffer() const { return buffer.getAlias(); }
-
-private:
-    CEArray(const CEArray &);
-    void operator=(const CEArray &);
-
-    int32_t doAppend(int32_t length, int64_t ce, UErrorCode &errorCode);
-
-    /**
-     * Array of CEs.
-     * Its initial length must be at least Collation::MAX_EXPANSION_LENGTH
-     * so that we need not grow this buffer,
-     * except in the slower code path mapping combining marks
-     * that were skipped in discontiguous contraction matching.
-     */
-    MaybeStackArray<int64_t, 40> buffer;
-};
-
-/**
  * Collation element iterator and abstract character iterator.
  *
  * When a method returns a code point value, it must be in 0..10FFFF,
  * except it can be negative as a sentinel value.
  */
 class U_I18N_API CollationIterator : public UObject {
+private:
+    class CEBuffer {
+    private:
+        /** Large enough for CEs of most short strings. */
+        static const int32_t INITIAL_CAPACITY = 40;
+    public:
+        CEBuffer() : length(0) {}
+        ~CEBuffer();
+
+        inline void append(int64_t ce, UErrorCode &errorCode) {
+            if(length < INITIAL_CAPACITY || ensureAppendCapacity(1, errorCode)) {
+                buffer[length++] = ce;
+            }
+        }
+
+        inline void appendUnsafe(int64_t ce) {
+            buffer[length++] = ce;
+        }
+
+        UBool ensureAppendCapacity(int32_t appCap, UErrorCode &errorCode);
+
+        inline UBool incLength(UErrorCode &errorCode) {
+            // Use INITIAL_CAPACITY for a very simple fastpath.
+            // (Rather than buffer.getCapacity().)
+            if(length < INITIAL_CAPACITY || ensureAppendCapacity(1, errorCode)) {
+                ++length;
+                return TRUE;
+            } else {
+                return FALSE;
+            }
+        }
+
+        inline int64_t set(int32_t i, int64_t ce) {
+            return buffer[i] = ce;
+        }
+        inline int64_t get(int32_t i) const { return buffer[i]; }
+
+        int32_t length;
+
+    private:
+        CEBuffer(const CEBuffer &);
+        void operator=(const CEBuffer &);
+
+        MaybeStackArray<int64_t, INITIAL_CAPACITY> buffer;
+    };
+
 public:
     CollationIterator(const CollationData *d, UBool numeric)
-            // Optimization: Skip initialization of fields that are not used
-            // until they are set together with other state changes.
             : trie(d->trie),
               data(d),
-              cesIndex(-1),  // cesMaxIndex(0), ces(NULL), -- unused while cesIndex<0
+              cesIndex(0),
               skipped(NULL),
               numCpFwd(-1),
               isNumeric(numeric) {}
@@ -95,15 +100,13 @@ public:
      * Returns the next collation element.
      */
     inline int64_t nextCE(UErrorCode &errorCode) {
-        if(cesIndex >= 0) {
+        if(cesIndex < ceBuffer.length) {
             // Return the next buffered CE.
-            int64_t ce = ces[cesIndex];
-            if(cesIndex < cesMaxIndex) {
-                ++cesIndex;
-            } else {
-                cesIndex = -1;
-            }
-            return ce;
+            return ceBuffer.get(cesIndex++);
+        }
+        // assert cesIndex == ceBuffer.length;
+        if(!ceBuffer.incLength(errorCode)) {
+            return Collation::NO_CE;
         }
         UChar32 c;
         uint32_t ce32 = handleNextCE32(c, errorCode);
@@ -111,28 +114,31 @@ public:
         if(t < Collation::SPECIAL_CE32_LOW_BYTE) {  // Forced-inline of isSpecialCE32(ce32).
             // Normal CE from the main data.
             // Forced-inline of ceFromSimpleCE32(ce32).
-            return ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (t << 8);
+            return ceBuffer.set(cesIndex++,
+                    ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (t << 8));
         }
         const CollationData *d;
         // The compiler should be able to optimize the previous and the following
         // comparisons of t with the same constant.
         if(t == Collation::SPECIAL_CE32_LOW_BYTE) {
             if(c < 0) {
-                return Collation::NO_CE;
+                return ceBuffer.set(cesIndex++, Collation::NO_CE);
             }
             d = data->base;
             ce32 = d->getCE32(c);
             t = ce32 & 0xff;
             if(t < Collation::SPECIAL_CE32_LOW_BYTE) {
                 // Normal CE from the base data.
-                return ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (t << 8);
+                return ceBuffer.set(cesIndex++,
+                        ((int64_t)(ce32 & 0xffff0000) << 32) | ((ce32 & 0xff00) << 16) | (t << 8));
             }
         } else {
             d = data;
         }
         if(t == Collation::LONG_PRIMARY_CE32_LOW_BYTE) {
             // Forced-inline of ceFromLongPrimaryCE32(ce32).
-            return ((int64_t)(ce32 - t) << 32) | Collation::COMMON_SEC_AND_TER_CE;
+            return ceBuffer.set(cesIndex++,
+                    ((int64_t)(ce32 - t) << 32) | Collation::COMMON_SEC_AND_TER_CE);
         }
         return nextCEFromSpecialCE32(d, c, ce32, errorCode);
     }
@@ -143,9 +149,33 @@ public:
     // Keep the normal, inline nextCE() maximally fast and efficient.
 
     /**
+     * Overwrites the current CE (the last one returned by nextCE()).
+     */
+    void setCurrentCE(int64_t ce) {
+        // assert cesIndex > 0;
+        ceBuffer.set(cesIndex - 1, ce);
+    }
+
+    /**
      * Returns the previous collation element.
      */
-    int64_t previousCE(CEArray &backwardCEs, UErrorCode &errorCode);
+    int64_t previousCE(UErrorCode &errorCode);
+
+    inline int32_t getCEsLength() const {
+        return ceBuffer.length;
+    }
+
+    inline int64_t getCE(int32_t i) const {
+        return ceBuffer.get(i);
+    }
+
+    void clearCEs() {
+        cesIndex = ceBuffer.length = 0;
+    }
+
+    void clearCEsIfNoneRemaining() {
+        if(cesIndex == ceBuffer.length) { clearCEs(); }
+    }
 
     /**
      * Returns the next code point (with post-increment).
@@ -216,6 +246,9 @@ private:
     int64_t nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                   UErrorCode &errorCode);
 
+    void appendCEsFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                                  UBool forward, UErrorCode &errorCode);
+
     /**
      * Computes a CE from c's ce32 which has the OFFSET_TAG.
      */
@@ -240,74 +273,37 @@ private:
             int32_t lookAhead, UChar32 c,
             UErrorCode &errorCode);
 
-    int64_t previousCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                                      UErrorCode &errorCode);
-
     /**
      * Returns the previous CE when data->isUnsafeBackward(c).
      */
-    int64_t previousCEUnsafe(CEArray &backwardCEs, UChar32 c, UErrorCode &errorCode);
-
-    /**
-     * Appends CEs for a combining mark that was skipped in discontiguous contraction.
-     */
-    void appendCEsFromCp(UChar32 c, UErrorCode &errorCode);
-
-    /**
-     * Appends CEs for a contraction result CE32,
-     * or for the CE32 of a combining mark that was skipped in discontiguous contraction.
-     */
-    void appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                           UErrorCode &errorCode);
+    int64_t previousCEUnsafe(UChar32 c, UErrorCode &errorCode);
 
     /**
      * Turns a string of digits (bytes 0..9)
      * into a sequence of CEs that will sort in numeric order.
      *
-     * Sets ces and cesMaxIndex.
-     *
+     * Starts from this ce32's digit value and consumes the following/preceding digits.
      * The digits string must not be empty and must not have leading zeros.
      */
-    void setNumericCEs(const char *digits, int32_t length, UErrorCode &errorCode);
+    void appendNumericCEs(uint32_t ce32, UBool forward, UErrorCode &errorCode);
 
     /**
      * Turns 1..254 digits into a sequence of CEs.
-     * Called by setNumericCEs() for each segment of at most 254 digits.
+     * Called by appendNumericCEs() for each segment of at most 254 digits.
      */
-    void setNumericSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode);
+    void appendNumericSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode);
 
     /**
-     * Sets 2 or 3 buffered CEs from a Hangul syllable,
-     * assuming that the constituent Jamos all have non-special CE32s.
-     * Otherwise DECOMP_HANGUL would have to be set.
-     *
-     * Sets cesMaxIndex as necessary.
-     * Does not set cesIndex;
-     * caller needs to set cesIndex=1 for forward iteration,
-     * or cesIndex=cesMaxIndex for backward iteration.
+     * Appends 2 or 3 CEs from a Hangul syllable,
+     * assuming that the constituent Jamos are all context-insensitive and map to single CEs.
+     * TODO: Otherwise DECOMP_HANGUL would have to be set.
      */
-    void setHangulExpansion(UChar32 c);
+    void appendHangulExpansion(UChar32 c, UErrorCode &errorCode);
 
-    /**
-     * Sets 2 buffered CEs from a Latin mini-expansion CE32.
-     * Sets cesIndex=cesMaxIndex=1.
-     */
-    void setLatinExpansion(uint32_t ce32);
-
-    /**
-     * Sets buffered CEs from CE32s.
-     */
-    void setCE32s(const CollationData *d, int32_t expIndex, int32_t length);
-
-    // List of CEs.
-    int32_t cesIndex, cesMaxIndex;
-    const int64_t *ces;
+    CEBuffer ceBuffer;
+    int32_t cesIndex;
 
     SkippedState *skipped;
-
-    // 64-bit-CE buffer for forward and safe-backward iteration
-    // (computed expansions and numeric-collation CEs).
-    CEArray forwardCEs;
 
     // Number of code points to read forward, or -1.
     // Used as a forward iteration limit in previousCEUnsafe().
