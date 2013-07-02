@@ -223,6 +223,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bidiconf2.cpp" />
     <ClCompile Include="bytestrietest.cpp" />
     <ClCompile Include="colldata.cpp" />
     <ClCompile Include="regiontst.cpp" />

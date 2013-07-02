@@ -457,6 +457,9 @@
     <ClCompile Include="regiontst.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
+    <ClCompile Include="bidiconf2.cpp">
+      <Filter>bidi</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="itrbbi.h">

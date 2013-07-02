@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1998-2009, International Business Machines Corporation and
+ * Copyright (c) 1998-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -37,6 +37,7 @@
 #include "csdetest.h"
 
 extern IntlTest *createBiDiConformanceTest();
+extern IntlTest *createBiDiConformanceTest2();
 
 #define CASE_SUITE(id, suite) case id:                  \
                           name = #suite;                \
@@ -200,6 +201,15 @@ void MajorTestLevel::runIndexedTest( int32_t index, UBool exec, const char* &nam
                 if (exec) {
                     logln("TestSuite bidi---"); logln();
                     LocalPointer<IntlTest> test(createBiDiConformanceTest());
+                    callTest(*test, par);
+                }
+
+                break;
+
+            case 16: name = "bidi2";
+                if (exec) {
+                    logln("TestSuite bidi2---"); logln();
+                    LocalPointer<IntlTest> test(createBiDiConformanceTest2());
                     callTest(*test, par);
                 }
 

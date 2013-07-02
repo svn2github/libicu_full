@@ -75,6 +75,7 @@ enum {
 #define MASK_LTR (DIRPROP_FLAG(L)|DIRPROP_FLAG(EN)|DIRPROP_FLAG(AN)|DIRPROP_FLAG(LRE)|DIRPROP_FLAG(LRO)|DIRPROP_FLAG(LRI))
 #define MASK_RTL (DIRPROP_FLAG(R)|DIRPROP_FLAG(AL)|DIRPROP_FLAG(RLE)|DIRPROP_FLAG(RLO)|DIRPROP_FLAG(RLI))
 #define MASK_R_AL (DIRPROP_FLAG(R)|DIRPROP_FLAG(AL))
+#define MASK_STRONG (DIRPROP_FLAG(L)|DIRPROP_FLAG(R)|DIRPROP_FLAG(AL))
 
 /* explicit embedding codes */
 #define MASK_EXPLICIT (DIRPROP_FLAG(LRE)|DIRPROP_FLAG(LRO)|DIRPROP_FLAG(RLE)|DIRPROP_FLAG(RLO)|DIRPROP_FLAG(PDF))
@@ -128,6 +129,8 @@ enum {
 #define SIMPLE_PARAS_SIZE   10
 /* number of isolate entries allocated initially without malloc */
 #define SIMPLE_ISOLATES_SIZE 5
+/* number of isolate run entries for paired brackets allocated initially without malloc */
+#define SIMPLE_OPENINGS_SIZE 20
 
 #define CR  0x000D
 #define LF  0x000A
@@ -145,9 +148,41 @@ typedef struct Para {
     int32_t level;
 } Para;
 
+enum {                                  /* flags for Opening.flags */
+    FOUND_L=DIRPROP_FLAG(L),
+    FOUND_R=DIRPROP_FLAG(R)
+};
+
+typedef struct Opening {
+    int32_t position;                   /* position of opening bracket */
+    int32_t match;                      /* matching char or -position of closing bracket */
+    int32_t lastStrongPos;              /* position of last strong char found before opening */
+    DirProp lastStrong;                 /* bidi class of last strong char before opening */
+    uint16_t flags;                     /* bits for L or R/AL found within the pair */
+} Opening;
+
+typedef struct IsoRun {
+    int32_t  lastStrongPos;             /* position of last strong char found in this run */
+    uint16_t start;                     /* index of first opening entry for this run */
+    uint16_t limit;                     /* index after last opening entry for this run */
+    UBiDiLevel level;                   /* level of this run */
+    DirProp lastStrong;                 /* bidi class of last strong char found in this run */
+} IsoRun;
+
+typedef struct BracketData {
+    UBiDi   *pBiDi;
+    /* array of opening entries which should be enough in most cases; no malloc() */
+    Opening simpleOpenings[SIMPLE_OPENINGS_SIZE];
+    Opening *openings;                  /* pointer to current array of entries */
+    int32_t openingsSize;               /* number of allocated entries */
+    int32_t isoRunLast;                 /* index of last used entry */
+    /* array of nested isolated sequence entries; can never excess UBIDI_MAX_EXPLICIT_LEVEL
+       + 1 for index 0, + 1 for before the first isolated sequence */
+    IsoRun  isoRuns[UBIDI_MAX_EXPLICIT_LEVEL+2];
+} BracketData;
+
 typedef struct Isolate {
     int32_t start1;
-    int32_t startON;
     int16_t stateImp;
     int16_t state;
 } Isolate;
@@ -240,11 +275,12 @@ struct UBiDi {
     int32_t resultLength;
 
     /* memory sizes in bytes */
-    int32_t dirPropsSize, levelsSize, parasSize, runsSize, isolatesSize;
+    int32_t dirPropsSize, levelsSize, openingsSize, parasSize, runsSize, isolatesSize;
 
     /* allocated memory */
     DirProp *dirPropsMemory;
     UBiDiLevel *levelsMemory;
+    Opening *openingsMemory;
     Para *parasMemory;
     Run *runsMemory;
     Isolate *isolatesMemory;
@@ -345,6 +381,7 @@ struct UBiDi {
 typedef union {
     DirProp *dirPropsMemory;
     UBiDiLevel *levelsMemory;
+    Opening *openingsMemory;
     Para *parasMemory;
     Run *runsMemory;
     Isolate *isolatesMemory;
@@ -412,6 +449,10 @@ ubidi_getMemory(BidiMemoryForAllocation *pMemory, int32_t *pSize, UBool mayAlloc
 #define getInitialLevelsMemory(pBiDi, length) \
         ubidi_getMemory((BidiMemoryForAllocation *)&(pBiDi)->levelsMemory, &(pBiDi)->levelsSize, \
                         TRUE, (length))
+
+#define getInitialOpeningsMemory(pBiDi, length) \
+        ubidi_getMemory((BidiMemoryForAllocation *)&(pBiDi)->openingsMemory, &(pBiDi)->openingsSize, \
+                        TRUE, (length)*sizeof(Opening))
 
 #define getInitialParasMemory(pBiDi, length) \
         ubidi_getMemory((BidiMemoryForAllocation *)&(pBiDi)->parasMemory, &(pBiDi)->parasSize, \
