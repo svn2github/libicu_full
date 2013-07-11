@@ -338,7 +338,7 @@ public:
      * @see CollationElementIterator#getMaxExpansion
      * @stable ICU 2.0
      */
-    // TODO: int32_t getMaxExpansion(int32_t order) const;
+    int32_t getMaxExpansion(int32_t order) const;
 
     /**
      * Returns a unique class ID POLYMORPHICALLY. Pure virtual override. This
@@ -595,6 +595,8 @@ public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationTailoring *t);
 
 private:
+    friend class CollationElementIterator;
+
     /**
      * Enumeration of attributes that are relevant for short definition strings
      * (e.g., ucol_getShortDefinitionString()) and the related ucol_getAttributeOrDefault().

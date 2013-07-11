@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2012, International Business Machines Corporation and
+ * Copyright (c) 1997-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 //===============================================================================
@@ -1329,7 +1329,7 @@ void CollationAPITest::TestMaxExpansion()
         if (order == 0)
             order = iter->previous(status);
 
-        while (U_SUCCESS(status) && iter->previous(status) != UCOL_NULLORDER) {
+        while (U_SUCCESS(status) && iter->previous(status) != CollationElementIterator::NULLORDER) {
             count ++;
         }
 

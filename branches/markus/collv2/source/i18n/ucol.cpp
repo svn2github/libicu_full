@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2012, International Business Machines
+*   Copyright (C) 1996-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  ucol.cpp
@@ -22,6 +22,7 @@
 
 #include "unicode/bytestream.h"
 #include "unicode/coleitr.h"
+#include "unicode/ucoleitr.h"
 #include "unicode/unorm.h"
 #include "unicode/udata.h"
 #include "unicode/ustring.h"

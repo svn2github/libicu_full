@@ -9,6 +9,8 @@
 * created by: Markus W. Scherer
 */
 
+#include "utypeinfo.h"  // for 'typeid' to work
+
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_COLLATION
@@ -138,17 +140,51 @@ private:
     UCharsTrie::State state;
 };
 
+CollationIterator::CollationIterator(const CollationIterator &other)
+        : trie(other.trie),
+          data(other.data),
+          cesIndex(other.cesIndex),
+          skipped(NULL),
+          numCpFwd(other.numCpFwd),
+          isNumeric(other.isNumeric) {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    int32_t length = other.ceBuffer.length;
+    if(length > 0 && ceBuffer.ensureAppendCapacity(length, errorCode)) {
+        for(int32_t i = 0; i < length; ++i) {
+            ceBuffer.set(i, other.ceBuffer.get(i));
+        }
+        ceBuffer.length = length;
+    } else {
+        cesIndex = 0;
+    }
+}
+
 CollationIterator::~CollationIterator() {
     delete skipped;
 }
 
-void
-CollationIterator::resetToStart() {
-    reset();
+UBool
+CollationIterator::operator==(const CollationIterator &other) const {
+    // Subclasses: Call this method and then add more specific checks.
+    // Compare the iterator state but not the collation data (trie & data fields):
+    // Assume that the caller compares the data.
+    // Ignore skipped since that should be unused between calls to nextCE().
+    // (It only stays around to avoid another memory allocation.)
+    if(!(typeid(*this) == typeid(other) &&
+            ceBuffer.length == other.ceBuffer.length &&
+            cesIndex == other.cesIndex &&
+            numCpFwd == other.numCpFwd &&
+            isNumeric == other.isNumeric)) {
+        return FALSE;
+    }
+    for(int32_t i = 0; i < ceBuffer.length; ++i) {
+        if(ceBuffer.get(i) != other.ceBuffer.get(i)) { return FALSE; }
+    }
+    return TRUE;
 }
 
 void
-CollationIterator::reset() {  // Needed as a separate function?
+CollationIterator::reset() {
     cesIndex = ceBuffer.length = 0;
     if(skipped != NULL) { skipped->clear(); }
 }
@@ -770,7 +806,6 @@ CollationIterator::previousCE(UErrorCode &errorCode) {
     if(ceBuffer.length > 0) {
         // Return the previous buffered CE.
         return ceBuffer.get(--ceBuffer.length);
-        // TODO: Jump by delta code points if the direction changed?
     }
     UChar32 c = previousCodePoint(errorCode);
     if(c < 0) { return Collation::NO_CE; }

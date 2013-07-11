@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * utf8collationiterator.cpp
@@ -27,9 +27,14 @@
 U_NAMESPACE_BEGIN
 
 void
-UTF8CollationIterator::resetToStart() {
-    pos = 0;
-    CollationIterator::resetToStart();
+UTF8CollationIterator::resetToOffset(int32_t newOffset) {
+    CollationIterator::reset();
+    pos = newOffset;
+}
+
+int32_t
+UTF8CollationIterator::getOffset() const {
+    return pos;
 }
 
 uint32_t
@@ -120,12 +125,19 @@ UTF8CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorCo
 // FCDUTF8CollationIterator ------------------------------------------------ ***
 
 void
-FCDUTF8CollationIterator::resetToStart() {
-    if(state < IN_FCD_SEGMENT || start != 0) {
-        start = 0;
-        state = CHECK_FWD;
+FCDUTF8CollationIterator::resetToOffset(int32_t newOffset) {
+    CollationIterator::reset();
+    start = pos = newOffset;
+    state = CHECK_FWD;
+}
+
+int32_t
+FCDUTF8CollationIterator::getOffset() const {
+    if(state != IN_NORMALIZED) {
+        return pos;
+    } else {
+        return start;
     }
-    UTF8CollationIterator::resetToStart();
 }
 
 uint32_t

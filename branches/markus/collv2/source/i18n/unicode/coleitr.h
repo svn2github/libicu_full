@@ -1,6 +1,6 @@
 /*
  ******************************************************************************
- *   Copyright (C) 1997-2008, International Business Machines
+ *   Copyright (C) 1997-2013, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  ******************************************************************************
  */
@@ -34,12 +34,11 @@
 
 #include "unicode/utypes.h"
 
- 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/unistr.h"
 #include "unicode/uobject.h"
 #include "unicode/tblcoll.h"
-#include "unicode/ucoleitr.h"
 
 /** 
  * The UCollationElements struct.
@@ -48,7 +47,14 @@
  */
 typedef struct UCollationElements UCollationElements;
 
+struct UHashtable;
+
 U_NAMESPACE_BEGIN
+
+struct CollationData;
+
+class CollationIterator;
+class RuleBasedCollator2;
 
 /**
 * The CollationElementIterator class is used as an iterator to walk through     
@@ -287,6 +293,12 @@ public:
     */
     static UClassID U_EXPORT2 getStaticClassID();
 
+    /**
+     * For internal use only.
+     * @internal
+     */
+    static UHashtable *computeMaxExpansions(const CollationData *data, UErrorCode &errorCode);
+
 protected:
   
     // CollationElementIterator protected constructors --------------------------
@@ -294,6 +306,7 @@ protected:
     * @stable ICU 2.0
     */
     friend class RuleBasedCollator;
+    friend class RuleBasedCollator2;
 
     /**
     * CollationElementIterator constructor. This takes the source string and the 
@@ -307,6 +320,11 @@ protected:
     */
     CollationElementIterator(const UnicodeString& sourceText,
         const RuleBasedCollator* order, UErrorCode& status);
+    // TODO: The constructors (and maybe assignment operator) should be private.
+    // TODO: The constructors should take settings & data & maxExpansions, not a collator.
+    // http://bugs.icu-project.org/trac/ticket/10251
+    CollationElementIterator(const UnicodeString& sourceText,
+        const RuleBasedCollator2* order, UErrorCode& status);
 
     /**
     * CollationElementIterator constructor. This takes the source string and the 
@@ -320,6 +338,8 @@ protected:
     */
     CollationElementIterator(const CharacterIterator& sourceText,
         const RuleBasedCollator* order, UErrorCode& status);
+    CollationElementIterator(const CharacterIterator& sourceText,
+        const RuleBasedCollator2* order, UErrorCode& status);
 
     // CollationElementIterator protected methods -------------------------------
 
@@ -335,8 +355,22 @@ protected:
 private:
     CollationElementIterator(); // default constructor not implemented
 
+    static int32_t getMaxExpansion(const UHashtable *maxExpansions, int32_t order);
+
     // CollationElementIterator private data members ----------------------------
 
+    CollationIterator *iter_;  // owned
+    const RuleBasedCollator2 *rbc_;  // aliased
+    uint32_t otherHalf_;
+    /**
+     * <0: backwards; 0: just after reset() (previous() begins from end);
+     * 1: just after setOffset(); >1: forward
+     */
+    int8_t dir_;
+
+    UnicodeString string_;
+
+    // TODO: remove the following members, and related code
     /**
     * Data wrapper for collation elements
     */
@@ -349,7 +383,7 @@ private:
 
 };
 
-// CollationElementIterator inline method defination --------------------------
+// CollationElementIterator inline method definitions --------------------------
 
 /**
 * Get the primary order of a collation order.
@@ -381,11 +415,6 @@ inline int32_t CollationElementIterator::secondaryOrder(int32_t order)
 inline int32_t CollationElementIterator::tertiaryOrder(int32_t order)
 {
     return (order &= RuleBasedCollator::TERTIARYORDERMASK);
-}
-
-inline int32_t CollationElementIterator::getMaxExpansion(int32_t order) const
-{
-    return ucol_getMaxExpansion(m_data_, (uint32_t)order);
 }
 
 inline UBool CollationElementIterator::isIgnorable(int32_t order)

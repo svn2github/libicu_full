@@ -10,7 +10,7 @@
 */
 
 #ifndef __COLLATIONSETS_H__
-#define __COLLATIONKEYS_H__
+#define __COLLATIONSETS_H__
 
 #include "unicode/utypes.h"
 
@@ -72,9 +72,17 @@ public:
 
 class ContractionsAndExpansions : public UMemory {
 public:
-    ContractionsAndExpansions(UnicodeSet *con, UnicodeSet *exp, UBool prefixes)
+    class CESink : public UMemory {
+    public:
+        virtual ~CESink();
+        virtual void handleCE(int64_t ce) = 0;
+        virtual void handleExpansion(const int64_t ces[], int32_t length) = 0;
+    };
+
+    ContractionsAndExpansions(UnicodeSet *con, UnicodeSet *exp, CESink *s, UBool prefixes)
             : data(NULL), tailoring(NULL),
               contractions(con), expansions(exp),
+              sink(s),
               addPrefixes(prefixes),
               checkTailored(0),
               prefix(NULL), suffix(NULL),
@@ -96,16 +104,18 @@ public:
     const CollationData *tailoring;
     UnicodeSet *contractions;
     UnicodeSet *expansions;
+    CESink *sink;
     UBool addPrefixes;
     int8_t checkTailored;  // -1: collected tailored  +1: exclude tailored
     UnicodeSet tailored;
     UnicodeSet ranges;
     const UnicodeString *prefix;
     const UnicodeString *suffix;
+    int64_t ces[Collation::MAX_EXPANSION_LENGTH];
     UErrorCode errorCode;
 };
 
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION
-#endif  // __COLLATIONKEYS_H__
+#endif  // __COLLATIONSETS_H__

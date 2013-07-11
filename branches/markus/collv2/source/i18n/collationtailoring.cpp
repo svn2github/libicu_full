@@ -20,8 +20,10 @@
 #include "collationdata.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
+#include "mutex.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
+#include "uhash.h"
 #include "umutex.h"
 #include "utrie2.h"
 
@@ -40,6 +42,7 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
         U_ASSERT(baseSettings->reorderTable == NULL);
     }
     version[0] = version[1] = version[2] = version[3] = 0;
+    maxExpansionsSingleton.fInstance = NULL;
 }
 
 CollationTailoring::~CollationTailoring() {
@@ -49,6 +52,7 @@ CollationTailoring::~CollationTailoring() {
     utrie2_close(trie);
     delete unsafeBackwardSet;
     uprv_free(reorderCodes);
+    uhash_close(static_cast<UHashtable *>(maxExpansionsSingleton.fInstance));
 }
 
 void

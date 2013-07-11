@@ -34,15 +34,9 @@ public:
     UIterCollationIterator(const CollationData *d, UBool numeric, UCharIterator &ui)
             : CollationIterator(d, numeric), iter(ui) {}
 
-    virtual void resetToStart();
+    virtual void resetToOffset(int32_t newOffset);
 
-    /* TODO: void setText(const UChar *s, const UChar *lim) {
-        reset();
-        start = pos = s;
-        limit = lim;
-    }*/
-
-    // TODO: setText(start, pos, limit)  ?
+    virtual int32_t getOffset() const;
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 
@@ -71,7 +65,9 @@ public:
               state(ITER_CHECK_FWD), start(startIndex),
               nfcImpl(data->nfcImpl) {}
 
-    virtual void resetToStart();  // TODO: Do we really need *CollationIterator::resetToStart()?
+    virtual void resetToOffset(int32_t newOffset);
+
+    virtual int32_t getOffset() const;
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 

@@ -19,7 +19,6 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
-#include "normalizer2impl.h"
 
 U_NAMESPACE_BEGIN
 
@@ -90,11 +89,19 @@ public:
 
     virtual ~CollationIterator();
 
+    virtual UBool operator==(const CollationIterator &other) const;
+    inline UBool operator!=(const CollationIterator &other) const {
+        return !operator==(other);
+    }
+
     /**
-     * Resets the iterator state and position to the beginning of the text.
-     * Subclasses must override, and must call the parent class method.
+     * Resets the iterator state and sets the position to the specified offset.
+     * Subclasses must implement, and must call the parent class method,
+     * or CollationIterator::reset().
      */
-    virtual void resetToStart();
+    virtual void resetToOffset(int32_t newOffset) = 0;
+
+    virtual int32_t getOffset() const = 0;
 
     /**
      * Returns the next collation element.
@@ -142,11 +149,6 @@ public:
         }
         return nextCEFromSpecialCE32(d, c, ce32, errorCode);
     }
-    // TODO: Jump by delta code points if direction changed? (See ICU ticket #9104.)
-    // If so, then copy nextCE() to a not-inline slowNextCE()
-    // which keeps track of the text movements together with previousCE()
-    // and is used by the CollationElementIterator.
-    // Keep the normal, inline nextCE() maximally fast and efficient.
 
     /**
      * Overwrites the current CE (the last one returned by nextCE()).
@@ -190,6 +192,8 @@ public:
     virtual UChar32 previousCodePoint(UErrorCode &errorCode) = 0;
 
 protected:
+    CollationIterator(const CollationIterator &other);
+
     void reset();
 
     /**
@@ -230,17 +234,6 @@ protected:
     // Main lookup trie of the data object.
     const UTrie2 *trie;
     const CollationData *data;
-
-    // TODO: Do we need to support changing iteration direction? (ICU ticket #9104.)
-    // If so, then nextCE() (rather, a "slow" version of it)
-    // and previousCE() must count how many code points
-    // resulted in their CE or ces[], and when they exhaust ces[] they need to
-    // check if the signed code point count is in the right direction;
-    // if not, move by that much in the opposite direction.
-    // For example, if previousCE() read 3 code points, set ces[],
-    // and then we change to nextCE() and it exhausts those ces[],
-    // then we need to skip forward over those 3 code points before reading
-    // more text.
 
 private:
     int64_t nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,

@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * uitercollationiterator.cpp
@@ -29,9 +29,14 @@
 U_NAMESPACE_BEGIN
 
 void
-UIterCollationIterator::resetToStart() {
-    iter.move(&iter, 0, UITER_START);
-    CollationIterator::resetToStart();
+UIterCollationIterator::resetToOffset(int32_t newOffset) {
+    CollationIterator::reset();
+    iter.move(&iter, newOffset, UITER_START);
+}
+
+int32_t
+UIterCollationIterator::getOffset() const {
+    return iter.getIndex(&iter, UITER_CURRENT);
 }
 
 uint32_t
@@ -77,22 +82,21 @@ UIterCollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorC
 // FCDUIterCollationIterator ----------------------------------------------- ***
 
 void
-FCDUIterCollationIterator::resetToStart() {
-    if(state <= ITER_IN_FCD_SEGMENT || start != 0) {
-        iter.move(&iter, 0, UITER_START);
-        if(state == ITER_IN_FCD_SEGMENT && start == 0) {
-            pos = 0;
-        } else {
-            start = 0;
-            state = ITER_CHECK_FWD;
-        }
+FCDUIterCollationIterator::resetToOffset(int32_t newOffset) {
+    UIterCollationIterator::resetToOffset(newOffset);
+    start = newOffset;
+    state = ITER_CHECK_FWD;
+}
+
+int32_t
+FCDUIterCollationIterator::getOffset() const {
+    if(state <= ITER_CHECK_BWD) {
+        return iter.getIndex(&iter, UITER_CURRENT);
+    } else if(state == ITER_IN_FCD_SEGMENT) {
+        return pos;
     } else {
-        // We are in the first text segment which got normalized.
-        pos = 0;
+        return start;
     }
-    // Skip the UIterCollationIterator::resetToStart() code
-    // and go directly to the base class.
-    CollationIterator::resetToStart();
 }
 
 uint32_t

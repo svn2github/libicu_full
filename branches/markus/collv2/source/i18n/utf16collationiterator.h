@@ -35,7 +35,13 @@ public:
             : CollationIterator(d, numeric),
               start(s), pos(p), limit(lim) {}
 
-    virtual void resetToStart();
+    UTF16CollationIterator(const UTF16CollationIterator &other, const UChar *newText);
+
+    virtual UBool operator==(const CollationIterator &other) const;
+
+    virtual void resetToOffset(int32_t newOffset);
+
+    virtual int32_t getOffset() const;
 
     void setText(const UChar *s, const UChar *lim) {
         reset();
@@ -43,13 +49,16 @@ public:
         limit = lim;
     }
 
-    // TODO: setText(start, pos, limit)  ?
-
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 
     virtual UChar32 previousCodePoint(UErrorCode &errorCode);
 
 protected:
+    // Copy constructor only for subclasses which set the pointers.
+    UTF16CollationIterator(const UTF16CollationIterator &other)
+            : CollationIterator(other),
+              start(NULL), pos(NULL), limit(NULL) {}
+
     virtual uint32_t handleNextCE32(UChar32 &c, UErrorCode &errorCode);
 
     virtual UChar handleGetTrailSurrogate();
@@ -78,7 +87,13 @@ public:
               nfcImpl(data->nfcImpl),
               checkDir(1) {}
 
-    virtual void resetToStart();
+    FCDUTF16CollationIterator(const FCDUTF16CollationIterator &other, const UChar *newText);
+
+    virtual UBool operator==(const CollationIterator &other) const;
+
+    virtual void resetToOffset(int32_t newOffset);
+
+    virtual int32_t getOffset() const;
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 

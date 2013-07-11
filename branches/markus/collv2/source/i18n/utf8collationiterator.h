@@ -35,15 +35,9 @@ public:
             : CollationIterator(d, numeric),
               u8(s), pos(p), length(len) {}
 
-    virtual void resetToStart();
+    virtual void resetToOffset(int32_t newOffset);
 
-    /* TODO: void setText(const UChar *s, const UChar *lim) {
-        reset();
-        start = pos = s;
-        limit = lim;
-    }*/
-
-    // TODO: setText(start, pos, limit)  ?
+    virtual int32_t getOffset() const;
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 
@@ -87,7 +81,9 @@ public:
               state(CHECK_FWD), start(p),
               nfcImpl(data->nfcImpl) {}
 
-    virtual void resetToStart();
+    virtual void resetToOffset(int32_t newOffset);
+
+    virtual int32_t getOffset() const;
 
     virtual UChar32 nextCodePoint(UErrorCode &errorCode);
 

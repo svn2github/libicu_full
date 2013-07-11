@@ -358,6 +358,8 @@ TailoredSet::add(UChar32 c) {
     }
 }
 
+ContractionsAndExpansions::CESink::~CESink() {}
+
 U_CDECL_BEGIN
 
 static UBool U_CALLCONV
@@ -418,38 +420,120 @@ ContractionsAndExpansions::forData(const CollationData *d, UErrorCode &ec) {
 void
 ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32) {
     for(;;) {
-        if((ce32 & 0xff) <= Collation::SPECIAL_CE32_LOW_BYTE) {
-            // !isSpecialCE32(), or fallback to the base
+        if((ce32 & 0xff) < Collation::SPECIAL_CE32_LOW_BYTE) {
+            // !isSpecialCE32()
+            if(sink != NULL) {
+                sink->handleCE(Collation::ceFromSimpleCE32(ce32));
+            }
             return;
         }
-        // Loop while ce32 is special.
-        int32_t tag = Collation::tagFromCE32(ce32);
-        if((Collation::LATIN_EXPANSION_TAG <= tag && tag <= Collation::EXPANSION_TAG) ||
-                tag == Collation::HANGUL_TAG) {
+        switch(Collation::tagFromCE32(ce32)) {
+        case Collation::FALLBACK_TAG:
+            return;
+        case Collation::RESERVED_TAG_3:
+        case Collation::RESERVED_TAG_7:
+        case Collation::LEAD_SURROGATE_TAG:
+            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+            return;
+        case Collation::LONG_PRIMARY_TAG:
+            if(sink != NULL) {
+                sink->handleCE(Collation::ceFromLongPrimaryCE32(ce32));
+            }
+            return;
+        case Collation::LONG_SECONDARY_TAG:
+            if(sink != NULL) {
+                sink->handleCE(Collation::ceFromLongSecondaryCE32(ce32));
+            }
+            return;
+        case Collation::LATIN_EXPANSION_TAG:
+            if(sink != NULL) {
+                ces[0] = Collation::latinCE0FromCE32(ce32);
+                ces[1] = Collation::latinCE1FromCE32(ce32);
+                sink->handleExpansion(ces, 2);
+            }
             // Optimization: If we have a prefix,
             // then the relevant strings have been added already.
             if(prefix == NULL) {
                 addExpansions(start, end);
             }
             return;
-        } else if(tag == Collation::PREFIX_TAG) {
+        case Collation::EXPANSION32_TAG:
+            if(sink != NULL) {
+                const uint32_t *ce32s = data->ce32s + Collation::indexFromCE32(ce32);
+                int32_t length = Collation::lengthFromCE32(ce32);
+                for(int32_t i = 0; i < length; ++i) {
+                    ces[i] = Collation::ceFromCE32(*ce32s++);
+                }
+                sink->handleExpansion(ces, length);
+            }
+            // Optimization: If we have a prefix,
+            // then the relevant strings have been added already.
+            if(prefix == NULL) {
+                addExpansions(start, end);
+            }
+            return;
+        case Collation::EXPANSION_TAG:
+            if(sink != NULL) {
+                int32_t length = Collation::lengthFromCE32(ce32);
+                sink->handleExpansion(data->ces + Collation::indexFromCE32(ce32), length);
+            }
+            // Optimization: If we have a prefix,
+            // then the relevant strings have been added already.
+            if(prefix == NULL) {
+                addExpansions(start, end);
+            }
+            return;
+        case Collation::PREFIX_TAG:
             handlePrefixes(start, end, ce32);
             return;
-        } else if(tag == Collation::CONTRACTION_TAG) {
+        case Collation::CONTRACTION_TAG:
             handleContractions(start, end, ce32);
             return;
-        } else if(tag == Collation::DIGIT_TAG) {
+        case Collation::DIGIT_TAG:
             // Fetch the non-numeric-collation CE32 and continue.
             ce32 = data->ce32s[Collation::indexFromCE32(ce32)];
-        } else if(tag == Collation::RESERVED_TAG_3 || tag == Collation::RESERVED_TAG_7 ||
-                tag == Collation::LEAD_SURROGATE_TAG) {
-            if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
-            return;
-        } else if(tag == Collation::U0000_TAG) {
+            break;
+        case Collation::U0000_TAG:
             U_ASSERT(start == 0 && end == 0);
             // Fetch the normal ce32 for U+0000 and continue.
             ce32 = data->ce32s[0];
-        } else {
+            break;
+        case Collation::HANGUL_TAG:
+            if(sink != NULL) {
+                // Note: This could be optimized,
+                // especially if [start..end] is the complete Hangul range.
+                for(UChar32 c = start; c <= end; ++c) {
+                    const int64_t *jamoCEs = data->jamoCEs;
+                    c -= Hangul::HANGUL_BASE;
+                    UChar32 t = c % Hangul::JAMO_T_COUNT;
+                    c /= Hangul::JAMO_T_COUNT;
+                    UChar32 v = c % Hangul::JAMO_V_COUNT;
+                    c /= Hangul::JAMO_V_COUNT;
+                    ces[0] = jamoCEs[c];
+                    ces[1] = jamoCEs[19 + v];
+                    if(t == 0) {
+                        sink->handleExpansion(ces, 2);
+                    } else {
+                        // offset 39 = 19 + 21 - 1:
+                        // 19 = JAMO_L_COUNT
+                        // 21 = JAMO_T_COUNT
+                        // -1 = omit t==0
+                        ces[2] = jamoCEs[39 + t];
+                        sink->handleExpansion(ces, 3);
+                    }
+                }
+            }
+            // Optimization: If we have a prefix,
+            // then the relevant strings have been added already.
+            if(prefix == NULL) {
+                addExpansions(start, end);
+            }
+            return;
+        case Collation::OFFSET_TAG:
+            // Currently no need to send offset CEs to the sink.
+            return;
+        case Collation::IMPLICIT_TAG:
+            // Currently no need to send implicit CEs to the sink.
             return;
         }
     }

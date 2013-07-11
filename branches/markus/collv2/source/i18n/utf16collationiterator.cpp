@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2012, International Business Machines
+* Copyright (C) 2010-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * utf16collationiterator.cpp
@@ -25,10 +25,31 @@
 
 U_NAMESPACE_BEGIN
 
+UTF16CollationIterator::UTF16CollationIterator(const UTF16CollationIterator &other,
+                                               const UChar *newText)
+        : CollationIterator(other),
+          start(newText),
+          pos(newText + (other.pos - other.start)),
+          limit(other.limit == NULL ? NULL : newText + (other.limit - other.start)) {
+}
+
+UBool
+UTF16CollationIterator::operator==(const CollationIterator &other) const {
+    if(!CollationIterator::operator==(other)) { return FALSE; }
+    const UTF16CollationIterator &o = static_cast<const UTF16CollationIterator &>(other);
+    // Compare the iterator state but not the text: Assume that the caller does that.
+    return (pos - start) == (o.pos - o.start);
+}
+
 void
-UTF16CollationIterator::resetToStart() {
-    pos = start;
-    CollationIterator::resetToStart();
+UTF16CollationIterator::resetToOffset(int32_t newOffset) {
+    CollationIterator::reset();
+    pos = start + newOffset;
+}
+
+int32_t
+UTF16CollationIterator::getOffset() const {
+    return (int32_t)(pos - start);
 }
 
 uint32_t
@@ -123,14 +144,58 @@ UTF16CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorC
 
 // FCDUTF16CollationIterator ----------------------------------------------- ***
 
-void
-FCDUTF16CollationIterator::resetToStart() {
-    if(checkDir < 0 || segmentStart != rawStart) {
-        start = segmentStart = rawStart;
-        limit = rawLimit;
-        checkDir = 1;
+FCDUTF16CollationIterator::FCDUTF16CollationIterator(const FCDUTF16CollationIterator &other,
+                                                     const UChar *newText)
+        : UTF16CollationIterator(other),
+          rawStart(newText),
+          segmentStart(newText + (other.segmentStart - other.rawStart)),
+          segmentLimit(other.segmentLimit == NULL ? NULL : newText + (other.segmentLimit - other.rawStart)),
+          rawLimit(other.rawLimit == NULL ? NULL : newText + (other.rawLimit - other.rawStart)),
+          nfcImpl(other.nfcImpl),
+          normalized(other.normalized),
+          checkDir(other.checkDir) {
+    if(checkDir != 0 || other.start == other.segmentStart) {
+        start = newText + (other.start - other.rawStart);
+        pos = newText + (other.pos - other.rawStart);
+        limit = other.limit == NULL ? NULL : newText + (other.limit - other.rawStart);
+    } else {
+        start = normalized.getBuffer();
+        pos = start + (other.pos - other.start);
+        limit = start + normalized.length();
     }
-    UTF16CollationIterator::resetToStart();
+}
+
+UBool
+FCDUTF16CollationIterator::operator==(const CollationIterator &other) const {
+    // Skip the UTF16CollationIterator and call its parent.
+    if(!CollationIterator::operator==(other)) { return FALSE; }
+    const FCDUTF16CollationIterator &o = static_cast<const FCDUTF16CollationIterator &>(other);
+    // Compare the iterator state but not the text: Assume that the caller does that.
+    if(checkDir != o.checkDir) { return FALSE; }
+    if(checkDir == 0 && (start == segmentStart) != (o.start == o.segmentStart)) { return FALSE; }
+    if(checkDir != 0 || start == segmentStart) {
+        return (pos - rawStart) == (o.pos - o.rawStart);
+    } else {
+        return (segmentStart - rawStart) == (o.segmentStart - o.rawStart) &&
+                (pos - start) == (o.pos - o.start);
+    }
+}
+
+void
+FCDUTF16CollationIterator::resetToOffset(int32_t newOffset) {
+    CollationIterator::reset();
+    start = segmentStart = pos = rawStart + newOffset;
+    limit = rawLimit;
+    checkDir = 1;
+}
+
+int32_t
+FCDUTF16CollationIterator::getOffset() const {
+    if(checkDir != 0 || start == segmentStart) {
+        return (int32_t)(pos - rawStart);
+    } else {
+        return (int32_t)(segmentStart - rawStart);
+    }
 }
 
 uint32_t

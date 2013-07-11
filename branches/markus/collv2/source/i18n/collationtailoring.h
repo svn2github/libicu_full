@@ -19,6 +19,7 @@
 #include "unicode/unistr.h"
 #include "unicode/uversion.h"
 #include "collationsettings.h"
+#include "mutex.h"
 
 U_NAMESPACE_BEGIN
 
@@ -68,6 +69,7 @@ struct U_I18N_API CollationTailoring : public UMemory {
     UnicodeSet *unsafeBackwardSet;
     int32_t *reorderCodes;
     uint8_t reorderTable[256];
+    mutable SimpleSingleton maxExpansionsSingleton;
 
     mutable int32_t refCount;
 };

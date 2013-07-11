@@ -14,6 +14,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/coll.h"
+#include "unicode/coleitr.h"
 #include "unicode/localpointer.h"
 #include "unicode/locid.h"
 #include "unicode/sortkey.h"
@@ -37,6 +38,7 @@
 #include "cstring.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
+#include "uhash.h"
 #include "uitercollationiterator.h"
 #include "utf16collationiterator.h"
 #include "utf8collationiterator.h"
@@ -267,7 +269,7 @@ RuleBasedCollator2::getContractionsAndExpansions(
     if(expansions != NULL) {
         expansions->clear();
     }
-    ContractionsAndExpansions(contractions, expansions, addPrefixes).forData(data, errorCode);
+    ContractionsAndExpansions(contractions, expansions, NULL, addPrefixes).forData(data, errorCode);
 }
 
 const CollationSettings &
@@ -1289,14 +1291,63 @@ RuleBasedCollator2::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
     return length;
 }
 
+namespace {
+
+/** Implements mutex.h InstantiatorFn(). */
+void *computeMaxExpansions(const void *context, UErrorCode &errorCode) {
+    return CollationElementIterator::computeMaxExpansions(
+            static_cast<const CollationData *>(context),
+            errorCode);
+}
+
+class MaxExpansionsWrapper {
+public:
+    MaxExpansionsWrapper(SimpleSingleton &s) : singleton(s) {}
+    UHashtable *getInstance(const void *context, UErrorCode &errorCode) {
+        void *duplicate;
+        UHashtable *instance = static_cast<UHashtable *>(
+            singleton.getInstance(computeMaxExpansions, context, duplicate, errorCode));
+        uhash_close(static_cast<UHashtable *>(duplicate));
+        return instance;
+    }
+private:
+    SimpleSingleton &singleton;
+};
+
+}  // namespace
+
 CollationElementIterator *
 RuleBasedCollator2::createCollationElementIterator(const UnicodeString& source) const {
-    return NULL;  // TODO
+    UErrorCode errorCode = U_ZERO_ERROR;
+    MaxExpansionsWrapper(tailoring->maxExpansionsSingleton).getInstance(data, errorCode);
+    if(U_FAILURE(errorCode)) { return NULL; }
+    CollationElementIterator *cei = new CollationElementIterator(source, this, errorCode);
+    if(U_FAILURE(errorCode)) {
+        delete cei;
+        return NULL;
+    }
+    return cei;
 }
 
 CollationElementIterator *
 RuleBasedCollator2::createCollationElementIterator(const CharacterIterator& source) const {
-    return NULL;  // TODO
+    UErrorCode errorCode = U_ZERO_ERROR;
+    MaxExpansionsWrapper(tailoring->maxExpansionsSingleton).getInstance(data, errorCode);
+    if(U_FAILURE(errorCode)) { return NULL; }
+    CollationElementIterator *cei = new CollationElementIterator(source, this, errorCode);
+    if(U_FAILURE(errorCode)) {
+        delete cei;
+        return NULL;
+    }
+    return cei;
+}
+
+int32_t
+RuleBasedCollator2::getMaxExpansion(int32_t order) const {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    UHashtable *maxExpansions = MaxExpansionsWrapper(tailoring->maxExpansionsSingleton).
+        getInstance(data, errorCode);
+    return CollationElementIterator::getMaxExpansion(maxExpansions, order);
 }
 
 // TODO: If we generate a Latin-1 sort key table like in v1,

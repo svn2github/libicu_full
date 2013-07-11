@@ -1,6 +1,6 @@
 /********************************************************************
- * COPYRIGHT: 
- * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * COPYRIGHT:
+ * Copyright (c) 1997-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -176,12 +176,12 @@ void CollationIteratorTest::TestOffset(/* char* par */)
     UErrorCode status = U_ZERO_ERROR;
     // testing boundaries
     iter->setOffset(0, status);
-    if (U_FAILURE(status) || iter->previous(status) != UCOL_NULLORDER) {
+    if (U_FAILURE(status) || iter->previous(status) != CollationElementIterator::NULLORDER) {
         errln("Error: After setting offset to 0, we should be at the end "
                 "of the backwards iteration");
     }
     iter->setOffset(test1.length(), status);
-    if (U_FAILURE(status) || iter->next(status) != UCOL_NULLORDER) {
+    if (U_FAILURE(status) || iter->next(status) != CollationElementIterator::NULLORDER) {
         errln("Error: After setting offset to end of the string, we should "
                 "be at the end of the backwards iteration");
     }
@@ -274,13 +274,13 @@ void CollationIteratorTest::TestSetText(/* char* par */)
     UnicodeString empty("");
     iter1->setText(empty, status);
     if (U_FAILURE(status) 
-        || iter1->next(status) != (int32_t)UCOL_NULLORDER) {
+        || iter1->next(status) != (int32_t)CollationElementIterator::NULLORDER) {
         errln("Empty string should have no CEs.");
     }
     ((StringCharacterIterator *)chariter)->setText(empty);
     iter1->setText(*chariter, status);
     if (U_FAILURE(status) 
-        || iter1->next(status) != (int32_t)UCOL_NULLORDER) {
+        || iter1->next(status) != (int32_t)CollationElementIterator::NULLORDER) {
         errln("Empty string should have no CEs.");
     }
     delete chariter;
@@ -314,7 +314,7 @@ void CollationIteratorTest::TestMaxExpansion(/* char* par */)
             order = iter->previous(status);
 
         while (U_SUCCESS(status)
-            && iter->previous(status) != (int32_t)UCOL_NULLORDER)
+            && iter->previous(status) != (int32_t)CollationElementIterator::NULLORDER)
         {
             count ++; 
         }
@@ -521,10 +521,10 @@ void CollationIteratorTest::TestConstructors()
         || *iter2 != *iter1) {
         errln("CollationElementIterators constructed with the same string data should be the same at the start");
     } 
-    if (iter1->next(status) != (int32_t)UCOL_NULLORDER) {
+    if (iter1->next(status) != (int32_t)CollationElementIterator::NULLORDER) {
         errln("Empty string should have no CEs.");
     }
-    if (iter2->next(status) != (int32_t)UCOL_NULLORDER) {
+    if (iter2->next(status) != (int32_t)CollationElementIterator::NULLORDER) {
         errln("Empty string should have no CEs.");
     }
     delete iter1;
