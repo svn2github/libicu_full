@@ -42,6 +42,10 @@ static const UChar PK_MOD[]={LOW_M,LOW_O,LOW_D,0};
 static const UChar PK_AND[]={LOW_A,LOW_N,LOW_D,0};
 static const UChar PK_OR[]={LOW_O,LOW_R,0};
 static const UChar PK_VAR_N[]={LOW_N,0};
+static const UChar PK_VAR_I[]={LOW_I,0};
+static const UChar PK_VAR_F[]={LOW_F,0};
+static const UChar PK_VAR_V[]={LOW_V,0};
+static const UChar PK_VAR_J[]={LOW_J,0};
 static const UChar PK_WITHIN[]={LOW_W,LOW_I,LOW_T,LOW_H,LOW_I,LOW_N,0};
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralRules)
@@ -420,6 +424,14 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
         case tMod:
             U_ASSERT(curAndConstraint != NULL);
             curAndConstraint->op=AndConstraint::MOD;
+            break;
+        case tVariableN:
+        case tVariableI:
+        case tVariableF:
+        case tVariableV:
+        case tVariableJ:
+            U_ASSERT(curAndConstraint != NULL);
+            curAndConstraint->digitsType = type;
             break;
         case tKeyword:
             if (ruleChain==NULL) {
@@ -1157,7 +1169,11 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
             status = U_UNEXPECTED_TOKEN;
         }
         break;
-    case tVariableN :
+    case tVariableN:
+    case tVariableI:
+    case tVariableF:
+    case tVariableV:
+    case tVariableJ:
         if (curType != tIs && curType != tMod && curType != tIn &&
             curType != tNot && curType != tWithin) {
             status = U_UNEXPECTED_TOKEN;
@@ -1175,7 +1191,11 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
         }
         break;
     case tColon :
-        if (curType != tVariableN) {
+        if (!(curType == tVariableN ||
+              curType == tVariableI ||
+              curType == tVariableF ||
+              curType == tVariableV ||
+              curType == tVariableJ)) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
@@ -1195,7 +1215,12 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
     case tWithin:
     case tAnd:
     case tOr:
-        if (curType != tNumber && curType != tVariableN) {
+        if (curType != tNumber && 
+                curType != tVariableN &&
+                curType != tVariableI &&
+                curType != tVariableF &&
+                curType != tVariableV &&
+                curType != tVariableJ) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
@@ -1353,6 +1378,18 @@ RuleParser::getKeyType(const UnicodeString& token, tokenType& keyType, UErrorCod
     }
     else if (0 == token.compare(PK_VAR_N, 1)) {
         keyType = tVariableN;
+    }
+    else if (0 == token.compare(PK_VAR_I, 1)) {
+        keyType = tVariableI;
+    }
+    else if (0 == token.compare(PK_VAR_F, 1)) {
+        keyType = tVariableF;
+    }
+    else if (0 == token.compare(PK_VAR_V, 1)) {
+        keyType = tVariableV;
+    }
+    else if (0 == token.compare(PK_VAR_J, 1)) {
+        keyType = tVariableJ;
     }
     else if (0 == token.compare(PK_IS, 2)) {
         keyType = tIs;
