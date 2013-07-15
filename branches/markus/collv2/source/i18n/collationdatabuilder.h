@@ -134,6 +134,7 @@ public:
                   UErrorCode &errorCode);
 
     void optimize(const UnicodeSet &set, UErrorCode &errorCode);
+    void suppressContractions(const UnicodeSet &set, UErrorCode &errorCode);
 
     virtual void build(CollationData &data, UErrorCode &errorCode);
 
@@ -180,7 +181,7 @@ protected:
     uint32_t encodeExpansion(const int64_t ces[], int32_t length, UErrorCode &errorCode);
     uint32_t encodeExpansion32(const int32_t newCE32s[], int32_t length, UErrorCode &errorCode);
 
-    uint32_t copyFromBaseCE32(UChar32 c, uint32_t ce32, UErrorCode &errorCode);
+    uint32_t copyFromBaseCE32(UChar32 c, uint32_t ce32, UBool withContext, UErrorCode &errorCode);
     /**
      * Copies base contractions to a list of ConditionalCE32.
      * Sets cond->next to the index of the first new item

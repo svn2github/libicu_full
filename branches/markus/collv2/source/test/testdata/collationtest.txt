@@ -808,6 +808,20 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <1 ᚠ    # U+16A0 first Runic
 
 
+** test: suppressContractions
+@ rules
+&z<ch<әж [suppressContractions [·cә]]
+* compare
+<1 ch
+<3 cH   # ch was suppressed
+<1 l
+<1 l·   # primary difference, not secondary, because l|· was suppressed
+<1 ә
+<2 ә\u0308  # secondary difference, not primary, because contractions for ә were suppressed
+<1 әж
+<3 әЖ
+
+
 #** test: this is a description
 #@ rawbase
 # string then list of CEs; empty leading weight=0, other empty=common

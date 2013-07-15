@@ -614,7 +614,7 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
         }
     } else if(rules->charAt(j) == 0x5b) {  // words end with [
         UnicodeSet set;
-        j = parseUnicodeSet(raw, j, set, errorCode);
+        j = parseUnicodeSet(j, set, errorCode);
         if(U_FAILURE(errorCode)) { return; }
         if(raw == UNICODE_STRING_SIMPLE("optimize")) {
             sink->optimize(set, errorReason, errorCode);
@@ -711,31 +711,30 @@ CollationRuleParser::getOnOffValue(const UnicodeString &s) {
 }
 
 int32_t
-CollationRuleParser::parseUnicodeSet(const UnicodeString &raw, int32_t i, UnicodeSet &set,
-                                     UErrorCode &errorCode) {
+CollationRuleParser::parseUnicodeSet(int32_t i, UnicodeSet &set, UErrorCode &errorCode) {
     // Collect a UnicodeSet pattern between a balanced pair of [brackets].
     int32_t level = 0;
     int32_t j = i;
     for(;;) {
-        if(j == raw.length()) {
+        if(j == rules->length()) {
             setParseError("unbalanced UnicodeSet pattern brackets", errorCode);
             return j;
         }
-        UChar c = raw.charAt(j++);
+        UChar c = rules->charAt(j++);
         if(c == 0x5b) {  // '['
             ++level;
-        } else if(c == 0x5c) {  // ']'
+        } else if(c == 0x5d) {  // ']'
             if(--level == 0) { break; }
         }
     }
-    set.applyPattern(raw.tempSubStringBetween(i, j), errorCode);
+    set.applyPattern(rules->tempSubStringBetween(i, j), errorCode);
     if(U_FAILURE(errorCode)) {
         errorCode = U_ZERO_ERROR;
         setParseError("not a valid UnicodeSet pattern", errorCode);
         return j;
     }
     j = skipWhiteSpace(j);
-    if(j == raw.length() || raw.charAt(j) != 0x5d) {
+    if(j == rules->length() || rules->charAt(j) != 0x5d) {
         setParseError("missing option-terminating ']' after UnicodeSet pattern", errorCode);
         return j;
     }

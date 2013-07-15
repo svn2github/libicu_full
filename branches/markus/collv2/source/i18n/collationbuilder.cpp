@@ -732,12 +732,12 @@ void
 CollationBuilder::suppressContractions(const UnicodeSet &set, const char *&parserErrorReason,
                                        UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    if(!set.isEmpty()) {
-        errorCode = U_UNSUPPORTED_ERROR;  // TODO
-        parserErrorReason = "TODO: support [suppressContractions [set]]";
-        return;
+    dataBuilder->suppressContractions(set, errorCode);
+    if(U_FAILURE(errorCode)) {
+        parserErrorReason = "application of [suppressContractions [set]] failed";
     }
-    // TODO
+    // TODO: add the set of suppressed base context strings to the canonical closure;
+    // try to remove suppressed builder context strings
 }
 
 void

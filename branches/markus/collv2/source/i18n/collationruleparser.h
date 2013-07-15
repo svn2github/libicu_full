@@ -159,8 +159,7 @@ private:
     void parseReordering(const UnicodeString &raw, UErrorCode &errorCode);
     static UColAttributeValue getOnOffValue(const UnicodeString &s);
 
-    int32_t parseUnicodeSet(const UnicodeString &raw, int32_t i, UnicodeSet &set,
-                            UErrorCode &errorCode);
+    int32_t parseUnicodeSet(int32_t i, UnicodeSet &set, UErrorCode &errorCode);
     int32_t readWords(int32_t i, UnicodeString &raw) const;
     int32_t skipComment(int32_t i) const;
 
