@@ -60,7 +60,9 @@
  * do not matter.
  *
  * Note that this implementation never modifies the dirProps
- * after the initial setup.
+ * after the initial setup, except for FSI which is changed to either
+ * LRI or RLI in getDirProps(), and paired brackets which may be changed
+ * to L or R according to N0.
  *
  *
  * In this implementation, the resolution of weak types (Wn),
@@ -362,9 +364,13 @@ int32_t length){
 
 /* perform (P2)..(P3) ------------------------------------------------------- */
 
+/**
+ * Returns the directionality of the first strong character
+ * after the last B in prologue, if any.
+ * Requires prologue!=null.
+ */
 static DirProp
 firstL_R_AL(UBiDi *pBiDi) {
-    /* return first strong char after the last B in prologue if any */
     const UChar *text=pBiDi->prologue;
     int32_t length=pBiDi->proLength;
     int32_t i;
@@ -411,14 +417,14 @@ checkParaCount(UBiDi *pBiDi) {
 /*
  * Get the directional properties for the text, calculate the flags bit-set, and
  * determine the paragraph level if necessary (in pBiDi->paras[i].level).
- * FSI inintiators are also resolved and their dirProp replaced with LRI or RLI.
+ * FSI initiators are also resolved and their dirProp replaced with LRI or RLI.
  */
 static UBool
 getDirProps(UBiDi *pBiDi) {
     const UChar *text=pBiDi->text;
     DirProp *dirProps=pBiDi->dirPropsMemory;    /* pBiDi->dirProps is const */
 
-    int32_t i=0, length=pBiDi->originalLength;
+    int32_t i=0, originalLength=pBiDi->originalLength;
     Flags flags=0;      /* collect all directionalities in the text */
     UChar32 uchar;
     DirProp dirProp=0, defaultParaLevel=0;  /* initialize to avoid compiler warnings */
@@ -440,8 +446,18 @@ getDirProps(UBiDi *pBiDi) {
          LOOKING_FOR_PDI                /* 3: found strong after FSI, looking for PDI */
     } State;
     State state;
-    DirProp lastStrong;                 /* for default level & inverse BiDi */
+    DirProp lastStrong=ON;              /* for default level & inverse BiDi */
+    /* The following stacks are used to manage isolate sequences. Those
+       sequences may be nested, but obviously never more deeply than the
+       maximum explicit embedding level.
+       lastStack is the index of the last used entry in the stack. A value of -1
+       means that there is no open isolate sequence.
+       lastStack is reset to -1 on paragraph boundaries. */
+    /* The following stack contains the position of the initiator of
+       each open isolate sequence */
     int32_t isolateStartStack[UBIDI_MAX_EXPLICIT_LEVEL+1];
+    /* The following stack contains the last known state before
+       encountering the initiator of an isolate sequence */
     int8_t  previousStateStack[UBIDI_MAX_EXPLICIT_LEVEL+1];
     int32_t stackLast=-1;
 
@@ -454,9 +470,9 @@ getDirProps(UBiDi *pBiDi) {
         if(pBiDi->proLength>0 &&                    /* there is a prologue */
            (dirProp=firstL_R_AL(pBiDi))!=ON) {  /* with a strong character */
             if(dirProp==L)
-                pBiDi->paras[0].level=0;
+                pBiDi->paras[0].level=0;    /* set the default para level */
             else
-                pBiDi->paras[0].level=1;
+                pBiDi->paras[0].level=1;    /* set the default para level */
             state=NOT_SEEKING_STRONG;
         } else {
             state=SEEKING_STRONG_FOR_PARA;
@@ -468,12 +484,12 @@ getDirProps(UBiDi *pBiDi) {
     /* count paragraphs and determine the paragraph level (P2..P3) */
     /*
      * see comment in ubidi.h:
-     * the DEFAULT_XXX values are designed so that
+     * the UBIDI_DEFAULT_XXX values are designed so that
      * their bit 0 alone yields the intended default
      */
-    for( /* i=0 above */ ; i<length; ) {
+    for( /* i=0 above */ ; i<originalLength; ) {
         /* i is incremented by U16_NEXT */
-        U16_NEXT(text, i, length, uchar);
+        U16_NEXT(text, i, originalLength, uchar);
         flags|=DIRPROP_FLAG(dirProp=(DirProp)ubidi_getCustomizedClass(pBiDi, uchar));
         dirProps[i-1]=dirProp;
         if(uchar>0xffff) {  /* set the lead surrogate's property to BN */
@@ -514,7 +530,7 @@ getDirProps(UBiDi *pBiDi) {
                 lastArabicPos=i-1;
             continue;
         }
-        if(dirProp>=FSI && dirProp<=RLI) {
+        if(dirProp>=FSI && dirProp<=RLI) {  /* FSI, LRI or RLI */
             stackLast++;
             if(stackLast<=UBIDI_MAX_EXPLICIT_LEVEL) {
                 isolateStartStack[stackLast]=i-1;
@@ -541,18 +557,20 @@ getDirProps(UBiDi *pBiDi) {
             continue;
         }
         if(dirProp==B) {
-            if(i<length && uchar==CR && text[i]==LF) /* do nothing on the CR */
+            if(i<originalLength && uchar==CR && text[i]==LF) /* do nothing on the CR */
                 continue;
+            pBiDi->paras[pBiDi->paraCount-1].limit=i;
             if(isDefaultLevelInverse && lastStrong==R)
                 pBiDi->paras[pBiDi->paraCount-1].level=1;
             if(pBiDi->reorderingOptions & UBIDI_OPTION_STREAMING) {
+                /* When streaming, we only process whole paragraphs
+                   thus some updates are only done on paragraph boundaries */
                 pBiDi->length=i;        /* i is index to next character */
                 pBiDi->controlCount=controlCount;
             }
-            if(i<length) {              /* B not last char in text */
-                pBiDi->paras[pBiDi->paraCount-1].limit=i;
+            if(i<originalLength) {              /* B not last char in text */
                 pBiDi->paraCount++;
-                if(checkParaCount(pBiDi)==FALSE)    /* not enough memory */
+                if(checkParaCount(pBiDi)==FALSE)    /* not enough memory for a new para entry */
                     return FALSE;
                 if(isDefaultLevel) {
                     pBiDi->paras[pBiDi->paraCount-1].level=defaultParaLevel;
@@ -567,11 +585,13 @@ getDirProps(UBiDi *pBiDi) {
             continue;
         }
     }
+    /* Ignore still open isolate sequences with overflow */
     if(stackLast>UBIDI_MAX_EXPLICIT_LEVEL) {
         stackLast=UBIDI_MAX_EXPLICIT_LEVEL;
         if(dirProps[previousStateStack[UBIDI_MAX_EXPLICIT_LEVEL]]!=FSI)
             state=LOOKING_FOR_PDI;
     }
+    /* Resolve direction of still unresolved open FSI sequences */
     while(stackLast>=0) {
         if(state==SEEKING_STRONG_FOR_FSI) {
             dirProps[isolateStartStack[stackLast]]=LRI;
@@ -580,18 +600,24 @@ getDirProps(UBiDi *pBiDi) {
         state=previousStateStack[stackLast];
         stackLast--;
     }
+    /* When streaming, ignore text after the last paragraph separator */
     if(pBiDi->reorderingOptions & UBIDI_OPTION_STREAMING) {
-        if(pBiDi->length<pBiDi->originalLength)
+        if(pBiDi->length<originalLength)
             pBiDi->paraCount--;
-    } else
+    } else {
+        pBiDi->paras[pBiDi->paraCount-1].limit=originalLength;
         pBiDi->controlCount=controlCount;
+    }
+    /* For inverse bidi, default para direction is RTL if there is
+       a strong R or AL at either end of the paragraph */
     if(isDefaultLevelInverse && lastStrong==R) {
         pBiDi->paras[pBiDi->paraCount-1].level=1;
     }
-    pBiDi->paras[pBiDi->paraCount-1].limit=pBiDi->length;   /* was changed if STREAMING */
     if(isDefaultLevel) {
         pBiDi->paraLevel=pBiDi->paras[0].level;
     }
+    /* The following is needed to resolve the text direction for default level
+       paragraphs containing no strong character */
     for(i=0; i<pBiDi->paraCount; i++)
         flags|=DIRPROP_FLAG_LR(pBiDi->paras[i].level);
 
@@ -617,6 +643,21 @@ get_paraLevel(const UBiDi *pBiDi, int32_t index) {
 }
 
 /* Functions for handling pairec brackets ----------------------------------- */
+
+/* In the isoRuns array, the first entry is used for text outside of any
+   isolate sequence.  Higher entries are used for each more deeply nested
+   isolate sequence. isoRunLast is the index of the last used entry.  The
+   openings array is used to note the data of opening brackets not yet
+   matched by a closing bracket, or matched but still susceptible to change
+   level.
+   Each isoRun entry contains the index of the first and
+   one-after-last openings entries for pending opening brackets it
+   contains.  The next openings entry to use is the one-after-last of the
+   most deeply nested isoRun entry.
+   isoRun entries also contain their current embedding level and the last
+   encountered strong character, since these will be needed to resolve
+   the level of paired brackets.  */
+
 static void
 bracketInit(UBiDi *pBiDi, BracketData *bd) {
     bd->pBiDi=pBiDi;
@@ -635,6 +676,7 @@ bracketInit(UBiDi *pBiDi, BracketData *bd) {
     }
 }
 
+/* paragraph boundary */
 static void
 bracketProcessB(BracketData *bd, UBiDiLevel level) {
     bd->isoRunLast=0;
@@ -644,6 +686,7 @@ bracketProcessB(BracketData *bd, UBiDiLevel level) {
     bd->isoRuns[0].lastStrongPos=0;
 }
 
+/* LRE, LRO, RLE, RLO, PDF */
 static void
 bracketProcessBoundary(BracketData *bd, UBiDiLevel level) {
     IsoRun *pLastIsoRun=&bd->isoRuns[bd->isoRunLast];
@@ -653,6 +696,7 @@ bracketProcessBoundary(BracketData *bd, UBiDiLevel level) {
     pLastIsoRun->lastStrongPos=0;
 }
 
+/* LRI or RLI */
 static void
 bracketProcessLRI_RLI(BracketData *bd, UBiDiLevel level) {
     IsoRun *pLastIsoRun=&bd->isoRuns[bd->isoRunLast];
@@ -666,11 +710,13 @@ bracketProcessLRI_RLI(BracketData *bd, UBiDiLevel level) {
     pLastIsoRun->lastStrongPos=0;
 }
 
+/* PDI */
 static void
 bracketProcessPDI(BracketData *bd) {
     bd->isoRunLast--;
 }
 
+/* newly found opening bracket: create an openings entry */
 static UBool                            /* return TRUE if success */
 bracketAddOpening(BracketData *bd, UChar match, int32_t position) {
     IsoRun *pLastIsoRun=&bd->isoRuns[bd->isoRunLast];
@@ -695,6 +741,7 @@ bracketAddOpening(BracketData *bd, UChar match, int32_t position) {
     return TRUE;
 }
 
+/* handle strong characters and candidates for closing brackets */
 static UBool                            /* return TRUE if success */
 bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
     IsoRun *pLastIsoRun;
@@ -712,6 +759,8 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
         if(dirProp==AL)
             dirProp=R;
         flag=DIRPROP_FLAG(dirProp);
+        /* strong characters found after an unmatched opening bracket
+           must be noted for possibly applying N0b */
         for(i=pLastIsoRun->start; i<pLastIsoRun->limit; i++)
             bd->openings[i].flags|=flag;
         return TRUE;
@@ -725,10 +774,30 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
     for(i=pLastIsoRun->limit-1; i>=pLastIsoRun->start; i--) {
         if(bd->openings[i].match!=c)
             continue;
+        /* We have a match */
         dirProps=bd->pBiDi->dirProps;
         pOpening=&bd->openings[i];
         direction=pLastIsoRun->level&1;
-        stable=TRUE;
+        stable=TRUE;            /* assume stable until proved otherwise */
+
+        /* The stable flag is set when brackets are paired and their
+           level is resolved and cannot be changed by what will be
+           found later in the source string.
+           An unstable match can occur only when applying N0c, where
+           the resolved level depends on the preceding context, and
+           this context may be affected by text occurring later.
+           Example: RTL paragraph containing:  abc[(latin) HEBREW]
+           When the closing parenthesis is encountered, it appears
+           that N0c1 must be applied since 'abc' sets an opposite
+           direction context and both parentheses receive level 2.
+           However, when the closing square bracket is processed,
+           N0b applies because of 'HEBREW' being included within the
+           brackets, thus the square brackets are treated like R and
+           receive level 1. However, this changes the preceding
+           context of the opening parenthesis, and it now appears
+           that N0c2 must be applied to the parentheses rather than
+           N0c1. */
+
         if((direction==0 && pOpening->flags&FOUND_L) ||
            (direction==1 && pOpening->flags&FOUND_R)) { /* N0b */
             newProp=direction;
@@ -737,7 +806,13 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
             if((direction==1 && pOpening->lastStrong==L) ||
                (direction==0 && pOpening->lastStrong!=L)) {
                 newProp=direction^1;                    /* N0c1 */
-                stable=(i==pLastIsoRun->start) || (pOpening->lastStrongPos>bd->openings[i-1].position) ;
+                /* it is stable if there is no preceding text or
+                   if the last strong char which determined the
+                   context for this opening bracket appears later
+                   in the text than any preceding unmatched
+                   opening bracket which could change the context */
+                stable=(i==pLastIsoRun->start) ||
+                       (pOpening->lastStrongPos>bd->openings[i-1].position) ;
             }
             else
                 newProp=direction;                      /* N0c2 */
@@ -768,7 +843,7 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
                 dirProps[-(qOpening->match)]= newProp;  /* can never be AL */
             }
         if(stable) {
-            pLastIsoRun->limit=i;
+            pLastIsoRun->limit=i;   /* forget any brackets nested within this pair */
             /* remove lower located synonyms if any */
             while(pLastIsoRun->limit>pLastIsoRun->start &&
                   bd->openings[pLastIsoRun->limit-1].position==pOpening->position)
@@ -782,13 +857,18 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
                   bd->openings[k].position==pOpening->position)
                 bd->openings[k--].match=0;
             /* neutralize any unmatched opening between the current pair;
-               this will also neutralize higher located synonyyms if any */
-            for(k=i+1, qOpening=&bd->openings[k]; qOpening->position<position; k++, qOpening++)
+               this will also neutralize higher located synonyms if any */
+            for(k=i+1; k<pLastIsoRun->limit; k++) {
+                qOpening=&bd->openings[k];
+                if(qOpening->position>=position)
+                    break;
                 if(qOpening->match>=0)
                     qOpening->match=0;
+            }
         }
         return TRUE;
     }
+    /* We get here only if the ON character was not a matching closing bracket */
     /* Now see if it is an opening bracket */
     match=u_getBidiPairedBracket(c);    /* get the matching char */
     if(match==c)                        /* if no matching char */
@@ -1126,7 +1206,7 @@ resolveExplicitLevels(UBiDi *pBiDi) {
 static UBiDiDirection
 checkExplicitLevels(UBiDi *pBiDi, UErrorCode *pErrorCode) {
     DirProp *dirProps=pBiDi->dirProps;
-    DirProp dirProp, pureDirProp;
+    DirProp dirProp;
     UBiDiLevel *levels=pBiDi->levels;
     const UChar *text=pBiDi->text;
     int32_t isolateCount=0;
@@ -1139,7 +1219,6 @@ checkExplicitLevels(UBiDi *pBiDi, UErrorCode *pErrorCode) {
     for(i=0; i<length; ++i) {
         level=levels[i];
         dirProp=dirProps[i];
-        pureDirProp=PURE_DIRPROP(dirProp);
         if(dirProp==LRI || dirProp==RLI) {
             isolateCount++;
             if(isolateCount>pBiDi->isolateCount)
@@ -1209,7 +1288,7 @@ enum { DirProp_L=0, DirProp_R=1, DirProp_EN=2, DirProp_AN=3, DirProp_ON=4, DirPr
       PROPERTIES  STATE  TABLE
 
  In table impTabProps,
-      - the ON column regroups ON and WS
+      - the ON column regroups ON and WS, FSI, RLI, LRI and PDI
       - the BN column regroups BN, LRE, RLE, LRO, RLO, PDF
       - the Res column is the reduced property assigned to a run
 
@@ -1802,9 +1881,12 @@ processPropertySeq(UBiDi *pBiDi, LevState *pLevState, uint8_t _prop,
     }
 }
 
+/**
+ * Returns the directionality of the last strong character at the end of the prologue, if any.
+ * Requires prologue!=null.
+ */
 static DirProp
 lastL_R_AL(UBiDi *pBiDi) {
-    /* return last strong char at the end of the prologue */
     const UChar *text=pBiDi->prologue;
     int32_t length=pBiDi->proLength;
     int32_t i;
@@ -1827,9 +1909,12 @@ lastL_R_AL(UBiDi *pBiDi) {
     return DirProp_ON;
 }
 
+/**
+ * Returns the directionality of the first strong character, or digit, in the epilogue, if any.
+ * Requires epilogue!=null.
+ */
 static DirProp
 firstL_R_AL_EN_AN(UBiDi *pBiDi) {
-    /* return first strong char or digit in epilogue */
     const UChar *text=pBiDi->epilogue;
     int32_t length=pBiDi->epiLength;
     int32_t i;
@@ -1895,6 +1980,9 @@ resolveImplicitLevels(UBiDi *pBiDi,
             sor=lastStrong;
         }
     }
+    /* The isolates[] entries contain enough information to
+       resume the bidi algorithm in the same state as it was
+       when it was interrupted by an isolate sequence. */
     if(dirProps[start]==PDI) {
         start1=pBiDi->isolates[pBiDi->isolateCount].start1;
         stateImp=pBiDi->isolates[pBiDi->isolateCount].stateImp;
@@ -2085,6 +2173,7 @@ setParaSuccess(UBiDi *pBiDi) {
 
 #define BIDI_MIN(x, y)   ((x)<(y) ? (x) : (y))
 #define BIDI_ABS(x)      ((x)>=0  ? (x) : (-(x)))
+
 static void
 setParaRunsOnly(UBiDi *pBiDi, const UChar *text, int32_t length,
                 UBiDiLevel paraLevel, UErrorCode *pErrorCode) {
@@ -2554,7 +2643,7 @@ ubidi_setPara(UBiDi *pBiDi, const UChar *text, int32_t length,
             level=pBiDi->paras[i].level;
             if(level==0)
                 continue;           /* LTR paragraph */
-            start= i==0 ? 0 : pBiDi->paras[i-1].level;
+            start= i==0 ? 0 : pBiDi->paras[i-1].limit;
             for(j=last; j>=start; j--) {
                 dirProp=pBiDi->dirProps[j];
                 if(dirProp==L) {

@@ -17,6 +17,96 @@
 *   BiDi conformance test, using the Unicode BidiCharacterTest.txt file.
 */
 
+/*
+*******************************************************************************
+*
+This program performs a conformance test for implementations of the
+Unicode Bidirectional Algorithm, specified in UAX #9: Unicode
+Bidirectional Algorithm, at http://www.unicode.org/unicode/reports/tr9/
+
+Each test case is represented in a single line which is read from a file
+named BidiCharacter.txt.  Empty, blank and comment lines may also appear
+in this file.
+
+The format of the test data is specified below.  Note that each test
+case constitutes a single line of text; reordering is applied within a
+single line and independently of a rendering engine, and rules L3 and L4
+are out of scope.
+
+The number sign '#' is the comment character: everything is ignored from
+the occurrence of '#' until the end of the line,
+Empty lines and lines containing only spaces and/or comments are ignored.
+
+Lines which represent test cases consist of 4 or 5 fields separated by a
+semicolon.  Each field consists of tokens separated by whitespace (space
+or Tab).  Whitespace before and after semicolons is optional.
+
+Field 0: A sequence of tokens where each token may be one of the following:
+    - an hexadecimal number of at least 2 digits representing a code point
+    - a bidi property value, which must be one of (case sensitive)
+        L    (translated to 'l'),
+        R    (translated to Hebrew Letter Alef),
+        EN   (translated to '3'),
+        ES   (translated to '-'),
+        ET   (translated to '%'),
+        AN   (translated to Arabic-Indic '9'),
+        CS   (translated to ','),
+        B    (translated to CR),
+        S    (translated to Tab),
+        WS   (translated to space),
+        ON   (translated to '='),
+        LRE, LRO,
+        AL   (translated to Arabic Letter Thal),
+        RLE, RLO, PDF,
+        NSM  (translated to Hebrew Point Holam),
+        BN   (translated to Soft Hyphen),
+        FSI, LRI, RLI, PDI
+    - a single character which represents itself
+
+Field 1: A value representing the paragraph direction, as follows:
+    - 0 represents left-to-right
+    - 1 represents right-to-left
+    - 2 represents auto-LTR according to rules P2 and P3 of the algorithm
+    - 3 represents auto-RTL according to rules P2 and P3 of the algorithm
+    - a negative number whose absolute value is taken as paragraph level;
+      this may be useful to test cases where the embedding level approaches
+      or exceeds the maximum embedding level.
+
+Field 2: The resolved paragraph embedding level.  If the input (field 0)
+         includes more than one paragraph, this field represents the
+         resolved level of the first paragraph.
+
+Field 3: An ordered list of resulting levels for each token in field 0
+         (each token represents one source character).
+         The UBA does not assign levels to certain characters (e.g. LRO);
+         characters removed in rule X9 are indicated with an 'x'.
+
+Field 4: An ordered list of indices showing the resulting visual ordering
+         from left to right; characters with a resolved level of 'x' are
+         skipped.  The number are zero-based.  Each index corresponds to
+         a character in the reordered (visual) string. It represents the
+         index of the source character in the input (field 0).
+         This field is optional.  When it is absent, the visual ordering
+         is not verified.
+
+Examples:
+
+# This is a comment line.
+L L ON R ; 0 ; 0 ; 0 0 0 1 ; 0 1 2 3
+L L ON R;0;0;0 0 0 1;0 1 2 3
+
+# Note: in the next line, 'B' represents a block separator, not the letter 'B'.
+LRE A B C PDF;2;0;x 2 0 0 x;1 2 3
+# Note: in the next line, 'b' represents the letter 'b', not a block separator.
+a b c 05d0 05d1 x ; 0 ; 0 ; 0 0 0 1 1 0 ; 0 1 2 4 3 5
+
+a R R x ; 1 ; 1 ; 2 1 1 2
+L L R R R B R R L L L B ON ON ; 3 ; 0 ; 0 0 1 1 1 0 1 1 2 2 2 1 1 1
+
+*
+*******************************************************************************
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +127,7 @@ public:
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=NULL);
 
-    void TestBidiTest();
+    void TestBidiTest2();
 private:
     char *getUnidataPath(char path[]);
 
@@ -49,7 +139,7 @@ private:
                       const char *paraLevelName);
     UBool checkOrdering(UBiDi *ubidi, const char *paraLevelName);
 
-    void printErrorLine(const char *paraLevelName);
+    void printErrorLine();
 
     char line[10000];
     UBiDiLevel levels[1000];
@@ -60,6 +150,8 @@ private:
     int32_t orderingCount;
     int32_t errorCount;
     UnicodeString inputString;
+    char *paraLevelName;
+    char levelNameString[12];
 };
 
 extern IntlTest *createBiDiConformanceTest2() {
@@ -71,7 +163,7 @@ void BiDiConformanceTest2::runIndexedTest(int32_t index, UBool exec, const char 
         logln("TestSuite BiDiConformanceTest2: ");
     }
     switch (index) {
-        TESTCASE(0, TestBidiTest);
+        TESTCASE(0, TestBidiTest2);
         default:
             name="";
             break; // needed to end the loop
@@ -126,8 +218,10 @@ UBool BiDiConformanceTest2::parseLevels(const char *&start) {
         } else {
             char *end;
             uint32_t value=(uint32_t)strtoul(start, &end, 10);
-            if(end<=start || (!U_IS_INV_WHITESPACE(*end) && *end!=0 && *end!=';') || value>(UBIDI_MAX_EXPLICIT_LEVEL+1)) {
+            if(end<=start || (!U_IS_INV_WHITESPACE(*end) && *end!=0 && *end!=';')
+                          || value>(UBIDI_MAX_EXPLICIT_LEVEL+1)) {
                 errln("\nError on line %d: Levels parse error at %s", (int)lineNumber, start);
+                printErrorLine();
                 return FALSE;
             }
             levels[levelsCount++]=(UBiDiLevel)value;
@@ -145,6 +239,7 @@ UBool BiDiConformanceTest2::parseOrdering(const char *start) {
         uint32_t value=(uint32_t)strtoul(start, &end, 10);
         if(end<=start || (!U_IS_INV_WHITESPACE(*end) && *end!=0 && *end!=';') || value>=1000) {
             errln("\nError on line %d: Reorder parse error at %s", (int)lineNumber, start);
+            printErrorLine();
             return FALSE;
         }
         ordering[orderingCount++]=(int32_t)value;
@@ -306,13 +401,14 @@ UBool BiDiConformanceTest2::parseInputStringFromBiDiClasses(const char *&start) 
             continue;
         }
         errln("\nError on line %d: BiDi class string not recognized at %s", (int)lineNumber, start);
+        printErrorLine();
         return FALSE;
     }
     return TRUE;
 }
 
-void BiDiConformanceTest2::TestBidiTest() {
-    IcuTestErrorCode errorCode(*this, "TestBidiTest");
+void BiDiConformanceTest2::TestBidiTest2() {
+    IcuTestErrorCode errorCode(*this, "TestBidiTest2");
     const char *sourceTestDataPath=getSourceTestData(errorCode);
     if(errorCode.logIfFailureAndReset("unable to find the source/test/testdata "
                                       "folder (getSourceTestData())")) {
@@ -331,8 +427,10 @@ void BiDiConformanceTest2::TestBidiTest() {
     levelsCount=0;
     orderingCount=0;
     errorCount=0;
-    while(errorCount<10 && fgets(line, (int)sizeof(line), bidiTestFile.getAlias())!=NULL) {
+    while(errorCount<20 && fgets(line, (int)sizeof(line), bidiTestFile.getAlias())!=NULL) {
         ++lineNumber;
+        paraLevelName="N/A";
+        inputString="N/A";
         // Remove trailing comments and whitespace.
         char *commentStart=strchr(line, '#');
         if(commentStart!=NULL) {
@@ -344,7 +442,6 @@ void BiDiConformanceTest2::TestBidiTest() {
             continue;  // Skip empty and comment-only lines.
         }
         if(!parseInputStringFromBiDiClasses(start)) {
-            errorCount++;
             continue;
         }
         start=u_skipWhitespace(start);
@@ -355,11 +452,33 @@ void BiDiConformanceTest2::TestBidiTest() {
         }
         start=u_skipWhitespace(start+1);
         char *end;
-        uint32_t paraDirection=(uint32_t)strtoul(start, &end, 16);
+        int32_t paraDirection=(int32_t)strtol(start, &end, 10);
+        UBiDiLevel paraLevel=UBIDI_MAX_EXPLICIT_LEVEL+2;
+        if(paraDirection==0) {
+            paraLevel=0;
+            paraLevelName="LTR";
+        }
+        else if(paraDirection==1) {
+            paraLevel=1;
+            paraLevelName="RTL";
+        }
+        else if(paraDirection==2) {
+            paraLevel=UBIDI_DEFAULT_LTR;
+            paraLevelName="Auto/LTR";
+        }
+        else if(paraDirection==3) {
+            paraLevel=UBIDI_DEFAULT_RTL;
+            paraLevelName="Auto/RTL";
+        }
+        else if(paraDirection<0 && -paraDirection<=(UBIDI_MAX_EXPLICIT_LEVEL+1)) {
+            paraLevel=(UBiDiLevel)(-paraDirection);
+            sprintf(levelNameString, "%d", (int)paraLevel);
+            paraLevelName=levelNameString;
+        }
         if(end<=start || (!U_IS_INV_WHITESPACE(*end) && *end!=';' && *end!=0) ||
-                         paraDirection>3) {
-            errorCount++;
+                         paraLevel==(UBIDI_MAX_EXPLICIT_LEVEL+2)) {
             errln("\nError on line %d: Input paragraph direction incorrect at %s", (int)lineNumber, start);
+            printErrorLine();
             continue;
         }
         start=u_skipWhitespace(end);
@@ -369,11 +488,11 @@ void BiDiConformanceTest2::TestBidiTest() {
             continue;
         }
         start++;
-        uint32_t resolvedParaLevel=(uint32_t)strtoul(start, &end, 16);
+        uint32_t resolvedParaLevel=(uint32_t)strtoul(start, &end, 10);
         if(end<=start || (!U_IS_INV_WHITESPACE(*end) && *end!=';' && *end!=0) ||
            resolvedParaLevel>1) {
-            errorCount++;
             errln("\nError on line %d: Resolved paragraph level incorrect at %s", (int)lineNumber, start);
+            printErrorLine();
             continue;
         }
         start=u_skipWhitespace(end);
@@ -384,23 +503,19 @@ void BiDiConformanceTest2::TestBidiTest() {
         }
         start++;
         if(!parseLevels(start)) {
-            errorCount++;
             continue;
         }
         start=u_skipWhitespace(start);
         if(*start==';') {
             if(!parseOrdering(start+1)) {
-                errorCount++;
                 continue;
             }
         }
         else
             orderingCount=-1;
 
-        static const UBiDiLevel paraLevels[]={ 0, 1, UBIDI_DEFAULT_LTR, UBIDI_DEFAULT_RTL };
-        static const char *const paraLevelNames[]={ "LTR", "RTL", "auto/LTR", "auto/RTL" };
         ubidi_setPara(ubidi.getAlias(), inputString.getBuffer(), inputString.length(),
-                      paraLevels[paraDirection], NULL, errorCode);
+                      paraLevel, NULL, errorCode);
         const UBiDiLevel *actualLevels=ubidi_getLevels(ubidi.getAlias(), errorCode);
         if(errorCode.logIfFailureAndReset("ubidi_setPara() or ubidi_getLevels()")) {
             errln("Input line %d: %s", (int)lineNumber, line);
@@ -408,16 +523,16 @@ void BiDiConformanceTest2::TestBidiTest() {
         }
         UBiDiLevel actualLevel;
         if((actualLevel=ubidi_getParaLevel(ubidi.getAlias()))!=resolvedParaLevel) {
-            printErrorLine(paraLevelNames[paraDirection]);
+            printErrorLine();
             errln("\nError on line %d: Wrong resolved paragraph level; expected %d actual %d",
                    (int)lineNumber, resolvedParaLevel, actualLevel);
             continue;
         }
         if(!checkLevels(actualLevels, ubidi_getProcessedLength(ubidi.getAlias()),
-                        paraLevelNames[paraDirection])) {
+                        paraLevelName)) {
             continue;
         }
-        if(orderingCount>=0 && !checkOrdering(ubidi.getAlias(), paraLevelNames[paraDirection])) {
+        if(orderingCount>=0 && !checkOrdering(ubidi.getAlias(), paraLevelName)) {
             continue;
         }
     }
@@ -465,7 +580,7 @@ UBool BiDiConformanceTest2::checkLevels(const UBiDiLevel actualLevels[], int32_t
         }
     }
     if(!isOk) {
-        printErrorLine(paraLevelName);
+        printErrorLine();
         UnicodeString els("Expected levels:   ");
         int32_t i;
         for(i=0; i<levelsCount; ++i) {
@@ -488,7 +603,7 @@ UBool BiDiConformanceTest2::checkLevels(const UBiDiLevel actualLevels[], int32_t
 // with the expected ordering that has them omitted.
 UBool BiDiConformanceTest2::checkOrdering(UBiDi *ubidi, const char *paraLevelName) {
     UBool isOk=TRUE;
-    IcuTestErrorCode errorCode(*this, "TestBidiTest/checkOrdering()");
+    IcuTestErrorCode errorCode(*this, "TestBidiTest2/checkOrdering()");
     int32_t resultLength=ubidi_getResultLength(ubidi);  // visual length including BiDi controls
     int32_t i, visualIndex;
     // Note: It should be faster to call ubidi_countRuns()/ubidi_getVisualRun()
@@ -518,7 +633,7 @@ UBool BiDiConformanceTest2::checkOrdering(UBiDi *ubidi, const char *paraLevelNam
         isOk=FALSE;
     }
     if(!isOk) {
-        printErrorLine(paraLevelName);
+        printErrorLine();
         UnicodeString eord("Expected ordering: ");
         for(i=0; i<orderingCount; ++i) {
             eord.append((UChar)0x20).append((UChar)(0x30+ordering[i]));
@@ -536,7 +651,7 @@ UBool BiDiConformanceTest2::checkOrdering(UBiDi *ubidi, const char *paraLevelNam
     return isOk;
 }
 
-void BiDiConformanceTest2::printErrorLine(const char *paraLevelName) {
+void BiDiConformanceTest2::printErrorLine() {
     ++errorCount;
     errln("Input line %5d:   %s", (int)lineNumber, line);
     errln(UnicodeString("Input string:       ")+inputString);
