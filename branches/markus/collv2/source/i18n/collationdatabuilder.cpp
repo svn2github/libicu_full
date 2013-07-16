@@ -110,9 +110,14 @@ CollationDataBuilder::initForTailoring(const CollationData *b, UErrorCode &error
     // For a tailoring, the default is to fall back to the base.
     trie = utrie2_open(Collation::FALLBACK_CE32, Collation::FFFD_CE32, &errorCode);
 
-    // Set Latin-1 blocks so that they are allocated first in the data array.
-    utrie2_setRange32(trie, 0, 0x7f, Collation::FALLBACK_CE32, TRUE, &errorCode);
-    utrie2_setRange32(trie, 0xc0, 0xff, Collation::FALLBACK_CE32, TRUE, &errorCode);
+    // Set the Latin-1 letters block so that it is allocated first in the data array,
+    // to try to improve locality of reference when sorting Latin-1 text.
+    // Do not use utrie2_setRange32() since that will not actually allocate blocks
+    // that are filled with the default value.
+    // ASCII (0..7F) is already preallocated anyway.
+    for(UChar32 c = 0xc0; c <= 0xff; ++c) {
+        utrie2_set32(trie, c, Collation::FALLBACK_CE32, &errorCode);
+    }
 
     // Hangul syllables are not tailorable (except via tailoring Jamos).
     // Always set the Hangul tag to help performance.

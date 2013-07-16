@@ -509,7 +509,22 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
                 ruleIndex = j;
                 return;
             }
-        // TODO: maxVariable
+        } else if(raw == UNICODE_STRING_SIMPLE("maxVariable")) {
+            int32_t value = UCOL_DEFAULT;
+            if(v == UNICODE_STRING_SIMPLE("space")) {
+                value = CollationSettings::MAX_VAR_SPACE;
+            } else if(v == UNICODE_STRING_SIMPLE("punct")) {
+                value = CollationSettings::MAX_VAR_PUNCT;
+            } else if(v == UNICODE_STRING_SIMPLE("symbol")) {
+                value = CollationSettings::MAX_VAR_SYMBOL;
+            } else if(v == UNICODE_STRING_SIMPLE("currency")) {
+                value = CollationSettings::MAX_VAR_CURRENCY;
+            }
+            if(value != UCOL_DEFAULT) {
+                settings->setMaxVariable(value, 0, errorCode);
+                ruleIndex = j;
+                return;
+            }
         } else if(raw == UNICODE_STRING_SIMPLE("caseFirst")) {
             UColAttributeValue value = UCOL_DEFAULT;
             if(v == UNICODE_STRING_SIMPLE("off")) {

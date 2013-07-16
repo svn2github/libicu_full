@@ -134,6 +134,8 @@ struct U_I18N_API CollationSettings : public UMemory {
         return ((options & ALTERNATE_MASK) == 0) ? UCOL_NON_IGNORABLE : UCOL_SHIFTED;
     }
 
+    void setMaxVariable(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
+
     MaxVariable getMaxVariable() const {
         return (MaxVariable)((options & MAX_VARIABLE_MASK) >> MAX_VARIABLE_SHIFT);
     }

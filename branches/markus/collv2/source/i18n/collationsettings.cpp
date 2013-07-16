@@ -105,6 +105,26 @@ CollationSettings::setAlternateHandling(UColAttributeValue value,
     }
 }
 
+void
+CollationSettings::setMaxVariable(int32_t value, int32_t defaultOptions, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    int32_t noMax = options & ~MAX_VARIABLE_MASK;
+    switch(value) {
+    case MAX_VAR_SPACE:
+    case MAX_VAR_PUNCT:
+    case MAX_VAR_SYMBOL:
+    case MAX_VAR_CURRENCY:
+        options = noMax | (value << MAX_VARIABLE_SHIFT);
+        break;
+    case UCOL_DEFAULT:
+        options = noMax | (defaultOptions & MAX_VARIABLE_MASK);
+        break;
+    default:
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        break;
+    }
+}
+
 U_NAMESPACE_END
 
 #endif  // !UCONFIG_NO_COLLATION
