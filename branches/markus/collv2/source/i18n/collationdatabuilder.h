@@ -190,7 +190,7 @@ protected:
     int32_t copyContractionsFromBaseCE32(UnicodeString &context, UChar32 c, uint32_t ce32,
                                          ConditionalCE32 *cond, UErrorCode &errorCode);
 
-    UBool setJamoCEs(UErrorCode &errorCode);
+    UBool getJamoCEs(int64_t jamoCEs[], UErrorCode &errorCode);
     void setDigitTags(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);
 
@@ -231,7 +231,6 @@ protected:
     UVector32 ce32s;
     UVector64 ce64s;
     UVector conditionalCE32s;  // vector of ConditionalCE32
-    int64_t jamoCEs[19+21+27];
     // Characters that have context (prefixes or contraction suffixes).
     UnicodeSet contextChars;
     // Serialized UCharsTrie structures for finalized contexts.

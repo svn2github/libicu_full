@@ -830,7 +830,6 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <1 z
 <1 ᚠ    # U+16A0 first Runic
 
-
 ** test: suppressContractions
 @ rules
 &z<ch<әж [suppressContractions [·cә]]
@@ -843,6 +842,30 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <2 ә\u0308  # secondary difference, not primary, because contractions for ә were suppressed
 <1 әж
 <3 әЖ
+
+** test: Hangul & Jamo
+@ rules
+&L=\u1100  # first Jamo L
+&V=\u1161  # first Jamo V
+&T=\u11A8  # first Jamo T
+&\uAC01<<*\u4E00-\u4EFF  # first Hangul LVT syllable & lots of secondary diffs
+* compare
+<1 Lv
+<3 LV
+=  \u1100\u1161
+=  \uAC00
+<1 LVt
+<3 LVT
+=  \u1100\u1161\u11A8
+=  \uAC00\u11A8
+=  \uAC01
+<2 LVT\u0308
+<2 \u4E00
+<2 \u4E01
+<2 \u4E80
+<2 \u4EFF
+<2 LV\u0308T
+<1 \uAC02
 
 
 #** test: this is a description

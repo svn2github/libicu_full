@@ -114,6 +114,13 @@ CollationDataBuilder::initForTailoring(const CollationData *b, UErrorCode &error
     utrie2_setRange32(trie, 0, 0x7f, Collation::FALLBACK_CE32, TRUE, &errorCode);
     utrie2_setRange32(trie, 0xc0, 0xff, Collation::FALLBACK_CE32, TRUE, &errorCode);
 
+    // Hangul syllables are not tailorable (except via tailoring Jamos).
+    // Always set the Hangul tag to help performance.
+    // Do this here, rather than in buildMappings(),
+    // so that we see the HANGUL_TAG in various assertions.
+    uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
+    utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
+
     // Copy the set contents but don't copy/clone the set as a whole because
     // that would copy the isFrozen state too.
     unsafeBackwardSet.addAll(*b->unsafeBackwardSet);
@@ -777,11 +784,12 @@ public:
                     prevDestCond->next = destIndex;
                 }
             } else {
-                // Just copy long CEs and Latin mini expansions as is,
+                // Just copy long CEs and Latin mini expansions (and other expected values) as is,
                 // assuming that the modifier would not modify them.
                 U_ASSERT(tag == Collation::LONG_PRIMARY_TAG ||
                         tag == Collation::LONG_SECONDARY_TAG ||
-                        tag == Collation::LATIN_EXPANSION_TAG);
+                        tag == Collation::LATIN_EXPANSION_TAG ||
+                        tag == Collation::HANGUL_TAG);
             }
         }
         return ce32;
@@ -859,13 +867,14 @@ CollationDataBuilder::suppressContractions(const UnicodeSet &set, UErrorCode &er
             // The caller will copy this builder in the end,
             // eliminating unreachable data.
             utrie2_set32(trie, c, ce32, &errorCode);
+            contextChars.remove(c);
         }
     }
     modified = TRUE;
 }
 
 UBool
-CollationDataBuilder::setJamoCEs(UErrorCode &errorCode) {
+CollationDataBuilder::getJamoCEs(int64_t jamoCEs[], UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return FALSE; }
     UBool anyJamoAssigned = FALSE;
     int32_t i;  // Count within Jamo types.
@@ -963,11 +972,10 @@ CollationDataBuilder::buildMappings(CollationData &data, UErrorCode &errorCode) 
         return;
     }
 
-    // TODO: Maybe always optimize Jamo and set HANGUL_TAG?
-
     buildContexts(errorCode);
 
-    UBool anyJamoAssigned = setJamoCEs(errorCode);
+    int64_t jamoCEs[19+21+27];
+    UBool anyJamoAssigned = getJamoCEs(jamoCEs, errorCode);
     int32_t jamoIndex = -1;
     if(anyJamoAssigned || base == NULL) {
         jamoIndex = ce64s.size();

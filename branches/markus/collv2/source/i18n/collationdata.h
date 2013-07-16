@@ -128,9 +128,6 @@ struct U_I18N_API CollationData : public UMemory {
      * For fast handling of HANGUL_TAG.
      */
     const int64_t *jamoCEs;
-        // TODO
-        // Build & return a simple array of CEs.
-        // Tailoring: Only necessary if Jamos are tailored.
     const Normalizer2Impl &nfcImpl;
     /** The single-byte primary weight (xx000000) for numeric collation. */
     uint32_t numericPrimary;

@@ -19,6 +19,7 @@
 
 #include "unicode/normalizer2.h"
 #include "unicode/parseerr.h"
+#include "unicode/uchar.h"
 #include "unicode/ucol.h"
 #include "unicode/unistr.h"
 #include "unicode/utf16.h"
@@ -454,6 +455,14 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         parserErrorReason = "normalizing the relation string";
         return;
     }
+
+    UBool hasContext = !nfdPrefix.isEmpty() || nfdString.hasMoreChar32Than(0, 0x7fffffff, 1);
+    if(hasContext && (containsJamo(nfdPrefix) || containsJamo(nfdString))) {
+        errorCode = U_UNSUPPORTED_ERROR;
+        parserErrorReason = "contextual mappings with conjoining Jamo (hst=L/V/T) not supported";
+        return;
+    }
+
     if(strength != UCOL_IDENTICAL) {
         // Find the node index after which we insert the new tailored node.
         int32_t index = findOrInsertNodeForCEs(strength, parserErrorReason, errorCode);
@@ -484,6 +493,16 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         if(strength < tempStrength) { tempStrength = strength; }
         ces[cesLength - 1] = tempCEFromIndexAndStrength(index, tempStrength);
     }
+
+    if(!hasContext && cesLength > 1) {
+        int32_t hst = u_getIntPropertyValue(nfdString.charAt(0), UCHAR_HANGUL_SYLLABLE_TYPE);
+        if(hst == U_HST_LEADING_JAMO || hst == U_HST_VOWEL_JAMO || hst == U_HST_TRAILING_JAMO) {
+            errorCode = U_UNSUPPORTED_ERROR;
+            parserErrorReason = "expansions for conjoining Jamo (hst=L/V/T) not supported";
+            return;
+        }
+    }
+
     setCaseBits(nfdString, parserErrorReason, errorCode);
     if(U_FAILURE(errorCode)) { return; }
 
@@ -730,6 +749,19 @@ CollationBuilder::findCommonNode(int32_t index, int32_t strength) const {
     } while(isTailoredNode(node) || strengthFromNode(node) > strength);
     U_ASSERT(weight16FromNode(node) == Collation::COMMON_WEIGHT16);
     return index;
+}
+
+UBool
+CollationBuilder::containsJamo(const UnicodeString &s) {
+    for(int32_t i = 0; i < s.length();) {
+        UChar32 c = s.char32At(i);
+        int32_t hst = u_getIntPropertyValue(c, UCHAR_HANGUL_SYLLABLE_TYPE);
+        if(hst == U_HST_LEADING_JAMO || hst == U_HST_VOWEL_JAMO || hst == U_HST_TRAILING_JAMO) {
+            return TRUE;
+        }
+        i += U16_LENGTH(c);
+    }
+    return FALSE;
 }
 
 void

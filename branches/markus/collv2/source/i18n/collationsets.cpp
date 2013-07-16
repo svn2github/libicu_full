@@ -500,8 +500,8 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
             break;
         case Collation::HANGUL_TAG:
             if(sink != NULL) {
-                // Note: This could be optimized,
-                // especially if [start..end] is the complete Hangul range.
+                // TODO: This should be optimized,
+                // especially if [start..end] is the complete Hangul range. (assert that)
                 for(UChar32 c = start; c <= end; ++c) {
                     const int64_t *jamoCEs = data->jamoCEs;
                     c -= Hangul::HANGUL_BASE;
