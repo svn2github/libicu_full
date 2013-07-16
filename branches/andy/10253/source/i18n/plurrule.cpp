@@ -12,6 +12,7 @@
 #include "unicode/plurrule.h"
 #include "unicode/upluralrules.h"
 #include "unicode/ures.h"
+#include "cmath"
 #include "cmemory.h"
 #include "cstring.h"
 #include "hash.h"
@@ -415,6 +416,7 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
             else {
                 if (curAndConstraint->rangeLow == -1) {
                     curAndConstraint->rangeLow=getNumberValue(token);
+                    curAndConstraint->rangeHigh=getNumberValue(token);
                 }
                 else {
                     curAndConstraint->rangeHigh=getNumberValue(token);
@@ -801,55 +803,33 @@ AndConstraint::~AndConstraint() {
 
 
 UBool
-AndConstraint::isFulfilled(double number) {
-    UBool result=TRUE;
-    double value=number;
-
-    // arrrrrrgh
-    if ((rangeHigh == -1 || integerOnly) && number != uprv_floor(number)) {
-      return notIn;
-    }
-
-    if ( op == MOD ) {
-        value = (int32_t)value % opNum;
-    }
-    if ( rangeHigh == -1 ) {
-        if ( rangeLow == -1 ) {
-            result = TRUE; // empty rule
-        }
-        else {
-            if ( value == rangeLow ) {
-                result = TRUE;
-            }
-            else {
-                result = FALSE;
-            }
-        }
-    }
-    else {
-        if ((rangeLow <= value) && (value <= rangeHigh)) {
-            if (integerOnly) {
-                if ( value != (int32_t)value) {
-                    result = FALSE;
-                }
-                else {
-                    result = TRUE;
-                }
-            }
-            else {
-                result = TRUE;
-            }
-        }
-        else {
+AndConstraint::isFulfilled(const NumberInfo &number) {
+    UBool result = TRUE;
+    double n = number.get(digitsType);  // pulls n | i | v | f value for the number.
+                                        // Will always be positive.
+                                        // May be non-integer (n option only)
+    do {
+        if ((integerOnly && n != uprv_floor(n)) ||
+                operand == tVariableJ && number.visibleFractionDigitCount != 0) {
             result = FALSE;
+            break
         }
-    }
+
+        if (op == MOD) {
+            // TODO: is fmod() safe for us to use? Wrap in uprv_??
+            n = std::fmod(n, opNum);
+        }
+        if (rangeLow == -1) {
+            result = TRUE;   // empty rule
+            break;
+        }
+        result = (rangeLow <= n && n <= rangeHi);
+    } while (FALSE);
+
     if (notIn) {
-        return !result;
+        result = !result;
     }
-    else {
-        return result;
-    }
+    return result;
 }
 
 UBool 
@@ -925,7 +905,7 @@ OrConstraint::add()
 }
 
 UBool
-OrConstraint::isFulfilled(double number) {
+OrConstraint::isFulfilled(const NumberInfo &number) {
     OrConstraint* orRule=this;
     UBool result=FALSE;
 

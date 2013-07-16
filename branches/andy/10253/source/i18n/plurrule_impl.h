@@ -144,6 +144,18 @@ private:
     UBool isValidKeyword(const UnicodeString& token);
 };
 
+class NumberInfo: public UMemory {
+  public:
+    NumberInfo(double  n, int32_t v, int64_t f);
+    NumberInfo(double n, int32_v);
+    NumberInfo(int64_t n);
+
+    double get(tokenType operand);
+
+  private:
+    
+}
+
 class AndConstraint : public UMemory  {
 public:
     typedef enum RuleOp {
@@ -154,7 +166,7 @@ public:
     int32_t opNum;
     int32_t  rangeLow;
     int32_t  rangeHigh;
-    UBool   notIn;
+    UBool   notIn;          // TRUE for "not" rules
     UBool   integerOnly;
     tokenType digitsType;   // n | i | v | f constraint
     AndConstraint *next;
@@ -163,7 +175,8 @@ public:
     AndConstraint(const AndConstraint& other);
     virtual ~AndConstraint();
     AndConstraint* add();
-    UBool isFulfilled(double number);
+    // UBool isFulfilled(double number);
+    UBool isFulfilled(const NumberInfo &number);
     UBool isLimited();
     int32_t updateRepeatLimit(int32_t maxLimit);
 };
@@ -177,7 +190,8 @@ public:
     OrConstraint(const OrConstraint& other);
     virtual ~OrConstraint();
     AndConstraint* add();
-    UBool isFulfilled(double number);
+    // UBool isFulfilled(double number);
+    UBool isFulfilled(const NumberInfo &number);
     UBool isLimited();
 };
 
@@ -214,6 +228,7 @@ private:
     int32_t pos;
     UVector fKeywordNames;
 };
+
 
 U_NAMESPACE_END
 
