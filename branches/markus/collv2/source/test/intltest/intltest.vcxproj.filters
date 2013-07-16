@@ -457,6 +457,9 @@
     <ClCompile Include="regiontst.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
+    <ClCompile Include="collationtest.cpp">
+      <Filter>collation</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="itrbbi.h">
