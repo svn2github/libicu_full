@@ -19,6 +19,7 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
+#include "collationiterator.h"
 #include "normalizer2impl.h"
 
 U_NAMESPACE_BEGIN

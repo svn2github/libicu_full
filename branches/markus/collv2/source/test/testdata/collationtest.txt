@@ -314,29 +314,54 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <1 α
 <1 丂
 
+** test: case bits
+@ rules
+&w<x  # tailored CE getting case bits
+  =uv=uV=Uv=UV  # 2 chars -> 1 CE
+&ae=ch=cH=Ch=CH  # 2 chars -> 2 CEs
+&rst=yz=yZ=Yz=YZ  # 2 chars -> 3 CEs
+% caseFirst=lower
+* compare
+<1 ae
+=  ch
+<3 cH
+<3 Ch
+<3 CH
+<1 rst
+=  yz
+<3 yZ
+<3 Yz
+<3 YZ
+<1 w
+<1 x
+=  uv
+<3 uV
+=  Uv  # mixed case on single CE cannot distinguish variations
+<3 UV
+
 ** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=lower
-@ root
-# TODO: replace hack with real tailoring of U+FFF1 & U+FFF2 (or other characters) to tertiary CEs
+@ rules
+&\u0001<<<t<<<T  # tertiary CEs
 % caseFirst=lower
 * compare
 <1 aa
-<3 aa\uFFF1
-<3 aa\uFFF2
+<3 aat
+<3 aaT
 <3 aA
-<3 aA\uFFF1
-<3 a\uFFF1a
-<3 a\uFFF2a
+<3 aAt
+<3 ata
+<3 aTa
 
 ** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=upper
 % caseFirst=upper
 * compare
 <1 aA
-<3 aA\uFFF1
+<3 aAt
 <3 aa
-<3 aa\uFFF1
-<3 aa\uFFF2
-<3 a\uFFF1a
-<3 a\uFFF2a
+<3 aat
+<3 aaT
+<3 ata
+<3 aTa
 
 ** test: empty rules
 @ rules
@@ -660,18 +685,16 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 
 ** test: many tertiary CEs at the top of their range
 @ rules
-&[last secondary ignorable]<<<*a-l  # TODO: make this a-z when the artificial tailorings of FFF1 and FFF2 are gone
+&[last secondary ignorable]<<<*a-z
 * compare
 <3 a
 <3 b
 <3 c
 <3 d
 # e..w
-<3 k
-<3 l
-# <3 x  -- see TODO above
-# <3 y
-# <3 z
+<3 x
+<3 y
+<3 z
 <2 \u0308
 
 ** test: tailor contraction together with nearly equivalent prefix, ICU ticket 10101

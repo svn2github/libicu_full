@@ -1136,19 +1136,6 @@ parseAndWriteCollationRootData(
     CollationBaseDataBuilder builder(errorCode);
     builder.init(errorCode);
     parseFractionalUCA(fracUCAPath, builder, &errorCode);
-    // TODO: remove artificial "tailoring", replace with real tailoring
-    // Set U+FFF1 to a tertiary CE.
-    // It must have uppercase bits.
-    // Its tertiary weight must be higher than that of any primary or secondary CE.
-    UnicodeString prefix;
-    UnicodeString s((UChar)0xfff1);
-    int64_t ce = 0x8000 | 0x3f30;
-    builder.add(prefix, s, &ce, 1, errorCode);
-    // Set U+FFF2 to the next tertiary CE after a gap.
-    s.setTo((UChar)0xfff2);
-    ce += 2;
-    builder.add(prefix, s, &ce, 1, errorCode);
-    // end artificial tailoring
     buildAndWriteBaseData(builder, binaryDataPath, errorCode);
     buildAndWriteFCDData(sourceCodePath, errorCode);
 }

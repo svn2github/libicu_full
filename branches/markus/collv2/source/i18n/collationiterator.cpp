@@ -189,6 +189,15 @@ CollationIterator::reset() {
     if(skipped != NULL) { skipped->clear(); }
 }
 
+int32_t
+CollationIterator::fetchCEs(UErrorCode &errorCode) {
+    while(U_SUCCESS(errorCode) && nextCE(errorCode) != Collation::NO_CE) {
+        // No need to loop for each expansion CE.
+        cesIndex = ceBuffer.length;
+    }
+    return ceBuffer.length;
+}
+
 uint32_t
 CollationIterator::handleNextCE32(UChar32 &c, UErrorCode &errorCode) {
     c = nextCodePoint(errorCode);
@@ -874,7 +883,7 @@ CollationIterator::previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
         // Append one or more CEs to the ceBuffer.
         nextCE(errorCode);
         U_ASSERT(U_FAILURE(errorCode) || ceBuffer.get(cesIndex - 1) != Collation::NO_CE);
-        // No need to fetch each expansion CE.
+        // No need to loop for each expansion CE.
         cesIndex = ceBuffer.length;
     }
     // Reset the forward iteration limit

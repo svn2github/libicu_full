@@ -98,6 +98,9 @@ private:
      */
     int32_t findCommonNode(int32_t index, int32_t strength) const;
 
+    void setCaseBits(const UnicodeString &nfdString,
+                     const char *&parserErrorReason, UErrorCode &errorCode);
+
     /** Implements CollationRuleParser::Sink. */
     virtual void suppressContractions(const UnicodeSet &set, const char *&parserErrorReason,
                                       UErrorCode &errorCode);

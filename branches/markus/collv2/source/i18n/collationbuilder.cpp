@@ -34,6 +34,7 @@
 #include "collationweights.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
+#include "utf16collationiterator.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -483,6 +484,9 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         if(strength < tempStrength) { tempStrength = strength; }
         ces[cesLength - 1] = tempCEFromIndexAndStrength(index, tempStrength);
     }
+    setCaseBits(nfdString, parserErrorReason, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+
     int32_t cesLengthBeforeExtension = cesLength;
     if(!extension.isEmpty()) {
         UnicodeString nfdExtension = nfd.normalize(extension, errorCode);
@@ -729,6 +733,74 @@ CollationBuilder::findCommonNode(int32_t index, int32_t strength) const {
 }
 
 void
+CollationBuilder::setCaseBits(const UnicodeString &nfdString,
+                              const char *&parserErrorReason, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    const UChar *s = nfdString.getBuffer();
+    UTF16CollationIterator baseCEs(baseData, FALSE, s, s, s + nfdString.length());
+    int32_t baseCEsLength = baseCEs.fetchCEs(errorCode) - 1;
+    if(U_FAILURE(errorCode)) {
+        parserErrorReason = "fetching root CEs for tailored string";
+        return;
+    }
+    U_ASSERT(baseCEsLength >= 0 && baseCEs.getCE(baseCEsLength) == Collation::NO_CE);
+
+    int32_t numTailoredPrimaries = 0;
+    for(int32_t i = 0; i < cesLength; ++i) {
+        if(ceStrength(ces[i]) == UCOL_PRIMARY) { ++numTailoredPrimaries; }
+    }
+    // We should not be able to get too many case bits because
+    // cesLength<=31==MAX_EXPANSION_LENGTH.
+    // 31 pairs of case bits fit into an int64_t without setting its sign bit.
+    U_ASSERT(numTailoredPrimaries <= 31);
+
+    int64_t cases = 0;
+    if(numTailoredPrimaries > 0) {
+        uint32_t lastCase = 0;
+        int32_t numBasePrimaries = 0;
+        for(int32_t i = 0; i < baseCEsLength; ++i) {
+            int64_t ce = baseCEs.getCE(i);
+            if((ce >> 32) != 0) {
+                ++numBasePrimaries;
+                uint32_t c = ((uint32_t)ce >> 14) & 3;
+                U_ASSERT(c == 0 || c == 2);  // lowercase or uppercase, no mixed case in any base CE
+                if(numBasePrimaries < numTailoredPrimaries) {
+                    cases |= (int64_t)c << ((numBasePrimaries - 1) * 2);
+                } else if(numBasePrimaries == numTailoredPrimaries) {
+                    lastCase = c;
+                } else if(c != lastCase) {
+                    // There are more base primary CEs than tailored primaries.
+                    // Set mixed case if the case bits of the remainder differ.
+                    lastCase = 1;
+                }
+            }
+        }
+        if(numBasePrimaries >= numTailoredPrimaries) {
+            cases |= (int64_t)lastCase << ((numTailoredPrimaries - 1) * 2);
+        }
+    }
+
+    for(int32_t i = 0; i < cesLength; ++i) {
+        int64_t ce = ces[i] & 0xffffffffffff3fff;  // clear old case bits
+        int32_t strength = ceStrength(ce);
+        if(strength == UCOL_PRIMARY) {
+            ce |= (cases & 3) << 14;
+            cases >>= 2;
+        } else if(strength == UCOL_TERTIARY) {
+            // Tertiary CEs must have uppercase bits.
+            // See the LDML spec, and comments in class CollationCompare.
+            ce |= 0x8000;
+        }
+        // Tertiary ignorable CEs must have 0 case bits.
+        // We set 0 case bits for secondary CEs too
+        // since currently only U+0345 is cased and maps to a secondary CE,
+        // and it is lowercase. Other secondaries are uncased.
+        // See [[:Cased:]&[:uca1=:]] where uca1 queries the root primary weight.
+        ces[i] = ce;
+    }
+}
+
+void
 CollationBuilder::suppressContractions(const UnicodeSet &set, const char *&parserErrorReason,
                                        UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
@@ -952,12 +1024,20 @@ public:
     virtual ~CEFinalizer();
     virtual int64_t modifyCE32(uint32_t ce32) const {
         U_ASSERT(!Collation::isSpecialCE32(ce32));
-        return CollationBuilder::isTempCE32(ce32) ?
-                finalCEs[CollationBuilder::indexFromTempCE32(ce32)] : Collation::NO_CE;
+        if(CollationBuilder::isTempCE32(ce32)) {
+            // retain case bits
+            return finalCEs[CollationBuilder::indexFromTempCE32(ce32)] | ((ce32 & 0xc0) << 8);
+        } else {
+            return Collation::NO_CE;
+        }
     }
     virtual int64_t modifyCE(int64_t ce) const {
-        return CollationBuilder::isTempCE(ce) ?
-                finalCEs[CollationBuilder::indexFromTempCE(ce)] : Collation::NO_CE;
+        if(CollationBuilder::isTempCE(ce)) {
+            // retain case bits
+            return finalCEs[CollationBuilder::indexFromTempCE(ce)] | (ce & 0xc000);
+        } else {
+            return Collation::NO_CE;
+        }
     }
 
 private:

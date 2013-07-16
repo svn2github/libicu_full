@@ -151,6 +151,12 @@ public:
     }
 
     /**
+     * Fetches all CEs.
+     * @return getCEsLength()
+     */
+    int32_t fetchCEs(UErrorCode &errorCode);
+
+    /**
      * Overwrites the current CE (the last one returned by nextCE()).
      */
     void setCurrentCE(int64_t ce) {
