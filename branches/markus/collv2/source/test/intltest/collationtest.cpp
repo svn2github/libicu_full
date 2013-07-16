@@ -31,6 +31,7 @@
 #include "collationdatabuilder.h"
 #include "collationiterator.h"
 #include "collationroot.h"
+#include "collationruleparser.h"
 #include "collationtailoring.h"
 #include "collationweights.h"
 #include "cstring.h"
@@ -38,7 +39,6 @@
 #include "normalizer2impl.h"
 #include "rulebasedcollator.h"
 #include "ucbuf.h"
-#include "ucol_bld.h"  // for ucol_findReorderingEntry
 #include "uitercollationiterator.h"
 #include "utf16collationiterator.h"
 #include "utf8collationiterator.h"
@@ -811,7 +811,6 @@ static const struct {
 void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
     int32_t start = skipSpaces(1);
     int32_t equalPos = fileLine.indexOf(0x3d);
-    // TODO: handle  % reorder Grek Zzzz digit
     // TODO: handle  % maxVariable symbol
     if(equalPos < 0) {
         if(fileLine.compare(start, 7, UNICODE_STRING("reorder", 7)) == 0) {
@@ -872,19 +871,12 @@ void CollationTest::parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &err
         while(limit < fileLine.length() && !isSpace(fileLine[limit])) { ++limit; }
         CharString name;
         name.appendInvariantChars(fileLine.tempSubStringBetween(start, limit), errorCode);
-        int32_t code = ucol_findReorderingEntry(name.data());
-        if(code < 0) {
-            code = u_getPropertyValueEnum(UCHAR_SCRIPT, name.data());
-            if(code < 0) {
-                if(uprv_strcmp(name.data(), "default") == 0) {
-                    code = UCOL_REORDER_CODE_DEFAULT;
-                } else {
-                    errln("invalid reorder code '%s' on line %d", name.data(), (int)fileLineNumber);
-                    errln(fileLine);
-                    errorCode.set(U_PARSE_ERROR);
-                    return;
-                }
-            }
+        int32_t code = CollationRuleParser::getReorderCode(name.data());
+        if(code < -1) {
+            errln("invalid reorder code '%s' on line %d", name.data(), (int)fileLineNumber);
+            errln(fileLine);
+            errorCode.set(U_PARSE_ERROR);
+            return;
         }
         reorderCodes.addElement(code, errorCode);
         start = limit;

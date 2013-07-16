@@ -696,7 +696,14 @@ CollationRuleParser::getReorderCode(const char *word) {
             return UCOL_REORDER_CODE_FIRST + i;
         }
     }
-    return u_getPropertyValueEnum(UCHAR_SCRIPT, word);
+    int32_t script = u_getPropertyValueEnum(UCHAR_SCRIPT, word);
+    if(script >= 0) {
+        return script;
+    }
+    if(uprv_stricmp(word, "default") == 0) {
+        return UCOL_REORDER_CODE_DEFAULT;
+    }
+    return -2;
 }
 
 UColAttributeValue
