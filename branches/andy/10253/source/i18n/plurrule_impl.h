@@ -85,19 +85,26 @@ static const UChar LOW_Z           = ((UChar)0x007A);
 
 static const int32_t PLURAL_RANGE_HIGH = 0x7fffffff;
 
-
-enum PluralKey {
-  pZero,
-  pOne,
-  pTwo,
-  pFew,
-  pMany,
-  pOther,
-  pLast
+enum ParseState {
+  PS_START,
+  PS_KEYWORD,
+  PS_EXPR,
+  PS_MOD
 };
 
-// When parsing rule source, getNextToken() returns a token of
-//    one of these types.
+enum ParseAction {
+   PA_NONE,
+   PA_KEYWORD,
+   PA_NIVFJ,
+   PA_MOD,
+   PA_NEGATE,
+   PA_IS_VALUE,
+   PA_RANGE_LOW,
+   PA_RANGE_HI,
+   PA_ADD_OR,
+   PA_ADD_AND
+};
+
 enum tokenType {
   none,
   tLetter,
@@ -108,28 +115,31 @@ enum tokenType {
   tColon,
   tDot,
   tKeyword,
-  tZero,
-  tOne,
-  tTwo,
-  tFew,
-  tMany,
-  tOther,
   tAnd,
   tOr,
   tMod,
   tNot,
   tIn,
   tWithin,
-  tNotIn,
   tVariableN,
   tVariableI,
   tVariableF,
   tVariableV,
   tVariableJ,
-  tIs,
-  tLeftBrace,
-  tRightBrace
+  tIs
 };
+
+struct ParseTableRow {
+   ParseState   fCurrentState;
+   tokenType    fTokenType;
+   ParseState   fNextState;
+   ParseAction  fAction;
+};
+
+ParseTableRow parseTable[] = {
+    {PS_START, tKeyword, PS_KEYWORD, PA_NONE}
+};
+    
 
 class RuleParser : public UMemory {
 public:
@@ -147,14 +157,15 @@ private:
 class NumberInfo: public UMemory {
   public:
     NumberInfo(double  n, int32_t v, int64_t f);
-    NumberInfo(double n, int32_v);
+    NumberInfo(double n, int32_t);
     NumberInfo(int64_t n);
 
-    double get(tokenType operand);
+    double get(tokenType operand) const;
+    int32_t visibleFractionDigitCount() const;
 
   private:
     
-}
+};
 
 class AndConstraint : public UMemory  {
 public:
@@ -163,12 +174,14 @@ public:
         MOD
     } RuleOp;
     RuleOp  op;
-    int32_t opNum;
-    int32_t  rangeLow;
-    int32_t  rangeHigh;
-    UBool   notIn;          // TRUE for "not" rules
-    UBool   integerOnly;
-    tokenType digitsType;   // n | i | v | f constraint
+    int32_t opNum;           // for mod expressions, the right operand of the mod.
+    // int32_t  rangeLow;
+    // int32_t  rangeHigh;
+    int32_t     value;       // valid for 'is' rules only.
+    UVector32   *rangeLists;  // for 'in', 'within' rules. Null otherwise.
+    UBool   negated;           // TRUE for negated rules.
+    UBool   integerOnly;     // TRUE for 'within' rules.
+    tokenType digitsType;    // n | i | v | f constraint.
     AndConstraint *next;
 
     AndConstraint();
@@ -178,7 +191,6 @@ public:
     // UBool isFulfilled(double number);
     UBool isFulfilled(const NumberInfo &number);
     UBool isLimited();
-    int32_t updateRepeatLimit(int32_t maxLimit);
 };
 
 class OrConstraint : public UMemory  {
@@ -206,13 +218,9 @@ public:
     virtual ~RuleChain();
     UnicodeString select(double number) const;
     void dumpRules(UnicodeString& result);
-    int32_t getRepeatLimit();
     UBool isLimited();
     UErrorCode getKeywords(int32_t maxArraySize, UnicodeString *keywords, int32_t& arraySize) const;
     UBool isKeyword(const UnicodeString& keyword) const;
-    void setRepeatLimit();
-private:
-    int32_t repeatLimit;
 };
 
 class PluralKeywordEnumeration : public StringEnumeration {
