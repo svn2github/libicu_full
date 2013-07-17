@@ -1105,7 +1105,17 @@ ucol_tok_parseNextTokenInternal(UColTokenParser *src,
                         src->current++;
                         if(*(src->current+1) == 0x003C) {
                             src->current++; /* three in a row! */
+#if 1  // TODO: hack for v1/v2 ja.txt
+                            if(*(src->current+1) == 0x003C) {
+                                src->current++; /* four in a row! */
+                                // v1 runtime uses [hiraganaQ on], v2 uses explicit <<<<
+                                newStrength = UCOL_IDENTICAL;
+                            } else { /* three in a row */
+                                newStrength = UCOL_TERTIARY;
+                            }
+#else
                             newStrength = UCOL_TERTIARY;
+#endif
                         } else { /* two in a row */
                             newStrength = UCOL_SECONDARY;
                         }

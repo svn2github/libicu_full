@@ -768,15 +768,6 @@ void
 CollationBuilder::setCaseBits(const UnicodeString &nfdString,
                               const char *&parserErrorReason, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    const UChar *s = nfdString.getBuffer();
-    UTF16CollationIterator baseCEs(baseData, FALSE, s, s, s + nfdString.length());
-    int32_t baseCEsLength = baseCEs.fetchCEs(errorCode) - 1;
-    if(U_FAILURE(errorCode)) {
-        parserErrorReason = "fetching root CEs for tailored string";
-        return;
-    }
-    U_ASSERT(baseCEsLength >= 0 && baseCEs.getCE(baseCEsLength) == Collation::NO_CE);
-
     int32_t numTailoredPrimaries = 0;
     for(int32_t i = 0; i < cesLength; ++i) {
         if(ceStrength(ces[i]) == UCOL_PRIMARY) { ++numTailoredPrimaries; }
@@ -788,6 +779,15 @@ CollationBuilder::setCaseBits(const UnicodeString &nfdString,
 
     int64_t cases = 0;
     if(numTailoredPrimaries > 0) {
+        const UChar *s = nfdString.getBuffer();
+        UTF16CollationIterator baseCEs(baseData, FALSE, s, s, s + nfdString.length());
+        int32_t baseCEsLength = baseCEs.fetchCEs(errorCode) - 1;
+        if(U_FAILURE(errorCode)) {
+            parserErrorReason = "fetching root CEs for tailored string";
+            return;
+        }
+        U_ASSERT(baseCEsLength >= 0 && baseCEs.getCE(baseCEsLength) == Collation::NO_CE);
+
         uint32_t lastCase = 0;
         int32_t numBasePrimaries = 0;
         for(int32_t i = 0; i < baseCEsLength; ++i) {
@@ -804,6 +804,8 @@ CollationBuilder::setCaseBits(const UnicodeString &nfdString,
                     // There are more base primary CEs than tailored primaries.
                     // Set mixed case if the case bits of the remainder differ.
                     lastCase = 1;
+                    // Nothing more can change.
+                    break;
                 }
             }
         }

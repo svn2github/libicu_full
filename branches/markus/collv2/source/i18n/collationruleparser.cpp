@@ -563,10 +563,11 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
         } else if(raw == UNICODE_STRING_SIMPLE("hiraganaQ")) {
             UColAttributeValue value = getOnOffValue(v);
             if(value != UCOL_DEFAULT) {
+#if 0  // TODO: remove [hiraganaQ on] from ja.txt and re-enable this check
                 if(value == UCOL_ON) {
-                    setParseError("[hiraganaQ on] is not supported", errorCode);  // TODO
+                    setParseError("[hiraganaQ on] is not supported", errorCode);
                 }
-                // TODO
+#endif
                 ruleIndex = j;
                 return;
             }
