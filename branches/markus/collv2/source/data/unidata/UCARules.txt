@@ -1,7 +1,7 @@
 ﻿# File:        UCA_Rules_SHORT.txt
 # UCA Version: 6.3.0
 # UCD Version: 6.3.0
-# Generated:   2013-03-04 [MS]
+# Generated:   2013-07-18 [MS]
 # For a description of the format and usage, see CollationAuxiliary.html
 
 & [last tertiary ignorable]
@@ -118,7 +118,7 @@
     =	 ؘ
     =	 ؙ
     =	 ؚ
-    =	 ‎؜‎
+    =	 '\u061C'
     =	 ‎ـ‎
     =	 ۖ
     =	 ۗ
@@ -176,7 +176,7 @@
     =	 ᠋
     =	 ᠌
     =	 ᠍
-    =	 '᠎'
+    =	 '\u180E'
     =	 ᩿
     =	 ᭫
     =	 ᭬
@@ -228,10 +228,10 @@
     =	 '\u2062'
     =	 '\u2063'
     =	 '\u2064'
-    =	 ⁦
-    =	 ⁧
-    =	 ⁨
-    =	 ⁩
+    =	 '\u2066'
+    =	 '\u2067'
+    =	 '\u2068'
+    =	 '\u2069'
     =	 '\u206A'
     =	 '\u206B'
     =	 '\u206C'
@@ -1600,6 +1600,10 @@
  <	 ᚜
  <	 ⁅
  <	 ⁆
+ <	 ⌈
+ <	 ⌉
+ <	 ⌊
+ <	 ⌋
  <	 ⧼
  <	 ⧽
  <	 ⦃
@@ -2581,10 +2585,6 @@
  <	 ⌅
  <	 ⌆
  <	 ⌇
- <	 ⌈
- <	 ⌉
- <	 ⌊
- <	 ⌋
  <	 ⌌
  <	 ⌍
  <	 ⌎
