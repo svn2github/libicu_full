@@ -85,26 +85,6 @@ static const UChar LOW_Z           = ((UChar)0x007A);
 
 static const int32_t PLURAL_RANGE_HIGH = 0x7fffffff;
 
-enum ParseState {
-  PS_START,
-  PS_KEYWORD,
-  PS_EXPR,
-  PS_MOD
-};
-
-enum ParseAction {
-   PA_NONE,
-   PA_KEYWORD,
-   PA_NIVFJ,
-   PA_MOD,
-   PA_NEGATE,
-   PA_IS_VALUE,
-   PA_RANGE_LOW,
-   PA_RANGE_HI,
-   PA_ADD_OR,
-   PA_ADD_AND
-};
-
 enum tokenType {
   none,
   tLetter,
@@ -129,17 +109,6 @@ enum tokenType {
   tIs
 };
 
-struct ParseTableRow {
-   ParseState   fCurrentState;
-   tokenType    fTokenType;
-   ParseState   fNextState;
-   ParseAction  fAction;
-};
-
-ParseTableRow parseTable[] = {
-    {PS_START, tKeyword, PS_KEYWORD, PA_NONE}
-};
-    
 
 class RuleParser : public UMemory {
 public:
@@ -158,13 +127,22 @@ class NumberInfo: public UMemory {
   public:
     NumberInfo(double  n, int32_t v, int64_t f);
     NumberInfo(double n, int32_t);
-    NumberInfo(int64_t n);
+    NumberInfo(double n);
 
     double get(tokenType operand) const;
-    int32_t visibleFractionDigitCount() const;
+    int32_t getVisibleFractionDigitCount() const;
 
   private:
-    
+    void init(double n, int32_t v, int64_t f);
+    static int32_t getFractionalDigits(double n, int32_t v);
+    static int32_t decimals(double n);
+
+    double      source;
+    int32_t     visibleFractionDigitCount;
+    int64_t     fractionalDigits;
+    int64_t     intValue;
+    UBool       hasIntegerValue;
+    UBool       isNegative;
 };
 
 class AndConstraint : public UMemory  {
@@ -175,10 +153,8 @@ public:
     } RuleOp;
     RuleOp  op;
     int32_t opNum;           // for mod expressions, the right operand of the mod.
-    // int32_t  rangeLow;
-    // int32_t  rangeHigh;
     int32_t     value;       // valid for 'is' rules only.
-    UVector32   *rangeLists;  // for 'in', 'within' rules. Null otherwise.
+    UVector32   *rangeList;  // for 'in', 'within' rules. Null otherwise.
     UBool   negated;           // TRUE for negated rules.
     UBool   integerOnly;     // TRUE for 'within' rules.
     tokenType digitsType;    // n | i | v | f constraint.

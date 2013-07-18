@@ -25,6 +25,7 @@
 #include "locutil.h"
 #include "uassert.h"
 #include "uvectr32.h"
+#include "stdio.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -346,6 +347,8 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
     AndConstraint *curAndConstraint=NULL;
     OrConstraint *orNode=NULL;
     RuleChain *lastChain=NULL;
+    int32_t  rangeLowIdx = -1;   // Indices in the UVector of ranges of the
+    int32_t  rangeHiIdx  = -1;   //    low and hi values currently being parsed.
 
     if (U_FAILURE(status)) {
         return;
@@ -382,20 +385,22 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
         case tIs:
             U_ASSERT(curAndConstraint != NULL);
             U_ASSERT(curAndConstraint->value == -1);
-            U_ASSERT(curAndConstraint->rangeLists == NULL);
+            U_ASSERT(curAndConstraint->rangeList == NULL);
             break;
         case tNot:
             U_ASSERT(curAndConstraint != NULL);
             curAndConstraint->negated=TRUE;
             break;
         case tIn:
-            U_ASSERT(curAndConstraint != NULL);
-            curAndConstraint->value=PLURAL_RANGE_HIGH;
-            curAndConstraint->integerOnly = TRUE;
-            break;
         case tWithin:
             U_ASSERT(curAndConstraint != NULL);
-            curAndConstraint->rangeHigh=PLURAL_RANGE_HIGH;
+            curAndConstraint->rangeList = new UVector32(status);
+            curAndConstraint->rangeList->addElement(-1, status);  // range Low
+            curAndConstraint->rangeList->addElement(-1, status);  // range Hi
+            rangeLowIdx = 0;
+            rangeHiIdx  = 1;
+            curAndConstraint->value=PLURAL_RANGE_HIGH;
+            curAndConstraint->integerOnly = (type == tIn);
             break;
         case tNumber:
             U_ASSERT(curAndConstraint != NULL);
@@ -404,14 +409,23 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
                 curAndConstraint->opNum=getNumberValue(token);
             }
             else {
-                if (curAndConstraint->rangeLow == -1) {
-                    curAndConstraint->rangeLow=getNumberValue(token);
-                    curAndConstraint->rangeHigh=getNumberValue(token);
+                if (curAndConstraint->rangeList->elementAti(rangeLowIdx) == -1) {
+                    curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeLowIdx);
+                    curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeHiIdx);
                 }
                 else {
-                    curAndConstraint->rangeHigh=getNumberValue(token);
+                    curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeHiIdx);
                 }
             }
+            break;
+        case tComma:
+            U_ASSERT(curAndConstraint != NULL);
+            U_ASSERT(curAndConstraint->rangeList != NULL);
+            U_ASSERT(curAndConstraint->rangeList->size() >= 2);
+            rangeLowIdx = curAndConstraint->rangeList->size();
+            curAndConstraint->rangeList->addElement(-1, status);  // range Low
+            rangeHiIdx = curAndConstraint->rangeList->size();
+            curAndConstraint->rangeList->addElement(-1, status);  // range Hi
             break;
         case tMod:
             U_ASSERT(curAndConstraint != NULL);
@@ -482,18 +496,6 @@ PluralRules::getNextLocale(const UnicodeString& localeData, int32_t* curIndex, U
     *curIndex=i;
 }
 
-
-#if 0
-int32_t
-PluralRules::getRepeatLimit() const {
-    if (mRules!=NULL) {
-        return mRules->getRepeatLimit();
-    }
-    else {
-        return 0;
-    }
-}
-#endif
 
 int32_t
 PluralRules::getKeywordIndex(const UnicodeString& keyword,
@@ -761,7 +763,7 @@ AndConstraint::AndConstraint() {
     op = AndConstraint::NONE;
     opNum=-1;
     value = -1;
-    rangeLists = NULL;
+    rangeList = NULL;
     negated=FALSE;
     integerOnly=FALSE;
     next=NULL;
@@ -772,11 +774,11 @@ AndConstraint::AndConstraint(const AndConstraint& other) {
     this->op = other.op;
     this->opNum=other.opNum;
     this->value=other.value;
-    this->rangeLists=NULL;
-    if (other.rangeLists != NULL) {
+    this->rangeList=NULL;
+    if (other.rangeList != NULL) {
         UErrorCode status = U_ZERO_ERROR;
-        this->rangeLists = new UVector32(status);
-        this->rangeLists->assign(*other.rangeLists, status);
+        this->rangeList = new UVector32(status);
+        this->rangeList->assign(*other.rangeList, status);
     }
     this->integerOnly=other.integerOnly;
     this->negated=other.negated;
@@ -803,7 +805,7 @@ AndConstraint::isFulfilled(const NumberInfo &number) {
                                         // May be non-integer (n option only)
     do {
         if ((integerOnly && n != uprv_floor(n)) ||
-                (digitsType == tVariableJ && number.visibleFractionDigitCount()) != 0) {
+                (digitsType == tVariableJ && number.getVisibleFractionDigitCount()) != 0) {
             result = FALSE;
             break;
         }
@@ -811,14 +813,14 @@ AndConstraint::isFulfilled(const NumberInfo &number) {
         if (op == MOD) {
             n = std::fmod(n, opNum);
         }
-        if (rangeLists == NULL) {
+        if (rangeList == NULL) {
             result = value == -1 ||    // empty rule
                      n == value;       //  'is' rule
             break;
         }
         result = FALSE;                // 'in' or 'within' rule
-        for (int32_t r=0; r<rangeLists->size(); r+=2) {
-            if (rangeLists->elementAti(r) <= n && n <= rangeLists->elementAti(r+1)) {
+        for (int32_t r=0; r<rangeList->size(); r+=2) {
+            if (rangeList->elementAti(r) <= n && n <= rangeList->elementAti(r+1)) {
                 result = TRUE;
                 break;
             }
@@ -833,27 +835,8 @@ AndConstraint::isFulfilled(const NumberInfo &number) {
 
 UBool 
 AndConstraint::isLimited() {
-    return (rangeLists == NULL || integerOnly) && !negated && op != MOD;
+    return (rangeList == NULL || integerOnly) && !negated && op != MOD;
 }
-
-#if 0
-int32_t
-AndConstraint::updateRepeatLimit(int32_t maxLimit) {
-
-    if ( op == MOD ) {
-        return uprv_max(opNum, maxLimit);
-    }
-    else {
-        if ( rangeHigh == -1 ) {
-            return uprv_max(rangeLow, maxLimit);
-        }
-        else{
-            return uprv_max(rangeHigh, maxLimit);
-        }
-    }
-}
-#endif
-
 
 AndConstraint*
 AndConstraint::add()
@@ -998,7 +981,7 @@ RuleChain::dumpRules(UnicodeString& result) {
         while ( orRule != NULL ) {
             AndConstraint* andRule=orRule->childNode;
             while ( andRule != NULL ) {
-                if ( (andRule->op==AndConstraint::NONE) && (andRule->rangeLists==NULL) ) {
+                if ( (andRule->op==AndConstraint::NONE) && (andRule->rangeList==NULL) ) {
                     result += UNICODE_STRING_SIMPLE(" n is ");
                     if (andRule->negated) {
                         result += UNICODE_STRING_SIMPLE("not ");
@@ -1015,7 +998,7 @@ RuleChain::dumpRules(UnicodeString& result) {
                     else {
                         result += UNICODE_STRING_SIMPLE("  n ");
                     }
-                    if (andRule->rangeLists==NULL) {
+                    if (andRule->rangeList==NULL) {
                         if (andRule->negated) {
                             result += UNICODE_STRING_SIMPLE(" is not ");
                             uprv_itou(digitString,16, andRule->value,10,0);
@@ -1044,16 +1027,16 @@ RuleChain::dumpRules(UnicodeString& result) {
                                 result += UNICODE_STRING_SIMPLE(" within ");
                             }
                         }
-                        for (int32_t r=0; r<andRule->rangeLists->size(); r+=2) {
-                            int32_t rangeLo = andRule->rangeLists->elementAti(r);
-                            int32_t rangeHi = andRule->rangeLists->elementAti(r+1);
+                        for (int32_t r=0; r<andRule->rangeList->size(); r+=2) {
+                            int32_t rangeLo = andRule->rangeList->elementAti(r);
+                            int32_t rangeHi = andRule->rangeList->elementAti(r+1);
                             uprv_itou(digitString,16, rangeLo, 10, 0);
                             result += UnicodeString(digitString);
                             if (rangeLo != rangeHi) {
                                 result += UNICODE_STRING_SIMPLE(" .. ");
                                 uprv_itou(digitString,16, rangeHi, 10,0);
                             }
-                            if (r+2 <= andRule->rangeLists->size()) {
+                            if (r+2 <= andRule->rangeList->size()) {
                                 result += UNICODE_STRING_SIMPLE(", ");
                             }
                         }
@@ -1073,36 +1056,6 @@ RuleChain::dumpRules(UnicodeString& result) {
     }
 }
 
-#if 0
-// TODO: REmove this?
-int32_t
-RuleChain::getRepeatLimit () {
-    return repeatLimit;
-}
-
-void
-RuleChain::setRepeatLimit () {
-    int32_t limit=0;
-
-    if ( next != NULL ) {
-        next->setRepeatLimit();
-        limit = next->repeatLimit;
-    }
-
-    if ( ruleHeader != NULL ) {
-        OrConstraint* orRule=ruleHeader;
-        while ( orRule != NULL ) {
-            AndConstraint* andRule=orRule->childNode;
-            while ( andRule != NULL ) {
-                limit = andRule->updateRepeatLimit(limit);
-                andRule = andRule->next;
-            }
-            orRule = orRule->next;
-        }
-    }
-    repeatLimit = limit;
-}
-#endif
 
 UErrorCode
 RuleChain::getKeywords(int32_t capacityOfKeywords, UnicodeString* keywords, int32_t& arraySize) const {
@@ -1206,10 +1159,13 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
         break;
     case tNumber:
         if (curType != tDot && curType != tSemiColon && curType != tIs && curType != tNot &&
-            curType != tIn && curType != tWithin && curType != tAnd && curType != tOr)
+            curType != tIn && curType != tWithin && curType != tAnd && curType != tOr && 
+            curType != tComma)
         {
             status = U_UNEXPECTED_TOKEN;
         }
+        // TODO: a comma following a number that is not part of a range will be allowed.
+        //       It's not the only case of this sort of thing. Parser needs a re-write.
         break;
     default:
         status = U_UNEXPECTED_TOKEN;
@@ -1252,6 +1208,7 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
             break; // consective space
         case tColon:
         case tSemiColon:
+        case tComma:
             if ( *ruleIndex != curIndex ) {
                 token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
                 *ruleIndex=curIndex;
@@ -1340,6 +1297,9 @@ RuleParser::inRange(UChar ch, tokenType& type) {
         return TRUE;
     case DOT:
         type = tDot;
+        return TRUE;
+    case COMMA:
+        type = tComma;
         return TRUE;
     default :
         type = none;
@@ -1448,6 +1408,92 @@ PluralKeywordEnumeration::count(UErrorCode& /*status*/) const {
 }
 
 PluralKeywordEnumeration::~PluralKeywordEnumeration() {
+}
+
+
+
+NumberInfo::NumberInfo(double n, int32_t v, int64_t f) {
+    init(n, v, f);
+    // check values. TODO make into unit test.
+    //            
+    //            long visiblePower = (int) Math.pow(10, v);
+    //            if (fractionalDigits > visiblePower) {
+    //                throw new IllegalArgumentException();
+    //            }
+    //            double fraction = intValue + (fractionalDigits / (double) visiblePower);
+    //            if (fraction != source) {
+    //                double diff = Math.abs(fraction - source)/(Math.abs(fraction) + Math.abs(source));
+    //                if (diff > 0.00000001d) {
+    //                    throw new IllegalArgumentException();
+    //                }
+    //            }
+}
+
+NumberInfo::NumberInfo(double n, int32_t v) {
+    // Ugly, but for samples we don't care.
+    init(n, v, getFractionalDigits(n, v));
+}
+
+NumberInfo::NumberInfo(double n) {
+    int64_t numFractionDigits = decimals(n);
+    init(n, numFractionDigits, getFractionalDigits(n, numFractionDigits));
+}
+
+void NumberInfo::init(double n, int32_t v, int64_t f) {
+    isNegative = n < 0;
+    source = isNegative ? -n : n;
+    visibleFractionDigitCount = v;
+    fractionalDigits = f;
+    intValue = (int64_t)n;
+    hasIntegerValue = source == intValue;   // TODO: problems with negative values. From Java.
+}
+
+int32_t NumberInfo::decimals(double n) {
+    // Count the number of decimal digits in the fraction part of the number.
+    // TODO: there must be a better way. Sloppy port from ICU4J.
+    //       This fails with numbers like 0.0001234567890123456, which kick over
+    //       into exponential format in the output from printf.
+    //       printf has no format specification to stay in fixed point form,
+    //         not print trailing fraction zeros, not print a fixed number of (possibly noise)
+    //         fraction digits, and print all significant digits.
+    if (n == trunc(n)) {
+        return 0;
+    }
+    n = fabs(n);
+    char  buf[30] = {0};
+    sprintf(buf, "%1.15g\n", n);
+    int lastDig = 0;
+    for (int i=17; i>=0; --i) {
+        if (buf[i] != 0 && lastDig == 0) lastDig = i;
+        if (buf[i] == 'e') {
+           return 0;
+        }
+        if (buf[i] == '.' || buf[i] == ',') {
+           return lastDig - i - 1;
+       }
+    }
+    return 0;
+}
+
+int32_t NumberInfo::getFractionalDigits(double n, int32_t v) {
+    // TODO: int32_t is suspect. Port from Java.
+    if (v == 0) {
+        return 0;
+    } else {
+        int32_t base = (int32_t) pow(10, v);
+        int64_t scaled = floor(n * base + 0.5);
+        return (int)fmod(scaled, base);
+    }
+}
+
+
+double NumberInfo::get(tokenType operand) const {
+    switch(operand) {
+        default: return source;
+        case tVariableI: return intValue;
+        case tVariableF: return fractionalDigits;
+        case tVariableV: return visibleFractionDigitCount;
+    }
 }
 
 U_NAMESPACE_END
