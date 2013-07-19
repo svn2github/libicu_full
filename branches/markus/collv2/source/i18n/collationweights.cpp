@@ -269,7 +269,13 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
         }
         weight=truncateWeight(weight, length-1);
     }
-    middle.start=incWeightTrail(weight, middleLength);
+    if(weight<0xff000000) {
+        middle.start=incWeightTrail(weight, middleLength);
+    } else {
+        // Prevent overflow for primary lead byte FF
+        // which would yield a middle range starting at 0.
+        middle.start=0xffffffff;  // no middle range
+    }
 
     weight=upperLimit;
     for(int32_t length=upperLength; length>middleLength; --length) {
@@ -289,10 +295,7 @@ CollationWeights::getWeightRanges(uint32_t lowerLimit, uint32_t upperLimit) {
     if(middle.end>=middle.start) {
         middle.count=(int32_t)((middle.end-middle.start)>>(8*(4-middleLength)))+1;
     } else {
-        /* eliminate overlaps */
-
-        /* remove the middle range */
-        middle.count=0;
+        /* no middle range, eliminate overlaps */
 
         /* reduce or remove the lower ranges that go beyond upperLimit */
         for(int32_t length=4; length>middleLength; --length) {

@@ -130,16 +130,16 @@ CollationBaseDataBuilder::init(UErrorCode &errorCode) {
     uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
     utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
 
-    // Add a tailoring boundary, but not a mapping, for [first trailing].
-    int64_t ce = Collation::makeCE(Collation::FIRST_TRAILING_PRIMARY);
-    rootElements.addElement(ce, errorCode);
-
     // Add a mapping for the first-unassigned boundary,
     // which is the AlphabeticIndex overflow boundary.
     UnicodeString s((UChar)0xfdd1);  // Script boundary contractions start with U+FDD1.
     s.append((UChar)0xfdd0);  // Zzzz script sample character U+FDD0.
-    ce = Collation::makeCE(Collation::FIRST_UNASSIGNED_PRIMARY);
+    int64_t ce = Collation::makeCE(Collation::FIRST_UNASSIGNED_PRIMARY);
     add(UnicodeString(), s, &ce, 1, errorCode);
+
+    // Add a tailoring boundary, but not a mapping, for [first trailing].
+    ce = Collation::makeCE(Collation::FIRST_TRAILING_PRIMARY);
+    rootElements.addElement(ce, errorCode);
 
     // U+FFFD maps to a CE with the third-highest primary weight,
     // for predictable handling of ill-formed UTF-8.

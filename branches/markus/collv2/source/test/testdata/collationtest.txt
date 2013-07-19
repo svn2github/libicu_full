@@ -960,17 +960,77 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <2 \u0358
 
 @ rules
+&[before 2][first variable]<<z
 &[before 2][first variable]<<y
-&[before 2][first variable]<<x
+&[before 3][first variable]<<<x
 &[before 3][first variable]<<<w
-&[before 3][first variable]<<<v
+&[before 1][first variable]<v
+&[before 2][first variable]<<u
+&[before 3][first variable]<<<t
+&[before 2]\uFDD1\xA0<<s  # FractionalUCA.txt: FDD1 00A0, SPACE first primary
 * compare
 <2 \u0358
-<1 v
-<3 w
+<1 s
+<2 \uFDD1\xA0
+<1 t
+<3 u
+<2 v
+<1 w
 <3 x
-<2 y
-<1 \x20
+<3 y
+<2 z
+<2 \t
+
+@ rules
+&[before 2][first regular]<<z
+&[before 3][first regular]<<<y
+&[before 1][first regular]<x
+&[before 3][first regular]<<<w
+&[before 2]\uFDD1\u263A<<v  # FractionalUCA.txt: FDD1 263A, SYMBOL first primary
+&[before 3][first regular]<<<u
+&[before 1][first regular]<p  # primary before the boundary: becomes variable
+&[before 3][first regular]<<<t  # not affected by p
+&[last variable]<q              # after p!
+* compare
+<1 ?
+<1 p
+<1 q
+<1 t
+<3 u
+<3 v
+<1 w
+<3 x
+<1 y
+<3 z
+<1 $
+
+# check that p & q are indeed variable
+% alternate=shifted
+* compare
+=  ?
+=  p
+=  q
+<1 t
+<3 u
+<3 v
+<1 w
+<3 x
+<1 y
+<3 z
+<1 $
+
+@ rules
+&[before 2][first trailing]<<z
+&[before 1][first trailing]<y
+&[before 3][first trailing]<<<x
+* compare
+<1 \u4E00  # first Han, first implicit
+<1 \uFDD1\uFDD0  # FractionalUCA.txt: unassigned first primary
+# Note: The root collator currently does not map any characters to the trailing first boundary primary.
+<1 x
+<3 y
+<1 z
+<2 \uFFFD  # The root collator currently maps U+FFFD to the first real trailing primary.
 
 @ rules
 &[before 2][first primary ignorable]<<z

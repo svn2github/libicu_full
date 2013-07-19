@@ -399,6 +399,7 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
     U_ASSERT(str.length() == 2);
     int64_t ce;
     int32_t strength = UCOL_PRIMARY;
+    UBool isBoundary = FALSE;
     UChar32 pos = str.charAt(1) - CollationRuleParser::POS_BASE;
     U_ASSERT(0 <= pos && pos <= CollationRuleParser::LAST_TRAILING);
     switch(pos) {
@@ -458,12 +459,14 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
         break;
     case CollationRuleParser::FIRST_VARIABLE:
         ce = rootElements.getFirstPrimaryCE();
+        isBoundary = TRUE;  // FractionalUCA.txt: FDD1 00A0, SPACE first primary
         break;
     case CollationRuleParser::LAST_VARIABLE:
         ce = rootElements.lastCEWithPrimaryBefore(variableTop + 1);
         break;
     case CollationRuleParser::FIRST_REGULAR:
         ce = rootElements.firstCEWithPrimaryAtLeast(variableTop + 1);
+        isBoundary = TRUE;  // FractionalUCA.txt: FDD1 263A, SYMBOL first primary
         break;
     case CollationRuleParser::LAST_REGULAR:
         // Use the Hani-first-primary rather than the actual last "regular" CE before it,
@@ -486,10 +489,12 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
         return 0;
     case CollationRuleParser::FIRST_TRAILING:
         ce = Collation::makeCE(Collation::FIRST_TRAILING_PRIMARY);
+        isBoundary = TRUE;  // trailing first primary (there is no mapping for it)
         break;
     case CollationRuleParser::LAST_TRAILING:
-        ce = rootElements.lastCEWithPrimaryBefore(Collation::FFFD_PRIMARY);
-        break;
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        parserErrorReason = "LDML forbids tailoring to U+FFFF";
+        return 0;
     default:
         U_ASSERT(FALSE);
         return 0;
@@ -500,9 +505,32 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
     int64_t node = nodes.elementAti(index);
     if((pos & 1) == 0) {
         // even pos = [first xyz]
+        if(!nodeHasAnyBefore(node) && isBoundary) {
+            // A <group> first primary boundary is artificially added to FractionalUCA.txt.
+            // It is reachable via its special contraction, but is not normally used.
+            // Find the first character tailored after the boundary CE,
+            // or the first real root CE after it.
+            if((index = nextIndexFromNode(node)) != 0) {
+                // If there is a following node, then it must be tailored
+                // because there are no root CEs with a boundary primary
+                // and non-common secondary/tertiary weights.
+                node = nodes.elementAti(index);
+                U_ASSERT(isTailoredNode(node));
+                ce = tempCEFromIndexAndStrength(index, strength);
+            } else {
+                U_ASSERT(strength == UCOL_PRIMARY);
+                uint32_t p = (uint32_t)(ce >> 32);
+                int32_t pIndex = rootElements.findPrimary(p);
+                UBool isCompressible = baseData->isCompressiblePrimary(p);
+                p = rootElements.getPrimaryAfter(p, pIndex, isCompressible);
+                ce = Collation::makeCE(p);
+                index = findOrInsertNodeForRootCE(ce, UCOL_PRIMARY, errorCode);
+                if(U_FAILURE(errorCode)) { return 0; }
+                node = nodes.elementAti(index);
+            }
+        }
         if(nodeHasAnyBefore(node)) {
-            // Get the first node that was tailored before the [first xyz]
-            // at a weaker strength.
+            // Get the first node that was tailored before this one at a weaker strength.
             if(nodeHasBefore2(node)) {
                 index = nextIndexFromNode(nodes.elementAti(nextIndexFromNode(node)));
                 node = nodes.elementAti(index);
