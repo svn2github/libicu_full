@@ -314,55 +314,6 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <1 α
 <1 丂
 
-** test: case bits
-@ rules
-&w<x  # tailored CE getting case bits
-  =uv=uV=Uv=UV  # 2 chars -> 1 CE
-&ae=ch=cH=Ch=CH  # 2 chars -> 2 CEs
-&rst=yz=yZ=Yz=YZ  # 2 chars -> 3 CEs
-% caseFirst=lower
-* compare
-<1 ae
-=  ch
-<3 cH
-<3 Ch
-<3 CH
-<1 rst
-=  yz
-<3 yZ
-<3 Yz
-<3 YZ
-<1 w
-<1 x
-=  uv
-<3 uV
-=  Uv  # mixed case on single CE cannot distinguish variations
-<3 UV
-
-** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=lower
-@ rules
-&\u0001<<<t<<<T  # tertiary CEs
-% caseFirst=lower
-* compare
-<1 aa
-<3 aat
-<3 aaT
-<3 aA
-<3 aAt
-<3 ata
-<3 aTa
-
-** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=upper
-% caseFirst=upper
-* compare
-<1 aA
-<3 aAt
-<3 aa
-<3 aat
-<3 aaT
-<3 ata
-<3 aTa
-
 ** test: empty rules
 @ rules
 * compare
@@ -386,6 +337,67 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <3 Y
 <2 z
 <3 Z
+
+** test: tailoring twice before a root position: primary
+@ rules
+&[before 1]b<p
+&[before 1]b<q
+* compare
+<1 a
+<1 p
+<1 q
+<1 b
+
+** test: tailoring twice before a root position: secondary
+@ rules
+&[before 2]ſ<<p
+&[before 2]ſ<<q
+* compare
+<1 s
+<2 p
+<2 q
+<2 ſ
+
+# secondary-before common weight
+@ rules
+&[before 2]b<<p
+&[before 2]b<<q
+* compare
+<1 a
+<1 p
+<2 q
+<2 b
+
+** test: tailoring twice before a root position: tertiary
+@ rules
+&[before 3]B<<<p
+&[before 3]B<<<q
+* compare
+<1 b
+<3 p
+<3 q
+<3 B
+
+# tertiary-before common weight
+@ rules
+&[before 3]b<<<p
+&[before 3]b<<<q
+* compare
+<1 a
+<1 p
+<3 q
+<3 b
+
+@ rules
+&[before 2]b<<s
+&[before 3]s<<<p
+&[before 3]s<<<q
+* compare
+<1 a
+<1 p
+<3 q
+<3 s
+<2 b
 
 ** test: tailor after completely ignorable
 @ rules
@@ -504,6 +516,55 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <2 t
 <1 n
 
+** test: case bits
+@ rules
+&w<x  # tailored CE getting case bits
+  =uv=uV=Uv=UV  # 2 chars -> 1 CE
+&ae=ch=cH=Ch=CH  # 2 chars -> 2 CEs
+&rst=yz=yZ=Yz=YZ  # 2 chars -> 3 CEs
+% caseFirst=lower
+* compare
+<1 ae
+=  ch
+<3 cH
+<3 Ch
+<3 CH
+<1 rst
+=  yz
+<3 yZ
+<3 Yz
+<3 YZ
+<1 w
+<1 x
+=  uv
+<3 uV
+=  Uv  # mixed case on single CE cannot distinguish variations
+<3 UV
+
+** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=lower
+@ rules
+&\u0001<<<t<<<T  # tertiary CEs
+% caseFirst=lower
+* compare
+<1 aa
+<3 aat
+<3 aaT
+<3 aA
+<3 aAt
+<3 ata
+<3 aTa
+
+** test: tertiary CEs, tertiary, caseLevel=off, caseFirst=upper
+% caseFirst=upper
+* compare
+<1 aA
+<3 aAt
+<3 aa
+<3 aat
+<3 aaT
+<3 ata
+<3 aTa
+
 ** test: reset on expansion, ICU tickets 9415 & 9593
 @ rules
 &æ<x    # tailor the last primary CE so that x sorts between ae and af
@@ -564,8 +625,8 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 &q<u &[before 1]ꝗ<v # q and ꝗ are primary adjacent
 * compare
 <1 q
-<1 v
 <1 u
+<1 v
 <1 ꝗ
 <1 t
 <3 ᵀ
@@ -802,8 +863,8 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 # which should be reliably encoded as one range in the root elements data.
 @ rules
 &[before 1]ᚁ<a
-&ᚁ<c
-&[before 1]ᚂ<b
+&ᚁ<b
+&[before 1]ᚂ<c
 &ᚂ<d
 &[before 1]ᚚ<y
 &ᚚ<z
@@ -866,6 +927,66 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <2 \u4EFF
 <2 LV\u0308T
 <1 \uAC02
+
+** test: adjust special reset positions according to previous rules, CLDR ticket 6070
+@ rules
+&[last variable]<x
+[maxVariable space]  # has effect only after building, no effect on following rules
+&[last variable]<y
+&[before 1][first regular]<z
+* compare
+<1 ?  # some punctuation
+<1 x
+<1 y
+<1 z
+<1 $  # some symbol
+
+@ rules
+&[last primary ignorable]<<x<<<y
+&[last primary ignorable]<<z
+* compare
+<2 \u0358
+<2 x
+<3 y
+<2 z
+<1 \x20
+
+@ rules
+&[last secondary ignorable]<<<x
+&[last secondary ignorable]<<<y
+* compare
+<3 x
+<3 y
+<2 \u0358
+
+@ rules
+&[before 2][first variable]<<y
+&[before 2][first variable]<<x
+* compare
+<2 \u0358
+<1 x
+<2 y
+<1 \x20
+
+@ rules
+&[before 2][first primary ignorable]<<z
+&[before 2][first primary ignorable]<<y
+&[before 3][first primary ignorable]<<<x
+* compare
+=  \x01
+<2 x
+<3 y
+<2 z
+<2 \u0301
+
+@ rules
+&[before 3][first secondary ignorable]<<<y
+&[before 3][first secondary ignorable]<<<x
+* compare
+=  \x01
+<3 x
+<3 y
+<2 \u0301
 
 
 #** test: this is a description

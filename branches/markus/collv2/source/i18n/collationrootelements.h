@@ -147,7 +147,7 @@ public:
      * Returns the first assigned primary CE.
      */
     int64_t getFirstPrimaryCE() const {
-        return Collation::makeCE(elements[elements[IX_FIRST_PRIMARY_INDEX]]);
+        return Collation::makeCE(getFirstPrimary());
     }
 
     /**

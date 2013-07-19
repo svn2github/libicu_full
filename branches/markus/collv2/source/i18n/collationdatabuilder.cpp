@@ -966,6 +966,8 @@ CollationDataBuilder::build(CollationData &data, UErrorCode &errorCode) {
     if(base != NULL) {
         data.numericPrimary = base->numericPrimary;
         data.compressibleBytes = base->compressibleBytes;
+        data.scripts = base->scripts;
+        data.scriptsLength = base->scriptsLength;
     }
 }
 

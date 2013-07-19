@@ -67,6 +67,7 @@ private:
      */
     int32_t findOrInsertNodeForCEs(int32_t strength, const char *&parserErrorReason,
                                    UErrorCode &errorCode);
+    int32_t findOrInsertNodeForRootCE(int64_t ce, int32_t strength, UErrorCode &errorCode);
     /** Finds or inserts the node for a root CE's primary weight. */
     int32_t findOrInsertNodeForPrimary(uint32_t p, UErrorCode &errorCode);
     /** Finds or inserts the node for a secondary or tertiary weight. */
@@ -246,6 +247,9 @@ private:
     static inline int32_t nodeHasBefore3(int64_t node) {
         return (node & HAS_BEFORE3) != 0;
     }
+    static inline int32_t nodeHasAnyBefore(int64_t node) {
+        return (node & (HAS_BEFORE2 | HAS_BEFORE3)) != 0;
+    }
     static inline int32_t isTailoredNode(int64_t node) {
         return (node & IS_TAILORED) != 0;
     }
@@ -311,11 +315,11 @@ private:
      * (&[before 2] resets to the BEFORE_WEIGHT16 node so that
      * the following addRelation(secondary) tailors right after that.
      * If we did not have this node and instead were to reset on the primary node,
-     * then addRelation(seconary) would skip forward to the the COMMON_WEIGHT16 node.)
+     * then addRelation(secondary) would skip forward to the the COMMON_WEIGHT16 node.)
      *
      * All secondary tailored nodes between these two explicit ones
      * will be assigned lower-than-common secondary weights.
-     * If the flag is not set, then there are no explicit secondary node
+     * If the flag is not set, then there are no explicit secondary nodes
      * with the common or lower weights.
      *
      * Same for HAS_BEFORE3 for tertiary nodes and weights.
