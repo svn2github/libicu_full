@@ -409,18 +409,28 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
                 curAndConstraint->opNum=getNumberValue(token);
             }
             else {
-                if (curAndConstraint->rangeList->elementAti(rangeLowIdx) == -1) {
-                    curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeLowIdx);
-                    curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeHiIdx);
-                }
-                else {
-                    curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeHiIdx);
+                if (curAndConstraint->rangeList == NULL) {
+                    // this is for an 'is' rule
+                    curAndConstraint->value = getNumberValue(token);
+                } else {
+                    // this is for an 'in' or 'within' rule
+                    if (curAndConstraint->rangeList->elementAti(rangeLowIdx) == -1) {
+                        curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeLowIdx);
+                        curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeHiIdx);
+                    }
+                    else {
+                        curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeHiIdx);
+                    }
                 }
             }
             break;
         case tComma:
-            U_ASSERT(curAndConstraint != NULL);
-            U_ASSERT(curAndConstraint->rangeList != NULL);
+            // TODO: rule syntax checking is inadequate, can happen with badly formed rules.
+            //       The fix is a redone parser.
+            if (curAndConstraint == NULL || curAndConstraint->rangeList == NULL) {
+                status = U_PARSE_ERROR;
+                break;
+            }
             U_ASSERT(curAndConstraint->rangeList->size() >= 2);
             rangeLowIdx = curAndConstraint->rangeList->size();
             curAndConstraint->rangeList->addElement(-1, status);  // range Low
@@ -460,6 +470,9 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
             break;
         }
         prevType=type;
+        if (U_FAILURE(status)) {
+            break;
+        }
     }
 }
 
@@ -1441,10 +1454,10 @@ NumberInfo::NumberInfo(double n) {
 
 void NumberInfo::init(double n, int32_t v, int64_t f) {
     isNegative = n < 0;
-    source = isNegative ? -n : n;
+    source = fabs(n);
     visibleFractionDigitCount = v;
     fractionalDigits = f;
-    intValue = (int64_t)n;
+    intValue = (int64_t)source;
     hasIntegerValue = source == intValue;   // TODO: problems with negative values. From Java.
 }
 
@@ -1494,6 +1507,10 @@ double NumberInfo::get(tokenType operand) const {
         case tVariableF: return fractionalDigits;
         case tVariableV: return visibleFractionDigitCount;
     }
+}
+
+int32_t NumberInfo::getVisibleFractionDigitCount() const {
+    return visibleFractionDigitCount;
 }
 
 U_NAMESPACE_END
