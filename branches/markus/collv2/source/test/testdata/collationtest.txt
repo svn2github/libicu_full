@@ -962,9 +962,13 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 @ rules
 &[before 2][first variable]<<y
 &[before 2][first variable]<<x
+&[before 3][first variable]<<<w
+&[before 3][first variable]<<<v
 * compare
 <2 \u0358
-<1 x
+<1 v
+<3 w
+<3 x
 <2 y
 <1 \x20
 
@@ -972,9 +976,11 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 &[before 2][first primary ignorable]<<z
 &[before 2][first primary ignorable]<<y
 &[before 3][first primary ignorable]<<<x
+&[before 3][first primary ignorable]<<<w
 * compare
 =  \x01
-<2 x
+<2 w
+<3 x
 <3 y
 <2 z
 <2 \u0301

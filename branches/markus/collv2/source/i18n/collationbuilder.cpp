@@ -438,6 +438,10 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
             if(strength < UCOL_SECONDARY) { break; }
             if(strength == UCOL_SECONDARY) {
                 if(isTailoredNode(node)) {
+                    if(nodeHasBefore3(node)) {
+                        index = nextIndexFromNode(nodes.elementAti(nextIndexFromNode(node)));
+                        U_ASSERT(isTailoredNode(nodes.elementAti(index)));
+                    }
                     return tempCEFromIndexAndStrength(index, UCOL_SECONDARY);
                 } else {
                     break;
@@ -499,13 +503,14 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
         if(nodeHasAnyBefore(node)) {
             // Get the first node that was tailored before the [first xyz]
             // at a weaker strength.
-            index = nextIndexFromNode(node);
-            node = nodes.elementAti(index);
-            U_ASSERT(!isTailoredNode(node) && strengthFromNode(node) > strength &&
-                    weight16FromNode(node) == BEFORE_WEIGHT16);
-            index = nextIndexFromNode(node);
-            node = nodes.elementAti(index);
-            U_ASSERT(isTailoredNode(node) && strengthFromNode(node) > strength);
+            if(nodeHasBefore2(node)) {
+                index = nextIndexFromNode(nodes.elementAti(nextIndexFromNode(node)));
+                node = nodes.elementAti(index);
+            }
+            if(nodeHasBefore3(node)) {
+                index = nextIndexFromNode(nodes.elementAti(nextIndexFromNode(node)));
+            }
+            U_ASSERT(isTailoredNode(nodes.elementAti(index)));
             ce = tempCEFromIndexAndStrength(index, strength);
         }
     } else {
