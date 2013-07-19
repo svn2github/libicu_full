@@ -607,8 +607,8 @@ void PluralRulesTest::checkSelect(const LocalPointer<PluralRules> &rules, UError
         }
         UnicodeString actualKeyword = rules->select(num);
         if (actualKeyword != UnicodeString(keyword)) {
-            errln("file %s, line %d, select() returned incorrect keyword. Expected %s, got %s",
-                   __FILE__, line, keyword, US(actualKeyword).cstr());
+            errln("file %s, line %d, select(%g) returned incorrect keyword. Expected %s, got %s",
+                   __FILE__, line, num, keyword, US(actualKeyword).cstr());
         }
     }
     va_end(ap);
@@ -623,6 +623,12 @@ void PluralRulesTest::testSelect() {
     pr.adoptInstead(PluralRules::createRules("s: n not in 1,3,4,6", status));
     checkSelect(pr, status, __LINE__, "other", 1.0, 3.0, 4.0, 6.0, END_MARK);
     checkSelect(pr, status, __LINE__, "s", 0.0, 2.0, 3.1, 7.0, END_MARK);
+
+    pr.adoptInstead(PluralRules::createRules("s: n in 1..4, 7..10, 14 .. 17;"
+                                             "t: n is 29;", status));
+    checkSelect(pr, status, __LINE__, "s", 1.0, 3.0, 7.0, 8.0, 10.0, 14.0, 17.0, END_MARK);
+    checkSelect(pr, status, __LINE__, "t", 29.0, END_MARK);
+    checkSelect(pr, status, __LINE__, "other", 28.0, 29.1, END_MARK);
 
 }
 

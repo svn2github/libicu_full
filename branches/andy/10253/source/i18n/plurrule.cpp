@@ -1159,7 +1159,7 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
     case tDot:
     case tIn:
     case tWithin:
-    case tAnd:
+    case tAnd:   // TODO: split of And and Or, which are different.
     case tOr:
         if (curType != tNumber && 
                 curType != tVariableN &&
@@ -1167,6 +1167,11 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
                 curType != tVariableF &&
                 curType != tVariableV &&
                 curType != tVariableJ) {
+            status = U_UNEXPECTED_TOKEN;
+        }
+        break;
+    case tComma:
+        if (curType != tNumber) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
