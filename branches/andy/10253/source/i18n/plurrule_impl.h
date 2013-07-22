@@ -34,6 +34,7 @@ static const UChar SPACE           = ((UChar)0x0020);
 static const UChar EXCLAMATION     = ((UChar)0x0021);
 static const UChar QUOTATION_MARK  = ((UChar)0x0022);
 static const UChar NUMBER_SIGN     = ((UChar)0x0023);
+static const UChar PERCENT_SIGN    = ((UChar)0x0025);
 static const UChar ASTERISK        = ((UChar)0x002A);
 static const UChar COMMA           = ((UChar)0x002C);
 static const UChar HYPHEN          = ((UChar)0x002D);

@@ -1234,6 +1234,7 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
         case tComma:
         case tIn:   // scanned '='
         case tNot:  // scanned '!'
+        case tMod:  // scanned '%'
             if ( *ruleIndex != curIndex ) {
                 token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
                 *ruleIndex=curIndex;
@@ -1331,6 +1332,9 @@ RuleParser::inRange(UChar ch, tokenType& type) {
         return TRUE;
     case EQUALS:
         type = tIn;
+        return TRUE;
+    case PERCENT_SIGN:
+        type = tMod;
         return TRUE;
     default :
         type = none;

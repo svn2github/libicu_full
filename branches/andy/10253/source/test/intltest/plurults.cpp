@@ -786,6 +786,9 @@ void PluralRulesTest::testSelect() {
     pr.adoptInstead(PluralRules::createRules("a: n = 1..8 and n!= 2,3,4,5", status));
     checkSelect(pr, status, __LINE__, "a", "1", "6", "7", "8", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "0", "2", "3", "4", "5", "9", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a:n % 10 != 1", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "6", "7", "8", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "1", "21", "211", "91", END_MARK);
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
