@@ -47,6 +47,7 @@ static const UChar PK_OR[]={LOW_O,LOW_R,0};
 static const UChar PK_VAR_N[]={LOW_N,0};
 static const UChar PK_VAR_I[]={LOW_I,0};
 static const UChar PK_VAR_F[]={LOW_F,0};
+static const UChar PK_VAR_T[]={LOW_T,0};
 static const UChar PK_VAR_V[]={LOW_V,0};
 static const UChar PK_VAR_J[]={LOW_J,0};
 static const UChar PK_WITHIN[]={LOW_W,LOW_I,LOW_T,LOW_H,LOW_I,LOW_N,0};
@@ -444,6 +445,7 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
         case tVariableN:
         case tVariableI:
         case tVariableF:
+        case tVariableT:
         case tVariableV:
         case tVariableJ:
             U_ASSERT(curAndConstraint != NULL);
@@ -1121,6 +1123,7 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
     case tVariableN:
     case tVariableI:
     case tVariableF:
+    case tVariableT:
     case tVariableV:
     case tVariableJ:
         if (curType != tIs && curType != tMod && curType != tIn &&
@@ -1133,10 +1136,11 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
             status = U_UNEXPECTED_TOKEN;
         }
         break;
-    case tColon :
+    case tColon:
         if (!(curType == tVariableN ||
               curType == tVariableI ||
               curType == tVariableF ||
+              curType == tVariableT ||
               curType == tVariableV ||
               curType == tVariableJ)) {
             status = U_UNEXPECTED_TOKEN;
@@ -1162,6 +1166,7 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
                 curType != tVariableN &&
                 curType != tVariableI &&
                 curType != tVariableF &&
+                curType != tVariableT &&
                 curType != tVariableV &&
                 curType != tVariableJ) {
             status = U_UNEXPECTED_TOKEN;
@@ -1227,6 +1232,8 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
         case tColon:
         case tSemiColon:
         case tComma:
+        case tIn:   // scanned '='
+        case tNot:  // scanned '!'
             if ( *ruleIndex != curIndex ) {
                 token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
                 *ruleIndex=curIndex;
@@ -1319,6 +1326,12 @@ RuleParser::inRange(UChar ch, tokenType& type) {
     case COMMA:
         type = tComma;
         return TRUE;
+    case EXCLAMATION:
+        type = tNot;
+        return TRUE;
+    case EQUALS:
+        type = tIn;
+        return TRUE;
     default :
         type = none;
         return FALSE;
@@ -1342,6 +1355,9 @@ RuleParser::getKeyType(const UnicodeString& token, tokenType& keyType, UErrorCod
     }
     else if (0 == token.compare(PK_VAR_F, 1)) {
         keyType = tVariableF;
+    }
+    else if (0 == token.compare(PK_VAR_T, 1)) {
+        keyType = tVariableT;
     }
     else if (0 == token.compare(PK_VAR_V, 1)) {
         keyType = tVariableV;
@@ -1464,6 +1480,15 @@ void NumberInfo::init(double n, int32_t v, int64_t f) {
     fractionalDigits = f;
     intValue = (int64_t)source;
     hasIntegerValue = source == intValue;   // TODO: problems with negative values. From Java.
+    if (f == 0) {
+         fractionalDigitsWithoutTrailingZeros = 0;
+    } else {
+        int64_t fdwtz = f;
+        while ((fdwtz%10) == 0) {
+            fdwtz /= 10;
+        }
+        fractionalDigitsWithoutTrailingZeros = fdwtz;
+    }
 }
 
 int32_t NumberInfo::decimals(double n) {
@@ -1507,9 +1532,10 @@ int32_t NumberInfo::getFractionalDigits(double n, int32_t v) {
 
 double NumberInfo::get(tokenType operand) const {
     switch(operand) {
-        default: return source;
+        default:         return source;
         case tVariableI: return intValue;
         case tVariableF: return fractionalDigits;
+        case tVariableT: return fractionalDigitsWithoutTrailingZeros; 
         case tVariableV: return visibleFractionDigitCount;
     }
 }

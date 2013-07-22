@@ -31,6 +31,7 @@ static const UChar SINGLE_QUOTE    = ((UChar)0x0027);
 static const UChar SLASH           = ((UChar)0x002F);
 static const UChar BACKSLASH       = ((UChar)0x005C);
 static const UChar SPACE           = ((UChar)0x0020);
+static const UChar EXCLAMATION     = ((UChar)0x0021);
 static const UChar QUOTATION_MARK  = ((UChar)0x0022);
 static const UChar NUMBER_SIGN     = ((UChar)0x0023);
 static const UChar ASTERISK        = ((UChar)0x002A);
@@ -48,6 +49,7 @@ static const UChar U_EIGHT         = ((UChar)0x0038);
 static const UChar U_NINE          = ((UChar)0x0039);
 static const UChar COLON           = ((UChar)0x003A);
 static const UChar SEMI_COLON      = ((UChar)0x003B);
+static const UChar EQUALS          = ((UChar)0x003D);
 static const UChar CAP_A           = ((UChar)0x0041);
 static const UChar CAP_B           = ((UChar)0x0042);
 static const UChar CAP_R           = ((UChar)0x0052);
@@ -106,6 +108,7 @@ enum tokenType {
   tVariableF,
   tVariableV,
   tVariableJ,
+  tVariableT,
   tIs,
   tEOF
 };
@@ -147,6 +150,7 @@ class NumberInfo: public UMemory {
     double      source;
     int32_t     visibleFractionDigitCount;
     int64_t     fractionalDigits;
+    int64_t     fractionalDigitsWithoutTrailingZeros;
     int64_t     intValue;
     UBool       hasIntegerValue;
     UBool       isNegative;

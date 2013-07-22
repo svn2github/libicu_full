@@ -648,10 +648,10 @@ void PluralRulesTest::testSelect() {
     checkSelect(pr, status, __LINE__, "other", "1.0", "3.0", "4.0", "6.0", END_MARK);
     checkSelect(pr, status, __LINE__, "s", "0.0", "2.0", "3.1", "7.0", END_MARK);
 
-    pr.adoptInstead(PluralRules::createRules("s: n in 1..4, 7..10, 14 .. 17;"
-                                             "t: n is 29;", status));
-    checkSelect(pr, status, __LINE__, "s", "1.0", "3.0", "7.0", "8.0", "10.0", "14.0", "17.0", END_MARK);
-    checkSelect(pr, status, __LINE__, "t", "29.0", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("r: n in 1..4, 7..10, 14 .. 17;"
+                                             "s: n is 29;", status));
+    checkSelect(pr, status, __LINE__, "r", "1.0", "3.0", "7.0", "8.0", "10.0", "14.0", "17.0", END_MARK);
+    checkSelect(pr, status, __LINE__, "s", "29.0", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "28.0", "29.1", END_MARK);
 
     pr.adoptInstead(PluralRules::createRules("a: n mod 10 is 1;  b: n mod 100 is 0 ", status));
@@ -712,8 +712,80 @@ void PluralRulesTest::testSelect() {
     checkSelect(pr, status, __LINE__, "a", "123", "123.0", "123.1", "0123.99", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "124", "122.0", END_MARK);
 
+    pr.adoptInstead(PluralRules::createRules("a: f is 120", status));
+    checkSelect(pr, status, __LINE__, "a", "1.120", "0.120", "11123.120", "0123.120", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "1.121", "122.1200", "1.12", "120", END_MARK);
 
+    pr.adoptInstead(PluralRules::createRules("a: t is 12", status));
+    checkSelect(pr, status, __LINE__, "a", "1.120", "0.12", "11123.12000", "0123.1200000", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "1.121", "122.1200001", "1.11", "12", END_MARK);
 
+    pr.adoptInstead(PluralRules::createRules("a: v is 3", status));
+    checkSelect(pr, status, __LINE__, "a", "1.120", "0.000", "11123.100", "0123.124", ".666", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "1.1212", "122.12", "1.1", "122", "0.0000", END_MARK);
+
+    pr.adoptInstead(PluralRules::createRules("a: j is 123", status));
+    checkSelect(pr, status, __LINE__, "a", "123", "123.", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "123.0", "123.1", "123.123", "0.123", END_MARK);
+    
+    // Test cases from ICU4J PluralRulesTest.parseTestData
+
+    pr.adoptInstead(PluralRules::createRules("a: n is 1", status));
+    checkSelect(pr, status, __LINE__, "a", "1", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 is 2", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "12", "22", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n is not 1", status));
+    checkSelect(pr, status, __LINE__, "a", "0", "2", "3", "4", "5", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 3 is not 1", status));
+    checkSelect(pr, status, __LINE__, "a", "0", "2", "3", "5", "6", "8", "9", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n in 2..5", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n within 2..5", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n not in 2..5", status));
+    checkSelect(pr, status, __LINE__, "a", "0", "1", "6", "7", "8", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n not within 2..5", status));
+    checkSelect(pr, status, __LINE__, "a", "0", "1", "6", "7", "8", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 in 2..5", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", "12", "13", "14", "15", "22", "23", "24", "25", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 within 2..5", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", "12", "13", "14", "15", "22", "23", "24", "25", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 is 2 and n is not 12", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "22", "32", "42", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 in 2..3 or n mod 10 is 5", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "5", "12", "13", "15", "22", "23", "25", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 within 2..3 or n mod 10 is 5", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "5", "12", "13", "15", "22", "23", "25", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n is 1 or n is 4 or n is 23", status));
+    checkSelect(pr, status, __LINE__, "a", "1", "4", "23", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 2 is 1 and n is not 3 and n in 1..11", status));
+    checkSelect(pr, status, __LINE__, "a", "1", "5", "7", "9", "11", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 2 is 1 and n is not 3 and n within 1..11", status));
+    checkSelect(pr, status, __LINE__, "a", "1", "5", "7", "9", "11", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 2 is 1 or n mod 5 is 1 and n is not 6", status));
+    checkSelect(pr, status, __LINE__, "a", "1", "3", "5", "7", "9", "11", "13", "15", "16", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n in 2..5; b: n in 5..8; c: n mod 2 is 1", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", END_MARK);
+    checkSelect(pr, status, __LINE__, "b", "6", "7", "8", END_MARK);
+    checkSelect(pr, status, __LINE__, "c", "1", "9", "11", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n within 2..5; b: n within 5..8; c: n mod 2 is 1", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", END_MARK);
+    checkSelect(pr, status, __LINE__, "b", "6", "7", "8", END_MARK);
+    checkSelect(pr, status, __LINE__, "c", "1", "9", "11", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n in 2, 4..6; b: n within 7..9,11..12,20", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "4", "5", "6", END_MARK);
+    checkSelect(pr, status, __LINE__, "b", "7", "8", "9", "11", "12", "20", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n in 2..8, 12 and n not in 4..6", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "7", "8", "12", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 in 2, 3,5..7 and n is not 12", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "5", "6", "7", "13", "15", "16", "17", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n in 2..6, 3..7", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", "6", "7", END_MARK);
+
+    // Extended Syntax. Still in flux, Java plural rules is looser.
+    pr.adoptInstead(PluralRules::createRules("a: n = 1..8 and n!= 2,3,4,5", status));
+    checkSelect(pr, status, __LINE__, "a", "1", "6", "7", "8", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "0", "2", "3", "4", "5", "9", END_MARK);
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
