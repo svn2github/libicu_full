@@ -106,7 +106,8 @@ enum tokenType {
   tVariableF,
   tVariableV,
   tVariableJ,
-  tIs
+  tIs,
+  tEOF
 };
 
 
@@ -125,9 +126,15 @@ private:
 
 class NumberInfo: public UMemory {
   public:
+    /**
+      * @param n   the number
+      * @param v   The number of visible fraction digits
+      * @param f   The fraction digits.
+      *
+      */
     NumberInfo(double  n, int32_t v, int64_t f);
     NumberInfo(double n, int32_t);
-    NumberInfo(double n);
+    explicit NumberInfo(double n);
 
     double get(tokenType operand) const;
     int32_t getVisibleFractionDigitCount() const;
@@ -192,7 +199,7 @@ public:
     RuleChain *next;
 
     virtual ~RuleChain();
-    UnicodeString select(double number) const;
+    UnicodeString select(const NumberInfo &number) const;
     void dumpRules(UnicodeString& result);
     UBool isLimited();
     UErrorCode getKeywords(int32_t maxArraySize, UnicodeString *keywords, int32_t& arraySize) const;

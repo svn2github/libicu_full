@@ -38,6 +38,7 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
+class NumberInfo;
 class RuleChain;
 class RuleParser;
 class PluralKeywordEnumeration;
@@ -337,6 +338,11 @@ public:
      * @stable ICU 4.0
      */
     UnicodeString select(double number) const;
+    
+    /**
+      * @internal
+      */
+    UnicodeString select(const NumberInfo &number) const;
 
     /**
      * Returns a list of all rule keywords used in this <code>PluralRules</code>

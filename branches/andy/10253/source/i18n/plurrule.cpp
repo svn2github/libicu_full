@@ -186,16 +186,16 @@ PluralRules::forLocale(const Locale& locale, UPluralType type, UErrorCode& statu
 
 UnicodeString
 PluralRules::select(int32_t number) const {
-    if (mRules == NULL) {
-        return UnicodeString(TRUE, PLURAL_DEFAULT_RULE, -1);
-    }
-    else {
-        return mRules->select(number);
-    }
+    return select(NumberInfo(number));
 }
 
 UnicodeString
 PluralRules::select(double number) const {
+    return select(NumberInfo(number));
+}
+
+UnicodeString
+PluralRules::select(const NumberInfo &number) const {
     if (mRules == NULL) {
         return UnicodeString(TRUE, PLURAL_DEFAULT_RULE, -1);
     }
@@ -607,7 +607,7 @@ PluralRules::initSamples(UErrorCode& status) {
         int32_t found = -1;
         while (rc != NULL) {
             if (rc->ruleHeader != NULL) {
-                if (rc->ruleHeader->isFulfilled(val)) {
+                if (rc->ruleHeader->isFulfilled(NumberInfo(val))) {
                     found = n;
                     break;
                 }
@@ -677,6 +677,7 @@ PluralRules::initSamples(UErrorCode& status) {
 void
 PluralRules::addRules(RuleChain& rules) {
     RuleChain *newRule = new RuleChain(rules);
+    U_ASSERT(this->mRules == NULL);
     this->mRules=newRule;
 }
 
@@ -777,8 +778,9 @@ AndConstraint::AndConstraint() {
     opNum=-1;
     value = -1;
     rangeList = NULL;
-    negated=FALSE;
-    integerOnly=FALSE;
+    negated = FALSE;
+    integerOnly = FALSE;
+    digitsType = none;
     next=NULL;
 }
 
@@ -795,6 +797,7 @@ AndConstraint::AndConstraint(const AndConstraint& other) {
     }
     this->integerOnly=other.integerOnly;
     this->negated=other.negated;
+    this->digitsType = other.digitsType;
     if (other.next==NULL) {
         this->next=NULL;
     }
@@ -895,7 +898,7 @@ OrConstraint::add()
         while (curOrConstraint->next!=NULL) {
             curOrConstraint = curOrConstraint->next;
         }
-        curOrConstraint->next = NULL;
+        U_ASSERT(curOrConstraint->childNode == NULL);
         curOrConstraint->childNode = new AndConstraint();
     }
     return curOrConstraint->childNode;
@@ -967,21 +970,15 @@ RuleChain::~RuleChain() {
     }
 }
 
+
 UnicodeString
-RuleChain::select(double number) const {
-
-   if ( ruleHeader != NULL ) {
-       if (ruleHeader->isFulfilled(number)) {
-           return keyword;
+RuleChain::select(const NumberInfo &number) const {
+    for (const RuleChain *rules = this; rules != NULL; rules = rules->next) {
+       if (rules->ruleHeader->isFulfilled(number)) {
+           return rules->keyword;
        }
-   }
-   if ( next != NULL ) {
-       return next->select(number);
-   }
-   else {
-       return UnicodeString(TRUE, PLURAL_KEYWORD_OTHER, 5);
-   }
-
+    }
+    return UnicodeString(TRUE, PLURAL_KEYWORD_OTHER, 5);
 }
 
 void
@@ -1117,7 +1114,7 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
     switch(prevType) {
     case none:
     case tSemiColon:
-        if (curType!=tKeyword) {
+        if (curType!=tKeyword && curType != tEOF) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
@@ -1178,7 +1175,7 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
     case tNumber:
         if (curType != tDot && curType != tSemiColon && curType != tIs && curType != tNot &&
             curType != tIn && curType != tWithin && curType != tAnd && curType != tOr && 
-            curType != tComma)
+            curType != tComma && curType != tEOF)
         {
             status = U_UNEXPECTED_TOKEN;
         }
@@ -1222,6 +1219,9 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
             }
             else {
                 *ruleIndex=*ruleIndex+1;
+                if (*ruleIndex >= ruleData.length()) {
+                    type = tEOF;
+                }
             }
             break; // consective space
         case tColon:

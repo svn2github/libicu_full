@@ -13,12 +13,18 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include <stdlib.h> // for strtod
+#include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
+
 #include "cmemory.h"
+#include "digitlst.h"
+#include "plurrule_impl.h"
 #include "plurults.h"
 #include "unicode/localpointer.h"
 #include "unicode/plurrule.h"
+#include "unicode/stringpiece.h"
+
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof(array[0]))
 
 void setupResult(const int32_t testSource[], char result[], int32_t* max);
@@ -580,10 +586,13 @@ class US {
 
 
 
-static const double END_MARK = 999.999;    // Mark end of varargs data.
+static const char * END_MARK = "999.999";    // Mark end of varargs data.
 
 void PluralRulesTest::checkSelect(const LocalPointer<PluralRules> &rules, UErrorCode &status, 
                                   int32_t line, const char *keyword, ...) {
+    // The varargs parameters are a const char* strings, each being a decimal number.
+    //   The formatting of the numbers as strings is significant, e.g.
+    //     the difference between "2" and "2.0" can affect which rule matches (which keyword is selected).
     // Note: rules parameter is a LocalPointer reference rather than a PluralRules * to avoid having
     //       to write getAlias() at every (numerous) call site.
 
@@ -601,13 +610,28 @@ void PluralRulesTest::checkSelect(const LocalPointer<PluralRules> &rules, UError
     va_list ap;
     va_start(ap, keyword);
     for (;;) {
-        double num = va_arg(ap, double);
-        if (num == END_MARK) {
+        const char *num = va_arg(ap, const char *);
+        if (strcmp(num, END_MARK) == 0) {
             break;
         }
-        UnicodeString actualKeyword = rules->select(num);
+
+        // DigitList is a convenient way to parse the decimal number string and get a double.
+        DigitList  dl;
+        dl.set(StringPiece(num), status);
+        if (U_FAILURE(status)) {
+            errln("file %s, line %d, ICU error status: %s.", __FILE__, line, u_errorName(status));
+            status = U_ZERO_ERROR;
+            continue;
+        }
+        double numDbl = dl.getDouble();
+        const char *decimalPoint = strchr(num, '.');
+        int fractionDigitCount = decimalPoint == NULL ? 0 : (num + strlen(num) - 1) - decimalPoint;
+        int fractionDigits = fractionDigitCount == 0 ? 0 : atoi(decimalPoint + 1);
+        NumberInfo ni(numDbl, fractionDigitCount, fractionDigits);
+        
+        UnicodeString actualKeyword = rules->select(ni);
         if (actualKeyword != UnicodeString(keyword)) {
-            errln("file %s, line %d, select(%g) returned incorrect keyword. Expected %s, got %s",
+            errln("file %s, line %d, select(%s) returned incorrect keyword. Expected %s, got %s",
                    __FILE__, line, num, keyword, US(actualKeyword).cstr());
         }
     }
@@ -617,18 +641,78 @@ void PluralRulesTest::checkSelect(const LocalPointer<PluralRules> &rules, UError
 void PluralRulesTest::testSelect() {
     UErrorCode status = U_ZERO_ERROR;
     LocalPointer<PluralRules> pr(PluralRules::createRules("s: n in 1,3,4,6", status));
-    checkSelect(pr, status, __LINE__, "s", 1.0, 3.0, 4.0, 6.0, END_MARK);
-    checkSelect(pr, status, __LINE__, "other", 0.0, 2.0, 3.1, 7.0, END_MARK);
+    checkSelect(pr, status, __LINE__, "s", "1.0", "3.0", "4.0", "6.0", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "0.0", "2.0", "3.1", "7.0", END_MARK);
 
     pr.adoptInstead(PluralRules::createRules("s: n not in 1,3,4,6", status));
-    checkSelect(pr, status, __LINE__, "other", 1.0, 3.0, 4.0, 6.0, END_MARK);
-    checkSelect(pr, status, __LINE__, "s", 0.0, 2.0, 3.1, 7.0, END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "1.0", "3.0", "4.0", "6.0", END_MARK);
+    checkSelect(pr, status, __LINE__, "s", "0.0", "2.0", "3.1", "7.0", END_MARK);
 
     pr.adoptInstead(PluralRules::createRules("s: n in 1..4, 7..10, 14 .. 17;"
                                              "t: n is 29;", status));
-    checkSelect(pr, status, __LINE__, "s", 1.0, 3.0, 7.0, 8.0, 10.0, 14.0, 17.0, END_MARK);
-    checkSelect(pr, status, __LINE__, "t", 29.0, END_MARK);
-    checkSelect(pr, status, __LINE__, "other", 28.0, 29.1, END_MARK);
+    checkSelect(pr, status, __LINE__, "s", "1.0", "3.0", "7.0", "8.0", "10.0", "14.0", "17.0", END_MARK);
+    checkSelect(pr, status, __LINE__, "t", "29.0", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "28.0", "29.1", END_MARK);
+
+    pr.adoptInstead(PluralRules::createRules("a: n mod 10 is 1;  b: n mod 100 is 0 ", status));
+    checkSelect(pr, status, __LINE__, "a", "1", "11", "41", "101", "301.00", END_MARK);
+    checkSelect(pr, status, __LINE__, "b", "0", "100", "200.0", "300.", "1000", "1100", "110000", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "0.01", "1.01", "0.99", "2", "3", "99", "102", END_MARK);
+
+    // Rules that end with or without a ';' and with or without trailing spaces.
+    //    (There was a rule parser bug here with these.)
+    pr.adoptInstead(PluralRules::createRules("a: n is 1", status));
+    checkSelect(pr, status, __LINE__, "a", "1", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "2", END_MARK);
+
+    pr.adoptInstead(PluralRules::createRules("a: n is 1 ", status));
+    checkSelect(pr, status, __LINE__, "a", "1", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "2", END_MARK);
+
+    pr.adoptInstead(PluralRules::createRules("a: n is 1;", status));
+    checkSelect(pr, status, __LINE__, "a", "1", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "2", END_MARK);
+
+    pr.adoptInstead(PluralRules::createRules("a: n is 1 ; ", status));
+    checkSelect(pr, status, __LINE__, "a", "1", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "2", END_MARK);
+
+    // First match when rules for different keywords are not disjoint.
+    //   Also try spacing variations around ':' and '..'
+    pr.adoptInstead(PluralRules::createRules("c: n in 5..15;  b : n in 1..10 ;a:n in 10 .. 20", status));
+    checkSelect(pr, status, __LINE__, "a", "20", END_MARK);
+    checkSelect(pr, status, __LINE__, "b", "1", END_MARK);
+    checkSelect(pr, status, __LINE__, "c", "10", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "0", "21", "10.1", END_MARK);
+
+    // in vs within
+    pr.adoptInstead(PluralRules::createRules("a: n in 2..10; b: n within 8..15", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "8", "10", END_MARK);
+    checkSelect(pr, status, __LINE__, "b", "8.01", "9.5", "11", "14.99", "15", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "1", "7.7", "15.01", "16", END_MARK);
+
+    // OR and AND chains.
+    pr.adoptInstead(PluralRules::createRules("a: n in 2..10 and n in 4..12 and n not in 5..7", status));
+    checkSelect(pr, status, __LINE__, "a", "4", "8", "9", "10", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "2", "3", "5", "7", "11", END_MARK);
+    pr.adoptInstead(PluralRules::createRules("a: n is 2 or n is 5 or n in 7..11 and n in 11..13", status));
+    checkSelect(pr, status, __LINE__, "a", "2", "5", "11", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "3", "4", "6", "8", "10", "12", "13", END_MARK);
+
+    // Number attributes - 
+    //   n: the number itself
+    //   i: integer digits
+    //   f: visible fraction digits
+    //   t: f with trailing zeros removed.
+    //   v: number of visible fraction digits
+    //   j: = n if there are no visible fraction digits
+    //      != anything if there are visible fraction digits
+
+    pr.adoptInstead(PluralRules::createRules("a: i is 123", status));
+    checkSelect(pr, status, __LINE__, "a", "123", "123.0", "123.1", "0123.99", END_MARK);
+    checkSelect(pr, status, __LINE__, "other", "124", "122.0", END_MARK);
+
+
 
 }
 
