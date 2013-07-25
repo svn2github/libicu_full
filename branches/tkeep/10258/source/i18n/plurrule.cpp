@@ -7,12 +7,14 @@
 * File plurrule.cpp
 */
 
+#include <math.h>
+#include <stdio.h>
+
 #include "unicode/utypes.h"
 #include "unicode/localpointer.h"
 #include "unicode/plurrule.h"
 #include "unicode/upluralrules.h"
 #include "unicode/ures.h"
-#include "cmath"
 #include "cmemory.h"
 #include "cstring.h"
 #include "hash.h"
@@ -25,7 +27,6 @@
 #include "locutil.h"
 #include "uassert.h"
 #include "uvectr32.h"
-#include "stdio.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -809,6 +810,7 @@ AndConstraint::AndConstraint(const AndConstraint& other) {
 }
 
 AndConstraint::~AndConstraint() {
+    delete rangeList;
     if (next!=NULL) {
         delete next;
     }
@@ -829,7 +831,7 @@ AndConstraint::isFulfilled(const NumberInfo &number) {
         }
 
         if (op == MOD) {
-            n = std::fmod(n, opNum);
+            n = fmod(n, opNum);
         }
         if (rangeList == NULL) {
             result = value == -1 ||    // empty rule
