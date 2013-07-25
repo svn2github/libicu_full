@@ -70,6 +70,7 @@
 #include "hash.h"
 #include "decfmtst.h"
 #include "dcfmtimp.h"
+#include "plurrule_impl.h"
 
 /*
  * On certain platforms, round is a macro defined in math.h
@@ -80,7 +81,25 @@
 #undef round
 #endif
 
+
 U_NAMESPACE_BEGIN
+
+#ifdef FMT_DEBUG
+#include <stdio.h>
+static void _debugout(const char *f, int l, const UnicodeString& s) {
+    char buf[2000];
+    s.extract((int32_t) 0, s.length(), buf, "utf-8");
+    printf("%s:%d: %s\n", f,l, buf);
+}
+#define debugout(x) _debugout(__FILE__,__LINE__,x)
+#define debug(x) printf("%s:%d: %s\n", __FILE__,__LINE__, x);
+static const UnicodeString dbg_null("<NULL>","");
+#define DEREFSTR(x)   ((x!=NULL)?(*x):(dbg_null))
+#else
+#define debugout(x)
+#define debug(x)
+#endif
+
 
 
 /* == Fastpath calculation. ==
@@ -123,6 +142,15 @@ struct AffixPatternsForCurrency : public UMemory {
 		posSuffixPatternForCurrency = posSuffix;
 		patternType = type;
 	}
+#ifdef FMT_DEBUG
+  void dump() const  {
+    debugout( UnicodeString("AffixPatternsForCurrency( -=\"") +
+              negPrefixPatternForCurrency + (UnicodeString)"\"/\"" +
+              negSuffixPatternForCurrency + (UnicodeString)"\" +=\"" + 
+              posPrefixPatternForCurrency + (UnicodeString)"\"/\"" + 
+              posSuffixPatternForCurrency + (UnicodeString)"\" )");
+  }
+#endif
 };
 
 /* affix for currency formatting when the currency sign in the pattern
@@ -150,6 +178,15 @@ struct AffixesForCurrency : public UMemory {
 		posPrefixForCurrency = posPrefix;
 		posSuffixForCurrency = posSuffix;
 	}
+#ifdef FMT_DEBUG
+  void dump() const {
+    debugout( UnicodeString("AffixesForCurrency( -=\"") +
+              negPrefixForCurrency + (UnicodeString)"\"/\"" +
+              negSuffixForCurrency + (UnicodeString)"\" +=\"" + 
+              posPrefixForCurrency + (UnicodeString)"\"/\"" + 
+              posSuffixForCurrency + (UnicodeString)"\" )");
+  }
+#endif
 };
 
 U_CDECL_BEGIN
@@ -197,21 +234,6 @@ U_CALLCONV decimfmtAffixPatternValueComparator(UHashTok val1, UHashTok val2) {
 
 U_CDECL_END
 
-#ifdef FMT_DEBUG
-#include <stdio.h>
-static void _debugout(const char *f, int l, const UnicodeString& s) {
-    char buf[2000];
-    s.extract((int32_t) 0, s.length(), buf);
-    printf("%s:%d: %s\n", f,l, buf);
-}
-#define debugout(x) _debugout(__FILE__,__LINE__,x)
-#define debug(x) printf("%s:%d: %s\n", __FILE__,__LINE__, x);
-static const UnicodeString dbg_null("<NULL>","");
-#define DEREFSTR(x)   ((x!=NULL)?(*x):(dbg_null))
-#else
-#define debugout(x)
-#define debug(x)
-#endif
 
 
 
@@ -269,7 +291,7 @@ inline int32_t _max(int32_t a, int32_t b) { return (a<b) ? b : a; }
 // Constructs a DecimalFormat instance in the default locale.
 
 DecimalFormat::DecimalFormat(UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     construct(status, parseError);
 }
@@ -280,7 +302,7 @@ DecimalFormat::DecimalFormat(UErrorCode& status) {
 
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     construct(status, parseError, &pattern);
 }
@@ -293,7 +315,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
                              UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -304,7 +326,7 @@ DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
                     DecimalFormatSymbols* symbolsToAdopt,
                     UParseError& parseErr,
                     UErrorCode& status) {
-    init(status);
+    init();
     if (symbolsToAdopt == NULL)
         status = U_ILLEGAL_ARGUMENT_ERROR;
     construct(status,parseErr, &pattern, symbolsToAdopt);
@@ -318,7 +340,7 @@ DecimalFormat::DecimalFormat(  const UnicodeString& pattern,
 DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              const DecimalFormatSymbols& symbols,
                              UErrorCode& status) {
-    init(status);
+    init();
     UParseError parseError;
     construct(status, parseError, &pattern, new DecimalFormatSymbols(symbols));
 }
@@ -332,7 +354,7 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
                              DecimalFormatSymbols* symbolsToAdopt,
                              UNumberFormatStyle style,
                              UErrorCode& status) {
-    init(status);
+    init();
     fStyle = style;
     UParseError parseError;
     construct(status, parseError, &pattern, symbolsToAdopt);
@@ -342,8 +364,10 @@ DecimalFormat::DecimalFormat(const UnicodeString& pattern,
 // Common DecimalFormat initialization.
 //    Put all fields of an uninitialized object into a known state.
 //    Common code, shared by all constructors.
+//    Can not fail. Leave the object in good enough shape that the destructor
+//    or assignment operator can run successfully.
 void
-DecimalFormat::init(UErrorCode &status) {
+DecimalFormat::init() {
     fPosPrefixPattern = 0;
     fPosSuffixPattern = 0;
     fNegPrefixPattern = 0;
@@ -382,8 +406,7 @@ DecimalFormat::init(UErrorCode &status) {
     data.fFastFormatStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
     data.fFastParseStatus=kFastpathUNKNOWN; // don't try to calculate the fastpath until later.
 #endif
-    // only do this once per obj.
-    DecimalFormatStaticSets::initSets(&status);
+    fStaticSets = NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -392,7 +415,7 @@ DecimalFormat::init(UErrorCode &status) {
 // created instance owns the symbols.
 
 void
-DecimalFormat::construct(UErrorCode&             status,
+DecimalFormat::construct(UErrorCode&            status,
                          UParseError&           parseErr,
                          const UnicodeString*   pattern,
                          DecimalFormatSymbols*  symbolsToAdopt)
@@ -417,11 +440,14 @@ DecimalFormat::construct(UErrorCode&             status,
     if (fSymbols == NULL)
     {
         fSymbols = new DecimalFormatSymbols(Locale::getDefault(), status);
-        /* test for NULL */
         if (fSymbols == 0) {
             status = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
+    }
+    fStaticSets = DecimalFormatStaticSets::getStaticSets(status);
+    if (U_FAILURE(status)) {
+        return;
     }
     UErrorCode nsStatus = U_ZERO_ERROR;
     NumberingSystem *ns = NumberingSystem::createInstance(nsStatus);
@@ -695,8 +721,7 @@ DecimalFormat::~DecimalFormat()
 
 DecimalFormat::DecimalFormat(const DecimalFormat &source) :
     NumberFormat(source) {
-    UErrorCode status = U_ZERO_ERROR;
-    init(status); // if this fails, 'source' isn't initialized properly either.
+    init();
     *this = source;
 }
 
@@ -729,7 +754,9 @@ DecimalFormat&
 DecimalFormat::operator=(const DecimalFormat& rhs)
 {
     if(this != &rhs) {
+        UErrorCode status = U_ZERO_ERROR;
         NumberFormat::operator=(rhs);
+        fStaticSets     = DecimalFormatStaticSets::getStaticSets(status);
         fPositivePrefix = rhs.fPositivePrefix;
         fPositiveSuffix = rhs.fPositiveSuffix;
         fNegativePrefix = rhs.fNegativePrefix;
@@ -2099,6 +2126,12 @@ DecimalFormat::parseForCurrency(const UnicodeString& text,
         UBool tmpStatus[fgStatusLength];
         ParsePosition tmpPos(origPos);
         DigitList tmpDigitList;
+
+#ifdef FMT_DEBUG
+        debug("trying affix for currency..");
+        affixPtn->dump();
+#endif
+
         UBool result = subparse(text,
                                 &affixPtn->negPrefixPatternForCurrency,
                                 &affixPtn->negSuffixPatternForCurrency,
@@ -2432,9 +2465,9 @@ UBool DecimalFormat::subparse(const UnicodeString& text,
 
         if (groupingCharLength == groupingStringLength) {
             if (strictParse) {
-                groupingSet = DecimalFormatStaticSets::gStaticSets->fStrictDefaultGroupingSeparators;
+                groupingSet = fStaticSets->fStrictDefaultGroupingSeparators;
             } else {
-                groupingSet = DecimalFormatStaticSets::gStaticSets->fDefaultGroupingSeparators;
+                groupingSet = fStaticSets->fDefaultGroupingSeparators;
             }
         }
 
@@ -2837,9 +2870,14 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     int32_t inputLength = input.length();
     int32_t affixCharLength = U16_LENGTH(affixChar);
     UnicodeSet *affixSet;
+    UErrorCode status = U_ZERO_ERROR;
 
+    const DecimalFormatStaticSets *staticSets = DecimalFormatStaticSets::getStaticSets(status);
+    if (U_FAILURE(status)) {
+        return -1;
+    }
     if (!lenient) {
-        affixSet = DecimalFormatStaticSets::gStaticSets->fStrictDashEquivalents;
+        affixSet = staticSets->fStrictDashEquivalents;
         
         // If the affix is exactly one character long and that character
         // is in the dash set and the very next input character is also
@@ -2905,7 +2943,7 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
     } else {
         UBool match = FALSE;
         
-        affixSet = DecimalFormatStaticSets::gStaticSets->fDashEquivalents;
+        affixSet = staticSets->fDashEquivalents;
 
         if (affixCharLength == affixLength && affixSet->contains(affixChar))  {
             pos = skipUWhiteSpace(input, pos);
@@ -4037,7 +4075,15 @@ int32_t DecimalFormat::appendAffix(UnicodeString& buf, double number,
 
     const UnicodeString* affix;
     if (fCurrencySignCount == fgCurrencySignCountInPluralFormat) {
-        UnicodeString pluralCount = fCurrencyPluralInfo->getPluralRules()->select(number);
+        // TODO: get an accurate count of visible fraction digits.
+        UnicodeString pluralCount;
+        int32_t minFractionDigits = this->getMinimumFractionDigits();
+        if (minFractionDigits > 0) {
+            NumberInfo ni(number, this->getMinimumFractionDigits());
+            pluralCount = fCurrencyPluralInfo->getPluralRules()->select(ni);
+        } else {
+            pluralCount = fCurrencyPluralInfo->getPluralRules()->select(number);
+        }
         AffixesForCurrency* oneSet;
         if (fStyle == UNUM_CURRENCY_PLURAL) {
             oneSet = (AffixesForCurrency*)fPluralAffixesForCurrency->get(pluralCount);
@@ -5215,6 +5261,7 @@ void DecimalFormat::setMinimumSignificantDigits(int32_t min) {
     int32_t max = _max(fMaxSignificantDigits, min);
     fMinSignificantDigits = min;
     fMaxSignificantDigits = max;
+    fUseSignificantDigits = TRUE;
 #if UCONFIG_FORMAT_FASTPATHS_49
     handleChanged();
 #endif
@@ -5229,6 +5276,7 @@ void DecimalFormat::setMaximumSignificantDigits(int32_t max) {
     int32_t min = _min(fMinSignificantDigits, max);
     fMinSignificantDigits = min;
     fMaxSignificantDigits = max;
+    fUseSignificantDigits = TRUE;
 #if UCONFIG_FORMAT_FASTPATHS_49
     handleChanged();
 #endif

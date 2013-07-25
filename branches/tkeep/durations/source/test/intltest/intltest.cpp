@@ -120,6 +120,14 @@ operator+(const UnicodeString& left,
     return left + buffer;
 }
 
+#if 0
+UnicodeString
+operator+(const UnicodeString& left,
+          int64_t num) {
+  return left + Int64ToUnicodeString(num);
+}
+#endif
+
 #if !UCONFIG_NO_FORMATTING
 
 /**
@@ -202,6 +210,12 @@ UnicodeString toString(const Formattable& f) {
 // useful when operator+ won't cooperate
 UnicodeString toString(int32_t n) {
     return UnicodeString() + (long)n;
+}
+
+
+
+UnicodeString toString(UBool b) {
+  return b ? UnicodeString("TRUE"):UnicodeString("false");
 }
 
 // stephen - cleaned up 05/05/99
@@ -1103,6 +1117,8 @@ main(int argc, char* argv[])
     UBool quick = TRUE;
     UBool name = FALSE;
     UBool leaks = FALSE;
+    UBool utf8 = FALSE;
+    const char *summary_file = NULL;
     UBool warnOnMissingData = FALSE;
     UBool defaultDataFound = FALSE;
     int32_t threadCount = 1;
@@ -1133,12 +1149,17 @@ main(int argc, char* argv[])
             else if (strcmp("all", str) == 0 ||
                      strcmp("a", str) == 0)
                 all = TRUE;
+            else if (strcmp("utf-8", str) == 0 ||
+                     strcmp("u", str) == 0)
+                utf8 = TRUE;
             else if (strcmp("leaks", str) == 0 ||
                      strcmp("l", str) == 0)
                 leaks = TRUE;
             else if (strcmp("notime", str) == 0 ||
                      strcmp("T", str) == 0)
                 no_time = TRUE;
+            else if (strncmp("E", str, 1) == 0)
+                summary_file = str+1;
             else if (strcmp("x", str)==0) {
               if(++i>=argc) {
                 printf("* Error: '-x' option requires an argument. usage: '-x outfile.xml'.\n");
@@ -1243,6 +1264,7 @@ main(int argc, char* argv[])
     fprintf(stdout, "   No error messages (n)    : %s\n", (no_err_msg?        "On" : "Off"));
     fprintf(stdout, "   Exhaustive (e)           : %s\n", (!quick?            "On" : "Off"));
     fprintf(stdout, "   Leaks (l)                : %s\n", (leaks?             "On" : "Off"));
+    fprintf(stdout, "   utf-8 (u)                : %s\n", (utf8?              "On" : "Off"));
     fprintf(stdout, "   notime (T)               : %s\n", (no_time?             "On" : "Off"));
     fprintf(stdout, "   Warn on missing data (w) : %s\n", (warnOnMissingData? "On" : "Off"));
 #if (ICU_USE_THREADS==0)
@@ -1255,6 +1277,9 @@ main(int argc, char* argv[])
     }
     fprintf(stdout, "-----------------------------------------------\n");
 
+    if(utf8) {
+      ucnv_setDefaultName("utf-8");
+    }
     /* Check whether ICU will initialize without forcing the build data directory into
      *  the ICU_DATA path.  Success here means either the data dll contains data, or that
      *  this test program was run with ICU_DATA set externally.  Failure of this check
@@ -1273,6 +1298,9 @@ main(int argc, char* argv[])
         defaultDataFound = TRUE;
     }
     u_cleanup();
+    if(utf8) {
+      ucnv_setDefaultName("utf-8");
+    }
     errorCode = U_ZERO_ERROR;
 
     /* Initialize ICU */
@@ -1291,7 +1319,6 @@ main(int argc, char* argv[])
                 return 1;
             }
     }
-
 
     // initial check for the default converter
     errorCode = U_ZERO_ERROR;
@@ -1408,6 +1435,16 @@ main(int argc, char* argv[])
     }else{
         fprintf(stdout, "Errors in total: %ld.\n", (long)major.getErrors());
         major.printErrors();
+
+        if(summary_file != NULL) {
+          FILE *summf = fopen(summary_file, "w");
+          if( summf != NULL) {
+            char buf[10000];
+            int32_t length = errorList.extract(0, errorList.length(), buf, sizeof(buf));
+            fwrite(buf, sizeof(*buf), length, (FILE*)summf);
+            fclose(summf);
+          }
+        }
 
 
         if (major.getDataErrors() != 0) {
@@ -1758,6 +1795,40 @@ UBool IntlTest::assertEquals(const char* message,
     return TRUE;
 }
 
+UBool IntlTest::assertEquals(const char* message,
+                             int64_t expected,
+                             int64_t actual) {
+    if (expected != actual) {
+        errln((UnicodeString)"FAIL: " + message + "; got int64 " +
+              Int64ToUnicodeString(actual) + 
+              "; expected " + Int64ToUnicodeString(expected) );
+        return FALSE;
+    }
+#ifdef VERBOSE_ASSERTIONS
+    else {
+      logln((UnicodeString)"Ok: " + message + "; got int64 " + Int64ToUnicodeString(actual));
+    }
+#endif
+    return TRUE;
+}
+
+UBool IntlTest::assertEquals(const char* message,
+                             UBool expected,
+                             UBool actual) {
+    if (expected != actual) {
+        errln((UnicodeString)"FAIL: " + message + "; got " +
+              toString(actual) +
+              "; expected " + toString(expected));
+        return FALSE;
+    }
+#ifdef VERBOSE_ASSERTIONS
+    else {
+      logln((UnicodeString)"Ok: " + message + "; got " + toString(actual));
+    }
+#endif
+    return TRUE;
+}
+
 #if !UCONFIG_NO_FORMATTING
 UBool IntlTest::assertEquals(const char* message,
                              const Formattable& expected,
@@ -1808,6 +1879,21 @@ UBool IntlTest::assertEquals(const UnicodeString& message,
 UBool IntlTest::assertEquals(const UnicodeString& message,
                              const char* expected,
                              const char* actual) {
+    return assertEquals(extractToAssertBuf(message), expected, actual);
+}
+UBool IntlTest::assertEquals(const UnicodeString& message,
+                             UBool expected,
+                             UBool actual) {
+    return assertEquals(extractToAssertBuf(message), expected, actual);
+}
+UBool IntlTest::assertEquals(const UnicodeString& message,
+                             int32_t expected,
+                             int32_t actual) {
+    return assertEquals(extractToAssertBuf(message), expected, actual);
+}
+UBool IntlTest::assertEquals(const UnicodeString& message,
+                             int64_t expected,
+                             int64_t actual) {
     return assertEquals(extractToAssertBuf(message), expected, actual);
 }
 //--------------------------------------------------------------------

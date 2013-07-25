@@ -59,6 +59,7 @@ class CurrencyPluralInfo;
 class Hashtable;
 class UnicodeSet;
 class FieldPositionHandler;
+class DecimalFormatStaticSets;
 
 // explicit template instantiation. see digitlst.h
 #if defined (_MSC_VER)
@@ -1304,7 +1305,7 @@ public:
 
     /**
      * Get the rounding increment.
-     * @return A positive rounding increment, or 0.0 if a rounding
+     * @return A positive rounding increment, or 0.0 if a custom rounding
      * increment is not in effect.
      * @see #setRoundingIncrement
      * @see #getRoundingMode
@@ -1316,7 +1317,8 @@ public:
     /**
      * Set the rounding increment.  In the absence of a rounding increment,
      *    numbers will be rounded to the number of digits displayed.
-     * @param newValue A positive rounding increment.
+     * @param newValue A positive rounding increment, or 0.0 to
+     * use the default rounding increment.
      * Negative increments are equivalent to 0.0.
      * @see #getRoundingIncrement
      * @see #getRoundingMode
@@ -1782,8 +1784,10 @@ public:
      * Sets the minimum number of significant digits that will be
      * displayed.  If <code>min</code> is less than one then it is set
      * to one.  If the maximum significant digits count is less than
-     * <code>min</code>, then it is set to <code>min</code>. This
-     * value has no effect unless areSignificantDigits() returns true.
+     * <code>min</code>, then it is set to <code>min</code>.
+     * This function also enables the use of significant digits
+     * by this formatter - areSignificantDigitsUsed() will return TRUE.
+     * @see #areSignificantDigitsUsed
      * @param min the fewest significant digits to be shown
      * @stable ICU 3.0
      */
@@ -1794,8 +1798,9 @@ public:
      * displayed.  If <code>max</code> is less than one then it is set
      * to one.  If the minimum significant digits count is greater
      * than <code>max</code>, then it is set to <code>max</code>.
-     * This value has no effect unless areSignificantDigits() returns
-     * true.
+     * This function also enables the use of significant digits
+     * by this formatter - areSignificantDigitsUsed() will return TRUE.
+     * @see #areSignificantDigitsUsed
      * @param max the most significant digits to be shown
      * @stable ICU 3.0
      */
@@ -1882,15 +1887,15 @@ private:
     int32_t precision() const;
 
     /**
-     *   Initialize all fields of a new DecimalFormatter.
+     *   Initialize all fields of a new DecimalFormatter to a safe default value.
      *      Common code for use by constructors.
      */
-    void init(UErrorCode& status);
+    void init();
 
     /**
      * Do real work of constructing a new DecimalFormat.
      */
-    void construct(UErrorCode&               status,
+    void construct(UErrorCode&              status,
                    UParseError&             parseErr,
                    const UnicodeString*     pattern = 0,
                    DecimalFormatSymbols*    symbolsToAdopt = 0
@@ -2294,6 +2299,9 @@ private:
 #if UCONFIG_HAVE_PARSEALLINPUT
     UNumberFormatAttributeValue fParseAllInput;
 #endif
+
+    // Decimal Format Static Sets singleton.
+    const DecimalFormatStaticSets *fStaticSets;
 
 
 protected:

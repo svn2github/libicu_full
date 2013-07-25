@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2012, International Business Machines Corporation and
+ * Copyright (c) 1997-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************
  * File TMSGFMT.CPP
@@ -578,11 +578,11 @@ void TestMessageFormat::testMsgFormatPlural(/* char* par */)
     delete mfNum;
     delete mfAlpha;
 
-    MessageFormat* mfNum2 = new MessageFormat(t3, Locale("ru"), err);
+    MessageFormat* mfNum2 = new MessageFormat(t3, Locale("uk"), err);
     numResult1.remove();
     Formattable testArgs2((int32_t)4);
     mfNum2->format(&testArgs2, 1, numResult1, ignore, err);
-    MessageFormat* mfAlpha2 = new MessageFormat(t4, Locale("ru"), err);
+    MessageFormat* mfAlpha2 = new MessageFormat(t4, Locale("uk"), err);
     argNameResult.remove();
     mfAlpha2->format(argName, &testArgs2, 1, argNameResult, err);
 

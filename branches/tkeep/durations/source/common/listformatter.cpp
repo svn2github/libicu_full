@@ -124,6 +124,13 @@ static ListFormatData* loadListFormatData(
     }
     rb = ures_getByKeyWithFallback(rb, "listPattern", rb, &errorCode);
     rb = ures_getByKeyWithFallback(rb, style, rb, &errorCode);
+
+    // TODO(Travis Keep): This is a hack until fallbacks can be added for
+    // listPattern/duration and listPattern/duration-narrow in CLDR.
+    if (errorCode == U_MISSING_RESOURCE_ERROR) {
+        errorCode = U_ZERO_ERROR;
+        rb = ures_getByKeyWithFallback(rb, "standard", rb, &errorCode);
+    }
     if (U_FAILURE(errorCode)) {
         ures_close(rb);
         return NULL;

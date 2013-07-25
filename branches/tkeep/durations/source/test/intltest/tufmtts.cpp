@@ -391,12 +391,12 @@ void TimeUnitTest::testFormatPeriodEn() {
     UErrorCode status = U_ZERO_ERROR;
 
     TimePeriodResult fullResults[] = {
-        {create1m59_9996s(status), "1 minute and 59.9996 seconds"},
+        {create1m59_9996s(status), "1 minute, 59.9996 seconds"},
         {create19m(status), "19 minutes"},
-        {create1h23_5s(status), "1 hour and 23.5 seconds"},
-        {create1h23_5m(status), "1 hour and 23.5 minutes"},
-        {create1h0m23s(status), "1 hour, 0 minutes, and 23 seconds"},
-        {create2y5M3w4d(status), "2 years, 5 months, 3 weeks, and 4 days"}};
+        {create1h23_5s(status), "1 hour, 23.5 seconds"},
+        {create1h23_5m(status), "1 hour, 23.5 minutes"},
+        {create1h0m23s(status), "1 hour, 0 minutes, 23 seconds"},
+        {create2y5M3w4d(status), "2 years, 5 months, 3 weeks, 4 days"}};
   
     TimePeriodResult abbrevResults[] = {
         {create1m59_9996s(status), "1 min, 59.9996 secs"},

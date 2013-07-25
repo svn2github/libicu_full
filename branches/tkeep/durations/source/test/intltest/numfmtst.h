@@ -160,12 +160,20 @@ class NumberFormatTest: public CalendarTimeZoneTest {
 
     void TestFormattableSize();
 
+    void TestUFormattable();
+
     void TestEnumSet();
 
     void TestSignificantDigits();
     void TestShowZero();
 
+    void TestCompatibleCurrencies();
+    void TestBug9936();
+
  private:
+    UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
+
+    void expectParseCurrency(const NumberFormat &fmt, const UChar* currency, double amount, const char *text);
 
     static UBool equalValue(const Formattable& a, const Formattable& b);
 

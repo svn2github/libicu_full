@@ -51,6 +51,7 @@ static void TestInt64Parse(void);
 static void TestParseCurrency(void);
 static void TestMaxInt(void);
 static void TestNoExponent(void);
+static void TestUFormattable(void);
 
 #define TESTCASE(x) addTest(root, &x, "tsformat/cnumtst/" #x)
 
@@ -73,6 +74,7 @@ void addNumForTest(TestNode** root)
     TESTCASE(TestCloneWithRBNF);
     TESTCASE(TestMaxInt);
     TESTCASE(TestNoExponent);
+    TESTCASE(TestUFormattable);
 }
 
 /* test Parse int 64 */
@@ -268,7 +270,7 @@ static void TestNumberFormat()
     result = 0;
 
     log_verbose("\nTesting unum_formatDouble()\n");
-    u_uastrcpy(temp1, "($10,456.37)");
+    u_uastrcpy(temp1, "-$10,456.37");
     resultlength=0;
     pos2.field = UNUM_FRACTION_FIELD;
     resultlengthneeded=unum_formatDouble(cur_def, d, NULL, resultlength, &pos2, &status);
@@ -2171,6 +2173,111 @@ static void TestMaxInt(void) {
 
 
     unum_close(fmt);
+}
+
+static void TestUFormattable(void) {
+  UChar out2k[2048];
+  // simple test for API docs
+  {
+    UErrorCode status = U_ZERO_ERROR;
+    UNumberFormat *unum = unum_open(UNUM_DEFAULT, NULL, -1, "en_US_POSIX", NULL, &status);
+    if(assertSuccess("calling ufmt_open()", &status)) {
+      //! [unum_parseToUFormattable]
+      const UChar str[] = { 0x0031, 0x0032, 0x0033, 0x0000 }; /* 123 */
+      int32_t result = 0;
+      UFormattable *ufmt = ufmt_open(&status);
+      unum_parseToUFormattable(unum, ufmt, str, -1, NULL, &status);
+      if (ufmt_isNumeric(ufmt)) {
+	result = ufmt_getLong(ufmt, &status); /* == 123 */
+      } /* else { ... } */
+      ufmt_close(ufmt);
+      //! [unum_parseToUFormattable]
+      assertTrue("result == 123", (result == 123));
+    }
+  }
+  // test with explicitly created ufmt_open
+  {
+    UChar buffer[2048];
+    UErrorCode status = U_ZERO_ERROR;
+    UFormattable *ufmt;
+    UNumberFormat *unum;
+    const char *pattern = "";
+
+    ufmt = ufmt_open(&status);
+    unum = unum_open(UNUM_DEFAULT, NULL, -1, "en_US_POSIX", NULL, &status);
+    if(assertSuccess("calling ufmt_open()", &status)) {
+
+      pattern = "31337";
+      log_verbose("-- pattern: %s\n", pattern);
+      u_uastrcpy(buffer, pattern);
+      unum_parseToUFormattable(unum, ufmt, buffer, -1, NULL, &status);
+      if(assertSuccess("unum_parseToUFormattable[31337]", &status)) {
+        assertTrue("ufmt_getLong()=31337", ufmt_getLong(ufmt, &status) == 31337);
+        assertTrue("ufmt_getType()=UFMT_LONG", ufmt_getType(ufmt, &status) == UFMT_LONG);
+        log_verbose("long = %d\n", ufmt_getLong(ufmt, &status));
+        assertSuccess("ufmt_getLong()", &status);
+      }
+      unum_formatUFormattable(unum, ufmt, out2k, 2048, NULL, &status);
+      if(assertSuccess("unum_formatUFormattable(31337)", &status)) {
+        assertEquals("unum_formatUFormattable r/t", austrdup(buffer), austrdup(out2k));
+      }
+
+      pattern = "3.14159";
+      log_verbose("-- pattern: %s\n", pattern);
+      u_uastrcpy(buffer, pattern);
+      unum_parseToUFormattable(unum, ufmt, buffer, -1, NULL, &status);
+      if(assertSuccess("unum_parseToUFormattable[3.14159]", &status)) {
+        assertTrue("ufmt_getDouble()=3.14159", ufmt_getDouble(ufmt, &status) == 3.14159);
+        assertTrue("ufmt_getType()=UFMT_DOUBLE", ufmt_getType(ufmt, &status) == UFMT_DOUBLE);
+        log_verbose("double = %g\n", ufmt_getDouble(ufmt, &status));
+        assertSuccess("ufmt_getDouble()", &status);
+      }
+      unum_formatUFormattable(unum, ufmt, out2k, 2048, NULL, &status);
+      if(assertSuccess("unum_formatUFormattable(3.14159)", &status)) {
+        assertEquals("unum_formatUFormattable r/t", austrdup(buffer), austrdup(out2k));
+      }
+    }
+    ufmt_close(ufmt);
+    unum_close(unum);
+  }
+
+  // test with auto-generated ufmt
+  {
+    UChar buffer[2048];
+    UErrorCode status = U_ZERO_ERROR;
+    UFormattable *ufmt = NULL;
+    UNumberFormat *unum;
+    const char *pattern = "73476730924573500000000"; // weight of the moon, kg
+
+    log_verbose("-- pattern: %s (testing auto-opened UFormattable)\n", pattern);
+    u_uastrcpy(buffer, pattern);
+
+    unum = unum_open(UNUM_DEFAULT, NULL, -1, "en_US_POSIX", NULL, &status);
+    if(assertSuccess("calling ufmt_open()", &status)) {
+
+      ufmt = unum_parseToUFormattable(unum, NULL, /* will be unum_open()'ed for us */
+                                   buffer, -1, NULL, &status);
+      if(assertSuccess("unum_parseToUFormattable(weight of the moon", &status)) {
+        log_verbose("new formattable allocated at %p\n", (void*)ufmt);
+        assertTrue("ufmt_isNumeric() TRUE", ufmt_isNumeric(ufmt));
+        unum_formatUFormattable(unum, ufmt, out2k, 2048, NULL, &status);
+        if(assertSuccess("unum_formatUFormattable(3.14159)", &status)) {
+          assertEquals("unum_formatUFormattable r/t", austrdup(buffer), austrdup(out2k));
+        }
+
+        log_verbose("double: %g\n",  ufmt_getDouble(ufmt, &status));
+        assertSuccess("ufmt_getDouble()", &status);
+
+        log_verbose("long: %ld\n", ufmt_getLong(ufmt, &status));
+        assertTrue("failure on ufmt_getLong() for huge number:", U_FAILURE(status));
+        // status is now a failure due to ufmt_getLong() above.
+        // the intltest does extensive r/t testing of Formattable vs. UFormattable.
+      }
+    }
+
+    unum_close(unum);
+    ufmt_close(ufmt); // was implicitly opened for us by the first unum_parseToUFormattable()
+  }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
