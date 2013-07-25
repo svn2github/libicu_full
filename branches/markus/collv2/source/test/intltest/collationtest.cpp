@@ -563,7 +563,10 @@ UnicodeString CollationTest::printCollationKey(const CollationKey &key) {
 UBool CollationTest::readLine(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     int32_t lineLength;
     const UChar *line = ucbuf_readline(f, &lineLength, errorCode);
-    if(line == NULL || errorCode.isFailure()) { return FALSE; }
+    if(line == NULL || errorCode.isFailure()) {
+        fileLine.remove();
+        return FALSE;
+    }
     ++fileLineNumber;
     // Strip trailing CR/LF, comments, and spaces.
     const UChar *comment = u_memchr(line, 0x23, lineLength);  // '#'

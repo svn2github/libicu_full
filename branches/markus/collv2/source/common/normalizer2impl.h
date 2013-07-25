@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2009-2011, International Business Machines
+*   Copyright (C) 2009-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -43,6 +43,7 @@ public:
         JAMO_T_BASE=0x11a7,     /* "trail" jamo */
 
         HANGUL_BASE=0xac00,
+        HANGUL_END=0xd7a3,
 
         JAMO_L_COUNT=19,
         JAMO_V_COUNT=21,

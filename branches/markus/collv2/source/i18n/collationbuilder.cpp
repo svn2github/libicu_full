@@ -17,11 +17,13 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/caniter.h"
 #include "unicode/normalizer2.h"
 #include "unicode/parseerr.h"
 #include "unicode/uchar.h"
 #include "unicode/ucol.h"
 #include "unicode/unistr.h"
+#include "unicode/usetiter.h"
 #include "unicode/utf16.h"
 #include "collation.h"
 #include "collationbuilder.h"
@@ -33,6 +35,7 @@
 #include "collationsettings.h"
 #include "collationtailoring.h"
 #include "collationweights.h"
+#include "normalizer2impl.h"
 #include "rulebasedcollator.h"
 #include "uassert.h"
 #include "utf16collationiterator.h"
@@ -122,7 +125,7 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
 
 CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &errorCode)
         : nfd(*Normalizer2::getNFDInstance(errorCode)),
-          fcc(*Normalizer2::getInstance(NULL, "nfc", UNORM2_COMPOSE_CONTIGUOUS, errorCode)),
+          fcd(*Normalizer2Factory::getFCDInstance(errorCode)),
           base(b),
           baseData(b->data),
           rootElements(b->data->rootElements, b->data->rootElementsLength),
@@ -178,11 +181,14 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     errorReason = parser.getErrorReason();
     if(dataBuilder->hasMappings()) {
         makeTailoredCEs(errorCode);
-        // TODO: canonical closure
+        closeOverComposites(errorCode);
         finalizeCEs(errorCode);
         // Copy all of ASCII, and Latin-1 letters, into each tailoring.
         optimizeSet.add(0, 0x7f);
         optimizeSet.add(0xc0, 0xff);
+        // Hangul is decomposed on the fly during collation,
+        // and the tailoring data is always built with HANGUL_TAG specials.
+        optimizeSet.remove(Hangul::HANGUL_BASE, Hangul::HANGUL_END);
         dataBuilder->optimize(optimizeSet, errorCode);
         tailoring->ensureOwnedData(errorCode);
         if(U_FAILURE(errorCode)) { return NULL; }
@@ -568,17 +574,15 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
                               const UnicodeString &str, const UnicodeString &extension,
                               const char *&parserErrorReason, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    UnicodeString nfdPrefix, fccPrefix;
+    UnicodeString nfdPrefix;
     if(!prefix.isEmpty()) {
         nfd.normalize(prefix, nfdPrefix, errorCode);
-        fcc.normalize(prefix, fccPrefix, errorCode);
         if(U_FAILURE(errorCode)) {
             parserErrorReason = "normalizing the relation prefix";
             return;
         }
     }
     UnicodeString nfdString = nfd.normalize(str, errorCode);
-    UnicodeString fccString = fcc.normalize(str, errorCode);
     if(U_FAILURE(errorCode)) {
         parserErrorReason = "normalizing the relation string";
         return;
@@ -649,13 +653,16 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
             return;
         }
     }
-    // Map from the NFD input to the CEs.
-    dataBuilder->add(nfdPrefix, nfdString, ces, cesLength, errorCode);
-    if(fccPrefix != nfdPrefix || fccString != nfdString) {
-        // Also right away map from the FCC input to the CEs.
-        // Do not map from un-normalized strings that may not pass the FCD check.
-        dataBuilder->add(fccPrefix, fccString, ces, cesLength, errorCode);
+    uint32_t ce32 = dataBuilder->encodeCEs(ces, cesLength, errorCode);
+    if((prefix != nfdPrefix || str != nfdString) &&
+            fcd.isNormalized(prefix, errorCode) &&
+            fcd.isNormalized(str, errorCode)) {
+        // Map from the original input to the CEs.
+        // We do this in case the canonical closure is incomplete,
+        // so that it is possible to explicitly provide the missing mappings.
+        dataBuilder->addCE32(prefix, str, ce32, errorCode);
     }
+    addWithClosure(nfdPrefix, nfdString, ce32, errorCode);
     if(U_FAILURE(errorCode)) {
         parserErrorReason = "writing collation elements";
         return;
@@ -977,8 +984,6 @@ CollationBuilder::suppressContractions(const UnicodeSet &set, const char *&parse
     if(U_FAILURE(errorCode)) {
         parserErrorReason = "application of [suppressContractions [set]] failed";
     }
-    // TODO: add the set of suppressed base context strings to the canonical closure;
-    // try to remove suppressed builder context strings
 }
 
 void
@@ -986,6 +991,101 @@ CollationBuilder::optimize(const UnicodeSet &set, const char *& /* parserErrorRe
                            UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     optimizeSet.addAll(set);
+}
+
+void
+CollationBuilder::addWithClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
+                                 uint32_t ce32, UErrorCode &errorCode) {
+    // Map from the NFD input to the CEs.
+    dataBuilder->addCE32(nfdPrefix, nfdString, ce32, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+
+    // Map from canonically equivalent input to the CEs.
+    if(nfdPrefix.isEmpty()) {
+        CanonicalIterator stringIter(nfdString, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        UnicodeString prefix;
+        for(;;) {
+            UnicodeString str = stringIter.next();
+            if(str.isBogus()) { break; }
+            if(ignoreString(str, errorCode) || str == nfdString) { continue; }
+            dataBuilder->addCE32(prefix, str, ce32, errorCode);
+            if(U_FAILURE(errorCode)) { return; }
+        }
+    } else {
+        CanonicalIterator prefixIter(nfdPrefix, errorCode);
+        CanonicalIterator stringIter(nfdString, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        for(;;) {
+            UnicodeString prefix = prefixIter.next();
+            if(prefix.isBogus()) { break; }
+            if(ignoreString(prefix, errorCode)) { continue; }
+            UBool samePrefix = prefix == nfdPrefix;
+            for(;;) {
+                UnicodeString str = stringIter.next();
+                if(str.isBogus()) { break; }
+                if(ignoreString(str, errorCode) || (samePrefix && str == nfdString)) { continue; }
+                dataBuilder->addCE32(prefix, str, ce32, errorCode);
+                if(U_FAILURE(errorCode)) { return; }
+            }
+            stringIter.reset();
+        }
+    }
+}
+
+UBool
+CollationBuilder::ignoreString(const UnicodeString &s, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode) || s.isEmpty()) { return TRUE; }
+    // Do not map non-NFD strings.
+    if(!fcd.isNormalized(s, errorCode)) { return TRUE; }
+    // Do not map strings with Hangul syllables: We decompose those on the fly.
+    int32_t length = s.length();
+    for(int32_t i = 0; i < length; ++i) {
+        if(Hangul::isHangul(s.charAt(i))) { return TRUE; }
+    }
+    return FALSE;
+}
+
+void
+CollationBuilder::closeOverComposites(UErrorCode &errorCode) {
+    UnicodeSet composites(UNICODE_STRING_SIMPLE("[:NFD_QC=N:]"), errorCode);  // Java: static final
+    if(U_FAILURE(errorCode)) { return; }
+    // Hangul is decomposed on the fly during collation.
+    composites.remove(Hangul::HANGUL_BASE, Hangul::HANGUL_END);
+    UnicodeString prefix;  // empty
+    UnicodeString nfdString;
+    int64_t compCEs[Collation::MAX_EXPANSION_LENGTH];
+    int32_t compCEsLength;
+    UnicodeSetIterator iter(composites);
+    while(iter.next()) {
+        U_ASSERT(!iter.isString());
+        nfd.getDecomposition(iter.getCodepoint(), nfdString);
+        cesLength = dataBuilder->getCEs(nfdString, ces, 0);
+        if(cesLength > Collation::MAX_EXPANSION_LENGTH) {
+            // Too many CEs from the decomposition (unusual), ignore this composite.
+            // We could add a capacity parameter to getCEs() and reallocate if necessary.
+            // However, this can only really happen in contrived cases.
+            continue;
+        }
+        const UnicodeString &composite(iter.getString());
+        compCEsLength = dataBuilder->getCEs(composite, compCEs, 0);
+        if(!sameCEs(ces, cesLength, compCEs, compCEsLength)) {
+            dataBuilder->add(prefix, composite, ces, cesLength, errorCode);
+        }
+    }
+}
+
+UBool
+CollationBuilder::sameCEs(const int64_t ces1[], int32_t ces1Length,
+                          const int64_t ces2[], int32_t ces2Length) {
+    if(ces1Length != ces2Length) {
+        return FALSE;
+    }
+    U_ASSERT(ces1Length <= Collation::MAX_EXPANSION_LENGTH);
+    for(int32_t i = 0; i < ces1Length; ++i) {
+        if(ces1[i] != ces2[i]) { return FALSE; }
+    }
+    return TRUE;
 }
 
 #ifdef DEBUG_COLLATION_BUILDER

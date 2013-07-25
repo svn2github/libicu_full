@@ -61,9 +61,7 @@ public:
     static int32_t diffTwoBytePrimaries(uint32_t p1, uint32_t p2, UBool isCompressible);
     static int32_t diffThreeBytePrimaries(uint32_t p1, uint32_t p2, UBool isCompressible);
 
-    virtual void add(const UnicodeString &prefix, const UnicodeString &s,
-                     const int64_t ces[], int32_t cesLength,
-                     UErrorCode &errorCode);
+    virtual uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
 
     void addRootElements(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
     void addRootElement(int64_t ce, UErrorCode &errorCode);

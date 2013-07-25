@@ -124,7 +124,7 @@ CollationDataBuilder::initForTailoring(const CollationData *b, UErrorCode &error
     // Do this here, rather than in buildMappings(),
     // so that we see the HANGUL_TAG in various assertions.
     uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
-    utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
+    utrie2_setRange32(trie, Hangul::HANGUL_BASE, Hangul::HANGUL_END, hangulCE32, TRUE, &errorCode);
 
     // Copy the set contents but don't copy/clone the set as a whole because
     // that would copy the isFrozen state too.
@@ -329,19 +329,6 @@ void
 CollationDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
                           const int64_t ces[], int32_t cesLength,
                           UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return; }
-    // cesLength must be limited (e.g., to 31) so that the CollationIterator
-    // can work with a fixed initial CEArray capacity for most cases.
-    if(s.isEmpty() || cesLength < 0 || cesLength > Collation::MAX_EXPANSION_LENGTH) {
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
-    if(trie == NULL || utrie2_isFrozen(trie)) {
-        errorCode = U_INVALID_STATE_ERROR;
-        return;
-    }
-    // TODO: Validate prefix/c/suffix.
-    // Forbid syllable-forming Jamos with/in expansions/contractions/prefixes, see design doc.
     uint32_t ce32 = encodeCEs(ces, cesLength, errorCode);
     addCE32(prefix, s, ce32, errorCode);
 }
@@ -350,6 +337,14 @@ void
 CollationDataBuilder::addCE32(const UnicodeString &prefix, const UnicodeString &s,
                               uint32_t ce32, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
+    if(s.isEmpty()) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    if(trie == NULL || utrie2_isFrozen(trie)) {
+        errorCode = U_INVALID_STATE_ERROR;
+        return;
+    }
     UChar32 c = s.char32At(0);
     int32_t cLength = U16_LENGTH(c);
     uint32_t oldCE32 = utrie2_get32(trie, c);
@@ -459,6 +454,14 @@ uint32_t
 CollationDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength,
                                 UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
+    if(cesLength < 0 || cesLength > Collation::MAX_EXPANSION_LENGTH) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    if(trie == NULL || utrie2_isFrozen(trie)) {
+        errorCode = U_INVALID_STATE_ERROR;
+        return 0;
+    }
     if(cesLength == 0) {
         // Convenience: We cannot map to nothing, but we can map to a completely ignorable CE.
         // Do this here so that callers need not do it.
@@ -637,7 +640,7 @@ CollationDataBuilder::copyFromBaseCE32(UChar32 c, uint32_t ce32, UBool withConte
         break;
     }
     case Collation::HANGUL_TAG:
-        errorCode = U_UNSUPPORTED_ERROR;  // TODO: revisit tailoring of Hangul syllables
+        errorCode = U_UNSUPPORTED_ERROR;  // We forbid tailoring of Hangul syllables.
         break;
     case Collation::OFFSET_TAG:
         ce32 = getCE32FromOffsetCE32(TRUE, c, ce32);
@@ -838,9 +841,8 @@ CollationDataBuilder::copyFrom(const CollationDataBuilder &src, const CEModifier
 void
 CollationDataBuilder::optimize(const UnicodeSet &set, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode) || set.isEmpty()) { return; }
-    // TODO: exclude Hangul syllables? see other TODOs about Hangul
     UnicodeSetIterator iter(set);
-    while(iter.next()) {
+    while(iter.next() && !iter.isString()) {
         UChar32 c = iter.getCodepoint();
         uint32_t ce32 = utrie2_get32(trie, c);
         if(ce32 == Collation::FALLBACK_CE32) {
@@ -855,9 +857,8 @@ CollationDataBuilder::optimize(const UnicodeSet &set, UErrorCode &errorCode) {
 void
 CollationDataBuilder::suppressContractions(const UnicodeSet &set, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode) || set.isEmpty()) { return; }
-    // TODO: exclude Hangul syllables? see other TODOs about Hangul
     UnicodeSetIterator iter(set);
-    while(iter.next()) {
+    while(iter.next() && !iter.isString()) {
         UChar32 c = iter.getCodepoint();
         uint32_t ce32 = utrie2_get32(trie, c);
         if(ce32 == Collation::FALLBACK_CE32) {
@@ -908,6 +909,7 @@ CollationDataBuilder::setDigitTags(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     UnicodeSetIterator iter(digits);
     while(iter.next()) {
+        U_ASSERT(!iter.isString());
         UChar32 c = iter.getCodepoint();
         uint32_t ce32 = utrie2_get32(trie, c);
         if(ce32 != Collation::FALLBACK_CE32 && ce32 != Collation::UNASSIGNED_CE32) {
@@ -1029,6 +1031,7 @@ CollationDataBuilder::buildContexts(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     UnicodeSetIterator iter(contextChars);
     while(iter.next()) {
+        U_ASSERT(!iter.isString());
         buildContext(iter.getCodepoint(), errorCode);
     }
 }

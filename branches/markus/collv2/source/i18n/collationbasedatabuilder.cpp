@@ -257,12 +257,10 @@ CollationBaseDataBuilder::diffThreeBytePrimaries(uint32_t p1, uint32_t p2, UBool
     }
 }
 
-void
-CollationBaseDataBuilder::add(const UnicodeString &prefix, const UnicodeString &s,
-                              const int64_t ces[], int32_t cesLength,
-                              UErrorCode &errorCode) {
-    CollationDataBuilder::add(prefix, s, ces, cesLength, errorCode);
+uint32_t
+CollationBaseDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode) {
     addRootElements(ces, cesLength, errorCode);
+    return CollationDataBuilder::encodeCEs(ces, cesLength, errorCode);
 }
 
 void

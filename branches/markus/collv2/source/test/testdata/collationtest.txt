@@ -8,6 +8,27 @@
 # created on: 2012apr13
 # created by: Markus W. Scherer
 
+# A line with "** test: description" is used for verbose and error output.
+
+# A collator can be built with "@ rawbase" or "@ rules".
+# "@ rawbase" is followed by lines that each contain a string and a list of CEs.
+# An empty leading weight is 0. An empty weight after a non-empty one is a common weight.
+
+# TODO: "@ locale de-u-co-phonebk"
+
+# A collator can be modified with "% attribute=value".
+
+# "* CEs" tests that the following strings map to their expected CEs.
+# It is fragile unless used with "@ rawbase".
+# It only tests CollationIterator which is not sensitive to most attributes.
+
+# "* compare" tests the order (= or <) of the following strings.
+# The relation can be "=" or "<" (the level of the difference is not specified)
+# or "<1", "<2", "<c", "<3", "<4" (indicating the level of the difference).
+
+# Test sections ("* CEs" and "* compare") are terminated by
+# definitions of new collators, changing attributes, or new test sections.
+
 ** test: simple CEs & expansions
 @ rawbase
 \x00    11..           # NUL not ignorable
@@ -678,9 +699,8 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 &a = b / c  &d = c / e
 % strength=secondary
 * compare
-<1 AC
+<1 AC  # C is still only tertiary different from the original c
 =  b
-<2 aç
 <1 ade
 =  ac
 
@@ -1054,31 +1074,32 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <3 y
 <2 \u0301
 
+** test: canonical closure
+@ rules
+&X=A &U=Â
+* compare
+<1 U
+=  Â
+=  A\u0302
+<2 Ú  # U with acute
+=  U\u0301
+=  Ấ  # A with circumflex & acute
+=  Â\u0301
+=  A\u0302\u0301
+<1 X
+=  A
+<2 X\u030A  # with ring above
+=  Å
+=  A\u030A
+=  \u212B  # Angstrom sign
 
-#** test: this is a description
-#@ rawbase
-# string then list of CEs; empty leading weight=0, other empty=common
-#a 20..
-#b 2233.44.5506
-#c 11223344.5566.07
-# ch 30..20
-# l|\xb7 ..   # prefix
-#\u3041 74..
-
-# rawbase could be combined with rules
-# each test has rawbase? rules? (attributes (compare | CEs | sortkey))*
-
-#% attribute=value
-#% strength=3
-# allow changing attributes between "* compare" etc. but not inside any section
-# (an attribute ends a section, just like starting a section ends the previous one)
-
-# * CEs  # not sensitive to many attributes, e.g., strength
-#abch 20.. 22.. 30..20
-#\u3041 74H  # with Hiragana flag
-
-#* sortkey
-#abch 202230.(syntax for compressed common?).(?)20
-
-#** test: German phonebook rules
-#@ locale de-u-co-phonebk
+@ rules
+&x=ä|ŝ
+* compare
+<1 äs  # not tailored
+<1 äx
+=  äŝ
+=  a\u0308s\u0302
+=  a\u0308ŝ
+=  äs\u0302
+<3 äX

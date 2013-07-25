@@ -116,6 +116,21 @@ private:
                           UErrorCode &errorCode);
 
     /**
+     * Adds the mapping and its canonical closure.
+     * Takes ce32=dataBuilder->encodeCEs(...) so that the data builder
+     * need not re-encode the CEs multiple times.
+     */
+    void addWithClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
+                        uint32_t ce32, UErrorCode &errorCode);
+
+    UBool ignoreString(const UnicodeString &s, UErrorCode &errorCode) const;
+
+    void closeOverComposites(UErrorCode &errorCode);
+
+    static UBool sameCEs(const int64_t ces1[], int32_t ces1Length,
+                         const int64_t ces2[], int32_t ces2Length);
+
+    /**
      * Walks the tailoring graph and overwrites tailored nodes with new CEs.
      * After this, the graph is destroyed.
      * The nodes array can then be used only as a source of tailored CEs.
@@ -261,7 +276,7 @@ private:
         return (node & 0xfffffffff00000ff) | nodeFromNextIndex(next);
     }
 
-    const Normalizer2 &nfd, &fcc;
+    const Normalizer2 &nfd, &fcd;
 
     const CollationTailoring *base;
     const CollationData *baseData;

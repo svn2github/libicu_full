@@ -90,9 +90,19 @@ public:
      */
     int64_t getSingleCE(UChar32 c, UErrorCode &errorCode) const;
 
-    virtual void add(const UnicodeString &prefix, const UnicodeString &s,
-                     const int64_t ces[], int32_t cesLength,
-                     UErrorCode &errorCode);
+    void add(const UnicodeString &prefix, const UnicodeString &s,
+             const int64_t ces[], int32_t cesLength,
+             UErrorCode &errorCode);
+
+    /**
+     * Encodes the ces as either the returned ce32 by itself,
+     * or by storing an expansion, with the returned ce32 referring to that.
+     *
+     * add(p, s, ces, cesLength) = addCE32(p, s, encodeCEs(ces, cesLength))
+     */
+    virtual uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
+    void addCE32(const UnicodeString &prefix, const UnicodeString &s,
+                 uint32_t ce32, UErrorCode &errorCode);
 
     /**
      * Sets three-byte-primary CEs for a range of code points in code point order,
@@ -140,9 +150,11 @@ public:
 
     /**
      * Looks up CEs for s and appends them to the ces array.
-     * s must be in NFD form.
+     * Does not handle normalization: s should be in FCD form.
+     *
      * Does not write completely ignorable CEs.
      * Does not write beyond Collation::MAX_EXPANSION_LENGTH.
+     *
      * @return incremented cesLength
      */
     int32_t getCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const;
@@ -172,12 +184,8 @@ protected:
         return getConditionalCE32(Collation::indexFromCE32(ce32));
     }
 
-    void addCE32(const UnicodeString &prefix, const UnicodeString &s,
-                 uint32_t ce32, UErrorCode &errorCode);
-
     static uint32_t encodeOneCEAsCE32(int64_t ce);
     uint32_t encodeOneCE(int64_t ce, UErrorCode &errorCode);
-    uint32_t encodeCEs(const int64_t ces[], int32_t cesLength, UErrorCode &errorCode);
     uint32_t encodeExpansion(const int64_t ces[], int32_t length, UErrorCode &errorCode);
     uint32_t encodeExpansion32(const int32_t newCE32s[], int32_t length, UErrorCode &errorCode);
 
