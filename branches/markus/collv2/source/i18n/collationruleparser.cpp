@@ -609,9 +609,12 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
             } else {
                 const UnicodeString *importedRules =
                     importer->getRules(baseID,
-                                       length > 0 ? collationType : NULL,
+                                       length > 0 ? collationType : "standard",
                                        errorReason, errorCode);
                 if(U_FAILURE(errorCode)) {
+                    if(errorReason == NULL) {
+                        errorReason = "[import langTag] failed";
+                    }
                     setErrorContext();
                     return;
                 }

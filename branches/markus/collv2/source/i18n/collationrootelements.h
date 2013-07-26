@@ -17,6 +17,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/uobject.h"
+#include "collation.h"
 
 U_NAMESPACE_BEGIN
 

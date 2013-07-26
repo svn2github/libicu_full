@@ -21,6 +21,8 @@
 #include "collationsettings.h"
 #include "mutex.h"
 
+struct UTrie2;
+
 U_NAMESPACE_BEGIN
 
 struct CollationData;

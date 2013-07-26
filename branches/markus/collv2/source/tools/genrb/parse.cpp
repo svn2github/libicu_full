@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1998-2012, International Business Machines
+*   Copyright (C) 1998-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -33,6 +33,10 @@
 #include "unicode/ustring.h"
 #include "unicode/uscript.h"
 #include "unicode/putil.h"
+#include "collationbuilder.h"
+#include "collationroot.h"
+#include "collationruleparser.h"
+#include "collationtailoring.h"
 #include <stdio.h>
 
 /* Number of tokens to read ahead of the current stream position */
@@ -50,6 +54,9 @@
 #define ENDCOMMAND       0x005D
 #define OPENSQBRACKET    0x005B
 #define CLOSESQBRACKET   0x005D
+
+using icu::LocalPointer;
+using icu::UnicodeString;
 
 struct Lookahead
 {
@@ -803,6 +810,39 @@ finish:
     return urules;
 }
 
+namespace {
+
+class GenrbImporter : public icu::CollationRuleParser::Importer {
+public:
+    GenrbImporter(void *ctx) : context(ctx) {}
+    virtual ~GenrbImporter();
+    virtual const UnicodeString *getRules(
+            const char *localeID, const char *collationType,
+            const char *&errorReason, UErrorCode &errorCode);
+
+private:
+    void *context;
+    UnicodeString rules;
+};
+
+GenrbImporter::~GenrbImporter() {}
+
+const UnicodeString *
+GenrbImporter::getRules(
+        const char *localeID, const char *collationType,
+        const char *& /*errorReason*/, UErrorCode &errorCode) {
+    // TODO: After removing collation v1 code,
+    // move the guts of importFromDataFile to here, use (const?) GenrbData * not void *.
+    int32_t length = 0;
+    const UChar *r = importFromDataFile(context, localeID, collationType, &length, &errorCode);
+    if(U_SUCCESS(errorCode)) {
+        rules.setTo(FALSE, r, length);
+    }
+    return &rules;
+}
+
+}  // namespace
+
 // Quick-and-dirty escaping function.
 // Assumes that we are on an ASCII-based platform.
 static void
@@ -825,7 +865,8 @@ escape(const UChar *s, char *buffer) {
 }
 
 static struct SResource *
-addCollation(ParseState* state, struct SResource  *result, uint32_t startline, UErrorCode *status)
+addCollation(ParseState* state, struct SResource  *result, const char *collationType,
+             uint32_t startline, UErrorCode *status)
 {
     struct SResource  *member = NULL;
     struct UString    *tokenValue;
@@ -986,10 +1027,11 @@ addCollation(ParseState* state, struct SResource  *result, uint32_t startline, U
                     escape(parseError.preContext, preBuffer);
                     escape(parseError.postContext, postBuffer);
                     warning(line,
-                            "%%%%CollationBin could not be constructed from CollationElements\n"
+                            "%%%%CollationBin could not be constructed from %s/Sequence\n"
                             "  check context, check that the FractionalUCA.txt UCA version "
                             "matches the current UCD version\n"
-                            "  UErrorCode=%s  UParseError={ line=%d offset=%d pre=<> post=<> }",
+                            "  UErrorCode=%s  UParseError={ line=%d offset=%d pre=<%s> post=<%s> }",
+                            collationType,
                             u_errorName(intStatus),
                             parseError.line,
                             parseError.offset,
@@ -998,6 +1040,32 @@ addCollation(ParseState* state, struct SResource  *result, uint32_t startline, U
                     if(isStrict()){
                         *status = intStatus;
                         return NULL;
+                    }
+                }
+                if(uprv_strcmp(collationType, "search") != 0) {  // TODO: Support conjoining Jamo with expansions.
+printf("---- CollationBuilder %s\n", collationType);
+                    UErrorCode errorCode = U_ZERO_ERROR;
+                    uprv_memset(&parseError, 0, sizeof(parseError));
+                    UnicodeString rules(FALSE, member->u.fString.fChars, member->u.fString.fLength);
+                    GenrbImporter importer(&genrbdata);
+                    icu::CollationBuilder builder(icu::CollationRoot::getRoot(errorCode), errorCode);
+                    LocalPointer<icu::CollationTailoring> t(
+                            builder.parseAndBuild(rules, &importer, &parseError, errorCode));
+                    if(U_SUCCESS(errorCode)) {
+                        // TODO: print stats, compare size with v1; later only if(isVerbose())
+                        // TODO: write binary
+                    } else {
+                        const char *reason = builder.getErrorReason();
+                        if(reason == NULL) { reason = ""; }
+                        error(line, "CollationBuilder failed at %s/Sequence rule offset %ld: %s  %s",
+                                collationType, (long)parseError.offset, u_errorName(errorCode), reason);
+                        if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
+                            // Print pre- and post-context.
+                            char preBuffer[100], postBuffer[100];
+                            escape(parseError.preContext, preBuffer);
+                            escape(parseError.postContext, postBuffer);
+                            error(line, "  error context: \"...%s\" ! \"%s...\"", preBuffer, postBuffer);
+                        }
                     }
                 }
             } else {
@@ -1048,7 +1116,7 @@ parseCollationElements(ParseState* state, char *tag, uint32_t startline, UBool n
         printf(" collation elements %s at line %i \n",  (tag == NULL) ? "(null)" : tag, (int)startline);
     }
     if(!newCollation) {
-        return addCollation(state, result, startline, status);
+        return addCollation(state, result, "(no type)", startline, status);
     }
     else {
         for(;;) {
@@ -1106,7 +1174,7 @@ parseCollationElements(ParseState* state, char *tag, uint32_t startline, UBool n
                 if(token == TOK_OPEN_BRACE) {
                     token = getToken(state, &tokenValue, &comment, &line, status);
                     collationRes = table_open(state->bundle, subtag, NULL, status);
-                    collationRes = addCollation(state, collationRes, startline, status); /* need to parse the collation data regardless */
+                    collationRes = addCollation(state, collationRes, subtag, startline, status); /* need to parse the collation data regardless */
                     if (gIncludeUnihanColl || uprv_strcmp(subtag, "unihan") != 0) {
                         table_add(result, collationRes, startline, status);
                     }

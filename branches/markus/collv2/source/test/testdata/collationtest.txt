@@ -1093,6 +1093,7 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  A\u030A
 =  \u212B  # Angstrom sign
 
+# canonical closure on prefix rules, ICU ticket 9444
 @ rules
 &x=ä|ŝ
 * compare
