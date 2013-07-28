@@ -43,8 +43,8 @@ struct U_I18N_API CollationDataReader : public UMemory {
         IX_RESERVED2,
         IX_RESERVED3,
 
-        /** Array offset to Jamo CEs in ces[], or <0 if none. */
-        IX_JAMO_CES_START,  // 4
+        /** Array offset to Jamo CE32s in ce32s[], or <0 if none. */
+        IX_JAMO_CE32S_START,  // 4
 
         // Byte offsets from the start of the data, after the generic header.
         // The indexes[] are at byte offset 0, other data follows.

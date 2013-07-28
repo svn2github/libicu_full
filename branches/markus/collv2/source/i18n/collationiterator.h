@@ -69,6 +69,8 @@ private:
         }
         inline int64_t get(int32_t i) const { return buffer[i]; }
 
+        const int64_t *getCEs() const { return buffer.getAlias(); }
+
         int32_t length;
 
     private:
@@ -147,7 +149,7 @@ public:
             return ceBuffer.set(cesIndex++,
                     ((int64_t)(ce32 - t) << 32) | Collation::COMMON_SEC_AND_TER_CE);
         }
-        return nextCEFromSpecialCE32(d, c, ce32, errorCode);
+        return nextCEFromCE32(d, c, ce32, errorCode);
     }
 
     /**
@@ -175,6 +177,10 @@ public:
 
     inline int64_t getCE(int32_t i) const {
         return ceBuffer.get(i);
+    }
+
+    const int64_t *getCEs() const {
+        return ceBuffer.getCEs();
     }
 
     void clearCEs() {
@@ -242,11 +248,11 @@ protected:
     const CollationData *data;
 
 private:
-    int64_t nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                                  UErrorCode &errorCode);
+    int64_t nextCEFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                           UErrorCode &errorCode);
 
-    void appendCEsFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                                  UBool forward, UErrorCode &errorCode);
+    void appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                           UBool forward, UErrorCode &errorCode);
 
     /**
      * Computes a CE from c's ce32 which has the OFFSET_TAG.
@@ -291,13 +297,6 @@ private:
      * Called by appendNumericCEs() for each segment of at most 254 digits.
      */
     void appendNumericSegmentCEs(const char *digits, int32_t length, UErrorCode &errorCode);
-
-    /**
-     * Appends 2 or 3 CEs from a Hangul syllable,
-     * assuming that the constituent Jamos are all context-insensitive and map to single CEs.
-     * TODO: Otherwise DECOMP_HANGUL would have to be set.
-     */
-    void appendHangulExpansion(UChar32 c, UErrorCode &errorCode);
 
     CEBuffer ceBuffer;
     int32_t cesIndex;

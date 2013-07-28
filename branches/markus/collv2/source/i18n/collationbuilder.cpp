@@ -626,15 +626,6 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         ces[cesLength - 1] = tempCEFromIndexAndStrength(index, tempStrength);
     }
 
-    if(!hasContext && cesLength > 1) {
-        int32_t hst = u_getIntPropertyValue(nfdString.charAt(0), UCHAR_HANGUL_SYLLABLE_TYPE);
-        if(hst == U_HST_LEADING_JAMO || hst == U_HST_VOWEL_JAMO || hst == U_HST_TRAILING_JAMO) {
-            errorCode = U_UNSUPPORTED_ERROR;
-            parserErrorReason = "expansions for conjoining Jamo (hst=L/V/T) not supported";
-            return;
-        }
-    }
-
     setCaseBits(nfdString, parserErrorReason, errorCode);
     if(U_FAILURE(errorCode)) { return; }
 

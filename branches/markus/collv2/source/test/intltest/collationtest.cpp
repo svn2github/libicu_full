@@ -1260,6 +1260,16 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
         (coll->getAttribute(UCOL_NORMALIZATION_MODE, errorCode) == UCOL_ON) ?
         "on" : "off";
     if(errorCode.isFailure()) { return FALSE; }
+
+    // Get the sort keys first, for error debug output.
+    CollationKey prevKey;
+    if(!getCollationKey(prevFileLine, prevString.getBuffer(), prevString.length(),
+                        prevKey, errorCode)) {
+        return FALSE;
+    }
+    CollationKey key;
+    if(!getCollationKey(fileLine, s.getBuffer(), s.length(), key, errorCode)) { return FALSE; }
+
 // TODO: remove -- printf("line %d coll(%s).compare(prev, s)\n", fileLineNumber, norm);
     UCollationResult order = coll->compare(prevString, s, errorCode);
     if(order != expectedOrder || errorCode.isFailure()) {
@@ -1268,6 +1278,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
               (int)fileLineNumber, norm, order, expectedOrder, errorCode.errorName());
         errln(prevFileLine);
         errln(fileLine);
+        errln(printCollationKey(prevKey));
+        errln(printCollationKey(key));
         errorCode.reset();
         return FALSE;
     }
@@ -1279,6 +1291,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
               (int)fileLineNumber, norm, order, -expectedOrder, errorCode.errorName());
         errln(prevFileLine);
         errln(fileLine);
+        errln(printCollationKey(prevKey));
+        errln(printCollationKey(key));
         errorCode.reset();
         return FALSE;
     }
@@ -1293,6 +1307,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                   (int)fileLineNumber, norm, order, expectedOrder, errorCode.errorName());
             errln(prevFileLine);
             errln(fileLine);
+            errln(printCollationKey(prevKey));
+            errln(printCollationKey(key));
             errorCode.reset();
             return FALSE;
         }
@@ -1304,6 +1320,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                   (int)fileLineNumber, norm, order, -expectedOrder, errorCode.errorName());
             errln(prevFileLine);
             errln(fileLine);
+            errln(printCollationKey(prevKey));
+            errln(printCollationKey(key));
             errorCode.reset();
             return FALSE;
         }
@@ -1334,6 +1352,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
               (int)fileLineNumber, norm, order, expectedUTF8Order, errorCode.errorName());
         errln(prevFileLine);
         errln(fileLine);
+        errln(printCollationKey(prevKey));
+        errln(printCollationKey(key));
         errorCode.reset();
         return FALSE;
     }
@@ -1344,6 +1364,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
               (int)fileLineNumber, norm, order, -expectedUTF8Order, errorCode.errorName());
         errln(prevFileLine);
         errln(fileLine);
+        errln(printCollationKey(prevKey));
+        errln(printCollationKey(key));
         errorCode.reset();
         return FALSE;
     }
@@ -1356,6 +1378,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                   (int)fileLineNumber, norm, order, expectedUTF8Order, errorCode.errorName());
             errln(prevFileLine);
             errln(fileLine);
+            errln(printCollationKey(prevKey));
+            errln(printCollationKey(key));
             errorCode.reset();
             return FALSE;
         }
@@ -1366,6 +1390,8 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
                   (int)fileLineNumber, norm, order, -expectedUTF8Order, errorCode.errorName());
             errln(prevFileLine);
             errln(fileLine);
+            errln(printCollationKey(prevKey));
+            errln(printCollationKey(key));
             errorCode.reset();
             return FALSE;
         }
@@ -1384,17 +1410,12 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
               (int)fileLineNumber, norm, order, expectedOrder, errorCode.errorName());
         errln(prevFileLine);
         errln(fileLine);
+        errln(printCollationKey(prevKey));
+        errln(printCollationKey(key));
         errorCode.reset();
         return FALSE;
     }
 
-    CollationKey prevKey;
-    if(!getCollationKey(prevFileLine, prevString.getBuffer(), prevString.length(),
-                        prevKey, errorCode)) {
-        return FALSE;
-    }
-    CollationKey key;
-    if(!getCollationKey(fileLine, s.getBuffer(), s.length(), key, errorCode)) { return FALSE; }
     order = prevKey.compareTo(key, errorCode);
     if(order != expectedOrder || errorCode.isFailure()) {
         errln(fileTestName);

@@ -252,6 +252,10 @@ public:
         IMPLICIT_TAG = 15
     };
 
+    static UBool isAssignedCE32(uint32_t ce32) {
+        return ce32 != FALLBACK_CE32 && ce32 != UNASSIGNED_CE32;
+    }
+
     /**
      * We limit the number of CEs in an expansion
      * so that we can use a small number of length bits in the data structure,
@@ -316,6 +320,16 @@ public:
         return !isSpecialCE32(ce32) ||
                 tagFromCE32(ce32) == LONG_PRIMARY_TAG ||
                 tagFromCE32(ce32) == LONG_SECONDARY_TAG;
+    }
+
+    /**
+     * @return TRUE if the ce32 yields one or more CEs without further data lookups
+     */
+    static UBool isSelfContainedCE32(uint32_t ce32) {
+        return !isSpecialCE32(ce32) ||
+                tagFromCE32(ce32) == LONG_PRIMARY_TAG ||
+                tagFromCE32(ce32) == LONG_SECONDARY_TAG ||
+                tagFromCE32(ce32) == LATIN_EXPANSION_TAG;
     }
 
     static inline UBool isPrefixCE32(uint32_t ce32) {
@@ -438,8 +452,6 @@ public:
      * Returns the unassigned-character implicit primary weight for any valid code point c.
      */
     static uint32_t unassignedPrimaryFromCodePoint(UChar32 c);
-    // TODO: Set [first unassigned] to unassignedPrimaryFromCodePoint(-1).
-    // TODO: Set [last unassigned] to unassignedPrimaryFromCodePoint(0x10ffff).
 
     static inline int64_t unassignedCEFromCodePoint(UChar32 c) {
         return makeCE(unassignedPrimaryFromCodePoint(c));

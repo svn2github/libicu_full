@@ -220,10 +220,10 @@ CollationIterator::forbidSurrogateCodePoints() const {
 }
 
 int64_t
-CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                                         UErrorCode &errorCode) {
+CollationIterator::nextCEFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                                  UErrorCode &errorCode) {
     --ceBuffer.length;  // Undo ceBuffer.incLength().
-    appendCEsFromSpecialCE32(d, c, ce32, TRUE, errorCode);
+    appendCEsFromCE32(d, c, ce32, TRUE, errorCode);
     if(U_SUCCESS(errorCode)) {
         return ceBuffer.get(cesIndex++);
     } else {
@@ -232,9 +232,9 @@ CollationIterator::nextCEFromSpecialCE32(const CollationData *d, UChar32 c, uint
 }
 
 void
-CollationIterator::appendCEsFromSpecialCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                                            UBool forward, UErrorCode &errorCode) {
-    for(;;) {  // Loop while ce32 is special.
+CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                                     UBool forward, UErrorCode &errorCode) {
+    while(Collation::isSpecialCE32(ce32)) {
         switch(Collation::tagFromCE32(ce32)) {
         case Collation::FALLBACK_TAG:
         case Collation::RESERVED_TAG_3:
@@ -342,10 +342,27 @@ CollationIterator::appendCEsFromSpecialCE32(const CollationData *d, UChar32 c, u
                 ce32 = d->ce32s[0];
                 break;
             }
-        case Collation::HANGUL_TAG:
-            appendHangulExpansion(c, errorCode);
-            return;
-        case Collation::LEAD_SURROGATE_TAG:
+        case Collation::HANGUL_TAG: {
+            const uint32_t *jamoCE32s = d->jamoCE32s;
+            c -= Hangul::HANGUL_BASE;
+            UChar32 t = c % Hangul::JAMO_T_COUNT;
+            c /= Hangul::JAMO_T_COUNT;
+            UChar32 v = c % Hangul::JAMO_V_COUNT;
+            c /= Hangul::JAMO_V_COUNT;
+            // Each conjoining Jamo ce32 should be isSimpleOrLongCE32() or an expansion.
+            // We should not need to compute each Jamo code point.
+            // In particular, there should be no context, and no offset or implict ce32.
+            appendCEsFromCE32(d, 0, jamoCE32s[c], forward, errorCode);
+            appendCEsFromCE32(d, 0, jamoCE32s[19 + v], forward, errorCode);
+            if(t == 0) { return; }
+            // offset 39 = 19 + 21 - 1:
+            // 19 = JAMO_L_COUNT
+            // 21 = JAMO_T_COUNT
+            // -1 = omit t==0
+            ce32 = jamoCE32s[39 + t];
+            break;
+        }
+        case Collation::LEAD_SURROGATE_TAG: {
             U_ASSERT(forward);  // Backward iteration should never see lead surrogate code _unit_ data.
             U_ASSERT(U16_IS_LEAD(c));
             UChar trail;
@@ -365,6 +382,7 @@ CollationIterator::appendCEsFromSpecialCE32(const CollationData *d, UChar32 c, u
                 ce32 = Collation::UNASSIGNED_CE32;
             }
             break;
+        }
         case Collation::OFFSET_TAG:
             ceBuffer.append(getCEFromOffsetCE32(d, c, ce32), errorCode);
             return;
@@ -377,11 +395,8 @@ CollationIterator::appendCEsFromSpecialCE32(const CollationData *d, UChar32 c, u
                 return;
             }
         }
-        if(!Collation::isSpecialCE32(ce32)) {
-            ceBuffer.append(Collation::ceFromSimpleCE32(ce32), errorCode);
-            return;
-        }
     }
+    ceBuffer.append(Collation::ceFromSimpleCE32(ce32), errorCode);
 }
 
 int64_t
@@ -605,11 +620,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
         // and then from the combining marks that we skipped before the match.
         UChar32 c = originalCp;
         for(;;) {
-            if(!Collation::isSpecialCE32(ce32)) {
-                ceBuffer.append(Collation::ceFromSimpleCE32(ce32), errorCode);
-            } else {
-                appendCEsFromSpecialCE32(d, c, ce32, TRUE, errorCode);
-            }
+            appendCEsFromCE32(d, c, ce32, TRUE, errorCode);
             // Fetch CE32s for skipped combining marks from the normal data, with fallback,
             // rather than from the CollationData where we found the contraction.
             if(!skipped->hasNext()) { break; }
@@ -786,27 +797,6 @@ CollationIterator::appendNumericSegmentCEs(const char *digits, int32_t length, U
     ceBuffer.append(Collation::makeCE(primary), errorCode);
 }
 
-void
-CollationIterator::appendHangulExpansion(UChar32 c, UErrorCode &errorCode) {
-    const int64_t *jamoCEs = data->jamoCEs;
-    c -= Hangul::HANGUL_BASE;
-    UChar32 t = c % Hangul::JAMO_T_COUNT;
-    c /= Hangul::JAMO_T_COUNT;
-    UChar32 v = c % Hangul::JAMO_V_COUNT;
-    c /= Hangul::JAMO_V_COUNT;
-    if(!ceBuffer.ensureAppendCapacity(t == 0 ? 2 : 3, errorCode)) { return; }
-    ceBuffer.set(ceBuffer.length, jamoCEs[c]);
-    ceBuffer.set(ceBuffer.length + 1, jamoCEs[19 + v]);
-    ceBuffer.length += 2;
-    if(t != 0) {
-        // offset 39 = 19 + 21 - 1:
-        // 19 = JAMO_L_COUNT
-        // 21 = JAMO_T_COUNT
-        // -1 = omit t==0
-        ceBuffer.set(ceBuffer.length++, jamoCEs[39 + t]);
-    }
-}
-
 // TODO: Backward iteration:
 // So far, this is just the initial code collection.
 
@@ -834,7 +824,7 @@ CollationIterator::previousCE(UErrorCode &errorCode) {
     if(Collation::isSimpleOrLongCE32(ce32)) {
         return Collation::ceFromCE32(ce32);
     }
-    appendCEsFromSpecialCE32(d, c, ce32, FALSE, errorCode);
+    appendCEsFromCE32(d, c, ce32, FALSE, errorCode);
     if(U_SUCCESS(errorCode)) {
         return ceBuffer.get(--ceBuffer.length);
     } else {

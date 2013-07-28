@@ -198,7 +198,7 @@ protected:
     int32_t copyContractionsFromBaseCE32(UnicodeString &context, UChar32 c, uint32_t ce32,
                                          ConditionalCE32 *cond, UErrorCode &errorCode);
 
-    UBool getJamoCEs(int64_t jamoCEs[], UErrorCode &errorCode);
+    UBool getJamoCE32s(uint32_t jamoCE32s[], UErrorCode &errorCode);
     void setDigitTags(UErrorCode &errorCode);
     void setLeadSurrogates(UErrorCode &errorCode);
 

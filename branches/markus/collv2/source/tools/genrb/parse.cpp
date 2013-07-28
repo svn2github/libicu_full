@@ -1042,30 +1042,28 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                         return NULL;
                     }
                 }
-                if(uprv_strcmp(collationType, "search") != 0) {  // TODO: Support conjoining Jamo with expansions.
 printf("---- CollationBuilder %s\n", collationType);
-                    UErrorCode errorCode = U_ZERO_ERROR;
-                    uprv_memset(&parseError, 0, sizeof(parseError));
-                    UnicodeString rules(FALSE, member->u.fString.fChars, member->u.fString.fLength);
-                    GenrbImporter importer(&genrbdata);
-                    icu::CollationBuilder builder(icu::CollationRoot::getRoot(errorCode), errorCode);
-                    LocalPointer<icu::CollationTailoring> t(
-                            builder.parseAndBuild(rules, &importer, &parseError, errorCode));
-                    if(U_SUCCESS(errorCode)) {
-                        // TODO: print stats, compare size with v1; later only if(isVerbose())
-                        // TODO: write binary
-                    } else {
-                        const char *reason = builder.getErrorReason();
-                        if(reason == NULL) { reason = ""; }
-                        error(line, "CollationBuilder failed at %s/Sequence rule offset %ld: %s  %s",
-                                collationType, (long)parseError.offset, u_errorName(errorCode), reason);
-                        if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
-                            // Print pre- and post-context.
-                            char preBuffer[100], postBuffer[100];
-                            escape(parseError.preContext, preBuffer);
-                            escape(parseError.postContext, postBuffer);
-                            error(line, "  error context: \"...%s\" ! \"%s...\"", preBuffer, postBuffer);
-                        }
+                UErrorCode errorCode = U_ZERO_ERROR;
+                uprv_memset(&parseError, 0, sizeof(parseError));
+                UnicodeString rules(FALSE, member->u.fString.fChars, member->u.fString.fLength);
+                GenrbImporter importer(&genrbdata);
+                icu::CollationBuilder builder(icu::CollationRoot::getRoot(errorCode), errorCode);
+                LocalPointer<icu::CollationTailoring> t(
+                        builder.parseAndBuild(rules, &importer, &parseError, errorCode));
+                if(U_SUCCESS(errorCode)) {
+                    // TODO: print stats, compare size with v1; later only if(isVerbose())
+                    // TODO: write binary
+                } else {
+                    const char *reason = builder.getErrorReason();
+                    if(reason == NULL) { reason = ""; }
+                    error(line, "CollationBuilder failed at %s/Sequence rule offset %ld: %s  %s",
+                            collationType, (long)parseError.offset, u_errorName(errorCode), reason);
+                    if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
+                        // Print pre- and post-context.
+                        char preBuffer[100], postBuffer[100];
+                        escape(parseError.preContext, preBuffer);
+                        escape(parseError.postContext, postBuffer);
+                        error(line, "  error context: \"...%s\" ! \"%s...\"", preBuffer, postBuffer);
                     }
                 }
             } else {

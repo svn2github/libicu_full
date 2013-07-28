@@ -206,8 +206,7 @@ CollationDataBuilder::isCompressibleLeadByte(uint32_t b) const {
 
 UBool
 CollationDataBuilder::isAssigned(UChar32 c) const {
-    uint32_t ce32 = utrie2_get32(trie, c);
-    return ce32 != Collation::FALLBACK_CE32 && ce32 != Collation::UNASSIGNED_CE32;
+    return Collation::isAssignedCE32(utrie2_get32(trie, c));
 }
 
 uint32_t
@@ -229,10 +228,7 @@ CollationDataBuilder::getSingleCE(UChar32 c, UErrorCode &errorCode) const {
         fromBase = TRUE;
         ce32 = base->getCE32(c);
     }
-    for(;;) {  // Loop while ce32 is special.
-        if(!Collation::isSpecialCE32(ce32)) {
-            return Collation::ceFromSimpleCE32(ce32);
-        }
+    while(Collation::isSpecialCE32(ce32)) {
         switch(Collation::tagFromCE32(ce32)) {
         case Collation::LATIN_EXPANSION_TAG:
         case Collation::PREFIX_TAG:
@@ -284,6 +280,7 @@ CollationDataBuilder::getSingleCE(UChar32 c, UErrorCode &errorCode) const {
             return Collation::unassignedCEFromCodePoint(c);
         }
     }
+    return Collation::ceFromSimpleCE32(ce32);
 }
 
 int32_t
@@ -880,27 +877,83 @@ CollationDataBuilder::suppressContractions(const UnicodeSet &set, UErrorCode &er
 }
 
 UBool
-CollationDataBuilder::getJamoCEs(int64_t jamoCEs[], UErrorCode &errorCode) {
+CollationDataBuilder::getJamoCE32s(uint32_t jamoCE32s[], UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return FALSE; }
-    UBool anyJamoAssigned = FALSE;
-    int32_t i;  // Count within Jamo types.
+    UBool anyJamoAssigned = base == NULL;  // always set jamoCE32s in the base data
+    UBool needToCopyFromBase = FALSE;
     int32_t j = 0;  // Count across Jamo types.
-    UChar32 jamo = Hangul::JAMO_L_BASE;
-    for(i = 0; i < Hangul::JAMO_L_COUNT; ++i, ++j, ++jamo) {
-        anyJamoAssigned |= isAssigned(jamo);
-        jamoCEs[j] = getSingleCE(jamo, errorCode);
+    for(UChar32 jamo = Hangul::JAMO_L_BASE;;) {
+        UBool fromBase = FALSE;
+        uint32_t ce32 = utrie2_get32(trie, jamo);
+        anyJamoAssigned |= Collation::isAssignedCE32(ce32);
+        if(ce32 == Collation::FALLBACK_CE32) {
+            fromBase = TRUE;
+            ce32 = base->getCE32(jamo);
+        }
+        if(Collation::isSpecialCE32(ce32)) {
+            switch(Collation::tagFromCE32(ce32)) {
+            case Collation::LONG_PRIMARY_TAG:
+            case Collation::LONG_SECONDARY_TAG:
+            case Collation::LATIN_EXPANSION_TAG:
+                // Copy the ce32 as-is.
+                break;
+            case Collation::EXPANSION32_TAG:
+            case Collation::EXPANSION_TAG:
+                if(fromBase) {
+                    // Defer copying the expansion until we know if anyJamoAssigned.
+                    ce32 = Collation::makeCE32FromTagAndIndex(Collation::FALLBACK_TAG, jamo);
+                    needToCopyFromBase = TRUE;
+                }
+                break;
+            case Collation::IMPLICIT_TAG:
+                // An unassigned Jamo should only occur in tests with incomplete bases.
+                if(fromBase) {
+                    ce32 = Collation::makeCE32FromTagAndIndex(Collation::FALLBACK_TAG, jamo);
+                    needToCopyFromBase = TRUE;
+                } else {
+                    ce32 = encodeOneCE(Collation::unassignedCEFromCodePoint(jamo), errorCode);
+                }
+                break;
+            case Collation::OFFSET_TAG:
+                ce32 = getCE32FromOffsetCE32(fromBase, jamo, ce32);
+                break;
+            case Collation::FALLBACK_TAG:
+            case Collation::RESERVED_TAG_3:
+            case Collation::RESERVED_TAG_7:
+            case Collation::DIGIT_TAG:
+            case Collation::U0000_TAG:
+            case Collation::HANGUL_TAG:
+            case Collation::LEAD_SURROGATE_TAG:
+                errorCode = U_INTERNAL_PROGRAM_ERROR;
+                return FALSE;
+            case Collation::PREFIX_TAG:
+            case Collation::CONTRACTION_TAG:
+                errorCode = U_UNSUPPORTED_ERROR;
+                return FALSE;
+            }
+        }
+        jamoCE32s[j++] = ce32;
+        if(jamo == Hangul::JAMO_L_END) {
+            jamo = Hangul::JAMO_V_BASE;
+        } else if(jamo == Hangul::JAMO_V_END) {
+            jamo = Hangul::JAMO_T_BASE + 1;
+        } else if(jamo == Hangul::JAMO_T_END) {
+            break;
+        } else {
+            ++jamo;
+        }
     }
-    jamo = Hangul::JAMO_V_BASE;
-    for(i = 0; i < Hangul::JAMO_V_COUNT; ++i, ++j, ++jamo) {
-        anyJamoAssigned |= isAssigned(jamo);
-        jamoCEs[j] = getSingleCE(jamo, errorCode);
+    U_ASSERT(j == CollationData::JAMO_CE32S_LENGTH);
+    if(anyJamoAssigned && needToCopyFromBase) {
+        for(j = 0; j < CollationData::JAMO_CE32S_LENGTH; ++j) {
+            uint32_t ce32 = jamoCE32s[j];
+            if(Collation::hasCE32Tag(ce32, Collation::FALLBACK_TAG)) {
+                UChar32 jamo = Collation::indexFromCE32(ce32);
+                jamoCE32s[j] = copyFromBaseCE32(jamo, base->getCE32(jamo), FALSE, errorCode);
+            }
+        }
     }
-    jamo = Hangul::JAMO_T_BASE + 1;  // Omit U+11A7 which is not a "T" Jamo.
-    for(i = 1; i < Hangul::JAMO_T_COUNT; ++i, ++j, ++jamo) {
-        anyJamoAssigned |= isAssigned(jamo);
-        jamoCEs[j] = getSingleCE(jamo, errorCode);
-    }
-    return anyJamoAssigned;
+    return anyJamoAssigned && U_SUCCESS(errorCode);
 }
 
 void
@@ -983,13 +1036,12 @@ CollationDataBuilder::buildMappings(CollationData &data, UErrorCode &errorCode) 
 
     buildContexts(errorCode);
 
-    int64_t jamoCEs[19+21+27];
-    UBool anyJamoAssigned = getJamoCEs(jamoCEs, errorCode);
+    uint32_t jamoCE32s[CollationData::JAMO_CE32S_LENGTH];
     int32_t jamoIndex = -1;
-    if(anyJamoAssigned || base == NULL) {
-        jamoIndex = ce64s.size();
-        for(int32_t i = 0; i < LENGTHOF(jamoCEs); ++i) {
-            ce64s.addElement(jamoCEs[i], errorCode);
+    if(getJamoCE32s(jamoCE32s, errorCode)) {
+        jamoIndex = ce32s.size();
+        for(int32_t i = 0; i < CollationData::JAMO_CE32S_LENGTH; ++i) {
+            ce32s.addElement((int32_t)jamoCE32s[i], errorCode);
         }
     }
 
@@ -1019,9 +1071,9 @@ CollationDataBuilder::buildMappings(CollationData &data, UErrorCode &errorCode) 
     data.contexts = contexts.getBuffer();
     data.base = base;
     if(jamoIndex >= 0) {
-        data.jamoCEs = data.ces + jamoIndex;
+        data.jamoCE32s = data.ce32s + jamoIndex;
     } else {
-        data.jamoCEs = base->jamoCEs;
+        data.jamoCE32s = base->jamoCE32s;
     }
     data.unsafeBackwardSet = &unsafeBackwardSet;
 }

@@ -908,7 +908,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     indexes[CollationDataReader::IX_INDEXES_LENGTH] = CollationDataReader::IX_TOTAL_SIZE + 1;
     indexes[CollationDataReader::IX_OPTIONS] = data.numericPrimary | settings.options;
 
-    indexes[CollationDataReader::IX_JAMO_CES_START] = data.jamoCEs - data.ces;
+    indexes[CollationDataReader::IX_JAMO_CE32S_START] = data.jamoCE32s - data.ce32s;
 
     printf("*** CLDR root collation part sizes ***\n");
     int32_t totalSize = (int32_t)sizeof(indexes);

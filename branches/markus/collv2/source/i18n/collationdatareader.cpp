@@ -123,20 +123,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         data.ces = NULL;
     }
 
-    int32_t jamoCEsStart = getIndex(inIndexes, indexesLength, IX_JAMO_CES_START);
-    if(jamoCEsStart >= 0) {
-        if(data.ces == NULL) {
-            errorCode = U_INVALID_FORMAT_ERROR;  // Index into non-existent CEs[].
-            return;
-        }
-        data.jamoCEs = data.ces + jamoCEsStart;
-    } else if(baseData != NULL) {
-        data.jamoCEs = baseData->jamoCEs;
-    } else {
-        errorCode = U_INVALID_FORMAT_ERROR;  // No Jamo CEs for Hangul processing.
-        return;
-    }
-
     index = IX_CE32S_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
@@ -148,6 +134,20 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         data.ce32s = reinterpret_cast<const uint32_t *>(inBytes + offset);
     } else {
         data.ce32s = NULL;
+    }
+
+    int32_t jamoCE32sStart = getIndex(inIndexes, indexesLength, IX_JAMO_CE32S_START);
+    if(jamoCE32sStart >= 0) {
+        if(data.ce32s == NULL) {
+            errorCode = U_INVALID_FORMAT_ERROR;  // Index into non-existent ce32s[].
+            return;
+        }
+        data.jamoCE32s = data.ce32s + jamoCE32sStart;
+    } else if(baseData != NULL) {
+        data.jamoCE32s = baseData->jamoCE32s;
+    } else {
+        errorCode = U_INVALID_FORMAT_ERROR;  // No Jamo CE32s for Hangul processing.
+        return;
     }
 
     index = IX_ROOT_ELEMENTS_OFFSET;

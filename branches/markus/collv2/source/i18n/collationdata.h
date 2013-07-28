@@ -38,7 +38,7 @@ struct U_I18N_API CollationData : public UMemory {
     CollationData(const Normalizer2Impl &nfc)
             : trie(NULL),
               ce32s(NULL), ces(NULL), contexts(NULL), base(NULL),
-              jamoCEs(NULL),
+              jamoCE32s(NULL),
               nfcImpl(nfc),
               numericPrimary(0x12000000),
               compressibleBytes(NULL),
@@ -109,6 +109,9 @@ struct U_I18N_API CollationData : public UMemory {
     void makeReorderTable(const int32_t *reorder, int32_t length,
                           uint8_t table[256], UErrorCode &errorCode) const;
 
+    /** @see jamoCE32s */
+    static const int32_t JAMO_CE32S_LENGTH = 19 + 21 + 27;
+
     /** Main lookup trie. */
     const UTrie2 *trie;
     /**
@@ -124,10 +127,11 @@ struct U_I18N_API CollationData : public UMemory {
     /** Base collation data, or NULL if this data itself is a base. */
     const CollationData *base;
     /**
-     * Simple array of 19+21+27 CEs, one per canonical Jamo L/V/T.
+     * Simple array of JAMO_CE32S_LENGTH=19+21+27 CE32s, one per canonical Jamo L/V/T.
+     * They are normally simple CE32s, rarely expansions.
      * For fast handling of HANGUL_TAG.
      */
-    const int64_t *jamoCEs;
+    const uint32_t *jamoCE32s;
     const Normalizer2Impl &nfcImpl;
     /** The single-byte primary weight (xx000000) for numeric collation. */
     uint32_t numericPrimary;

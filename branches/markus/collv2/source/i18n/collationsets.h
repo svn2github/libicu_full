@@ -48,10 +48,13 @@ public:
 
     void forData(const CollationData *d, UErrorCode &errorCode);
 
-    // all following: @internal, only public for access by callback
+    /**
+     * @return U_SUCCESS(errorCode) in C++, void in Java
+     * @internal only public for access by callback
+     */
+    UBool handleCE32(UChar32 start, UChar32 end, uint32_t ce32);
 
-    void handleCE32(UChar32 start, UChar32 end, uint32_t ce32);
-
+private:
     void compare(UChar32 c, uint32_t ce32, uint32_t baseCE32);
     void comparePrefixes(UChar32 c, const UChar *p, const UChar *q);
     void compareContractions(UChar32 c, const UChar *p, const UChar *q);

@@ -39,8 +39,11 @@ public:
     /* Korean Hangul and Jamo constants */
     enum {
         JAMO_L_BASE=0x1100,     /* "lead" jamo */
+        JAMO_L_END=0x1112,
         JAMO_V_BASE=0x1161,     /* "vowel" jamo */
+        JAMO_V_END=0x1175,
         JAMO_T_BASE=0x11a7,     /* "trail" jamo */
+        JAMO_T_END=0x11c2,
 
         HANGUL_BASE=0xac00,
         HANGUL_END=0xd7a3,

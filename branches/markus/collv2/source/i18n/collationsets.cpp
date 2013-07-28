@@ -22,6 +22,7 @@
 #include "collationsets.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
+#include "utf16collationiterator.h"
 #include "utrie2.h"
 
 // TODO: This code is untested. Test & debug!
@@ -36,8 +37,7 @@ enumTailoredRange(const void *context, UChar32 start, UChar32 end, uint32_t ce32
         return TRUE;  // fallback to base, not tailored
     }
     TailoredSet *ts = (TailoredSet *)context;
-    ts->handleCE32(start, end, ce32);
-    return U_SUCCESS(ts->errorCode);
+    return ts->handleCE32(start, end, ce32);
 }
 
 U_CDECL_END
@@ -47,17 +47,19 @@ TailoredSet::forData(const CollationData *d, UErrorCode &ec) {
     if(U_FAILURE(ec)) { return; }
     errorCode = ec;  // Preserve info & warning codes.
     data = d;
+    baseData = d->base;
+    U_ASSERT(baseData != NULL);
     utrie2_enum(data->trie, NULL, enumTailoredRange, this);
     ec = errorCode;
 }
 
-void
+UBool
 TailoredSet::handleCE32(UChar32 start, UChar32 end, uint32_t ce32) {
     U_ASSERT(ce32 != Collation::FALLBACK_CE32);
     if(Collation::isSpecialCE32(ce32)) {
         ce32 = data->getIndirectCE32(ce32);
         if(ce32 == Collation::FALLBACK_CE32) {
-            return;
+            return U_SUCCESS(errorCode);
         }
     }
     do {
@@ -65,7 +67,7 @@ TailoredSet::handleCE32(UChar32 start, UChar32 end, uint32_t ce32) {
         // Do not just continue if ce32 == baseCE32 because
         // contractions and expansions in different data objects
         // normally differ even if they have the same data offsets.
-        if(Collation::isSimpleOrLongCE32(ce32) && Collation::isSimpleOrLongCE32(baseCE32)) {
+        if(Collation::isSelfContainedCE32(ce32) && Collation::isSelfContainedCE32(baseCE32)) {
             // fastpath
             if(ce32 != baseCE32) {
                 tailored->add(start);
@@ -74,6 +76,7 @@ TailoredSet::handleCE32(UChar32 start, UChar32 end, uint32_t ce32) {
             compare(start, ce32, baseCE32);
         }
     } while(++start <= end);
+    return U_SUCCESS(errorCode);
 }
 
 void
@@ -200,13 +203,8 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
     } else if(tag == Collation::HANGUL_TAG) {
         UChar jamos[3];
         int32_t length = Hangul::decompose(c, jamos);
-        const int64_t *jamoCEs = data->jamoCEs;
-        const int64_t *baseJamoCEs = baseData->jamoCEs;
-        UChar l = jamos[0];
-        UChar v = jamos[1];
-        if(jamoCEs[l] != baseJamoCEs[l] ||
-                jamoCEs[19 + v] != baseJamoCEs[19 + v] ||
-                (length == 3 && jamoCEs[39 + jamos[2]] != baseJamoCEs[39 + jamos[2]])) {
+        if(tailored->contains(jamos[0]) || tailored->contains(jamos[1]) ||
+                (length == 3 && tailored->contains(jamos[2]))) {
             add(c);
         }
     } else if(ce32 != baseCE32) {
@@ -502,25 +500,13 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
             if(sink != NULL) {
                 // TODO: This should be optimized,
                 // especially if [start..end] is the complete Hangul range. (assert that)
+                UTF16CollationIterator iter(data, FALSE, NULL, NULL, NULL);
+                UChar hangul[1] = { 0 };
                 for(UChar32 c = start; c <= end; ++c) {
-                    const int64_t *jamoCEs = data->jamoCEs;
-                    c -= Hangul::HANGUL_BASE;
-                    UChar32 t = c % Hangul::JAMO_T_COUNT;
-                    c /= Hangul::JAMO_T_COUNT;
-                    UChar32 v = c % Hangul::JAMO_V_COUNT;
-                    c /= Hangul::JAMO_V_COUNT;
-                    ces[0] = jamoCEs[c];
-                    ces[1] = jamoCEs[19 + v];
-                    if(t == 0) {
-                        sink->handleExpansion(ces, 2);
-                    } else {
-                        // offset 39 = 19 + 21 - 1:
-                        // 19 = JAMO_L_COUNT
-                        // 21 = JAMO_T_COUNT
-                        // -1 = omit t==0
-                        ces[2] = jamoCEs[39 + t];
-                        sink->handleExpansion(ces, 3);
-                    }
+                    hangul[0] = (UChar)c;
+                    iter.setText(hangul, hangul + 1);
+                    int32_t length = iter.fetchCEs(errorCode);
+                    sink->handleExpansion(iter.getCEs(), length);
                 }
             }
             // Optimization: If we have a prefix,
