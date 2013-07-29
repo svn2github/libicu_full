@@ -123,7 +123,9 @@ private:
     void addWithClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
                         uint32_t ce32, UErrorCode &errorCode);
 
+    UBool ignorePrefix(const UnicodeString &s, UErrorCode &errorCode) const;
     UBool ignoreString(const UnicodeString &s, UErrorCode &errorCode) const;
+    UBool isFCD(const UnicodeString &s, UErrorCode &errorCode) const;
 
     void closeOverComposites(UErrorCode &errorCode);
 

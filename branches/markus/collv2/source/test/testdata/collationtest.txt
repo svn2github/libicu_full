@@ -1104,3 +1104,15 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  a\u0308ŝ
 =  äs\u0302
 <3 äX
+
+** test: conjoining Jamo map to expansions
+@ rules
+&gg=\u1101  # Jamo Lead consonant GG
+&nj=\u11AC  # Jamo Trail consonant NJ
+* compare
+<1 gg\u1161nj
+=  \u1101\u1161\u11AC
+=  \uAE4C\u11AC
+=  \uAE51
+<3 gg\u1161nJ
+<1 \u1100\u1100

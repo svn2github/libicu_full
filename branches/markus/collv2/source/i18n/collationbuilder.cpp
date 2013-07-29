@@ -646,8 +646,7 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
     }
     uint32_t ce32 = dataBuilder->encodeCEs(ces, cesLength, errorCode);
     if((prefix != nfdPrefix || str != nfdString) &&
-            fcd.isNormalized(prefix, errorCode) &&
-            fcd.isNormalized(str, errorCode)) {
+            !ignorePrefix(prefix, errorCode) && !ignoreString(str, errorCode)) {
         // Map from the original input to the CEs.
         // We do this in case the canonical closure is incomplete,
         // so that it is possible to explicitly provide the missing mappings.
@@ -1025,16 +1024,21 @@ CollationBuilder::addWithClosure(const UnicodeString &nfdPrefix, const UnicodeSt
 }
 
 UBool
+CollationBuilder::ignorePrefix(const UnicodeString &s, UErrorCode &errorCode) const {
+    // Do not map non-FCD prefixes.
+    return !isFCD(s, errorCode);
+}
+
+UBool
 CollationBuilder::ignoreString(const UnicodeString &s, UErrorCode &errorCode) const {
-    if(U_FAILURE(errorCode) || s.isEmpty()) { return TRUE; }
-    // Do not map non-NFD strings.
-    if(!fcd.isNormalized(s, errorCode)) { return TRUE; }
-    // Do not map strings with Hangul syllables: We decompose those on the fly.
-    int32_t length = s.length();
-    for(int32_t i = 0; i < length; ++i) {
-        if(Hangul::isHangul(s.charAt(i))) { return TRUE; }
-    }
-    return FALSE;
+    // Do not map non-FCD strings.
+    // Do not map strings that start with Hangul syllables: We decompose those on the fly.
+    return !isFCD(s, errorCode) || Hangul::isHangul(s.charAt(0));
+}
+
+UBool
+CollationBuilder::isFCD(const UnicodeString &s, UErrorCode &errorCode) const {
+    return U_SUCCESS(errorCode) && fcd.isNormalized(s, errorCode);
 }
 
 void

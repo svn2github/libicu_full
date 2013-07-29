@@ -352,6 +352,9 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             // Each conjoining Jamo ce32 should be isSimpleOrLongCE32() or an expansion.
             // We should not need to compute each Jamo code point.
             // In particular, there should be no context, and no offset or implict ce32.
+            // Possible optimization: We could use a bit in the Hangul ce32
+            // to indicate that none of the Jamo CE32s are isSpecialCE32(),
+            // and avoid the recursive function calls and the per-Jamo tests.
             appendCEsFromCE32(d, 0, jamoCE32s[c], forward, errorCode);
             appendCEsFromCE32(d, 0, jamoCE32s[19 + v], forward, errorCode);
             if(t == 0) { return; }
