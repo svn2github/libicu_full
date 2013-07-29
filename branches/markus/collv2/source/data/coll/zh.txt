@@ -2793,7 +2793,7 @@ zh{
         zhuyin{
             Sequence{
                 " [reorder Hani Bopo]"
-                "&[last primary ignorable ]<<ˉ<ˊ<ˇ<ˋ<˙<˪<˫"
+                "&[last primary ignorable ]<<ˉ<<ˊ<<ˇ<<ˋ<<˙<<˪<<˫"  // patched for v2: secondary CEs, http://unicode.org/cldr/trac/ticket/6511
                 "&[before 2]a<<ā<<<Ā<<á<<<Á<<ǎ<<<Ǎ<<à<<<À"
                 "&[before 2]e<<ē<<<Ē<<é<<<É<<ě<<<Ě<<è<<<È"
                 "&e<<ê̄<<<Ê̄<<ế<<<Ế<<ê̌<<<Ê̌<<ề<<<Ề"
