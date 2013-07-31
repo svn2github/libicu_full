@@ -287,7 +287,7 @@ public:
      * @return a StringEnumeration over the locales available.
      * @internal
      */
-    static StringEnumeration* U_EXPORT2 getAvailableLocales(void);
+    static StringEnumeration* U_EXPORT2 getAvailableLocales(UErrorCode &status);
 
     /**
      * Returns the 'functionally equivalent' locale with respect to plural rules. 

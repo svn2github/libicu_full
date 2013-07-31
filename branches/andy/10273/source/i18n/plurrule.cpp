@@ -1498,31 +1498,31 @@ void NumberInfo::init(double n, int32_t v, int64_t f) {
 }
 
 int32_t NumberInfo::decimals(double n) {
-    // Count the number of decimal digits in the fraction part of the number.
-    // TODO: there must be a better way. Sloppy port from ICU4J.
-    //       This fails with numbers like 0.0001234567890123456, which kick over
-    //       into exponential format in the output from printf.
-    //       printf has no format specification to stay in fixed point form,
-    //         not print trailing fraction zeros, not print a fixed number of (possibly noise)
-    //         fraction digits, and print all significant digits.
-    if (n == floor(n)) {
-        return 0;
-    }
+    // Count the number of decimal digits in the fraction part of the number, excluding trailing zeros.
     n = fabs(n);
-    char  buf[30] = {0};
-    sprintf(buf, "%1.15g\n", n);
-    int lastDig = 0;
-    for (int i=17; i>=0; --i) {
-        if (buf[i] != 0 && lastDig == 0) lastDig = i;
-        if (buf[i] == 'e') {
-           return 0;
+    double scaledN = n;
+    for (int ndigits=0; ndigits<=3; ndigits++) {
+        // fastpath the common cases, integers or fractions with 3 or fewer digits
+        if (scaledN == floor(scaledN)) {
+            return ndigits;
         }
-        if (buf[i] == '.' || buf[i] == ',') {
-           return lastDig - i - 1;
-       }
+        scaledN *= 10;
     }
-    return 0;
+    char  buf[30] = {0};
+    sprintf(buf, "%1.15e", n);
+    // formatted number looks like this: 1.234567890123457e-01
+    int exponent = atoi(buf+18);
+    int numFractionDigits = 15;
+    for (int i=16; ; --i) {
+        if (buf[i] != '0') {
+            break;
+        }
+        --numFractionDigits; 
+    }
+    numFractionDigits -= exponent;   // Fraction part of fixed point representation.
+    return numFractionDigits;
 }
+
 
 int32_t NumberInfo::getFractionalDigits(double n, int32_t v) {
     // TODO: int32_t is suspect. Port from Java.
@@ -1549,6 +1549,72 @@ double NumberInfo::get(tokenType operand) const {
 int32_t NumberInfo::getVisibleFractionDigitCount() const {
     return visibleFractionDigitCount;
 }
+
+
+
+PluralAvailableLocalesEnumeration::PluralAvailableLocalesEnumeration(UErrorCode &status) {
+    fLocales = NULL;
+    fRes = NULL;
+    fOpenStatus = status;
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fOpenStatus = U_ZERO_ERROR;
+    LocalUResourceBundlePointer rb(ures_openDirect(NULL, "plurals", &fOpenStatus));
+    fLocales = ures_getByKey(rb.getAlias(), "locales", NULL, &fOpenStatus);
+}
+
+PluralAvailableLocalesEnumeration::~PluralAvailableLocalesEnumeration() {
+    ures_close(fLocales);
+    ures_close(fRes);
+    fLocales = NULL;
+    fRes = NULL;
+}
+
+const char *PluralAvailableLocalesEnumeration::next(int32_t *resultLength, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    if (U_FAILURE(fOpenStatus)) {
+        status = fOpenStatus;
+        return NULL;
+    }
+    fRes = ures_getNextResource(fLocales, fRes, &status);
+    if (fRes == NULL || U_FAILURE(status)) {
+        return NULL;
+    }
+    const char *result = ures_getKey(fRes);
+    if (resultLength != NULL) {
+        *resultLength = uprv_strlen(result);
+    }
+    return result;
+}
+
+
+void PluralAvailableLocalesEnumeration::reset(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+       return;
+    }
+    if (U_FAILURE(fOpenStatus)) {
+        status = fOpenStatus;
+        return;
+    }
+    ures_resetIterator(fLocales);
+}
+
+int32_t PluralAvailableLocalesEnumeration::count(UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return 0;
+    }
+    if (U_FAILURE(fOpenStatus)) {
+        status = fOpenStatus;
+        return 0;
+    }
+    return ures_getSize(fLocales);
+}
+
+
+
 
 U_NAMESPACE_END
 

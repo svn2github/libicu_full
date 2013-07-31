@@ -20,6 +20,7 @@
 #include "unicode/format.h"
 #include "unicode/locid.h"
 #include "unicode/parseerr.h"
+#include "unicode/ures.h"
 #include "unicode/utypes.h"
 #include "uvector.h"
 #include "hash.h"
@@ -225,6 +226,19 @@ private:
     UVector fKeywordNames;
 };
 
+
+class U_I18N_API PluralAvailableLocalesEnumeration: public StringEnumeration {
+  public:
+    PluralAvailableLocalesEnumeration(UErrorCode &status);
+    virtual ~PluralAvailableLocalesEnumeration();
+    virtual const char* next(int32_t *resultLength, UErrorCode& status);
+    virtual void reset(UErrorCode& status);
+    virtual int32_t count(UErrorCode& status) const;
+  private:
+    UErrorCode      fOpenStatus;
+    UResourceBundle *fLocales;
+    UResourceBundle *fRes;
+};
 
 U_NAMESPACE_END
 
