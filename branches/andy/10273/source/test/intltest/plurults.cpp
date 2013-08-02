@@ -21,6 +21,7 @@
 #include "digitlst.h"
 #include "plurrule_impl.h"
 #include "plurults.h"
+#include "uhash.h"
 #include "unicode/localpointer.h"
 #include "unicode/plurrule.h"
 #include "unicode/stringpiece.h"
@@ -40,12 +41,15 @@ void PluralRulesTest::runIndexedTest( int32_t index, UBool exec, const char* &na
     if (exec) logln("TestSuite PluralRulesAPI");
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(testAPI);
-    TESTCASE_AUTO(testGetUniqueKeywordValue);
+    // TESTCASE_AUTO(testGetUniqueKeywordValue);
     TESTCASE_AUTO(testGetSamples);
     TESTCASE_AUTO(testWithin);
     TESTCASE_AUTO(testGetAllKeywordValues);
     TESTCASE_AUTO(testOrdinal);
     TESTCASE_AUTO(testSelect);
+    TESTCASE_AUTO(testAvailbleLocales);
+    TESTCASE_AUTO(testParseErrors);
+    TESTCASE_AUTO(testNumberInfo);
     TESTCASE_AUTO_END;
 }
 
@@ -334,6 +338,8 @@ PluralRulesTest::assertRuleKeyValue(const UnicodeString& rule,
   }
 }
 
+// TODO: UniqueKeywordValue() is not currently supported.
+//       If it never will be, this test code should be removed.
 void PluralRulesTest::testGetUniqueKeywordValue() {
   assertRuleValue("n is 1", 1);
   assertRuleValue("n in 2..2", 2);
@@ -790,5 +796,165 @@ void PluralRulesTest::testSelect() {
     checkSelect(pr, status, __LINE__, "a", "2", "6", "7", "8", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "1", "21", "211", "91", END_MARK);
 }
+
+
+void PluralRulesTest::testAvailbleLocales() {
+    
+    // Hash set of (char *) strings.
+    UErrorCode status = U_ZERO_ERROR;
+    UHashtable *localeSet = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, uhash_compareLong, &status);
+    uhash_setKeyDeleter(localeSet, uprv_deleteUObject);
+    if (U_FAILURE(status)) {
+        errln("file %s,  line %d: Error status = %s", __FILE__, __LINE__, u_errorName(status));
+        return;
+    }
+
+    // Check that each locale returned by the iterator is unique.
+    StringEnumeration *localesEnum = PluralRules::getAvailableLocales(status);
+    int localeCount = 0;
+    for (;;) {
+        const char *locale = localesEnum->next(NULL, status);
+        if (U_FAILURE(status)) {
+            errln("file %s,  line %d: Error status = %s", __FILE__, __LINE__, u_errorName(status));
+            return;
+        }
+        if (locale == NULL) {
+            break;
+        }
+        localeCount++;
+        int32_t oldVal = uhash_puti(localeSet, new UnicodeString(locale), 1, &status);
+        if (oldVal != 0) {
+            errln("file %s,  line %d: locale %s was seen before.", __FILE__, __LINE__, locale);
+        }
+    }
+
+    // Reset the iterator, verify that we get the same count.
+    localesEnum->reset(status);
+    int32_t localeCount2 = 0;
+    while (localesEnum->next(NULL, status) != NULL) {
+        if (U_FAILURE(status)) {
+            errln("file %s,  line %d: Error status = %s", __FILE__, __LINE__, u_errorName(status));
+            break;
+        }
+        localeCount2++;
+    }
+    if (localeCount != localeCount2) {
+        errln("file %s,  line %d: locale counts differ. They are (%d, %d)", 
+            __FILE__, __LINE__, localeCount, localeCount2);
+    }
+
+    // Instantiate plural rules for each available locale.
+    localesEnum->reset(status);
+    for (;;) {
+        const char *localeName = localesEnum->next(NULL, status);
+        if (U_FAILURE(status)) {
+            errln("file %s,  line %d: Error status = %s", __FILE__, __LINE__, u_errorName(status));
+            return;
+        }
+        if (localeName == NULL) {
+            break;
+        }
+        Locale locale = Locale::createFromName(localeName);
+        PluralRules *pr = PluralRules::forLocale(locale, status);
+        if (U_FAILURE(status)) {
+            errln("file %s,  line %d: Error %s creating plural rules for locale %s", 
+                __FILE__, __LINE__, u_errorName(status), localeName);
+            continue;
+        }
+        if (pr == NULL) {
+            errln("file %s, line %d: Null plural rules for locale %s", __FILE__, __LINE__, localeName);
+            continue;
+        }
+
+        // Pump some numbers through the plural rules.  Can't check for correct results, 
+        // mostly this to tickle any asserts or crashes that may be lurking.
+        for (double n=0; n<120.0; n+=0.5) {
+            UnicodeString keyword = pr->select(n);
+            if (keyword.length() == 0) {
+                errln("file %s, line %d, empty keyword for n = %g, locale %s",
+                    __FILE__, __LINE__, n, localeName);
+            }
+        }
+        delete pr;
+    }
+
+    uhash_close(localeSet);
+    delete localesEnum;
+
+}
+
+
+void PluralRulesTest::testParseErrors() {
+    // Test rules with syntax errors.
+    // Creation of PluralRules from them should fail.
+
+    static const char *testCases[] = {
+            "a: n mod 10, is 1",
+            "a: q is 13",
+            "a  n is 13",
+            "a: n is 13,",
+            "a: n is 13, 15,   b: n is 4",
+            "a: n is 1, 3, 4.. ",
+            "a: n within 5..4"
+            };
+    for (int i=0; i<LENGTHOF(testCases); i++) {
+        const char *rules = testCases[i];
+        UErrorCode status = U_ZERO_ERROR;
+        PluralRules *pr = PluralRules::createRules(UnicodeString(rules), status);
+        if (U_SUCCESS(status)) {
+            errln("file %s, line %d, expected failure with \"%s\".", __FILE__, __LINE__, rules);
+        }
+        if (pr != NULL) {
+            errln("file %s, line %d, expected NULL. Rules: \"%s\"", __FILE__, __LINE__, rules);
+        }
+    }
+    return;
+}
+
+
+void PluralRulesTest::testNumberInfo() {
+    struct DoubleTestCase {
+        double n;
+        int32_t fractionDigitCount;
+        int64_t fractionDigits;
+    };
+
+    // Check that the internal functions for extracting the decimal fraction digits from
+    //   a double value are working.
+    static DoubleTestCase testCases[] = {
+        {1.0, 0, 0},
+        {123456.0, 0, 0},
+        {1.1, 1, 1},
+        {1.23, 2, 23},
+        {1.234, 3, 234},
+        {1.2345, 4, 2345},
+        {1.23456, 5, 23456},
+        {.1234, 4, 1234},
+        {.01234, 5, 1234},
+        {.001234, 6, 1234},
+        {.0001234, 7, 1234},
+        {100.1234, 4, 1234},
+        {100.01234, 5, 1234},
+        {100.001234, 6, 1234},
+        {100.0001234, 7, 1234}
+    };
+
+    for (int i=0; i<LENGTHOF(testCases); ++i) {
+        DoubleTestCase &tc = testCases[i];
+        int32_t numFractionDigits = NumberInfo::decimals(tc.n);
+        if (numFractionDigits != tc.fractionDigitCount) {
+            errln("file %s, line %d: decimals(%g) expected %d, actual %d",
+                   __FILE__, __LINE__, tc.n, tc.fractionDigitCount, numFractionDigits);
+            continue;
+        }
+        int64_t actualFractionDigits = NumberInfo::getFractionalDigits(tc.n, numFractionDigits);
+        if (actualFractionDigits != tc.fractionDigits) {
+            errln("file %s, line %d: getFractionDigits(%g, %d): expected %ld, got %ld",
+                  __FILE__, __LINE__, tc.n, numFractionDigits, tc.fractionDigits, actualFractionDigits);
+        }
+    }
+}
+
+
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

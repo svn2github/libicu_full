@@ -472,9 +472,6 @@ public:
 private:
     RuleChain  *mRules;
     RuleParser *mParser;
-    double     *mSamples;
-    int32_t    *mSampleInfo;
-    int32_t    mSampleInfoCount;
 
     PluralRules();   // default constructor not implemented
     int32_t getRepeatLimit() const;
@@ -486,12 +483,8 @@ private:
 
     static const int32_t MAX_SAMPLES = 3;
 
-    int32_t getSamplesInternal(const UnicodeString &keyword, double *dest,
-                               int32_t destCapacity, UBool includeUnlimited,
-                               UErrorCode& status);
     int32_t getKeywordIndex(const UnicodeString& keyword,
                             UErrorCode& status) const;
-    void initSamples(UErrorCode& status);
 
 };
 

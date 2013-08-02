@@ -32,9 +32,6 @@
 
 U_NAMESPACE_BEGIN
 
-// shared by all instances when lazy-initializing samples
-static UMutex pluralMutex = U_MUTEX_INITIALIZER;
-
 #define ARRAY_SIZE(array) (int32_t)(sizeof array  / sizeof array[0])
 
 static const UChar PLURAL_KEYWORD_OTHER[]={LOW_O,LOW_T,LOW_H,LOW_E,LOW_R,0};
@@ -59,10 +56,7 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralKeywordEnumeration)
 PluralRules::PluralRules(UErrorCode& status)
 :   UObject(),
     mRules(NULL),
-    mParser(NULL),
-    mSamples(NULL),
-    mSampleInfo(NULL),
-    mSampleInfoCount(0)
+    mParser(NULL)
 {
     if (U_FAILURE(status)) {
         return;
@@ -76,10 +70,7 @@ PluralRules::PluralRules(UErrorCode& status)
 PluralRules::PluralRules(const PluralRules& other)
 : UObject(other),
     mRules(NULL),
-  mParser(NULL),
-  mSamples(NULL),
-  mSampleInfo(NULL),
-  mSampleInfoCount(0)
+  mParser(NULL)
 {
     *this=other;
 }
@@ -87,8 +78,6 @@ PluralRules::PluralRules(const PluralRules& other)
 PluralRules::~PluralRules() {
     delete mRules;
     delete mParser;
-    uprv_free(mSamples);
-    uprv_free(mSampleInfo);
 }
 
 PluralRules*
@@ -108,17 +97,23 @@ PluralRules::operator=(const PluralRules& other) {
         }
         delete mParser;
         mParser = new RuleParser();
-
-        uprv_free(mSamples);
-        mSamples = NULL;
-
-        uprv_free(mSampleInfo);
-        mSampleInfo = NULL;
-        mSampleInfoCount = 0;
     }
 
     return *this;
 }
+
+StringEnumeration* PluralRules::getAvailableLocales(UErrorCode &status) {
+    StringEnumeration *result = new PluralAvailableLocalesEnumeration(status);
+    if (result == NULL && U_SUCCESS(status)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    if (U_FAILURE(status)) {
+        delete result;
+        result = NULL;
+    }
+    return result;
+}
+
 
 PluralRules* U_EXPORT2
 PluralRules::createRules(const UnicodeString& description, UErrorCode& status) {
@@ -219,66 +214,23 @@ PluralRules::getKeywords(UErrorCode& status) const {
 }
 
 double
-PluralRules::getUniqueKeywordValue(const UnicodeString& keyword) {
-  double val = 0.0;
-  UErrorCode status = U_ZERO_ERROR;
-  int32_t count = getSamplesInternal(keyword, &val, 1, FALSE, status);
-  return count == 1 ? val : UPLRULES_NO_UNIQUE_VALUE;
+PluralRules::getUniqueKeywordValue(const UnicodeString& /* keyword */) {
+  // Not Implemented.
+  return UPLRULES_NO_UNIQUE_VALUE;
 }
 
 int32_t
-PluralRules::getAllKeywordValues(const UnicodeString &keyword, double *dest,
-                                 int32_t destCapacity, UErrorCode& error) {
-    return getSamplesInternal(keyword, dest, destCapacity, FALSE, error);
+PluralRules::getAllKeywordValues(const UnicodeString & /* keyword */, double * /* dest */,
+                                 int32_t /* destCapacity */, UErrorCode& error) {
+    error = U_UNSUPPORTED_ERROR;
+    return 0;
 }
 
 int32_t
-PluralRules::getSamples(const UnicodeString &keyword, double *dest,
-                        int32_t destCapacity, UErrorCode& status) {
-    return getSamplesInternal(keyword, dest, destCapacity, TRUE, status);
-}
-
-int32_t
-PluralRules::getSamplesInternal(const UnicodeString &keyword, double *dest,
-                                int32_t destCapacity, UBool includeUnlimited,
-                                UErrorCode& status) {
-    initSamples(status);
-    if (U_FAILURE(status)) {
-        return -1;
-    }
-    if (destCapacity < 0 || (dest == NULL && destCapacity > 0)) {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-        return -1;
-    }
-
-    int32_t index = getKeywordIndex(keyword, status);
-    if (index == -1) {
-        return 0;
-    }
-
-    const int32_t LIMIT_MASK = 0x1 << 31;
-
-    if (!includeUnlimited) {
-        if ((mSampleInfo[index] & LIMIT_MASK) == 0) {
-            return -1;
-        }
-    }
-
-    int32_t start = index == 0 ? 0 : mSampleInfo[index - 1] & ~LIMIT_MASK;
-    int32_t limit = mSampleInfo[index] & ~LIMIT_MASK;
-    int32_t len = limit - start;
-    if (len <= destCapacity) {
-        destCapacity = len;
-    } else if (includeUnlimited) {
-        len = destCapacity;  // no overflow, and don't report more than we copy
-    } else {
-        status = U_BUFFER_OVERFLOW_ERROR;
-        return len;
-    }
-    for (int32_t i = 0; i < destCapacity; ++i, ++start) {
-        dest[i] = mSamples[start];
-    }
-    return len;
+PluralRules::getSamples(const UnicodeString & /* keyword */, double * /* dest */,
+                        int32_t /* destCapacity */, UErrorCode& status) {
+    status = U_UNSUPPORTED_ERROR;
+    return 0;
 }
 
 
@@ -422,15 +374,23 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
                     }
                     else {
                         curAndConstraint->rangeList->setElementAt(getNumberValue(token), rangeHiIdx);
+                        if (curAndConstraint->rangeList->elementAti(rangeLowIdx) > 
+                                curAndConstraint->rangeList->elementAti(rangeHiIdx)) {
+                            // Range Lower bound > Range Upper bound.
+                            // U_UNEXPECTED_TOKEN seems a little funny, but it is consistently
+                            // used for all plural rule parse errors.
+                            status = U_UNEXPECTED_TOKEN;
+                            break;
+                        }
                     }
                 }
             }
             break;
         case tComma:
             // TODO: rule syntax checking is inadequate, can happen with badly formed rules.
-            //       The fix is a redone parser.
+            //       Catch cases like "n mod 10, is 1" here instead.
             if (curAndConstraint == NULL || curAndConstraint->rangeList == NULL) {
-                status = U_PARSE_ERROR;
+                status = U_UNEXPECTED_TOKEN;
                 break;
             }
             U_ASSERT(curAndConstraint->rangeList->size() >= 2);
@@ -535,147 +495,6 @@ PluralRules::getKeywordIndex(const UnicodeString& keyword,
     return -1;
 }
 
-typedef struct SampleRecord {
-    int32_t ruleIndex;
-    double  value;
-} SampleRecord;
-
-void
-PluralRules::initSamples(UErrorCode& status) {
-    if (U_FAILURE(status)) {
-        return;
-    }
-    Mutex lock(&pluralMutex);
-
-    if (mSamples) {
-        return;
-    }
-
-    // Note, the original design let you have multiple rules with the same keyword.  But
-    // we don't use that in our data and existing functions in this implementation don't
-    // fully support it (for example, the returned keywords is a list and not a set).
-    //
-    // So I don't support this here either.  If you ask for samples, or for all values,
-    // you will get information about the first rule with that keyword, not all rules with
-    // that keyword.
-
-    int32_t maxIndex = 0;
-    int32_t otherIndex = -1; // the value -1 will indicate we added 'other' at end
-    RuleChain* rc = mRules;
-    while (rc != NULL) {
-        if (rc->ruleHeader != NULL) {
-            if (otherIndex == -1 && 0 == rc->keyword.compare(PLURAL_KEYWORD_OTHER, 5)) {
-                otherIndex = maxIndex;
-            }
-            ++maxIndex;
-        }
-        rc = rc->next;
-    }
-    if (otherIndex == -1) {
-        ++maxIndex;
-    }
-
-    LocalMemory<int32_t> newSampleInfo;
-    if (NULL == newSampleInfo.allocateInsteadAndCopy(maxIndex)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-
-    const int32_t LIMIT_MASK = 0x1 << 31;
-
-    rc = mRules;
-    int32_t n = 0;
-    while (rc != NULL) {
-        if (rc->ruleHeader != NULL) {
-            newSampleInfo[n++] = rc->ruleHeader->isLimited() ? LIMIT_MASK : 0;
-        }
-        rc = rc->next;
-    }
-    if (otherIndex == -1) {
-        newSampleInfo[maxIndex - 1] = 0; // unlimited
-    }
-
-    MaybeStackArray<SampleRecord, 10> newSamples;
-    int32_t sampleCount = 0;
-
-    int32_t limit = 10;
-
-    for (int i = 0, keywordsRemaining = maxIndex;
-          keywordsRemaining > 0 && i < limit;
-          ++i) {
-        double val = i / 2.0;
-
-        n = 0;
-        rc = mRules;
-        int32_t found = -1;
-        while (rc != NULL) {
-            if (rc->ruleHeader != NULL) {
-                if (rc->ruleHeader->isFulfilled(NumberInfo(val))) {
-                    found = n;
-                    break;
-                }
-                ++n;
-            }
-            rc = rc->next;
-        }
-        if (found == -1) {
-            // 'other'.  If there is an 'other' rule, the rule set is bad since nothing
-            // should leak through, but we don't bother to report that here.
-            found = otherIndex == -1 ? maxIndex - 1 : otherIndex;
-        }
-        if (newSampleInfo[found] == MAX_SAMPLES) { // limit flag not set
-            continue;
-        }
-        newSampleInfo[found] += 1; // won't impact limit flag
-
-        if (sampleCount == newSamples.getCapacity()) {
-            int32_t newCapacity = sampleCount < 20 ? 128 : sampleCount * 2;
-            if (NULL == newSamples.resize(newCapacity, sampleCount)) {
-                status = U_MEMORY_ALLOCATION_ERROR;
-                return;
-            }
-        }
-        newSamples[sampleCount].ruleIndex = found;
-        newSamples[sampleCount].value = val;
-        ++sampleCount;
-
-        if (newSampleInfo[found] == MAX_SAMPLES) { // limit flag not set
-            --keywordsRemaining;
-        }
-    }
-
-    // sort the values by index, leaving order otherwise unchanged
-    // this is just a selection sort for simplicity
-    LocalMemory<double> values;
-    if (NULL == values.allocateInsteadAndCopy(sampleCount)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    for (int i = 0, j = 0; i < maxIndex; ++i) {
-        for (int k = 0; k < sampleCount; ++k) {
-            if (newSamples[k].ruleIndex == i) {
-                values[j++] = newSamples[k].value;
-            }
-        }
-    }
-
-    // convert array of mask/lengths to array of mask/limits
-    limit = 0;
-    for (int i = 0; i < maxIndex; ++i) {
-        int32_t info = newSampleInfo[i];
-        int32_t len = info & ~LIMIT_MASK;
-        limit += len;
-        // if a rule is 'unlimited' but has fewer than MAX_SAMPLES samples,
-        // it's not really unlimited, so mark it as limited
-        int32_t mask = len < MAX_SAMPLES ? LIMIT_MASK : info & LIMIT_MASK;
-        newSampleInfo[i] = limit | mask;
-    }
-
-    // ok, we've got good data
-    mSamples = values.orphan();
-    mSampleInfo = newSampleInfo.orphan();
-    mSampleInfoCount = maxIndex;
-}
 
 void
 PluralRules::addRules(RuleChain& rules) {
@@ -1162,15 +981,18 @@ RuleParser::checkSyntax(tokenType prevType, tokenType curType, UErrorCode &statu
     case tDot:
     case tIn:
     case tWithin:
-    case tAnd:   // TODO: split of And and Or, which are different.
+        if (curType != tNumber) {
+            status = U_UNEXPECTED_TOKEN;
+        }
+        break;
+    case tAnd:
     case tOr:
-        if (curType != tNumber && 
-                curType != tVariableN &&
-                curType != tVariableI &&
-                curType != tVariableF &&
-                curType != tVariableT &&
-                curType != tVariableV &&
-                curType != tVariableJ) {
+        if ( curType != tVariableN &&
+             curType != tVariableI &&
+             curType != tVariableF &&
+             curType != tVariableT &&
+             curType != tVariableV &&
+             curType != tVariableJ) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
@@ -1485,7 +1307,7 @@ void NumberInfo::init(double n, int32_t v, int64_t f) {
     visibleFractionDigitCount = v;
     fractionalDigits = f;
     intValue = (int64_t)source;
-    hasIntegerValue = source == intValue;   // TODO: problems with negative values. From Java.
+    hasIntegerValue = (source == intValue);
     if (f == 0) {
          fractionalDigitsWithoutTrailingZeros = 0;
     } else {
@@ -1524,15 +1346,31 @@ int32_t NumberInfo::decimals(double n) {
 }
 
 
-int32_t NumberInfo::getFractionalDigits(double n, int32_t v) {
-    // TODO: int32_t is suspect. Port from Java.
-    if (v == 0) {
+// Get the fraction digits of a double, represented as an integer.
+//    v is the number of visible fraction digits in the displayed form of the number.
+//       Example: n = 1001.234, v = 6, result = 234000
+//    TODO: need to think through how this is used in the plural rule context.
+//          This function can easily encounter integer overflow, 
+//          and can easily return noise digits when the precision of a double is exceeded.
+
+int64_t NumberInfo::getFractionalDigits(double n, int32_t v) {
+    if (v == 0 || n == floor(n)) {
         return 0;
-    } else {
-        int32_t base = (int32_t) pow(10.0, v);
-        double scaled = floor(n * base + 0.5);
-        return (int)fmod(scaled, base);
     }
+    n = fabs(n);
+    double fract = n - floor(n);
+    switch (v) {
+      case 1: return (int64_t)(fract*10.0 + 0.5);
+      case 2: return (int64_t)(fract*100.0 + 0.5);
+      case 3: return (int64_t)(fract*1000.0 + 0.5);
+      default:
+          double scaled = floor(fract * pow(10, v) + 0.5);
+          if (scaled > INT64_MAX) {
+              return INT64_MAX;
+          } else {
+              return (int64_t)scaled;
+          }
+      }
 }
 
 
@@ -1581,6 +1419,9 @@ const char *PluralAvailableLocalesEnumeration::next(int32_t *resultLength, UErro
     }
     fRes = ures_getNextResource(fLocales, fRes, &status);
     if (fRes == NULL || U_FAILURE(status)) {
+        if (status == U_INDEX_OUTOFBOUNDS_ERROR) {
+            status = U_ZERO_ERROR;
+        }
         return NULL;
     }
     const char *result = ures_getKey(fRes);
@@ -1612,9 +1453,6 @@ int32_t PluralAvailableLocalesEnumeration::count(UErrorCode &status) const {
     }
     return ures_getSize(fLocales);
 }
-
-
-
 
 U_NAMESPACE_END
 

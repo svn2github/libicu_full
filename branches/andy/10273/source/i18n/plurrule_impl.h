@@ -25,6 +25,8 @@
 #include "uvector.h"
 #include "hash.h"
 
+class PluralRulesTest;
+
 U_NAMESPACE_BEGIN
 
 static const UChar DOT             = ((UChar)0x002E);
@@ -144,9 +146,10 @@ class U_I18N_API NumberInfo: public UMemory {
     double get(tokenType operand) const;
     int32_t getVisibleFractionDigitCount() const;
 
+    friend class ::PluralRulesTest;
   private:
     void init(double n, int32_t v, int64_t f);
-    static int32_t getFractionalDigits(double n, int32_t v);
+    static int64_t getFractionalDigits(double n, int32_t v);
     static int32_t decimals(double n);
 
     double      source;
