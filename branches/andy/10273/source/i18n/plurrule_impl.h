@@ -118,17 +118,18 @@ enum tokenType {
 };
 
 
-class RuleParser : public UMemory {
+class RuleParser: public UMemory {
 public:
-    RuleParser();
-    virtual ~RuleParser();
-    void getNextToken(const UnicodeString& ruleData, int32_t *ruleIndex, UnicodeString& token,
+    static void getNextToken(const UnicodeString& ruleData, int32_t *ruleIndex, UnicodeString& token,
                             tokenType& type, UErrorCode &status);
-    void checkSyntax(tokenType prevType, tokenType curType, UErrorCode &status);
+    static void checkSyntax(tokenType prevType, tokenType curType, UErrorCode &status);
 private:
-    void getKeyType(const UnicodeString& token, tokenType& type, UErrorCode &status);
-    UBool inRange(UChar ch, tokenType& type);
-    UBool isValidKeyword(const UnicodeString& token);
+    static void getKeyType(const UnicodeString& token, tokenType& type, UErrorCode &status);
+    static UBool inRange(UChar ch, tokenType& type);
+    static UBool isValidKeyword(const UnicodeString& token);
+
+    RuleParser();     // No instantiation. 
+    ~RuleParser();
 };
 
 class U_I18N_API NumberInfo: public UMemory {
@@ -201,13 +202,14 @@ public:
 
 class RuleChain : public UMemory  {
 public:
-    OrConstraint *ruleHeader;
-    UnicodeString keyword;
+    UnicodeString  keyword;
+    RuleChain     *next;
+    OrConstraint  *ruleHeader;
+
     RuleChain();
     RuleChain(const RuleChain& other);
-    RuleChain *next;
-
     virtual ~RuleChain();
+
     UnicodeString select(const NumberInfo &number) const;
     void dumpRules(UnicodeString& result);
     UBool isLimited();

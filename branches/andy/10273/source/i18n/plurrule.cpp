@@ -55,29 +55,23 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralKeywordEnumeration)
 
 PluralRules::PluralRules(UErrorCode& status)
 :   UObject(),
-    mRules(NULL),
-    mParser(NULL)
+    mRules(NULL)
 {
-    if (U_FAILURE(status)) {
-        return;
-    }
-    mParser = new RuleParser();
-    if (mParser==NULL) {
+    mRules = new RuleChain;
+    if (mRules == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
 }
 
 PluralRules::PluralRules(const PluralRules& other)
 : UObject(other),
-    mRules(NULL),
-  mParser(NULL)
+    mRules(NULL)
 {
     *this=other;
 }
 
 PluralRules::~PluralRules() {
     delete mRules;
-    delete mParser;
 }
 
 PluralRules*
@@ -95,8 +89,6 @@ PluralRules::operator=(const PluralRules& other) {
         else {
             mRules = new RuleChain(*other.mRules);
         }
-        delete mParser;
-        mParser = new RuleParser();
     }
 
     return *this;
@@ -117,25 +109,23 @@ StringEnumeration* PluralRules::getAvailableLocales(UErrorCode &status) {
 
 PluralRules* U_EXPORT2
 PluralRules::createRules(const UnicodeString& description, UErrorCode& status) {
-    RuleChain   rules;
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+
+    PluralRules *newRules = new PluralRules(status);
+    if (U_SUCCESS(status) && newRules == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    if (U_SUCCESS(status)) {
+        newRules->parseDescription(description, status);
+    }
 
     if (U_FAILURE(status)) {
-        return NULL;
-    }
-    PluralRules *newRules = new PluralRules(status);
-    if ( (newRules != NULL)&& U_SUCCESS(status) ) {
-        newRules->parseDescription((UnicodeString &)description, rules, status);
-        if (U_SUCCESS(status)) {
-            newRules->addRules(rules);
-        }
-    }
-    if (U_FAILURE(status)) {
         delete newRules;
-        return NULL;
+        newRules = NULL;
     }
-    else {
-        return newRules;
-    }
+    return newRules;
 }
 
 PluralRules* U_EXPORT2
@@ -150,7 +140,6 @@ PluralRules::forLocale(const Locale& locale, UErrorCode& status) {
 
 PluralRules* U_EXPORT2
 PluralRules::forLocale(const Locale& locale, UPluralType type, UErrorCode& status) {
-    RuleChain   rChain;
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -165,17 +154,17 @@ PluralRules::forLocale(const Locale& locale, UPluralType type, UErrorCode& statu
     }
     UnicodeString locRule = newObj->getRuleFromResource(locale, type, status);
     if ((locRule.length() != 0) && U_SUCCESS(status)) {
-        newObj->parseDescription(locRule, rChain, status);
-        if (U_SUCCESS(status)) {
-            newObj->addRules(rChain);
-        }
+        newObj->parseDescription(locRule, status);
     }
     if (U_FAILURE(status)||(locRule.length() == 0)) {
         // use default plural rule
+        //  TODO: should this propagate the failure out.
+        //        I think so.
+        //        Ask the question to ICU Core.
+
         status = U_ZERO_ERROR;
         UnicodeString defRule = UnicodeString(PLURAL_DEFAULT_RULE);
-        newObj->parseDescription(defRule, rChain, status);
-        newObj->addRules(rChain);
+        newObj->parseDescription(defRule, status);
     }
 
     return newObj;
@@ -291,7 +280,7 @@ PluralRules::operator==(const PluralRules& other) const  {
 }
 
 void
-PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode &status)
+PluralRules::parseDescription(const UnicodeString& data, UErrorCode &status)
 {
     int32_t ruleIndex=0;
     UnicodeString token;
@@ -307,13 +296,14 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
     if (U_FAILURE(status)) {
         return;
     }
-    UnicodeString ruleData = data.toLower("");
+    UnicodeString ruleData(data);
+    ruleData.toLower("");          // TODO: revisit, probably don't want this.
     while (ruleIndex< ruleData.length()) {
-        mParser->getNextToken(ruleData, &ruleIndex, token, type, status);
+        RuleParser::getNextToken(ruleData, &ruleIndex, token, type, status);
         if (U_FAILURE(status)) {
             return;
         }
-        mParser->checkSyntax(prevType, type, status);
+        RuleParser::checkSyntax(prevType, type, status);
         if (U_FAILURE(status)) {
             return;
         }
@@ -323,7 +313,7 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
             curAndConstraint = curAndConstraint->add();
             break;
         case tOr:
-            lastChain = &rules;
+            lastChain = mRules;
             while (lastChain->next !=NULL) {
                 lastChain = lastChain->next;
             }
@@ -414,7 +404,7 @@ PluralRules::parseDescription(UnicodeString& data, RuleChain& rules, UErrorCode 
             break;
         case tKeyword:
             if (ruleChain==NULL) {
-                ruleChain = &rules;
+                ruleChain = mRules;
             }
             else {
                 while (ruleChain->next!=NULL){
@@ -762,35 +752,22 @@ OrConstraint::isLimited() {
     return TRUE;
 }
 
-RuleChain::RuleChain() {
-    ruleHeader=NULL;
-    next = NULL;
+RuleChain::RuleChain(): keyword(), next(NULL), ruleHeader(NULL) {
 }
 
-RuleChain::RuleChain(const RuleChain& other) {
-    this->keyword=other.keyword;
+RuleChain::RuleChain(const RuleChain& other)
+  : keyword(other.keyword), next(NULL), ruleHeader(NULL) {
     if (other.ruleHeader != NULL) {
         this->ruleHeader = new OrConstraint(*(other.ruleHeader));
-    }
-    else {
-        this->ruleHeader = NULL;
     }
     if (other.next != NULL ) {
         this->next = new RuleChain(*other.next);
     }
-    else
-    {
-        this->next = NULL;
-    }
 }
 
 RuleChain::~RuleChain() {
-    if (next != NULL) {
-        delete next;
-    }
-    if ( ruleHeader != NULL ) {
-        delete ruleHeader;
-    }
+    delete next;
+    delete ruleHeader;
 }
 
 

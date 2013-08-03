@@ -471,11 +471,10 @@ public:
 
 private:
     RuleChain  *mRules;
-    RuleParser *mParser;
 
     PluralRules();   // default constructor not implemented
     int32_t getRepeatLimit() const;
-    void parseDescription(UnicodeString& ruleData, RuleChain& rules, UErrorCode &status);
+    void parseDescription(const UnicodeString& ruleData, RuleChain& rules, UErrorCode &status);
     void getNextLocale(const UnicodeString& localeData, int32_t* curIndex, UnicodeString& localeName);
     void addRules(RuleChain& rules);
     int32_t getNumberValue(const UnicodeString& token) const;
