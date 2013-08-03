@@ -1267,3 +1267,29 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <1 aa
 <2 aa\u0308
 =  aä
+
+** test: Jamo L with and in prefix
+# Useful for the Korean "searchjl" tailoring (instead of contractions of pairs of Jamo L).
+@ rules
+# Jamo Lead consonant G after G or GG
+&[last primary ignorable]<<\u1100|\u1100=\u1101|\u1100
+# Jamo Lead consonant GG sorts like G+G
+&\u1100\u1100=\u1101
+# Note: Making G|GG and GG|GG sort the same as G|G+G
+# would require the ability to reset on G|G+G,
+# or we could make G-after-G equal to some secondary-CE character,
+# and reset on a pair of those.
+# (It does not matter much if there are at most two G in a row in real text.)
+* compare
+<1 \u1100
+<2 \u1100\u1100  # only one primary from a sequence of G lead consonants
+=  \u1101
+<2 \u1100\u1100\u1100
+=  \u1101\u1100
+# but not = \u1100\u1101, see above
+<1 \u1100\u1161
+=  \uAC00
+<2 \u1100\u1100\u1161
+=  \u1100\uAC00  # prefix match from the L of the LV syllable
+=  \u1101\u1161
+=  \uAE4C

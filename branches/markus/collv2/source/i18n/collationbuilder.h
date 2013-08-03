@@ -100,11 +100,6 @@ private:
      */
     int32_t findCommonNode(int32_t index, int32_t strength) const;
 
-    /**
-     * @return TRUE if s contains a conjoining Jamo (HST=L/V/T).
-     */
-    static UBool containsJamo(const UnicodeString &s);
-
     void setCaseBits(const UnicodeString &nfdString,
                      const char *&parserErrorReason, UErrorCode &errorCode);
 

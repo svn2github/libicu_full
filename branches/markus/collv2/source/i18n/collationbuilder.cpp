@@ -590,12 +590,36 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
         return;
     }
 
-    UBool hasContext = !nfdPrefix.isEmpty() || nfdString.hasMoreChar32Than(0, 0x7fffffff, 1);
-    if(hasContext && (containsJamo(nfdPrefix) || containsJamo(nfdString))) {
-        errorCode = U_UNSUPPORTED_ERROR;
-        parserErrorReason = "contextual mappings with conjoining Jamo (hst=L/V/T) not supported";
-        return;
+    // The runtime code decomposes Hangul syllables on the fly,
+    // with recursive processing but without making the Jamo pieces visible for matching.
+    // It does not work with certain types of contextual mappings.
+    int32_t nfdLength = nfdString.length();
+    if(nfdLength >= 2) {
+        UChar c = nfdString.charAt(0);
+        if(Hangul::isJamoL(c) || Hangul::isJamoV(c)) {
+            // While handling a Hangul syllable, contractions starting with Jamo L or V
+            // would not see the following Jamo of that syllable.
+            errorCode = U_UNSUPPORTED_ERROR;
+            parserErrorReason = "contractions starting with conjoining Jamo L or V not supported";
+            return;
+        }
+        c = nfdString.charAt(nfdLength - 1);
+        if(Hangul::isJamoL(c) ||
+                (Hangul::isJamoV(c) && Hangul::isJamoL(nfdString.charAt(nfdLength - 2)))) {
+            // A contraction ending with Jamo L or L+V would require
+            // generating Hangul syllables in addTailComposites() (588 for a Jamo L),
+            // or decomposing a following Hangul syllable on the fly, during contraction matching.
+            errorCode = U_UNSUPPORTED_ERROR;
+            parserErrorReason = "contractions ending with conjoining Jamo L or L+V not supported";
+            return;
+        }
+        // A Hangul syllable completely inside a contraction is ok.
     }
+    // Note: If there is a prefix, then the parser checked that
+    // both the prefix and the string beging with NFC boundaries (not Jamo V or T).
+    // Therefore: prefix.isEmpty() || !isJamoVOrT(nfdString.charAt(0))
+    // (While handling a Hangul syllable, prefixes on Jamo V or T
+    // would not see the previous Jamo of that syllable.)
 
     if(strength != UCOL_IDENTICAL) {
         // Find the node index after which we insert the new tailored node.
@@ -883,19 +907,6 @@ CollationBuilder::findCommonNode(int32_t index, int32_t strength) const {
     } while(isTailoredNode(node) || strengthFromNode(node) > strength);
     U_ASSERT(weight16FromNode(node) == Collation::COMMON_WEIGHT16);
     return index;
-}
-
-UBool
-CollationBuilder::containsJamo(const UnicodeString &s) {
-    for(int32_t i = 0; i < s.length();) {
-        UChar32 c = s.char32At(i);
-        int32_t hst = u_getIntPropertyValue(c, UCHAR_HANGUL_SYLLABLE_TYPE);
-        if(hst == U_HST_LEADING_JAMO || hst == U_HST_VOWEL_JAMO || hst == U_HST_TRAILING_JAMO) {
-            return TRUE;
-        }
-        i += U16_LENGTH(c);
-    }
-    return FALSE;
 }
 
 void

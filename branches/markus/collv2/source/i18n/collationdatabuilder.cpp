@@ -899,8 +899,10 @@ CollationDataBuilder::getJamoCE32s(uint32_t jamoCE32s[], UErrorCode &errorCode) 
                 break;
             case Collation::EXPANSION32_TAG:
             case Collation::EXPANSION_TAG:
+            case Collation::PREFIX_TAG:
+            case Collation::CONTRACTION_TAG:
                 if(fromBase) {
-                    // Defer copying the expansion until we know if anyJamoAssigned.
+                    // Defer copying until we know if anyJamoAssigned.
                     ce32 = Collation::makeCE32FromTagAndIndex(Collation::FALLBACK_TAG, jamo);
                     needToCopyFromBase = TRUE;
                 }
@@ -925,10 +927,6 @@ CollationDataBuilder::getJamoCE32s(uint32_t jamoCE32s[], UErrorCode &errorCode) 
             case Collation::HANGUL_TAG:
             case Collation::LEAD_SURROGATE_TAG:
                 errorCode = U_INTERNAL_PROGRAM_ERROR;
-                return FALSE;
-            case Collation::PREFIX_TAG:
-            case Collation::CONTRACTION_TAG:
-                errorCode = U_UNSUPPORTED_ERROR;
                 return FALSE;
             }
         }
