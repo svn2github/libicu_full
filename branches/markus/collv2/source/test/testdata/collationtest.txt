@@ -1093,6 +1093,16 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  A\u030A
 =  \u212B  # Angstrom sign
 
+@ rules
+&x=\u5140\u55C0
+* compare
+<1 x
+=  \u5140\u55C0
+=  \u5140\uFA0D
+=  \uFA0C\u55C0
+=  \uFA0C\uFA0D  # CJK compatibility characters
+<3 X
+
 # canonical closure on prefix rules, ICU ticket 9444
 @ rules
 &x=ä|ŝ
@@ -1116,3 +1126,144 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  \uAE51
 <3 gg\u1161nJ
 <1 \u1100\u1100
+
+** test: canonical tail closure, ICU ticket 5913
+@ rules
+&a<â
+* compare
+<1 a
+<1 â              # tailored
+=  a\u0302
+<2 a\u0323\u0302  # discontiguous contraction
+=  ạ\u0302        # equivalent
+=  ậ              # equivalent
+<1 b
+
+@ rules
+&a<ạ
+* compare
+<1 a
+<1 ạ              # tailored
+=  a\u0323
+<2 a\u0323\u0302  # contiguous contraction plus extra diacritic
+=  ạ\u0302        # equivalent
+=  ậ              # equivalent
+<1 b
+
+# Tail closure should work even if there is a prefix and/or contraction.
+@ rules
+&a<\u5140|câ
+# In order to find discontiguous contractions for \u5140|câ
+# there must exist a mapping for \u5140|ca, regardless of what it maps to.
+# (This follows from the UCA spec.)
+&x=\u5140|ca
+* compare
+<1 \u5140a
+=  \uFA0Ca
+<1 \u5140câ              # tailored
+=  \uFA0Ccâ
+=  \u5140ca\u0302
+=  \uFA0Cca\u0302
+<2 \u5140ca\u0323\u0302  # discontiguous contraction
+=  \uFA0Cca\u0323\u0302
+=  \u5140cạ\u0302
+=  \uFA0Ccạ\u0302
+=  \u5140cậ
+=  \uFA0Ccậ
+<1 \u5140b
+=  \uFA0Cb
+<1 \u5140x
+=  \u5140ca
+
+# Double-check that without the extra mapping there will be no discontiguous match.
+@ rules
+&a<\u5140|câ
+* compare
+<1 \u5140a
+=  \uFA0Ca
+<1 \u5140câ              # tailored
+=  \uFA0Ccâ
+=  \u5140ca\u0302
+=  \uFA0Cca\u0302
+<1 \u5140b
+=  \uFA0Cb
+<1 \u5140ca\u0323\u0302  # no discontiguous contraction
+=  \uFA0Cca\u0323\u0302
+=  \u5140cạ\u0302
+=  \uFA0Ccạ\u0302
+=  \u5140cậ
+=  \uFA0Ccậ
+
+@ rules
+&a<cạ
+* compare
+<1 a
+<1 cạ              # tailored
+=  ca\u0323
+<2 ca\u0323\u0302  # contiguous contraction plus extra diacritic
+=  cạ\u0302        # equivalent
+=  cậ              # equivalent
+<1 b
+
+# ᾢ = U+1FA2 GREEK SMALL LETTER OMEGA WITH PSILI AND VARIA AND YPOGEGRAMMENI
+#   = 03C9 0313 0300 0345
+# ccc = 0, 230, 230, 240
+@ rules
+&δ=αῳ
+# In order to find discontiguous contractions for αῳ
+# there must exist a mapping for αω, regardless of what it maps to.
+# (This follows from the UCA spec.)
+&ε=αω
+* compare
+<1 δ
+=  αῳ
+=  αω\u0345
+<2 αω\u0313\u0300\u0345  # discontiguous contraction
+=  αὠ\u0300\u0345
+=  αὢ\u0345
+=  αᾢ
+<2 αω\u0300\u0313\u0345
+=  αὼ\u0313\u0345
+=  αῲ\u0313  # not FCD
+<1 ε
+=  αω
+
+# Double-check that without the extra mapping there will be no discontiguous match.
+@ rules
+&δ=αῳ
+* compare
+<1 αω\u0313\u0300\u0345  # no discontiguous contraction
+=  αὠ\u0300\u0345
+=  αὢ\u0345
+=  αᾢ
+<2 αω\u0300\u0313\u0345
+=  αὼ\u0313\u0345
+=  αῲ\u0313  # not FCD
+<1 δ
+=  αῳ
+=  αω\u0345
+
+# Add U+0315 COMBINING COMMA ABOVE RIGHT which has ccc=232.
+# Tests code paths where the tailored string has a combining mark
+# that does not occur in any composite's decomposition.
+@ rules
+&δ=αὼ\u0315
+* compare
+<1 αω\u0313\u0300\u0315  # Not tailored: The grave accent blocks the comma above.
+=  αὠ\u0300\u0315
+=  αὢ\u0315
+<1 δ
+=  αὼ\u0315
+=  αω\u0300\u0315
+<2 αω\u0300\u0315\u0345
+=  αὼ\u0315\u0345
+=  αῲ\u0315  # not FCD
+
+** test: danish a+a vs. a-umlaut, ICU ticket 9319
+@ rules
+&z<aa
+* compare
+<1 z
+<1 aa
+<2 aa\u0308
+=  aä

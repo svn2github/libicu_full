@@ -33,6 +33,7 @@ struct CollationTailoring;
 class CEFinalizer;
 class CollationDataBuilder;
 class Normalizer2;
+class Normalizer2Impl;
 
 class U_I18N_API CollationBuilder : public CollationRuleParser::Sink {
 public:
@@ -120,8 +121,18 @@ private:
      * Takes ce32=dataBuilder->encodeCEs(...) so that the data builder
      * need not re-encode the CEs multiple times.
      */
-    void addWithClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
-                        uint32_t ce32, UErrorCode &errorCode);
+    uint32_t addWithClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
+                            const int64_t newCEs[], int32_t newCEsLength, uint32_t ce32,
+                            UErrorCode &errorCode);
+    uint32_t addOnlyClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
+                            const int64_t newCEs[], int32_t newCEsLength, uint32_t ce32,
+                            UErrorCode &errorCode);
+    void addTailComposites(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
+                           UErrorCode &errorCode);
+    UBool mergeCompositeIntoString(const UnicodeString &nfdString, int32_t indexAfterLastStarter,
+                                   UChar32 composite, const UnicodeString &decomp,
+                                   UnicodeString &newNFDString, UnicodeString &newString,
+                                   UErrorCode &errorCode) const;
 
     UBool ignorePrefix(const UnicodeString &s, UErrorCode &errorCode) const;
     UBool ignoreString(const UnicodeString &s, UErrorCode &errorCode) const;
@@ -129,6 +140,9 @@ private:
 
     void closeOverComposites(UErrorCode &errorCode);
 
+    uint32_t addIfDifferent(const UnicodeString &prefix, const UnicodeString &str,
+                            const int64_t newCEs[], int32_t newCEsLength, uint32_t ce32,
+                            UErrorCode &errorCode);
     static UBool sameCEs(const int64_t ces1[], int32_t ces1Length,
                          const int64_t ces2[], int32_t ces2Length);
 
@@ -279,6 +293,7 @@ private:
     }
 
     const Normalizer2 &nfd, &fcd;
+    const Normalizer2Impl &nfcImpl;
 
     const CollationTailoring *base;
     const CollationData *baseData;

@@ -126,6 +126,7 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
 CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &errorCode)
         : nfd(*Normalizer2::getNFDInstance(errorCode)),
           fcd(*Normalizer2Factory::getFCDInstance(errorCode)),
+          nfcImpl(*Normalizer2Factory::getNFCImpl(errorCode)),
           base(b),
           baseData(b->data),
           rootElements(b->data->rootElements, b->data->rootElementsLength),
@@ -134,6 +135,7 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
           errorReason(NULL),
           cesLength(0),
           rootPrimaryIndexes(errorCode), nodes(errorCode) {
+    nfcImpl.ensureCanonIterData(errorCode);
     if(U_FAILURE(errorCode)) {
         errorReason = "CollationBuilder fields initialization failed";
         return;
@@ -644,15 +646,15 @@ CollationBuilder::addRelation(int32_t strength, const UnicodeString &prefix,
             return;
         }
     }
-    uint32_t ce32 = dataBuilder->encodeCEs(ces, cesLength, errorCode);
+    uint32_t ce32 = Collation::UNASSIGNED_CE32;
     if((prefix != nfdPrefix || str != nfdString) &&
             !ignorePrefix(prefix, errorCode) && !ignoreString(str, errorCode)) {
         // Map from the original input to the CEs.
         // We do this in case the canonical closure is incomplete,
         // so that it is possible to explicitly provide the missing mappings.
-        dataBuilder->addCE32(prefix, str, ce32, errorCode);
+        ce32 = addIfDifferent(prefix, str, ces, cesLength, ce32, errorCode);
     }
-    addWithClosure(nfdPrefix, nfdString, ce32, errorCode);
+    addWithClosure(nfdPrefix, nfdString, ces, cesLength, ce32, errorCode);
     if(U_FAILURE(errorCode)) {
         parserErrorReason = "writing collation elements";
         return;
@@ -983,29 +985,39 @@ CollationBuilder::optimize(const UnicodeSet &set, const char *& /* parserErrorRe
     optimizeSet.addAll(set);
 }
 
-void
+uint32_t
 CollationBuilder::addWithClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
-                                 uint32_t ce32, UErrorCode &errorCode) {
+                                 const int64_t newCEs[], int32_t newCEsLength, uint32_t ce32,
+                                 UErrorCode &errorCode) {
     // Map from the NFD input to the CEs.
-    dataBuilder->addCE32(nfdPrefix, nfdString, ce32, errorCode);
-    if(U_FAILURE(errorCode)) { return; }
+    ce32 = addIfDifferent(nfdPrefix, nfdString, newCEs, newCEsLength, ce32, errorCode);
+    ce32 = addOnlyClosure(nfdPrefix, nfdString, newCEs, newCEsLength, ce32, errorCode);
+    addTailComposites(nfdPrefix, nfdString, errorCode);
+    return ce32;
+}
 
-    // Map from canonically equivalent input to the CEs.
+uint32_t
+CollationBuilder::addOnlyClosure(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
+                                 const int64_t newCEs[], int32_t newCEsLength, uint32_t ce32,
+                                 UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return ce32; }
+
+    // Map from canonically equivalent input to the CEs. (But not from the all-NFD input.)
     if(nfdPrefix.isEmpty()) {
         CanonicalIterator stringIter(nfdString, errorCode);
-        if(U_FAILURE(errorCode)) { return; }
+        if(U_FAILURE(errorCode)) { return ce32; }
         UnicodeString prefix;
         for(;;) {
             UnicodeString str = stringIter.next();
             if(str.isBogus()) { break; }
             if(ignoreString(str, errorCode) || str == nfdString) { continue; }
-            dataBuilder->addCE32(prefix, str, ce32, errorCode);
-            if(U_FAILURE(errorCode)) { return; }
+            ce32 = addIfDifferent(prefix, str, newCEs, newCEsLength, ce32, errorCode);
+            if(U_FAILURE(errorCode)) { return ce32; }
         }
     } else {
         CanonicalIterator prefixIter(nfdPrefix, errorCode);
         CanonicalIterator stringIter(nfdString, errorCode);
-        if(U_FAILURE(errorCode)) { return; }
+        if(U_FAILURE(errorCode)) { return ce32; }
         for(;;) {
             UnicodeString prefix = prefixIter.next();
             if(prefix.isBogus()) { break; }
@@ -1015,12 +1027,153 @@ CollationBuilder::addWithClosure(const UnicodeString &nfdPrefix, const UnicodeSt
                 UnicodeString str = stringIter.next();
                 if(str.isBogus()) { break; }
                 if(ignoreString(str, errorCode) || (samePrefix && str == nfdString)) { continue; }
-                dataBuilder->addCE32(prefix, str, ce32, errorCode);
-                if(U_FAILURE(errorCode)) { return; }
+                ce32 = addIfDifferent(prefix, str, newCEs, newCEsLength, ce32, errorCode);
+                if(U_FAILURE(errorCode)) { return ce32; }
             }
             stringIter.reset();
         }
     }
+    return ce32;
+}
+
+void
+CollationBuilder::addTailComposites(const UnicodeString &nfdPrefix, const UnicodeString &nfdString,
+                                    UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+
+    // Look for the last starter in the NFD string.
+    UChar32 lastStarter;
+    int32_t indexAfterLastStarter = nfdString.length();
+    for(;;) {
+        if(indexAfterLastStarter == 0) { return; }  // no starter at all
+        lastStarter = nfdString.char32At(indexAfterLastStarter - 1);
+        if(nfd.getCombiningClass(lastStarter) == 0) { break; }
+        indexAfterLastStarter -= U16_LENGTH(lastStarter);
+    }
+    // No closure to Hangul syllables since we decompose them on the fly.
+    if(Hangul::isJamoL(lastStarter)) { return; }
+
+    // Are there any composites whose decomposition starts with the lastStarter?
+    // Note: Normalizer2Impl does not currently return start sets for NFC_QC=Maybe characters.
+    // We might find some more equivalent mappings here if it did.
+    UnicodeSet composites;
+    if(!nfcImpl.getCanonStartSet(lastStarter, composites)) { return; }
+
+    UnicodeString decomp;
+    UnicodeString newNFDString, newString;
+    int64_t newCEs[Collation::MAX_EXPANSION_LENGTH];
+    UnicodeSetIterator iter(composites);
+    while(iter.next()) {
+        U_ASSERT(!iter.isString());
+        UChar32 composite = iter.getCodepoint();
+        nfd.getDecomposition(composite, decomp);
+        if(!mergeCompositeIntoString(nfdString, indexAfterLastStarter, composite, decomp,
+                                     newNFDString, newString, errorCode)) {
+            continue;
+        }
+        int32_t newCEsLength = dataBuilder->getCEs(nfdPrefix, newNFDString, newCEs, 0);
+        if(newCEsLength > Collation::MAX_EXPANSION_LENGTH) {
+            // Ignore mappings that we cannot store.
+            continue;
+        }
+        // We do not need an explicit mapping for the NFD strings.
+        // It is fine if the NFD input collates like this via a sequence of mappings.
+        // It also saves a little bit of space, and may reduce the set of characters with contractions.
+        uint32_t ce32 = addIfDifferent(nfdPrefix, newString,
+                                       newCEs, newCEsLength, Collation::UNASSIGNED_CE32, errorCode);
+        if(ce32 != Collation::UNASSIGNED_CE32) {
+            // was different, was added
+            addOnlyClosure(nfdPrefix, newNFDString, newCEs, newCEsLength, ce32, errorCode);
+        }
+    }
+}
+
+UBool
+CollationBuilder::mergeCompositeIntoString(const UnicodeString &nfdString,
+                                           int32_t indexAfterLastStarter,
+                                           UChar32 composite, const UnicodeString &decomp,
+                                           UnicodeString &newNFDString, UnicodeString &newString,
+                                           UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return FALSE; }
+    U_ASSERT(nfdString.char32At(indexAfterLastStarter - 1) == decomp.char32At(0));
+    int32_t lastStarterLength = decomp.moveIndex32(0, 1);
+    if(lastStarterLength == decomp.length()) {
+        // Singleton decompositions should be found by addWithClosure()
+        // and the CanonicalIterator, so we can ignore them here.
+        return FALSE;
+    }
+    if(nfdString.compare(indexAfterLastStarter, 0x7fffffff,
+                         decomp, lastStarterLength, 0x7fffffff) == 0) {
+        // same strings, nothing new to be found here
+        return FALSE;
+    }
+
+    // Make new FCD strings that combine a composite, or its decomposition,
+    // into the nfdString's last starter and the combining marks following it.
+    // Make an NFD version, and a version with the composite.
+    newNFDString.setTo(nfdString, 0, indexAfterLastStarter);
+    newString.setTo(nfdString, 0, indexAfterLastStarter - lastStarterLength).append(composite);
+
+    // The following is related to discontiguous contraction matching,
+    // but builds only FCD strings (or else returns FALSE).
+    int32_t sourceIndex = indexAfterLastStarter;
+    int32_t decompIndex = lastStarterLength;
+    // Small optimization: We keep the source character across loop iterations
+    // because we do not always consume it,
+    // and then need not fetch it again nor look up its combining class again.
+    UChar32 sourceChar = U_SENTINEL;
+    // The cc variables need to be declared before the loop so that at the end
+    // they are set to the last combining classes seen.
+    uint8_t sourceCC = 0;
+    uint8_t decompCC = 0;
+    for(;;) {
+        if(sourceChar < 0) {
+            if(sourceIndex >= nfdString.length()) { break; }
+            sourceChar = nfdString.char32At(sourceIndex);
+            sourceCC = nfd.getCombiningClass(sourceChar);
+            U_ASSERT(sourceCC != 0);
+        }
+        // We consume a decomposition character in each iteration.
+        if(decompIndex >= decomp.length()) { break; }
+        UChar32 decompChar = decomp.char32At(decompIndex);
+        decompCC = nfd.getCombiningClass(decompChar);
+        // Compare the two characters and their combining classes.
+        if(decompCC == 0) {
+            // Unable to merge because the source contains a non-zero combining mark
+            // but the composite's decomposition contains another starter.
+            // The strings would not be equivalent.
+            return FALSE;
+        } else if(sourceCC < decompCC) {
+            // Composite + sourceChar would not be FCD.
+            return FALSE;
+        } else if(decompCC < sourceCC) {
+            newNFDString.append(decompChar);
+            decompIndex += U16_LENGTH(decompChar);
+        } else if(decompChar != sourceChar) {
+            // Blocked because same combining class.
+            return FALSE;
+        } else {  // match: decompChar == sourceChar
+            newNFDString.append(decompChar);
+            decompIndex += U16_LENGTH(decompChar);
+            sourceIndex += U16_LENGTH(decompChar);
+            sourceChar = U_SENTINEL;
+        }
+    }
+    // We are at the end of at least one of the two inputs.
+    if(sourceChar >= 0) {  // more characters from nfdString but not from decomp
+        if(sourceCC < decompCC) {
+            // Appending the next source character to the composite would not be FCD.
+            return FALSE;
+        }
+        newNFDString.append(nfdString, sourceIndex, 0x7fffffff);
+        newString.append(nfdString, sourceIndex, 0x7fffffff);
+    } else if(decompIndex < decomp.length()) {  // more characters from decomp, not from nfdString
+        newNFDString.append(decomp, decompIndex, 0x7fffffff);
+    }
+    U_ASSERT(nfd.isNormalized(newNFDString, errorCode));
+    U_ASSERT(fcd.isNormalized(newString, errorCode));
+    U_ASSERT(nfd.normalize(newString, errorCode) == newNFDString);  // canonically equivalent
+    return TRUE;
 }
 
 UBool
@@ -1049,8 +1202,6 @@ CollationBuilder::closeOverComposites(UErrorCode &errorCode) {
     composites.remove(Hangul::HANGUL_BASE, Hangul::HANGUL_END);
     UnicodeString prefix;  // empty
     UnicodeString nfdString;
-    int64_t compCEs[Collation::MAX_EXPANSION_LENGTH];
-    int32_t compCEsLength;
     UnicodeSetIterator iter(composites);
     while(iter.next()) {
         U_ASSERT(!iter.isString());
@@ -1063,11 +1214,24 @@ CollationBuilder::closeOverComposites(UErrorCode &errorCode) {
             continue;
         }
         const UnicodeString &composite(iter.getString());
-        compCEsLength = dataBuilder->getCEs(composite, compCEs, 0);
-        if(!sameCEs(ces, cesLength, compCEs, compCEsLength)) {
-            dataBuilder->add(prefix, composite, ces, cesLength, errorCode);
-        }
+        addIfDifferent(prefix, composite, ces, cesLength, Collation::UNASSIGNED_CE32, errorCode);
     }
+}
+
+uint32_t
+CollationBuilder::addIfDifferent(const UnicodeString &prefix, const UnicodeString &str,
+                                 const int64_t newCEs[], int32_t newCEsLength, uint32_t ce32,
+                                 UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return ce32; }
+    int64_t oldCEs[Collation::MAX_EXPANSION_LENGTH];
+    int32_t oldCEsLength = dataBuilder->getCEs(prefix, str, oldCEs, 0);
+    if(!sameCEs(newCEs, newCEsLength, oldCEs, oldCEsLength)) {
+        if(ce32 == Collation::UNASSIGNED_CE32) {
+            ce32 = dataBuilder->encodeCEs(newCEs, newCEsLength, errorCode);
+        }
+        dataBuilder->addCE32(prefix, str, ce32, errorCode);
+    }
+    return ce32;
 }
 
 UBool

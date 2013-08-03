@@ -158,6 +158,8 @@ public:
      * @return incremented cesLength
      */
     int32_t getCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const;
+    int32_t getCEs(const UnicodeString &prefix, const UnicodeString &s,
+                   int64_t ces[], int32_t cesLength) const;
 
     int32_t lengthOfCE32s() const { return ce32s.size(); }
     int32_t lengthOfCEs() const { return ce64s.size(); }
@@ -208,6 +210,8 @@ protected:
     void buildContext(UChar32 c, UErrorCode &errorCode);
     int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
                            UErrorCode &errorCode);
+
+    int32_t getCEs(const UnicodeString &s, int32_t start, int64_t ces[], int32_t cesLength) const;
 
     uint32_t getCE32FromContext(const UnicodeString &s, uint32_t ce32,
                                 int32_t sIndex, UnicodeSet &consumed) const;

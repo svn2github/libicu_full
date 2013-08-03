@@ -1216,6 +1216,23 @@ CollationDataBuilder::addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &tr
 
 int32_t
 CollationDataBuilder::getCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const {
+    return getCEs(s, 0, ces, cesLength);
+}
+
+int32_t
+CollationDataBuilder::getCEs(const UnicodeString &prefix, const UnicodeString &s,
+                             int64_t ces[], int32_t cesLength) const {
+    int32_t prefixLength = prefix.length();
+    if(prefixLength == 0) {
+        return getCEs(s, 0, ces, cesLength);
+    } else {
+        return getCEs(prefix + s, prefixLength, ces, cesLength);
+    }
+}
+
+int32_t
+CollationDataBuilder::getCEs(const UnicodeString &s, int32_t start,
+                             int64_t ces[], int32_t cesLength) const {
     // Modified copy of CollationIterator::nextCE() and CollationIterator::nextCEFromSpecialCE32().
 
     // Track which input code points have been consumed,
@@ -1223,7 +1240,7 @@ CollationDataBuilder::getCEs(const UnicodeString &s, int64_t ces[], int32_t cesL
     // or the runtime code's more complicated state management.
     // (In Java we may use a BitSet.)
     UnicodeSet consumed;
-    for(int32_t i = 0; i < s.length();) {
+    for(int32_t i = start; i < s.length();) {
         UChar32 c = s.char32At(i);
         int32_t nextIndex = i + U16_LENGTH(c);
         if(consumed.contains(i)) {
