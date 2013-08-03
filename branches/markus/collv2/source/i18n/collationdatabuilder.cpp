@@ -1247,91 +1247,101 @@ CollationDataBuilder::getCEs(const UnicodeString &s, int32_t start,
         }
         consumed.add(i);
         i = nextIndex;
-        UBool fromBase = FALSE;
-        uint32_t ce32 = utrie2_get32(trie, c);
-        if(ce32 == Collation::FALLBACK_CE32) {
-            ce32 = base->getCE32(c);
-            fromBase = TRUE;
-        }
-        for(;;) {  // Loop while ce32 is special.
-            if(!Collation::isSpecialCE32(ce32)) {
-                cesLength = appendCE(ces, cesLength, Collation::ceFromSimpleCE32(ce32));
-                break;
-            }
-            switch(Collation::tagFromCE32(ce32)) {
-            case Collation::FALLBACK_TAG:
-            case Collation::RESERVED_TAG_3:
-            case Collation::RESERVED_TAG_7:
-            case Collation::HANGUL_TAG:
-            case Collation::LEAD_SURROGATE_TAG:
-                U_ASSERT(FALSE);
-                break;
-            case Collation::LONG_PRIMARY_TAG:
-                cesLength = appendCE(ces, cesLength, Collation::ceFromLongPrimaryCE32(ce32));
-                break;
-            case Collation::LONG_SECONDARY_TAG:
-                cesLength = appendCE(ces, cesLength, Collation::ceFromLongSecondaryCE32(ce32));
-                break;
-            case Collation::LATIN_EXPANSION_TAG:
-                cesLength = appendCE(ces, cesLength, Collation::latinCE0FromCE32(ce32));
-                cesLength = appendCE(ces, cesLength, Collation::latinCE1FromCE32(ce32));
-                break;
-            case Collation::EXPANSION32_TAG: {
-                const uint32_t *rawCE32s =
-                    fromBase ? base->ce32s : reinterpret_cast<uint32_t *>(ce32s.getBuffer());
-                rawCE32s += Collation::indexFromCE32(ce32);
-                int32_t length = Collation::lengthFromCE32(ce32);
-                do {
-                    cesLength = appendCE(ces, cesLength, Collation::ceFromCE32(*rawCE32s++));
-                } while(--length > 0);
-                break;
-            }
-            case Collation::EXPANSION_TAG: {
-                const int64_t *rawCEs = fromBase ? base->ces : ce64s.getBuffer();
-                rawCEs += Collation::indexFromCE32(ce32);
-                int32_t length = Collation::lengthFromCE32(ce32);
-                do {
-                    cesLength = appendCE(ces, cesLength, *rawCEs++);
-                } while(--length > 0);
-                break;
-            }
-            case Collation::PREFIX_TAG:
-                U_ASSERT(fromBase);
-                ce32 = getCE32FromBasePrefix(s, ce32, i - U16_LENGTH(c));
-                continue;
-            case Collation::CONTRACTION_TAG:
-                if(fromBase) {
-                    ce32 = getCE32FromBaseContraction(s, ce32, i, consumed);
-                } else {
-                    ce32 = getCE32FromContext(s, ce32, i, consumed);
-                }
-                continue;
-            case Collation::DIGIT_TAG:
-                U_ASSERT(fromBase);
-                // Fetch the non-numeric-collation CE32 and continue.
-                ce32 = base->ce32s[Collation::indexFromCE32(ce32)];
-                continue;
-            case Collation::U0000_TAG:
-                U_ASSERT(fromBase);
-                U_ASSERT(c == 0);
-                // Fetch the normal ce32 for U+0000 and continue.
-                ce32 = base->ce32s[0];
-                continue;
-            case Collation::OFFSET_TAG: {
-                U_ASSERT(fromBase);
-                int64_t dataCE = base->ces[Collation::indexFromCE32(ce32)];
-                uint32_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
-                cesLength = appendCE(ces, cesLength, Collation::makeCE(p));
-                break;
-            }
-            case Collation::IMPLICIT_TAG:
-                U_ASSERT(fromBase);
-                cesLength = appendCE(ces, cesLength, Collation::unassignedCEFromCodePoint(c));
-            }
-            break;
-        }
+        cesLength = appendCEsFromCodePoint(s, c, i, consumed, ces, cesLength);
     }
     return cesLength;
+}
+
+int32_t
+CollationDataBuilder::appendCEsFromCodePoint(const UnicodeString &s, UChar c,
+                                             int32_t i, UnicodeSet &consumed,
+                                             int64_t ces[], int32_t cesLength) const {
+    UBool fromBase = FALSE;
+    uint32_t ce32 = utrie2_get32(trie, c);
+    if(ce32 == Collation::FALLBACK_CE32) {
+        ce32 = base->getCE32(c);
+        fromBase = TRUE;
+    }
+    while(Collation::isSpecialCE32(ce32)) {  // Loop while ce32 is special.
+        switch(Collation::tagFromCE32(ce32)) {
+        case Collation::FALLBACK_TAG:
+        case Collation::RESERVED_TAG_3:
+        case Collation::RESERVED_TAG_7:
+        case Collation::LEAD_SURROGATE_TAG:
+            U_ASSERT(FALSE);
+            return cesLength;
+        case Collation::LONG_PRIMARY_TAG:
+            return appendCE(ces, cesLength, Collation::ceFromLongPrimaryCE32(ce32));
+        case Collation::LONG_SECONDARY_TAG:
+            return appendCE(ces, cesLength, Collation::ceFromLongSecondaryCE32(ce32));
+        case Collation::LATIN_EXPANSION_TAG:
+            cesLength = appendCE(ces, cesLength, Collation::latinCE0FromCE32(ce32));
+            return appendCE(ces, cesLength, Collation::latinCE1FromCE32(ce32));
+        case Collation::EXPANSION32_TAG: {
+            const uint32_t *rawCE32s =
+                fromBase ? base->ce32s : reinterpret_cast<uint32_t *>(ce32s.getBuffer());
+            rawCE32s += Collation::indexFromCE32(ce32);
+            int32_t length = Collation::lengthFromCE32(ce32);
+            do {
+                cesLength = appendCE(ces, cesLength, Collation::ceFromCE32(*rawCE32s++));
+            } while(--length > 0);
+            return cesLength;
+        }
+        case Collation::EXPANSION_TAG: {
+            const int64_t *rawCEs = fromBase ? base->ces : ce64s.getBuffer();
+            rawCEs += Collation::indexFromCE32(ce32);
+            int32_t length = Collation::lengthFromCE32(ce32);
+            do {
+                cesLength = appendCE(ces, cesLength, *rawCEs++);
+            } while(--length > 0);
+            return cesLength;
+        }
+        case Collation::PREFIX_TAG:
+            U_ASSERT(fromBase);
+            ce32 = getCE32FromBasePrefix(s, ce32, i - U16_LENGTH(c));
+            break;
+        case Collation::CONTRACTION_TAG:
+            if(fromBase) {
+                ce32 = getCE32FromBaseContraction(s, ce32, i, consumed);
+            } else {
+                ce32 = getCE32FromContext(s, ce32, i, consumed);
+            }
+            break;
+        case Collation::DIGIT_TAG:
+            U_ASSERT(fromBase);
+            // Fetch the non-numeric-collation CE32 and continue.
+            ce32 = base->ce32s[Collation::indexFromCE32(ce32)];
+            break;
+        case Collation::U0000_TAG:
+            U_ASSERT(fromBase);
+            U_ASSERT(c == 0);
+            // Fetch the normal ce32 for U+0000 and continue.
+            ce32 = base->ce32s[0];
+            break;
+        case Collation::HANGUL_TAG: {
+            // This supports only limited context, like in CollationIterator.
+            // The CollationBuilder checks for supported context.
+            UChar jamos[3];
+            int32_t numJamos = Hangul::decompose(c, jamos);
+            cesLength = appendCEsFromCodePoint(s, jamos[0], i, consumed, ces, cesLength);
+            cesLength = appendCEsFromCodePoint(s, jamos[1], i, consumed, ces, cesLength);
+            if(numJamos == 3) {
+                cesLength = appendCEsFromCodePoint(s, jamos[2], i, consumed, ces, cesLength);
+            }
+            return cesLength;
+        }
+        case Collation::OFFSET_TAG: {
+            U_ASSERT(fromBase);
+            int64_t dataCE = base->ces[Collation::indexFromCE32(ce32)];
+            uint32_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
+            return appendCE(ces, cesLength, Collation::makeCE(p));
+        }
+        case Collation::IMPLICIT_TAG:
+            U_ASSERT(fromBase);
+            return appendCE(ces, cesLength, Collation::unassignedCEFromCodePoint(c));
+        }
+    }
+    return appendCE(ces, cesLength, Collation::ceFromSimpleCE32(ce32));
 }
 
 uint32_t

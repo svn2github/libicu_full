@@ -267,14 +267,12 @@ private:
     void backwardNumSkipped(int32_t n, UErrorCode &errorCode);
 
     uint32_t nextCE32FromContraction(
-            const CollationData *d, UChar32 originalCp,
-            const UChar *p, uint32_t ce32,
+            const CollationData *d, const UChar *p, uint32_t ce32,
             UBool maybeDiscontiguous, UChar32 c,
             UErrorCode &errorCode);
 
     uint32_t nextCE32FromDiscontiguousContraction(
-            const CollationData *d, UChar32 originalCp,
-            UCharsTrie &suffixes, uint32_t ce32,
+            const CollationData *d, UCharsTrie &suffixes, uint32_t ce32,
             int32_t lookAhead, UChar32 c,
             UErrorCode &errorCode);
 

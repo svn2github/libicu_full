@@ -1032,7 +1032,7 @@ CollationBuilder::addOnlyClosure(const UnicodeString &nfdPrefix, const UnicodeSt
         for(;;) {
             UnicodeString prefix = prefixIter.next();
             if(prefix.isBogus()) { break; }
-            if(ignoreString(prefix, errorCode)) { continue; }
+            if(ignorePrefix(prefix, errorCode)) { continue; }
             UBool samePrefix = prefix == nfdPrefix;
             for(;;) {
                 UnicodeString str = stringIter.next();

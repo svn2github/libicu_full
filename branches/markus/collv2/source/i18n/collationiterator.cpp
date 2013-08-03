@@ -313,7 +313,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
                     break;
                 }
             }
-            ce32 = nextCE32FromContraction(d, c, p + 2, defaultCE32,
+            ce32 = nextCE32FromContraction(d, p + 2, defaultCE32,
                                            (ce32 & Collation::CONTRACT_TRAILING_CCC) != 0,
                                            nextCp, errorCode);
             if(ce32 == 0x100) {
@@ -349,20 +349,20 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             c /= Hangul::JAMO_T_COUNT;
             UChar32 v = c % Hangul::JAMO_V_COUNT;
             c /= Hangul::JAMO_V_COUNT;
-            // Each conjoining Jamo ce32 should be isSimpleOrLongCE32() or an expansion.
             // We should not need to compute each Jamo code point.
-            // In particular, there should be no context, and no offset or implict ce32.
+            // In particular, there should be no offset or implict ce32.
             // Possible optimization: We could use a bit in the Hangul ce32
             // to indicate that none of the Jamo CE32s are isSpecialCE32(),
             // and avoid the recursive function calls and the per-Jamo tests.
-            appendCEsFromCE32(d, 0, jamoCE32s[c], forward, errorCode);
-            appendCEsFromCE32(d, 0, jamoCE32s[19 + v], forward, errorCode);
+            appendCEsFromCE32(d, U_SENTINEL, jamoCE32s[c], forward, errorCode);
+            appendCEsFromCE32(d, U_SENTINEL, jamoCE32s[19 + v], forward, errorCode);
             if(t == 0) { return; }
             // offset 39 = 19 + 21 - 1:
             // 19 = JAMO_L_COUNT
             // 21 = JAMO_T_COUNT
             // -1 = omit t==0
             ce32 = jamoCE32s[39 + t];
+            c = U_SENTINEL;
             break;
         }
         case Collation::LEAD_SURROGATE_TAG: {
@@ -387,9 +387,11 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             break;
         }
         case Collation::OFFSET_TAG:
+            U_ASSERT(c >= 0);
             ceBuffer.append(getCEFromOffsetCE32(d, c, ce32), errorCode);
             return;
         case Collation::IMPLICIT_TAG:
+            U_ASSERT(c >= 0);
             if(U_IS_SURROGATE(c) && forbidSurrogateCodePoints()) {
                 ce32 = Collation::FFFD_CE32;
                 break;
@@ -451,11 +453,10 @@ CollationIterator::backwardNumSkipped(int32_t n, UErrorCode &errorCode) {
 }
 
 uint32_t
-CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 originalCp,
-                                           const UChar *p, uint32_t ce32,
-                                           UBool maybeDiscontiguous, UChar32 c, UErrorCode &errorCode) {
-    // originalCp: Only needed as input to nextCE32FromDiscontiguousContraction().
-    // c: next code point after originalCp
+CollationIterator::nextCE32FromContraction(const CollationData *d, const UChar *p, uint32_t ce32,
+                                           UBool maybeDiscontiguous, UChar32 c,
+                                           UErrorCode &errorCode) {
+    // c: next code point after the original one
 
     // Number of code points read beyond the original code point.
     // Only needed as input to nextCE32FromDiscontiguousContraction().
@@ -495,7 +496,7 @@ CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 origi
                 }
                 if(d->getFCD16(c) > 0xff) {
                     return nextCE32FromDiscontiguousContraction(
-                        d, originalCp, suffixes, ce32, lookAhead, c, errorCode);
+                        d, suffixes, ce32, lookAhead, c, errorCode);
                 }
             }
             break;
@@ -516,8 +517,7 @@ CollationIterator::nextCE32FromContraction(const CollationData *d, UChar32 origi
 
 uint32_t
 CollationIterator::nextCE32FromDiscontiguousContraction(
-        const CollationData *d, UChar32 originalCp,
-        UCharsTrie &suffixes, uint32_t ce32,
+        const CollationData *d, UCharsTrie &suffixes, uint32_t ce32,
         int32_t lookAhead, UChar32 c,
         UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return 0; }
@@ -621,7 +621,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
         // and we are not in a recursive discontiguous contraction.
         // Append CEs from the contraction ce32
         // and then from the combining marks that we skipped before the match.
-        UChar32 c = originalCp;
+        UChar32 c = U_SENTINEL;
         for(;;) {
             appendCEsFromCE32(d, c, ce32, TRUE, errorCode);
             // Fetch CE32s for skipped combining marks from the normal data, with fallback,

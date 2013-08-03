@@ -1293,3 +1293,13 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  \u1100\uAC00  # prefix match from the L of the LV syllable
 =  \u1101\u1161
 =  \uAE4C
+
+** test: Hangul syllables in prefix & in the interior of a contraction
+@ rules
+&x=\u1100\u1161|a\u1102\u1162z
+* compare
+<1 \u1100\u1161x
+=  \u1100\u1161a\u1102\u1162z
+=  \u1100\u1161a\uB0B4z
+=  \uAC00a\u1102\u1162z
+=  \uAC00a\uB0B4z
