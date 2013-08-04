@@ -128,7 +128,7 @@ CollationBaseDataBuilder::init(UErrorCode &errorCode) {
     // but omitting this special element from the root elements is simple and effective.
 
     uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
-    utrie2_setRange32(trie, 0xac00, 0xd7a3, hangulCE32, TRUE, &errorCode);
+    utrie2_setRange32(trie, Hangul::HANGUL_BASE, Hangul::HANGUL_END, hangulCE32, TRUE, &errorCode);
 
     // Add a mapping for the first-unassigned boundary,
     // which is the AlphabeticIndex overflow boundary.

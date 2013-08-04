@@ -123,8 +123,15 @@ CollationDataBuilder::initForTailoring(const CollationData *b, UErrorCode &error
     // Always set the Hangul tag to help performance.
     // Do this here, rather than in buildMappings(),
     // so that we see the HANGUL_TAG in various assertions.
-    uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
-    utrie2_setRange32(trie, Hangul::HANGUL_BASE, Hangul::HANGUL_END, hangulCE32, TRUE, &errorCode);
+    // Copy from the base in blocks per Jamo L,
+    // assuming that HANGUL_NO_SPECIAL_JAMO is set or not set for whole blocks.
+    for(UChar32 c = Hangul::HANGUL_BASE; c < Hangul::HANGUL_LIMIT;) {
+        uint32_t ce32 = base->getCE32(c);
+        U_ASSERT(Collation::hasCE32Tag(ce32, Collation::HANGUL_TAG));
+        UChar32 limit = c + Hangul::JAMO_VT_COUNT;
+        utrie2_setRange32(trie, c, limit - 1, ce32, TRUE, &errorCode);
+        c = limit;
+    }
 
     // Copy the set contents but don't copy/clone the set as a whole because
     // that would copy the isFrozen state too.
@@ -1040,6 +1047,31 @@ CollationDataBuilder::buildMappings(CollationData &data, UErrorCode &errorCode) 
         jamoIndex = ce32s.size();
         for(int32_t i = 0; i < CollationData::JAMO_CE32S_LENGTH; ++i) {
             ce32s.addElement((int32_t)jamoCE32s[i], errorCode);
+        }
+        // Small optimization: Use a bit in the Hangul ce32
+        // to indicate that none of the Jamo CE32s are isSpecialCE32()
+        // (as it should be in the root collator).
+        // It allows CollationIterator to avoid recursive function calls and per-Jamo tests.
+        // In order to still have good trie compression and keep this code simple,
+        // we only set this flag if a whole block of 588 Hangul syllables starting with
+        // a common leading consonant (Jamo L) has this property.
+        UBool isAnyJamoVTSpecial = FALSE;
+        for(int32_t i = Hangul::JAMO_L_COUNT; i < CollationData::JAMO_CE32S_LENGTH; ++i) {
+            if(Collation::isSpecialCE32(jamoCE32s[i])) {
+                isAnyJamoVTSpecial = TRUE;
+                break;
+            }
+        }
+        uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
+        UChar32 c = Hangul::HANGUL_BASE;
+        for(int32_t i = 0; i < Hangul::JAMO_L_COUNT; ++i) {  // iterate over the Jamo L
+            uint32_t ce32 = hangulCE32;
+            if(!isAnyJamoVTSpecial && !Collation::isSpecialCE32(jamoCE32s[i])) {
+                ce32 |= Collation::HANGUL_NO_SPECIAL_JAMO;
+            }
+            UChar32 limit = c + Hangul::JAMO_VT_COUNT;
+            utrie2_setRange32(trie, c, limit - 1, ce32, TRUE, &errorCode);
+            c = limit;
         }
     }
 

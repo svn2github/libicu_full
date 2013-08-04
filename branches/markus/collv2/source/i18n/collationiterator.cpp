@@ -349,21 +349,32 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             c /= Hangul::JAMO_T_COUNT;
             UChar32 v = c % Hangul::JAMO_V_COUNT;
             c /= Hangul::JAMO_V_COUNT;
-            // We should not need to compute each Jamo code point.
-            // In particular, there should be no offset or implict ce32.
-            // Possible optimization: We could use a bit in the Hangul ce32
-            // to indicate that none of the Jamo CE32s are isSpecialCE32(),
-            // and avoid the recursive function calls and the per-Jamo tests.
-            appendCEsFromCE32(d, U_SENTINEL, jamoCE32s[c], forward, errorCode);
-            appendCEsFromCE32(d, U_SENTINEL, jamoCE32s[19 + v], forward, errorCode);
-            if(t == 0) { return; }
-            // offset 39 = 19 + 21 - 1:
-            // 19 = JAMO_L_COUNT
-            // 21 = JAMO_T_COUNT
-            // -1 = omit t==0
-            ce32 = jamoCE32s[39 + t];
-            c = U_SENTINEL;
-            break;
+            if((ce32 & Collation::HANGUL_NO_SPECIAL_JAMO) != 0) {
+                // None of the Jamo CE32s are isSpecialCE32().
+                // Avoid recursive function calls and per-Jamo tests.
+                if(ceBuffer.ensureAppendCapacity(t == 0 ? 2 : 3, errorCode)) {
+                    ceBuffer.set(ceBuffer.length, Collation::ceFromCE32(jamoCE32s[c]));
+                    ceBuffer.set(ceBuffer.length + 1, Collation::ceFromCE32(jamoCE32s[19 + v]));
+                    ceBuffer.length += 2;
+                    if(t != 0) {
+                        ceBuffer.set(ceBuffer.length++, Collation::ceFromCE32(jamoCE32s[39 + t]));
+                    }
+                }
+                return;
+            } else {
+                // We should not need to compute each Jamo code point.
+                // In particular, there should be no offset or implicit ce32.
+                appendCEsFromCE32(d, U_SENTINEL, jamoCE32s[c], forward, errorCode);
+                appendCEsFromCE32(d, U_SENTINEL, jamoCE32s[19 + v], forward, errorCode);
+                if(t == 0) { return; }
+                // offset 39 = 19 + 21 - 1:
+                // 19 = JAMO_L_COUNT
+                // 21 = JAMO_T_COUNT
+                // -1 = omit t==0
+                ce32 = jamoCE32s[39 + t];
+                c = U_SENTINEL;
+                break;
+            }
         }
         case Collation::LEAD_SURROGATE_TAG: {
             U_ASSERT(forward);  // Backward iteration should never see lead surrogate code _unit_ data.

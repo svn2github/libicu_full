@@ -269,6 +269,9 @@ public:
     /** Set if any contraction suffix ends with cc != 0. */
     static const uint32_t CONTRACT_TRAILING_CCC = 0x100;
 
+    /** For HANGUL_TAG: None of its Jamo CE32s isSpecialCE32(). */
+    static const uint32_t HANGUL_NO_SPECIAL_JAMO = 0x100;
+
     static const uint32_t LEAD_ALL_UNASSIGNED = 0;
     static const uint32_t LEAD_ALL_FALLBACK = 0x100;
     static const uint32_t LEAD_MIXED = 0x200;
