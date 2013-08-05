@@ -1294,6 +1294,42 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  \u1101\u1161
 =  \uAE4C
 
+** test: proposed Korean "searchjl" tailoring with prefixes, CLDR ticket 6546
+@ rules
+# Low secondary CEs for Jamo V & T.
+# Note: T should sort before V for proper syllable order.
+&\u0332  # COMBINING LOW LINE (first primary ignorable)
+<<\u1161<<\u1162
+
+# Korean Jamo lead consonant search rules, part 2:
+# Make modern compound L jamo primary equivalent to non-compound forms.
+
+# Secondary CEs for Jamo L-after-L, greater than Jamo V & T.
+&\u0313  # COMBINING COMMA ABOVE (second primary ignorable)
+=\u1100|\u1100
+=\u1103|\u1103
+=\u1107|\u1107
+=\u1109|\u1109
+=\u110C|\u110C
+
+# Compound L Jamo map to equivalent expansions of primary+secondary CE.
+&\u1100\u0313=\u1101<<<\u3132  # HANGUL CHOSEONG SSANGKIYEOK, HANGUL LETTER SSANGKIYEOK
+&\u1103\u0313=\u1104<<<\u3138  # HANGUL CHOSEONG SSANGTIKEUT, HANGUL LETTER SSANGTIKEUT
+&\u1107\u0313=\u1108<<<\u3143  # HANGUL CHOSEONG SSANGPIEUP, HANGUL LETTER SSANGPIEUP
+&\u1109\u0313=\u110A<<<\u3146  # HANGUL CHOSEONG SSANGSIOS, HANGUL LETTER SSANGSIOS
+&\u110C\u0313=\u110D<<<\u3149  # HANGUL CHOSEONG SSANGCIEUC, HANGUL LETTER SSANGCIEUC
+
+* compare
+<1 \u1100\u1161
+=  \uAC00
+<2 \u1100\u1162
+=  \uAC1C
+<2 \u1100\u1100\u1161
+=  \u1100\uAC00
+=  \u1101\u1161
+=  \uAE4C
+<3 \u3132\u1161
+
 ** test: Hangul syllables in prefix & in the interior of a contraction
 @ rules
 &x=\u1100\u1161|a\u1102\u1162z
