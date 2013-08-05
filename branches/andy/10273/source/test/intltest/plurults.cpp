@@ -846,9 +846,11 @@ void PluralRulesTest::testAvailbleLocales() {
     // Instantiate plural rules for each available locale.
     localesEnum->reset(status);
     for (;;) {
+        status = U_ZERO_ERROR;
         const char *localeName = localesEnum->next(NULL, status);
         if (U_FAILURE(status)) {
-            errln("file %s,  line %d: Error status = %s", __FILE__, __LINE__, u_errorName(status));
+            errln("file %s,  line %d: Error status = %s, locale = %s",
+                __FILE__, __LINE__, u_errorName(status), localeName);
             return;
         }
         if (localeName == NULL) {

@@ -153,19 +153,16 @@ PluralRules::forLocale(const Locale& locale, UPluralType type, UErrorCode& statu
         return NULL;
     }
     UnicodeString locRule = newObj->getRuleFromResource(locale, type, status);
-    if ((locRule.length() != 0) && U_SUCCESS(status)) {
-        newObj->parseDescription(locRule, status);
+    // TODO: which errors, if any, should be returned?
+    if (locRule.length() == 0) {
+        locRule =  UnicodeString(PLURAL_DEFAULT_RULE);
+        /// status = U_ZERO_ERROR;   // TODO: this is hiding some bogus data wit U_MISSING__RESOURCE_ERROR.
     }
-    if (U_FAILURE(status)||(locRule.length() == 0)) {
-        // use default plural rule
-        //  TODO: should this propagate the failure out.
-        //        I think so.
+    newObj->parseDescription(locRule, status);
+        //  TODO: should rule parse errors be returned, or
+        //        should we silently use default rules?
+        //        Original impl used default rules.
         //        Ask the question to ICU Core.
-
-        status = U_ZERO_ERROR;
-        UnicodeString defRule = UnicodeString(PLURAL_DEFAULT_RULE);
-        newObj->parseDescription(defRule, status);
-    }
 
     return newObj;
 }
