@@ -23,11 +23,14 @@
 #include "unicode/errorcode.h"
 #include "unicode/localpointer.h"
 #include "charstr.h"
+#include "cmemory.h"
 #include "collation.h"
 #include "collationbasedatabuilder.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
 #include "collationdatareader.h"
+#include "collationdatawriter.h"
+#include "collationinfo.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
 #include "cstring.h"
@@ -50,7 +53,7 @@ static UBool beVerbose=FALSE, withCopyright=TRUE;
 
 static UVersionInfo UCAVersion;
 
-static const UDataInfo ucaDataInfo={
+static UDataInfo ucaDataInfo={
     sizeof(UDataInfo),
     0,
 
@@ -61,20 +64,6 @@ static const UDataInfo ucaDataInfo={
 
     { 0x55, 0x43, 0x6f, 0x6c },         // dataFormat="UCol"
     { 4, 0, 0, 0 },                     // formatVersion
-    { 6, 3, 0, 0 }                      // dataVersion
-};
-
-static const UDataInfo invUcaDataInfo={
-    sizeof(UDataInfo),
-    0,
-
-    U_IS_BIG_ENDIAN,
-    U_CHARSET_FAMILY,
-    U_SIZEOF_UCHAR,
-    0,
-
-    { 0x49, 0x6e, 0x76, 0x43 },         // dataFormat="InvC"
-    { 3, 0, 0, 0 },                     // formatVersion
     { 6, 3, 0, 0 }                      // dataVersion
 };
 
@@ -801,9 +790,6 @@ parseFractionalUCA(const char *filename,
     return;
 }
 
-static uint8_t trieBytes[300 * 1024];
-static uint16_t unsafeBwdSetWords[30 * 1024];
-
 static void
 buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                       const char *path, UErrorCode &errorCode) {
@@ -866,14 +852,6 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     // default options, so that we need not duplicate them here.
     CollationSettings settings;
 
-    int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1]={
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0
-    };
-
     UVector32 rootElements(errorCode);
     for(int32_t i = 0; i < CollationRootElements::IX_COUNT; ++i) {
         rootElements.addElement(0, errorCode);
@@ -903,80 +881,33 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     secTerBoundaries |= (int32_t)getOptionValue("[fixed first ignorable tertiary byte");
     rootElements.setElementAt(secTerBoundaries, CollationRootElements::IX_SEC_TER_BOUNDARIES);
 
-    // For the root collator, we write an even number of indexes
-    // so that we start with an 8-aligned offset.
-    indexes[CollationDataReader::IX_INDEXES_LENGTH] = CollationDataReader::IX_TOTAL_SIZE + 1;
-    indexes[CollationDataReader::IX_OPTIONS] = data.numericPrimary | settings.options;
-
-    indexes[CollationDataReader::IX_JAMO_CE32S_START] = data.jamoCE32s - data.ce32s;
-
+    LocalMemory<uint8_t> buffer;
+    int32_t capacity = 1000000;
+    uint8_t *dest = buffer.allocateInsteadAndCopy(capacity);
+    if(dest == NULL) {
+        fprintf(stderr, "memory allocation (%ld bytes) for file contents failed\n",
+                (long)capacity);
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1];
+    int32_t totalSize = CollationDataWriter::write(
+            TRUE, NULL,
+            &builder, data, settings,
+            rootElements.getBuffer(), rootElements.size(),
+            indexes, dest, capacity,
+            errorCode);
+    if(U_FAILURE(errorCode)) {
+        fprintf(stderr, "CollationDataWriter::write(capacity = %ld) failed: %s\n",
+                (long)capacity, u_errorName(errorCode));
+        return;
+    }
     printf("*** CLDR root collation part sizes ***\n");
-    int32_t totalSize = (int32_t)sizeof(indexes);
+    CollationInfo::printSizes(totalSize, indexes);
+    printf("*** CLDR root collation size:   %6ld (with file header but no copyright string)\n",
+           (long)totalSize + 32);  // 32 bytes = DataHeader rounded up to 16-byte boundary
 
-    indexes[CollationDataReader::IX_REORDER_CODES_OFFSET] = totalSize;
-    indexes[CollationDataReader::IX_REORDER_TABLE_OFFSET] = totalSize;
-    indexes[CollationDataReader::IX_TRIE_OFFSET] = totalSize;
-    int32_t trieSize = builder.serializeTrie(trieBytes, LENGTHOF(trieBytes), errorCode);
-    if(U_FAILURE(errorCode)) {
-        fprintf(stderr, "builder.serializeTrie()=%ld failed: %s\n",
-                (long)trieSize, u_errorName(errorCode));
-        return;
-    }
-    printf("  trie size:                    %6ld\n", (long)trieSize);
-    totalSize += trieSize;
-
-    // cePadding should be 0 due to the way compactIndex2(UNewTrie2 *trie)
-    // currently works (trieSize should be a multiple of 8 bytes).
-    int32_t cePadding = (totalSize & 7) == 0 ? 0 : 4;
-    totalSize += cePadding;
-
-    indexes[CollationDataReader::IX_RESERVED8_OFFSET] = totalSize;
-    indexes[CollationDataReader::IX_CES_OFFSET] = totalSize;
-    int32_t length = builder.lengthOfCEs();
-    printf("  CEs:              %6ld *8 = %6ld\n", (long)length, (long)length * 8);
-    totalSize += length * 8;
-
-    indexes[CollationDataReader::IX_RESERVED10_OFFSET] = totalSize;
-    indexes[CollationDataReader::IX_CE32S_OFFSET] = totalSize;
-    length = builder.lengthOfCE32s();
-    printf("  CE32s:            %6ld *4 = %6ld\n", (long)length, (long)length * 4);
-    totalSize += length * 4;
-
-    indexes[CollationDataReader::IX_ROOT_ELEMENTS_OFFSET] = totalSize;
-    length = rootElements.size();
-    printf("  rootElements:     %6ld *4 = %6ld\n", (long)length, (long)length * 4);
-    totalSize += length * 4;
-
-    indexes[CollationDataReader::IX_CONTEXTS_OFFSET] = totalSize;
-    length = builder.lengthOfContexts();
-    printf("  contexts:         %6ld *2 = %6ld\n", (long)length, (long)length * 2);
-    totalSize += length * 2;
-
-    indexes[CollationDataReader::IX_UNSAFE_BWD_OFFSET] = totalSize;
-    int32_t unsafeBwdSetLength = builder.serializeUnsafeBackwardSet(
-        unsafeBwdSetWords, LENGTHOF(unsafeBwdSetWords), errorCode);
-    if(U_FAILURE(errorCode)) {
-        fprintf(stderr, "builder.serializeUnsafeBackwardSet()=%ld failed: %s\n",
-                (long)unsafeBwdSetLength, u_errorName(errorCode));
-        return;
-    }
-    printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)unsafeBwdSetLength, (long)unsafeBwdSetLength * 2);
-    totalSize += unsafeBwdSetLength * 2;
-
-    indexes[CollationDataReader::IX_RESERVED15_OFFSET] = totalSize;
-    indexes[CollationDataReader::IX_SCRIPTS_OFFSET] = totalSize;
-    length = data.scriptsLength;
-    printf("  scripts data:     %6ld *2 = %6ld\n", (long)length, (long)length * 2);
-    totalSize += length * 2;
-
-    indexes[CollationDataReader::IX_COMPRESSIBLE_BYTES_OFFSET] = totalSize;
-    printf("  compressibleBytes:               256\n");
-    totalSize += 256;
-
-    indexes[CollationDataReader::IX_RESERVED18_OFFSET] = totalSize;
-    indexes[CollationDataReader::IX_TOTAL_SIZE] = totalSize;
-    printf("*** CLDR root collation size:   %6ld\n", (long)totalSize);
-
+    uprv_memcpy(ucaDataInfo.dataVersion, UCAVersion, sizeof(UVersionInfo));
     UNewDataMemory *pData=udata_create(path, "icu", "ucadata2", &ucaDataInfo,
                                        withCopyright ? U_COPYRIGHT_STRING : NULL, &errorCode);
     if(U_FAILURE(errorCode)) {
@@ -985,17 +916,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         return;
     }
 
-    udata_writeBlock(pData, indexes, sizeof(indexes));
-    udata_writeBlock(pData, trieBytes, trieSize);
-    udata_writePadding(pData, cePadding);
-    udata_writeBlock(pData, data.ces, builder.lengthOfCEs() * 8);
-    udata_writeBlock(pData, data.ce32s, builder.lengthOfCE32s() * 4);
-    udata_writeBlock(pData, rootElements.getBuffer(), rootElements.size() * 4);
-    udata_writeBlock(pData, data.contexts, builder.lengthOfContexts() * 2);
-    udata_writeBlock(pData, unsafeBwdSetWords, unsafeBwdSetLength * 2);
-    udata_writeBlock(pData, data.scripts, data.scriptsLength * 2);
-    udata_writeBlock(pData, data.compressibleBytes, 256);
-
+    udata_writeBlock(pData, dest, totalSize);
     long dataLength = udata_finish(pData, &errorCode);
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "genuca: error %s writing the output file\n", u_errorName(errorCode));

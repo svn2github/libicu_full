@@ -34,6 +34,10 @@
 #include "unicode/uscript.h"
 #include "unicode/putil.h"
 #include "collationbuilder.h"
+#include "collationdatabuilder.h"
+#include "collationdatareader.h"
+#include "collationdatawriter.h"
+#include "collationinfo.h"
 #include "collationroot.h"
 #include "collationruleparser.h"
 #include "collationtailoring.h"
@@ -91,6 +95,7 @@ typedef struct {
     uint32_t        inputdirLength;
     const char     *outputdir;
     uint32_t        outputdirLength;
+    const char     *filename;
     UBool           makeBinaryCollation;
 } ParseState;
 
@@ -778,7 +783,7 @@ static const UChar* importFromDataFile(void* context, const char* locale, const 
     }
 
     /* Parse the data into an SRBRoot */
-    data = parse(ucbuf, genrbdata->inputDir, genrbdata->outputDir, FALSE, status);
+    data = parse(ucbuf, genrbdata->inputDir, genrbdata->outputDir, filename, FALSE, status);
 
     root = data->fRoot;
     collations = resLookup(root, "collations");
@@ -934,6 +939,7 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
 
             u_UCharsToChars(member->u.fString.fChars, ver, length + 1); /* +1 for copying NULL */
             u_versionFromString(version, ver);
+            // TODO: need to handle .txt files where the Version comes after the Sequence
 
             table_add(result, member, line, status);
 
@@ -972,6 +978,7 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                 coll = ucol_openRulesForImport(member->u.fString.fChars, member->u.fString.fLength,
                                                UCOL_OFF, UCOL_DEFAULT_STRENGTH,&parseError, importFromDataFile, &genrbdata, &intStatus);
 
+                int32_t v1Size = 0;  // TODO: remove
                 if (U_SUCCESS(intStatus) && coll != NULL)
                 {
                     len = ucol_cloneBinary(coll, NULL, 0, &intStatus);
@@ -979,6 +986,7 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                     intStatus = U_ZERO_ERROR;
                     len = ucol_cloneBinary(coll, data, len, &intStatus);
                     /*data = ucol_cloneRuleData(coll, &len, &intStatus);*/
+                    v1Size = len;
 
                     /* tailoring rules version */
                     /* This is wrong! */
@@ -1003,6 +1011,10 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                                 intvector_add(reorderCodeRes, reorderCodes[reorderCodeIndex], status);
                             }
                             table_add(result, reorderCodeRes, line, status);
+                            v1Size += reorderCodeCount * 4
+                                + 4  // store the length
+                                + 6  // average padding of a binary
+                                + strlen("%%ReorderCodes") + 1 + 4;  // resource overhead
                         }
                     }
                     else
@@ -1027,11 +1039,11 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                     escape(parseError.preContext, preBuffer);
                     escape(parseError.postContext, postBuffer);
                     warning(line,
-                            "%%%%CollationBin could not be constructed from %s/Sequence\n"
+                            "%%%%CollationBin could not be constructed from %s~%s/Sequence\n"
                             "  check context, check that the FractionalUCA.txt UCA version "
                             "matches the current UCD version\n"
                             "  UErrorCode=%s  UParseError={ line=%d offset=%d pre=<%s> post=<%s> }",
-                            collationType,
+                            state->filename, collationType,
                             u_errorName(intStatus),
                             parseError.line,
                             parseError.offset,
@@ -1042,7 +1054,6 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                         return NULL;
                     }
                 }
-printf("---- CollationBuilder %s\n", collationType);
                 UErrorCode errorCode = U_ZERO_ERROR;
                 uprv_memset(&parseError, 0, sizeof(parseError));
                 UnicodeString rules(FALSE, member->u.fString.fChars, member->u.fString.fLength);
@@ -1051,13 +1062,65 @@ printf("---- CollationBuilder %s\n", collationType);
                 LocalPointer<icu::CollationTailoring> t(
                         builder.parseAndBuild(rules, &importer, &parseError, errorCode));
                 if(U_SUCCESS(errorCode)) {
-                    // TODO: print stats, compare size with v1; later only if(isVerbose())
+                    icu::LocalMemory<uint8_t> buffer;
+                    int32_t capacity = 100000;
+                    uint8_t *dest = buffer.allocateInsteadAndCopy(capacity);
+                    if(dest == NULL) {
+                        fprintf(stderr, "memory allocation (%ld bytes) for file contents failed\n",
+                                (long)capacity);
+                        // TODO: errorCode vs. *status ...
+                        errorCode = U_MEMORY_ALLOCATION_ERROR;
+                        return NULL;
+                    }
+                    const icu::CollationDataBuilder *dataBuilder =
+                            static_cast<const icu::CollationDataBuilder *>(t->builder);
+                    int32_t indexes[icu::CollationDataReader::IX_TOTAL_SIZE + 1];
+                    int32_t totalSize = icu::CollationDataWriter::write(
+                            FALSE, version,  // TODO: what version?
+                            dataBuilder, *t->data, t->settings,
+                            NULL, 0,
+                            indexes, dest, capacity,
+                            errorCode);
+                    if(errorCode == U_BUFFER_OVERFLOW_ERROR) {
+                        errorCode = U_ZERO_ERROR;
+                        capacity = totalSize;
+                        dest = buffer.allocateInsteadAndCopy(capacity);
+                        if(dest == NULL) {
+                            fprintf(stderr, "memory allocation (%ld bytes) for file contents failed\n",
+                                    (long)capacity);
+                            errorCode = U_MEMORY_ALLOCATION_ERROR;
+                            return NULL;
+                        }
+                        totalSize = icu::CollationDataWriter::write(
+                                FALSE, version,  // TODO: what version?
+                                dataBuilder, *t->data, t->settings,
+                                NULL, 0,
+                                indexes, dest, capacity,
+                                errorCode);
+                    }
+                    if(U_FAILURE(errorCode)) {
+                        fprintf(stderr, "CollationDataWriter::write() failed: %s\n",
+                                u_errorName(errorCode));
+                        return NULL;
+                    }
+                    // TODO: print only if verbose
+                    printf("%s~%s collation tailoring part sizes:\n", state->filename, collationType);
+                    icu::CollationInfo::printSizes(totalSize, indexes);
+                    // TODO: remove v1 vs. v2 printing
+                    int32_t v2fl = totalSize;  // with fast-Latin estimate unless search collator
+                    if(t->data->base != NULL && uprv_strncmp(collationType, "search", 6) != 0) {
+                        v2fl += 0x180 * 4 + 6 * 4;
+                    }
+                    printf("v1_vs_v2 %s~%s %ld %ld %ld\n",
+                           state->filename, collationType,
+                           (long)v1Size, (long)totalSize, (long)v2fl);
                     // TODO: write binary
                 } else {
                     const char *reason = builder.getErrorReason();
                     if(reason == NULL) { reason = ""; }
-                    error(line, "CollationBuilder failed at %s/Sequence rule offset %ld: %s  %s",
-                            collationType, (long)parseError.offset, u_errorName(errorCode), reason);
+                    error(line, "CollationBuilder failed at %s~%s/Sequence rule offset %ld: %s  %s",
+                            state->filename, collationType,
+                            (long)parseError.offset, u_errorName(errorCode), reason);
                     if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
                         // Print pre- and post-context.
                         char preBuffer[100], postBuffer[100];
@@ -2106,7 +2169,8 @@ parseResource(ParseState* state, char *tag, const struct UString *comment, UErro
 
 /* parse the top-level resource */
 struct SRBRoot *
-parse(UCHARBUF *buf, const char *inputDir, const char *outputDir, UBool makeBinaryCollation,
+parse(UCHARBUF *buf, const char *inputDir, const char *outputDir,
+      const char *filename, UBool makeBinaryCollation,
       UErrorCode *status)
 {
     struct UString    *tokenValue;
@@ -2130,6 +2194,7 @@ parse(UCHARBUF *buf, const char *inputDir, const char *outputDir, UBool makeBina
     state.inputdirLength = (state.inputdir != NULL) ? (uint32_t)uprv_strlen(state.inputdir) : 0;
     state.outputdir       = outputDir;
     state.outputdirLength = (state.outputdir != NULL) ? (uint32_t)uprv_strlen(state.outputdir) : 0;
+    state.filename = filename;
     state.makeBinaryCollation = makeBinaryCollation;
 
     ustr_init(&comment);

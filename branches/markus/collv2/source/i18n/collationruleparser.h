@@ -16,6 +16,7 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/ucol.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 

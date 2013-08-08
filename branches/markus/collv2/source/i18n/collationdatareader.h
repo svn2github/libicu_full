@@ -16,6 +16,8 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/udata.h"
+
 struct UDataMemory;
 
 U_NAMESPACE_BEGIN
@@ -25,7 +27,7 @@ struct CollationTailoring;
 /**
  * Collation binary data reader.
  */
-struct U_I18N_API CollationDataReader : public UMemory {
+struct U_I18N_API CollationDataReader /* all static */ {
     enum {
         /**
          * Number of int32_t indexes.
@@ -96,6 +98,9 @@ struct U_I18N_API CollationDataReader : public UMemory {
 
     static UBool U_CALLCONV
     isAcceptable(void *context, const char *type, const char *name, const UDataInfo *pInfo);
+
+private:
+    CollationDataReader();  // no constructor
 };
 
 /**

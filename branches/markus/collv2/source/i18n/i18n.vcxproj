@@ -255,6 +255,7 @@
     <ClCompile Include="collationdata.cpp" />
     <ClCompile Include="collationdatabuilder.cpp" />
     <ClCompile Include="collationdatareader.cpp" />
+    <ClCompile Include="collationdatawriter.cpp" />
     <ClCompile Include="collationfcd.cpp" />
     <ClCompile Include="collationiterator.cpp" />
     <ClCompile Include="collationkeys.cpp" />
@@ -567,6 +568,7 @@
     <ClInclude Include="collationdata.h" />
     <ClInclude Include="collationdatabuilder.h" />
     <ClInclude Include="collationdatareader.h" />
+    <ClInclude Include="collationdatawriter.h" />
     <ClInclude Include="collationfcd.h" />
     <ClInclude Include="collationiterator.h" />
     <ClInclude Include="collationkeys.h" />

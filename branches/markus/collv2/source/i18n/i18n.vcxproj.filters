@@ -523,6 +523,9 @@
     <ClCompile Include="collationdatareader.cpp">
       <Filter>collation</Filter>
     </ClCompile>
+    <ClCompile Include="collationdatawriter.cpp">
+      <Filter>collation</Filter>
+    </ClCompile>
     <ClCompile Include="collationfcd.cpp">
       <Filter>collation</Filter>
     </ClCompile>
@@ -889,6 +892,9 @@
       <Filter>collation</Filter>
     </ClInclude>
     <ClInclude Include="collationdatareader.h">
+      <Filter>collation</Filter>
+    </ClInclude>
+    <ClInclude Include="collationdatawriter.h">
       <Filter>collation</Filter>
     </ClInclude>
     <ClInclude Include="collationfcd.h">
