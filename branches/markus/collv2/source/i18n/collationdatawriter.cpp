@@ -21,6 +21,7 @@
 #include "collationdatareader.h"
 #include "collationdatawriter.h"
 #include "collationsettings.h"
+#include "collationtailoring.h"
 #include "uassert.h"
 #include "ucmndata.h"
 
@@ -39,6 +40,30 @@ static const UDataInfo dataInfo = {
     { 4, 0, 0, 0 },                     // formatVersion
     { 6, 3, 0, 0 }                      // dataVersion
 };
+
+int32_t
+CollationDataWriter::writeBase(const CollationDataBuilder *dataBuilder,
+                               const CollationData &data, const CollationSettings &settings,
+                               const void *rootElements, int32_t rootElementsLength,
+                               int32_t indexes[], uint8_t *dest, int32_t capacity,
+                               UErrorCode &errorCode) {
+    return write(TRUE, NULL,
+                 dataBuilder, data, settings,
+                 rootElements, rootElementsLength,
+                 indexes, dest, capacity, errorCode);
+}
+
+int32_t
+CollationDataWriter::writeTailoring(const UVersionInfo dataVersion,  // TODO: use t.version?
+                                    const CollationTailoring &t,
+                                    int32_t indexes[], uint8_t *dest, int32_t capacity,
+                                    UErrorCode &errorCode) {
+    return write(FALSE, dataVersion,
+                 static_cast<const icu::CollationDataBuilder *>(t.builder),
+                 *t.data, t.settings,
+                 NULL, 0,
+                 indexes, dest, capacity, errorCode);
+}
 
 // TODO: review whether the dataVersion should just be the UCA version,
 // or somehow include the UCOL_BUILDER_VERSION and/or the .res/collation version etc.;

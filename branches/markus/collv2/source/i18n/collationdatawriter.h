@@ -20,6 +20,7 @@ U_NAMESPACE_BEGIN
 
 struct CollationData;
 struct CollationSettings;
+struct CollationTailoring;
 
 class CollationDataBuilder;
 
@@ -28,15 +29,26 @@ class CollationDataBuilder;
  */
 class U_I18N_API CollationDataWriter /* all static */ {
 public:
+    static int32_t writeBase(const CollationDataBuilder *dataBuilder,
+                             const CollationData &data, const CollationSettings &settings,
+                             const void *rootElements, int32_t rootElementsLength,
+                             int32_t indexes[], uint8_t *dest, int32_t capacity,
+                             UErrorCode &errorCode);
+
+    static int32_t writeTailoring(const UVersionInfo dataVersion,
+                                  const CollationTailoring &t,
+                                  int32_t indexes[], uint8_t *dest, int32_t capacity,
+                                  UErrorCode &errorCode);
+
+private:
+    CollationDataWriter();  // no constructor
+
     static int32_t write(UBool isBase,  const UVersionInfo dataVersion,
                          const CollationDataBuilder *dataBuilder,
                          const CollationData &data, const CollationSettings &settings,
                          const void *rootElements, int32_t rootElementsLength,
                          int32_t indexes[], uint8_t *dest, int32_t capacity,
                          UErrorCode &errorCode);
-
-private:
-    CollationDataWriter();  // no constructor
 
     static void copyData(const int32_t indexes[], int32_t startIndex,
                          const void *src, uint8_t *dest);

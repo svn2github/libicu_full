@@ -34,7 +34,7 @@
 #include "unicode/uscript.h"
 #include "unicode/putil.h"
 #include "collationbuilder.h"
-#include "collationdatabuilder.h"
+#include "collationdata.h"
 #include "collationdatareader.h"
 #include "collationdatawriter.h"
 #include "collationinfo.h"
@@ -1072,13 +1072,9 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                         errorCode = U_MEMORY_ALLOCATION_ERROR;
                         return NULL;
                     }
-                    const icu::CollationDataBuilder *dataBuilder =
-                            static_cast<const icu::CollationDataBuilder *>(t->builder);
                     int32_t indexes[icu::CollationDataReader::IX_TOTAL_SIZE + 1];
-                    int32_t totalSize = icu::CollationDataWriter::write(
-                            FALSE, version,  // TODO: what version?
-                            dataBuilder, *t->data, t->settings,
-                            NULL, 0,
+                    int32_t totalSize = icu::CollationDataWriter::writeTailoring(
+                            version, *t,  // TODO: what version?
                             indexes, dest, capacity,
                             errorCode);
                     if(errorCode == U_BUFFER_OVERFLOW_ERROR) {
@@ -1091,15 +1087,13 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                             errorCode = U_MEMORY_ALLOCATION_ERROR;
                             return NULL;
                         }
-                        totalSize = icu::CollationDataWriter::write(
-                                FALSE, version,  // TODO: what version?
-                                dataBuilder, *t->data, t->settings,
-                                NULL, 0,
+                        totalSize = icu::CollationDataWriter::writeTailoring(
+                                version, *t,  // TODO: what version?
                                 indexes, dest, capacity,
                                 errorCode);
                     }
                     if(U_FAILURE(errorCode)) {
-                        fprintf(stderr, "CollationDataWriter::write() failed: %s\n",
+                        fprintf(stderr, "CollationDataWriter::writeTailoring() failed: %s\n",
                                 u_errorName(errorCode));
                         return NULL;
                     }

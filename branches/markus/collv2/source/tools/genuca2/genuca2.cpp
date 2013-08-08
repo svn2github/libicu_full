@@ -891,14 +891,13 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
         return;
     }
     int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1];
-    int32_t totalSize = CollationDataWriter::write(
-            TRUE, NULL,
+    int32_t totalSize = CollationDataWriter::writeBase(
             &builder, data, settings,
             rootElements.getBuffer(), rootElements.size(),
             indexes, dest, capacity,
             errorCode);
     if(U_FAILURE(errorCode)) {
-        fprintf(stderr, "CollationDataWriter::write(capacity = %ld) failed: %s\n",
+        fprintf(stderr, "CollationDataWriter::writeBase(capacity = %ld) failed: %s\n",
                 (long)capacity, u_errorName(errorCode));
         return;
     }
