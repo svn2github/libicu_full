@@ -93,7 +93,6 @@ static const int32_t PLURAL_RANGE_HIGH = 0x7fffffff;
 
 enum tokenType {
   none,
-  tLetter,
   tNumber,
   tComma,
   tSemiColon,
@@ -103,17 +102,19 @@ enum tokenType {
   tKeyword,
   tAnd,
   tOr,
-  tMod,
-  tNot,
-  tIn,
+  tMod,          // 'mod' or '%'
+  tNot,          //  'not' only.
+  tIn,           //  'in'  only.
+  tEqual,        //  '='   only.
+  tNotEqual,     //  '!='
   tWithin,
+  tIs,
   tVariableN,
   tVariableI,
   tVariableF,
   tVariableV,
   tVariableJ,
   tVariableT,
-  tIs,
   tEOF
 };
 
@@ -122,9 +123,9 @@ class RuleParser: public UMemory {
 public:
     static void getNextToken(const UnicodeString& ruleData, int32_t *ruleIndex, UnicodeString& token,
                             tokenType& type, UErrorCode &status);
-    static void checkSyntax(tokenType prevType, tokenType curType, UErrorCode &status);
+    static void checkSyntax(const UnicodeString &token, tokenType prevType, tokenType &curType, UErrorCode &status);
 private:
-    static void getKeyType(const UnicodeString& token, tokenType& type, UErrorCode &status);
+    static tokenType getKeyType(const UnicodeString& token, tokenType type);
     static UBool inRange(UChar ch, tokenType& type);
     static UBool isValidKeyword(const UnicodeString& token);
 

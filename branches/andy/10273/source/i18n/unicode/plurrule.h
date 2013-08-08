@@ -473,17 +473,9 @@ private:
     RuleChain  *mRules;
 
     PluralRules();   // default constructor not implemented
-    int32_t getRepeatLimit() const;
     void parseDescription(const UnicodeString& ruleData, UErrorCode &status);
-    void getNextLocale(const UnicodeString& localeData, int32_t* curIndex, UnicodeString& localeName);
-    void addRules(RuleChain& rules);
     int32_t getNumberValue(const UnicodeString& token) const;
     UnicodeString getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& status);
-
-    static const int32_t MAX_SAMPLES = 3;
-
-    int32_t getKeywordIndex(const UnicodeString& keyword,
-                            UErrorCode& status) const;
 
 };
 

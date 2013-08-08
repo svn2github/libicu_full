@@ -733,8 +733,35 @@ void PluralRulesTest::testSelect() {
     pr.adoptInstead(PluralRules::createRules("a: j is 123", status));
     checkSelect(pr, status, __LINE__, "a", "123", "123.", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "123.0", "123.1", "123.123", "0.123", END_MARK);
-    
-    // Test cases from ICU4J PluralRulesTest.parseTestData
+
+    // The reserved words from the rule syntax will also function as keywords.
+    pr.adoptInstead(PluralRules::createRules("a: n is 21; n: n is 22; i: n is 23; f: n is 24;"
+                                             "t: n is 25; v: n is 26; w: n is 27; j: n is 28"
+                                             , status));
+    checkSelect(pr, status, __LINE__, "other", "20", "29", END_MARK);
+    checkSelect(pr, status, __LINE__, "a", "21", END_MARK);
+    checkSelect(pr, status, __LINE__, "n", "22", END_MARK);
+    checkSelect(pr, status, __LINE__, "i", "23", END_MARK);
+    checkSelect(pr, status, __LINE__, "f", "24", END_MARK);
+    checkSelect(pr, status, __LINE__, "t", "25", END_MARK);
+    checkSelect(pr, status, __LINE__, "v", "26", END_MARK);
+    checkSelect(pr, status, __LINE__, "w", "27", END_MARK);
+    checkSelect(pr, status, __LINE__, "j", "28", END_MARK);
+
+
+    pr.adoptInstead(PluralRules::createRules("not: n=31; and: n=32; or: n=33; mod: n=34;"
+                                             "in: n=35; within: n=36;is:n=37"
+                                             , status));
+    checkSelect(pr, status, __LINE__, "other",  "30", "39", END_MARK);
+    checkSelect(pr, status, __LINE__, "not",    "31", END_MARK);
+    checkSelect(pr, status, __LINE__, "and",    "32", END_MARK);
+    checkSelect(pr, status, __LINE__, "or",     "33", END_MARK);
+    checkSelect(pr, status, __LINE__, "mod",    "34", END_MARK);
+    checkSelect(pr, status, __LINE__, "in",     "35", END_MARK);
+    checkSelect(pr, status, __LINE__, "within", "36", END_MARK);
+    checkSelect(pr, status, __LINE__, "is",     "37", END_MARK);
+
+// Test cases from ICU4J PluralRulesTest.parseTestData
 
     pr.adoptInstead(PluralRules::createRules("a: n is 1", status));
     checkSelect(pr, status, __LINE__, "a", "1", END_MARK);
@@ -788,7 +815,7 @@ void PluralRulesTest::testSelect() {
     pr.adoptInstead(PluralRules::createRules("a: n in 2..6, 3..7", status));
     checkSelect(pr, status, __LINE__, "a", "2", "3", "4", "5", "6", "7", END_MARK);
 
-    // Extended Syntax. Still in flux, Java plural rules is looser.
+    // Extended Syntax, with '=', '!=' and '%' operators. 
     pr.adoptInstead(PluralRules::createRules("a: n = 1..8 and n!= 2,3,4,5", status));
     checkSelect(pr, status, __LINE__, "a", "1", "6", "7", "8", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "0", "2", "3", "4", "5", "9", END_MARK);
@@ -897,7 +924,13 @@ void PluralRulesTest::testParseErrors() {
             "a: n is 13,",
             "a: n is 13, 15,   b: n is 4",
             "a: n is 1, 3, 4.. ",
-            "a: n within 5..4"
+            "a: n within 5..4",
+            "A: n is 13",          // Uppercase keywords not allowed.
+            "a: n ! = 3",          // spaces in != operator
+            "a: n = not 3",        // '=' not exact equivalent of 'is'
+            "a: n ! in 3..4"       // '!' not exact equivalent of 'not'
+            "a: n % 37 ! in 3..4"
+
             };
     for (int i=0; i<LENGTHOF(testCases); i++) {
         const char *rules = testCases[i];
