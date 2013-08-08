@@ -1287,7 +1287,7 @@ CollationDataBuilder::getCEs(const UnicodeString &s, int32_t start,
 }
 
 int32_t
-CollationDataBuilder::appendCEsFromCodePoint(const UnicodeString &s, UChar c,
+CollationDataBuilder::appendCEsFromCodePoint(const UnicodeString &s, UChar32 c,
                                              int32_t i, UnicodeSet &consumed,
                                              int64_t ces[], int32_t cesLength) const {
     UBool fromBase = FALSE;

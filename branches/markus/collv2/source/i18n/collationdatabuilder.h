@@ -212,7 +212,7 @@ protected:
                            UErrorCode &errorCode);
 
     int32_t getCEs(const UnicodeString &s, int32_t start, int64_t ces[], int32_t cesLength) const;
-    int32_t appendCEsFromCodePoint(const UnicodeString &s, UChar c,
+    int32_t appendCEsFromCodePoint(const UnicodeString &s, UChar32 c,
                                    int32_t i, UnicodeSet &consumed,
                                    int64_t ces[], int32_t cesLength) const;
 

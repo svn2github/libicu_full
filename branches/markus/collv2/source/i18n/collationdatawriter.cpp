@@ -132,13 +132,17 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         uprv_memcpy(header.info.dataVersion, dataVersion, sizeof(UVersionInfo));
         headerSize = (int32_t)sizeof(header);
         U_ASSERT((headerSize & 3) == 0);  // multiple of 4 bytes
-        if(hasMappings && dataBuilder->lengthOfCEs() != 0 &&
-                ((indexesLength + settings.reorderCodesLength) & 1) != 0) {
-            // We need to add padding somewhere so that the 64-bit ces[] are 8-aligned.
-            // We add to the header size here.
-            // Alternatively, we could increment the indexesLength
-            // or add a few bytes to the reorderTable.
-            headerSize += 4;
+        if(hasMappings && dataBuilder->lengthOfCEs() != 0) {
+            // Sum of the sizes of the data items which are
+            // not automatically multiples of 8 bytes and which are placed before the CEs.
+            int32_t sum = headerSize + (indexesLength + settings.reorderCodesLength) * 4;
+            if((sum & 7) != 0) {
+                // We need to add padding somewhere so that the 64-bit CEs are 8-aligned.
+                // We add to the header size here.
+                // Alternatively, we could increment the indexesLength
+                // or add a few bytes to the reorderTable.
+                headerSize += 4;
+            }
         }
         header.dataHeader.headerSize = (uint16_t)headerSize;
         if(headerSize <= capacity) {
@@ -197,7 +201,7 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
 
     indexes[CollationDataReader::IX_RESERVED8_OFFSET] = totalSize;
     indexes[CollationDataReader::IX_CES_OFFSET] = totalSize;
-    if(hasMappings) {
+    if(hasMappings && dataBuilder->lengthOfCEs() != 0) {
         U_ASSERT(((headerSize + totalSize) & 7) == 0);
         totalSize += dataBuilder->lengthOfCEs() * 8;
     }
