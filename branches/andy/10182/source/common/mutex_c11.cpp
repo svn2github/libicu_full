@@ -43,7 +43,8 @@ static std::condition_variable  initCondition;
 //   the caller needs to invoke the Init function, or FALSE if the initialization
 //   has completed on another thread.
 //
-UBool umtx_initImplPreInit(UInitOnce &uio) {
+U_CAPI UBool U_EXPORT2 
+umtx_initImplPreInit(UInitOnce &uio) {
     std::unique_lock<std::mutex> initLock(initMutex);
     int32_t state = uio.fState;
     if (state == 0) {
@@ -67,7 +68,8 @@ UBool umtx_initImplPreInit(UInitOnce &uio) {
 //   Some threads may be racing to test the fState variable outside of the mutex, 
 //   requiring the use of store/release when changing its value.
 
-void umtx_initImplPostInit(UInitOnce &uio) {
+U_CAPI void U_EXPORT2 
+umtx_initImplPostInit(UInitOnce &uio) {
     std::unique_lock<std::mutex> initLock(initMutex);
     umtx_storeRelease(uio.fState, 2);
     initCondition.notify_all();

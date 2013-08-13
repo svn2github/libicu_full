@@ -179,7 +179,7 @@ struct UInitOnce {
 
 
 U_CAPI UBool U_EXPORT2 umtx_initImplPreInit(UInitOnce &);
-U_CAPI void  U_EXPORT2 umtx_initImplPostInit(UInitOnce &, UBool success);
+U_CAPI void  U_EXPORT2 umtx_initImplPostInit(UInitOnce &);
 
 template<class T> void umtx_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
     if (umtx_loadAcquire(uio.fState) == 2) {
@@ -187,7 +187,7 @@ template<class T> void umtx_initOnce(UInitOnce &uio, T *obj, void (T::*fp)()) {
     }
     if (umtx_initImplPreInit(uio)) {
         (obj->*fp)();
-        umtx_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio);
     }
 }
 
@@ -200,7 +200,7 @@ inline void umtx_initOnce(UInitOnce &uio, void (*fp)()) {
     }
     if (umtx_initImplPreInit(uio)) {
         (*fp)();
-        umtx_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio);
     }
 }
 
@@ -214,7 +214,7 @@ inline void umtx_initOnce(UInitOnce &uio, void (*fp)(UErrorCode &), UErrorCode &
         // We run the initialization.
         (*fp)(errCode);
         uio.fErrCode = errCode;
-        umtx_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio);
     } else {
         // Someone else already ran the initialization.
         if (U_FAILURE(uio.fErrCode)) {
@@ -231,7 +231,7 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T), T context) {
     }
     if (umtx_initImplPreInit(uio)) {
         (*fp)(context);
-        umtx_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio);
     }
 }
 
@@ -245,7 +245,7 @@ template<class T> void umtx_initOnce(UInitOnce &uio, void (*fp)(T, UErrorCode &)
         // We run the initialization.
         (*fp)(context, errCode);
         uio.fErrCode = errCode;
-        umtx_initImplPostInit(uio, TRUE);
+        umtx_initImplPostInit(uio);
     } else {
         // Someone else already ran the initialization.
         if (U_FAILURE(uio.fErrCode)) {
