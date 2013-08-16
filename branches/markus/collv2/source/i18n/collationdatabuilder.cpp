@@ -21,9 +21,11 @@
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
 #include "unicode/utf16.h"
+#include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
+#include "collationfastlatinbuilder.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
 #include "uvectr32.h"
@@ -84,7 +86,8 @@ CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
           base(NULL), baseSettings(NULL),
           trie(NULL),
           ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode),
-          modified(FALSE) {
+          modified(FALSE),
+          fastLatinEnabled(FALSE), fastLatinBuilder(NULL) {
     // Reserve the first CE32 for U+0000.
     ce32s.addElement(0, errorCode);
     conditionalCE32s.setDeleter(uprv_deleteConditionalCE32);
@@ -92,6 +95,7 @@ CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
 
 CollationDataBuilder::~CollationDataBuilder() {
     utrie2_close(trie);
+    delete fastLatinBuilder;
 }
 
 void
@@ -1031,6 +1035,7 @@ CollationDataBuilder::build(CollationData &data, UErrorCode &errorCode) {
         data.scripts = base->scripts;
         data.scriptsLength = base->scriptsLength;
     }
+    buildFastLatinTable(data, errorCode);
 }
 
 void
@@ -1244,6 +1249,34 @@ CollationDataBuilder::addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &tr
         contexts.append(context);
     }
     return index;
+}
+
+void
+CollationDataBuilder::buildFastLatinTable(CollationData &data, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode) || !fastLatinEnabled) { return; }
+
+    delete fastLatinBuilder;
+    fastLatinBuilder = new CollationFastLatinBuilder(errorCode);
+    if(fastLatinBuilder == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    if(fastLatinBuilder->forData(data, errorCode)) {
+        const uint16_t *table = fastLatinBuilder->getTable();
+        int32_t length = fastLatinBuilder->lengthOfTable();
+        if(base != NULL && length == base->fastLatinTableLength &&
+                uprv_memcmp(table, base->fastLatinTable, length * 2) == 0) {
+            // Same fast Latin table as in the base, use that one instead.
+            delete fastLatinBuilder;
+            fastLatinBuilder = NULL;
+            table = base->fastLatinTable;
+        }
+        data.fastLatinTable = table;
+        data.fastLatinTableLength = length;
+    } else {
+        delete fastLatinBuilder;
+        fastLatinBuilder = NULL;
+    }
 }
 
 int32_t

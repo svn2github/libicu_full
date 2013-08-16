@@ -327,6 +327,7 @@ CollationBaseDataBuilder::build(CollationData &data, UErrorCode &errorCode) {
     data.compressibleBytes = compressibleBytes;
     data.scripts = reinterpret_cast<const uint16_t *>(scripts.getBuffer());
     data.scriptsLength = scripts.length();
+    buildFastLatinTable(data, errorCode);
 }
 
 void

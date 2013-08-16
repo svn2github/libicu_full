@@ -570,6 +570,7 @@
     <ClInclude Include="collationdatabuilder.h" />
     <ClInclude Include="collationdatareader.h" />
     <ClInclude Include="collationdatawriter.h" />
+    <ClInclude Include="collationfastlatin.h" />
     <ClInclude Include="collationfastlatinbuilder.h" />
     <ClInclude Include="collationfcd.h" />
     <ClInclude Include="collationiterator.h" />

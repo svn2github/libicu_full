@@ -131,7 +131,7 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
           baseData(b->data),
           rootElements(b->data->rootElements, b->data->rootElementsLength),
           variableTop(0),
-          dataBuilder(new CollationDataBuilder(errorCode)),
+          dataBuilder(new CollationDataBuilder(errorCode)), fastLatinEnabled(FALSE),
           errorReason(NULL),
           cesLength(0),
           rootPrimaryIndexes(errorCode), nodes(errorCode) {
@@ -194,6 +194,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
         dataBuilder->optimize(optimizeSet, errorCode);
         tailoring->ensureOwnedData(errorCode);
         if(U_FAILURE(errorCode)) { return NULL; }
+        if(fastLatinEnabled) { dataBuilder->enableFastLatin(); }
         dataBuilder->build(*tailoring->ownedData, errorCode);
         tailoring->builder = dataBuilder;
         dataBuilder = NULL;

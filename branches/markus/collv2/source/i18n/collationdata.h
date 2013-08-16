@@ -43,6 +43,7 @@ struct U_I18N_API CollationData : public UMemory {
               numericPrimary(0x12000000),
               compressibleBytes(NULL),
               unsafeBackwardSet(NULL),
+              fastLatinTable(NULL), fastLatinTableLength(0),
               scripts(NULL), scriptsLength(0),
               rootElements(NULL), rootElementsLength(0) {}
 
@@ -147,6 +148,13 @@ struct U_I18N_API CollationData : public UMemory {
      * or in backwards CE iteration.
      */
     const UnicodeSet *unsafeBackwardSet;
+
+    /**
+     * Fast Latin table for common-Latin-text string comparisons.
+     * Data structure see class CollationFastLatin.
+     */
+    const uint16_t *fastLatinTable;
+    int32_t fastLatinTableLength;
 
     /**
      * Data for scripts and reordering groups.

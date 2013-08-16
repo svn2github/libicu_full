@@ -20,6 +20,7 @@
 #include "collation.h"
 #include "collationdata.h"
 #include "collationdatareader.h"
+#include "collationfastlatin.h"
 #include "collationkeys.h"
 #include "collationrootelements.h"
 #include "collationsettings.h"
@@ -56,7 +57,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     data.base = baseData;
     int32_t options = inIndexes[IX_OPTIONS];
     data.numericPrimary = options & 0xff000000;
-    settings.options = options & 0xffffff;
+    settings.options = options & 0xffff;
 
     // Set pointers to non-empty data parts.
     // Do this in order of their byte offsets. (Should help porting to Java.)
@@ -245,6 +246,23 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     } else {
         errorCode = U_INVALID_FORMAT_ERROR;  // No unsafeBackwardSet.
         return;
+    }
+
+    index = IX_FAST_LATIN_TABLE_OFFSET;
+    offset = getIndex(inIndexes, indexesLength, index);
+    length = getIndex(inIndexes, indexesLength, index + 1) - offset;
+    if(length >= 256) {
+        data.fastLatinTable = reinterpret_cast<const uint16_t *>(inBytes + offset);
+        data.fastLatinTableLength = length / 2;
+    } else if(baseData != NULL && ((options >> 16) & 0xff) == CollationFastLatin::VERSION) {
+        data.fastLatinTable = baseData->fastLatinTable;
+        data.fastLatinTableLength = baseData->fastLatinTableLength;
+    } else {
+        // If the fast Latin format version is different,
+        // or the version is set to 0 for "no fast Latin table",
+        // then just always use the normal string comparison path.
+        data.fastLatinTable = NULL;
+        data.fastLatinTableLength = 0;
     }
 
     index = IX_SCRIPTS_OFFSET;

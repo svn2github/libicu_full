@@ -32,6 +32,7 @@ U_NAMESPACE_BEGIN
 
 struct ConditionalCE32;
 
+class CollationFastLatinBuilder;
 class CopyHelper;
 class UCharsTrieBuilder;
 
@@ -146,6 +147,7 @@ public:
     void optimize(const UnicodeSet &set, UErrorCode &errorCode);
     void suppressContractions(const UnicodeSet &set, UErrorCode &errorCode);
 
+    void enableFastLatin() { fastLatinEnabled = TRUE; }
     virtual void build(CollationData &data, UErrorCode &errorCode);
 
     /**
@@ -211,6 +213,8 @@ protected:
     int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
                            UErrorCode &errorCode);
 
+    void buildFastLatinTable(CollationData &data, UErrorCode &errorCode);
+
     int32_t getCEs(const UnicodeString &s, int32_t start, int64_t ces[], int32_t cesLength) const;
     int32_t appendCEsFromCodePoint(const UnicodeString &s, UChar32 c,
                                    int32_t i, UnicodeSet &consumed,
@@ -252,6 +256,9 @@ protected:
     UnicodeString contexts;
     UnicodeSet unsafeBackwardSet;
     UBool modified;
+
+    UBool fastLatinEnabled;
+    CollationFastLatinBuilder *fastLatinBuilder;
 };
 
 U_NAMESPACE_END

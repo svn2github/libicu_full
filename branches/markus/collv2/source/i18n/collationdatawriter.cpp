@@ -20,6 +20,7 @@
 #include "collationdatabuilder.h"
 #include "collationdatareader.h"
 #include "collationdatawriter.h"
+#include "collationfastlatin.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
 #include "uassert.h"
@@ -91,6 +92,14 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
     UnicodeSet unsafeBackwardSet;
     const CollationData *baseData = data.base;
 
+    int32_t fastLatinVersion;
+    if(data.fastLatinTable != NULL) {
+        fastLatinVersion = (int32_t)CollationFastLatin::VERSION << 16;
+    } else {
+        fastLatinVersion = 0;
+    }
+    int32_t fastLatinTableLength = 0;
+
     if(isBase) {
         // For the root collator, we write an even number of indexes
         // so that we start with an 8-aligned offset.
@@ -98,6 +107,7 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         U_ASSERT(settings.reorderCodesLength == 0);
         hasMappings = TRUE;
         unsafeBackwardSet = *data.unsafeBackwardSet;
+        fastLatinTableLength = data.fastLatinTableLength;
     } else if(baseData == NULL) {
         hasMappings = FALSE;
         if(settings.reorderCodesLength == 0) {
@@ -118,6 +128,10 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         unsafeBackwardSet.addAll(*data.unsafeBackwardSet).removeAll(*baseData->unsafeBackwardSet);
         if(!unsafeBackwardSet.isEmpty()) {
             indexesLength = CollationDataReader::IX_UNSAFE_BWD_OFFSET + 2;
+        }
+        if(data.fastLatinTable != baseData->fastLatinTable) {
+            fastLatinTableLength = data.fastLatinTableLength;
+            indexesLength = CollationDataReader::IX_FAST_LATIN_TABLE_OFFSET + 2;
         }
     }
 
@@ -158,7 +172,9 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
     }
 
     indexes[CollationDataReader::IX_INDEXES_LENGTH] = indexesLength;
-    indexes[CollationDataReader::IX_OPTIONS] = data.numericPrimary | settings.options;
+    U_ASSERT((settings.options & ~0xffff) == 0);
+    indexes[CollationDataReader::IX_OPTIONS] =
+            data.numericPrimary | fastLatinVersion | settings.options;
     indexes[CollationDataReader::IX_RESERVED2] = 0;
     indexes[CollationDataReader::IX_RESERVED3] = 0;
 
@@ -238,7 +254,9 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         totalSize += length * 2;
     }
 
-    indexes[CollationDataReader::IX_RESERVED15_OFFSET] = totalSize;
+    indexes[CollationDataReader::IX_FAST_LATIN_TABLE_OFFSET] = totalSize;
+    totalSize += fastLatinTableLength * 2;
+
     indexes[CollationDataReader::IX_SCRIPTS_OFFSET] = totalSize;
     if(isBase) {
         totalSize += data.scriptsLength * 2;
@@ -266,6 +284,7 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
     copyData(indexes, CollationDataReader::IX_ROOT_ELEMENTS_OFFSET, rootElements, dest);
     copyData(indexes, CollationDataReader::IX_CONTEXTS_OFFSET, data.contexts, dest);
     // The unsafeBackwardSet has already been serialized into the dest buffer.
+    copyData(indexes, CollationDataReader::IX_FAST_LATIN_TABLE_OFFSET, data.fastLatinTable, dest);
     copyData(indexes, CollationDataReader::IX_SCRIPTS_OFFSET, data.scripts, dest);
     copyData(indexes, CollationDataReader::IX_COMPRESSIBLE_BYTES_OFFSET, data.compressibleBytes, dest);
 

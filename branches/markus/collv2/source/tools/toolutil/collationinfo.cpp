@@ -83,9 +83,9 @@ CollationInfo::printSizes(int32_t sizeWithHeader, const int32_t indexes[]) {
         printf("  unsafeBwdSet:     %6ld *2 = %6ld\n", (long)length / 2, (long)length);
     }
 
-    length = getDataLength(indexes, CollationDataReader::IX_RESERVED15_OFFSET);
+    length = getDataLength(indexes, CollationDataReader::IX_FAST_LATIN_TABLE_OFFSET);
     if(length != 0) {
-        printf("  reserved (offset 15):         %6ld\n", (long)length);
+        printf("  fastLatin table:  %6ld *2 = %6ld\n", (long)length / 2, (long)length);
     }
 
     length = getDataLength(indexes, CollationDataReader::IX_SCRIPTS_OFFSET);
@@ -104,7 +104,7 @@ CollationInfo::printSizes(int32_t sizeWithHeader, const int32_t indexes[]) {
         printf("  reserved (offset 18):         %6ld\n", (long)length);
     }
 
-    printf(" collator binary total size:    %6ld\n", (long)totalSize);
+    printf(" collator binary total size:    %6ld\n", (long)sizeWithHeader);
 }
 
 int32_t

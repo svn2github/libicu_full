@@ -40,6 +40,8 @@ public:
     CollationBuilder(const CollationTailoring *base, UErrorCode &errorCode);
     virtual ~CollationBuilder();
 
+    void enableFastLatin() { fastLatinEnabled = TRUE; }
+
     CollationTailoring *parseAndBuild(const UnicodeString &ruleString,
                                       CollationRuleParser::Importer *importer,
                                       UParseError *outParseError,
@@ -296,6 +298,7 @@ private:
     uint32_t variableTop;
 
     CollationDataBuilder *dataBuilder;
+    UBool fastLatinEnabled;
     UnicodeSet optimizeSet;
     const char *errorReason;
 

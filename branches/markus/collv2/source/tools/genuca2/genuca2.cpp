@@ -842,6 +842,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     }
 
     CollationData data(*Normalizer2Factory::getNFCImpl(errorCode));
+    builder.enableFastLatin();
     builder.build(data, errorCode);
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "builder.build() failed: %s\n",
@@ -929,8 +930,6 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                 dataLength, (long)totalSize);
         errorCode=U_INTERNAL_PROGRAM_ERROR;
     }
-    // TODO: move elsewhere
-    CollationFastLatinBuilder(errorCode).forData(data, errorCode);
 }
 
 /**

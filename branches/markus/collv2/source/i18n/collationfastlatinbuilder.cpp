@@ -9,7 +9,7 @@
 * created by: Markus W. Scherer
 */
 
-#define DEBUG_COLLATION_FAST_LATIN_BUILDER 1  // 0 or 1 or 2
+#define DEBUG_COLLATION_FAST_LATIN_BUILDER 0  // 0 or 1 or 2
 #if DEBUG_COLLATION_FAST_LATIN_BUILDER
 #include <stdio.h>
 #include <string>
@@ -27,7 +27,7 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
-// TODO: #include "collationfastlatin.h"
+#include "collationfastlatin.h"
 #include "collationfastlatinbuilder.h"
 #include "uassert.h"
 #include "uvectr64.h"
@@ -121,13 +121,18 @@ CollationFastLatinBuilder::forData(const CollationData &data, UErrorCode &errorC
         if(!encodeUniqueCEs(errorCode)) { return FALSE; }
     }
     // Note: If we still have a short-primary overflow but not a long-primary overflow,
-    // we could calculate how many more long primaries would fit,
+    // then we could calculate how many more long primaries would fit,
     // and set the firstShortPrimary to that many after the current firstShortPrimary,
     // and try again.
     // However, this might only benefit the en_US_POSIX tailoring,
-    // and it is simpler to suppress building fast Latin data for it in genrb.
+    // and it is simpler to suppress building fast Latin data for it in genrb,
+    // or by returning FALSE here if shortPrimaryOverflow.
 
-    return encodeCharCEs(errorCode) && encodeContractions(errorCode);
+    UBool ok = !shortPrimaryOverflow &&
+            encodeCharCEs(errorCode) && encodeContractions(errorCode);
+    contractionCEs.removeAllElements();  // might reduce heap memory usage
+    uniqueCEs.removeAllElements();
+    return ok;
 }
 
 UBool

@@ -39,7 +39,8 @@ struct U_I18N_API CollationDataReader /* all static */ {
         IX_INDEXES_LENGTH,  // 0
         /**
          * Bits 31..24: numericPrimary, for numeric collation
-         *      23.. 0: options bit set
+         *      23..16: fast Latin format version (0 = no fast Latin table)
+         *      15.. 0: options bit set
          */
         IX_OPTIONS,
         IX_RESERVED2,
@@ -79,7 +80,8 @@ struct U_I18N_API CollationDataReader /* all static */ {
         IX_CONTEXTS_OFFSET,
         /** Byte offset to uint16_t [] with serialized unsafeBackwardSet. */
         IX_UNSAFE_BWD_OFFSET,
-        IX_RESERVED15_OFFSET,
+        /** Byte offset to uint16_t fastLatinTable[]. */
+        IX_FAST_LATIN_TABLE_OFFSET,
 
         /** Byte offset to uint16_t scripts[]. */
         IX_SCRIPTS_OFFSET,  // 16
