@@ -62,6 +62,8 @@ public:
 
     // Digits may use long primaries (preserving more short ones)
     // or short primaries (faster) without changing this data structure.
+    // (If we supported numeric collation, then digits would have to have long primaries
+    // so that special handling does not affect the fast path.)
 
     static const uint32_t SHORT_PRIMARY_MASK = 0xfc00;  // bits 15..10
     static const uint32_t INDEX_MASK = 0x3ff;  // bits 9..0 for expansions & contractions
@@ -72,10 +74,19 @@ public:
 
     static const uint32_t CONTRACTION = 0x400;
     static const uint32_t EXPANSION = 0x800;
+    /**
+     * 128 long/low mini primaries.
+     * All potentially-variable primaries must be in this range,
+     * to make the short-primary path as fast as possible.
+     */
     static const uint32_t MIN_LONG = 0xc00;
     static const uint32_t LONG_INC = 8;
-    static const uint32_t MAX_LONG = 0xff8;  // 128 long/low primaries
-    static const uint32_t MIN_SHORT = 0x1000;  // 60 short/high primaries
+    static const uint32_t MAX_LONG = 0xff8;
+    /**
+     * 60 short/high primaries.
+     * Simple/fast handling; at least all letter primaries should be in this range.
+     */
+    static const uint32_t MIN_SHORT = 0x1000;
     static const uint32_t SHORT_INC = 0x400;
     static const uint32_t MAX_SHORT = SHORT_PRIMARY_MASK;
 
@@ -156,6 +167,8 @@ private:
     UBool loadGroups(const CollationData &data, UErrorCode &errorCode);
     UBool inSameGroup(uint32_t p, uint32_t q) const;
 
+    void resetCEs();
+    void getCEs(const CollationData &data, UErrorCode &errorCode);
     UBool getCEsFromCE32(const CollationData &data, UChar32 c, uint32_t ce32,
                          UErrorCode &errorCode);
     UBool getCEsFromContractionCE32(const CollationData &data, uint32_t ce32,
@@ -183,8 +196,15 @@ private:
     /** One 16-bit mini CE per unique CE. */
     uint16_t *miniCEs;
 
-    uint32_t firstShortPrimary;
+    // These are constant for a given list of CollationData.scripts.
+    uint32_t firstDigitPrimary;
+    uint32_t firstLatinPrimary;
     uint32_t lastLatinPrimary;
+    // This determines the first normal primary weight which is mapped to
+    // a short mini primary. It must be >=firstDigitPrimary.
+    uint32_t firstShortPrimary;
+
+    UBool shortPrimaryOverflow;
 
     UnicodeString result;
     int32_t headerLength;

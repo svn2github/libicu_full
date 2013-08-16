@@ -90,7 +90,8 @@ CollationFastLatinBuilder::CollationFastLatinBuilder(UErrorCode &errorCode)
         : ce0(0), ce1(0),
           contractionCEs(errorCode), uniqueCEs(errorCode),
           miniCEs(NULL),
-          firstShortPrimary(0), lastLatinPrimary(0),
+          firstDigitPrimary(0), firstLatinPrimary(0), lastLatinPrimary(0),
+          firstShortPrimary(0), shortPrimaryOverflow(FALSE),
           headerLength(0) {
 }
 
@@ -107,6 +108,104 @@ CollationFastLatinBuilder::forData(const CollationData &data, UErrorCode &errorC
     }
     if(!loadGroups(data, errorCode)) { return FALSE; }
 
+    // Fast handling of digits.
+    firstShortPrimary = firstDigitPrimary;
+    getCEs(data, errorCode);
+    if(!encodeUniqueCEs(errorCode)) { return FALSE; }
+    if(shortPrimaryOverflow) {
+        // Give digits long mini primaries,
+        // so that there are more short primaries for letters.
+        firstShortPrimary = firstLatinPrimary;
+        resetCEs();
+        getCEs(data, errorCode);
+        if(!encodeUniqueCEs(errorCode)) { return FALSE; }
+    }
+    // Note: If we still have a short-primary overflow but not a long-primary overflow,
+    // we could calculate how many more long primaries would fit,
+    // and set the firstShortPrimary to that many after the current firstShortPrimary,
+    // and try again.
+    // However, this might only benefit the en_US_POSIX tailoring,
+    // and it is simpler to suppress building fast Latin data for it in genrb.
+
+    return encodeCharCEs(errorCode) && encodeContractions(errorCode);
+}
+
+UBool
+CollationFastLatinBuilder::loadGroups(const CollationData &data, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return FALSE; }
+    result.append(0);  // reserved for version & headerLength
+    // The first few reordering groups should be special groups
+    // (space, punct, ..., digit) followed by Latn, then Grek and other scripts.
+    for(int32_t i = 0;;) {
+        if(i >= data.scriptsLength) {
+            // no Latn script
+            errorCode = U_INTERNAL_PROGRAM_ERROR;
+            return FALSE;
+        }
+        uint32_t head = data.scripts[i];
+        uint32_t lastByte = head & 0xff;  // last primary byte in the group
+        int32_t group = data.scripts[i + 2];
+        if(group == UCOL_REORDER_CODE_DIGIT) {
+            firstDigitPrimary = (head & 0xff00) << 16;
+            headerLength = result.length();
+            uint32_t r0 = (CollationFastLatin::VERSION << 8) | headerLength;
+            result.setCharAt(0, (UChar)r0);
+        } else if(group == USCRIPT_LATIN) {
+            if(firstDigitPrimary == 0) {
+                // no digit group
+                errorCode = U_INTERNAL_PROGRAM_ERROR;
+                return FALSE;
+            }
+            firstLatinPrimary = (head & 0xff00) << 16;
+            lastLatinPrimary = (lastByte << 24) | 0xffffff;
+            break;
+        } else if(firstDigitPrimary == 0) {
+            // a group below digits
+            if(lastByte > 0x7f) {
+                // We only use 7 bits for the last byte of a below-digits group.
+                // This does not warrant an errorCode, but we do not build a fast Latin table.
+                return FALSE;
+            }
+            result.append((UChar)lastByte);
+        }
+        i = i + 2 + data.scripts[i + 1];
+    }
+    return TRUE;
+}
+
+UBool
+CollationFastLatinBuilder::inSameGroup(uint32_t p, uint32_t q) const {
+    if(p >= firstDigitPrimary) {
+        return q >= firstDigitPrimary;
+    } else if(q >= firstDigitPrimary) {
+        return FALSE;
+    }
+    // Both will be encoded with long mini primaries.
+    p >>= 24;  // first primary byte
+    q >>= 24;
+    U_ASSERT(p != 0 && q != 0);
+    U_ASSERT(p <= result[headerLength - 1]);  // the loop will terminate
+    for(int32_t i = 1;; ++i) {
+        uint32_t lastByte = result[i];
+        if(p <= lastByte) {
+            return q <= lastByte;
+        } else if(q <= lastByte) {
+            return FALSE;
+        }
+    }
+}
+
+void
+CollationFastLatinBuilder::resetCEs() {
+    contractionCEs.removeAllElements();
+    uniqueCEs.removeAllElements();
+    shortPrimaryOverflow = FALSE;
+    result.truncate(headerLength);
+}
+
+void
+CollationFastLatinBuilder::getCEs(const CollationData &data, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
     int32_t i = 0;
     for(UChar c = 0;; ++i, ++c) {
         if(c == CollationFastLatin::LATIN_LIMIT) {
@@ -135,68 +234,6 @@ CollationFastLatinBuilder::forData(const CollationData &data, UErrorCode &errorC
     }
     // Terminate the last contraction list.
     contractionCEs.addElement(CollationFastLatin::CONTR_CHAR_MASK, errorCode);
-    return encodeUniqueCEs(errorCode) &&
-        encodeCharCEs(errorCode) &&
-        encodeContractions(errorCode);
-}
-
-UBool
-CollationFastLatinBuilder::loadGroups(const CollationData &data, UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return FALSE; }
-    result.append(0);  // reserved for version & headerLength
-    // The first few reordering groups should be special groups
-    // (space, punct, ..., digit) followed by Latn, then Grek and other scripts.
-    for(int32_t i = 0;;) {
-        if(i >= data.scriptsLength) {
-            // no Latn script
-            errorCode = U_INTERNAL_PROGRAM_ERROR;
-            return FALSE;
-        }
-        uint32_t head = data.scripts[i];
-        uint32_t lastByte = head & 0xff;  // last primary byte in the group
-        int32_t group = data.scripts[i + 2];
-        if(group == UCOL_REORDER_CODE_DIGIT) {
-            firstShortPrimary = (head & 0xff00) << 16;
-            headerLength = result.length();
-            uint32_t r0 = (CollationFastLatin::VERSION << 8) | headerLength;
-            result.setCharAt(0, (UChar)r0);
-        } else if(group == USCRIPT_LATIN) {
-            lastLatinPrimary = (head << 24) | 0xffffff;
-            break;
-        } else if(firstShortPrimary == 0) {
-            // a group below digits
-            if(lastByte > 0x7f) {
-                // We only use 7 bits for the last byte of a below-digits group.
-                // This does not warrant an errorCode, but we do not build a fast Latin table.
-                return FALSE;
-            }
-            result.append((UChar)lastByte);
-        }
-        i = i + 2 + data.scripts[i + 1];
-    }
-    return TRUE;
-}
-
-UBool
-CollationFastLatinBuilder::inSameGroup(uint32_t p, uint32_t q) const {
-    if(p >= firstShortPrimary) {
-        return q >= firstShortPrimary;
-    } else if(q >= firstShortPrimary) {
-        return FALSE;
-    }
-    // Both will be encoded with long mini primaries.
-    p >>= 24;  // first primary byte
-    q >>= 24;
-    U_ASSERT(p != 0 && q != 0);
-    U_ASSERT(p <= result[headerLength - 1]);  // the loop will terminate
-    for(int32_t i = 1;; ++i) {
-        uint32_t lastByte = result[i];
-        if(p <= lastByte) {
-            return q <= lastByte;
-        } else if(q <= lastByte) {
-            return FALSE;
-        }
-    }
 }
 
 UBool
@@ -456,9 +493,7 @@ CollationFastLatinBuilder::encodeUniqueCEs(UErrorCode &errorCode) {
 #if DEBUG_COLLATION_FAST_LATIN_BUILDER
                     printf("short-primary overflow for %08x\n", p);
 #endif
-                    // TODO: We might indicate to the caller that we had a short-primary overflow,
-                    // and add a boolean setting for giving digits long mini primaries,
-                    // so that the caller could retry with that.
+                    shortPrimaryOverflow = TRUE;
                     miniCEs[i] = CollationFastLatin::BAIL_OUT;
                     continue;
                 }
