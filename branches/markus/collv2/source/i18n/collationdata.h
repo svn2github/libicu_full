@@ -77,6 +77,11 @@ struct U_I18N_API CollationData : public UMemory {
      */
     uint32_t getFinalCE32(uint32_t ce32) const;
 
+    int64_t getCEFromOffsetCE32(UChar32 c, uint32_t ce32) const {
+        int64_t dataCE = ces[Collation::indexFromCE32(ce32)];
+        return Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(c, dataCE));
+    }
+
     /**
      * Returns the FCD16 value for code point c. c must be >= 0.
      */

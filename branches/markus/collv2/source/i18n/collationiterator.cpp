@@ -399,7 +399,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
         }
         case Collation::OFFSET_TAG:
             U_ASSERT(c >= 0);
-            ceBuffer.append(getCEFromOffsetCE32(d, c, ce32), errorCode);
+            ceBuffer.append(d->getCEFromOffsetCE32(c, ce32), errorCode);
             return;
         case Collation::IMPLICIT_TAG:
             U_ASSERT(c >= 0);
@@ -413,12 +413,6 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
         }
     }
     ceBuffer.append(Collation::ceFromSimpleCE32(ce32), errorCode);
-}
-
-int64_t
-CollationIterator::getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32) {
-    int64_t dataCE = d->ces[Collation::indexFromCE32(ce32)];
-    return Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(c, dataCE));
 }
 
 uint32_t

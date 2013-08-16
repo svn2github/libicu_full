@@ -37,6 +37,7 @@
 #include "collationdata.h"
 #include "collationdatareader.h"
 #include "collationdatawriter.h"
+#include "collationfastlatinbuilder.h"
 #include "collationinfo.h"
 #include "collationroot.h"
 #include "collationruleparser.h"
@@ -1101,9 +1102,19 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                     printf("%s~%s collation tailoring part sizes:\n", state->filename, collationType);
                     icu::CollationInfo::printSizes(totalSize, indexes);
                     // TODO: remove v1 vs. v2 printing
-                    int32_t v2fl = totalSize;  // with fast-Latin estimate unless search collator
-                    if(t->data->base != NULL && uprv_strncmp(collationType, "search", 6) != 0) {
-                        v2fl += 0x180 * 4 + 6 * 4;
+                    int32_t v2fl = totalSize;  // with fast-Latin unless search collator or en_US_POSIX
+                    if(t->data->base != NULL &&
+                            uprv_strncmp(collationType, "search", 6) != 0 &&
+                            uprv_strcmp(findBasename(state->filename), "en_US_POSIX.txt") != 0) {
+                        // TODO: move elsewhere
+                        icu::CollationFastLatinBuilder flb(errorCode);
+                        if(flb.forData(*t->data, errorCode)) {
+                            int32_t length = flb.resultLength();
+                            printf("  fastLatin table:  %6ld *2 = %6ld\n", (long)length / 2, (long)length);
+                            v2fl += length * 2;
+                            // TODO: suppress (except for 2B with version header)
+                            // if same as root fast Latin table
+                        }
                     }
                     printf("v1_vs_v2 %s~%s %ld %ld %ld\n",
                            state->filename, collationType,

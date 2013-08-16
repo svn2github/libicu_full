@@ -64,14 +64,18 @@ public:
     /** Lower 32 bits of a CE with common secondary and tertiary weights. */
     static const uint32_t COMMON_SEC_AND_TER_CE = 0x05000500;
 
+    static const uint32_t SECONDARY_MASK = 0xffff0000;
+    static const uint32_t CASE_MASK = 0xc000;
+    static const uint32_t SECONDARY_AND_CASE_MASK = SECONDARY_MASK | CASE_MASK;
     /** Only the 2*6 bits for the pure tertiary weight. */
     static const uint32_t ONLY_TERTIARY_MASK = 0x3f3f;
     /** Only the secondary & tertiary bits; no case, no quaternary. */
-    static const uint32_t ONLY_SEC_TER_MASK = 0xffff0000 | ONLY_TERTIARY_MASK;
+    static const uint32_t ONLY_SEC_TER_MASK = SECONDARY_MASK | ONLY_TERTIARY_MASK;
     /** Case bits and tertiary bits. */
-    static const uint32_t CASE_AND_TERTIARY_MASK = 0xff3f;
+    static const uint32_t CASE_AND_TERTIARY_MASK = CASE_MASK | ONLY_TERTIARY_MASK;
+    static const uint32_t QUATERNARY_MASK = 0xc0;
     /** Case bits and quaternary bits. */
-    static const uint32_t CASE_AND_QUATERNARY_MASK = 0xc0c0;
+    static const uint32_t CASE_AND_QUATERNARY_MASK = CASE_MASK | QUATERNARY_MASK;
 
     static const uint8_t UNASSIGNED_IMPLICIT_BYTE = 0xfe;  // compressible
     /**

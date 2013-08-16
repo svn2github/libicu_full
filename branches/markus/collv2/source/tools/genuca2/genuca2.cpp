@@ -30,6 +30,7 @@
 #include "collationdatabuilder.h"
 #include "collationdatareader.h"
 #include "collationdatawriter.h"
+#include "collationfastlatinbuilder.h"  // TODO: remove
 #include "collationinfo.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
@@ -928,6 +929,8 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
                 dataLength, (long)totalSize);
         errorCode=U_INTERNAL_PROGRAM_ERROR;
     }
+    // TODO: move elsewhere
+    CollationFastLatinBuilder(errorCode).forData(data, errorCode);
 }
 
 /**
@@ -999,6 +1002,7 @@ static void
 buildAndWriteFCDData(const char *path, UErrorCode &errorCode) {
     UnicodeSet lcccSet(UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
     UnicodeSet tcccSet(UNICODE_STRING_SIMPLE("[:^tccc=0:]"), errorCode);
+    if(U_FAILURE(errorCode)) { return; }
     setLeadSurrogatesForAssociatedSupplementary(tcccSet, tcccSet);
     // The following supp(lccc)->lead(tccc) should be unnecessary
     // after the previous supp(tccc)->lead(tccc)

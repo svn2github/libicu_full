@@ -1366,9 +1366,7 @@ CollationDataBuilder::appendCEsFromCodePoint(const UnicodeString &s, UChar32 c,
         }
         case Collation::OFFSET_TAG: {
             U_ASSERT(fromBase);
-            int64_t dataCE = base->ces[Collation::indexFromCE32(ce32)];
-            uint32_t p = Collation::getThreeBytePrimaryForOffsetData(c, dataCE);
-            return appendCE(ces, cesLength, Collation::makeCE(p));
+            return appendCE(ces, cesLength, base->getCEFromOffsetCE32(c, ce32));
         }
         case Collation::IMPLICIT_TAG:
             U_ASSERT(fromBase);
