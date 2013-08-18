@@ -58,7 +58,8 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, UErrorCode &e
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
-          explicitlySetAttributes(0) {
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1) {
     buildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, errorCode);
 }
 
@@ -69,7 +70,8 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, ECollationStr
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
-          explicitlySetAttributes(0) {
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1) {
     buildTailoring(rules, strength, UCOL_DEFAULT, NULL, errorCode);
 }
 
@@ -81,7 +83,8 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
-          explicitlySetAttributes(0) {
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1) {
     buildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, errorCode);
 }
 
@@ -94,7 +97,8 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
           tailoring(NULL),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
-          explicitlySetAttributes(0) {
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1) {
     buildTailoring(rules, strength, decompositionMode, NULL, errorCode);
 }
 
@@ -103,8 +107,9 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
                                    int32_t strength,
                                    UColAttributeValue decompositionMode,
                                    UParseError *outParseError, UErrorCode &errorCode) {
+    const CollationTailoring *base = CollationRoot::getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return; }
-    CollationBuilder builder(CollationRoot::getRoot(errorCode), errorCode);
+    CollationBuilder builder(base, errorCode);
     LocalPointer<CollationTailoring> t(builder.parseAndBuild(rules, NULL /* TODO: importer */,
                                                              outParseError, errorCode));
     if(U_FAILURE(errorCode)) { return; }
@@ -119,6 +124,7 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
     settings = &t->settings;
     t->addRef();
     tailoring = t.orphan();
+    fastLatinOptions = getFastLatinOptions();
 }
 
 // CollationBuilder implementation ----------------------------------------- ***

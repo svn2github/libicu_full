@@ -1059,7 +1059,12 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
                 uprv_memset(&parseError, 0, sizeof(parseError));
                 UnicodeString rules(FALSE, member->u.fString.fChars, member->u.fString.fLength);
                 GenrbImporter importer(&genrbdata);
-                icu::CollationBuilder builder(icu::CollationRoot::getRoot(errorCode), errorCode);
+                const icu::CollationTailoring *base = icu::CollationRoot::getRoot(errorCode);
+                if(U_FAILURE(errorCode)) {
+                    error(line, "failed to load root collator - %s", u_errorName(errorCode));
+                    return NULL;  // TODO: use LocalUResourceBundlePointer for result
+                }
+                icu::CollationBuilder builder(base, errorCode);
                 if(uprv_strncmp(collationType, "search", 6) != 0) {
                     builder.enableFastLatin();  // build fast-Latin table unless search collator
                 }

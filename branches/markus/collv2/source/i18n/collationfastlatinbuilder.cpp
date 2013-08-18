@@ -233,8 +233,16 @@ CollationFastLatinBuilder::getCEs(const CollationData &data, UErrorCode &errorCo
             addUniqueCE(ce1, errorCode);
         } else {
             // bail out for c
-            charCEs[i][0] = Collation::NO_CE;
-            charCEs[i][1] = 0;
+            charCEs[i][0] = ce0 = Collation::NO_CE;
+            charCEs[i][1] = ce1 = 0;
+        }
+        if(c == 0 && !isContractionCharCE(ce0)) {
+            // Always map U+0000 to a contraction.
+            // Write a contraction list with only a default value if there is no real contraction.
+            U_ASSERT(contractionCEs.isEmpty());
+            addContractionEntry(CollationFastLatin::CONTR_CHAR_MASK, ce0, ce1, errorCode);
+            charCEs[0][0] = ((int64_t)Collation::NO_CE_PRIMARY << 32) | CONTRACTION_FLAG;
+            charCEs[0][1] = 0;
         }
     }
     // Terminate the last contraction list.
@@ -585,9 +593,7 @@ CollationFastLatinBuilder::encodeCharCEs(UErrorCode &errorCode) {
     int32_t indexBase = result.length();
     for(int32_t i = 0; i < CollationFastLatin::NUM_FAST_CHARS; ++i) {
         int64_t ce = charCEs[i][0];
-        if((uint32_t)(ce >> 32) == Collation::NO_CE_PRIMARY && ce != Collation::NO_CE) {
-            continue;  // defer contraction
-        }
+        if(isContractionCharCE(ce)) { continue; }  // defer contraction
         uint32_t miniCE = encodeTwoCEs(ce, charCEs[i][1]);
         if(miniCE > 0xffff) {
             // Note: There is a chance that this new expansion is the same as a previous one,
@@ -615,9 +621,7 @@ CollationFastLatinBuilder::encodeContractions(UErrorCode &errorCode) {
     int32_t firstContractionIndex = result.length();
     for(int32_t i = 0; i < CollationFastLatin::NUM_FAST_CHARS; ++i) {
         int64_t ce = charCEs[i][0];
-        if((uint32_t)(ce >> 32) != Collation::NO_CE_PRIMARY || ce == Collation::NO_CE) {
-            continue;
-        }
+        if(!isContractionCharCE(ce)) { continue; }
         int32_t contractionIndex = result.length() - indexBase;
         if(contractionIndex > (int32_t)CollationFastLatin::INDEX_MASK) {
             result.setCharAt(headerLength + i, CollationFastLatin::BAIL_OUT);

@@ -635,12 +635,17 @@ private:
         return (UBool)((explicitlySetAttributes & ((uint32_t)1 << attribute)) != 0);
     }
 
+    int32_t getFastLatinOptions() const;
+
     const CollationData *data;
     const CollationSettings *settings;  // == &tailoring->settings or ownedSettings
     const CollationTailoring *tailoring;
     CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
     int32_t ownedReorderCodesCapacity;
     uint32_t explicitlySetAttributes;
+
+    /** Options for CollationFastLatin. Negative if disabled. */
+    int32_t fastLatinOptions;
 };
 
 U_NAMESPACE_END

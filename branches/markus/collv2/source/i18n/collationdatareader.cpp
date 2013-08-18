@@ -248,21 +248,26 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         return;
     }
 
-    index = IX_FAST_LATIN_TABLE_OFFSET;
-    offset = getIndex(inIndexes, indexesLength, index);
-    length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-    if(length >= 256) {
-        data.fastLatinTable = reinterpret_cast<const uint16_t *>(inBytes + offset);
-        data.fastLatinTableLength = length / 2;
-    } else if(baseData != NULL && ((options >> 16) & 0xff) == CollationFastLatin::VERSION) {
-        data.fastLatinTable = baseData->fastLatinTable;
-        data.fastLatinTableLength = baseData->fastLatinTableLength;
-    } else {
-        // If the fast Latin format version is different,
-        // or the version is set to 0 for "no fast Latin table",
-        // then just always use the normal string comparison path.
-        data.fastLatinTable = NULL;
-        data.fastLatinTableLength = 0;
+    // If the fast Latin format version is different,
+    // or the version is set to 0 for "no fast Latin table",
+    // then just always use the normal string comparison path.
+    data.fastLatinTable = NULL;
+    data.fastLatinTableLength = 0;
+    if(((options >> 16) & 0xff) == CollationFastLatin::VERSION) {
+        index = IX_FAST_LATIN_TABLE_OFFSET;
+        offset = getIndex(inIndexes, indexesLength, index);
+        length = getIndex(inIndexes, indexesLength, index + 1) - offset;
+        if(length > 0) {
+            data.fastLatinTable = reinterpret_cast<const uint16_t *>(inBytes + offset);
+            data.fastLatinTableLength = length / 2;
+            if((*data.fastLatinTable >> 8) != CollationFastLatin::VERSION) {
+                errorCode = U_INVALID_FORMAT_ERROR;  // header vs. table version mismatch
+                return;
+            }
+        } else if(baseData != NULL) {
+            data.fastLatinTable = baseData->fastLatinTable;
+            data.fastLatinTableLength = baseData->fastLatinTableLength;
+        }
     }
 
     index = IX_SCRIPTS_OFFSET;

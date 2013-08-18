@@ -18,6 +18,7 @@
 
 #include "unicode/unistr.h"
 #include "unicode/uobject.h"
+#include "collation.h"
 #include "collationfastlatin.h"
 #include "uvectr64.h"
 
@@ -56,6 +57,10 @@ private:
     UBool encodeExpansions(UErrorCode &errorCode);
     UBool encodeContractions(UErrorCode &errorCode);
     uint32_t encodeTwoCEs(int64_t first, int64_t second) const;
+
+    static UBool isContractionCharCE(int64_t ce) {
+        return (uint32_t)(ce >> 32) == Collation::NO_CE_PRIMARY && ce != Collation::NO_CE;
+    }
 
     static const uint32_t CONTRACTION_FLAG = 0x80000000;
 

@@ -122,7 +122,7 @@ public:
 
     int32_t size(void) const;
 
-    //UBool isEmpty(void) const;
+    inline UBool isEmpty(void) const { return count == 0; }
 
     // Inline.  Use this one for speedy size check.
     inline UBool ensureCapacity(int32_t minimumCapacity, UErrorCode &status);

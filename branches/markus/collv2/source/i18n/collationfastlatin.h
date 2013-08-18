@@ -64,10 +64,30 @@ public:
     static const uint32_t LONG_PRIMARY_MASK = 0xff80;  // bits 15..3
     static const uint32_t TERTIARY_MASK = 7;  // bits 2..0
 
+    /**
+     * Contraction with one fast Latin character.
+     * Use INDEX_MASK to find the start of the contraction list after the fixed table.
+     * The first entry contains the default mapping.
+     * Otherwise use CONTR_CHAR_MASK for the contraction character index
+     * (in ascending order).
+     * Use CONTR_LENGTH_SHIFT for the length of the entry
+     * (1=BAIL_OUT, 2=one CE, 3=two CEs).
+     *
+     * Also, U+0000 maps to a contraction entry, so that the fast path need not
+     * check for NUL termination.
+     * It usually maps to a contraction list with only the completely ignorable default value.
+     */
     static const uint32_t CONTRACTION = 0x400;
+    /**
+     * An expansion encodes two CEs.
+     * Use INDEX_MASK to find the pair of CEs after the fixed table.
+     *
+     * The higher a mini CE value, the easier it is to process.
+     * For expansions and higher, no context needs to be considered.
+     */
     static const uint32_t EXPANSION = 0x800;
     /**
-     * 128 long/low mini primaries.
+     * Encodes one CE with a long/low mini primary (there are 128).
      * All potentially-variable primaries must be in this range,
      * to make the short-primary path as fast as possible.
      */
@@ -75,8 +95,9 @@ public:
     static const uint32_t LONG_INC = 8;
     static const uint32_t MAX_LONG = 0xff8;
     /**
-     * 60 short/high primaries.
-     * Simple/fast handling; at least all letter primaries should be in this range.
+     * Encodes one CE with a short/high primary (there are 60),
+     * plus a secondary CE if the secondary weight is high.
+     * Fast handling: At least all letter primaries should be in this range.
      */
     static const uint32_t MIN_SHORT = 0x1000;
     static const uint32_t SHORT_INC = 0x400;
@@ -94,6 +115,7 @@ public:
     /**
      * Lookup: Add this offset to secondary weights, except for completely ignorable CEs.
      * Must be greater than any special value, e.g., MERGE_WEIGHT.
+     * The exact value is not relevant for the format version.
      */
     static const uint32_t SEC_OFFSET = SEC_INC;
     static const uint32_t COMMON_SEC_PLUS_OFFSET = COMMON_SEC + SEC_OFFSET;
@@ -107,6 +129,7 @@ public:
     /**
      * Lookup: Add this offset to tertiary weights, except for completely ignorable CEs.
      * Must be greater than any special value, e.g., MERGE_WEIGHT.
+     * The exact value is not relevant for the format version.
      */
     static const uint32_t TER_OFFSET = 8;
 
@@ -125,6 +148,8 @@ public:
      * 1=bail out, 2=one mini CE, 3=two mini CEs
      */
     static const uint32_t CONTR_LENGTH_SHIFT = 9;
+
+    // The following constants are not relevant for the format version.
 
     static int32_t getCharIndex(UChar c) {
         if(c <= LATIN_MAX) {

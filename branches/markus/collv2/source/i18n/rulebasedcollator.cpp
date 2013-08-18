@@ -133,8 +133,10 @@ RuleBasedCollator2::RuleBasedCollator2(const CollationTailoring *t)
           tailoring(t),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
-          explicitlySetAttributes(0) {
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1) {
     tailoring->addRef();
+    fastLatinOptions = getFastLatinOptions();
 }
 
 RuleBasedCollator2::~RuleBasedCollator2() {
@@ -371,6 +373,7 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
         break;
     case UCOL_NUMERIC_COLLATION:
         ownedSettings->setFlag(CollationSettings::NUMERIC, value, defaultSettings.options, errorCode);
+        fastLatinOptions = getFastLatinOptions();
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -435,6 +438,7 @@ RuleBasedCollator2::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
     } else {
         setAttributeExplicitly(ATTR_VARIABLE_TOP);
     }
+    fastLatinOptions = getFastLatinOptions();
 }
 
 int32_t
@@ -480,6 +484,7 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
             }
             ownedSettings->reorderCodesLength = defaultSettings.reorderCodesLength;
         }
+        fastLatinOptions = getFastLatinOptions();
         return;
     }
     if(!ensureOwnedSettings(errorCode)) { return; }
@@ -491,6 +496,7 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
             ownedSettings->reorderTable = NULL;
         }
         ownedSettings->reorderCodesLength = 0;
+        fastLatinOptions = getFastLatinOptions();
         return;
     }
     LocalArray<uint8_t> newReorderTable;
@@ -530,6 +536,7 @@ RuleBasedCollator2::setReorderCodes(const int32_t *reorderCodes, int32_t length,
     if(newReorderTable.isValid()) {
         ownedSettings->reorderTable = newReorderTable.orphan();
     }
+    fastLatinOptions = getFastLatinOptions();
 }
 
 int32_t
@@ -544,6 +551,44 @@ RuleBasedCollator2::getEquivalentReorderCodes(int32_t reorderCode,
     const CollationData *baseData = CollationRoot::getData(errorCode);
     if(U_FAILURE(errorCode)) { return 0; }
     return baseData->getEquivalentScripts(reorderCode, dest, capacity, errorCode);
+}
+
+int32_t
+RuleBasedCollator2::getFastLatinOptions() const {
+    const uint16_t *flt = data->fastLatinTable;
+    if(flt == NULL || settings->isNumeric()) { return -1; }
+
+    int32_t headerLength = *flt & 0xff;
+    int32_t miniVarTop = 0;
+    if((settings->options & CollationSettings::ALTERNATE_MASK) != 0) {
+        uint32_t v1 = settings->variableTop >> 24;
+        int32_t i = headerLength - 1;
+        if(i <= 0 || v1 > (flt[i] & 0x7f)) {
+            return -1;  // variableTop >= digits, should not occur
+        }
+        while(i > 1 && v1 <= (flt[i - 1] & 0x7f)) { --i; }
+        miniVarTop = (int32_t)(flt[i] & 0xff80) << 9;  // shift above other options
+    }
+
+    const uint8_t *reorderTable = settings->reorderTable;
+    if(reorderTable != NULL) {
+        const uint16_t *scripts = data->scripts;
+        int32_t length = data->scriptsLength;
+        uint32_t prevLastByte = 0;
+        for(int32_t i = 0; i < length;) {
+            // reordered last byte of the group
+            uint32_t lastByte = reorderTable[scripts[i] & 0xff];
+            if(lastByte < prevLastByte) {
+                // The permutation affects the groups up to Latin.
+                return -1;
+            }
+            if(scripts[i + 2] == USCRIPT_LATIN) { break; }
+            i = i + 2 + scripts[i + 1];
+            prevLastByte = lastByte;
+        }
+    }
+
+    return miniVarTop | settings->options;
 }
 
 UCollationResult
