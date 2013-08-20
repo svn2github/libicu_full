@@ -99,6 +99,8 @@ enum tokenType {
   tSpace,
   tColon,
   tDot,
+  tDot2,
+  tDot3,
   tKeyword,
   tAnd,
   tOr,
@@ -115,6 +117,9 @@ enum tokenType {
   tVariableV,
   tVariableJ,
   tVariableT,
+  tDecimal,
+  tInteger,
+  tTilde,
   tEOF
 };
 
@@ -126,7 +131,7 @@ public:
     static void checkSyntax(const UnicodeString &token, tokenType prevType, tokenType &curType, UErrorCode &status);
 private:
     static tokenType getKeyType(const UnicodeString& token, tokenType type);
-    static UBool inRange(UChar ch, tokenType& type);
+    static tokenType charType(UChar ch);
     static UBool isValidKeyword(const UnicodeString& token);
 
     RuleParser();     // No instantiation. 

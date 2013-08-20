@@ -912,7 +912,7 @@ RuleParser::checkSyntax(const UnicodeString &token, tokenType prevType, tokenTyp
         }
         break;
     case tMod:
-    case tDot:
+    case tDot2:
     case tIn:
     case tWithin:
     case tEqual:
@@ -938,7 +938,7 @@ RuleParser::checkSyntax(const UnicodeString &token, tokenType prevType, tokenTyp
         }
         break;
     case tNumber:
-        if (curType != tDot && curType != tSemiColon && curType != tIs && curType != tNot &&
+        if (curType != tDot2 && curType != tSemiColon && curType != tIs && curType != tNot &&
             curType != tIn && curType != tEqual && curType != tNotEqual && curType != tWithin && 
             curType != tAnd && curType != tOr && curType != tComma && curType != tEOF)
         {
@@ -970,151 +970,118 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
                          tokenType& type,
                          UErrorCode &status)
 {
-    int32_t curIndex= *ruleIndex;
-    UChar ch;
-    tokenType prevType=none;
-
     if (U_FAILURE(status)) {
         return;
     }
-    while (curIndex<ruleData.length()) {
-        ch = ruleData.charAt(curIndex);
-        if ( !inRange(ch, type) ) {
-            status = U_ILLEGAL_CHARACTER;
-            return;
-        }
-        switch (type) {
-        case tSpace:
-            if ( *ruleIndex != curIndex ) { // letter
-                token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
-                *ruleIndex=curIndex;
-                type=prevType;
-                return;
-            }
-            else {
-                *ruleIndex=*ruleIndex+1;
-                if (*ruleIndex >= ruleData.length()) {
-                    type = tEOF;
-                }
-            }
-            break; // consective space
-        case tColon:
-        case tSemiColon:
-        case tComma:
-        case tEqual:   // scanned '='
-        case tMod:     // scanned '%'
-            if ( *ruleIndex != curIndex ) {
-                token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
-                *ruleIndex=curIndex;
-                type=prevType;
-                return;
-            }
-            else {
-                *ruleIndex=curIndex+1;
-                return;
-            }
-        case tNotEqual:  // scanned '!'
-            if ( *ruleIndex != curIndex ) {
-                token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
-                *ruleIndex=curIndex;
-                type=prevType;
-                return;
-            }
-            if (ruleData.charAt(curIndex+1) == EQUALS) {
-                token=UnicodeString(ruleData, *ruleIndex, 2);
-                *ruleIndex=curIndex+2;
-                return;
-            }
-            status = U_ILLEGAL_CHARACTER;
-            return;
 
-        case tKeyword:
-             if ((type==prevType)||(prevType==none)) {
-                prevType=type;
-                break;
-             }
-             break;
-        case tNumber:
-             if ((type==prevType)||(prevType==none)) {
-                prevType=type;
-                break;
-             }
-             else {
-                *ruleIndex=curIndex+1;
-                return;
-             }
-         case tDot:
-             if (prevType==none) {         // first dot
-                prevType=type;
-                break;
-             }
-             else if (prevType == tDot) {  // two consecutive dots. Return them
-                *ruleIndex=curIndex+1;     //   without looking to see what follows.
-                return;
-             } else {
-                // Encountered '.' while parsing something else
-                // Return the something else.
-                U_ASSERT( *ruleIndex != curIndex );
-                token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
-                *ruleIndex=curIndex;
-                type=prevType;
-                return;
-             }
-         default:
-             status = U_UNEXPECTED_TOKEN;
-             return;
+    UChar ch;
+    while (*ruleIndex < ruleData.length()) {
+        ch = ruleData.charAt(*ruleIndex);
+        type = charType(ch);
+        if (type != tSpace) {
+            break;
         }
-        curIndex++;
+        ++(*ruleIndex);
     }
-    if ( curIndex>=ruleData.length() ) {
-        if ( (type == tKeyword) || (type == tNumber) ) {
-            token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
-            if (U_FAILURE(status)) {
-                return;
-            }
+    if (*ruleIndex >= ruleData.length()) {
+        type = tEOF;
+        return;
+    }
+
+    int32_t curIndex= *ruleIndex;
+        
+    ch = ruleData.charAt(curIndex);
+    type = charType(ch);
+    switch (type) {
+
+    case tColon:
+    case tSemiColon:
+    case tComma:
+    case tEqual:   // scanned '='
+    case tMod:     // scanned '%'
+        // Single character tokens.
+        ++curIndex;
+        break;
+
+    case tNotEqual:  // scanned '!'
+        if (ruleData.charAt(curIndex+1) == EQUALS) {
+            curIndex += 2;
+        } else {
+            type = none;
+            curIndex += 1;
         }
-        *ruleIndex = ruleData.length();
+        break;
+
+    case tKeyword:
+         while (type == tKeyword && ++curIndex < ruleData.length()) {
+             ch = ruleData.charAt(curIndex);
+             type = charType(ch);
+         }
+         type = tKeyword;
+         break;
+
+    case tNumber:
+         while (type == tNumber && ++curIndex < ruleData.length()) {
+             ch = ruleData.charAt(curIndex);
+             type = charType(ch);
+         }
+         type = tNumber;
+         break;
+
+     case tDot:
+         // We could be looking at either ".." in a range, or "..." at the end of a sample.
+         if (curIndex+1 >= ruleData.length() || ruleData[curIndex+1] != DOT) {
+             ++curIndex;
+             break; // Single dot
+         }
+         if (curIndex+2 >= ruleData.length() || ruleData[curIndex+2] != DOT) {
+             curIndex += 2;
+             type = tDot2;
+             break; // double dot
+         }
+         type = tDot3;
+         curIndex += 3;
+         break;     // triple dot
+
+     default:
+         status = U_UNEXPECTED_TOKEN;
+         ++curIndex;
+         break;
     }
+
+    U_ASSERT(*ruleIndex <= ruleData.length());
+    U_ASSERT(curIndex <= ruleData.length());
+    token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
+    *ruleIndex = curIndex;
 }
 
-UBool
-RuleParser::inRange(UChar ch, tokenType& type) {
+tokenType
+RuleParser::charType(UChar ch) {
     if ((ch>=U_ZERO) && (ch<=U_NINE)) {
-        type = tNumber;
-        return TRUE;
+        return tNumber;
     }
     if (ch>=LOW_A && ch<=LOW_Z) {
-        type = tKeyword;
-        return true;
+        return tKeyword;
     }
     switch (ch) {
     case COLON:
-        type = tColon;
-        return TRUE;
+        return tColon;
     case SPACE:
-        type = tSpace;
-        return TRUE;
+        return tSpace;
     case SEMI_COLON:
-        type = tSemiColon;
-        return TRUE;
+        return tSemiColon;
     case DOT:
-        type = tDot;
-        return TRUE;
+        return tDot;
     case COMMA:
-        type = tComma;
-        return TRUE;
+        return tComma;
     case EXCLAMATION:
-        type = tNotEqual;
-        return TRUE;
+        return tNotEqual;
     case EQUALS:
-        type = tEqual;
-        return TRUE;
+        return tEqual;
     case PERCENT_SIGN:
-        type = tMod;
-        return TRUE;
+        return tMod;
     default :
-        type = none;
-        return FALSE;
+        return none;
     }
 }
 
