@@ -741,6 +741,33 @@ bracketAddOpening(BracketData *bd, UChar match, int32_t position) {
     return TRUE;
 }
 
+/* change N0c1 to N0c2 when a preceding bracket is assigned the embedding level */
+static void
+fixN0c(BracketData *bd, int32_t openingIndex, int32_t newPropPosition, DirProp newProp) {
+    /* This function calls itself recursively */
+    IsoRun *pLastIsoRun=&bd->isoRuns[bd->isoRunLast];
+    Opening *qOpening;
+    DirProp *dirProps=bd->pBiDi->dirProps;
+    int32_t k, openingPosition, closingPosition;
+    for(k=openingIndex+1, qOpening=&bd->openings[k]; k<pLastIsoRun->limit; k++, qOpening++) {
+        if(qOpening->match>=0)      /* not an N0c match */
+            continue;
+        if(newPropPosition<=qOpening->lastStrongPos)
+            break;
+        if(newPropPosition>=qOpening->position)
+            continue;
+        if(newProp==qOpening->lastStrong || (newProp==R && qOpening->lastStrong==AL))
+            break;
+        openingPosition=qOpening->position;
+        dirProps[openingPosition]=dirProps[newPropPosition];
+        closingPosition=-(qOpening->match);
+        dirProps[closingPosition]= newProp; /* can never be AL */
+        qOpening->match=0;                  /* prevent further changes */
+        fixN0c(bd, k, openingPosition, newProp);
+        fixN0c(bd, k, closingPosition, newProp);
+    }
+}
+
 /* handle strong characters and candidates for closing brackets */
 static UBool                            /* return TRUE if success */
 bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
@@ -806,13 +833,9 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
             if((direction==1 && pOpening->lastStrong==L) ||
                (direction==0 && pOpening->lastStrong!=L)) {
                 newProp=direction^1;                    /* N0c1 */
-                /* it is stable if there is no preceding text or
-                   if the last strong char which determined the
-                   context for this opening bracket appears later
-                   in the text than any preceding unmatched
-                   opening bracket which could change the context */
-                stable=(i==pLastIsoRun->start) ||
-                       (pOpening->lastStrongPos>bd->openings[i-1].position) ;
+                /* it is stable if there is no preceding text or in
+                   conditions too complicated and not worth checking */
+                stable=(i==pLastIsoRun->start);
             }
             else
                 newProp=direction;                      /* N0c2 */
@@ -832,16 +855,7 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
         }
         /* Update nested N0c pairs that may be affected */
         if(newProp==direction)
-            for(k=i+1, qOpening=&bd->openings[k]; k<pLastIsoRun->limit; k++, qOpening++) {
-                if(qOpening->match>=0)      /* not an N0c match */
-                    continue;
-                if(qOpening->lastStrongPos>pOpening->position)
-                    break;
-                if(newProp==qOpening->lastStrong || (newProp==R && pOpening->lastStrong==AL))
-                    break;
-                dirProps[qOpening->position]=dirProps[pOpening->position];
-                dirProps[-(qOpening->match)]= newProp;  /* can never be AL */
-            }
+            fixN0c(bd, i, pOpening->position, newProp);
         if(stable) {
             pLastIsoRun->limit=i;   /* forget any brackets nested within this pair */
             /* remove lower located synonyms if any */
@@ -862,7 +876,7 @@ bracketProcessChar(BracketData *bd, int32_t position, DirProp dirProp) {
                 qOpening=&bd->openings[k];
                 if(qOpening->position>=position)
                     break;
-                if(qOpening->match>=0)
+                if(qOpening->match>0)
                     qOpening->match=0;
             }
         }
