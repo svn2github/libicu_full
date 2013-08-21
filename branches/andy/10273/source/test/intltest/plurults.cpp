@@ -26,6 +26,8 @@
 #include "unicode/plurrule.h"
 #include "unicode/stringpiece.h"
 
+#include <iostream>     // TODO: Remove. debug only.
+
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof(array[0]))
 
 void setupResult(const int32_t testSource[], char result[], int32_t* max);
@@ -573,6 +575,10 @@ void PluralRulesTest::testOrdinal() {
     if (keyword != UNICODE_STRING("two", 3)) {
         dataerrln("PluralRules(en-ordinal).select(2) failed");
     }
+    for (int i=0; i<14; i++) {
+        keyword = pr->select(i);
+        std::string ss; keyword.toUTF8String(ss); std::cout << "i = " << i << ", key = "<< ss << std::endl;
+    }
 }
 
 
@@ -730,7 +736,7 @@ void PluralRulesTest::testSelect() {
     checkSelect(pr, status, __LINE__, "a", "1.120", "0.000", "11123.100", "0123.124", ".666", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "1.1212", "122.12", "1.1", "122", "0.0000", END_MARK);
 
-    pr.adoptInstead(PluralRules::createRules("a: j is 123", status));
+    pr.adoptInstead(PluralRules::createRules("a: v is 0 and i is 123", status));
     checkSelect(pr, status, __LINE__, "a", "123", "123.", END_MARK);
     checkSelect(pr, status, __LINE__, "other", "123.0", "123.1", "123.123", "0.123", END_MARK);
 

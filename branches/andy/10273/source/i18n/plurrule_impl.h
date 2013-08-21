@@ -54,6 +54,7 @@ static const UChar U_NINE          = ((UChar)0x0039);
 static const UChar COLON           = ((UChar)0x003A);
 static const UChar SEMI_COLON      = ((UChar)0x003B);
 static const UChar EQUALS          = ((UChar)0x003D);
+static const UChar AT              = ((UChar)0x0040);
 static const UChar CAP_A           = ((UChar)0x0041);
 static const UChar CAP_B           = ((UChar)0x0042);
 static const UChar CAP_R           = ((UChar)0x0052);
@@ -61,6 +62,8 @@ static const UChar CAP_Z           = ((UChar)0x005A);
 static const UChar LOWLINE         = ((UChar)0x005F);
 static const UChar LEFTBRACE       = ((UChar)0x007B);
 static const UChar RIGHTBRACE      = ((UChar)0x007D);
+static const UChar TILDE           = ((UChar)0x007E);
+static const UChar ELLIPSIS        = ((UChar)0x2026);
 
 static const UChar LOW_A           = ((UChar)0x0061);
 static const UChar LOW_B           = ((UChar)0x0062);
@@ -98,9 +101,10 @@ enum tokenType {
   tSemiColon,
   tSpace,
   tColon,
+  tAt,           // '@'
   tDot,
   tDot2,
-  tDot3,
+  tEllipsis,
   tKeyword,
   tAnd,
   tOr,
@@ -109,17 +113,16 @@ enum tokenType {
   tIn,           //  'in'  only.
   tEqual,        //  '='   only.
   tNotEqual,     //  '!='
+  tTilde,
   tWithin,
   tIs,
   tVariableN,
   tVariableI,
   tVariableF,
   tVariableV,
-  tVariableJ,
   tVariableT,
   tDecimal,
   tInteger,
-  tTilde,
   tEOF
 };
 
@@ -129,10 +132,19 @@ public:
     static void getNextToken(const UnicodeString& ruleData, int32_t *ruleIndex, UnicodeString& token,
                             tokenType& type, UErrorCode &status);
     static void checkSyntax(const UnicodeString &token, tokenType prevType, tokenType &curType, UErrorCode &status);
+
 private:
     static tokenType getKeyType(const UnicodeString& token, tokenType type);
     static tokenType charType(UChar ch);
     static UBool isValidKeyword(const UnicodeString& token);
+
+    enum EParseState {
+       kKeyword,
+       kExpr,
+       kValue,
+       kRangeList,
+       kSamples
+    };
 
     RuleParser();     // No instantiation. 
     ~RuleParser();
