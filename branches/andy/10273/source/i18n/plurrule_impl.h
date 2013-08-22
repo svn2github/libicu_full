@@ -127,16 +127,35 @@ enum tokenType {
 };
 
 
-class RuleParser: public UMemory {
+class PluralRuleParser: public UMemory {
 public:
-    static void getNextToken(const UnicodeString& ruleData, int32_t *ruleIndex, UnicodeString& token,
-                            tokenType& type, UErrorCode &status);
-    static void checkSyntax(const UnicodeString &token, tokenType prevType, tokenType &curType, UErrorCode &status);
+    PluralRuleParser();
+    virtual ~PluralRuleParser();
+
+    void parse(const UnicodeString &rules, PluralRules *dest, UErrorCode &status);
+    void getNextToken(UErrorCode &status);
+    void checkSyntax(UErrorCode &status);
+    static int32_t getNumberValue(const UnicodeString &token);
 
 private:
     static tokenType getKeyType(const UnicodeString& token, tokenType type);
     static tokenType charType(UChar ch);
     static UBool isValidKeyword(const UnicodeString& token);
+
+    const UnicodeString  *ruleSrc;  // The rules string.
+    int32_t        ruleIndex;       // String index in the input rules, the current parse position.
+    UnicodeString  token;           // Token most recently scanned.
+    tokenType      type;
+    tokenType      prevType;
+
+                                    // The items currently being parsed & built.
+                                    // Note: currentChain may not be the last RuleChain in the
+                                    //       list because the "other" chain is forced to the end.
+    AndConstraint *curAndConstraint;
+    RuleChain     *currentChain;
+
+    int32_t        rangeLowIdx;     // Indices in the UVector of ranges of the
+    int32_t        rangeHiIdx;      //    low and hi values currently being parsed.
 
     enum EParseState {
        kKeyword,
@@ -146,8 +165,6 @@ private:
        kSamples
     };
 
-    RuleParser();     // No instantiation. 
-    ~RuleParser();
 };
 
 class U_I18N_API NumberInfo: public UMemory {

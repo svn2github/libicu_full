@@ -40,8 +40,9 @@ U_NAMESPACE_BEGIN
 class Hashtable;
 class NumberInfo;
 class RuleChain;
-class RuleParser;
+class PluralRuleParser;
 class PluralKeywordEnumeration;
+class AndConstraint;
 
 /**
  * Defines rules for mapping non-negative numeric values onto a small set of
@@ -483,6 +484,7 @@ private:
     int32_t getNumberValue(const UnicodeString& token) const;
     UnicodeString getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& status);
 
+    friend class PluralRuleParser;
 };
 
 U_NAMESPACE_END

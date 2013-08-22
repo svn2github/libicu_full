@@ -17,14 +17,15 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "unicode/localpointer.h"
+#include "unicode/plurrule.h"
+#include "unicode/stringpiece.h"
+
 #include "cmemory.h"
 #include "digitlst.h"
 #include "plurrule_impl.h"
 #include "plurults.h"
 #include "uhash.h"
-#include "unicode/localpointer.h"
-#include "unicode/plurrule.h"
-#include "unicode/stringpiece.h"
 
 #include <iostream>     // TODO: Remove. debug only.
 

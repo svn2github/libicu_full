@@ -113,20 +113,19 @@ PluralRules::createRules(const UnicodeString& description, UErrorCode& status) {
         return NULL;
     }
 
+    PluralRuleParser parser;
     PluralRules *newRules = new PluralRules(status);
     if (U_SUCCESS(status) && newRules == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
-    if (U_SUCCESS(status)) {
-        newRules->parseDescription(description, status);
-    }
-
+    parser.parse(description, newRules, status);
     if (U_FAILURE(status)) {
         delete newRules;
         newRules = NULL;
     }
     return newRules;
 }
+
 
 PluralRules* U_EXPORT2
 PluralRules::createDefaultRules(UErrorCode& status) {
@@ -161,7 +160,8 @@ PluralRules::forLocale(const Locale& locale, UPluralType type, UErrorCode& statu
         locRule =  UnicodeString(PLURAL_DEFAULT_RULE);
         status = U_ZERO_ERROR;
     }
-    newObj->parseDescription(locRule, status);
+    PluralRuleParser parser;
+    parser.parse(locRule, newObj, status);
         //  TODO: should rule parse errors be returned, or
         //        should we silently use default rules?
         //        Original impl used default rules.
@@ -279,32 +279,22 @@ PluralRules::operator==(const PluralRules& other) const  {
     return TRUE;
 }
 
+
 void
-PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
+PluralRuleParser::parse(const UnicodeString& ruleData, PluralRules *prules, UErrorCode &status)
 {
-// TODO: move guts into a method of RuleParser. Put some state in RuleParser. Reduce heavy parameter passing
-//       beween RuleParser functions.
-
-    int32_t ruleIndex=0;
-    UnicodeString token;
-    tokenType type;
-    tokenType prevType=none;
-    AndConstraint *curAndConstraint=NULL;
-    OrConstraint *orNode=NULL;
-    RuleChain *currentChain=NULL;
-    int32_t  rangeLowIdx = -1;   // Indices in the UVector of ranges of the
-    int32_t  rangeHiIdx  = -1;   //    low and hi values currently being parsed.
-
     if (U_FAILURE(status)) {
         return;
     }
-    // UnicodeString ruleData(data);
-    while (ruleIndex< ruleData.length()) {
-        RuleParser::getNextToken(ruleData, &ruleIndex, token, type, status);
+    U_ASSERT(ruleIndex == 0);    // Parsers are good for a single use only!
+    ruleSrc = &ruleData;
+
+    while (ruleIndex< ruleSrc->length()) {
+        getNextToken(status);
         if (U_FAILURE(status)) {
             return;
         }
-        RuleParser::checkSyntax(token, prevType, type, status);
+        checkSyntax(status);
         if (U_FAILURE(status)) {
             return;
         }
@@ -314,15 +304,17 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
             curAndConstraint = curAndConstraint->add();
             break;
         case tOr:
-            U_ASSERT(currentChain != NULL);
-            orNode=currentChain->ruleHeader;
-            while (orNode->next != NULL) {
-                orNode = orNode->next;
+            {
+                U_ASSERT(currentChain != NULL);
+                OrConstraint *orNode=currentChain->ruleHeader;
+                while (orNode->next != NULL) {
+                    orNode = orNode->next;
+                }
+                orNode->next= new OrConstraint();
+                orNode=orNode->next;
+                orNode->next=NULL;
+                curAndConstraint = orNode->add();
             }
-            orNode->next= new OrConstraint();
-            orNode=orNode->next;
-            orNode->next=NULL;
-            curAndConstraint = orNode->add();
             break;
         case tIs:
             U_ASSERT(curAndConstraint != NULL);
@@ -411,12 +403,12 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
                 break;
             }
             newChain->keyword = token;
-            if (mRules == NULL) {
-                mRules = newChain;
+            if (prules->mRules == NULL) {
+                prules->mRules = newChain;
             } else {
                 // The new rule chain goes at the end of the linked list of rule chains,
                 //   unless there is an "other" keyword & chain. "other" must remain last.
-                RuleChain *insertAfter = mRules;
+                RuleChain *insertAfter = prules->mRules;
                 while (insertAfter->next!=NULL && 
                        insertAfter->next->keyword.compare(PLURAL_KEYWORD_OTHER, 5) != 0 ){
                     insertAfter=insertAfter->next;
@@ -424,7 +416,8 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
                 newChain->next = insertAfter->next;
                 insertAfter->next = newChain;
             }
-            orNode = newChain->ruleHeader = new OrConstraint();
+            OrConstraint *orNode = new OrConstraint();
+            newChain->ruleHeader = orNode;
             curAndConstraint = orNode->add();
             currentChain = newChain;
             }
@@ -433,7 +426,7 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
             // TODO: implement this samples stuff.
             //       For now, just swallow and ignore the samples.
             do {
-                RuleParser::getNextToken(ruleData, &ruleIndex, token, type, status);
+                getNextToken(status);
             } while (type != tEOF && type != tSemiColon);
             break;
                 
@@ -446,18 +439,6 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
         }
     }
 }
-
-int32_t
-PluralRules::getNumberValue(const UnicodeString& token) const {
-    int32_t i;
-    char digits[128];
-
-    i = token.extract(0, token.length(), digits, ARRAY_SIZE(digits), US_INV);
-    digits[i]='\0';
-
-    return((int32_t)atoi(digits));
-}
-
 
 UnicodeString
 PluralRules::getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& errCode) {
@@ -893,20 +874,36 @@ RuleChain::isKeyword(const UnicodeString& keywordParam) const {
 }
 
 
-RuleParser::RuleParser() {
+PluralRuleParser::PluralRuleParser() : 
+        ruleIndex(0), token(), type(none), prevType(none), 
+        curAndConstraint(NULL), currentChain(NULL), rangeLowIdx(-1), rangeHiIdx(-1)  
+{
 }
 
-RuleParser::~RuleParser() {
+PluralRuleParser::~PluralRuleParser() {
 }
+
+
+int32_t
+PluralRuleParser::getNumberValue(const UnicodeString& token) {
+    int32_t i;
+    char digits[128];
+
+    i = token.extract(0, token.length(), digits, ARRAY_SIZE(digits), US_INV);
+    digits[i]='\0';
+
+    return((int32_t)atoi(digits));
+}
+
 
 void
-RuleParser::checkSyntax(const UnicodeString &token, tokenType prevType, tokenType &curType, UErrorCode &status)
+PluralRuleParser::checkSyntax(UErrorCode &status)
 {
     if (U_FAILURE(status)) {
         return;
     }
     if (!(prevType==none || prevType==tSemiColon)) {
-        curType = getKeyType(token, curType);  // Switch token type from tKeyword if we scanned a reserved word,
+        type = getKeyType(token, type);  // Switch token type from tKeyword if we scanned a reserved word,
                                                //   and we are not at the start of a rule, where a
                                                //   keyword is expected.
     }
@@ -914,7 +911,7 @@ RuleParser::checkSyntax(const UnicodeString &token, tokenType prevType, tokenTyp
     switch(prevType) {
     case none:
     case tSemiColon:
-        if (curType!=tKeyword && curType != tEOF) {
+        if (type!=tKeyword && type != tEOF) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
@@ -923,33 +920,33 @@ RuleParser::checkSyntax(const UnicodeString &token, tokenType prevType, tokenTyp
     case tVariableF:
     case tVariableT:
     case tVariableV:
-        if (curType != tIs && curType != tMod && curType != tIn &&
-            curType != tNot && curType != tWithin && curType != tEqual && curType != tNotEqual) {
+        if (type != tIs && type != tMod && type != tIn &&
+            type != tNot && type != tWithin && type != tEqual && type != tNotEqual) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
     case tKeyword:
-        if (curType != tColon) {
+        if (type != tColon) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
     case tColon:
-        if (!(curType == tVariableN ||
-              curType == tVariableI ||
-              curType == tVariableF ||
-              curType == tVariableT ||
-              curType == tVariableV ||
-              curType == tAt)) {
+        if (!(type == tVariableN ||
+              type == tVariableI ||
+              type == tVariableF ||
+              type == tVariableT ||
+              type == tVariableV ||
+              type == tAt)) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
     case tIs:
-        if ( curType != tNumber && curType != tNot) {
+        if ( type != tNumber && type != tNot) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
     case tNot:
-        if (curType != tNumber && curType != tIn && curType != tWithin) {
+        if (type != tNumber && type != tIn && type != tWithin) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
@@ -959,29 +956,29 @@ RuleParser::checkSyntax(const UnicodeString &token, tokenType prevType, tokenTyp
     case tWithin:
     case tEqual:
     case tNotEqual:
-        if (curType != tNumber) {
+        if (type != tNumber) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
     case tAnd:
     case tOr:
-        if ( curType != tVariableN &&
-             curType != tVariableI &&
-             curType != tVariableF &&
-             curType != tVariableT &&
-             curType != tVariableV) {
+        if ( type != tVariableN &&
+             type != tVariableI &&
+             type != tVariableF &&
+             type != tVariableT &&
+             type != tVariableV) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
     case tComma:
-        if (curType != tNumber) {
+        if (type != tNumber) {
             status = U_UNEXPECTED_TOKEN;
         }
         break;
     case tNumber:
-        if (curType != tDot2 && curType != tSemiColon && curType != tIs && curType != tNot &&
-            curType != tIn && curType != tEqual && curType != tNotEqual && curType != tWithin && 
-            curType != tAnd && curType != tOr && curType != tComma && curType != tAt && curType != tEOF)
+        if (type != tDot2 && type != tSemiColon && type != tIs && type != tNot &&
+            type != tIn && type != tEqual && type != tNotEqual && type != tWithin && 
+            type != tAnd && type != tOr && type != tComma && type != tAt && type != tEOF)
         {
             status = U_UNEXPECTED_TOKEN;
         }
@@ -996,39 +993,30 @@ RuleParser::checkSyntax(const UnicodeString &token, tokenType prevType, tokenTyp
 
 
 /*
- *  params
- *      ruleData:   UnicodeString containing the rules being parsed.
- *      ruleIndex:  in/out, the string index to begin scanning.
- *      type:       in:  the last token type processed by the parser.
- *                  out: The newly scanned token type.
- *                  The incoming value provides state controlling whether reserve words
- *                  are recognized.
+ *  Scan the next token from the input rules.
+ *     rules and returned token type are in the parser state variables.
  */
 void
-RuleParser::getNextToken(const UnicodeString& ruleData,
-                         int32_t *ruleIndex,
-                         UnicodeString& token,
-                         tokenType& type,
-                         UErrorCode &status)
+PluralRuleParser::getNextToken(UErrorCode &status)
 {
     if (U_FAILURE(status)) {
         return;
     }
 
     UChar ch;
-    while (*ruleIndex < ruleData.length()) {
-        ch = ruleData.charAt(*ruleIndex);
+    while (ruleIndex < ruleSrc->length()) {
+        ch = ruleSrc->charAt(ruleIndex);
         type = charType(ch);
         if (type != tSpace) {
             break;
         }
-        ++(*ruleIndex);
+        ++(ruleIndex);
     }
-    if (*ruleIndex >= ruleData.length()) {
+    if (ruleIndex >= ruleSrc->length()) {
         type = tEOF;
         return;
     }
-    int32_t curIndex= *ruleIndex;
+    int32_t curIndex= ruleIndex;
         
     switch (type) {
       case tColon:
@@ -1044,7 +1032,7 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
         break;
 
       case tNotEqual:  // scanned '!'
-        if (ruleData.charAt(curIndex+1) == EQUALS) {
+        if (ruleSrc->charAt(curIndex+1) == EQUALS) {
             curIndex += 2;
         } else {
             type = none;
@@ -1053,16 +1041,16 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
         break;
 
       case tKeyword:
-         while (type == tKeyword && ++curIndex < ruleData.length()) {
-             ch = ruleData.charAt(curIndex);
+         while (type == tKeyword && ++curIndex < ruleSrc->length()) {
+             ch = ruleSrc->charAt(curIndex);
              type = charType(ch);
          }
          type = tKeyword;
          break;
 
       case tNumber:
-         while (type == tNumber && ++curIndex < ruleData.length()) {
-             ch = ruleData.charAt(curIndex);
+         while (type == tNumber && ++curIndex < ruleSrc->length()) {
+             ch = ruleSrc->charAt(curIndex);
              type = charType(ch);
          }
          type = tNumber;
@@ -1070,11 +1058,11 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
 
        case tDot:
          // We could be looking at either ".." in a range, or "..." at the end of a sample.
-         if (curIndex+1 >= ruleData.length() || ruleData[curIndex+1] != DOT) {
+         if (curIndex+1 >= ruleSrc->length() || ruleSrc->charAt(curIndex+1) != DOT) {
              ++curIndex;
              break; // Single dot
          }
-         if (curIndex+2 >= ruleData.length() || ruleData[curIndex+2] != DOT) {
+         if (curIndex+2 >= ruleSrc->length() || ruleSrc->charAt(curIndex+2) != DOT) {
              curIndex += 2;
              type = tDot2;
              break; // double dot
@@ -1089,14 +1077,14 @@ RuleParser::getNextToken(const UnicodeString& ruleData,
          break;
     }
 
-    U_ASSERT(*ruleIndex <= ruleData.length());
-    U_ASSERT(curIndex <= ruleData.length());
-    token=UnicodeString(ruleData, *ruleIndex, curIndex-*ruleIndex);
-    *ruleIndex = curIndex;
+    U_ASSERT(ruleIndex <= ruleSrc->length());
+    U_ASSERT(curIndex <= ruleSrc->length());
+    token=UnicodeString(*ruleSrc, ruleIndex, curIndex-ruleIndex);
+    ruleIndex = curIndex;
 }
 
 tokenType
-RuleParser::charType(UChar ch) {
+PluralRuleParser::charType(UChar ch) {
     if ((ch>=U_ZERO) && (ch<=U_NINE)) {
         return tNumber;
     }
@@ -1135,7 +1123,7 @@ RuleParser::charType(UChar ch) {
 //  Set token type for reserved words in the Plural Rule syntax.
 
 tokenType 
-RuleParser::getKeyType(const UnicodeString &token, tokenType keyType)
+PluralRuleParser::getKeyType(const UnicodeString &token, tokenType keyType)
 {
     if (keyType != tKeyword) {
         return keyType;
