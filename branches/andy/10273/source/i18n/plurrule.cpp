@@ -57,14 +57,10 @@ static const UChar PK_INTEGER[]={LOW_I,LOW_N,LOW_T,LOW_E,LOW_G,LOW_E,LOW_R,0};
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralRules)
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(PluralKeywordEnumeration)
 
-PluralRules::PluralRules(UErrorCode& status)
+PluralRules::PluralRules(UErrorCode& /*status*/)
 :   UObject(),
     mRules(NULL)
 {
-    mRules = new RuleChain;
-    if (mRules == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-    }
 }
 
 PluralRules::PluralRules(const PluralRules& other)
@@ -293,10 +289,9 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
     UnicodeString token;
     tokenType type;
     tokenType prevType=none;
-    RuleChain *ruleChain=NULL;
     AndConstraint *curAndConstraint=NULL;
     OrConstraint *orNode=NULL;
-    RuleChain *lastChain=NULL;
+    RuleChain *currentChain=NULL;
     int32_t  rangeLowIdx = -1;   // Indices in the UVector of ranges of the
     int32_t  rangeHiIdx  = -1;   //    low and hi values currently being parsed.
 
@@ -319,11 +314,8 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
             curAndConstraint = curAndConstraint->add();
             break;
         case tOr:
-            lastChain = mRules;
-            while (lastChain->next !=NULL) {
-                lastChain = lastChain->next;
-            }
-            orNode=lastChain->ruleHeader;
+            U_ASSERT(currentChain != NULL);
+            orNode=currentChain->ruleHeader;
             while (orNode->next != NULL) {
                 orNode = orNode->next;
             }
@@ -412,21 +404,30 @@ PluralRules::parseDescription(const UnicodeString& ruleData, UErrorCode &status)
             curAndConstraint->digitsType = type;
             break;
         case tKeyword:
-            if (ruleChain==NULL) {
-                ruleChain = mRules;
+            {
+            RuleChain *newChain = new RuleChain;
+            if (newChain == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                break;
             }
-            else {
-                while (ruleChain->next!=NULL){
-                    ruleChain=ruleChain->next;
+            newChain->keyword = token;
+            if (mRules == NULL) {
+                mRules = newChain;
+            } else {
+                // The new rule chain goes at the end of the linked list of rule chains,
+                //   unless there is an "other" keyword & chain. "other" must remain last.
+                RuleChain *insertAfter = mRules;
+                while (insertAfter->next!=NULL && 
+                       insertAfter->next->keyword.compare(PLURAL_KEYWORD_OTHER, 5) != 0 ){
+                    insertAfter=insertAfter->next;
                 }
-                ruleChain=ruleChain->next=new RuleChain();
+                newChain->next = insertAfter->next;
+                insertAfter->next = newChain;
             }
-            if (ruleChain->ruleHeader != NULL) {
-                delete ruleChain->ruleHeader;
-            }
-            orNode = ruleChain->ruleHeader = new OrConstraint();
+            orNode = newChain->ruleHeader = new OrConstraint();
             curAndConstraint = orNode->add();
-            ruleChain->keyword = token;
+            currentChain = newChain;
+            }
             break;
         case tAt:
             // TODO: implement this samples stuff.
@@ -540,6 +541,17 @@ PluralRules::getRuleFromResource(const Locale& locale, UPluralType type, UErrorC
     // std::string rs; result.toUTF8String(rs); std::cout << rs << std::endl;
     return result;
 }
+
+
+UnicodeString
+PluralRules::getRules() const {
+    UnicodeString rules;
+    if (mRules != NULL) {
+        mRules->dumpRules(rules);
+    }
+    return rules;
+}
+
 
 AndConstraint::AndConstraint() {
     op = AndConstraint::NONE;
@@ -740,18 +752,42 @@ RuleChain::select(const NumberInfo &number) const {
     return UnicodeString(TRUE, PLURAL_KEYWORD_OTHER, 5);
 }
 
+static UnicodeString tokenString(tokenType tok) {
+    UnicodeString s;
+    switch (tok) {
+      case tVariableN:
+        s.append(LOW_N); break;
+      case tVariableI:
+        s.append(LOW_I); break;
+      case tVariableF:
+        s.append(LOW_F); break;
+      case tVariableV:
+        s.append(LOW_V); break;
+      case tVariableT:
+        s.append(LOW_T); break;
+      default:
+        s.append(TILDE);
+    }
+    return s;
+}
+
 void
 RuleChain::dumpRules(UnicodeString& result) {
     UChar digitString[16];
 
     if ( ruleHeader != NULL ) {
         result +=  keyword;
+        result += COLON;
+        result += SPACE;
         OrConstraint* orRule=ruleHeader;
         while ( orRule != NULL ) {
             AndConstraint* andRule=orRule->childNode;
             while ( andRule != NULL ) {
-                if ( (andRule->op==AndConstraint::NONE) && (andRule->rangeList==NULL) ) {
-                    result += UNICODE_STRING_SIMPLE(" n is ");
+                if ((andRule->op==AndConstraint::NONE) &&  (andRule->rangeList==NULL) && (andRule->value == -1)) {
+                    // Empty Rules.
+                } else if ( (andRule->op==AndConstraint::NONE) && (andRule->rangeList==NULL) ) {
+                    result += tokenString(andRule->digitsType);
+                    result += UNICODE_STRING_SIMPLE(" is ");
                     if (andRule->negated) {
                         result += UNICODE_STRING_SIMPLE("not ");
                     }
@@ -759,13 +795,12 @@ RuleChain::dumpRules(UnicodeString& result) {
                     result += UnicodeString(digitString);
                 }
                 else {
+                    result += tokenString(andRule->digitsType);
+                    result += SPACE;
                     if (andRule->op==AndConstraint::MOD) {
-                        result += UNICODE_STRING_SIMPLE("  n mod ");
+                        result += UNICODE_STRING_SIMPLE("mod ");
                         uprv_itou(digitString,16, andRule->opNum,10,0);
                         result += UnicodeString(digitString);
-                    }
-                    else {
-                        result += UNICODE_STRING_SIMPLE("  n ");
                     }
                     if (andRule->rangeList==NULL) {
                         if (andRule->negated) {
@@ -782,10 +817,10 @@ RuleChain::dumpRules(UnicodeString& result) {
                     else {
                         if (andRule->negated) {
                             if ( andRule->integerOnly ) {
-                                result += UNICODE_STRING_SIMPLE("  not in ");
+                                result += UNICODE_STRING_SIMPLE(" not in ");
                             }
                             else {
-                                result += UNICODE_STRING_SIMPLE("  not within ");
+                                result += UNICODE_STRING_SIMPLE(" not within ");
                             }
                         }
                         else {
@@ -801,26 +836,26 @@ RuleChain::dumpRules(UnicodeString& result) {
                             int32_t rangeHi = andRule->rangeList->elementAti(r+1);
                             uprv_itou(digitString,16, rangeLo, 10, 0);
                             result += UnicodeString(digitString);
-                            if (rangeLo != rangeHi) {
-                                result += UNICODE_STRING_SIMPLE(" .. ");
-                                uprv_itou(digitString,16, rangeHi, 10,0);
-                            }
-                            if (r+2 <= andRule->rangeList->size()) {
+                            result += UNICODE_STRING_SIMPLE("..");
+                            uprv_itou(digitString,16, rangeHi, 10,0);
+                            result += UnicodeString(digitString);
+                            if (r+2 < andRule->rangeList->size()) {
                                 result += UNICODE_STRING_SIMPLE(", ");
                             }
                         }
                     }
                 }
                 if ( (andRule=andRule->next) != NULL) {
-                    result.append(PK_AND, 3);
+                    result += UNICODE_STRING_SIMPLE(" and ");
                 }
             }
             if ( (orRule = orRule->next) != NULL ) {
-                result.append(PK_OR, 2);
+                result += UNICODE_STRING_SIMPLE(" or ");
             }
         }
     }
     if ( next != NULL ) {
+        result += UNICODE_STRING_SIMPLE("; ");
         next->dumpRules(result);
     }
 }

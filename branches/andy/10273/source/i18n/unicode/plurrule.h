@@ -433,6 +433,12 @@ public:
     UnicodeString getKeywordOther() const;
 
     /**
+     *
+     * @internal
+     */
+     UnicodeString getRules() const;
+
+    /**
      * Compares the equality of two PluralRules objects.
      *
      * @param other The other PluralRules object to be compared with.

@@ -575,10 +575,6 @@ void PluralRulesTest::testOrdinal() {
     if (keyword != UNICODE_STRING("two", 3)) {
         dataerrln("PluralRules(en-ordinal).select(2) failed");
     }
-    for (int i=0; i<14; i++) {
-        keyword = pr->select(i);
-        std::string ss; keyword.toUTF8String(ss); std::cout << "i = " << i << ", key = "<< ss << std::endl;
-    }
 }
 
 
