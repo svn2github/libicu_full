@@ -52,7 +52,7 @@ void PluralRulesTest::runIndexedTest( int32_t index, UBool exec, const char* &na
     TESTCASE_AUTO(testSelect);
     TESTCASE_AUTO(testAvailbleLocales);
     TESTCASE_AUTO(testParseErrors);
-    TESTCASE_AUTO(testNumberInfo);
+    TESTCASE_AUTO(testFixedDecimal);
     TESTCASE_AUTO_END;
 }
 
@@ -636,7 +636,7 @@ void PluralRulesTest::checkSelect(const LocalPointer<PluralRules> &rules, UError
         const char *decimalPoint = strchr(num, '.');
         int fractionDigitCount = decimalPoint == NULL ? 0 : (num + strlen(num) - 1) - decimalPoint;
         int fractionDigits = fractionDigitCount == 0 ? 0 : atoi(decimalPoint + 1);
-        NumberInfo ni(numDbl, fractionDigitCount, fractionDigits);
+        FixedDecimal ni(numDbl, fractionDigitCount, fractionDigits);
         
         UnicodeString actualKeyword = rules->select(ni);
         if (actualKeyword != UnicodeString(keyword)) {
@@ -950,7 +950,7 @@ void PluralRulesTest::testParseErrors() {
 }
 
 
-void PluralRulesTest::testNumberInfo() {
+void PluralRulesTest::testFixedDecimal() {
     struct DoubleTestCase {
         double n;
         int32_t fractionDigitCount;
@@ -979,13 +979,13 @@ void PluralRulesTest::testNumberInfo() {
 
     for (int i=0; i<LENGTHOF(testCases); ++i) {
         DoubleTestCase &tc = testCases[i];
-        int32_t numFractionDigits = NumberInfo::decimals(tc.n);
+        int32_t numFractionDigits = FixedDecimal::decimals(tc.n);
         if (numFractionDigits != tc.fractionDigitCount) {
             errln("file %s, line %d: decimals(%g) expected %d, actual %d",
                    __FILE__, __LINE__, tc.n, tc.fractionDigitCount, numFractionDigits);
             continue;
         }
-        int64_t actualFractionDigits = NumberInfo::getFractionalDigits(tc.n, numFractionDigits);
+        int64_t actualFractionDigits = FixedDecimal::getFractionalDigits(tc.n, numFractionDigits);
         if (actualFractionDigits != tc.fractionDigits) {
             errln("file %s, line %d: getFractionDigits(%g, %d): expected %ld, got %ld",
                   __FILE__, __LINE__, tc.n, numFractionDigits, tc.fractionDigits, actualFractionDigits);

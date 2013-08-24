@@ -167,7 +167,7 @@ private:
 
 };
 
-class U_I18N_API NumberInfo: public UMemory {
+class U_I18N_API FixedDecimal: public UMemory {
   public:
     /**
       * @param n   the number
@@ -175,9 +175,9 @@ class U_I18N_API NumberInfo: public UMemory {
       * @param f   The fraction digits.
       *
       */
-    NumberInfo(double  n, int32_t v, int64_t f);
-    NumberInfo(double n, int32_t);
-    explicit NumberInfo(double n);
+    FixedDecimal(double  n, int32_t v, int64_t f);
+    FixedDecimal(double n, int32_t);
+    explicit FixedDecimal(double n);
 
     double get(tokenType operand) const;
     int32_t getVisibleFractionDigitCount() const;
@@ -217,8 +217,7 @@ public:
     virtual ~AndConstraint();
     AndConstraint* add();
     // UBool isFulfilled(double number);
-    UBool isFulfilled(const NumberInfo &number);
-    UBool isLimited();
+    UBool isFulfilled(const FixedDecimal &number);
 };
 
 class OrConstraint : public UMemory  {
@@ -231,25 +230,25 @@ public:
     virtual ~OrConstraint();
     AndConstraint* add();
     // UBool isFulfilled(double number);
-    UBool isFulfilled(const NumberInfo &number);
-    UBool isLimited();
+    UBool isFulfilled(const FixedDecimal &number);
 };
 
 class RuleChain : public UMemory  {
 public:
-    UnicodeString  keyword;
-    RuleChain     *next;
-    OrConstraint  *ruleHeader;
+    UnicodeString   fKeyword;
+    RuleChain      *fNext;
+    OrConstraint   *ruleHeader;
+    UnicodeString   fDecimalSamples;  // Samples strings from rule source
+    UnicodeString   fIntegerSamples;  //   without @decimal or @integer, otherwise unprocessed.
 
     RuleChain();
     RuleChain(const RuleChain& other);
     virtual ~RuleChain();
 
-    UnicodeString select(const NumberInfo &number) const;
-    void dumpRules(UnicodeString& result);
-    UBool isLimited();
-    UErrorCode getKeywords(int32_t maxArraySize, UnicodeString *keywords, int32_t& arraySize) const;
-    UBool isKeyword(const UnicodeString& keyword) const;
+    UnicodeString select(const FixedDecimal &number) const;
+    void          dumpRules(UnicodeString& result);
+    UErrorCode    getKeywords(int32_t maxArraySize, UnicodeString *keywords, int32_t& arraySize) const;
+    UBool         isKeyword(const UnicodeString& keyword) const;
 };
 
 class PluralKeywordEnumeration : public StringEnumeration {
@@ -262,8 +261,8 @@ public:
     virtual void reset(UErrorCode& status);
     virtual int32_t count(UErrorCode& status) const;
 private:
-    int32_t pos;
-    UVector fKeywordNames;
+    int32_t         pos;
+    UVector         fKeywordNames;
 };
 
 

@@ -38,7 +38,7 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
-class NumberInfo;
+class FixedDecimal;
 class RuleChain;
 class PluralRuleParser;
 class PluralKeywordEnumeration;
@@ -343,7 +343,7 @@ public:
     /**
       * @internal
       */
-    UnicodeString select(const NumberInfo &number) const;
+    UnicodeString select(const FixedDecimal &number) const;
 
     /**
      * Returns a list of all rule keywords used in this <code>PluralRules</code>

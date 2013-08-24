@@ -172,16 +172,16 @@ PluralRules::forLocale(const Locale& locale, UPluralType type, UErrorCode& statu
 
 UnicodeString
 PluralRules::select(int32_t number) const {
-    return select(NumberInfo(number));
+    return select(FixedDecimal(number));
 }
 
 UnicodeString
 PluralRules::select(double number) const {
-    return select(NumberInfo(number));
+    return select(FixedDecimal(number));
 }
 
 UnicodeString
-PluralRules::select(const NumberInfo &number) const {
+PluralRules::select(const FixedDecimal &number) const {
     if (mRules == NULL) {
         return UnicodeString(TRUE, PLURAL_DEFAULT_RULE, -1);
     }
@@ -402,19 +402,19 @@ PluralRuleParser::parse(const UnicodeString& ruleData, PluralRules *prules, UErr
                 status = U_MEMORY_ALLOCATION_ERROR;
                 break;
             }
-            newChain->keyword = token;
+            newChain->fKeyword = token;
             if (prules->mRules == NULL) {
                 prules->mRules = newChain;
             } else {
                 // The new rule chain goes at the end of the linked list of rule chains,
                 //   unless there is an "other" keyword & chain. "other" must remain last.
                 RuleChain *insertAfter = prules->mRules;
-                while (insertAfter->next!=NULL && 
-                       insertAfter->next->keyword.compare(PLURAL_KEYWORD_OTHER, 5) != 0 ){
-                    insertAfter=insertAfter->next;
+                while (insertAfter->fNext!=NULL && 
+                       insertAfter->fNext->fKeyword.compare(PLURAL_KEYWORD_OTHER, 5) != 0 ){
+                    insertAfter=insertAfter->fNext;
                 }
-                newChain->next = insertAfter->next;
-                insertAfter->next = newChain;
+                newChain->fNext = insertAfter->fNext;
+                insertAfter->fNext = newChain;
             }
             OrConstraint *orNode = new OrConstraint();
             newChain->ruleHeader = orNode;
@@ -422,12 +422,34 @@ PluralRuleParser::parse(const UnicodeString& ruleData, PluralRules *prules, UErr
             currentChain = newChain;
             }
             break;
+        #if 0
         case tAt:
             // TODO: implement this samples stuff.
             //       For now, just swallow and ignore the samples.
             do {
                 getNextToken(status);
             } while (type != tEOF && type != tSemiColon);
+            break;
+        #endif
+
+        case tInteger:
+            for (;;) {
+                getNextToken(status);
+                if (U_FAILURE(status) || type == tSemiColon || type == tEOF) {
+                    break;
+                }
+                currentChain->fIntegerSamples.append(token);
+            }
+            break;
+
+        case tDecimal:
+            for (;;) {
+                getNextToken(status);
+                if (U_FAILURE(status) || type == tSemiColon || type == tEOF) {
+                    break;
+                }
+                currentChain->fDecimalSamples.append(token);
+            }
             break;
                 
         default:
@@ -576,7 +598,7 @@ AndConstraint::~AndConstraint() {
 
 
 UBool
-AndConstraint::isFulfilled(const NumberInfo &number) {
+AndConstraint::isFulfilled(const FixedDecimal &number) {
     UBool result = TRUE;
     if (digitsType == none) {
         // An empty AndConstraint, created by a rule with a keyword but no following expression.
@@ -614,10 +636,6 @@ AndConstraint::isFulfilled(const NumberInfo &number) {
     return result;
 }
 
-UBool 
-AndConstraint::isLimited() {
-    return (rangeList == NULL || integerOnly) && !negated && op != MOD;
-}
 
 AndConstraint*
 AndConstraint::add()
@@ -670,7 +688,7 @@ OrConstraint::add()
 }
 
 UBool
-OrConstraint::isFulfilled(const NumberInfo &number) {
+OrConstraint::isFulfilled(const FixedDecimal &number) {
     OrConstraint* orRule=this;
     UBool result=FALSE;
 
@@ -687,47 +705,31 @@ OrConstraint::isFulfilled(const NumberInfo &number) {
     return result;
 }
 
-UBool
-OrConstraint::isLimited() {
-    for (OrConstraint *orc = this; orc != NULL; orc = orc->next) {
-        UBool result = FALSE;
-        for (AndConstraint *andc = orc->childNode; andc != NULL; andc = andc->next) {
-            if (andc->isLimited()) {
-                result = TRUE;
-                break;
-            }
-        }
-        if (result == FALSE) {
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
 
-RuleChain::RuleChain(): keyword(), next(NULL), ruleHeader(NULL) {
+RuleChain::RuleChain(): fKeyword(), fNext(NULL), ruleHeader(NULL), fDecimalSamples(), fIntegerSamples() {
 }
 
 RuleChain::RuleChain(const RuleChain& other)
-  : keyword(other.keyword), next(NULL), ruleHeader(NULL) {
+  : fKeyword(other.fKeyword), fNext(NULL), ruleHeader(NULL) {
     if (other.ruleHeader != NULL) {
         this->ruleHeader = new OrConstraint(*(other.ruleHeader));
     }
-    if (other.next != NULL ) {
-        this->next = new RuleChain(*other.next);
+    if (other.fNext != NULL ) {
+        this->fNext = new RuleChain(*other.fNext);
     }
 }
 
 RuleChain::~RuleChain() {
-    delete next;
+    delete fNext;
     delete ruleHeader;
 }
 
 
 UnicodeString
-RuleChain::select(const NumberInfo &number) const {
-    for (const RuleChain *rules = this; rules != NULL; rules = rules->next) {
+RuleChain::select(const FixedDecimal &number) const {
+    for (const RuleChain *rules = this; rules != NULL; rules = rules->fNext) {
        if (rules->ruleHeader->isFulfilled(number)) {
-           return rules->keyword;
+           return rules->fKeyword;
        }
     }
     return UnicodeString(TRUE, PLURAL_KEYWORD_OTHER, 5);
@@ -757,7 +759,7 @@ RuleChain::dumpRules(UnicodeString& result) {
     UChar digitString[16];
 
     if ( ruleHeader != NULL ) {
-        result +=  keyword;
+        result +=  fKeyword;
         result += COLON;
         result += SPACE;
         OrConstraint* orRule=ruleHeader;
@@ -835,9 +837,9 @@ RuleChain::dumpRules(UnicodeString& result) {
             }
         }
     }
-    if ( next != NULL ) {
+    if ( fNext != NULL ) {
         result += UNICODE_STRING_SIMPLE("; ");
-        next->dumpRules(result);
+        fNext->dumpRules(result);
     }
 }
 
@@ -845,14 +847,14 @@ RuleChain::dumpRules(UnicodeString& result) {
 UErrorCode
 RuleChain::getKeywords(int32_t capacityOfKeywords, UnicodeString* keywords, int32_t& arraySize) const {
     if ( arraySize < capacityOfKeywords-1 ) {
-        keywords[arraySize++]=keyword;
+        keywords[arraySize++]=fKeyword;
     }
     else {
         return U_BUFFER_OVERFLOW_ERROR;
     }
 
-    if ( next != NULL ) {
-        return next->getKeywords(capacityOfKeywords, keywords, arraySize);
+    if ( fNext != NULL ) {
+        return fNext->getKeywords(capacityOfKeywords, keywords, arraySize);
     }
     else {
         return U_ZERO_ERROR;
@@ -861,12 +863,12 @@ RuleChain::getKeywords(int32_t capacityOfKeywords, UnicodeString* keywords, int3
 
 UBool
 RuleChain::isKeyword(const UnicodeString& keywordParam) const {
-    if ( keyword == keywordParam ) {
+    if ( fKeyword == keywordParam ) {
         return TRUE;
     }
 
-    if ( next != NULL ) {
-        return next->isKeyword(keywordParam);
+    if ( fNext != NULL ) {
+        return fNext->isKeyword(keywordParam);
     }
     else {
         return FALSE;
@@ -976,14 +978,20 @@ PluralRuleParser::checkSyntax(UErrorCode &status)
         }
         break;
     case tNumber:
-        if (type != tDot2 && type != tSemiColon && type != tIs && type != tNot &&
-            type != tIn && type != tEqual && type != tNotEqual && type != tWithin && 
-            type != tAnd && type != tOr && type != tComma && type != tAt && type != tEOF)
+        if (type != tDot2  && type != tSemiColon && type != tIs       && type != tNot    &&
+            type != tIn    && type != tEqual     && type != tNotEqual && type != tWithin && 
+            type != tAnd   && type != tOr        && type != tComma    && type != tAt     && 
+            type != tEOF)
         {
             status = U_UNEXPECTED_TOKEN;
         }
         // TODO: a comma following a number that is not part of a range will be allowed.
         //       It's not the only case of this sort of thing. Parser needs a re-write.
+        break;
+    case tAt:
+        if (type != tDecimal && type != tInteger) {
+            status = U_UNEXPECTED_TOKEN;
+        }
         break;
     default:
         status = U_UNEXPECTED_TOKEN;
@@ -1171,14 +1179,14 @@ PluralKeywordEnumeration::PluralKeywordEnumeration(RuleChain *header, UErrorCode
     UBool  addKeywordOther=TRUE;
     RuleChain *node=header;
     while(node!=NULL) {
-        fKeywordNames.addElement(new UnicodeString(node->keyword), status);
+        fKeywordNames.addElement(new UnicodeString(node->fKeyword), status);
         if (U_FAILURE(status)) {
             return;
         }
-        if (0 == node->keyword.compare(PLURAL_KEYWORD_OTHER, 5)) {
+        if (0 == node->fKeyword.compare(PLURAL_KEYWORD_OTHER, 5)) {
             addKeywordOther= FALSE;
         }
-        node=node->next;
+        node=node->fNext;
     }
 
     if (addKeywordOther) {
@@ -1209,7 +1217,7 @@ PluralKeywordEnumeration::~PluralKeywordEnumeration() {
 
 
 
-NumberInfo::NumberInfo(double n, int32_t v, int64_t f) {
+FixedDecimal::FixedDecimal(double n, int32_t v, int64_t f) {
     init(n, v, f);
     // check values. TODO make into unit test.
     //            
@@ -1226,17 +1234,17 @@ NumberInfo::NumberInfo(double n, int32_t v, int64_t f) {
     //            }
 }
 
-NumberInfo::NumberInfo(double n, int32_t v) {
+FixedDecimal::FixedDecimal(double n, int32_t v) {
     // Ugly, but for samples we don't care.
     init(n, v, getFractionalDigits(n, v));
 }
 
-NumberInfo::NumberInfo(double n) {
+FixedDecimal::FixedDecimal(double n) {
     int64_t numFractionDigits = decimals(n);
     init(n, numFractionDigits, getFractionalDigits(n, numFractionDigits));
 }
 
-void NumberInfo::init(double n, int32_t v, int64_t f) {
+void FixedDecimal::init(double n, int32_t v, int64_t f) {
     isNegative = n < 0;
     source = fabs(n);
     visibleFractionDigitCount = v;
@@ -1254,7 +1262,7 @@ void NumberInfo::init(double n, int32_t v, int64_t f) {
     }
 }
 
-int32_t NumberInfo::decimals(double n) {
+int32_t FixedDecimal::decimals(double n) {
     // Count the number of decimal digits in the fraction part of the number, excluding trailing zeros.
     n = fabs(n);
     double scaledN = n;
@@ -1288,7 +1296,7 @@ int32_t NumberInfo::decimals(double n) {
 //          This function can easily encounter integer overflow, 
 //          and can easily return noise digits when the precision of a double is exceeded.
 
-int64_t NumberInfo::getFractionalDigits(double n, int32_t v) {
+int64_t FixedDecimal::getFractionalDigits(double n, int32_t v) {
     if (v == 0 || n == floor(n)) {
         return 0;
     }
@@ -1309,7 +1317,7 @@ int64_t NumberInfo::getFractionalDigits(double n, int32_t v) {
 }
 
 
-double NumberInfo::get(tokenType operand) const {
+double FixedDecimal::get(tokenType operand) const {
     switch(operand) {
         case tVariableN: return source;
         case tVariableI: return (double)intValue;
@@ -1322,7 +1330,7 @@ double NumberInfo::get(tokenType operand) const {
     }
 }
 
-int32_t NumberInfo::getVisibleFractionDigitCount() const {
+int32_t FixedDecimal::getVisibleFractionDigitCount() const {
     return visibleFractionDigitCount;
 }
 
