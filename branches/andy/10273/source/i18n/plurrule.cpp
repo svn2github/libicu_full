@@ -15,16 +15,18 @@
 #include "unicode/plurrule.h"
 #include "unicode/upluralrules.h"
 #include "unicode/ures.h"
+#include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "digitlst.h"
 #include "hash.h"
+#include "locutil.h"
 #include "mutex.h"
 #include "patternprops.h"
 #include "plurrule_impl.h"
 #include "putilimp.h"
 #include "ucln_in.h"
 #include "ustrfmt.h"
-#include "locutil.h"
 #include "uassert.h"
 #include "uvectr32.h"
 
@@ -215,11 +217,59 @@ PluralRules::getAllKeywordValues(const UnicodeString & /* keyword */, double * /
     return 0;
 }
 
+    
 int32_t
-PluralRules::getSamples(const UnicodeString & /* keyword */, double * /* dest */,
-                        int32_t /* destCapacity */, UErrorCode& status) {
-    status = U_UNSUPPORTED_ERROR;
-    return 0;
+PluralRules::getSamples(const UnicodeString &keyword, double *dest,
+                        int32_t destCapacity, UErrorCode& status) {
+    RuleChain *rc = rulesForKeyword(keyword);
+    if (rc == NULL || U_FAILURE(status)) {
+        return 0;
+    }
+    int32_t sampleCount = 0;
+    int32_t sampleStartIdx = 0;
+    int32_t sampleEndIdx = 0;
+
+    for (sampleCount = 0; 
+           sampleCount < destCapacity && sampleStartIdx < rc->fIntegerSamples.length();
+           ++sampleCount) {
+        sampleEndIdx = rc->fIntegerSamples.indexOf(sampleStartIdx, COMMA);
+        if (sampleEndIdx == -1) {
+            sampleEndIdx = rc->fIntegerSamples.length();
+        }
+        UnicodeString sampleRange = rc->fIntegerSamples.tempSubStringBetween(sampleStartIdx, sampleEndIdx);
+        int32_t tildeIndex = sampleRange.indexOf(TILDE);
+        if (tildeIndex < 0) {
+            dest[sampleCount++] = FixedDecimal(sampleRange, status).source;
+        } else {
+            double rangeLo = FixedDecimal(sampleRange.tempSubStringBetween(0, tildeIndex), status).source;
+            double rangeHi = FixedDecimal(sampleRange.tempSubStringBetween(tildeIndex+1), status).source;
+            if (U_FAILURE(status)) {
+                break;
+            }
+            if (rangeHi < rangeLo) {
+                status = U_INVALID_FORMAT_ERROR;
+                break;
+            }
+            for (double n=rangeLo; n<=rangeHi; n++) {
+                dest[sampleCount++] = n;
+                if (sampleCount >= destCapacity) {
+                    break;
+                }
+            }
+        }
+    }
+    return sampleCount;
+}
+
+
+RuleChain *PluralRules::rulesForKeyword(const UnicodeString &keyword) const {
+    RuleChain *rc;
+    for (rc = mRules; rc != NULL; rc = rc->fNext) {
+        if (rc->fKeyword == keyword) {
+            break;
+        }
+    }
+    return rc;
 }
 
 
@@ -228,14 +278,7 @@ PluralRules::isKeyword(const UnicodeString& keyword) const {
     if (0 == keyword.compare(PLURAL_KEYWORD_OTHER, 5)) {
         return true;
     }
-    else {
-        if (mRules==NULL) {
-            return false;
-        }
-        else {
-            return mRules->isKeyword(keyword);
-        }
-    }
+    return rulesForKeyword(keyword) != NULL;
 }
 
 UnicodeString
@@ -1222,10 +1265,10 @@ FixedDecimal::FixedDecimal(double n, int32_t v, int64_t f) {
     // check values. TODO make into unit test.
     //            
     //            long visiblePower = (int) Math.pow(10, v);
-    //            if (fractionalDigits > visiblePower) {
+    //            if (decimalDigits > visiblePower) {
     //                throw new IllegalArgumentException();
     //            }
-    //            double fraction = intValue + (fractionalDigits / (double) visiblePower);
+    //            double fraction = intValue + (decimalDigits / (double) visiblePower);
     //            if (fraction != source) {
     //                double diff = Math.abs(fraction - source)/(Math.abs(fraction) + Math.abs(source));
     //                if (diff > 0.00000001d) {
@@ -1244,21 +1287,44 @@ FixedDecimal::FixedDecimal(double n) {
     init(n, numFractionDigits, getFractionalDigits(n, numFractionDigits));
 }
 
+// Create a FixedDecimal from a UnicodeString containing a number.
+//    Inefficient, but only used for samples, so simplicity trumps efficiency.
+
+FixedDecimal::FixedDecimal(const UnicodeString &num, UErrorCode &status) {
+    CharString cs;
+    cs.appendInvariantChars(num, status);
+    DigitList dl;
+    dl.set(cs.toStringPiece(), status);
+    if (U_FAILURE(status)) {
+        init(0, 0, 0);
+        return;
+    }
+    int32_t decimalPoint = num.indexOf(DOT);
+    double n = dl.getDouble();
+    if (decimalPoint == -1) {
+        init(n, 0, 0);
+    } else {
+        int32_t v = num.length() - decimalPoint - 1;
+        init(n, v, getFractionalDigits(n, v));
+    }
+}
+
+
 void FixedDecimal::init(double n, int32_t v, int64_t f) {
     isNegative = n < 0;
     source = fabs(n);
-    visibleFractionDigitCount = v;
-    fractionalDigits = f;
+    visibleDecimalDigitCount = v;
+    decimalDigits = f;
     intValue = (int64_t)source;
     hasIntegerValue = (source == intValue);
     if (f == 0) {
-         fractionalDigitsWithoutTrailingZeros = 0;
+         decimalDigitsWithoutTrailingZeros = 0;
     } else {
         int64_t fdwtz = f;
         while ((fdwtz%10) == 0) {
             fdwtz /= 10;
         }
-        fractionalDigitsWithoutTrailingZeros = fdwtz;
+        decimalDigitsWithoutTrailingZeros = fdwtz;
     }
 }
 
@@ -1321,9 +1387,9 @@ double FixedDecimal::get(tokenType operand) const {
     switch(operand) {
         case tVariableN: return source;
         case tVariableI: return (double)intValue;
-        case tVariableF: return (double)fractionalDigits;
-        case tVariableT: return (double)fractionalDigitsWithoutTrailingZeros; 
-        case tVariableV: return visibleFractionDigitCount;
+        case tVariableF: return (double)decimalDigits;
+        case tVariableT: return (double)decimalDigitsWithoutTrailingZeros; 
+        case tVariableV: return visibleDecimalDigitCount;
         default:
              U_ASSERT(FALSE);  // unexpected.
              return source;
@@ -1331,7 +1397,7 @@ double FixedDecimal::get(tokenType operand) const {
 }
 
 int32_t FixedDecimal::getVisibleFractionDigitCount() const {
-    return visibleFractionDigitCount;
+    return visibleDecimalDigitCount;
 }
 
 

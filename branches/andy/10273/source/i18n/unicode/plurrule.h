@@ -480,9 +480,10 @@ private:
     RuleChain  *mRules;
 
     PluralRules();   // default constructor not implemented
-    void parseDescription(const UnicodeString& ruleData, UErrorCode &status);
-    int32_t getNumberValue(const UnicodeString& token) const;
-    UnicodeString getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& status);
+    void            parseDescription(const UnicodeString& ruleData, UErrorCode &status);
+    int32_t         getNumberValue(const UnicodeString& token) const;
+    UnicodeString   getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& status);
+    RuleChain      *rulesForKeyword(const UnicodeString &keyword) const;
 
     friend class PluralRuleParser;
 };

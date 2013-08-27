@@ -178,20 +178,20 @@ class U_I18N_API FixedDecimal: public UMemory {
     FixedDecimal(double  n, int32_t v, int64_t f);
     FixedDecimal(double n, int32_t);
     explicit FixedDecimal(double n);
+    FixedDecimal(const UnicodeString &s, UErrorCode &ec);
 
     double get(tokenType operand) const;
     int32_t getVisibleFractionDigitCount() const;
 
     friend class ::PluralRulesTest;
-  private:
     void init(double n, int32_t v, int64_t f);
     static int64_t getFractionalDigits(double n, int32_t v);
     static int32_t decimals(double n);
 
     double      source;
-    int32_t     visibleFractionDigitCount;
-    int64_t     fractionalDigits;
-    int64_t     fractionalDigitsWithoutTrailingZeros;
+    int32_t     visibleDecimalDigitCount;
+    int64_t     decimalDigits;
+    int64_t     decimalDigitsWithoutTrailingZeros;
     int64_t     intValue;
     UBool       hasIntegerValue;
     UBool       isNegative;
