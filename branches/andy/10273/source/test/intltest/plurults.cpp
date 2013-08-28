@@ -56,6 +56,25 @@ void PluralRulesTest::runIndexedTest( int32_t index, UBool exec, const char* &na
     TESTCASE_AUTO_END;
 }
 
+
+// Quick and dirty class for putting UnicodeStrings in char * messages.
+//   TODO: something like this should be generally available.
+class US {
+  private:
+    char *buf;
+  public:
+    US(const UnicodeString &us) {
+       int32_t bufLen = us.extract((int32_t)0, us.length(), (char *)NULL, (uint32_t)0) + 1;
+       buf = (char *)uprv_malloc(bufLen);
+       us.extract(0, us.length(), buf, bufLen); };
+    const char *cstr() {return buf;};
+    ~US() { uprv_free(buf);};
+};
+
+
+
+
+
 #define PLURAL_TEST_NUM    18
 /**
  * Test various generic API methods of PluralRules for API coverage.
@@ -360,7 +379,6 @@ void PluralRulesTest::testGetUniqueKeywordValue() {
 }
 
 void PluralRulesTest::testGetSamples() {
-#if 0
   // TODO: fix samples, re-enable this test.
 
   // no get functional equivalent API in ICU4C, so just
@@ -369,7 +387,7 @@ void PluralRulesTest::testGetSamples() {
   int32_t numLocales;
   const Locale* locales = Locale::getAvailableLocales(numLocales);
 
-  double values[4];
+  double values[1000];
   for (int32_t i = 0; U_SUCCESS(status) && i < numLocales; ++i) {
     PluralRules *rules = PluralRules::forLocale(locales[i], status);
     if (U_FAILURE(status)) {
@@ -382,7 +400,7 @@ void PluralRulesTest::testGetSamples() {
     }
     const UnicodeString* keyword;
     while (NULL != (keyword = keywords->snext(status))) {
-      int32_t count = rules->getSamples(*keyword, values, 4, status);
+      int32_t count = rules->getSamples(*keyword, values, LENGTHOF(values), status);
       if (U_FAILURE(status)) {
         errln(UNICODE_STRING_SIMPLE("getSamples() failed for locale ") +
               locales[i].getName() +
@@ -390,7 +408,8 @@ void PluralRulesTest::testGetSamples() {
         continue;
       }
       if (count == 0) {
-        errln(UNICODE_STRING_SIMPLE("no samples for keyword ") + *keyword + UNICODE_STRING_SIMPLE(" in locale ") + locales[i].getName() );
+        // TODO: Lots of these. 
+        //   errln(UNICODE_STRING_SIMPLE("no samples for keyword ") + *keyword + UNICODE_STRING_SIMPLE(" in locale ") + locales[i].getName() );
       }
       if (count > LENGTHOF(values)) {
         errln(UNICODE_STRING_SIMPLE("getSamples()=") + count +
@@ -404,8 +423,12 @@ void PluralRulesTest::testGetSamples() {
           errln("got 'no unique value' among values");
         } else {
           UnicodeString resultKeyword = rules->select(values[j]);
+          // if (strcmp(locales[i].getName(), "uk") == 0) {    // Debug only.
+          //     std::cout << "  uk " << US(resultKeyword).cstr() << " " << values[j] << std::endl;
+          // }
           if (*keyword != resultKeyword) {
-            errln("keywords don't match");
+            errln("file %s, line %d, Locale %s, sample for keyword \"%s\":  %g, select(%g) returns keyword \"%s\"",
+                __FILE__, __LINE__, locales[i].getName(), US(*keyword).cstr(), values[j], values[j], US(resultKeyword).cstr());
           }
         }
       }
@@ -413,7 +436,6 @@ void PluralRulesTest::testGetSamples() {
     delete keywords;
     delete rules;
   }
-#endif
 }
 
 void PluralRulesTest::testWithin() {
@@ -577,22 +599,6 @@ void PluralRulesTest::testOrdinal() {
         dataerrln("PluralRules(en-ordinal).select(2) failed");
     }
 }
-
-
-// Quick and dirty class for putting UnicodeStrings in char * messages.
-//   TODO: something like this should be generally available.
-class US {
-  private:
-    char *buf;
-  public:
-    US(const UnicodeString &us) {
-       int32_t bufLen = us.extract((int32_t)0, us.length(), (char *)NULL, (uint32_t)0) + 1;
-       buf = (char *)uprv_malloc(bufLen);
-       us.extract(0, us.length(), buf, bufLen); };
-    const char *cstr() {return buf;};
-    ~US() { uprv_free(buf);};
-};
-
 
 
 static const char * END_MARK = "999.999";    // Mark end of varargs data.

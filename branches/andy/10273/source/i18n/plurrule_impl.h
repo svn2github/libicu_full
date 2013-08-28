@@ -240,6 +240,9 @@ public:
     OrConstraint   *ruleHeader;
     UnicodeString   fDecimalSamples;  // Samples strings from rule source
     UnicodeString   fIntegerSamples;  //   without @decimal or @integer, otherwise unprocessed.
+    UBool           fDecimalSamplesUnbounded;
+    UBool           fIntegerSamplesUnbounded;
+
 
     RuleChain();
     RuleChain(const RuleChain& other);

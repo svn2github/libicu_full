@@ -218,31 +218,45 @@ PluralRules::getAllKeywordValues(const UnicodeString & /* keyword */, double * /
 }
 
     
-int32_t
-PluralRules::getSamples(const UnicodeString &keyword, double *dest,
-                        int32_t destCapacity, UErrorCode& status) {
-    RuleChain *rc = rulesForKeyword(keyword);
-    if (rc == NULL || U_FAILURE(status)) {
-        return 0;
+static double scaleForInt(double d) {
+    double scale = 1.0;
+    while (d != floor(d)) {
+        d = d * 10.0;
+        scale = scale * 10.0;
     }
+    return scale;
+}
+
+static int32_t
+getSamplesFromString(const UnicodeString &samples, double *dest,
+                        int32_t destCapacity, UErrorCode& status) {
     int32_t sampleCount = 0;
     int32_t sampleStartIdx = 0;
     int32_t sampleEndIdx = 0;
 
-    for (sampleCount = 0; 
-           sampleCount < destCapacity && sampleStartIdx < rc->fIntegerSamples.length();
-           ++sampleCount) {
-        sampleEndIdx = rc->fIntegerSamples.indexOf(sampleStartIdx, COMMA);
+    //std::string ss;  // TODO: debugging.
+    // std::cout << "PluralRules::getSamples(), samples = \"" << samples.toUTF8String(ss) << "\"\n";
+    for (sampleCount = 0; sampleCount < destCapacity && sampleStartIdx < samples.length(); ) {
+        sampleEndIdx = samples.indexOf(COMMA, sampleStartIdx);
         if (sampleEndIdx == -1) {
-            sampleEndIdx = rc->fIntegerSamples.length();
+            sampleEndIdx = samples.length();
         }
-        UnicodeString sampleRange = rc->fIntegerSamples.tempSubStringBetween(sampleStartIdx, sampleEndIdx);
+        const UnicodeString &sampleRange = samples.tempSubStringBetween(sampleStartIdx, sampleEndIdx);
+        // ss.erase();
+        // std::cout << "PluralRules::getSamples(), samplesRange = \"" << sampleRange.toUTF8String(ss) << "\"\n";
         int32_t tildeIndex = sampleRange.indexOf(TILDE);
         if (tildeIndex < 0) {
-            dest[sampleCount++] = FixedDecimal(sampleRange, status).source;
+            FixedDecimal fixed(sampleRange, status);
+            double sampleValue = fixed.source;
+            if (fixed.visibleDecimalDigitCount == 0 || sampleValue != floor(sampleValue)) {
+                dest[sampleCount++] = sampleValue;
+            }
         } else {
-            double rangeLo = FixedDecimal(sampleRange.tempSubStringBetween(0, tildeIndex), status).source;
-            double rangeHi = FixedDecimal(sampleRange.tempSubStringBetween(tildeIndex+1), status).source;
+            
+            FixedDecimal fixedLo(sampleRange.tempSubStringBetween(0, tildeIndex), status);
+            FixedDecimal fixedHi(sampleRange.tempSubStringBetween(tildeIndex+1), status);
+            double rangeLo = fixedLo.source;
+            double rangeHi = fixedHi.source;
             if (U_FAILURE(status)) {
                 break;
             }
@@ -250,17 +264,52 @@ PluralRules::getSamples(const UnicodeString &keyword, double *dest,
                 status = U_INVALID_FORMAT_ERROR;
                 break;
             }
-            for (double n=rangeLo; n<=rangeHi; n++) {
-                dest[sampleCount++] = n;
+
+            // For ranges of samples with fraction decimal digits, scale the number up so that we
+            //   are adding one in the units place. Avoids roundoffs from repetitive adds of tenths.
+
+            double scale = scaleForInt(rangeLo); 
+            double t = scaleForInt(rangeHi);
+            if (t > scale) {
+                scale = t;
+            }
+            rangeLo *= scale;
+            rangeHi *= scale;
+            for (double n=rangeLo; n<=rangeHi; n+=1) {
+                // Hack Alert: don't return any decimal samples with integer values that
+                //    originated from a format with trailing decimals.
+                //    This API is returning doubles, which can't distinguish having displayed
+                //    zeros to the right of the decimal.
+                //    This results in test failures with values mapping back to a different keyword.
+                double sampleValue = n/scale;
+                if (!(sampleValue == floor(sampleValue) && fixedLo.visibleDecimalDigitCount > 0)) {
+                    dest[sampleCount++] = sampleValue;
+                }
                 if (sampleCount >= destCapacity) {
                     break;
                 }
             }
         }
+        sampleStartIdx = sampleEndIdx + 1;
     }
     return sampleCount;
 }
 
+
+int32_t
+PluralRules::getSamples(const UnicodeString &keyword, double *dest,
+                        int32_t destCapacity, UErrorCode& status) {
+    RuleChain *rc = rulesForKeyword(keyword);
+    if (rc == NULL || destCapacity == 0 || U_FAILURE(status)) {
+        return 0;
+    }
+    int32_t numSamples = getSamplesFromString(rc->fIntegerSamples, dest, destCapacity, status);
+    if (numSamples == 0) { 
+        numSamples = getSamplesFromString(rc->fDecimalSamples, dest, destCapacity, status);
+    }
+    return numSamples;
+}
+    
 
 RuleChain *PluralRules::rulesForKeyword(const UnicodeString &keyword) const {
     RuleChain *rc;
@@ -465,21 +514,16 @@ PluralRuleParser::parse(const UnicodeString& ruleData, PluralRules *prules, UErr
             currentChain = newChain;
             }
             break;
-        #if 0
-        case tAt:
-            // TODO: implement this samples stuff.
-            //       For now, just swallow and ignore the samples.
-            do {
-                getNextToken(status);
-            } while (type != tEOF && type != tSemiColon);
-            break;
-        #endif
 
         case tInteger:
             for (;;) {
                 getNextToken(status);
-                if (U_FAILURE(status) || type == tSemiColon || type == tEOF) {
+                if (U_FAILURE(status) || type == tSemiColon || type == tEOF || type == tAt) {
                     break;
+                }
+                if (type == tEllipsis) {
+                    currentChain->fIntegerSamplesUnbounded = TRUE;
+                    continue;
                 }
                 currentChain->fIntegerSamples.append(token);
             }
@@ -488,8 +532,12 @@ PluralRuleParser::parse(const UnicodeString& ruleData, PluralRules *prules, UErr
         case tDecimal:
             for (;;) {
                 getNextToken(status);
-                if (U_FAILURE(status) || type == tSemiColon || type == tEOF) {
+                if (U_FAILURE(status) || type == tSemiColon || type == tEOF || type == tAt) {
                     break;
+                }
+                if (type == tEllipsis) {
+                    currentChain->fDecimalSamplesUnbounded = TRUE;
+                    continue;
                 }
                 currentChain->fDecimalSamples.append(token);
             }
@@ -583,8 +631,6 @@ PluralRules::getRuleFromResource(const Locale& locale, UPluralType type, UErrorC
         result.append(rules);
         result.append(SEMI_COLON);
     }
-    
-    // std::string rs; result.toUTF8String(rs); std::cout << rs << std::endl;
     return result;
 }
 
@@ -749,11 +795,14 @@ OrConstraint::isFulfilled(const FixedDecimal &number) {
 }
 
 
-RuleChain::RuleChain(): fKeyword(), fNext(NULL), ruleHeader(NULL), fDecimalSamples(), fIntegerSamples() {
+RuleChain::RuleChain(): fKeyword(), fNext(NULL), ruleHeader(NULL), fDecimalSamples(), fIntegerSamples(), 
+                        fDecimalSamplesUnbounded(FALSE), fIntegerSamplesUnbounded(FALSE) {
 }
 
-RuleChain::RuleChain(const RuleChain& other)
-  : fKeyword(other.fKeyword), fNext(NULL), ruleHeader(NULL) {
+RuleChain::RuleChain(const RuleChain& other) : 
+        fKeyword(other.fKeyword), fNext(NULL), ruleHeader(NULL), fDecimalSamples(other.fDecimalSamples),
+        fIntegerSamples(other.fIntegerSamples), fDecimalSamplesUnbounded(other.fDecimalSamplesUnbounded), 
+        fIntegerSamplesUnbounded(other.fIntegerSamplesUnbounded) {
     if (other.ruleHeader != NULL) {
         this->ruleHeader = new OrConstraint(*(other.ruleHeader));
     }
