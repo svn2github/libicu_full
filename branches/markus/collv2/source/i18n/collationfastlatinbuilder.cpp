@@ -180,12 +180,23 @@ CollationFastLatinBuilder::loadGroups(const CollationData &data, UErrorCode &err
 
 UBool
 CollationFastLatinBuilder::inSameGroup(uint32_t p, uint32_t q) const {
+    // Both or neither need to be encoded as short primaries,
+    // so that we can test only one and use the same bit mask.
+    if(p >= firstShortPrimary) {
+        return q >= firstShortPrimary;
+    } else if(q >= firstShortPrimary) {
+        return FALSE;
+    }
+    // Both or neither must be potentially-variable,
+    // so that we can test only one and determine if both are variable.
     if(p >= firstDigitPrimary) {
         return q >= firstDigitPrimary;
     } else if(q >= firstDigitPrimary) {
         return FALSE;
     }
     // Both will be encoded with long mini primaries.
+    // They must be in the same special reordering group,
+    // so that we can test only one and determine if both are variable.
     p >>= 24;  // first primary byte
     q >>= 24;
     U_ASSERT(p != 0 && q != 0);
@@ -323,9 +334,11 @@ CollationFastLatinBuilder::getCEsFromCE32(const CollationData &data, UChar32 c, 
     if(ce1 != 0) {
         // Both primaries must be in the same group,
         // or both must get short mini primaries,
-        // or ce1 must be a secondary CE.
+        // or a short-primary CE is followed by a secondary CE.
+        // This is so that we can test the first primary and use the same mask for both,
+        // and determine for both whether they are variable.
         uint32_t p1 = (uint32_t)(ce1 >> 32);
-        if(p1 != 0 && !inSameGroup(p0, p1)) { return FALSE; }
+        if(p1 == 0 ? p0 < firstShortPrimary : !inSameGroup(p0, p1)) { return FALSE; }
         uint32_t lower32_1 = (uint32_t)ce1;
         // No tertiary CEs.
         if((lower32_1 >> 16) == 0) { return FALSE; }
@@ -500,7 +513,8 @@ CollationFastLatinBuilder::encodeUniqueCEs(UErrorCode &errorCode) {
             } else {
                 if(pri < CollationFastLatin::MIN_SHORT) {
                     pri = CollationFastLatin::MIN_SHORT;
-                } else if(pri < CollationFastLatin::MAX_SHORT) {
+                } else if(pri < (CollationFastLatin::MAX_SHORT - CollationFastLatin::SHORT_INC)) {
+                    // Reserve the highest primary weight for U+FFFF.
                     pri += CollationFastLatin::SHORT_INC;
                 } else {
 #if DEBUG_COLLATION_FAST_LATIN_BUILDER

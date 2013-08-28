@@ -17,6 +17,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/ucol.h"
+#include "collation.h"
 
 U_NAMESPACE_BEGIN
 
@@ -140,9 +141,15 @@ struct U_I18N_API CollationSettings : public UMemory {
         return (MaxVariable)((options & MAX_VARIABLE_MASK) >> MAX_VARIABLE_SHIFT);
     }
 
+    /**
+     * Include case bits in the tertiary level if caseLevel=off and caseFirst!=off.
+     */
+    static inline UBool isTertiaryWithCaseBits(int32_t options) {
+        return (options & (CASE_LEVEL | CASE_FIRST)) == CASE_FIRST;
+    }
     static uint32_t getTertiaryMask(int32_t options) {
         // Remove the case bits from the tertiary weight when caseLevel is on or caseFirst is off.
-        return ((options & (CASE_LEVEL | CASE_FIRST)) == CASE_FIRST) ?
+        return isTertiaryWithCaseBits(options) ?
                 Collation::CASE_AND_TERTIARY_MASK : Collation::ONLY_TERTIARY_MASK;
     }
 

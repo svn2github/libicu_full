@@ -190,7 +190,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
         for(;;) {
             uint32_t leftCase, leftLower32, rightCase;
             if(strength == UCOL_PRIMARY) {
-                // Primary+case: Ignore case level weights of primary ignorables.
+                // Primary+caseLevel: Ignore case level weights of primary ignorables.
                 // Otherwise we would get a-umlaut > a
                 // which is not desirable for accent-insensitive sorting.
                 // Check for (lower 32 bits) == 0 as well because variable CEs are stored
@@ -209,15 +209,20 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 } while((uint32_t)(ce >> 32) == 0 || rightCase == 0);
                 rightCase &= 0xc000;
             } else {
-                // Secondary+case: By analogy with the above,
+                // Secondary+caseLevel: By analogy with the above,
                 // ignore case level weights of secondary ignorables.
-                // Tertiary+case: If we turned 0.0.ct into 0.0.c.t (c=case weight)
-                // then 0.0.c.t would be ill-formed because c<upper would be less than
-                // uppercase weights on primary and secondary CEs.
+                //
+                // Note: A tertiary CE has uppercase case bits (0.0.ut)
+                // to keep tertiary+caseFirst well-formed.
+                //
+                // Tertiary+caseLevel: Also ignore case level weights of secondary ignorables.
+                // Otherwise a tertiary CE's uppercase would be no greater than
+                // a primary/secondary CE's uppercase.
                 // (See UCA well-formedness condition 2.)
                 // We could construct a special case weight higher than uppercase,
                 // but it's simpler to always ignore case weights of secondary ignorables,
-                // turning 0.0.ct into 0.0.0.t.
+                // turning 0.0.ut into 0.0.0.t.
+                // (See LDML Collation, Case Parameters.)
                 do {
                     leftCase = (uint32_t)left.getCE(leftIndex++);
                 } while(leftCase <= 0xffff);

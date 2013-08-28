@@ -29,6 +29,7 @@
 #include "collation.h"
 #include "collationcompare.h"
 #include "collationdata.h"
+#include "collationfastlatin.h"
 #include "collationiterator.h"
 #include "collationkeys.h"
 #include "collationroot.h"
@@ -373,13 +374,13 @@ RuleBasedCollator2::setAttribute(UColAttribute attr, UColAttributeValue value,
         break;
     case UCOL_NUMERIC_COLLATION:
         ownedSettings->setFlag(CollationSettings::NUMERIC, value, defaultSettings.options, errorCode);
-        fastLatinOptions = getFastLatinOptions();
         break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         break;
     }
     if(U_FAILURE(errorCode)) { return; }
+    fastLatinOptions = getFastLatinOptions();
     if(value == UCOL_DEFAULT) {
         setAttributeDefault(attr);
     } else {
@@ -559,15 +560,25 @@ RuleBasedCollator2::getFastLatinOptions() const {
     if(flt == NULL || settings->isNumeric()) { return -1; }
 
     int32_t headerLength = *flt & 0xff;
-    int32_t miniVarTop = 0;
-    if((settings->options & CollationSettings::ALTERNATE_MASK) != 0) {
+    int32_t miniVarTop;
+    if((settings->options & CollationSettings::ALTERNATE_MASK) == 0) {
+        // No mini primaries are variable, set a variableTop just below the
+        // lowest long mini primary.
+        miniVarTop = (int32_t)CollationFastLatin::MIN_LONG - 1;
+        // Shift it above other options.
+        miniVarTop <<= 16;
+    } else {
         uint32_t v1 = settings->variableTop >> 24;
         int32_t i = headerLength - 1;
         if(i <= 0 || v1 > (flt[i] & 0x7f)) {
             return -1;  // variableTop >= digits, should not occur
         }
         while(i > 1 && v1 <= (flt[i - 1] & 0x7f)) { --i; }
-        miniVarTop = (int32_t)(flt[i] & 0xff80) << 9;  // shift above other options
+        // Shift the miniCE variableTop above other options.
+        // In the table header, it is in bits 15..7, with 4 zero bits 19..16 implied.
+        // At compare time, options>>16 makes it comparable with long mini primaries
+        // in bits 15..3.
+        miniVarTop = (int32_t)(flt[i] & 0xff80) << 12;
     }
 
     const uint8_t *reorderTable = settings->reorderTable;
@@ -900,36 +911,55 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
                 (equalPrefixLength != rightLength && data->isUnsafeBackward(right[equalPrefixLength]))) {
             // Identical prefix: Back up to the start of a contraction or reordering sequence.
             while(--equalPrefixLength > 0 && data->isUnsafeBackward(left[equalPrefixLength])) {}
-        } else if(settings->hasBackwardSecondary()) {
-            // With a backward level, a longer string can compare less-than a prefix of it.
-            // TODO: add a unit test for this case
-        } else if(equalPrefixLength == leftLength) {
-            return UCOL_LESS;
-        } else if(equalPrefixLength == rightLength) {
-            return UCOL_GREATER;
         }
+        // Notes:
+        // - A longer string can compare equal to a prefix of it if only ignorables follow.
+        // - With a backward level, a longer string can compare less-than a prefix of it.
+
         // Pass the actual start of each string into the CollationIterators,
         // plus the equalPrefixLength position,
         // so that prefix matches back into the equal prefix work.
     }
 
-    UBool numeric = settings->isNumeric();
-    UCollationResult result;
-    if(settings->dontCheckFCD()) {
-        UTF16CollationIterator leftIter(data, numeric,
-                                        left, left + equalPrefixLength, leftLimit);
-        UTF16CollationIterator rightIter(data, numeric,
-                                         right, right + equalPrefixLength, rightLimit);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+    int32_t result;
+    if(fastLatinOptions >= 0 &&
+            equalPrefixLength != leftLength &&
+            left[equalPrefixLength] <= CollationFastLatin::LATIN_MAX &&
+            equalPrefixLength != rightLength &&
+            right[equalPrefixLength] <= CollationFastLatin::LATIN_MAX) {
+        if(leftLength >= 0) {
+            result = CollationFastLatin::compareUTF16(data->fastLatinTable, fastLatinOptions,
+                                                      left + equalPrefixLength,
+                                                      leftLength - equalPrefixLength,
+                                                      right + equalPrefixLength,
+                                                      rightLength - equalPrefixLength);
+        } else {
+            result = CollationFastLatin::compareUTF16(data->fastLatinTable, fastLatinOptions,
+                                                      left + equalPrefixLength, -1,
+                                                      right + equalPrefixLength, -1);
+        }
     } else {
-        FCDUTF16CollationIterator leftIter(data, numeric,
-                                           left, left + equalPrefixLength, leftLimit);
-        FCDUTF16CollationIterator rightIter(data, numeric,
+        result = CollationFastLatin::BAIL_OUT_RESULT;
+    }
+
+    if(result == CollationFastLatin::BAIL_OUT_RESULT) {
+        UBool numeric = settings->isNumeric();
+        if(settings->dontCheckFCD()) {
+            UTF16CollationIterator leftIter(data, numeric,
+                                            left, left + equalPrefixLength, leftLimit);
+            UTF16CollationIterator rightIter(data, numeric,
                                             right, right + equalPrefixLength, rightLimit);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+            result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+        } else {
+            FCDUTF16CollationIterator leftIter(data, numeric,
+                                              left, left + equalPrefixLength, leftLimit);
+            FCDUTF16CollationIterator rightIter(data, numeric,
+                                                right, right + equalPrefixLength, rightLimit);
+            result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+        }
     }
     if(result != UCOL_EQUAL || settings->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
-        return result;
+        return (UCollationResult)result;
     }
 
     // TODO: If NUL-terminated, get actual limits from iterators?
@@ -941,13 +971,12 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
     if(settings->dontCheckFCD()) {
         UTF16NFDIterator leftIter(left, leftLimit);
         UTF16NFDIterator rightIter(right, rightLimit);
-        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+        return compareNFDIter(nfcImpl, leftIter, rightIter);
     } else {
         FCDUTF16NFDIterator leftIter(nfcImpl, left, leftLimit);
         FCDUTF16NFDIterator rightIter(nfcImpl, right, rightLimit);
-        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+        return compareNFDIter(nfcImpl, leftIter, rightIter);
     }
-    return result;
 }
 
 UCollationResult
@@ -1006,13 +1035,9 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
             do {
                 U8_PREV_OR_FFFD(left, 0, equalPrefixLength, c);
             } while(equalPrefixLength > 0 && data->isUnsafeBackward(c));
-        } else if(settings->hasBackwardSecondary()) {
-            // With a backward level, a longer string can compare less-than a prefix of it.
-        } else if(equalPrefixLength == leftLength) {
-            return UCOL_LESS;
-        } else if(equalPrefixLength == rightLength) {
-            return UCOL_GREATER;
         }
+        // See the notes in the UTF-16 version.
+
         // Pass the actual start of each string into the CollationIterators,
         // plus the equalPrefixLength position,
         // so that prefix matches back into the equal prefix work.
@@ -1046,13 +1071,12 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
     if(settings->dontCheckFCD()) {
         UTF8NFDIterator leftIter(left, leftLength);
         UTF8NFDIterator rightIter(right, rightLength);
-        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+        return compareNFDIter(nfcImpl, leftIter, rightIter);
     } else {
         FCDUTF8NFDIterator leftIter(data, left, leftLength);
         FCDUTF8NFDIterator rightIter(data, right, rightLength);
-        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+        return compareNFDIter(nfcImpl, leftIter, rightIter);
     }
-    return result;
 }
 
 UCollationResult
@@ -1083,13 +1107,8 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
                     leftUnit = left.previous(&left);
                     right.previous(&right);
                 } while(equalPrefixLength > 0 && data->isUnsafeBackward(leftUnit));
-            } else if(settings->hasBackwardSecondary()) {
-                // With a backward level, a longer string can compare less-than a prefix of it.
-            } else if(leftUnit < 0) {
-                return UCOL_LESS;
-            } else if(rightUnit < 0) {
-                return UCOL_GREATER;
             }
+            // See the notes in the UTF-16 version.
         }
     }
 
@@ -1115,13 +1134,12 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
     if(settings->dontCheckFCD()) {
         UIterNFDIterator leftIter(left);
         UIterNFDIterator rightIter(right);
-        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+        return compareNFDIter(nfcImpl, leftIter, rightIter);
     } else {
         FCDUIterNFDIterator leftIter(data, left, equalPrefixLength);
         FCDUIterNFDIterator rightIter(data, right, equalPrefixLength);
-        result = compareNFDIter(nfcImpl, leftIter, rightIter);
+        return compareNFDIter(nfcImpl, leftIter, rightIter);
     }
-    return result;
 }
 
 CollationKey &

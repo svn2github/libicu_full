@@ -394,7 +394,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
         if((levels & Collation::CASE_LEVEL_FLAG) != 0) {
             if((CollationSettings::getStrength(options) == UCOL_PRIMARY) ?
                     p == 0 : lower32 <= 0xffff) {
-                // Primary+case: Ignore case level weights of primary ignorables.
+                // Primary+caseLevel: Ignore case level weights of primary ignorables.
                 // Otherwise: Ignore case level weights of secondary ignorables.
                 // For details see the comments in the CollationCompare class.
             } else {

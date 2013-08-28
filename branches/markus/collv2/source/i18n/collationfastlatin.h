@@ -44,13 +44,14 @@ public:
     // the CEs for characters in the above ranges, excluding expansions with length >2,
     // excluding contractions of >2 characters, and other restrictions
     // (see the builder's getCEsFromCE32()),
-    // use at most about 150 primary weights (except a lot more for en_US_POSIX),
+    // use at most about 150 primary weights,
     // where about 94 primary weights are possibly-variable (space/punct/symbol/currency),
     // at most 4 secondary before-common weights,
     // at most 4 secondary after-common weights,
     // at most 16 secondary high weights (in secondary CEs), and
     // at most 4 tertiary after-common weights.
     // The following ranges are designed to support slightly more weights than that.
+    // (en_US_POSIX is unusual: It creates about 64 variable + 116 Latin primaries.)
 
     // Digits may use long primaries (preserving more short ones)
     // or short primaries (faster) without changing this data structure.
@@ -61,8 +62,20 @@ public:
     static const uint32_t INDEX_MASK = 0x3ff;  // bits 9..0 for expansions & contractions
     static const uint32_t SECONDARY_MASK = 0x3e0;  // bits 9..5
     static const uint32_t CASE_MASK = 0x18;  // bits 4..3
-    static const uint32_t LONG_PRIMARY_MASK = 0xff80;  // bits 15..3
+    static const uint32_t LONG_PRIMARY_MASK = 0xfff8;  // bits 15..3
     static const uint32_t TERTIARY_MASK = 7;  // bits 2..0
+    static const uint32_t CASE_AND_TERTIARY_MASK = CASE_MASK | TERTIARY_MASK;
+
+    static const uint32_t TWO_SHORT_PRIMARIES_MASK =
+            (SHORT_PRIMARY_MASK << 16) | SHORT_PRIMARY_MASK;  // 0xfc00fc00
+    static const uint32_t TWO_LONG_PRIMARIES_MASK =
+            (LONG_PRIMARY_MASK << 16) | LONG_PRIMARY_MASK;  // 0xfff8fff8
+    static const uint32_t TWO_SECONDARIES_MASK =
+            (SECONDARY_MASK << 16) | SECONDARY_MASK;  // 0x3e003e0
+    static const uint32_t TWO_CASES_MASK =
+            (CASE_MASK << 16) | CASE_MASK;  // 0x180018
+    static const uint32_t TWO_TERTIARIES_MASK =
+            (TERTIARY_MASK << 16) | TERTIARY_MASK;  // 0x70007
 
     /**
      * Contraction with one fast Latin character.
@@ -101,6 +114,7 @@ public:
      */
     static const uint32_t MIN_SHORT = 0x1000;
     static const uint32_t SHORT_INC = 0x400;
+    /** The highest primary weight is reserved for U+FFFF. */
     static const uint32_t MAX_SHORT = SHORT_PRIMARY_MASK;
 
     static const uint32_t MIN_SEC_BEFORE = 0;  // must add SEC_OFFSET
@@ -119,9 +133,14 @@ public:
      */
     static const uint32_t SEC_OFFSET = SEC_INC;
     static const uint32_t COMMON_SEC_PLUS_OFFSET = COMMON_SEC + SEC_OFFSET;
-    static const uint32_t MIN_SEC_HIGH_PLUS_OFFSET = MIN_SEC_HIGH + SEC_OFFSET;
+
+    static const uint32_t TWO_SEC_OFFSETS =
+            (SEC_OFFSET << 16) | SEC_OFFSET;  // 0x200020
+    static const uint32_t TWO_COMMON_SEC_PLUS_OFFSET =
+            (COMMON_SEC_PLUS_OFFSET << 16) | COMMON_SEC_PLUS_OFFSET;
 
     static const uint32_t LOWER_CASE = 8;  // case bits include this offset
+    static const uint32_t TWO_LOWER_CASES = (LOWER_CASE << 16) | LOWER_CASE;  // 0x80008
 
     static const uint32_t COMMON_TER = 0;  // must add TER_OFFSET
     static const uint32_t MAX_TER_AFTER = 7;  // 7 after common
@@ -129,9 +148,16 @@ public:
     /**
      * Lookup: Add this offset to tertiary weights, except for completely ignorable CEs.
      * Must be greater than any special value, e.g., MERGE_WEIGHT.
+     * Must be greater than case bits as well, so that with combined case+tertiary weights
+     * plus the offset the tertiary bits does not spill over into the case bits.
      * The exact value is not relevant for the format version.
      */
-    static const uint32_t TER_OFFSET = 8;
+    static const uint32_t TER_OFFSET = SEC_OFFSET;
+    static const uint32_t COMMON_TER_PLUS_OFFSET = COMMON_TER + TER_OFFSET;
+
+    static const uint32_t TWO_TER_OFFSETS = (TER_OFFSET << 16) | TER_OFFSET;
+    static const uint32_t TWO_COMMON_TER_PLUS_OFFSET =
+            (COMMON_TER_PLUS_OFFSET << 16) | COMMON_TER_PLUS_OFFSET;
 
     static const uint32_t MERGE_WEIGHT = 3;
     static const uint32_t EOS = 2;  // end of string
@@ -149,9 +175,13 @@ public:
      */
     static const uint32_t CONTR_LENGTH_SHIFT = 9;
 
-    // The following constants are not relevant for the format version.
+    /**
+     * Comparison return value when the regular comparison must be used.
+     * The exact value is not relevant for the format version.
+     */
+    static const int32_t BAIL_OUT_RESULT = -2;
 
-    static int32_t getCharIndex(UChar c) {
+    static inline int32_t getCharIndex(UChar c) {
         if(c <= LATIN_MAX) {
             return c;
         } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
@@ -163,6 +193,34 @@ public:
             return -1;
         }
     }
+
+    static int32_t compareUTF16(const uint16_t *table, int32_t options,
+                                const UChar *left, int32_t leftLength,
+                                const UChar *right, int32_t rightLength);
+
+private:
+    static uint32_t nextPair(const uint16_t *table, UChar32 c, uint32_t ce,
+                             const UChar *s16, const uint8_t *s8, int32_t &sIndex, int32_t &sLength);
+
+    static inline uint32_t getPrimaries(uint32_t variableTop, uint32_t pair) {
+        uint32_t ce = pair & 0xffff;
+        if(ce >= MIN_SHORT) { return pair & TWO_SHORT_PRIMARIES_MASK; }
+        if(ce > variableTop) { return pair & TWO_LONG_PRIMARIES_MASK; }
+        if(ce >= MIN_LONG) { return 0; }  // variable
+        return pair;  // special mini CE
+    }
+    static inline uint32_t getSecondariesFromOneShortCE(uint32_t ce) {
+        ce &= SECONDARY_MASK;
+        if(ce < MIN_SEC_HIGH) {
+            return ce + SEC_OFFSET;
+        } else {
+            return ((ce + SEC_OFFSET) << 16) | COMMON_SEC_PLUS_OFFSET;
+        }
+    }
+    static uint32_t getSecondaries(uint32_t variableTop, uint32_t pair);
+    static uint32_t getCases(uint32_t variableTop, UBool strengthIsPrimary, uint32_t pair);
+    static uint32_t getTertiaries(uint32_t variableTop, UBool withCaseBits, uint32_t pair);
+    static uint32_t getQuaternaries(uint32_t variableTop, uint32_t pair);
 
 private:
     CollationFastLatin();  // no constructor

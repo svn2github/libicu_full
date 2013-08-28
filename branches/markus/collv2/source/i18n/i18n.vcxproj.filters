@@ -526,6 +526,9 @@
     <ClCompile Include="collationdatawriter.cpp">
       <Filter>collation</Filter>
     </ClCompile>
+    <ClCompile Include="collationfastlatin.cpp">
+      <Filter>collation</Filter>
+    </ClCompile>
     <ClCompile Include="collationfastlatinbuilder.cpp">
       <Filter>collation</Filter>
     </ClCompile>

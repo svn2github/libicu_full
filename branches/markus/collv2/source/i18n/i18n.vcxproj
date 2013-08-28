@@ -256,6 +256,7 @@
     <ClCompile Include="collationdatabuilder.cpp" />
     <ClCompile Include="collationdatareader.cpp" />
     <ClCompile Include="collationdatawriter.cpp" />
+    <ClCompile Include="collationfastlatin.cpp" />
     <ClCompile Include="collationfastlatinbuilder.cpp" />
     <ClCompile Include="collationfcd.cpp" />
     <ClCompile Include="collationiterator.cpp" />
