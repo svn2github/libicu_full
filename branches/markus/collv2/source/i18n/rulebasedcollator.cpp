@@ -557,7 +557,7 @@ RuleBasedCollator2::getEquivalentReorderCodes(int32_t reorderCode,
 int32_t
 RuleBasedCollator2::getFastLatinOptions() const {
     const uint16_t *flt = data->fastLatinTable;
-    if(flt == NULL || settings->isNumeric()) { return -1; }
+    if(flt == NULL) { return -1; }
 
     int32_t miniVarTop;
     if((settings->options & CollationSettings::ALTERNATE_MASK) == 0) {

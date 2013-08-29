@@ -52,6 +52,9 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
             }
             UChar32 c = left[leftIndex++];
             if(c <= LATIN_MAX) {
+                if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
+                    return BAIL_OUT_RESULT;
+                }
                 leftPair = table[c];
             } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
                 leftPair = table[c - PUNCT_START + LATIN_LIMIT];
@@ -78,6 +81,9 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
             }
             UChar32 c = right[rightIndex++];
             if(c <= LATIN_MAX) {
+                if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
+                    return BAIL_OUT_RESULT;
+                }
                 rightPair = table[c];
             } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
                 rightPair = table[c - PUNCT_START + LATIN_LIMIT];
