@@ -199,6 +199,7 @@ public:
                                 const UChar *right, int32_t rightLength);
 
 private:
+    static uint32_t lookup(const uint16_t *table, UChar32 c);
     static uint32_t nextPair(const uint16_t *table, UChar32 c, uint32_t ce,
                              const UChar *s16, const uint8_t *s8, int32_t &sIndex, int32_t &sLength);
 

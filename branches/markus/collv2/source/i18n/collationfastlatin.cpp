@@ -56,7 +56,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
             } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
                 leftPair = table[c - PUNCT_START + LATIN_LIMIT];
             } else {
-                leftPair = EOS;  // nextPair() examines c
+                leftPair = lookup(table, c);
             }
             if(leftPair >= MIN_SHORT) {
                 leftPair &= SHORT_PRIMARY_MASK;
@@ -82,7 +82,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
             } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
                 rightPair = table[c - PUNCT_START + LATIN_LIMIT];
             } else {
-                rightPair = EOS;  // nextPair() examines c
+                rightPair = lookup(table, c);
             }
             if(rightPair >= MIN_SHORT) {
                 rightPair &= SHORT_PRIMARY_MASK;
@@ -133,7 +133,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                 } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
                     leftPair = table[c - PUNCT_START + LATIN_LIMIT];
                 } else {
-                    leftPair = EOS;  // nextPair() examines c
+                    leftPair = lookup(table, c);
                 }
                 if(leftPair >= MIN_SHORT) {
                     leftPair = getSecondariesFromOneShortCE(leftPair);
@@ -158,7 +158,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                 } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
                     rightPair = table[c - PUNCT_START + LATIN_LIMIT];
                 } else {
-                    rightPair = EOS;  // nextPair() examines c
+                    rightPair = lookup(table, c);
                 }
                 if(rightPair >= MIN_SHORT) {
                     rightPair = getSecondariesFromOneShortCE(rightPair);
@@ -204,11 +204,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                     break;
                 }
                 UChar32 c = left[leftIndex++];
-                if(c <= LATIN_MAX) {
-                    leftPair = table[c];
-                } else {
-                    leftPair = EOS;  // nextPair() examines c
-                }
+                leftPair = (c <= LATIN_MAX) ? table[c] : lookup(table, c);
                 if(leftPair < MIN_LONG) {
                     leftPair = nextPair(table, c, leftPair, left, NULL, leftIndex, leftLength);
                 }
@@ -221,11 +217,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                     break;
                 }
                 UChar32 c = right[rightIndex++];
-                if(c <= LATIN_MAX) {
-                    rightPair = table[c];
-                } else {
-                    rightPair = EOS;  // nextPair() examines c
-                }
+                rightPair = (c <= LATIN_MAX) ? table[c] : lookup(table, c);
                 if(rightPair < MIN_LONG) {
                     rightPair = nextPair(table, c, rightPair, right, NULL, rightIndex, rightLength);
                 }
@@ -265,11 +257,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                 break;
             }
             UChar32 c = left[leftIndex++];
-            if(c <= LATIN_MAX) {
-                leftPair = table[c];
-            } else {
-                leftPair = EOS;  // nextPair() examines c
-            }
+            leftPair = (c <= LATIN_MAX) ? table[c] : lookup(table, c);
             if(leftPair < MIN_LONG) {
                 leftPair = nextPair(table, c, leftPair, left, NULL, leftIndex, leftLength);
             }
@@ -282,11 +270,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                 break;
             }
             UChar32 c = right[rightIndex++];
-            if(c <= LATIN_MAX) {
-                rightPair = table[c];
-            } else {
-                rightPair = EOS;  // nextPair() examines c
-            }
+            rightPair = (c <= LATIN_MAX) ? table[c] : lookup(table, c);
             if(rightPair < MIN_LONG) {
                 rightPair = nextPair(table, c, rightPair, right, NULL, rightIndex, rightLength);
             }
@@ -329,11 +313,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                 break;
             }
             UChar32 c = left[leftIndex++];
-            if(c <= LATIN_MAX) {
-                leftPair = table[c];
-            } else {
-                leftPair = EOS;  // nextPair() examines c
-            }
+            leftPair = (c <= LATIN_MAX) ? table[c] : lookup(table, c);
             if(leftPair < MIN_LONG) {
                 leftPair = nextPair(table, c, leftPair, left, NULL, leftIndex, leftLength);
             }
@@ -346,11 +326,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
                 break;
             }
             UChar32 c = right[rightIndex++];
-            if(c <= LATIN_MAX) {
-                rightPair = table[c];
-            } else {
-                rightPair = EOS;  // nextPair() examines c
-            }
+            rightPair = (c <= LATIN_MAX) ? table[c] : lookup(table, c);
             if(rightPair < MIN_LONG) {
                 rightPair = nextPair(table, c, rightPair, right, NULL, rightIndex, rightLength);
             }
@@ -375,28 +351,28 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
 }
 
 uint32_t
+CollationFastLatin::lookup(const uint16_t *table, UChar32 c) {
+    U_ASSERT(c > LATIN_MAX);
+    if(PUNCT_START <= c && c < PUNCT_LIMIT) {
+        return table[c - PUNCT_START + LATIN_LIMIT];
+    } else if(c == 0xfffe) {
+        return MERGE_WEIGHT;
+    } else if(c == 0xffff) {
+        return MAX_SHORT | COMMON_SEC | LOWER_CASE | COMMON_TER;
+    } else {
+        return BAIL_OUT;
+    }
+}
+
+uint32_t
 CollationFastLatin::nextPair(const uint16_t *table, UChar32 c, uint32_t ce,
                              const UChar *s16, const uint8_t *s8, int32_t &sIndex, int32_t &sLength) {
-    if(ce == EOS) {
-        // The caller did not fetch the mini CE.
-        if(c <= LATIN_MAX) {
-            ce = table[c];
-        } else if(PUNCT_START <= c && c < PUNCT_LIMIT) {
-            ce = table[c - PUNCT_START + LATIN_LIMIT];
-        } else if(c == 0xfffe) {
-            return MERGE_WEIGHT;
-        } else if(c == 0xffff) {
-            return MAX_SHORT | COMMON_SEC | LOWER_CASE | COMMON_TER;
-        } else {
-            return BAIL_OUT;
-        }
-    }
-    if(ce >= MIN_LONG) {
-        return ce;
+    if(ce >= MIN_LONG || ce < CONTRACTION) {
+        return ce;  // simple or special mini CE
     } else if(ce >= EXPANSION) {
         int32_t index = NUM_FAST_CHARS + (ce & INDEX_MASK);
         return ((uint32_t)table[index + 1] << 16) | table[index];
-    } else if(ce >= CONTRACTION) {
+    } else /* ce >= CONTRACTION */ {
         if(c == 0 && sLength < 0) {
             sLength = sIndex - 1;
             return EOS;
@@ -476,8 +452,6 @@ CollationFastLatin::nextPair(const uint16_t *table, UChar32 c, uint32_t ce,
         } else {
             return ((uint32_t)table[index + 2] << 16) | ce;
         }
-    } else {
-        return ce;  // special mini CE
     }
 }
 

@@ -559,7 +559,6 @@ RuleBasedCollator2::getFastLatinOptions() const {
     const uint16_t *flt = data->fastLatinTable;
     if(flt == NULL || settings->isNumeric()) { return -1; }
 
-    int32_t headerLength = *flt & 0xff;
     int32_t miniVarTop;
     if((settings->options & CollationSettings::ALTERNATE_MASK) == 0) {
         // No mini primaries are variable, set a variableTop just below the
@@ -569,6 +568,7 @@ RuleBasedCollator2::getFastLatinOptions() const {
         miniVarTop <<= 16;
     } else {
         uint32_t v1 = settings->variableTop >> 24;
+        int32_t headerLength = *flt & 0xff;
         int32_t i = headerLength - 1;
         if(i <= 0 || v1 > (flt[i] & 0x7f)) {
             return -1;  // variableTop >= digits, should not occur
