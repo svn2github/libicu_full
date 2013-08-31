@@ -8716,9 +8716,7 @@ ucol_strcollUTF8(
 
     if(coll->delegate != NULL) {
         return ((const Collator*)coll->delegate)->compareUTF8(
-            StringPiece(source, (sourceLength < 0) ? uprv_strlen(source) : sourceLength),
-            StringPiece(target, (targetLength < 0) ? uprv_strlen(target) : targetLength),
-            *status);
+            source, sourceLength, target, targetLength, *status);
     }
 
     /* Scan the strings.  Find:                                                             */

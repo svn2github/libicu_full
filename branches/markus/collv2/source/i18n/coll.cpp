@@ -920,13 +920,18 @@ Collator::internalGetShortDefinitionString(const char * /*locale*/,
 }
 
 UCollationResult
-Collator::compareUTF8(const char * /*left*/, int32_t /*leftLength*/,
-                      const char * /*right*/, int32_t /*rightLength*/,
+Collator::compareUTF8(const char *left, int32_t leftLength,
+                      const char *right, int32_t rightLength,
                       UErrorCode &errorCode) const {
-    if (U_SUCCESS(errorCode)) {
-        errorCode = U_UNSUPPORTED_ERROR;
+    if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
+    if((left == NULL && leftLength != 0) || (right == NULL && rightLength != 0)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return UCOL_EQUAL;
     }
-    return UCOL_EQUAL;
+    return compareUTF8(
+            StringPiece(left, (leftLength < 0) ? uprv_strlen(left) : leftLength),
+            StringPiece(right, (rightLength < 0) ? uprv_strlen(right) : rightLength),
+            errorCode);
 }
 
 int32_t
