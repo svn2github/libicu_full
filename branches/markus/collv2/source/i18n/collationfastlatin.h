@@ -33,6 +33,8 @@ public:
     static const int32_t LATIN_MAX = 0x17f;
     static const int32_t LATIN_LIMIT = LATIN_MAX + 1;
 
+    static const int32_t LATIN_MAX_UTF8_LEAD = 0xc5;  // UTF-8 lead byte of LATIN_MAX
+
     static const int32_t PUNCT_START = 0x2000;
     static const int32_t PUNCT_LIMIT = 0x2040;
 
@@ -198,8 +200,17 @@ public:
                                 const UChar *left, int32_t leftLength,
                                 const UChar *right, int32_t rightLength);
 
+    static int32_t compareUTF8(const uint16_t *table, int32_t options,
+                               const uint8_t *left, int32_t leftLength,
+                               const uint8_t *right, int32_t rightLength);
+
 private:
     static uint32_t lookup(const uint16_t *table, UChar32 c);
+    static uint32_t lookupUTF8(const uint16_t *table, UChar32 c,
+                               const uint8_t *s8, int32_t &sIndex, int32_t sLength);
+    static uint32_t lookupUTF8Unsafe(const uint16_t *table, UChar32 c,
+                                     const uint8_t *s8, int32_t &sIndex);
+
     static uint32_t nextPair(const uint16_t *table, UChar32 c, uint32_t ce,
                              const UChar *s16, const uint8_t *s8, int32_t &sIndex, int32_t &sLength);
 

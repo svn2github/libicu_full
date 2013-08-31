@@ -28,6 +28,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
     // This is a modified copy of CollationCompare::compareUpToQuaternary(),
     // optimized for common Latin text.
     // Keep them in sync!
+    // Keep compareUTF16() and compareUTF8() in sync very closely!
 
     U_ASSERT((table[0] >> 8) == VERSION);
     table += (table[0] & 0xff);  // skip the header
@@ -356,6 +357,348 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
     return UCOL_EQUAL;
 }
 
+int32_t
+CollationFastLatin::compareUTF8(const uint16_t *table, int32_t options,
+                                 const uint8_t *left, int32_t leftLength,
+                                 const uint8_t *right, int32_t rightLength) {
+    // Keep compareUTF16() and compareUTF8() in sync very closely!
+
+    U_ASSERT((table[0] >> 8) == VERSION);
+    table += (table[0] & 0xff);  // skip the header
+    uint32_t variableTop = (uint32_t)options >> 16;  // see RuleBasedCollator::getFastLatinOptions()
+    options &= 0xffff;  // needed for CollationSettings::getStrength() to work
+
+    // Check for supported characters, fetch mini CEs, and compare primaries.
+    U_ALIGN_CODE(16);
+    int32_t leftIndex = 0, rightIndex = 0;
+    /**
+     * Single mini CE or a pair.
+     * The current mini CE is in the lower 16 bits, the next one is in the upper 16 bits.
+     * If there is only one, then it is in the lower bits, and the upper bits are 0.
+     */
+    uint32_t leftPair = 0, rightPair = 0;
+    // Note: There is no need to assemble the code point.
+    // We only need to look up the table entry for the character,
+    // and nextPair() looks for whether c==0.
+    for(;;) {
+        // We fetch CEs until we get a non-ignorable primary or reach the end.
+        while(leftPair == 0) {
+            if(leftIndex == leftLength) {
+                leftPair = EOS;
+                break;
+            }
+            UChar32 c = left[leftIndex++];
+            uint8_t t;
+            if(c <= 0x7f) {
+                if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
+                    return BAIL_OUT_RESULT;
+                }
+                leftPair = table[c];
+            } else if(c <= LATIN_MAX_UTF8_LEAD && 0xc2 <= c && leftIndex != leftLength &&
+                    0x80 <= (t = left[leftIndex]) && t <= 0xbf) {
+                ++leftIndex;
+                leftPair = table[((c - 0xc2) << 6) + t];
+            } else {
+                leftPair = lookupUTF8(table, c, left, leftIndex, leftLength);
+            }
+            if(leftPair >= MIN_SHORT) {
+                leftPair &= SHORT_PRIMARY_MASK;
+                break;
+            } else if(leftPair > variableTop) {
+                leftPair &= LONG_PRIMARY_MASK;
+                break;
+            } else {
+                leftPair = nextPair(table, c, leftPair, NULL, left, leftIndex, leftLength);
+                if(leftPair == BAIL_OUT) { return BAIL_OUT_RESULT; }
+                leftPair = getPrimaries(variableTop, leftPair);
+            }
+        }
+
+        while(rightPair == 0) {
+            if(rightIndex == rightLength) {
+                rightPair = EOS;
+                break;
+            }
+            UChar32 c = right[rightIndex++];
+            uint8_t t;
+            if(c <= 0x7f) {
+                if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
+                    return BAIL_OUT_RESULT;
+                }
+                rightPair = table[c];
+            } else if(c <= LATIN_MAX_UTF8_LEAD && 0xc2 <= c && rightIndex != rightLength &&
+                    0x80 <= (t = right[rightIndex]) && t <= 0xbf) {
+                ++rightIndex;
+                rightPair = table[((c - 0xc2) << 6) + t];
+            } else {
+                rightPair = lookupUTF8(table, c, right, rightIndex, rightLength);
+            }
+            if(rightPair >= MIN_SHORT) {
+                rightPair &= SHORT_PRIMARY_MASK;
+                break;
+            } else if(rightPair > variableTop) {
+                rightPair &= LONG_PRIMARY_MASK;
+                break;
+            } else {
+                rightPair = nextPair(table, c, rightPair, NULL, right, rightIndex, rightLength);
+                if(rightPair == BAIL_OUT) { return BAIL_OUT_RESULT; }
+                rightPair = getPrimaries(variableTop, rightPair);
+            }
+        }
+
+        if(leftPair == rightPair) {
+            if(leftPair == EOS) { break; }
+            leftPair = rightPair = 0;
+            continue;
+        }
+        uint32_t leftPrimary = leftPair & 0xffff;
+        uint32_t rightPrimary = rightPair & 0xffff;
+        if(leftPrimary != rightPrimary) {
+            // Return the primary difference.
+            return (leftPrimary < rightPrimary) ? UCOL_LESS : UCOL_GREATER;
+        }
+        if(leftPair == EOS) { break; }
+        leftPair >>= 16;
+        rightPair >>= 16;
+    }
+    // In the following, we need to re-fetch each character because we did not buffer the CEs,
+    // but we know that the string is well-formed and
+    // only contains supported characters and mappings.
+
+    // We might skip the secondary level but continue with the case level
+    // which is turned on separately.
+    if(CollationSettings::getStrength(options) >= UCOL_SECONDARY) {
+        leftIndex = rightIndex = 0;
+        leftPair = rightPair = 0;
+        for(;;) {
+            while(leftPair == 0) {
+                if(leftIndex == leftLength) {
+                    leftPair = EOS;
+                    break;
+                }
+                UChar32 c = left[leftIndex++];
+                if(c <= 0x7f) {
+                    leftPair = table[c];
+                } else if(c <= LATIN_MAX_UTF8_LEAD) {
+                    leftPair = table[((c - 0xc2) << 6) + left[leftIndex++]];
+                } else {
+                    leftPair = lookupUTF8Unsafe(table, c, left, leftIndex);
+                }
+                if(leftPair >= MIN_SHORT) {
+                    leftPair = getSecondariesFromOneShortCE(leftPair);
+                    break;
+                } else if(leftPair > variableTop) {
+                    leftPair = COMMON_SEC_PLUS_OFFSET;
+                    break;
+                } else {
+                    leftPair = nextPair(table, c, leftPair, NULL, left, leftIndex, leftLength);
+                    leftPair = getSecondaries(variableTop, leftPair);
+                }
+            }
+
+            while(rightPair == 0) {
+                if(rightIndex == rightLength) {
+                    rightPair = EOS;
+                    break;
+                }
+                UChar32 c = right[rightIndex++];
+                if(c <= 0x7f) {
+                    rightPair = table[c];
+                } else if(c <= LATIN_MAX_UTF8_LEAD) {
+                    rightPair = table[((c - 0xc2) << 6) + right[rightIndex++]];
+                } else {
+                    rightPair = lookupUTF8Unsafe(table, c, right, rightIndex);
+                }
+                if(rightPair >= MIN_SHORT) {
+                    rightPair = getSecondariesFromOneShortCE(rightPair);
+                    break;
+                } else if(rightPair > variableTop) {
+                    rightPair = COMMON_SEC_PLUS_OFFSET;
+                    break;
+                } else {
+                    rightPair = nextPair(table, c, rightPair, NULL, right, rightIndex, rightLength);
+                    rightPair = getSecondaries(variableTop, rightPair);
+                }
+            }
+
+            if(leftPair == rightPair) {
+                if(leftPair == EOS) { break; }
+                leftPair = rightPair = 0;
+                continue;
+            }
+            uint32_t leftSecondary = leftPair & 0xffff;
+            uint32_t rightSecondary = rightPair & 0xffff;
+            if(leftSecondary != rightSecondary) {
+                if((options & CollationSettings::BACKWARD_SECONDARY) != 0) {
+                    // Full support for backwards secondary requires backwards contraction matching
+                    // and moving backwards between merge separators.
+                    return BAIL_OUT_RESULT;
+                }
+                return (leftSecondary < rightSecondary) ? UCOL_LESS : UCOL_GREATER;
+            }
+            if(leftPair == EOS) { break; }
+            leftPair >>= 16;
+            rightPair >>= 16;
+        }
+    }
+
+    if((options & CollationSettings::CASE_LEVEL) != 0) {
+        UBool strengthIsPrimary = CollationSettings::getStrength(options) == UCOL_PRIMARY;
+        leftIndex = rightIndex = 0;
+        leftPair = rightPair = 0;
+        for(;;) {
+            while(leftPair == 0) {
+                if(leftIndex == leftLength) {
+                    leftPair = EOS;
+                    break;
+                }
+                UChar32 c = left[leftIndex++];
+                leftPair = (c <= 0x7f) ? table[c] : lookupUTF8Unsafe(table, c, left, leftIndex);
+                if(leftPair < MIN_LONG) {
+                    leftPair = nextPair(table, c, leftPair, NULL, left, leftIndex, leftLength);
+                }
+                leftPair = getCases(variableTop, strengthIsPrimary, leftPair);
+            }
+
+            while(rightPair == 0) {
+                if(rightIndex == rightLength) {
+                    rightPair = EOS;
+                    break;
+                }
+                UChar32 c = right[rightIndex++];
+                rightPair = (c <= 0x7f) ? table[c] : lookupUTF8Unsafe(table, c, right, rightIndex);
+                if(rightPair < MIN_LONG) {
+                    rightPair = nextPair(table, c, rightPair, NULL, right, rightIndex, rightLength);
+                }
+                rightPair = getCases(variableTop, strengthIsPrimary, rightPair);
+            }
+
+            if(leftPair == rightPair) {
+                if(leftPair == EOS) { break; }
+                leftPair = rightPair = 0;
+                continue;
+            }
+            uint32_t leftCase = leftPair & 0xffff;
+            uint32_t rightCase = rightPair & 0xffff;
+            if(leftCase != rightCase) {
+                if((options & CollationSettings::UPPER_FIRST) == 0) {
+                    return (leftCase < rightCase) ? UCOL_LESS : UCOL_GREATER;
+                } else {
+                    return (leftCase < rightCase) ? UCOL_GREATER : UCOL_LESS;
+                }
+            }
+            if(leftPair == EOS) { break; }
+            leftPair >>= 16;
+            rightPair >>= 16;
+        }
+    }
+    if(CollationSettings::getStrength(options) <= UCOL_SECONDARY) { return UCOL_EQUAL; }
+
+    // Remove the case bits from the tertiary weight when caseLevel is on or caseFirst is off.
+    UBool withCaseBits = CollationSettings::isTertiaryWithCaseBits(options);
+
+    leftIndex = rightIndex = 0;
+    leftPair = rightPair = 0;
+    for(;;) {
+        while(leftPair == 0) {
+            if(leftIndex == leftLength) {
+                leftPair = EOS;
+                break;
+            }
+            UChar32 c = left[leftIndex++];
+            leftPair = (c <= 0x7f) ? table[c] : lookupUTF8Unsafe(table, c, left, leftIndex);
+            if(leftPair < MIN_LONG) {
+                leftPair = nextPair(table, c, leftPair, NULL, left, leftIndex, leftLength);
+            }
+            leftPair = getTertiaries(variableTop, withCaseBits, leftPair);
+        }
+
+        while(rightPair == 0) {
+            if(rightIndex == rightLength) {
+                rightPair = EOS;
+                break;
+            }
+            UChar32 c = right[rightIndex++];
+            rightPair = (c <= 0x7f) ? table[c] : lookupUTF8Unsafe(table, c, right, rightIndex);
+            if(rightPair < MIN_LONG) {
+                rightPair = nextPair(table, c, rightPair, NULL, right, rightIndex, rightLength);
+            }
+            rightPair = getTertiaries(variableTop, withCaseBits, rightPair);
+        }
+
+        if(leftPair == rightPair) {
+            if(leftPair == EOS) { break; }
+            leftPair = rightPair = 0;
+            continue;
+        }
+        uint32_t leftTertiary = leftPair & 0xffff;
+        uint32_t rightTertiary = rightPair & 0xffff;
+        if(leftTertiary != rightTertiary) {
+            if(CollationSettings::sortsTertiaryUpperCaseFirst(options)) {
+                // Pass through EOS and MERGE_WEIGHT
+                // and keep real tertiary weights larger than the MERGE_WEIGHT.
+                // Tertiary CEs (secondary ignorables) are not supported in fast Latin.
+                if(leftTertiary > MERGE_WEIGHT) {
+                    leftTertiary ^= CASE_MASK;
+                }
+                if(rightTertiary > MERGE_WEIGHT) {
+                    rightTertiary ^= CASE_MASK;
+                }
+            }
+            return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;
+        }
+        if(leftPair == EOS) { break; }
+        leftPair >>= 16;
+        rightPair >>= 16;
+    }
+    if(CollationSettings::getStrength(options) <= UCOL_TERTIARY) { return UCOL_EQUAL; }
+
+    leftIndex = rightIndex = 0;
+    leftPair = rightPair = 0;
+    for(;;) {
+        while(leftPair == 0) {
+            if(leftIndex == leftLength) {
+                leftPair = EOS;
+                break;
+            }
+            UChar32 c = left[leftIndex++];
+            leftPair = (c <= 0x7f) ? table[c] : lookupUTF8Unsafe(table, c, left, leftIndex);
+            if(leftPair < MIN_LONG) {
+                leftPair = nextPair(table, c, leftPair, NULL, left, leftIndex, leftLength);
+            }
+            leftPair = getQuaternaries(variableTop, leftPair);
+        }
+
+        while(rightPair == 0) {
+            if(rightIndex == rightLength) {
+                rightPair = EOS;
+                break;
+            }
+            UChar32 c = right[rightIndex++];
+            rightPair = (c <= 0x7f) ? table[c] : lookupUTF8Unsafe(table, c, right, rightIndex);
+            if(rightPair < MIN_LONG) {
+                rightPair = nextPair(table, c, rightPair, NULL, right, rightIndex, rightLength);
+            }
+            rightPair = getQuaternaries(variableTop, rightPair);
+        }
+
+        if(leftPair == rightPair) {
+            if(leftPair == EOS) { break; }
+            leftPair = rightPair = 0;
+            continue;
+        }
+        uint32_t leftQuaternary = leftPair & 0xffff;
+        uint32_t rightQuaternary = rightPair & 0xffff;
+        if(leftQuaternary != rightQuaternary) {
+            return (leftQuaternary < rightQuaternary) ? UCOL_LESS : UCOL_GREATER;
+        }
+        if(leftPair == EOS) { break; }
+        leftPair >>= 16;
+        rightPair >>= 16;
+    }
+    return UCOL_EQUAL;
+}
+
 uint32_t
 CollationFastLatin::lookup(const uint16_t *table, UChar32 c) {
     U_ASSERT(c > LATIN_MAX);
@@ -367,6 +710,49 @@ CollationFastLatin::lookup(const uint16_t *table, UChar32 c) {
         return MAX_SHORT | COMMON_SEC | LOWER_CASE | COMMON_TER;
     } else {
         return BAIL_OUT;
+    }
+}
+
+uint32_t
+CollationFastLatin::lookupUTF8(const uint16_t *table, UChar32 c,
+                               const uint8_t *s8, int32_t &sIndex, int32_t sLength) {
+    // The caller handled ASCII and valid/supported Latin.
+    U_ASSERT(c > 0x7f);
+    int32_t i2 = sIndex + 1;
+    if(i2 < sLength || sLength < 0) {
+        uint8_t t1 = s8[sIndex];
+        uint8_t t2 = s8[i2];
+        sIndex += 2;
+        if(c == 0xe2 && t1 == 0x80 && 0x80 <= t2 && t2 <= 0xbf) {
+            return table[(LATIN_LIMIT - 0x80) + t2];  // 2000..203F -> 0180..01BF
+        } else if(c == 0xef && t1 == 0xbf) {
+            if(t2 == 0xbe) {
+                return MERGE_WEIGHT;  // U+FFFE
+            } else if(t2 == 0xbf) {
+                return MAX_SHORT | COMMON_SEC | LOWER_CASE | COMMON_TER;  // U+FFFF
+            }
+        }
+    }
+    return BAIL_OUT;
+}
+
+uint32_t
+CollationFastLatin::lookupUTF8Unsafe(const uint16_t *table, UChar32 c,
+                                     const uint8_t *s8, int32_t &sIndex) {
+    // The caller handled ASCII.
+    // The string is well-formed and contains only supported characters.
+    U_ASSERT(c > 0x7f);
+    if(c <= LATIN_MAX_UTF8_LEAD) {
+        return table[((c - 0xc2) << 6) + s8[sIndex++]];  // 0080..017F
+    }
+    uint8_t t2 = s8[sIndex + 1];
+    sIndex += 2;
+    if(c == 0xe2) {
+        return table[(LATIN_LIMIT - 0x80) + t2];  // 2000..203F -> 0180..01BF
+    } else if(t2 == 0xbe) {
+        return MERGE_WEIGHT;  // U+FFFE
+    } else {
+        return MAX_SHORT | COMMON_SEC | LOWER_CASE | COMMON_TER;  // U+FFFF
     }
 }
 
@@ -393,7 +779,7 @@ CollationFastLatin::nextPair(const uint16_t *table, UChar32 c, uint32_t ce,
             if(s16 != NULL) {
                 c2 = s16[nextIndex++];
                 if(c2 > LATIN_MAX) {
-                    if(PUNCT_START <= c && c < PUNCT_LIMIT) {
+                    if(PUNCT_START <= c2 && c2 < PUNCT_LIMIT) {
                         c2 = c2 - PUNCT_START + LATIN_LIMIT;  // 2000..203F -> 0180..01BF
                     } else if(c2 == 0xfffe || c2 == 0xffff) {
                         c2 = -1;  // U+FFFE & U+FFFF cannot occur in contractions.

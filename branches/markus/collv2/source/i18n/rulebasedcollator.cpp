@@ -1043,19 +1043,41 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
         // so that prefix matches back into the equal prefix work.
     }
 
-    UBool numeric = settings->isNumeric();
-    UCollationResult result;
-    if(settings->dontCheckFCD()) {
-        UTF8CollationIterator leftIter(data, numeric, left, equalPrefixLength, leftLength);
-        UTF8CollationIterator rightIter(data, numeric, right, equalPrefixLength, rightLength);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+    int32_t result;
+    if(fastLatinOptions >= 0 &&
+            equalPrefixLength != leftLength &&
+            left[equalPrefixLength] <= CollationFastLatin::LATIN_MAX_UTF8_LEAD &&
+            equalPrefixLength != rightLength &&
+            right[equalPrefixLength] <= CollationFastLatin::LATIN_MAX_UTF8_LEAD) {
+        if(leftLength >= 0) {
+            result = CollationFastLatin::compareUTF8(data->fastLatinTable, fastLatinOptions,
+                                                     left + equalPrefixLength,
+                                                     leftLength - equalPrefixLength,
+                                                     right + equalPrefixLength,
+                                                     rightLength - equalPrefixLength);
+        } else {
+            result = CollationFastLatin::compareUTF8(data->fastLatinTable, fastLatinOptions,
+                                                     left + equalPrefixLength, -1,
+                                                     right + equalPrefixLength, -1);
+        }
     } else {
-        FCDUTF8CollationIterator leftIter(data, numeric, left, equalPrefixLength, leftLength);
-        FCDUTF8CollationIterator rightIter(data, numeric, right, equalPrefixLength, rightLength);
-        result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+        result = CollationFastLatin::BAIL_OUT_RESULT;
+    }
+
+    if(result == CollationFastLatin::BAIL_OUT_RESULT) {
+        UBool numeric = settings->isNumeric();
+        if(settings->dontCheckFCD()) {
+            UTF8CollationIterator leftIter(data, numeric, left, equalPrefixLength, leftLength);
+            UTF8CollationIterator rightIter(data, numeric, right, equalPrefixLength, rightLength);
+            result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+        } else {
+            FCDUTF8CollationIterator leftIter(data, numeric, left, equalPrefixLength, leftLength);
+            FCDUTF8CollationIterator rightIter(data, numeric, right, equalPrefixLength, rightLength);
+            result = CollationCompare::compareUpToQuaternary(leftIter, rightIter, *settings, errorCode);
+        }
     }
     if(result != UCOL_EQUAL || settings->getStrength() < UCOL_IDENTICAL || U_FAILURE(errorCode)) {
-        return result;
+        return (UCollationResult)result;
     }
 
     // TODO: If NUL-terminated, get actual limits from iterators?
