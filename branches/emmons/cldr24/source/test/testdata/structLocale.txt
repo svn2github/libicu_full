@@ -3915,6 +3915,11 @@ structLocale:table(nofallback){
         alternateQuotationEnd{""}
         alternateQuotationStart{""}
     }
+    durationUnits{
+        hm{""}
+        hms{""}
+        ms{""}
+    }
     fields{
         day{
             dn{"Day"}
@@ -3926,6 +3931,24 @@ structLocale:table(nofallback){
                 "1"{""}
                 "2"{""}
                 "3"{""}
+            }
+            relativeTime{
+                future{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+                past{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
             }
         }
         dayperiod{
@@ -3958,6 +3981,24 @@ structLocale:table(nofallback){
                 "0"{""}
                 "1"{""}
             }
+            relativeTime{
+                future{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+                past{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+            }
         }
         minute{
             dn{"Minute"}
@@ -3965,6 +4006,24 @@ structLocale:table(nofallback){
                 "-1"{""}
                 "0"{""}
                 "1"{""}
+            }
+            relativeTime{
+                future{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+                past{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
             }
         }
         mon{
@@ -3981,6 +4040,24 @@ structLocale:table(nofallback){
                 "0"{""}
                 "1"{""}
             }
+            relativeTime{
+                future{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+                past{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+            }
         }
         sat{
             relative{
@@ -3995,6 +4072,24 @@ structLocale:table(nofallback){
                 "-1"{""}
                 "0"{""}
                 "1"{""}
+            }
+            relativeTime{
+                future{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+                past{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
             }
         }
         sun{
@@ -4032,6 +4127,24 @@ structLocale:table(nofallback){
                 "0"{""}
                 "1"{""}
             }
+            relativeTime{
+                future{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+                past{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+            }
         }
         weekday{
             dn{"Day of the Week"}
@@ -4047,6 +4160,24 @@ structLocale:table(nofallback){
                 "-1"{""}
                 "0"{""}
                 "1"{""}
+            }
+            relativeTime{
+                future{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
+                past{
+                    zero{""}
+                    one{""}
+                    two{""}
+                    few{""}
+                    many{""}
+                    other{""}
+                }
             }
         }
         zone{
@@ -4646,6 +4777,7 @@ structLocale:table(nofallback){
         zap{""}
         zbl{""}
         zen{""}
+        zgh{""}
         zh{""}
         zh_Hans{""}
         zh_Hant{""}
@@ -4666,6 +4798,7 @@ structLocale:table(nofallback){
         arab{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -4892,6 +5025,7 @@ structLocale:table(nofallback){
         arabext{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -5118,6 +5252,7 @@ structLocale:table(nofallback){
         bali{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -5344,6 +5479,7 @@ structLocale:table(nofallback){
         beng{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -5570,6 +5706,7 @@ structLocale:table(nofallback){
         cham{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -5797,6 +5934,7 @@ structLocale:table(nofallback){
         deva{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -6247,6 +6385,7 @@ structLocale:table(nofallback){
         gujr{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -6473,6 +6612,7 @@ structLocale:table(nofallback){
         guru{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -6699,6 +6839,7 @@ structLocale:table(nofallback){
         hanidec{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -6925,6 +7066,7 @@ structLocale:table(nofallback){
         java{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -7151,6 +7293,7 @@ structLocale:table(nofallback){
         kali{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -7377,6 +7520,7 @@ structLocale:table(nofallback){
         khmr{
              miscPatterns{
                 atLeast{""}
+                range{""}
             }
            patterns{
                 currencyFormat{""}
@@ -7603,6 +7747,7 @@ structLocale:table(nofallback){
         knda{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -7829,6 +7974,7 @@ structLocale:table(nofallback){
         lana{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -8278,6 +8424,7 @@ structLocale:table(nofallback){
         laoo{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -8504,6 +8651,7 @@ structLocale:table(nofallback){
         latn{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -8730,6 +8878,7 @@ structLocale:table(nofallback){
         lepc{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -8956,6 +9105,7 @@ structLocale:table(nofallback){
         limb{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -9182,6 +9332,7 @@ structLocale:table(nofallback){
         mlym{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -9408,6 +9559,7 @@ structLocale:table(nofallback){
         mong{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -9634,6 +9786,7 @@ structLocale:table(nofallback){
         mtei{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -9860,6 +10013,7 @@ structLocale:table(nofallback){
         mymr{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -10310,6 +10464,7 @@ structLocale:table(nofallback){
         nkoo{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -10536,6 +10691,7 @@ structLocale:table(nofallback){
         olck{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -10762,6 +10918,7 @@ structLocale:table(nofallback){
         orya{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -10988,6 +11145,7 @@ structLocale:table(nofallback){
         saur{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -11214,6 +11372,7 @@ structLocale:table(nofallback){
         sund{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -11440,6 +11599,7 @@ structLocale:table(nofallback){
         talu{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -11666,6 +11826,7 @@ structLocale:table(nofallback){
         tamldec{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -11892,6 +12053,7 @@ structLocale:table(nofallback){
         telu{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -12118,6 +12280,7 @@ structLocale:table(nofallback){
         thai{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -12344,6 +12507,7 @@ structLocale:table(nofallback){
         tibt{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -12571,6 +12735,7 @@ structLocale:table(nofallback){
         vaii{
             miscPatterns{
                 atLeast{""}
+                range{""}
             }
             patterns{
                 currencyFormat{""}
@@ -16610,19 +16775,19 @@ structLocale:table(nofallback){
         lines{""}
     }
     listPattern{
-        duration{
+        unit{
             2{""}
             end{""}
             middle{""}
             start{""}
         }
-        duration-narrow{
+        unit-narrow{
             2{""}
             end{""}
             middle{""}
             start{""}
         }
-        duration-short{
+        unit-short{
             2{""}
             end{""}
             middle{""}
@@ -16671,7 +16836,7 @@ structLocale:table(nofallback){
                 many{""}
                 other{""}
             }
-            minute{
+            arc-minute{
                 zero{""}
                 one{""}
                 two{""}
@@ -16679,7 +16844,7 @@ structLocale:table(nofallback){
                 many{""}
                 other{""}
             }
-            second{
+            arc-second{
                 zero{""}
                 one{""}
                 two{""}
@@ -17175,7 +17340,7 @@ structLocale:table(nofallback){
                 many{""}
                 other{""}
             }
-            minute{
+            arc-minute{
                 zero{""}
                 one{""}
                 two{""}
@@ -17183,7 +17348,7 @@ structLocale:table(nofallback){
                 many{""}
                 other{""}
             }
-            second{
+            arc-second{
                 zero{""}
                 one{""}
                 two{""}

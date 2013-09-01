@@ -3605,7 +3605,7 @@ const char* const full_data[][3] = {
     "pa_PK"
   }, {
     "pap",
-    "pap_Latn_BQ",
+    "pap_Latn_AW",
     "pap"
   }, {
     "pau",
@@ -3795,10 +3795,6 @@ const char* const full_data[][3] = {
     "und_AM",
     "hy_Armn_AM",
     "hy"
-  }, {
-    "und_AN",
-    "pap_Latn_AN",
-    "pap_AN"
   }, {
     "und_AO",
     "pt_Latn_AO",
@@ -4637,7 +4633,7 @@ const char* const full_data[][3] = {
     "es_UY"
   }, {
     "und_UZ",
-    "uz_Cyrl_UZ",
+    "uz_Latn_UZ",
     "uz"
   }, {
     "und_VA",
@@ -4681,7 +4677,7 @@ const char* const full_data[][3] = {
     "ur"
   }, {
     "uz",
-    "uz_Cyrl_UZ",
+    "uz_Latn_UZ",
     "uz"
   }, {
     "uz_AF",

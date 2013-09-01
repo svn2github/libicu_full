@@ -1,0 +1,15 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2013 International Business Machines
+// * Corporation and others. All Rights Reserved.
+// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
+// * Source File: <path>/common/main/yo_BJ.xml
+// *
+// ***************************************************************************
+yo_BJ{
+    ExemplarCharacters{
+        "[a á à b d e é è ɛ {ɛ\u0301} {ɛ\u0300} f g {gb} h i í ì j k l m n o ó ò ɔ {ɔ"
+        "\u0301} {ɔ\u0300} p r s {sh} t u ú ù w y]"
+    }
+    Version{"2.0.91.3"}
+}
