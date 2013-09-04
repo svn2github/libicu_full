@@ -460,6 +460,7 @@ likelySubtags:table(nofallback){
     und_Arab_MN{"kk_Arab_MN"}
     und_Arab_MU{"ur_Arab_MU"}
     und_Arab_NG{"ha_Arab_NG"}
+    und_Arab_PK{"ur_Arab_PK"}
     und_Arab_TJ{"fa_Arab_TJ"}
     und_Arab_TR{"zza_Arab_TR"}
     und_Arab_YT{"swb_Arab_YT"}
@@ -628,6 +629,7 @@ likelySubtags:table(nofallback){
     und_Latn_CN{"za_Latn_CN"}
     und_Latn_CY{"tr_Latn_CY"}
     und_Latn_DZ{"fr_Latn_DZ"}
+    und_Latn_ET{"en_Latn_ET"}
     und_Latn_GE{"ku_Latn_GE"}
     und_Latn_GR{"tr_Latn_GR"}
     und_Latn_IL{"ro_Latn_IL"}
@@ -680,7 +682,7 @@ likelySubtags:table(nofallback){
     und_Mymr_TH{"mnw_Mymr_TH"}
     und_NA{"af_Latn_NA"}
     und_NC{"fr_Latn_NC"}
-    und_NE{"fr_Latn_NE"}
+    und_NE{"ha_Latn_NE"}
     und_NI{"es_Latn_NI"}
     und_NL{"nl_Latn_NL"}
     und_NO{"nb_Latn_NO"}
