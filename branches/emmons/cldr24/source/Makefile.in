@@ -56,7 +56,7 @@ INSTALLED_BUILT_FILES = $(top_builddir)/config/Makefile.inc $(top_builddir)/conf
 LOCAL_BUILT_FILES = icudefs.mk config/icucross.mk config/icucross.inc
 
 DOCDIRS = common i18n
-SUBDIRS =  stubdata common i18n $(LAYOUT) $(TOOLS) data $(ICUIO) $(EXTRA) $(SAMPLE) $(TEST)
+SUBDIRS =  stubdata common i18n $(LAYOUT) $(ICUIO) $(TOOLS) data $(EXTRA) $(SAMPLE) $(TEST)
 
 SECTION = 1
 
@@ -89,6 +89,9 @@ check-recursive: all
 xcheck: all xcheck-recursive
 xperf: all xperf-recursive
 check-exhaustive: all check-exhaustive-recursive
+
+pcheck: all tests
+	@$(MAKE) -C test pcheck
 
 check-exhaustive-local: check-local
 
@@ -221,8 +224,8 @@ xcheck-local: $(top_builddir)/config/icu-config $(top_builddir)/config/Makefile.
 	@test "passed" = "$(shell $(MAKE) --no-print-directory -f $(top_builddir)/config/Makefile.inc SELFCHECK=1 selfcheck)" || (echo "FAIL: Makefile.inc could not run properly." ; exit 1 )
 	@echo "PASS: config selfcheck OK"
 
-#$(srcdir)/configure : $(srcdir)/configure.in $(top_srcdir)/aclocal.m4
-#	cd $(srcdir) && $(AUTOCONF)
+#$(srcdir)/configure : $(srcdir)/configure.ac $(top_srcdir)/aclocal.m4
+#	cd $(srcdir) && aclocal && $(AUTOCONF)
 
 icudefs.mk: $(srcdir)/icudefs.mk.in  $(top_builddir)/config.status
 	cd $(top_builddir) \
