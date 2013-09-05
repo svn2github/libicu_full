@@ -943,7 +943,7 @@ th{
         VALLADER{"วัลลาเดอร์"}
         WADEGILE{"การถอดอักษรแบบเวด-ไจลส์"}
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.8"}
     codePatterns{
         language{"ภาษา: {0}"}
         script{"สคริปต์: {0}"}

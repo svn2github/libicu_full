@@ -253,7 +253,7 @@ cy{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.7"}
     calendar{
         generic{
             DateTimePatterns{
@@ -554,21 +554,17 @@ cy{
             intervalFormats{
                 H{
                     H{"HH–HH"}
-                    a{"HH–HH"}
                 }
                 Hm{
                     H{"HH:mm–HH:mm"}
-                    a{"HH:mm–HH:mm"}
                     m{"HH:mm–HH:mm"}
                 }
                 Hmv{
                     H{"HH:mm–HH:mm v"}
-                    a{"HH:mm–HH:mm v"}
                     m{"HH:mm–HH:mm v"}
                 }
                 Hv{
                     H{"HH–HH v"}
-                    a{"HH–HH v"}
                 }
                 M{
                     M{"M-M"}
@@ -604,14 +600,14 @@ cy{
                     h{"h–h a"}
                 }
                 hm{
-                    a{"h.mm a – h.mm a"}
-                    h{"h.mm–h.mm a"}
-                    m{"h.mm–h.mm a"}
+                    a{"h:mm a – h:mm a"}
+                    h{"h:mm–h:mm a"}
+                    m{"h:mm–h:mm a"}
                 }
                 hmv{
-                    a{"h.mm a – h.mm a v"}
-                    h{"h.mm–h.mm a v"}
-                    m{"h.mm–h.mm a v"}
+                    a{"h:mm a – h:mm a v"}
+                    h{"h:mm–h:mm a v"}
+                    m{"h:mm–h:mm a v"}
                 }
                 hv{
                     a{"h a – h a v"}

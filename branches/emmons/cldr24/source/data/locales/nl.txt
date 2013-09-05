@@ -154,7 +154,7 @@ nl{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.8"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -1312,21 +1312,6 @@ nl{
                         "Elloel",
                         "Adar B",
                     }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                        "8",
-                        "9",
-                        "10",
-                        "11",
-                        "12",
-                        "13",
-                    }
                     wide{
                         "Tisjrie",
                         "Chesjwan",
@@ -1360,21 +1345,6 @@ nl{
                         "Av",
                         "Elloel",
                         "Adar B",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                        "8",
-                        "9",
-                        "10",
-                        "11",
-                        "12",
-                        "13",
                     }
                     wide{
                         "Tisjrie",

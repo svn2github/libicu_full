@@ -908,7 +908,7 @@ id{
         VALENCIA{"Valencia"}
         WADEGILE{"Wade-Giles Latin"}
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.8"}
     codePatterns{
         language{"Bahasa: {0}"}
         script{"Skrip: {0}"}

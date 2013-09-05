@@ -913,7 +913,7 @@ nl{
         VALLADER{"Vallader"}
         WADEGILE{"Wade-Giles-romanisering"}
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.8"}
     codePatterns{
         language{"Taal: {0}"}
         script{"Schrift: {0}"}

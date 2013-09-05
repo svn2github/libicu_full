@@ -115,7 +115,7 @@ root{
         }
         native{"latn"}
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.8"}
     calendar{
         buddhist{
             AmPmMarkers:alias{"/LOCALE/calendar/gregorian/AmPmMarkers"}
@@ -1116,6 +1116,7 @@ root{
                         "11",
                         "12",
                         "13",
+                        "7",
                     }
                     wide:alias{"/LOCALE/calendar/hebrew/monthNames/format/wide"}
                 }

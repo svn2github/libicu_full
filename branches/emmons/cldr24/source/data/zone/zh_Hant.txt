@@ -11,7 +11,7 @@
  */
 zh_Hant{
     %%Parent{"root"}
-    Version{"2.0.92.87"}
+    Version{"2.0.93.8"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"阿比讓"}

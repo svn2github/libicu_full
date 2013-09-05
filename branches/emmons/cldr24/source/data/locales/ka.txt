@@ -157,7 +157,7 @@ ka{
         native{"latn"}
         traditional{"geor"}
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.8"}
     calendar{
         generic{
             DateTimePatterns{

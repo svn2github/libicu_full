@@ -289,7 +289,7 @@ cy{
             tibt{"Digidau Tibetaidd"}
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.7"}
     codePatterns{
         language{"Iaith: {0}"}
         script{"Sgript: {0}"}
