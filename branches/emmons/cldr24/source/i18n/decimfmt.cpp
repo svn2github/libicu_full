@@ -1022,19 +1022,53 @@ DecimalFormat::clone() const
 
 
 FixedDecimal
-DecimalFormat::getFixedDecimal(double number, UErrorCode &status) {
-    DigitList digits;
-    digits.set(number);
-    UBool isNegative;
-    _round(digits, digits, isNegative, status);
-    double roundedNum = digits.getDouble();
-    FixedDecimal result(roundedNum);
-    int32_t numTrailingFractionZeros = this->getMinimumFractionDigits() - result.visibleDecimalDigitCount;
+DecimalFormat::getFixedDecimal(double number, UErrorCode &status) const {
+    FixedDecimal result;
+
+    if (U_FAILURE(status)) {
+        return result;
+    }
+
+    if (uprv_isNaN(number) || uprv_isPositiveInfinity(fabs(number))) {
+        // For NaN and Infinity the state of the formatter is ignored.
+        result.init(number);
+        return result;
+    }
+
+    int32_t minFractionDigits = getMinimumFractionDigits();
+
+    if (fMultiplier == NULL && fScale == 0 && fRoundingIncrement == 0 && areSignificantDigitsUsed() == FALSE &&
+            result.quickInit(number) && result.visibleDecimalDigitCount <= getMaximumFractionDigits()) {
+        // Fast Path. Construction of an exact FixedDecimal directly from the double, without passing
+        //   through a DigitList, was successful, and the formatter is doing nothing tricky with rounding.
+        // printf("getFixedDecimal(%g): taking fast path.\n", number);
+    } else {
+        // Slow path. Create a DigitList, and have this formatter round it according to the
+        //     requirements of the format, and fill the fixedDecimal from that.
+        DigitList digits;
+        digits.set(number);
+        UBool isNegative;
+        _round(digits, digits, isNegative, status);
+        double roundedNum = digits.getDouble();
+        result.init(roundedNum);
+
+        if (areSignificantDigitsUsed()) {
+            minFractionDigits = getMinimumSignificantDigits() - digits.getDecimalAt();
+            if (minFractionDigits < 0) {
+                minFractionDigits = 0;
+            }
+        }
+    }
+
+    // Adjust result for trailing zeros to the right of the decimal. Needed for both fast & slow paths.
+
+    int32_t numTrailingFractionZeros = minFractionDigits - result.visibleDecimalDigitCount;
     if (numTrailingFractionZeros > 0) {
         double scaleFactor = pow(10.0, numTrailingFractionZeros);
         result.decimalDigits *= scaleFactor;
         result.visibleDecimalDigitCount += numTrailingFractionZeros;
     }
+
     return result;
 }
 
@@ -2904,23 +2938,24 @@ static UBool equalWithSignCompatibility(UChar32 lhs, UChar32 rhs) {
 // check for LRM 0x200E, RLM 0x200F, ALM 0x061C
 #define IS_BIDI_MARK(c) (c==0x200E || c==0x200F || c==0x061C)
 
-// The following assumes any marks are at the beginning or end of the affix
+#define TRIM_BUFLEN 32
 UnicodeString& DecimalFormat::trimMarksFromAffix(const UnicodeString& affix, UnicodeString& trimmedAffix) {
-    int32_t first = 0;
-    int32_t last = affix.length() - 1;
-    if (last > 0) {
-        UChar c = affix.charAt(0);
-        if (IS_BIDI_MARK(c)) {
-            first++;
-        }
-        if (last > first) {
-            c = affix.charAt(last);
-            if (IS_BIDI_MARK(c)) {
-                last--;
-            }
+    UChar trimBuf[TRIM_BUFLEN];
+    int32_t affixLen = affix.length();
+    int32_t affixPos, trimLen = 0;
+    
+    for (affixPos = 0; affixPos < affixLen; affixPos++) {
+        UChar c = affix.charAt(affixPos);
+        if (!IS_BIDI_MARK(c)) {
+        	if (trimLen < TRIM_BUFLEN) {
+        		trimBuf[trimLen++] = c;
+        	} else {
+        		trimLen = 0;
+        		break;
+        	}
         }
     }
-    return trimmedAffix.setTo(affix, first, last + 1 - first);
+    return (trimLen > 0)? trimmedAffix.setTo(trimBuf, trimLen): trimmedAffix.setTo(affix);
 }
 
 /**
@@ -2939,6 +2974,8 @@ int32_t DecimalFormat::compareSimpleAffix(const UnicodeString& affix,
                                           UBool lenient) {
     int32_t start = pos;
     UnicodeString trimmedAffix;
+    // For more efficiency we should keep lazily-created trimmed affixes around in
+    // instance variables instead of trimming each time they are used (the next step)
     trimMarksFromAffix(affix, trimmedAffix);
     UChar32 affixChar = trimmedAffix.char32At(0);
     int32_t affixLength = trimmedAffix.length();

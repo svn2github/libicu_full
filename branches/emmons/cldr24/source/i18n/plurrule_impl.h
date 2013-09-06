@@ -170,17 +170,24 @@ private:
 
 };
 
+/**
+ * class FixedDecimal serves to communicate the properties
+ * of a formatted number from a decimal formatter to PluralRules::select()
+ *
+ * see DecimalFormat::getFixedDecimal()
+ * @internal
+ */
 class U_I18N_API FixedDecimal: public UMemory {
   public:
     /**
-      * @param n   the number
-      * @param v   The number of visible fraction digits
-      * @param f   The fraction digits.
-      *
+      * @param n   the number, e.g. 12.345
+      * @param v   The number of visible fraction digits, e.g. 3
+      * @param f   The fraction digits, e.g. 345
       */
     FixedDecimal(double  n, int32_t v, int64_t f);
     FixedDecimal(double n, int32_t);
     explicit FixedDecimal(double n);
+    FixedDecimal();
     FixedDecimal(const UnicodeString &s, UErrorCode &ec);
     FixedDecimal(const FixedDecimal &other);
 
@@ -188,6 +195,9 @@ class U_I18N_API FixedDecimal: public UMemory {
     int32_t getVisibleFractionDigitCount() const;
 
     void init(double n, int32_t v, int64_t f);
+    void init(double n);
+    UBool quickInit(double n);  // Try a fast-path only initialization,
+                                //    return TRUE if successful.
     static int64_t getFractionalDigits(double n, int32_t v);
     static int32_t decimals(double n);
 
