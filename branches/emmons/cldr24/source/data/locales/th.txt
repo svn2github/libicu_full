@@ -133,11 +133,11 @@ th{
         }
         native{"thai"}
     }
-    Version{"2.0.93.8"}
+    Version{"2.0.93.18"}
     calendar{
         buddhist{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -292,7 +292,7 @@ th{
         }
         chinese{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -601,7 +601,7 @@ th{
         }
         dangi{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -911,7 +911,7 @@ th{
         }
         generic{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -1058,7 +1058,7 @@ th{
                 "หลังเที่ยง",
             }
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -1421,7 +1421,7 @@ th{
         }
         hebrew{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -1610,7 +1610,7 @@ th{
         }
         islamic{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -1735,7 +1735,7 @@ th{
         }
         japanese{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",
@@ -2120,7 +2120,7 @@ th{
         }
         roc{
             DateTimePatterns{
-                "H นาฬิกา mm นาที ss วินาที a zzzz",
+                "H นาฬิกา mm นาที ss วินาที zzzz",
                 "H นาฬิกา mm นาที ss วินาที z",
                 "HH:mm:ss",
                 "HH:mm",

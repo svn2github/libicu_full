@@ -135,7 +135,7 @@ my{
         }
         native{"mymr"}
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.16"}
     calendar{
         generic{
             DateTimePatterns{

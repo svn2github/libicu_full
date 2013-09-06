@@ -10,7 +10,7 @@
  * ICU <specials> source: <path>/common/main/my.xml
  */
 my{
-    Version{"2.0.92.87"}
+    Version{"2.0.93.16"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"အာဘီဂျွန်း"}
@@ -1496,7 +1496,7 @@ my{
             ls{"ဂါလားပါဂိုးစ်အချိန်"}
         }
         "meta:Gambier"{
-            ls{"ဂန်ဘီရာအချိန်"}
+            ls{"ဂန်ဘီအာအချိန်"}
         }
         "meta:Georgia"{
             ld{"ဂျော်ဂျီယာ နွေရာသီ အချိန်"}
