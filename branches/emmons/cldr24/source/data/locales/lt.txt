@@ -193,7 +193,7 @@ lt{
                 group{" "}
                 infinity{"∞"}
                 list{";"}
-                minusSign{"–"}
+                minusSign{"−"}
                 nan{"NaN"}
                 perMille{"‰"}
                 percentSign{"%"}
@@ -202,7 +202,7 @@ lt{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.0.93.19"}
     calendar{
         buddhist{
             eras{
