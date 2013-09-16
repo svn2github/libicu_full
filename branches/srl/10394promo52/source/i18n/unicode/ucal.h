@@ -1476,7 +1476,7 @@ enum UTimeZoneTransitionType {
     UCAL_TZ_TRANSITION_PREVIOUS_INCLUSIVE
 };
 
-typedef enum UTimeZoneTransitionType UTimeZoneTransitionType;
+typedef enum UTimeZoneTransitionType UTimeZoneTransitionType; /**< @stable ICU 50 */
 
 /**
 * Get the UDate for the next/previous time zone transition relative to

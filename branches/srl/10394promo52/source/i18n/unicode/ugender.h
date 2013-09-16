@@ -57,6 +57,7 @@ typedef struct UGenderInfo UGenderInfo;
 /**
  * Opens a new UGenderInfo object given locale.
  * @param locale The locale for which the rules are desired.
+ * @param status UErrorCode pointer
  * @return A UGenderInfo for the specified locale, or NULL if an error occurred.
  * @stable ICU 50
  */
