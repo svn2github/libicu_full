@@ -40,6 +40,7 @@ public:
     const CharsetMatch *detect(UErrorCode& status);
 
     void setDeclaredEncoding(const char *encoding, int32_t len) const;
+	void setDetectableCharset(const char *encoding, UBool enabled, UErrorCode &status);
 
     UBool setStripTagsFlag(UBool flag);
 

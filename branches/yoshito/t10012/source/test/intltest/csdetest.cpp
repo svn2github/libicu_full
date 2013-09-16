@@ -597,6 +597,10 @@ void CharsetDetectionTest::IBM424Test()
     char *bytes_r = extractBytes(s2, "IBM424", brLength);
     
     UCharsetDetector *csd = ucsdet_open(&status);
+	ucsdet_setDetectableCharset(csd, "IBM424_rtl", TRUE, &status);
+	ucsdet_setDetectableCharset(csd, "IBM424_ltr", TRUE, &status);
+	ucsdet_setDetectableCharset(csd, "IBM420_rtl", TRUE, &status);
+	ucsdet_setDetectableCharset(csd, "IBM420_ltr", TRUE, &status);
     if (U_FAILURE(status)) {
         errln("Error opening charset detector. - %s", u_errorName(status));
     }
@@ -684,6 +688,10 @@ void CharsetDetectionTest::IBM420Test()
     if (U_FAILURE(status)) {
         errln("Error opening charset detector. - %s", u_errorName(status));
     }
+	ucsdet_setDetectableCharset(csd, "IBM424_rtl", TRUE, &status);
+	ucsdet_setDetectableCharset(csd, "IBM424_ltr", TRUE, &status);
+	ucsdet_setDetectableCharset(csd, "IBM420_rtl", TRUE, &status);
+	ucsdet_setDetectableCharset(csd, "IBM420_ltr", TRUE, &status);
     const UCharsetMatch *match;
     const char *name;
 

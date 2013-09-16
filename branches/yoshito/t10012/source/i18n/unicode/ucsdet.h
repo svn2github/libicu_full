@@ -335,7 +335,6 @@ ucsdet_getUChars(const UCharsetMatch *ucsm,
 U_STABLE  UEnumeration * U_EXPORT2
 ucsdet_getAllDetectableCharsets(const UCharsetDetector *ucsd,  UErrorCode *status);
 
-
 /**
   *  Test whether input filtering is enabled for this charset detector.
   *  Input filtering removes text that appears to be HTML or xml
@@ -346,6 +345,7 @@ ucsdet_getAllDetectableCharsets(const UCharsetDetector *ucsd,  UErrorCode *statu
   *  @return TRUE if filtering is enabled.
   *  @stable ICU 3.6
   */
+
 U_STABLE  UBool U_EXPORT2
 ucsdet_isInputFilterEnabled(const UCharsetDetector *ucsd);
 
@@ -363,6 +363,15 @@ ucsdet_isInputFilterEnabled(const UCharsetDetector *ucsd);
  */
 U_STABLE  UBool U_EXPORT2
 ucsdet_enableInputFilter(UCharsetDetector *ucsd, UBool filter);
+
+
+/*  Ticket #10012 - Charset Detector: US-ASCII being detected as IBM420_ltr */
+
+U_DRAFT UEnumeration * U_EXPORT2
+ucsdet_getDetectableCharsets(const UCharsetDetector *ucsd,  UErrorCode *status);
+
+U_DRAFT void U_EXPORT2
+ucsdet_setDetectableCharset(UCharsetDetector *ucsd, const char *encoding, UBool enabled, UErrorCode *status);
 
 #endif
 #endif   /* __UCSDET_H */

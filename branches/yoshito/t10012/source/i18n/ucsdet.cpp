@@ -11,6 +11,11 @@
 #include "unicode/ucsdet.h"
 #include "csdetect.h"
 #include "csmatch.h"
+#include "csrsbcs.h"
+#include "csrmbcs.h"
+#include "csrutf8.h"
+#include "csrucode.h"
+#include "csr2022.h"
 
 #include "cmemory.h"
 
@@ -175,6 +180,17 @@ ucsdet_getUChars(const UCharsetMatch *ucsm,
 
     return ((CharsetMatch *) ucsm)->getUChars(buf, cap, status);
 }
+
+U_CAPI void U_EXPORT2
+ucsdet_setDetectableCharset(UCharsetDetector *ucsd, const char *encoding, UBool enabled, UErrorCode *status)
+{
+	if(U_FAILURE(*status)) {
+		return;
+	}
+	((CharsetDetector *)ucsd)->setDetectableCharset(encoding, enabled, *status);
+}
+
 U_CDECL_END
+
 
 #endif
