@@ -184,10 +184,19 @@ ucsdet_getUChars(const UCharsetMatch *ucsm,
 U_CAPI void U_EXPORT2
 ucsdet_setDetectableCharset(UCharsetDetector *ucsd, const char *encoding, UBool enabled, UErrorCode *status)
 {
-	if(U_FAILURE(*status)) {
-		return;
-	}
-	((CharsetDetector *)ucsd)->setDetectableCharset(encoding, enabled, *status);
+    ((CharsetDetector *)ucsd)->setDetectableCharset(encoding, enabled, *status);
+}
+
+U_CAPI  UEnumeration * U_EXPORT2
+ucsdet_getAllDetectableCharsets(const UCharsetDetector * /*ucsd*/, UErrorCode *status)
+{
+    return CharsetDetector::getAllDetectableCharsets(*status);
+}
+
+U_DRAFT UEnumeration * U_EXPORT2
+ucsdet_getDetectableCharsets(const UCharsetDetector *ucsd,  UErrorCode *status)
+{
+    return ((CharsetDetector *)ucsd)->getDetectableCharsets(*status);
 }
 
 U_CDECL_END

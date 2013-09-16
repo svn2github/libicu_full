@@ -365,11 +365,35 @@ U_STABLE  UBool U_EXPORT2
 ucsdet_enableInputFilter(UCharsetDetector *ucsd, UBool filter);
 
 
-/*  Ticket #10012 - Charset Detector: US-ASCII being detected as IBM420_ltr */
-
+/**
+  *  Get an iterator over the set of detectable charsets -
+  *  over the charsets that are enabled by the specified charset detector.
+  *
+  *  The returned UEnumeration provides access to the names of
+  *  the charsets.
+  *
+  *  @param ucsd a Charset detector.
+  *  @param status  Any error conditions are reported back in this variable.
+  *  @return an iterator providing access to the detectable charset names by
+  *  the specified charset detector.
+  *  @internal
+  */
 U_DRAFT UEnumeration * U_EXPORT2
 ucsdet_getDetectableCharsets(const UCharsetDetector *ucsd,  UErrorCode *status);
 
+/**
+  * Enable or disable individual charset encoding.
+  * A name of charset encoding must be included in the names returned by
+  * {@link #getAllDetectableCharsets()}.
+  *
+  * @param ucsd a Charset detector.
+  * @param encoding encoding the name of charset encoding.
+  * @param enabled <code>TRUE</code> to enable, or <code>FALSE</code> to disable the
+  *   charset encoding.
+  * @param status receives the return status. When the name of charset encoding
+  *   is not supported, U_ILLEGAL_ARGUMENT_ERROR is set.
+  * @internal
+  */
 U_DRAFT void U_EXPORT2
 ucsdet_setDetectableCharset(UCharsetDetector *ucsd, const char *encoding, UBool enabled, UErrorCode *status);
 
