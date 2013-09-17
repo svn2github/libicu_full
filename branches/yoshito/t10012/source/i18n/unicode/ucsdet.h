@@ -321,11 +321,20 @@ ucsdet_getUChars(const UCharsetMatch *ucsm,
   *  The returned UEnumeration provides access to the names of
   *  the charsets.
   *
+  *  <p>
   *  The state of the Charset detector that is passed in does not
   *  affect the result of this function, but requiring a valid, open
   *  charset detector as a parameter insures that the charset detection
   *  service has been safely initialized and that the required detection
   *  data is available.
+  *
+  *  <p>
+  *  <b>Note:</b> Multiple different charset encodings in a same family may use
+  *  a single shared name in this implementation. For example, this method returns
+  *  an array including "ISO-8859-1" (ISO Latin 1), but not including "windows-1252"
+  *  (Windows Latin 1). However, actual detection result could be "windows-1252"
+  *  when the input data matches Latin 1 code points with any points only available
+  *  in "windows-1252".
   *
   *  @param ucsd a Charset detector.
   *  @param status  Any error conditions are reported back in this variable.
