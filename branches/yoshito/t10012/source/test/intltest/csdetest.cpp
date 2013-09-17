@@ -275,6 +275,45 @@ void CharsetDetectionTest::ConstructionTest()
         printf("%s\n", name);
 #endif
     }
+
+    const char* defDisabled[] = {
+        "IBM420_rtl", "IBM420_ltr",
+        "IBM424_rtl", "IBM424_ltr",
+        0
+    };
+
+    LocalUEnumerationPointer eActive(ucsdet_getDetectableCharsets(csd.getAlias(), status));
+    const char *activeName = NULL;
+
+    while (activeName = uenum_next(eActive.getAlias(), NULL, status)) {
+        // the charset must be included in all list
+        UBool found = FALSE;
+
+        const char *name = NULL;
+        uenum_reset(e.getAlias(), status);
+        while (name = uenum_next(e.getAlias(), NULL, status)) {
+            if (strcmp(activeName, name) == 0) {
+                found = TRUE;
+                break;
+            }
+        }
+
+        if (!found) {
+            errln(UnicodeString(activeName) + " is not included in the all charset list.");
+        }
+
+        // some charsets are disabled by default
+        found = FALSE;
+        for (int32_t i = 0; defDisabled[i] != 0; i++) {
+            if (strcmp(activeName, defDisabled[i]) == 0) {
+                found = TRUE;
+                break;
+            }
+        }
+        if (found) {
+            errln(UnicodeString(activeName) + " should not be included in the default charset list.");
+        }
+    }
 }
 
 void CharsetDetectionTest::UTF8Test()
