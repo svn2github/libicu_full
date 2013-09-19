@@ -7303,16 +7303,16 @@ void NumberFormatTest::Test10419RoundingWith0FractionDigits() {
         { DecimalFormat::kRoundUp, 1.5,  "2"},
     };
     UErrorCode status = U_ZERO_ERROR;
-    DecimalFormat decfmt(status);
+    LocalPointer<DecimalFormat> decfmt((DecimalFormat *) NumberFormat::createInstance(Locale("en_US"), status));
     if (U_FAILURE(status)) {
         dataerrln("Failure creating DecimalFormat %s", u_errorName(status));
         return;
     }
     for (int32_t i = 0; i < sizeof(items) / sizeof(items[0]); ++i) {
-        decfmt.setRoundingMode(items[i].mode);
-        decfmt.setMaximumFractionDigits(0);
+        decfmt->setRoundingMode(items[i].mode);
+        decfmt->setMaximumFractionDigits(0);
         UnicodeString actual;
-        if (items[i].expected != decfmt.format(items[i].value, actual)) {
+        if (items[i].expected != decfmt->format(items[i].value, actual)) {
             errln("Expected " + items[i].expected + ", got " + actual);
         }
     }
