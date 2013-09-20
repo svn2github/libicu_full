@@ -412,30 +412,7 @@ class U_I18N_API IslamicCalendar : public Calendar {
    */
   virtual int32_t defaultCenturyStartYear() const;
 
- private: // default century stuff.
-  /**
-   * The system maintains a static default century start date.  This is initialized
-   * the first time it is used.  Before then, it is set to SYSTEM_DEFAULT_CENTURY to
-   * indicate an uninitialized state.  Once the system default century date and year
-   * are set, they do not change.
-   */
-  static UDate         fgSystemDefaultCenturyStart;
-
-  /**
-   * See documentation for systemDefaultCenturyStart.
-   */
-  static int32_t          fgSystemDefaultCenturyStartYear;
-
-  
-  /**
-   * Default value that indicates the defaultCenturyStartYear is unitialized
-   */
-  static const int32_t    fgSystemDefaultCenturyYear;
-
-  /**
-   * start of default century, as a date
-   */
-  static const UDate        fgSystemDefaultCentury;
+ private:
 
   static const int32_t UMALQURA_YEAR_START = 1318;
   static const int32_t UMALQURA_YEAR_END = 1480;
@@ -529,19 +506,6 @@ class U_I18N_API IslamicCalendar : public Calendar {
         else
             return 30;
   }
-
- 
-  /**
-   * Returns the beginning date of the 100-year window that dates 
-   * with 2-digit years are considered to fall within.
-   */
-  UDate         internalGetDefaultCenturyStart(void) const;
-
-  /**
-   * Returns the first year of the 100-year window that dates with 
-   * 2-digit years are considered to fall within.
-   */
-  int32_t          internalGetDefaultCenturyStartYear(void) const;
 
   /**
    * Initializes the 100-year window that dates with 2-digit years
