@@ -170,54 +170,55 @@ int32_t getUmalqura_MonthLength(int32_t y, int32_t m) {
 // Constructors...
 //-------------------------------------------------------------------------
 
-const char *IslamicCalendar::getType() const { 
-    if(civil==CIVIL) {
-        return "islamic-civil";
-    } else if(civil==ASTRONOMICAL){
-        return "islamic";
-    } else if(civil==TBLA){
-        return "islamic-tbla";
-    } else if(civil==UMALQURA){
-      return "islamic-umalqura";
-    } else {
-      U_ASSERT(false); // out of range
-      return "islamic-unknown";
+const char *IslamicCalendar::getType() const {
+    const char *sType = NULL;
+
+    switch (cType) {
+    case CIVIL:
+        sType = "islamic-civil";
+        break;
+    case ASTRONOMICAL:
+        sType = "islamic";
+        break;
+    case TBLA:
+        sType = "islamic-tbla";
+        break;
+    case UMALQURA:
+        sType = "islamic-umalqura";
+        break;
+    default:
+        U_ASSERT(false); // out of range
+        sType = "islamic";  // "islamic" is used as the generic type
+        break;
     }
+    return sType;
 }
 
 Calendar* IslamicCalendar::clone() const {
     return new IslamicCalendar(*this);
 }
 
-IslamicCalendar::IslamicCalendar(const Locale& aLocale, UErrorCode& success, ECivil beCivil)
+IslamicCalendar::IslamicCalendar(const Locale& aLocale, UErrorCode& success, ECalculationType type)
 :   Calendar(TimeZone::createDefault(), aLocale, success),
-civil(beCivil)
+cType(type)
 {
     setTimeInMillis(getNow(), success); // Call this again now that the vtable is set up properly.
 }
 
-IslamicCalendar::IslamicCalendar(const IslamicCalendar& other) : Calendar(other), civil(other.civil) {
+IslamicCalendar::IslamicCalendar(const IslamicCalendar& other) : Calendar(other), cType(other.cType) {
 }
 
 IslamicCalendar::~IslamicCalendar()
 {
 }
 
-/**
-* Determines whether this object uses the fixed-cycle Islamic civil calendar
-* or an approximation of the religious, astronomical calendar.
-*
-* @param beCivil   <code>true</code> to use the civil calendar,
-*                  <code>false</code> to use the astronomical calendar.
-* @draft ICU 2.4
-*/
-void IslamicCalendar::setCivil(ECivil beCivil, UErrorCode &status)
+void IslamicCalendar::setCalculationType(ECalculationType type, UErrorCode &status)
 {
-    if (civil != beCivil) {
+    if (cType != type) {
         // The fields of the calendar will become invalid, because the calendar
         // rules are different
         UDate m = getTimeInMillis(status);
-        civil = beCivil;
+        cType = type;
         clear();
         setTimeInMillis(m, status);
     }
@@ -230,7 +231,7 @@ void IslamicCalendar::setCivil(ECivil beCivil, UErrorCode &status)
 * @draft ICU 2.4
 */
 UBool IslamicCalendar::isCivil() {
-    return (civil == CIVIL);
+    return (cType == CIVIL);
 }
 
 //-------------------------------------------------------------------------
@@ -296,11 +297,11 @@ UBool IslamicCalendar::civilLeapYear(int32_t year)
 * from the Hijri epoch, origin 0.
 */
 int32_t IslamicCalendar::yearStart(int32_t year) const{
-    if (civil == CIVIL || civil == TBLA ||
-        (civil == UMALQURA && year < UMALQURA_YEAR_START)) 
+    if (cType == CIVIL || cType == TBLA ||
+        (cType == UMALQURA && year < UMALQURA_YEAR_START)) 
     {
         return (year-1)*354 + ClockMath::floorDivide((3+11*year),30);
-    } else if(civil==ASTRONOMICAL){
+    } else if(cType==ASTRONOMICAL){
         return trueMonthStart(12*(year-1));
     } else {
         int32_t ys = yearStart(UMALQURA_YEAR_START-1);
@@ -320,10 +321,10 @@ int32_t IslamicCalendar::yearStart(int32_t year) const{
 * @param year  The hijri month, 0-based
 */
 int32_t IslamicCalendar::monthStart(int32_t year, int32_t month) const {
-    if (civil == CIVIL || civil == TBLA) {
+    if (cType == CIVIL || cType == TBLA) {
         return (int32_t)uprv_ceil(29.5*month)
             + (year-1)*354 + (int32_t)ClockMath::floorDivide((3+11*year),30);
-    } else if(civil==ASTRONOMICAL){
+    } else if(cType==ASTRONOMICAL){
         return trueMonthStart(12*(year-1) + month);
     } else {
         int32_t ms = yearStart(year);
@@ -438,13 +439,13 @@ int32_t IslamicCalendar::handleGetMonthLength(int32_t extendedYear, int32_t mont
 
     int32_t length = 0;
 
-    if (civil == CIVIL || civil == TBLA ||
-        (civil == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
+    if (cType == CIVIL || cType == TBLA ||
+        (cType == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
         length = 29 + (month+1) % 2;
         if (month == DHU_AL_HIJJAH && civilLeapYear(extendedYear)) {
             length++;
         }
-    } else if(civil == ASTRONOMICAL){
+    } else if(cType == ASTRONOMICAL){
         month = 12*(extendedYear-1) + month;
         length =  trueMonthStart(month+1) - trueMonthStart(month) ;
     } else {
@@ -458,10 +459,10 @@ int32_t IslamicCalendar::handleGetMonthLength(int32_t extendedYear, int32_t mont
 * @draft ICU 2.4
 */
 int32_t IslamicCalendar::handleGetYearLength(int32_t extendedYear) const {
-    if (civil == CIVIL || civil == TBLA ||
-        (civil == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
+    if (cType == CIVIL || cType == TBLA ||
+        (cType == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
         return 354 + (civilLeapYear(extendedYear) ? 1 : 0);
-    } else if(civil == ASTRONOMICAL){
+    } else if(cType == ASTRONOMICAL){
         int32_t month = 12*(extendedYear-1);
         return (trueMonthStart(month + 12) - trueMonthStart(month));
     } else {
@@ -522,15 +523,15 @@ void IslamicCalendar::handleComputeFields(int32_t julianDay, UErrorCode &status)
     UDate startDate;
     int32_t days = julianDay - CIVIL_EPOC;
 
-    if (civil == CIVIL || civil == TBLA) {
-        if(civil == TBLA)
+    if (cType == CIVIL || cType == TBLA) {
+        if(cType == TBLA)
             days = julianDay - ASTRONOMICAL_EPOC;
         // Use the civil calendar approximation, which is just arithmetic
         year  = (int)ClockMath::floorDivide( (double)(30 * days + 10646) , 10631.0 );
         month = (int32_t)uprv_ceil((days - 29 - yearStart(year)) / 29.5 );
         month = month<11?month:11;
         startDate = monthStart(year, month);
-    } else if(civil == ASTRONOMICAL){
+    } else if(cType == ASTRONOMICAL){
         // Guess at the number of elapsed full months since the epoch
         int32_t months = (int32_t)uprv_floor((double)days / CalendarAstronomer::SYNODIC_MONTH);
 
@@ -555,7 +556,7 @@ void IslamicCalendar::handleComputeFields(int32_t julianDay, UErrorCode &status)
 
         year = months / 12 + 1;
         month = months % 12;
-    } else if(civil == UMALQURA) {
+    } else if(cType == UMALQURA) {
         int32_t umalquraStartdays = yearStart(UMALQURA_YEAR_START) ;
         if( days < umalquraStartdays){
                 //Use Civil calculation

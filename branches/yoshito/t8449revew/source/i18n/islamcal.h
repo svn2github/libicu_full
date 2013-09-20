@@ -91,7 +91,7 @@ class U_I18N_API IslamicCalendar : public Calendar {
    * Calendar type - civil or religious or um alqura
    * @internal 
    */
-  enum ECivil {
+  enum ECalculationType {
     ASTRONOMICAL,
     CIVIL,
     UMALQURA,
@@ -190,10 +190,10 @@ class U_I18N_API IslamicCalendar : public Calendar {
    * @param aLocale  The given locale.
    * @param success  Indicates the status of IslamicCalendar object construction.
    *                 Returns U_ZERO_ERROR if constructed successfully.
-   * @param beCivil  Whether the calendar should be civil (default-TRUE) or religious (FALSE)
+   * @param type     The Islamic calendar calculation type. The default value is CIVIL.
    * @internal
    */
-  IslamicCalendar(const Locale& aLocale, UErrorCode &success, ECivil beCivil = CIVIL);
+  IslamicCalendar(const Locale& aLocale, UErrorCode &success, ECalculationType type = CIVIL);
 
   /**
    * Copy Constructor
@@ -208,14 +208,13 @@ class U_I18N_API IslamicCalendar : public Calendar {
   virtual ~IslamicCalendar();
 
   /**
-   * Determines whether this object uses the fixed-cycle Islamic civil calendar
-   * or an approximation of the religious, astronomical calendar.
+   * Sets Islamic calendar calculation type used by this instance.
    *
-   * @param beCivil   <code>CIVIL</code> to use the civil calendar,
-   *                  <code>ASTRONOMICAL</code> to use the astronomical calendar.
+   * @param type    The calendar calculation type, <code>CIVIL</code> to use the civil
+   *                calendar, <code>ASTRONOMICAL</code> to use the astronomical calendar.
    * @internal
    */
-  void setCivil(ECivil beCivil, UErrorCode &status);
+  void setCalculationType(ECalculationType type, UErrorCode &status);
     
   /**
    * Returns <code>true</code> if this object is using the fixed-cycle civil
@@ -282,7 +281,7 @@ class U_I18N_API IslamicCalendar : public Calendar {
    * and <code>ASTRONOMICAL</code> if it approximates the true religious calendar using
    * astronomical calculations for the time of the new moon.
    */
-  ECivil civil;
+  ECalculationType cType;
 
   //----------------------------------------------------------------------
   // Calendar framework
