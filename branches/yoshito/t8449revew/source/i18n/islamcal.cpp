@@ -205,19 +205,19 @@ UBool IslamicCalendar::civilLeapYear(int32_t year)
 */
 int32_t IslamicCalendar::yearStart(int32_t year) const{
     if (civil == CIVIL || civil == TBLA ||
-		(civil == UMALQURA && year < UMALQURA_YEAR_START)) 
-	{
+        (civil == UMALQURA && year < UMALQURA_YEAR_START)) 
+    {
         return (year-1)*354 + ClockMath::floorDivide((3+11*year),30);
     } else if(civil==ASTRONOMICAL){
         return trueMonthStart(12*(year-1));
     } else {
-		int32_t ys = yearStart(UMALQURA_YEAR_START-1);
-		ys+= handleGetYearLength(UMALQURA_YEAR_START-1);
-		for(int i=UMALQURA_YEAR_START; i< year; i++){  
-        	ys+= handleGetYearLength(i);
+        int32_t ys = yearStart(UMALQURA_YEAR_START-1);
+        ys+= handleGetYearLength(UMALQURA_YEAR_START-1);
+        for(int i=UMALQURA_YEAR_START; i< year; i++){  
+            ys+= handleGetYearLength(i);
         }
-		return ys;
-	}
+        return ys;
+    }
 }
 
 /**
@@ -234,12 +234,12 @@ int32_t IslamicCalendar::monthStart(int32_t year, int32_t month) const {
     } else if(civil==ASTRONOMICAL){
         return trueMonthStart(12*(year-1) + month);
     } else {
-		int32_t ms = yearStart(year);
+        int32_t ms = yearStart(year);
         for(int i=0; i< month; i++){
-        	ms+= handleGetMonthLength(year, i);
+            ms+= handleGetMonthLength(year, i);
         }
-		return ms;
-	}
+        return ms;
+    }
 }
 
 /**
@@ -347,7 +347,7 @@ int32_t IslamicCalendar::handleGetMonthLength(int32_t extendedYear, int32_t mont
     int32_t length = 0;
 
     if (civil == CIVIL || civil == TBLA ||
-		(civil == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
+        (civil == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
         length = 29 + (month+1) % 2;
         if (month == DHU_AL_HIJJAH && civilLeapYear(extendedYear)) {
             length++;
@@ -357,7 +357,7 @@ int32_t IslamicCalendar::handleGetMonthLength(int32_t extendedYear, int32_t mont
         length =  trueMonthStart(month+1) - trueMonthStart(month) ;
     } else {
         length = getUmalqura_MonthLength(extendedYear - UMALQURA_YEAR_START, month);
-	}
+    }
     return length;
 }
 
@@ -367,17 +367,17 @@ int32_t IslamicCalendar::handleGetMonthLength(int32_t extendedYear, int32_t mont
 */
 int32_t IslamicCalendar::handleGetYearLength(int32_t extendedYear) const {
     if (civil == CIVIL || civil == TBLA ||
-		(civil == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
+        (civil == UMALQURA && (extendedYear<UMALQURA_YEAR_START || extendedYear>UMALQURA_YEAR_END)) ) {
         return 354 + (civilLeapYear(extendedYear) ? 1 : 0);
     } else if(civil == ASTRONOMICAL){
         int32_t month = 12*(extendedYear-1);
         return (trueMonthStart(month + 12) - trueMonthStart(month));
     } else {
-		int len = 0;
-		for(int i=0; i<12; i++)
-        	len += handleGetMonthLength(extendedYear, i);
-		return len;
-	}
+        int len = 0;
+        for(int i=0; i<12; i++)
+            len += handleGetMonthLength(extendedYear, i);
+        return len;
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -446,8 +446,8 @@ void IslamicCalendar::handleComputeFields(int32_t julianDay, UErrorCode &status)
 
         double age = moonAge(internalGetTime(), status);
         if (U_FAILURE(status)) {
-        	status = U_MEMORY_ALLOCATION_ERROR;
-        	return;
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
         }
         if ( days - startDate >= 25 && age > 0) {
             // If we're near the end of the month, assume next month and search backwards
@@ -464,46 +464,46 @@ void IslamicCalendar::handleComputeFields(int32_t julianDay, UErrorCode &status)
         year = months / 12 + 1;
         month = months % 12;
     } else if(civil == UMALQURA) {
-		int32_t umalquraStartdays = yearStart(UMALQURA_YEAR_START) ;
-		if( days < umalquraStartdays){
-        		//Use Civil calculation
-        		year  = (int)ClockMath::floorDivide( (double)(30 * days + 10646) , 10631.0 );
-				month = (int32_t)uprv_ceil((days - 29 - yearStart(year)) / 29.5 );
-				month = month<11?month:11;
-				startDate = monthStart(year, month);
-        	}else{
-        		int y =UMALQURA_YEAR_START-1, m =0;
-        		long d = 1;
-        		while(d > 0){ 
-        			y++; 
-        			d = days - yearStart(y) +1;
-        			if(d == handleGetYearLength(y)){
-        				m=11;
-        				break;
-        			}else if(d < handleGetYearLength(y) ){
-    					int monthLen = handleGetMonthLength(y, m); 
-    					m=0;
-    					while(d > monthLen){
-    						d -= monthLen;
-    						m++;
-    						monthLen = handleGetMonthLength(y, m);    						
-    					}
-    					break;
-        			}        			       			
-        		}        		
-        		year = y;
-				month = m;
-        	}
+        int32_t umalquraStartdays = yearStart(UMALQURA_YEAR_START) ;
+        if( days < umalquraStartdays){
+                //Use Civil calculation
+                year  = (int)ClockMath::floorDivide( (double)(30 * days + 10646) , 10631.0 );
+                month = (int32_t)uprv_ceil((days - 29 - yearStart(year)) / 29.5 );
+                month = month<11?month:11;
+                startDate = monthStart(year, month);
+            }else{
+                int y =UMALQURA_YEAR_START-1, m =0;
+                long d = 1;
+                while(d > 0){ 
+                    y++; 
+                    d = days - yearStart(y) +1;
+                    if(d == handleGetYearLength(y)){
+                        m=11;
+                        break;
+                    }else if(d < handleGetYearLength(y) ){
+                        int monthLen = handleGetMonthLength(y, m); 
+                        m=0;
+                        while(d > monthLen){
+                            d -= monthLen;
+                            m++;
+                            monthLen = handleGetMonthLength(y, m);
+                        }
+                        break;
+                    }                                       
+                }                
+                year = y;
+                month = m;
+            }
     } else { // invalid 'civil'
       U_ASSERT(false); // should not get here, out of range
       year=month=0;
     }
 
-	dayOfMonth = (days - monthStart(year, month)) + 1;
+    dayOfMonth = (days - monthStart(year, month)) + 1;
 
-	// Now figure out the day of the year.
-	dayOfYear = (days - monthStart(year, 0) + 1);
-	
+    // Now figure out the day of the year.
+    dayOfYear = (days - monthStart(year, 0) + 1);
+
 
     internalSet(UCAL_ERA, 0);
     internalSet(UCAL_YEAR, year);
