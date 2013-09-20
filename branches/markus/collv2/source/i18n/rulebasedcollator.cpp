@@ -906,11 +906,15 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
         }
     }
 
+    UBool numeric = settings->isNumeric();
     if(equalPrefixLength > 0) {
-        if((equalPrefixLength != leftLength && data->isUnsafeBackward(left[equalPrefixLength])) ||
-                (equalPrefixLength != rightLength && data->isUnsafeBackward(right[equalPrefixLength]))) {
+        if((equalPrefixLength != leftLength &&
+                    data->isUnsafeBackward(left[equalPrefixLength], numeric)) ||
+                (equalPrefixLength != rightLength &&
+                    data->isUnsafeBackward(right[equalPrefixLength], numeric))) {
             // Identical prefix: Back up to the start of a contraction or reordering sequence.
-            while(--equalPrefixLength > 0 && data->isUnsafeBackward(left[equalPrefixLength])) {}
+            while(--equalPrefixLength > 0 &&
+                    data->isUnsafeBackward(left[equalPrefixLength], numeric)) {}
         }
         // Notes:
         // - A longer string can compare equal to a prefix of it if only ignorables follow.
@@ -943,7 +947,6 @@ RuleBasedCollator2::doCompare(const UChar *left, int32_t leftLength,
     }
 
     if(result == CollationFastLatin::BAIL_OUT_RESULT) {
-        UBool numeric = settings->isNumeric();
         if(settings->dontCheckFCD()) {
             UTF16CollationIterator leftIter(data, numeric,
                                             left, left + equalPrefixLength, leftLimit);
@@ -1015,26 +1018,27 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
         while(--equalPrefixLength > 0 && U8_IS_TRAIL(left[equalPrefixLength])) {}
     }
 
+    UBool numeric = settings->isNumeric();
     if(equalPrefixLength > 0) {
         UBool unsafe = FALSE;
         if(equalPrefixLength != leftLength) {
             int32_t i = equalPrefixLength;
             UChar32 c;
             U8_NEXT_OR_FFFD(left, i, leftLength, c);
-            unsafe = data->isUnsafeBackward(c);
+            unsafe = data->isUnsafeBackward(c, numeric);
         }
         if(!unsafe && equalPrefixLength != rightLength) {
             int32_t i = equalPrefixLength;
             UChar32 c;
             U8_NEXT_OR_FFFD(right, i, rightLength, c);
-            unsafe = data->isUnsafeBackward(c);
+            unsafe = data->isUnsafeBackward(c, numeric);
         }
         if(unsafe) {
             // Identical prefix: Back up to the start of a contraction or reordering sequence.
             UChar32 c;
             do {
                 U8_PREV_OR_FFFD(left, 0, equalPrefixLength, c);
-            } while(equalPrefixLength > 0 && data->isUnsafeBackward(c));
+            } while(equalPrefixLength > 0 && data->isUnsafeBackward(c, numeric));
         }
         // See the notes in the UTF-16 version.
 
@@ -1065,7 +1069,6 @@ RuleBasedCollator2::doCompare(const uint8_t *left, int32_t leftLength,
     }
 
     if(result == CollationFastLatin::BAIL_OUT_RESULT) {
-        UBool numeric = settings->isNumeric();
         if(settings->dontCheckFCD()) {
             UTF8CollationIterator leftIter(data, numeric, left, equalPrefixLength, leftLength);
             UTF8CollationIterator rightIter(data, numeric, right, equalPrefixLength, rightLength);
@@ -1105,6 +1108,7 @@ UCollationResult
 RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
                             UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode) || &left == &right) { return UCOL_EQUAL; }
+    UBool numeric = settings->isNumeric();
 
     // Identical-prefix test.
     int32_t equalPrefixLength = 0;
@@ -1121,20 +1125,19 @@ RuleBasedCollator2::compare(UCharIterator &left, UCharIterator &right,
         if(rightUnit >= 0) { right.previous(&right); }
 
         if(equalPrefixLength > 0) {
-            if((leftUnit >= 0 && data->isUnsafeBackward(leftUnit)) ||
-                    (rightUnit >= 0 && data->isUnsafeBackward(rightUnit))) {
+            if((leftUnit >= 0 && data->isUnsafeBackward(leftUnit, numeric)) ||
+                    (rightUnit >= 0 && data->isUnsafeBackward(rightUnit, numeric))) {
                 // Identical prefix: Back up to the start of a contraction or reordering sequence.
                 do {
                     --equalPrefixLength;
                     leftUnit = left.previous(&left);
                     right.previous(&right);
-                } while(equalPrefixLength > 0 && data->isUnsafeBackward(leftUnit));
+                } while(equalPrefixLength > 0 && data->isUnsafeBackward(leftUnit, numeric));
             }
             // See the notes in the UTF-16 version.
         }
     }
 
-    UBool numeric = settings->isNumeric();
     UCollationResult result;
     if(settings->dontCheckFCD()) {
         UIterCollationIterator leftIter(data, numeric, left);

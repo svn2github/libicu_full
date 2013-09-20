@@ -816,7 +816,7 @@ CollationIterator::previousCE(UErrorCode &errorCode) {
     }
     UChar32 c = previousCodePoint(errorCode);
     if(c < 0) { return Collation::NO_CE; }
-    if(data->isUnsafeBackward(c)) {
+    if(data->isUnsafeBackward(c, isNumeric)) {
         return previousCEUnsafe(c, errorCode);
     }
     // Simple, safe-backwards iteration:
@@ -862,7 +862,7 @@ CollationIterator::previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
     int32_t numBackward = 1;
     while((c = previousCodePoint(errorCode)) >= 0) {
         ++numBackward;
-        if(!data->isUnsafeBackward(c)) {
+        if(!data->isUnsafeBackward(c, isNumeric)) {
             break;
         }
     }

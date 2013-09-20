@@ -1339,3 +1339,12 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 =  \u1100\u1161a\uB0B4z
 =  \uAC00a\u1102\u1162z
 =  \uAC00a\uB0B4z
+
+** test: digits are unsafe-backwards when numeric=on
+@ root
+% numeric=on
+* compare
+# If digits are not unsafe, then numeric collation sees "1"=="01" and "b">"a".
+# We need to back up before the identical prefix "1" and compare the full numbers.
+<1 11b
+<1 101a

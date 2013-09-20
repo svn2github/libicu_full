@@ -277,7 +277,7 @@ private:
             UErrorCode &errorCode);
 
     /**
-     * Returns the previous CE when data->isUnsafeBackward(c).
+     * Returns the previous CE when data->isUnsafeBackward(c, isNumeric).
      */
     int64_t previousCEUnsafe(UChar32 c, UErrorCode &errorCode);
 

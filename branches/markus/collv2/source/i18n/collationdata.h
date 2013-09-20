@@ -55,8 +55,13 @@ struct U_I18N_API CollationData : public UMemory {
         return UTRIE2_GET32_FROM_SUPP(trie, c);
     }
 
-    UBool isUnsafeBackward(UChar32 c) const {
-        return unsafeBackwardSet->contains(c);
+    UBool isDigit(UChar32 c) const {
+        return c < 0x660 ? 0x30 <= c && c <= 0x39 :
+                Collation::hasCE32Tag(getCE32(c), Collation::DIGIT_TAG);
+    }
+
+    UBool isUnsafeBackward(UChar32 c, UBool numeric) const {
+        return unsafeBackwardSet->contains(c) || (numeric && isDigit(c));
     }
 
     UBool isCompressibleLeadByte(uint32_t b) const {
