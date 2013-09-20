@@ -285,10 +285,10 @@ void CalendarTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
           }
           break;
         case 31:
-          name = "Test8449";
+          name = "TestIslamicUmAlQura";
           if(exec) {
-            logln("Test8449---"); logln("");
-            Test8449();
+            logln("TestIslamicUmAlQura---"); logln("");
+            TestIslamicUmAlQura();
           }
           break;
         case 32:
@@ -2766,7 +2766,7 @@ void CalendarTest::setAndTestWholeYear(Calendar* cal, int32_t startYear, UErrorC
 }
           
         
-void CalendarTest::Test8449() {
+void CalendarTest::TestIslamicUmAlQura() {
                
     UErrorCode status = U_ZERO_ERROR;
     Locale islamicLoc("ar_SA@calendar=islamic-umalqura"); 
