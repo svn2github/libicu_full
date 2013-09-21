@@ -102,6 +102,8 @@ struct U_I18N_API CollationSettings : public UMemory {
               reorderTable(NULL),
               reorderCodes(NULL), reorderCodesLength(0) {}
 
+    UBool operator==(const CollationSettings &other) const;
+
     void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
 
     static int32_t getStrength(int32_t options) {

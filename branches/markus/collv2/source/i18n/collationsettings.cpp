@@ -19,6 +19,17 @@
 
 U_NAMESPACE_BEGIN
 
+UBool
+CollationSettings::operator==(const CollationSettings &other) const {
+    if(options != other.options) { return FALSE; }
+    if((options & ALTERNATE_MASK) != 0 && variableTop != other.variableTop) { return FALSE; }
+    if(reorderCodesLength != other.reorderCodesLength) { return FALSE; }
+    for(int32_t i = 0; i < reorderCodesLength; ++i) {
+        if(reorderCodes[i] != other.reorderCodes[i]) { return FALSE; }
+    }
+    return TRUE;
+}
+
 void
 CollationSettings::setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }

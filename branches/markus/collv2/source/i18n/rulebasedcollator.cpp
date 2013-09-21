@@ -202,7 +202,15 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedCollator2)
 
 UBool
 RuleBasedCollator2::operator==(const Collator& other) const {
-    return FALSE;  // TODO
+    if(this == &other) { return TRUE; }
+    if(!Collator::operator==(other)) { return FALSE; }
+    const RuleBasedCollator2 &o = static_cast<const RuleBasedCollator2 &>(other);
+    return *settings == *o.settings &&
+        tailoring->rules == o.tailoring->rules;
+    // Note: We rely on the rule string equality and
+    // do not double-check for equal or equivalent mappings.
+    // The rule strings are optional in ICU resource bundles but included by default.
+    // Testing equality of collators seems unusual.
 }
 
 int32_t
