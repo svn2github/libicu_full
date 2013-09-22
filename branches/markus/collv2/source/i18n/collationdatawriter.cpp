@@ -23,10 +23,41 @@
 #include "collationfastlatin.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
+#include "rulebasedcollator.h"
 #include "uassert.h"
 #include "ucmndata.h"
 
 U_NAMESPACE_BEGIN
+
+uint8_t *
+RuleBasedCollator2::cloneRuleData(int32_t &length, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return NULL; }
+    LocalMemory<uint8_t> buffer((uint8_t *)uprv_malloc(20000));
+    if(buffer.isNull()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    length = cloneBinary(buffer.getAlias(), 20000, errorCode);
+    if(errorCode == U_BUFFER_OVERFLOW_ERROR) {
+        if(buffer.allocateInsteadAndCopy(length, 0) == NULL) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
+        }
+        errorCode = U_ZERO_ERROR;
+        length = cloneBinary(buffer.getAlias(), length, errorCode);
+    }
+    if(U_FAILURE(errorCode)) { return NULL; }
+    return buffer.orphan();
+}
+
+int32_t
+RuleBasedCollator2::cloneBinary(uint8_t *dest, int32_t capacity, UErrorCode &errorCode) const {
+    int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1];
+    return CollationDataWriter::writeTailoring(
+            tailoring->version, *tailoring,  // TODO: what version?
+            indexes, dest, capacity,
+            errorCode);
+}
 
 static const UDataInfo dataInfo = {
     sizeof(UDataInfo),

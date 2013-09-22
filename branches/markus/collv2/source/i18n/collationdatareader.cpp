@@ -26,6 +26,7 @@
 #include "collationsettings.h"
 #include "collationtailoring.h"
 #include "uassert.h"
+#include "ucmndata.h"
 #include "utrie2.h"
 
 U_NAMESPACE_BEGIN
@@ -39,12 +40,34 @@ int32_t getIndex(const int32_t *indexes, int32_t length, int32_t i) {
 }  // namespace
 
 void
-CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes,
+CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes, int32_t inLength,
                           CollationTailoring &tailoring, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
+    if(base != NULL) {
+        if(inBytes == NULL || (0 <= inLength && inLength < 24)) {
+            errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+            return;
+        }
+        const DataHeader *header = reinterpret_cast<const DataHeader *>(inBytes);
+        if(!(header->dataHeader.magic1 == 0xda && header->dataHeader.magic2 == 0x27 &&
+                isAcceptable(tailoring.version, NULL, NULL, &header->info))) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        int32_t headerLength = header->dataHeader.headerSize;
+        inBytes += headerLength;
+        if(inLength >= 0) {
+            inLength -= headerLength;
+        }
+    }
+
+    if(inBytes == NULL || (0 <= inLength && inLength < 8)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
     const int32_t *inIndexes = reinterpret_cast<const int32_t *>(inBytes);
     int32_t indexesLength = inIndexes[IX_INDEXES_LENGTH];
-    if(indexesLength < 2) {
+    if(indexesLength < 2 || (0 <= inLength && inLength < indexesLength * 4)) {
         errorCode = U_INVALID_FORMAT_ERROR;  // Not enough indexes.
         return;
     }
@@ -65,6 +88,18 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     int32_t index;  // one of the indexes[] slots
     int32_t offset;  // byte offset for the index part
     int32_t length;  // number of bytes in the index part
+
+    if(indexesLength > IX_TOTAL_SIZE) {
+        length = inIndexes[IX_TOTAL_SIZE];
+    } else if(indexesLength > IX_REORDER_CODES_OFFSET) {
+        length = inIndexes[indexesLength - 1];
+    } else {
+        length = 0;  // only indexes, and inLength was already checked for them
+    }
+    if(0 <= inLength && inLength < length) {
+        errorCode = U_INVALID_FORMAT_ERROR;
+        return;
+    }
 
     index = IX_REORDER_CODES_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);

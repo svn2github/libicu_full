@@ -120,11 +120,7 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
         t->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
     }
     if(U_FAILURE(errorCode)) { return; }
-    data = t->data;
-    settings = &t->settings;
-    t->addRef();
-    tailoring = t.orphan();
-    fastLatinOptions = getFastLatinOptions();
+    adoptTailoring(t.orphan());
 }
 
 // CollationBuilder implementation ----------------------------------------- ***

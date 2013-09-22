@@ -95,7 +95,7 @@ struct U_I18N_API CollationDataReader /* all static */ {
         IX_TOTAL_SIZE
     };
 
-    static void read(const CollationTailoring *base, const uint8_t *inBytes,
+    static void read(const CollationTailoring *base, const uint8_t *inBytes, int32_t inLength,
                      CollationTailoring &tailoring, UErrorCode &errorCode);
 
     static UBool U_CALLCONV

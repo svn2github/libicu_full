@@ -30,6 +30,7 @@
 #include "collation.h"
 #include "collationcompare.h"
 #include "collationdata.h"
+#include "collationdatareader.h"
 #include "collationfastlatin.h"
 #include "collationiterator.h"
 #include "collationkeys.h"
@@ -129,6 +130,37 @@ CollationKeyByteSink2::Resize(int32_t appendCapacity, int32_t length) {
 
 // TODO: Add UTRACE_... calls back in.
 
+RuleBasedCollator2::RuleBasedCollator2(const uint8_t *bin, int32_t length,
+                                       const RuleBasedCollator2 *base, UErrorCode &errorCode)
+        : data(NULL),
+          settings(NULL),
+          tailoring(NULL),
+          ownedSettings(NULL),
+          ownedReorderCodesCapacity(0),
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1) {
+    if(U_FAILURE(errorCode)) { return; }
+    if(bin == NULL || length <= 0 || base == NULL) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    const CollationTailoring *root = CollationRoot::getRoot(errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+    if(base->tailoring != root) {
+        errorCode = U_UNSUPPORTED_ERROR;
+        return;
+    }
+    // TODO: check version (builder, UCA, ...)
+    LocalPointer<CollationTailoring> t(new CollationTailoring(&base->tailoring->settings));
+    if(t.isNull()) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    CollationDataReader::read(base->tailoring, bin, length, *t, errorCode);
+    if(U_FAILURE(errorCode)) { return; }
+    adoptTailoring(t.orphan());
+}
+
 RuleBasedCollator2::RuleBasedCollator2(const CollationTailoring *t)
         : data(t->data),
           settings(&t->settings),
@@ -155,6 +187,16 @@ RuleBasedCollator2::~RuleBasedCollator2() {
     if(tailoring != NULL) {
         tailoring->removeRef();
     }
+}
+
+void
+RuleBasedCollator2::adoptTailoring(CollationTailoring *t) {
+    U_ASSERT(settings == NULL && data == NULL && tailoring == NULL);
+    data = t->data;
+    settings = &t->settings;
+    t->addRef();
+    tailoring = t;
+    fastLatinOptions = getFastLatinOptions();
 }
 
 Collator *
@@ -265,11 +307,7 @@ RuleBasedCollator2::getRules() const {
     return tailoring->rules;
 }
 
-// TODO: void getRules(UColRuleOption delta, UnicodeString &buffer);
-
-// TODO: uint8_t *cloneRuleData(int32_t &length, UErrorCode &status);
-
-// TODO: int32_t cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status);
+// TODO: void getRules(UColRuleOption delta, UnicodeString &buffer) const;
 
 void
 RuleBasedCollator2::getVersion(UVersionInfo version) const {

@@ -365,16 +365,19 @@ public:
      */
     static UClassID U_EXPORT2 getStaticClassID(void);
 
+#ifndef U_HIDE_DEPRECATED_API 
     /**
-     * Returns the binary format of the class's rules. The format is that of
-     * .col files.
+     * Do not use this method: The caller and the ICU library might use different heaps.
+     * Use cloneBinary() instead which writes to caller-provided memory.
+     *
+     * Returns a binary format of this collator.
      * @param length Returns the length of the data, in bytes
      * @param status the error code status.
      * @return memory, owned by the caller, of size 'length' bytes.
-     * @stable ICU 2.2
+     * @deprecated ICU 52. Use cloneBinary() instead.
      */
-    // TODO: uint8_t *cloneRuleData(int32_t &length, UErrorCode &status);
-
+    uint8_t *cloneRuleData(int32_t &length, UErrorCode &status) const;
+#endif  /* U_HIDE_DEPRECATED_API */
 
     /** Creates a binary image of a collator. This binary image can be stored and 
     *  later used to instantiate a collator using ucol_openBinary.
@@ -386,7 +389,7 @@ public:
     *  @see ucol_openBinary
     *  @stable ICU 3.4
     */
-    // TODO: int32_t cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status);
+    int32_t cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status) const;
 
     /**
      * Returns current rules. Delta defines whether full rules are returned or
@@ -395,7 +398,7 @@ public:
      * @param buffer UnicodeString to store the result rules
      * @stable ICU 2.2
      */
-    // TODO: void getRules(UColRuleOption delta, UnicodeString &buffer);
+    // TODO: void getRules(UColRuleOption delta, UnicodeString &buffer) const;
 
     /**
      * Universal attribute setter
@@ -606,6 +609,8 @@ private:
         ATTR_VARIABLE_TOP = UCOL_ATTRIBUTE_COUNT,
         ATTR_LIMIT
     };
+
+    void adoptTailoring(CollationTailoring *t);
 
     // Both lengths must be <0 or else both must be >=0.
     UCollationResult doCompare(const UChar *left, int32_t leftLength,

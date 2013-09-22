@@ -25,6 +25,7 @@
 #include "normalizer2impl.h"
 #include "rulebasedcollator.h"
 #include "ucln_in.h"
+#include "udatamem.h"
 
 U_NAMESPACE_BEGIN
 
@@ -56,7 +57,7 @@ CollationRoot::load(UErrorCode &errorCode) {
                                  CollationDataReader::isAcceptable, NULL, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     const uint8_t *inBytes = static_cast<const uint8_t *>(udata_getMemory(t->memory));
-    CollationDataReader::read(NULL, inBytes, *t, errorCode);
+    CollationDataReader::read(NULL, inBytes, udata_getLength(t->memory), *t, errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     ucln_i18n_registerCleanup(UCLN_I18N_COLLATION_ROOT, uprv_collation_root_cleanup);
     t->refCount = 1;  // The rootSingleton takes ownership.
