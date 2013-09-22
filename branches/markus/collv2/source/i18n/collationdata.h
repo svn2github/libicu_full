@@ -56,7 +56,7 @@ struct U_I18N_API CollationData : public UMemory {
     }
 
     UBool isDigit(UChar32 c) const {
-        return c < 0x660 ? 0x30 <= c && c <= 0x39 :
+        return c < 0x660 ? c <= 0x39 && 0x30 <= c :
                 Collation::hasCE32Tag(getCE32(c), Collation::DIGIT_TAG);
     }
 

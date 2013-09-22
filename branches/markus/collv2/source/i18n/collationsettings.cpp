@@ -30,6 +30,17 @@ CollationSettings::operator==(const CollationSettings &other) const {
     return TRUE;
 }
 
+int32_t
+CollationSettings::hashCode() const {
+    int32_t h = options << 8;
+    if((options & ALTERNATE_MASK) != 0) { h ^= variableTop; }
+    h ^= reorderCodesLength;
+    for(int32_t i = 0; i < reorderCodesLength; ++i) {
+        h ^= (reorderCodes[i] << i);
+    }
+    return h;
+}
+
 void
 CollationSettings::setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }

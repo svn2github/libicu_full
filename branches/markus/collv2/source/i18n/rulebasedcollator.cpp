@@ -22,6 +22,7 @@
 #include "unicode/uiter.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
+#include "unicode/usetiter.h"
 #include "unicode/utf8.h"
 #include "unicode/uversion.h"
 #include "bocsu.h"
@@ -205,17 +206,45 @@ RuleBasedCollator2::operator==(const Collator& other) const {
     if(this == &other) { return TRUE; }
     if(!Collator::operator==(other)) { return FALSE; }
     const RuleBasedCollator2 &o = static_cast<const RuleBasedCollator2 &>(other);
-    return *settings == *o.settings &&
-        tailoring->rules == o.tailoring->rules;
-    // Note: We rely on the rule string equality and
-    // do not double-check for equal or equivalent mappings.
-    // The rule strings are optional in ICU resource bundles but included by default.
+    if(*settings != *o.settings) { return FALSE; }
+    if(data == o.data) { return TRUE; }
+    UBool thisIsRoot = data->base == NULL;
+    UBool otherIsRoot = o.data->base == NULL;
+    U_ASSERT(!thisIsRoot || !otherIsRoot);  // otherwise their data pointers should be ==
+    if(thisIsRoot != otherIsRoot) { return FALSE; }
+    if((thisIsRoot || !tailoring->rules.isEmpty()) &&
+            (otherIsRoot || !o.tailoring->rules.isEmpty())) {
+        // Shortcut: If both collators have valid rule strings, then compare those.
+        if(tailoring->rules == o.tailoring->rules) { return TRUE; }
+    }
+    // The rule strings are optional in ICU resource bundles, although included by default.
+    // Different rule strings can result in the same or equivalent tailoring.
+    UErrorCode errorCode = U_ZERO_ERROR;
+    LocalPointer<UnicodeSet> thisTailored(getTailoredSet(errorCode));
+    LocalPointer<UnicodeSet> otherTailored(o.getTailoredSet(errorCode));
+    if(U_FAILURE(errorCode)) { return FALSE; }
+    if(*thisTailored != *otherTailored) { return FALSE; }
+    // For completeness, we should compare all of the mappings;
+    // or we should create a list of strings, sort it with one collator,
+    // and check if both collators compare adjacent strings the same
+    // (order & strength, down to quaternary); or similar.
     // Testing equality of collators seems unusual.
+    return TRUE;
 }
 
 int32_t
 RuleBasedCollator2::hashCode() const {
-    return 0;  // TODO
+    int32_t h = settings->hashCode();
+    if(data->base == NULL) { return h; }  // root collator
+    // Do not rely on the rule string, see comments in operator==().
+    UErrorCode errorCode = U_ZERO_ERROR;
+    LocalPointer<UnicodeSet> set(getTailoredSet(errorCode));
+    if(U_FAILURE(errorCode)) { return 0; }
+    UnicodeSetIterator iter(*set);
+    while(iter.next() && !iter.isString()) {
+        h ^= data->getCE32(iter.getCodepoint());
+    }
+    return h;
 }
 
 Locale

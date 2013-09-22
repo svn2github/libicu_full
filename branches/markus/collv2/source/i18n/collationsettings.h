@@ -104,6 +104,12 @@ struct U_I18N_API CollationSettings : public UMemory {
 
     UBool operator==(const CollationSettings &other) const;
 
+    inline UBool operator!=(const CollationSettings &other) const {
+        return !operator==(other);
+    }
+
+    int32_t hashCode() const;
+
     void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
 
     static int32_t getStrength(int32_t options) {
