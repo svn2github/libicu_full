@@ -22,6 +22,12 @@
 
 #include <stdio.h>
 
+U_NAMESPACE_BEGIN
+
+struct CollationTailoring;
+
+U_NAMESPACE_END
+
 class UCAConformanceTest: public IntlTestCollator {
 public:
   UCAConformanceTest();
@@ -42,6 +48,7 @@ private:
   void testConformance(const Collator *coll);
   void openTestFile(const char *type);
 
+  const CollationTailoring *root;
   RuleBasedCollator *UCA;  // rule-based so rules are available
   Collator *rbUCA;
   FILE *testFile;

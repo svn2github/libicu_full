@@ -874,11 +874,14 @@ static struct SResource *
 addCollation(ParseState* state, struct SResource  *result, const char *collationType,
              uint32_t startline, UErrorCode *status)
 {
+    // TODO: Use LocalPointer for result, or make caller close it when there is a failure.
     struct SResource  *member = NULL;
     struct UString    *tokenValue;
     struct UString     comment;
     enum   ETokenType  token;
     char               subtag[1024];
+    UnicodeString      rules;
+    UBool              haveRules = FALSE;
     UVersionInfo       version;
     uint32_t           line;
     GenrbData genrbdata;
@@ -892,7 +895,7 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
 
         if (token == TOK_CLOSE_BRACE)
         {
-            return result;
+            break;
         }
 
         if (token != TOK_STRING)
@@ -940,7 +943,6 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
 
             u_UCharsToChars(member->u.fString.fChars, ver, length + 1); /* +1 for copying NULL */
             u_versionFromString(version, ver);
-            // TODO: need to handle .txt files where the Version comes after the Sequence
 
             table_add(result, member, line, status);
 
@@ -957,183 +959,10 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
         }
         else if (uprv_strcmp(subtag, "Sequence") == 0)
         {
-#if UCONFIG_NO_COLLATION || UCONFIG_NO_FILE_IO
-            warning(line, "Not building collation elements because of UCONFIG_NO_COLLATION and/or UCONFIG_NO_FILE_IO, see uconfig.h");
-#else
-            if(state->makeBinaryCollation) {
-
-                /* do the collation elements */
-                int32_t     len   = 0;
-                uint8_t   *data  = NULL;
-                UCollator *coll  = NULL;
-                int32_t reorderCodes[USCRIPT_CODE_LIMIT + (UCOL_REORDER_CODE_LIMIT - UCOL_REORDER_CODE_FIRST)];
-                int32_t reorderCodeCount;
-                int32_t reorderCodeIndex;
-                UParseError parseError;
-
-                genrbdata.inputDir = state->inputdir;
-                genrbdata.outputDir = state->outputdir;
-
-                UErrorCode intStatus = U_ZERO_ERROR;
-                uprv_memset(&parseError, 0, sizeof(parseError));
-                coll = ucol_openRulesForImport(member->u.fString.fChars, member->u.fString.fLength,
-                                               UCOL_OFF, UCOL_DEFAULT_STRENGTH,&parseError, importFromDataFile, &genrbdata, &intStatus);
-
-                int32_t v1Size = 0;  // TODO: remove
-                if (U_SUCCESS(intStatus) && coll != NULL)
-                {
-                    len = ucol_cloneBinary(coll, NULL, 0, &intStatus);
-                    data = (uint8_t *)uprv_malloc(len);
-                    intStatus = U_ZERO_ERROR;
-                    len = ucol_cloneBinary(coll, data, len, &intStatus);
-                    /*data = ucol_cloneRuleData(coll, &len, &intStatus);*/
-                    v1Size = len;
-
-                    /* tailoring rules version */
-                    /* This is wrong! */
-                    /*coll->dataInfo.dataVersion[1] = version[0];*/
-                    /* Copy tailoring version. Builder version already */
-                    /* set in ucol_openRules */
-                    ((UCATableHeader *)data)->version[1] = version[0];
-                    ((UCATableHeader *)data)->version[2] = version[1];
-                    ((UCATableHeader *)data)->version[3] = version[2];
-
-                    if (U_SUCCESS(intStatus) && data != NULL)
-                    {
-                        struct SResource *collationBin = bin_open(state->bundle, "%%CollationBin", len, data, NULL, NULL, status);
-                        table_add(result, collationBin, line, status);
-                        uprv_free(data);
-
-                        reorderCodeCount = ucol_getReorderCodes(
-                            coll, reorderCodes, USCRIPT_CODE_LIMIT + (UCOL_REORDER_CODE_LIMIT - UCOL_REORDER_CODE_FIRST), &intStatus);
-                        if (U_SUCCESS(intStatus) && reorderCodeCount > 0) {
-                            struct SResource *reorderCodeRes = intvector_open(state->bundle, "%%ReorderCodes", NULL, status);
-                            for (reorderCodeIndex = 0; reorderCodeIndex < reorderCodeCount; reorderCodeIndex++) {
-                                intvector_add(reorderCodeRes, reorderCodes[reorderCodeIndex], status);
-                            }
-                            table_add(result, reorderCodeRes, line, status);
-                            v1Size += reorderCodeCount * 4
-                                + 4  // store the length
-                                + 6  // average padding of a binary
-                                + strlen("%%ReorderCodes") + 1 + 4;  // resource overhead
-                        }
-                    }
-                    else
-                    {
-                        warning(line, "could not obtain rules from collator");
-                        if(isStrict()){
-                            *status = U_INVALID_FORMAT_ERROR;
-                            return NULL;
-                        }
-                    }
-
-                    ucol_close(coll);
-                }
-                else
-                {
-                    if(intStatus == U_FILE_ACCESS_ERROR) {
-                        error(startline, "Collation could not be built- U_FILE_ACCESS_ERROR. Make sure ICU's data has been built and is loading properly.");
-                        *status = intStatus;
-                        return NULL;
-                    }
-                    char preBuffer[100], postBuffer[100];
-                    escape(parseError.preContext, preBuffer);
-                    escape(parseError.postContext, postBuffer);
-                    warning(line,
-                            "%%%%CollationBin could not be constructed from %s~%s/Sequence\n"
-                            "  check context, check that the FractionalUCA.txt UCA version "
-                            "matches the current UCD version\n"
-                            "  UErrorCode=%s  UParseError={ line=%d offset=%d pre=<%s> post=<%s> }",
-                            state->filename, collationType,
-                            u_errorName(intStatus),
-                            parseError.line,
-                            parseError.offset,
-                            preBuffer,
-                            postBuffer);
-                    if(isStrict()){
-                        *status = intStatus;
-                        return NULL;
-                    }
-                }
-                UErrorCode errorCode = U_ZERO_ERROR;
-                uprv_memset(&parseError, 0, sizeof(parseError));
-                UnicodeString rules(FALSE, member->u.fString.fChars, member->u.fString.fLength);
-                GenrbImporter importer(&genrbdata);
-                const icu::CollationTailoring *base = icu::CollationRoot::getRoot(errorCode);
-                if(U_FAILURE(errorCode)) {
-                    error(line, "failed to load root collator - %s", u_errorName(errorCode));
-                    return NULL;  // TODO: use LocalUResourceBundlePointer for result
-                }
-                icu::CollationBuilder builder(base, errorCode);
-                if(uprv_strncmp(collationType, "search", 6) != 0) {
-                    builder.enableFastLatin();  // build fast-Latin table unless search collator
-                }
-                LocalPointer<icu::CollationTailoring> t(
-                        builder.parseAndBuild(rules, &importer, &parseError, errorCode));
-                if(U_SUCCESS(errorCode)) {
-                    icu::LocalMemory<uint8_t> buffer;
-                    int32_t capacity = 100000;
-                    uint8_t *dest = buffer.allocateInsteadAndCopy(capacity);
-                    if(dest == NULL) {
-                        fprintf(stderr, "memory allocation (%ld bytes) for file contents failed\n",
-                                (long)capacity);
-                        // TODO: errorCode vs. *status ...
-                        errorCode = U_MEMORY_ALLOCATION_ERROR;
-                        return NULL;
-                    }
-                    int32_t indexes[icu::CollationDataReader::IX_TOTAL_SIZE + 1];
-                    int32_t totalSize = icu::CollationDataWriter::writeTailoring(
-                            version, *t,  // TODO: what version?
-                            indexes, dest, capacity,
-                            errorCode);
-                    if(errorCode == U_BUFFER_OVERFLOW_ERROR) {
-                        errorCode = U_ZERO_ERROR;
-                        capacity = totalSize;
-                        dest = buffer.allocateInsteadAndCopy(capacity);
-                        if(dest == NULL) {
-                            fprintf(stderr, "memory allocation (%ld bytes) for file contents failed\n",
-                                    (long)capacity);
-                            errorCode = U_MEMORY_ALLOCATION_ERROR;
-                            return NULL;
-                        }
-                        totalSize = icu::CollationDataWriter::writeTailoring(
-                                version, *t,  // TODO: what version?
-                                indexes, dest, capacity,
-                                errorCode);
-                    }
-                    if(U_FAILURE(errorCode)) {
-                        fprintf(stderr, "CollationDataWriter::writeTailoring() failed: %s\n",
-                                u_errorName(errorCode));
-                        return NULL;
-                    }
-                    // TODO: print only if verbose
-                    printf("%s~%s collation tailoring part sizes:\n", state->filename, collationType);
-                    icu::CollationInfo::printSizes(totalSize, indexes);
-                    // TODO: remove v1 vs. v2 printing
-                    printf("v1_vs_v2 %s~%s %ld %ld\n",
-                           state->filename, collationType,
-                           (long)v1Size, (long)totalSize);
-                    // TODO: write binary
-                } else {
-                    const char *reason = builder.getErrorReason();
-                    if(reason == NULL) { reason = ""; }
-                    error(line, "CollationBuilder failed at %s~%s/Sequence rule offset %ld: %s  %s",
-                            state->filename, collationType,
-                            (long)parseError.offset, u_errorName(errorCode), reason);
-                    if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
-                        // Print pre- and post-context.
-                        char preBuffer[100], postBuffer[100];
-                        escape(parseError.preContext, preBuffer);
-                        escape(parseError.postContext, postBuffer);
-                        error(line, "  error context: \"...%s\" ! \"%s...\"", preBuffer, postBuffer);
-                    }
-                }
-            } else {
-                if(isVerbose()) {
-                    printf("Not building Collation binary\n");
-                }
-            }
-#endif
+            rules.setTo(member->u.fString.fChars, member->u.fString.fLength);
+            haveRules = TRUE;
+            // Defer building the collator until we have seen
+            // all sub-elements of the collation table, including the Version.
             /* in order to achieve smaller data files, we can direct genrb */
             /* to omit collation rules */
             if(gOmitCollationRules) {
@@ -1149,9 +978,196 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
         }
     }
 
-    // Reached the end without a TOK_CLOSE_BRACE.  Should be an error.
-    *status = U_INTERNAL_PROGRAM_ERROR;
-    return NULL;
+    if (!haveRules) { return result; }
+
+#if UCONFIG_NO_COLLATION || UCONFIG_NO_FILE_IO
+    warning(line, "Not building collation elements because of UCONFIG_NO_COLLATION and/or UCONFIG_NO_FILE_IO, see uconfig.h");
+#else
+    if(state->makeBinaryCollation) {
+
+        /* do the collation elements */
+        int32_t     len   = 0;
+        uint8_t   *data  = NULL;
+        UCollator *coll  = NULL;
+        int32_t reorderCodes[USCRIPT_CODE_LIMIT + (UCOL_REORDER_CODE_LIMIT - UCOL_REORDER_CODE_FIRST)];
+        int32_t reorderCodeCount;
+        int32_t reorderCodeIndex;
+        UParseError parseError;
+
+        genrbdata.inputDir = state->inputdir;
+        genrbdata.outputDir = state->outputdir;
+
+        UErrorCode intStatus = U_ZERO_ERROR;
+        uprv_memset(&parseError, 0, sizeof(parseError));
+        coll = ucol_openRulesForImport(rules.getBuffer(), rules.length(),
+                                       UCOL_OFF, UCOL_DEFAULT_STRENGTH,&parseError, importFromDataFile, &genrbdata, &intStatus);
+
+        int32_t v1Size = 0;  // TODO: remove
+        if (U_SUCCESS(intStatus) && coll != NULL)
+        {
+            len = ucol_cloneBinary(coll, NULL, 0, &intStatus);
+            data = (uint8_t *)uprv_malloc(len);
+            intStatus = U_ZERO_ERROR;
+            len = ucol_cloneBinary(coll, data, len, &intStatus);
+            /*data = ucol_cloneRuleData(coll, &len, &intStatus);*/
+            v1Size = len;
+
+            /* tailoring rules version */
+            /* This is wrong! */
+            /*coll->dataInfo.dataVersion[1] = version[0];*/
+            /* Copy tailoring version. Builder version already */
+            /* set in ucol_openRules */
+            ((UCATableHeader *)data)->version[1] = version[0];
+            ((UCATableHeader *)data)->version[2] = version[1];
+            ((UCATableHeader *)data)->version[3] = version[2];
+
+            if (U_SUCCESS(intStatus) && data != NULL)
+            {
+                struct SResource *collationBin = bin_open(state->bundle, "%%CollationBin", len, data, NULL, NULL, status);
+                table_add(result, collationBin, line, status);
+                uprv_free(data);
+
+                reorderCodeCount = ucol_getReorderCodes(
+                    coll, reorderCodes, USCRIPT_CODE_LIMIT + (UCOL_REORDER_CODE_LIMIT - UCOL_REORDER_CODE_FIRST), &intStatus);
+                if (U_SUCCESS(intStatus) && reorderCodeCount > 0) {
+                    struct SResource *reorderCodeRes = intvector_open(state->bundle, "%%ReorderCodes", NULL, status);
+                    for (reorderCodeIndex = 0; reorderCodeIndex < reorderCodeCount; reorderCodeIndex++) {
+                        intvector_add(reorderCodeRes, reorderCodes[reorderCodeIndex], status);
+                    }
+                    table_add(result, reorderCodeRes, line, status);
+                    v1Size += reorderCodeCount * 4
+                        + 4  // store the length
+                        + 6  // average padding of a binary
+                        + strlen("%%ReorderCodes") + 1 + 4;  // resource overhead
+                }
+            }
+            else
+            {
+                warning(line, "could not obtain rules from collator");
+                if(isStrict()){
+                    *status = U_INVALID_FORMAT_ERROR;
+                    res_close(result);
+                    return NULL;
+                }
+            }
+
+            ucol_close(coll);
+        }
+        else
+        {
+            if(intStatus == U_FILE_ACCESS_ERROR) {
+                error(startline, "Collation could not be built- U_FILE_ACCESS_ERROR. Make sure ICU's data has been built and is loading properly.");
+                *status = intStatus;
+                res_close(result);
+                return NULL;
+            }
+            char preBuffer[100], postBuffer[100];
+            escape(parseError.preContext, preBuffer);
+            escape(parseError.postContext, postBuffer);
+            warning(line,
+                    "%%%%CollationBin could not be constructed from %s~%s/Sequence\n"
+                    "  check context, check that the FractionalUCA.txt UCA version "
+                    "matches the current UCD version\n"
+                    "  UErrorCode=%s  UParseError={ line=%d offset=%d pre=<%s> post=<%s> }",
+                    state->filename, collationType,
+                    u_errorName(intStatus),
+                    parseError.line,
+                    parseError.offset,
+                    preBuffer,
+                    postBuffer);
+            if(isStrict()){
+                *status = intStatus;
+                res_close(result);
+                return NULL;
+            }
+        }
+        UErrorCode errorCode = U_ZERO_ERROR;
+        uprv_memset(&parseError, 0, sizeof(parseError));
+        GenrbImporter importer(&genrbdata);
+        const icu::CollationTailoring *base = icu::CollationRoot::getRoot(errorCode);
+        if(U_FAILURE(errorCode)) {
+            error(line, "failed to load root collator - %s", u_errorName(errorCode));
+            res_close(result);
+            return NULL;  // TODO: use LocalUResourceBundlePointer for result
+        }
+        icu::CollationBuilder builder(base, errorCode);
+        if(uprv_strncmp(collationType, "search", 6) != 0) {
+            builder.enableFastLatin();  // build fast-Latin table unless search collator
+        }
+        LocalPointer<icu::CollationTailoring> t(
+                builder.parseAndBuild(rules, version, &importer, &parseError, errorCode));
+        if(U_SUCCESS(errorCode)) {
+            icu::LocalMemory<uint8_t> buffer;
+            int32_t capacity = 100000;
+            uint8_t *dest = buffer.allocateInsteadAndCopy(capacity);
+            if(dest == NULL) {
+                fprintf(stderr, "memory allocation (%ld bytes) for file contents failed\n",
+                        (long)capacity);
+                // TODO: errorCode vs. *status ...
+                errorCode = U_MEMORY_ALLOCATION_ERROR;
+                res_close(result);
+                return NULL;
+            }
+            int32_t indexes[icu::CollationDataReader::IX_TOTAL_SIZE + 1];
+            int32_t totalSize = icu::CollationDataWriter::writeTailoring(
+                    *t,
+                    indexes, dest, capacity,
+                    errorCode);
+            if(errorCode == U_BUFFER_OVERFLOW_ERROR) {
+                errorCode = U_ZERO_ERROR;
+                capacity = totalSize;
+                dest = buffer.allocateInsteadAndCopy(capacity);
+                if(dest == NULL) {
+                    fprintf(stderr, "memory allocation (%ld bytes) for file contents failed\n",
+                            (long)capacity);
+                    errorCode = U_MEMORY_ALLOCATION_ERROR;
+                    res_close(result);
+                    return NULL;
+                }
+                totalSize = icu::CollationDataWriter::writeTailoring(
+                        *t, indexes, dest, capacity,
+                        errorCode);
+            }
+            if(U_FAILURE(errorCode)) {
+                fprintf(stderr, "CollationDataWriter::writeTailoring() failed: %s\n",
+                        u_errorName(errorCode));
+                res_close(result);
+                return NULL;
+            }
+            // TODO: print only if verbose
+            printf("%s~%s collation tailoring part sizes:\n", state->filename, collationType);
+            icu::CollationInfo::printSizes(totalSize, indexes);
+            // TODO: remove v1 vs. v2 printing
+            printf("v1_vs_v2 %s~%s %ld %ld\n",
+                   state->filename, collationType,
+                   (long)v1Size, (long)totalSize);
+            // TODO: write binary
+        } else {
+            const char *reason = builder.getErrorReason();
+            if(reason == NULL) { reason = ""; }
+            error(line, "CollationBuilder failed at %s~%s/Sequence rule offset %ld: %s  %s",
+                    state->filename, collationType,
+                    (long)parseError.offset, u_errorName(errorCode), reason);
+            if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
+                // Print pre- and post-context.
+                char preBuffer[100], postBuffer[100];
+                escape(parseError.preContext, preBuffer);
+                escape(parseError.postContext, postBuffer);
+                error(line, "  error context: \"...%s\" ! \"%s...\"", preBuffer, postBuffer);
+            }
+        }
+    } else {
+        if(isVerbose()) {
+            printf("Not building Collation binary\n");
+        }
+    }
+    if (U_FAILURE(*status))
+    {
+        res_close(result);
+        return NULL;
+    }
+#endif
+    return result;
 }
 
 static struct SResource *

@@ -32,15 +32,14 @@ public:
                              int32_t indexes[], uint8_t *dest, int32_t capacity,
                              UErrorCode &errorCode);
 
-    static int32_t writeTailoring(const UVersionInfo dataVersion,
-                                  const CollationTailoring &t,
+    static int32_t writeTailoring(const CollationTailoring &t,
                                   int32_t indexes[], uint8_t *dest, int32_t capacity,
                                   UErrorCode &errorCode);
 
 private:
     CollationDataWriter();  // no constructor
 
-    static int32_t write(UBool isBase,  const UVersionInfo dataVersion,
+    static int32_t write(UBool isBase, const UVersionInfo dataVersion,
                          const CollationData &data, const CollationSettings &settings,
                          const void *rootElements, int32_t rootElementsLength,
                          int32_t indexes[], uint8_t *dest, int32_t capacity,

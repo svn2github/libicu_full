@@ -34,6 +34,7 @@
 #include "collationinfo.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
+#include "collationtailoring.h"
 #include "cstring.h"
 #include "normalizer2impl.h"
 #include "toolutil.h"
@@ -908,7 +909,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     printf("*** CLDR root collation size:   %6ld (with file header but no copyright string)\n",
            (long)totalSize + 32);  // 32 bytes = DataHeader rounded up to 16-byte boundary
 
-    uprv_memcpy(ucaDataInfo.dataVersion, UCAVersion, sizeof(UVersionInfo));
+    CollationTailoring::makeBaseVersion(UCAVersion, ucaDataInfo.dataVersion);
     UNewDataMemory *pData=udata_create(path, "icu", "ucadata2", &ucaDataInfo,
                                        withCopyright ? U_COPYRIGHT_STRING : NULL, &errorCode);
     if(U_FAILURE(errorCode)) {

@@ -54,8 +54,7 @@ int32_t
 RuleBasedCollator2::cloneBinary(uint8_t *dest, int32_t capacity, UErrorCode &errorCode) const {
     int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1];
     return CollationDataWriter::writeTailoring(
-            tailoring->version, *tailoring,  // TODO: what version?
-            indexes, dest, capacity,
+            *tailoring, indexes, dest, capacity,
             errorCode);
 }
 
@@ -85,20 +84,15 @@ CollationDataWriter::writeBase(const CollationData &data, const CollationSetting
 }
 
 int32_t
-CollationDataWriter::writeTailoring(const UVersionInfo dataVersion,  // TODO: use t.version?
-                                    const CollationTailoring &t,
+CollationDataWriter::writeTailoring(const CollationTailoring &t,
                                     int32_t indexes[], uint8_t *dest, int32_t capacity,
                                     UErrorCode &errorCode) {
-    return write(FALSE, dataVersion,
+    return write(FALSE, t.version,
                  *t.data, t.settings,
                  NULL, 0,
                  indexes, dest, capacity, errorCode);
 }
 
-// TODO: review whether the dataVersion should just be the UCA version,
-// or somehow include the UCOL_BUILDER_VERSION and/or the .res/collation version etc.;
-// maybe put the UCOL_BUILDER_VERSION into the formatVersion (last field)?
-// maybe compute the getVersion() on the fly?
 int32_t
 CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
                            const CollationData &data, const CollationSettings &settings,

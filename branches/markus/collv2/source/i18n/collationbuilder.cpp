@@ -25,6 +25,8 @@
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
 #include "unicode/utf16.h"
+#include "unicode/uversion.h"
+#include "cmemory.h"
 #include "collation.h"
 #include "collationbuilder.h"
 #include "collationdata.h"
@@ -110,7 +112,9 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
     const CollationTailoring *base = CollationRoot::getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return; }
     CollationBuilder builder(base, errorCode);
-    LocalPointer<CollationTailoring> t(builder.parseAndBuild(rules, NULL /* TODO: importer */,
+    UVersionInfo noVersion = { 0, 0, 0, 0 };
+    LocalPointer<CollationTailoring> t(builder.parseAndBuild(rules, noVersion,
+                                                             NULL /* TODO: importer */,
                                                              outParseError, errorCode));
     if(U_FAILURE(errorCode)) { return; }
     if(strength != UCOL_DEFAULT) {
@@ -159,6 +163,7 @@ CollationBuilder::~CollationBuilder() {
 
 CollationTailoring *
 CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
+                                const UVersionInfo rulesVersion,
                                 CollationRuleParser::Importer *importer,
                                 UParseError *outParseError,
                                 UErrorCode &errorCode) {
@@ -211,11 +216,9 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
         U_ASSERT(variableTop != 0);  // The rule parser should enforce valid settings.
         tailoring->settings.variableTop = variableTop;
     }
-    // TODO: remember if any settings were modified, if useful for suppressing them in writing .res file data
-    // (otherwise just detect that they are the same as the root collator settings)
     if(U_FAILURE(errorCode)) { return NULL; }
     tailoring->rules = ruleString;
-    // TODO: tailoring->version: maybe root version xor rules.hashCode() xor strength xor decomp (if not default)
+    tailoring->setVersion(base->version, rulesVersion);
     return tailoring.orphan();
 }
 

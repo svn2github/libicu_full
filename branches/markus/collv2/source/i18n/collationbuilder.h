@@ -43,6 +43,7 @@ public:
     void enableFastLatin() { fastLatinEnabled = TRUE; }
 
     CollationTailoring *parseAndBuild(const UnicodeString &ruleString,
+                                      const UVersionInfo rulesVersion,
                                       CollationRuleParser::Importer *importer,
                                       UParseError *outParseError,
                                       UErrorCode &errorCode);

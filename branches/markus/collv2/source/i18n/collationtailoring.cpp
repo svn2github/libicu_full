@@ -16,6 +16,7 @@
 #include "unicode/udata.h"
 #include "unicode/unistr.h"
 #include "unicode/uversion.h"
+#include "unicode/uvernum.h"
 #include "cmemory.h"
 #include "collationdata.h"
 #include "collationsettings.h"
@@ -83,6 +84,28 @@ CollationTailoring::ensureOwnedData(UErrorCode &errorCode) {
     }
     data = ownedData;
     return TRUE;
+}
+
+void
+CollationTailoring::makeBaseVersion(const UVersionInfo ucaVersion, UVersionInfo version) {
+    version[0] = UCOL_BUILDER_VERSION;
+    version[1] = (ucaVersion[0] << 4) + ucaVersion[1];
+    version[2] = ucaVersion[2] << 6;
+    version[3] = 0;
+}
+
+void
+CollationTailoring::setVersion(const UVersionInfo baseVersion, const UVersionInfo rulesVersion) {
+    version[0] = UCOL_BUILDER_VERSION;
+    version[1] = baseVersion[1];
+    version[2] = (baseVersion[2] & 0xc0) + ((rulesVersion[0] + (rulesVersion[0] >> 6)) & 0x3f);
+    version[3] = (rulesVersion[1] << 3) + (rulesVersion[1] >> 5) + rulesVersion[2] +
+            (rulesVersion[3] << 4) + (rulesVersion[3] >> 4);
+}
+
+int32_t
+CollationTailoring::getUCAVersion() const {
+    return ((int32_t)version[1] << 4) | (version[2] >> 6);
 }
 
 U_NAMESPACE_END

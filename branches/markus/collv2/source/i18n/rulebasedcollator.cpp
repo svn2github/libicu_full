@@ -356,9 +356,8 @@ RuleBasedCollator2::getRules(UColRuleOption delta, UnicodeString &buffer) const 
 
 void
 RuleBasedCollator2::getVersion(UVersionInfo version) const {
-    // TODO: add UCA version, builder version, ...
-    // TODO: memset to 0?
-    uprv_memcpy(version, tailoring->version, 4);
+    uprv_memcpy(version, tailoring->version, U_MAX_VERSION_LENGTH);
+    version[0] += (UCOL_RUNTIME_VERSION << 4) + (UCOL_RUNTIME_VERSION >> 4);
 }
 
 // TODO: int32_t getMaxExpansion(int32_t order) const;

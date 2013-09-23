@@ -54,6 +54,10 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             errorCode = U_INVALID_FORMAT_ERROR;
             return;
         }
+        if(base->getUCAVersion() != tailoring.getUCAVersion()) {
+            errorCode = U_COLLATOR_VERSION_MISMATCH;
+            return;
+        }
         int32_t headerLength = header->dataHeader.headerSize;
         inBytes += headerLength;
         if(inLength >= 0) {
@@ -363,7 +367,7 @@ CollationDataReader::isAcceptable(void *context,
         pInfo->dataFormat[3] == 0x6c &&
         pInfo->formatVersion[0] == 4
     ) {
-        UVersionInfo *version = reinterpret_cast<UVersionInfo *>(context);
+        UVersionInfo *version = static_cast<UVersionInfo *>(context);
         if(version != NULL) {
             uprv_memcpy(version, pInfo->dataVersion, 4);
         }

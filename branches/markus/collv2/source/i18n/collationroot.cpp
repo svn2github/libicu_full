@@ -54,7 +54,7 @@ CollationRoot::load(UErrorCode &errorCode) {
     }
     t->memory = udata_openChoice(U_ICUDATA_NAME U_TREE_SEPARATOR_STRING "coll",
                                  "icu", "ucadata2",
-                                 CollationDataReader::isAcceptable, NULL, &errorCode);
+                                 CollationDataReader::isAcceptable, t->version, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     const uint8_t *inBytes = static_cast<const uint8_t *>(udata_getMemory(t->memory));
     CollationDataReader::read(NULL, inBytes, udata_getLength(t->memory), *t, errorCode);
@@ -88,18 +88,6 @@ CollationRoot::getSettings(UErrorCode &errorCode) {
     const CollationTailoring *root = getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     return &root->settings;
-}
-
-// TODO: poor layering, move to RuleBasedCollator?
-Collator *
-CollationRoot::createCollator(UErrorCode &errorCode) {
-    const CollationTailoring *root = getRoot(errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
-    Collator *rootCollator = new RuleBasedCollator2(root);
-    if(rootCollator == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-    }
-    return rootCollator;
 }
 
 U_NAMESPACE_END

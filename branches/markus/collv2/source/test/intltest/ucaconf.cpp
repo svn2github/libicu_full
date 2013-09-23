@@ -33,7 +33,7 @@ status(U_ZERO_ERROR)
         dataerrln("Error - UCAConformanceTest: Unable to open UCA collator! - %s", u_errorName(status));
     }
 
-    CollationRoot::getData(status);
+    root = CollationRoot::getRoot(status);
     if(U_FAILURE(status)) {
         errln("ERROR - UCAConformanceTest: Unable to open CLDR root collator!");
     }
@@ -355,14 +355,14 @@ void UCAConformanceTest::TestRulesShifted(/* par */) {
 }
 
 void UCAConformanceTest::TestTable2NonIgnorable() {
-    LocalPointer<Collator> coll(CollationRoot::createCollator(status));
+    LocalPointer<Collator> coll(new RuleBasedCollator2(root));
     setCollNonIgnorable(coll.getAlias());
     openTestFile("NON_IGNORABLE");
     testConformance(coll.getAlias());
 }
 
 void UCAConformanceTest::TestTable2Shifted() {
-    LocalPointer<Collator> coll(CollationRoot::createCollator(status));
+    LocalPointer<Collator> coll(new RuleBasedCollator2(root));
     setCollShifted(coll.getAlias());
     openTestFile("SHIFTED");
     testConformance(coll.getAlias());

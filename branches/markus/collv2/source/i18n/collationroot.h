@@ -22,8 +22,6 @@ struct CollationData;
 struct CollationSettings;
 struct CollationTailoring;
 
-class Collator;
-
 /**
  * Collation root provider.
  */
@@ -32,7 +30,6 @@ public:
     static const CollationTailoring *getRoot(UErrorCode &errorCode);
     static const CollationData *getData(UErrorCode &errorCode);
     static const CollationSettings *getSettings(UErrorCode &errorCode);
-    static Collator *createCollator(UErrorCode &errorCode);
 
 private:
     static CollationTailoring *load(UErrorCode &errorCode);

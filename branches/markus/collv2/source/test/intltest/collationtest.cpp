@@ -960,9 +960,10 @@ void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     // Duplicate of RuleBasedCollator2::buildTailoring(),
     // to get more error information.
     CollationBuilder builder(CollationRoot::getRoot(errorCode), errorCode);
+    UVersionInfo noVersion = { 0, 0, 0, 0 };
     UParseError parseError;
     LocalPointer<CollationTailoring> tailoring(
-            builder.parseAndBuild(rules, NULL, &parseError, errorCode));
+            builder.parseAndBuild(rules, noVersion, NULL, &parseError, errorCode));
     if(errorCode.isFailure()) {
         errln("CollationBuilder.parseAndBuild() failed - %s", errorCode.errorName());
         const char *reason = builder.getErrorReason();
@@ -988,11 +989,13 @@ void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
 
 void CollationTest::setRootCollator(IcuTestErrorCode &errorCode) {
     if(errorCode.isFailure()) { return; }
-    Collator *newColl = CollationRoot::createCollator(errorCode);
+    const CollationTailoring *root = CollationRoot::getRoot(errorCode);
     if(errorCode.isFailure()) {
         errln("unable to create a root collator");
         return;
     }
+    Collator *newColl = new RuleBasedCollator2(root);
+    U_ASSERT(newColl != NULL);
     delete coll;
     collData = NULL;
     coll = newColl;

@@ -58,11 +58,20 @@ struct U_I18N_API CollationTailoring : public UMemory {
 
     UBool ensureOwnedData(UErrorCode &errorCode);
 
+    static void makeBaseVersion(const UVersionInfo ucaVersion, UVersionInfo version);
+    void setVersion(const UVersionInfo baseVersion, const UVersionInfo rulesVersion);
+    int32_t getUCAVersion() const;
+
     // data for sorting etc.
     const CollationData *data;  // == base data or ownedData
     CollationSettings settings;
     UnicodeString rules;
     Locale actualLocale, validLocale;  // bogus when built from rules or constructed from a binary blob
+    // UCA version u.v.w & rules version r.s.t.q:
+    // version[0]: builder version (runtime version is mixed in at runtime)
+    // version[1]: bits 7..4=u, bits 3..0=v
+    // version[2]: bits 7..6=w, bits 5..0=r
+    // version[3]= (s<<5)+(s>>3)+t+(q<<4)+(q>>4)
     UVersionInfo version;
 
     // owned objects
