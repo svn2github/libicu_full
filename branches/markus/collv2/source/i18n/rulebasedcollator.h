@@ -398,7 +398,7 @@ public:
      * @param buffer UnicodeString to store the result rules
      * @stable ICU 2.2
      */
-    // TODO: void getRules(UColRuleOption delta, UnicodeString &buffer) const;
+    void getRules(UColRuleOption delta, UnicodeString &buffer) const;
 
     /**
      * Universal attribute setter
@@ -569,6 +569,15 @@ public:
     nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
                     uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 
+#ifndef U_HIDE_INTERNAL_API
+    /**
+     * Implements ucol_getLocaleByType().
+     * Needed because the lifetime of the locale ID string must match that of the collator.
+     * getLocale() returns a copy of a Locale, with minimal lifetime in a C wrapper.
+     * @internal
+     */
+    const char *getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) const;
+
     /**
      * Implements ucol_getContractionsAndExpansions().
      * Gets this collator's sets of contraction strings and/or
@@ -593,6 +602,7 @@ public:
                         int32_t strength,
                         UColAttributeValue decompositionMode,
                         UParseError *outParseError, UErrorCode &errorCode);
+#endif  // U_HIDE_INTERNAL_API
 
 public:  // TODO: Public only for testing.
     RuleBasedCollator2(const CollationTailoring *t);

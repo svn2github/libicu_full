@@ -16,6 +16,7 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/locid.h"
 #include "unicode/unistr.h"
 #include "unicode/uversion.h"
 #include "collationsettings.h"
@@ -61,6 +62,7 @@ struct U_I18N_API CollationTailoring : public UMemory {
     const CollationData *data;  // == base data or ownedData
     CollationSettings settings;
     UnicodeString rules;
+    Locale actualLocale, validLocale;  // bogus when built from rules or constructed from a binary blob
     UVersionInfo version;
 
     // owned objects

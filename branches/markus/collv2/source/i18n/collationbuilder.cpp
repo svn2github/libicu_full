@@ -120,6 +120,8 @@ RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
         t->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
     }
     if(U_FAILURE(errorCode)) { return; }
+    t->actualLocale.setToBogus();
+    t->validLocale.setToBogus();
     adoptTailoring(t.orphan());
 }
 

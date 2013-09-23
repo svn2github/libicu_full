@@ -30,7 +30,9 @@
 U_NAMESPACE_BEGIN
 
 CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
-        : data(NULL), ownedData(NULL),
+        : data(NULL),
+          actualLocale(""), validLocale(""),
+          ownedData(NULL),
           builder(NULL), memory(NULL),
           trie(NULL), unsafeBackwardSet(NULL),
           reorderCodes(NULL),

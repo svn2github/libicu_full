@@ -18,6 +18,7 @@
 #include "unicode/localpointer.h"
 #include "unicode/locid.h"
 #include "unicode/sortkey.h"
+#include "unicode/tblcoll.h"
 #include "unicode/ucol.h"
 #include "unicode/uiter.h"
 #include "unicode/uniset.h"
@@ -39,7 +40,7 @@
 #include "collationsettings.h"
 #include "collationtailoring.h"
 #include "cstring.h"
-#include "rulebasedcollator.h"
+#include "rulebasedcollator.h"  // TODO: remove!
 #include "uassert.h"
 #include "uhash.h"
 #include "uitercollationiterator.h"
@@ -158,6 +159,8 @@ RuleBasedCollator2::RuleBasedCollator2(const uint8_t *bin, int32_t length,
     }
     CollationDataReader::read(base->tailoring, bin, length, *t, errorCode);
     if(U_FAILURE(errorCode)) { return; }
+    t->actualLocale.setToBogus();
+    t->validLocale.setToBogus();
     adoptTailoring(t.orphan());
 }
 
@@ -259,8 +262,9 @@ RuleBasedCollator2::operator==(const Collator& other) const {
         // Shortcut: If both collators have valid rule strings, then compare those.
         if(tailoring->rules == o.tailoring->rules) { return TRUE; }
     }
-    // The rule strings are optional in ICU resource bundles, although included by default.
     // Different rule strings can result in the same or equivalent tailoring.
+    // The rule strings are optional in ICU resource bundles, although included by default.
+    // cloneBinary() drops the rule string.
     UErrorCode errorCode = U_ZERO_ERROR;
     LocalPointer<UnicodeSet> thisTailored(getTailoredSet(errorCode));
     LocalPointer<UnicodeSet> otherTailored(o.getTailoredSet(errorCode));
@@ -294,12 +298,37 @@ RuleBasedCollator2::getLocale(ULocDataLocaleType type, UErrorCode& errorCode) co
     if(U_FAILURE(errorCode)) {
         return Locale::getRoot();
     }
-    if(type != ULOC_ACTUAL_LOCALE && type != ULOC_VALID_LOCALE) {
+    switch(type) {
+    case ULOC_ACTUAL_LOCALE:
+        return tailoring->actualLocale;
+    case ULOC_VALID_LOCALE:
+        return tailoring->validLocale;
+    default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return Locale::getRoot();
     }
-    // TODO: return either locale from the tailoring
-    return Locale::getRoot();
+}
+
+const char *
+RuleBasedCollator2::getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) {
+        return NULL;
+    }
+    const Locale *result;
+    switch(type) {
+    case ULOC_ACTUAL_LOCALE:
+        result = &tailoring->actualLocale;
+    case ULOC_VALID_LOCALE:
+        result = &tailoring->validLocale;
+    default:
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+    if(result->isBogus()) {
+        return NULL;  // built from rules or constructed from a binary blob
+    } else {
+        return result->getName();
+    }
 }
 
 const UnicodeString&
@@ -307,7 +336,23 @@ RuleBasedCollator2::getRules() const {
     return tailoring->rules;
 }
 
-// TODO: void getRules(UColRuleOption delta, UnicodeString &buffer) const;
+void
+RuleBasedCollator2::getRules(UColRuleOption delta, UnicodeString &buffer) const {
+    if(delta == UCOL_TAILORING_ONLY) {
+        buffer = tailoring->rules;
+        return;
+    }
+    // UCOL_FULL_RULES
+    buffer.remove();
+    // TODO: rewire to access the root bundle's UCARules string directly
+    UErrorCode errorCode = U_ZERO_ERROR;
+    LocalPointer<Collator> rootColl(Collator::createInstance(Locale::getRoot(), errorCode));
+    if(U_SUCCESS(errorCode)) {
+        RuleBasedCollator *rbc = static_cast<RuleBasedCollator *>(rootColl.getAlias());
+        rbc->getRules(UCOL_FULL_RULES, buffer);
+    }
+    buffer.append(tailoring->rules);
+}
 
 void
 RuleBasedCollator2::getVersion(UVersionInfo version) const {
