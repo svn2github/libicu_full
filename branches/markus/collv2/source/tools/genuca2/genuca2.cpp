@@ -894,7 +894,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
     }
     int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1];
     int32_t totalSize = CollationDataWriter::writeBase(
-            &builder, data, settings,
+            data, settings,
             rootElements.getBuffer(), rootElements.size(),
             indexes, dest, capacity,
             errorCode);

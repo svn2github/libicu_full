@@ -74,13 +74,12 @@ static const UDataInfo dataInfo = {
 };
 
 int32_t
-CollationDataWriter::writeBase(const CollationDataBuilder *dataBuilder,
-                               const CollationData &data, const CollationSettings &settings,
+CollationDataWriter::writeBase(const CollationData &data, const CollationSettings &settings,
                                const void *rootElements, int32_t rootElementsLength,
                                int32_t indexes[], uint8_t *dest, int32_t capacity,
                                UErrorCode &errorCode) {
     return write(TRUE, NULL,
-                 dataBuilder, data, settings,
+                 data, settings,
                  rootElements, rootElementsLength,
                  indexes, dest, capacity, errorCode);
 }
@@ -91,7 +90,6 @@ CollationDataWriter::writeTailoring(const UVersionInfo dataVersion,  // TODO: us
                                     int32_t indexes[], uint8_t *dest, int32_t capacity,
                                     UErrorCode &errorCode) {
     return write(FALSE, dataVersion,
-                 static_cast<const icu::CollationDataBuilder *>(t.builder),
                  *t.data, t.settings,
                  NULL, 0,
                  indexes, dest, capacity, errorCode);
@@ -103,7 +101,6 @@ CollationDataWriter::writeTailoring(const UVersionInfo dataVersion,  // TODO: us
 // maybe compute the getVersion() on the fly?
 int32_t
 CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
-                           const CollationDataBuilder *dataBuilder,
                            const CollationData &data, const CollationSettings &settings,
                            const void *rootElements, int32_t rootElementsLength,
                            int32_t indexes[], uint8_t *dest, int32_t capacity,
@@ -153,7 +150,7 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         // Tailored mappings, and what else?
         // Check in ascending order of optional tailoring data items.
         indexesLength = CollationDataReader::IX_CE32S_OFFSET + 2;
-        if(dataBuilder->lengthOfContexts() != 0) {
+        if(data.contextsLength != 0) {
             indexesLength = CollationDataReader::IX_CONTEXTS_OFFSET + 2;
         }
         unsafeBackwardSet.addAll(*data.unsafeBackwardSet).removeAll(*baseData->unsafeBackwardSet);
@@ -177,7 +174,7 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         uprv_memcpy(header.info.dataVersion, dataVersion, sizeof(UVersionInfo));
         headerSize = (int32_t)sizeof(header);
         U_ASSERT((headerSize & 3) == 0);  // multiple of 4 bytes
-        if(hasMappings && dataBuilder->lengthOfCEs() != 0) {
+        if(hasMappings && data.cesLength != 0) {
             // Sum of the sizes of the data items which are
             // not automatically multiples of 8 bytes and which are placed before the CEs.
             int32_t sum = headerSize + (indexesLength + settings.reorderCodesLength) * 4;
@@ -232,9 +229,10 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         UErrorCode errorCode2 = U_ZERO_ERROR;
         int32_t length;
         if(totalSize < capacity) {
-            length = dataBuilder->serializeTrie(dest + totalSize, capacity - totalSize, errorCode2);
+            length = utrie2_serialize(data.trie, dest + totalSize,
+                                      capacity - totalSize, &errorCode2);
         } else {
-            length = dataBuilder->serializeTrie(NULL, 0, errorCode2);
+            length = utrie2_serialize(data.trie, NULL, 0, &errorCode2);
         }
         if(U_FAILURE(errorCode2) && errorCode2 != U_BUFFER_OVERFLOW_ERROR) {
             errorCode = errorCode2;
@@ -248,15 +246,15 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
 
     indexes[CollationDataReader::IX_RESERVED8_OFFSET] = totalSize;
     indexes[CollationDataReader::IX_CES_OFFSET] = totalSize;
-    if(hasMappings && dataBuilder->lengthOfCEs() != 0) {
+    if(hasMappings && data.cesLength != 0) {
         U_ASSERT(((headerSize + totalSize) & 7) == 0);
-        totalSize += dataBuilder->lengthOfCEs() * 8;
+        totalSize += data.cesLength * 8;
     }
 
     indexes[CollationDataReader::IX_RESERVED10_OFFSET] = totalSize;
     indexes[CollationDataReader::IX_CE32S_OFFSET] = totalSize;
     if(hasMappings) {
-        totalSize += dataBuilder->lengthOfCE32s() * 4;
+        totalSize += data.ce32sLength * 4;
     }
 
     indexes[CollationDataReader::IX_ROOT_ELEMENTS_OFFSET] = totalSize;
@@ -264,7 +262,7 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
 
     indexes[CollationDataReader::IX_CONTEXTS_OFFSET] = totalSize;
     if(hasMappings) {
-        totalSize += dataBuilder->lengthOfContexts() * 2;
+        totalSize += data.contextsLength * 2;
     }
 
     indexes[CollationDataReader::IX_UNSAFE_BWD_OFFSET] = totalSize;
@@ -273,10 +271,10 @@ CollationDataWriter::write(UBool isBase, const UVersionInfo dataVersion,
         int32_t length;
         if(totalSize < capacity) {
             uint16_t *p = reinterpret_cast<uint16_t *>(dest + totalSize);
-            length = dataBuilder->serializeUnsafeBackwardSet(
+            length = unsafeBackwardSet.serialize(
                     p, (capacity - totalSize) / 2, errorCode2);
         } else {
-            length = dataBuilder->serializeUnsafeBackwardSet(NULL, 0, errorCode2);
+            length = unsafeBackwardSet.serialize(NULL, 0, errorCode2);
         }
         if(U_FAILURE(errorCode2) && errorCode2 != U_BUFFER_OVERFLOW_ERROR) {
             errorCode = errorCode2;

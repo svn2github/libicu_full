@@ -22,15 +22,12 @@ struct CollationData;
 struct CollationSettings;
 struct CollationTailoring;
 
-class CollationDataBuilder;
-
 /**
  * Collation-related code for tools & demos.
  */
 class U_I18N_API CollationDataWriter /* all static */ {
 public:
-    static int32_t writeBase(const CollationDataBuilder *dataBuilder,
-                             const CollationData &data, const CollationSettings &settings,
+    static int32_t writeBase(const CollationData &data, const CollationSettings &settings,
                              const void *rootElements, int32_t rootElementsLength,
                              int32_t indexes[], uint8_t *dest, int32_t capacity,
                              UErrorCode &errorCode);
@@ -44,7 +41,6 @@ private:
     CollationDataWriter();  // no constructor
 
     static int32_t write(UBool isBase,  const UVersionInfo dataVersion,
-                         const CollationDataBuilder *dataBuilder,
                          const CollationData &data, const CollationSettings &settings,
                          const void *rootElements, int32_t rootElementsLength,
                          int32_t indexes[], uint8_t *dest, int32_t capacity,

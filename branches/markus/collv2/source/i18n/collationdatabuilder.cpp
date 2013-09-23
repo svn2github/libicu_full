@@ -1106,6 +1106,11 @@ CollationDataBuilder::buildMappings(CollationData &data, UErrorCode &errorCode) 
     data.ce32s = reinterpret_cast<const uint32_t *>(ce32s.getBuffer());
     data.ces = ce64s.getBuffer();
     data.contexts = contexts.getBuffer();
+
+    data.ce32sLength = ce32s.size();
+    data.cesLength = ce64s.size();
+    data.contextsLength = contexts.length();
+
     data.base = base;
     if(jamoIndex >= 0) {
         data.jamoCE32s = data.ce32s + jamoIndex;
@@ -1638,24 +1643,6 @@ CollationDataBuilder::getCE32FromBaseContraction(const UnicodeString &s,
     }
 
     return ce32;
-}
-
-int32_t
-CollationDataBuilder::serializeTrie(void *data, int32_t capacity, UErrorCode &errorCode) const {
-    return utrie2_serialize(trie, data, capacity, &errorCode);
-}
-
-int32_t
-CollationDataBuilder::serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
-                                                 UErrorCode &errorCode) const {
-    return unsafeBackwardSet.serialize(data, capacity, errorCode);
-}
-
-UTrie2 *
-CollationDataBuilder::orphanTrie() {
-    UTrie2 *orphan = trie;
-    trie = NULL;
-    return orphan;
 }
 
 U_NAMESPACE_END

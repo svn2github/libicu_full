@@ -41,6 +41,7 @@ struct U_I18N_API CollationData : public UMemory {
               jamoCE32s(NULL),
               nfcImpl(nfc),
               numericPrimary(0x12000000),
+              ce32sLength(0), cesLength(0), contextsLength(0),
               compressibleBytes(NULL),
               unsafeBackwardSet(NULL),
               fastLatinTable(NULL), fastLatinTableLength(0),
@@ -146,6 +147,11 @@ struct U_I18N_API CollationData : public UMemory {
     const Normalizer2Impl &nfcImpl;
     /** The single-byte primary weight (xx000000) for numeric collation. */
     uint32_t numericPrimary;
+
+    int32_t ce32sLength;
+    int32_t cesLength;
+    int32_t contextsLength;
+
     /** 256 flags for which primary-weight lead bytes are compressible. */
     const UBool *compressibleBytes;
     /**

@@ -163,15 +163,6 @@ public:
     int32_t getCEs(const UnicodeString &prefix, const UnicodeString &s,
                    int64_t ces[], int32_t cesLength) const;
 
-    int32_t lengthOfCE32s() const { return ce32s.size(); }
-    int32_t lengthOfCEs() const { return ce64s.size(); }
-    int32_t lengthOfContexts() const { return contexts.length(); }
-
-    int32_t serializeTrie(void *data, int32_t capacity, UErrorCode &errorCode) const;
-    int32_t serializeUnsafeBackwardSet(uint16_t *data, int32_t capacity,
-                                       UErrorCode &errorCode) const;
-    UTrie2 *orphanTrie();
-
 protected:
     friend class CopyHelper;
 

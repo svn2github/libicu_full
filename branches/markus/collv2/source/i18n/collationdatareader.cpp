@@ -155,6 +155,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             return;
         }
         data.ces = reinterpret_cast<const int64_t *>(inBytes + offset);
+        data.cesLength = length / 8;
     } else {
         data.ces = NULL;
     }
@@ -168,6 +169,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             return;
         }
         data.ce32s = reinterpret_cast<const uint32_t *>(inBytes + offset);
+        data.ce32sLength = length / 4;
     } else {
         data.ce32s = NULL;
     }
@@ -223,6 +225,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             return;
         }
         data.contexts = reinterpret_cast<const UChar *>(inBytes + offset);
+        data.contextsLength = length / 2;
     } else {
         data.contexts = NULL;
     }
