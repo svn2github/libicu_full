@@ -407,7 +407,7 @@ ucol_openRules( const UChar        *rules,
  * Open a collator defined by a short form string.
  * The structure and the syntax of the string is defined in the "Naming collators"
  * section of the users guide: 
- * http://icu-project.org/userguide/Collate_Concepts.html#Naming_Collators
+ * http://userguide.icu-project.org/collation/concepts#TOC-Collator-naming-scheme
  * Attributes are overriden by the subsequent attributes. So, for "S2_S3", final
  * strength will be 3. 3066bis locale overrides individual locale parts.
  * The call to this function is equivalent to a call to ucol_open, followed by a 
@@ -902,7 +902,7 @@ ucol_getRules(    const    UCollator    *coll,
  *  This string will be normalized.
  *  The structure and the syntax of the string is defined in the "Naming collators"
  *  section of the users guide: 
- *  http://icu-project.org/userguide/Collate_Concepts.html#Naming_Collators
+ *  http://userguide.icu-project.org/collation/concepts#TOC-Collator-naming-scheme
  *  This API supports preflighting.
  *  @param coll a collator
  *  @param locale a locale that will appear as a collators locale in the resulting

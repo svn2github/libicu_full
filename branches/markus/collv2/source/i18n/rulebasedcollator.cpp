@@ -21,12 +21,14 @@
 #include "unicode/tblcoll.h"
 #include "unicode/ucol.h"
 #include "unicode/uiter.h"
+#include "unicode/uloc.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
 #include "unicode/utf8.h"
 #include "unicode/uversion.h"
 #include "bocsu.h"
+#include "charstr.h"
 #include "cmemory.h"
 #include "collation.h"
 #include "collationcompare.h"
@@ -44,8 +46,11 @@
 #include "uassert.h"
 #include "uhash.h"
 #include "uitercollationiterator.h"
+#include "ustr_imp.h"
 #include "utf16collationiterator.h"
 #include "utf8collationiterator.h"
+
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 U_NAMESPACE_BEGIN
 
@@ -151,7 +156,6 @@ RuleBasedCollator2::RuleBasedCollator2(const uint8_t *bin, int32_t length,
         errorCode = U_UNSUPPORTED_ERROR;
         return;
     }
-    // TODO: check version (builder, UCA, ...)
     LocalPointer<CollationTailoring> t(new CollationTailoring(&base->tailoring->settings));
     if(t.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
@@ -359,8 +363,6 @@ RuleBasedCollator2::getVersion(UVersionInfo version) const {
     uprv_memcpy(version, tailoring->version, U_MAX_VERSION_LENGTH);
     version[0] += (UCOL_RUNTIME_VERSION << 4) + (UCOL_RUNTIME_VERSION >> 4);
 }
-
-// TODO: int32_t getMaxExpansion(int32_t order) const;
 
 UnicodeSet *
 RuleBasedCollator2::getTailoredSet(UErrorCode &errorCode) const {
@@ -1500,6 +1502,102 @@ RuleBasedCollator2::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
 
 namespace {
 
+void appendSubtag(CharString &s, char letter, const char *subtag, int32_t length,
+                  UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode) || length == 0) { return; }
+    if(!s.isEmpty()) {
+        s.append('_', errorCode);
+    }
+    s.append(letter, errorCode);
+    for(int32_t i = 0; i < length; ++i) {
+        s.append(uprv_toupper(subtag[i]), errorCode);
+    }
+}
+
+void appendAttribute(CharString &s, char letter, UColAttributeValue value,
+                     UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return; }
+    if(!s.isEmpty()) {
+        s.append('_', errorCode);
+    }
+    static const char *valueChars = "1234...........IXO..SN..LU......";
+    s.append(letter, errorCode);
+    s.append(valueChars[value], errorCode);
+}
+
+}  // namespace
+
+int32_t
+RuleBasedCollator2::internalGetShortDefinitionString(const char *locale,
+                                                     char *buffer, int32_t capacity,
+                                                     UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(buffer == NULL ? capacity != 0 : capacity < 0) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
+    }
+    if(locale == NULL) {
+        locale = getLocaleID(ULOC_VALID_LOCALE, errorCode);
+    }
+
+    char resultLocale[ULOC_FULLNAME_CAPACITY + 1];
+    int32_t length = ucol_getFunctionalEquivalent(resultLocale, ULOC_FULLNAME_CAPACITY,
+                                                  "collation", locale,
+                                                  NULL, &errorCode);
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(length == 0) {
+        uprv_strcpy(resultLocale, "root");
+    } else {
+        resultLocale[length] = 0;
+    }
+
+    // Append items in alphabetic order of their short definition letters.
+    CharString result;
+    char subtag[ULOC_KEYWORD_AND_VALUES_CAPACITY];
+
+    if(attributeHasBeenSetExplicitly(UCOL_ALTERNATE_HANDLING)) {
+        appendAttribute(result, 'A', getAttribute(UCOL_ALTERNATE_HANDLING, errorCode), errorCode);
+    }
+    // TODO: ATTR_VARIABLE_TOP, or maybe drop it because 'B' was broken?? remove enum Attributes?
+    if(attributeHasBeenSetExplicitly(UCOL_CASE_FIRST)) {
+        appendAttribute(result, 'C', getAttribute(UCOL_CASE_FIRST, errorCode), errorCode);
+    }
+    if(attributeHasBeenSetExplicitly(UCOL_NUMERIC_COLLATION)) {
+        appendAttribute(result, 'D', getAttribute(UCOL_NUMERIC_COLLATION, errorCode), errorCode);
+    }
+    if(attributeHasBeenSetExplicitly(UCOL_CASE_LEVEL)) {
+        appendAttribute(result, 'E', getAttribute(UCOL_CASE_LEVEL, errorCode), errorCode);
+    }
+    if(attributeHasBeenSetExplicitly(UCOL_FRENCH_COLLATION)) {
+        appendAttribute(result, 'F', getAttribute(UCOL_FRENCH_COLLATION, errorCode), errorCode);
+    }
+    // Note: UCOL_HIRAGANA_QUATERNARY_MODE is deprecated and never changes away from default.
+    length = uloc_getKeywordValue(resultLocale, "collation", subtag, LENGTHOF(subtag), &errorCode);
+    appendSubtag(result, 'K', subtag, length, errorCode);
+    length = uloc_getLanguage(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    appendSubtag(result, 'L', subtag, length, errorCode);
+    if(attributeHasBeenSetExplicitly(UCOL_NORMALIZATION_MODE)) {
+        appendAttribute(result, 'N', getAttribute(UCOL_NORMALIZATION_MODE, errorCode), errorCode);
+    }
+    length = uloc_getCountry(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    appendSubtag(result, 'R', subtag, length, errorCode);
+    if(attributeHasBeenSetExplicitly(UCOL_STRENGTH)) {
+        appendAttribute(result, 'S', getAttribute(UCOL_STRENGTH, errorCode), errorCode);
+    }
+    length = uloc_getVariant(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    appendSubtag(result, 'V', subtag, length, errorCode);
+    length = uloc_getScript(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    appendSubtag(result, 'Z', subtag, length, errorCode);
+
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(result.length() <= capacity) {
+        uprv_memcpy(buffer, result.data(), result.length());
+    }
+    return u_terminateChars(buffer, capacity, result.length(), &errorCode);
+}
+
+namespace {
+
 /** Implements mutex.h InstantiatorFn(). */
 void *computeMaxExpansions(const void *context, UErrorCode &errorCode) {
     return CollationElementIterator::computeMaxExpansions(
@@ -1556,11 +1654,6 @@ RuleBasedCollator2::getMaxExpansion(int32_t order) const {
         getInstance(data, errorCode);
     return CollationElementIterator::getMaxExpansion(maxExpansions, order);
 }
-
-// TODO: If we generate a Latin-1 sort key table like in v1,
-// then make sure to exclude contractions that contain non-Latin-1 characters.
-// (For example, decomposed versions of Latin-1 composites.)
-// (Unless there is special, clever contraction-matching code that can consume them.)
 
 U_NAMESPACE_END
 

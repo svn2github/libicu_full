@@ -561,6 +561,34 @@ public:
                                          const char *right, int32_t rightLength,
                                          UErrorCode &errorCode) const;
 
+    /** Get the short definition string for a collator. This internal API harvests the collator's
+     *  locale and the attribute set and produces a string that can be used for opening 
+     *  a collator with the same properties using the ucol_openFromShortString API.
+     *  This string will be normalized.
+     *  The structure and the syntax of the string is defined in the "Naming collators"
+     *  section of the users guide: 
+     *  http://userguide.icu-project.org/collation/concepts#TOC-Collator-naming-scheme
+     *  This function supports preflighting.
+     * 
+     *  This is internal, and intended to be used with delegate converters.
+     *
+     *  @param locale a locale that will appear as a collators locale in the resulting
+     *                short string definition. If NULL, the locale will be harvested 
+     *                from the collator.
+     *  @param buffer space to hold the resulting string
+     *  @param capacity capacity of the buffer
+     *  @param status for returning errors. All the preflighting errors are featured
+     *  @return length of the resulting string
+     *  @see ucol_openFromShortString
+     *  @see ucol_normalizeShortDefinitionString
+     *  @see ucol_getShortDefinitionString
+     *  @internal
+     */
+    virtual int32_t internalGetShortDefinitionString(const char *locale,
+                                                     char *buffer,
+                                                     int32_t capacity,
+                                                     UErrorCode &status) const;
+
     /**
      * Implements ucol_nextSortKeyPart().
      * @internal
@@ -645,7 +673,7 @@ private:
     void setAttributeExplicitly(int32_t attribute) {
         explicitlySetAttributes |= (uint32_t)1 << attribute;
     }
-    UBool attributeHasBeenSetExplicitly(int32_t attribute) {
+    UBool attributeHasBeenSetExplicitly(int32_t attribute) const {
         // assert(0 <= attribute < ATTR_LIMIT);
         return (UBool)((explicitlySetAttributes & ((uint32_t)1 << attribute)) != 0);
     }

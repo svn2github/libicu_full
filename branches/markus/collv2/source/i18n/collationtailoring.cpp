@@ -89,7 +89,7 @@ CollationTailoring::ensureOwnedData(UErrorCode &errorCode) {
 void
 CollationTailoring::makeBaseVersion(const UVersionInfo ucaVersion, UVersionInfo version) {
     version[0] = UCOL_BUILDER_VERSION;
-    version[1] = (ucaVersion[0] << 4) + ucaVersion[1];
+    version[1] = (ucaVersion[0] << 3) + ucaVersion[1];
     version[2] = ucaVersion[2] << 6;
     version[3] = 0;
 }
