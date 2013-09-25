@@ -1598,34 +1598,21 @@ RuleBasedCollator2::internalGetShortDefinitionString(const char *locale,
 
 namespace {
 
-/** Implements mutex.h InstantiatorFn(). */
-void *computeMaxExpansions(const void *context, UErrorCode &errorCode) {
-    return CollationElementIterator::computeMaxExpansions(
-            static_cast<const CollationData *>(context),
-            errorCode);
+void computeMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode) {
+    t->maxExpansions = CollationElementIterator::computeMaxExpansions(t->data, errorCode);
 }
 
-class MaxExpansionsWrapper {
-public:
-    MaxExpansionsWrapper(SimpleSingleton &s) : singleton(s) {}
-    UHashtable *getInstance(const void *context, UErrorCode &errorCode) {
-        void *duplicate;
-        UHashtable *instance = static_cast<UHashtable *>(
-            singleton.getInstance(computeMaxExpansions, context, duplicate, errorCode));
-        uhash_close(static_cast<UHashtable *>(duplicate));
-        return instance;
-    }
-private:
-    SimpleSingleton &singleton;
-};
+UBool initMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode) {
+    umtx_initOnce(t->maxExpansionsInitOnce, computeMaxExpansions, t, errorCode);
+    return U_SUCCESS(errorCode);
+}
 
 }  // namespace
 
 CollationElementIterator *
 RuleBasedCollator2::createCollationElementIterator(const UnicodeString& source) const {
     UErrorCode errorCode = U_ZERO_ERROR;
-    MaxExpansionsWrapper(tailoring->maxExpansionsSingleton).getInstance(data, errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
+    if(!initMaxExpansions(tailoring, errorCode)) { return NULL; }
     CollationElementIterator *cei = new CollationElementIterator(source, this, errorCode);
     if(U_FAILURE(errorCode)) {
         delete cei;
@@ -1637,8 +1624,7 @@ RuleBasedCollator2::createCollationElementIterator(const UnicodeString& source) 
 CollationElementIterator *
 RuleBasedCollator2::createCollationElementIterator(const CharacterIterator& source) const {
     UErrorCode errorCode = U_ZERO_ERROR;
-    MaxExpansionsWrapper(tailoring->maxExpansionsSingleton).getInstance(data, errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
+    if(!initMaxExpansions(tailoring, errorCode)) { return NULL; }
     CollationElementIterator *cei = new CollationElementIterator(source, this, errorCode);
     if(U_FAILURE(errorCode)) {
         delete cei;
@@ -1650,9 +1636,8 @@ RuleBasedCollator2::createCollationElementIterator(const CharacterIterator& sour
 int32_t
 RuleBasedCollator2::getMaxExpansion(int32_t order) const {
     UErrorCode errorCode = U_ZERO_ERROR;
-    UHashtable *maxExpansions = MaxExpansionsWrapper(tailoring->maxExpansionsSingleton).
-        getInstance(data, errorCode);
-    return CollationElementIterator::getMaxExpansion(maxExpansions, order);
+    (void)initMaxExpansions(tailoring, errorCode);
+    return CollationElementIterator::getMaxExpansion(tailoring->maxExpansions, order);
 }
 
 U_NAMESPACE_END

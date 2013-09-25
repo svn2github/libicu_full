@@ -20,7 +20,8 @@
 #include "unicode/unistr.h"
 #include "unicode/uversion.h"
 #include "collationsettings.h"
-#include "mutex.h"
+#include "uhash.h"
+#include "umutex.h"
 
 struct UTrie2;
 
@@ -82,9 +83,10 @@ struct U_I18N_API CollationTailoring : public UMemory {
     UnicodeSet *unsafeBackwardSet;
     int32_t *reorderCodes;
     uint8_t reorderTable[256];
-    mutable SimpleSingleton maxExpansionsSingleton;
+    mutable UHashtable *maxExpansions;
+    mutable UInitOnce maxExpansionsInitOnce;
 
-    mutable int32_t refCount;
+    mutable u_atomic_int32_t refCount;
 };
 
 U_NAMESPACE_END

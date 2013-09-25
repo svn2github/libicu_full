@@ -37,6 +37,7 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
           builder(NULL), memory(NULL),
           trie(NULL), unsafeBackwardSet(NULL),
           reorderCodes(NULL),
+          maxExpansions(NULL), maxExpansionsInitOnce(U_INITONCE_INITIALIZER),
           refCount(0) {
     if(baseSettings != NULL) {
         settings.options = baseSettings->options;
@@ -45,7 +46,6 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
         U_ASSERT(baseSettings->reorderTable == NULL);
     }
     version[0] = version[1] = version[2] = version[3] = 0;
-    maxExpansionsSingleton.fInstance = NULL;
 }
 
 CollationTailoring::~CollationTailoring() {
@@ -55,7 +55,8 @@ CollationTailoring::~CollationTailoring() {
     utrie2_close(trie);
     delete unsafeBackwardSet;
     uprv_free(reorderCodes);
-    uhash_close(static_cast<UHashtable *>(maxExpansionsSingleton.fInstance));
+    uhash_close(maxExpansions);
+    maxExpansionsInitOnce.reset();
 }
 
 void

@@ -21,59 +21,57 @@
 #include "collationroot.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
-#include "mutex.h"
 #include "normalizer2impl.h"
 #include "rulebasedcollator.h"
 #include "ucln_in.h"
 #include "udatamem.h"
+#include "umutex.h"
 
 U_NAMESPACE_BEGIN
 
-U_CDECL_BEGIN
-static UBool U_CALLCONV uprv_collation_root_cleanup();
-U_CDECL_END
+namespace {
 
-STATIC_TRI_STATE_SINGLETON(rootSingleton);
+static CollationTailoring *rootSingleton = NULL;
+static UInitOnce initOnce = U_INITONCE_INITIALIZER;
+
+}  // namespace
 
 U_CDECL_BEGIN
 
 static UBool U_CALLCONV uprv_collation_root_cleanup() {
-    TriStateSingletonWrapper<CollationTailoring>(rootSingleton).deleteInstance();
+    delete rootSingleton;
+    rootSingleton = NULL;
+    initOnce.reset();
     return TRUE;
 }
 
 U_CDECL_END
 
-CollationTailoring *
+void
 CollationRoot::load(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return NULL; }
+    if(U_FAILURE(errorCode)) { return; }
     LocalPointer<CollationTailoring> t(new CollationTailoring(NULL));
     if(t.isNull()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
+        return;
     }
     t->memory = udata_openChoice(U_ICUDATA_NAME U_TREE_SEPARATOR_STRING "coll",
                                  "icu", "ucadata2",
                                  CollationDataReader::isAcceptable, t->version, &errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
+    if(U_FAILURE(errorCode)) { return; }
     const uint8_t *inBytes = static_cast<const uint8_t *>(udata_getMemory(t->memory));
     CollationDataReader::read(NULL, inBytes, udata_getLength(t->memory), *t, errorCode);
-    if(U_FAILURE(errorCode)) { return NULL; }
+    if(U_FAILURE(errorCode)) { return; }
     ucln_i18n_registerCleanup(UCLN_I18N_COLLATION_ROOT, uprv_collation_root_cleanup);
     t->refCount = 1;  // The rootSingleton takes ownership.
-    return t.orphan();
-}
-
-void *
-CollationRoot::createInstance(const void * /*context*/, UErrorCode &errorCode) {
-    return CollationRoot::load(errorCode);
+    rootSingleton = t.orphan();
 }
 
 const CollationTailoring *
 CollationRoot::getRoot(UErrorCode &errorCode) {
+    umtx_initOnce(initOnce, CollationRoot::load, errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
-    return TriStateSingletonWrapper<CollationTailoring>(rootSingleton).
-        getInstance(createInstance, NULL, errorCode);
+    return rootSingleton;
 }
 
 const CollationData *

@@ -310,8 +310,14 @@ private:
     */
     CollationElementIterator(const UnicodeString& sourceText,
         const RuleBasedCollator* order, UErrorCode& status);
-    // TODO: The constructors should take settings & data & maxExpansions, not a collator.
-    // http://bugs.icu-project.org/trac/ticket/10251
+    // Note: The constructors should take settings & tailoring, not a collator,
+    // to avoid circular dependencies.
+    // However, for operator==() we would need to be able to compare tailoring data for equality
+    // without making CollationData or CollationTailoring depend on TailoredSet.
+    // (See the implementation of RuleBasedCollator::operator==().)
+    // That might require creating an intermediate class that would be used
+    // by both CollationElementIterator and RuleBasedCollator
+    // but only contain the part of RBC== related to data and rules.
     CollationElementIterator(const UnicodeString& sourceText,
         const RuleBasedCollator2* order, UErrorCode& status);
 

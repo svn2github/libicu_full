@@ -722,9 +722,7 @@ CollationElementIterator::getMaxExpansion(int32_t order) const {
     if (m_data_ != NULL) {
         return ucol_getMaxExpansion(m_data_, (uint32_t)order);
     }
-    return getMaxExpansion(
-        static_cast<const UHashtable *>(rbc_->tailoring->maxExpansionsSingleton.fInstance),
-        order);
+    return getMaxExpansion(rbc_->tailoring->maxExpansions, order);
 }
 
 int32_t

@@ -32,8 +32,7 @@ public:
     static const CollationSettings *getSettings(UErrorCode &errorCode);
 
 private:
-    static CollationTailoring *load(UErrorCode &errorCode);
-    static void *createInstance(const void *context, UErrorCode &errorCode);
+    static void load(UErrorCode &errorCode);
 };
 
 U_NAMESPACE_END
