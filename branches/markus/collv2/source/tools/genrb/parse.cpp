@@ -1009,7 +1009,6 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
             data = (uint8_t *)uprv_malloc(len);
             intStatus = U_ZERO_ERROR;
             len = ucol_cloneBinary(coll, data, len, &intStatus);
-            /*data = ucol_cloneRuleData(coll, &len, &intStatus);*/
             v1Size = len;
 
             /* tailoring rules version */
