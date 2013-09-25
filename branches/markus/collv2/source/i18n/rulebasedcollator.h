@@ -101,7 +101,7 @@ public:
     *  cloneBinary. Binary image used in instantiation of the 
     *  collator remains owned by the user and should stay around for 
     *  the lifetime of the collator. The API also takes a base collator
-    *  which usualy should be the root collator.
+    *  which usually should be the root collator.
     *  @param bin binary image owned by the user and required through the
     *             lifetime of the collator
     *  @param length size of the image. If negative, the API will try to
@@ -270,7 +270,7 @@ public:
     * @param status the error code status.
     * @return the transformed key.
     * @see CollationKey
-    * @deprecated ICU 2.8 Use getSortKey(...) instead
+    * @stable ICU 2.0
     */
     virtual CollationKey& getCollationKey(const UnicodeString& source,
                                           CollationKey& key,
@@ -287,7 +287,7 @@ public:
     * @param status the error code status.
     * @return the transformed key.
     * @see CollationKey
-    * @deprecated ICU 2.8 Use getSortKey(...) instead
+    * @stable ICU 2.0
     */
     virtual CollationKey& getCollationKey(const UChar *source,
                                           int32_t sourceLength,
@@ -314,9 +314,8 @@ public:
     virtual Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
 
     /**
-     * Gets the table-based rules for the collation object.
-     * @return returns the collation rules that the table collation object was
-     *         created from.
+     * Gets the tailoring rules for this collator.
+     * @return the collation tailoring from which this collator was created
      * @stable ICU 2.0
      */
     const UnicodeString& getRules() const;
@@ -328,17 +327,25 @@ public:
      */
     virtual void getVersion(UVersionInfo info) const;
 
+#ifndef U_HIDE_DEPRECATED_API 
     /**
-     * Return the maximum length of any expansion sequences that end with the
+     * Returns the maximum length of any expansion sequences that end with the
      * specified comparison order.
-     * @param order a collation order returned by previous or next.
+     *
+     * This is specific to the kind of collation element values and sequences
+     * returned by the CollationElementIterator.
+     * Call CollationElementIterator::getMaxExpansion() instead.
+     *
+     * @param order a collation order returned by CollationElementIterator::previous
+     *              or CollationElementIterator::next.
      * @return maximum size of the expansion sequences ending with the collation
-     *         element or 1 if collation element does not occur at the end of
+     *         element, or 1 if the collation element does not occur at the end of
      *         any expansion sequence
      * @see CollationElementIterator#getMaxExpansion
-     * @stable ICU 2.0
+     * @deprecated ICU 51 Use CollationElementIterator::getMaxExpansion() instead.
      */
     int32_t getMaxExpansion(int32_t order) const;
+#endif  /* U_HIDE_DEPRECATED_API */
 
     /**
      * Returns a unique class ID POLYMORPHICALLY. Pure virtual override. This
@@ -394,9 +401,13 @@ public:
     /**
      * Returns current rules. Delta defines whether full rules are returned or
      * just the tailoring.
+     *
+     * getRules(void) should normally be used instead.
+     * See http://userguide.icu-project.org/collation/customization#TOC-Building-on-Existing-Locales
      * @param delta one of UCOL_TAILORING_ONLY, UCOL_FULL_RULES.
      * @param buffer UnicodeString to store the result rules
      * @stable ICU 2.2
+     * @see UCOL_FULL_RULES
      */
     void getRules(UColRuleOption delta, UnicodeString &buffer) const;
 
@@ -510,11 +521,11 @@ public:
      * @see ucol_setReorderCodes
      * @see Collator#getEquivalentReorderCodes
      * @see Collator#setReorderCodes
-     * @draft ICU 4.8 
+     * @stable ICU 4.8 
      */
      virtual int32_t getReorderCodes(int32_t *dest,
-                                    int32_t destCapacity,
-                                    UErrorCode& status) const;
+                                     int32_t destCapacity,
+                                     UErrorCode& status) const;
 
     /**
      * Sets the ordering of scripts for this collator.
@@ -524,13 +535,12 @@ public:
      * @param status error code
      * @see Collator#getReorderCodes
      * @see Collator#getEquivalentReorderCodes
-     * @draft ICU 4.8 
+     * @stable ICU 4.8 
      */
      virtual void setReorderCodes(const int32_t* reorderCodes,
-                                int32_t reorderCodesLength,
-                                UErrorCode& status);
+                                  int32_t reorderCodesLength,
+                                  UErrorCode& status) ;
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Retrieves the reorder codes that are grouped with the given reorder code. Some reorder
      * codes will be grouped and must reorder together.
@@ -545,13 +555,12 @@ public:
      * @see ucol_setReorderCodes
      * @see Collator#getReorderCodes
      * @see Collator#setReorderCodes
-     * @draft ICU 4.8 
+     * @stable ICU 4.8 
      */
     static int32_t U_EXPORT2 getEquivalentReorderCodes(
             int32_t reorderCode,
             int32_t* dest, int32_t destCapacity,
             UErrorCode& status);
-#endif  /* U_HIDE_DRAFT_API */
 
     /**
      * Implements ucol_strcollUTF8().

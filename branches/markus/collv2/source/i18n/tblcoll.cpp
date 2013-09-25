@@ -283,7 +283,7 @@ const UnicodeString& RuleBasedCollator::getRules() const
     return urulestring;
 }
 
-void RuleBasedCollator::getRules(UColRuleOption delta, UnicodeString &buffer)
+void RuleBasedCollator::getRules(UColRuleOption delta, UnicodeString &buffer) const
 {
     int32_t rulesize = ucol_getRulesEx(ucollator, delta, NULL, -1);
 
@@ -455,7 +455,7 @@ int32_t RuleBasedCollator::getMaxExpansion(int32_t order) const
 }
 
 uint8_t* RuleBasedCollator::cloneRuleData(int32_t &length,
-                                              UErrorCode &status)
+                                              UErrorCode &status) const
 {
     if (U_FAILURE(status)) { return NULL; }
     LocalMemory<uint8_t> buffer((uint8_t *)uprv_malloc(20000));
@@ -477,7 +477,7 @@ uint8_t* RuleBasedCollator::cloneRuleData(int32_t &length,
 }
 
 
-int32_t RuleBasedCollator::cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status)
+int32_t RuleBasedCollator::cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status) const
 {
   return ucol_cloneBinary(ucollator, buffer, capacity, &status);
 }

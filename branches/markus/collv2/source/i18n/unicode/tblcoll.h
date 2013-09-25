@@ -7,7 +7,7 @@
 
 /**
  * \file 
- * \brief C++ API: RuleBasedCollator class provides the simple implementation of Collator.
+ * \brief C++ API: The RuleBasedCollator class implements the Collator abstract base class.
  */
 
 /**
@@ -61,7 +61,6 @@
 
 #include "unicode/utypes.h"
 
- 
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/coll.h"
@@ -182,12 +181,12 @@ public:
     *  cloneBinary. Binary image used in instantiation of the 
     *  collator remains owned by the user and should stay around for 
     *  the lifetime of the collator. The API also takes a base collator
-    *  which usualy should be UCA.
+    *  which usually should be the root collator.
     *  @param bin binary image owned by the user and required through the
     *             lifetime of the collator
     *  @param length size of the image. If negative, the API will try to
     *                figure out the length of the image
-    *  @param base fallback collator, usually UCA. Base is required to be
+    *  @param base fallback collator, usually root. The base is required to be
     *              present through the lifetime of the collator. Currently 
     *              it cannot be NULL.
     *  @param status for catching errors
@@ -271,8 +270,8 @@ public:
     * @stable ICU 2.6
     **/
     virtual UCollationResult compare(const UnicodeString& source,
-                                      const UnicodeString& target,
-                                      UErrorCode &status) const;
+                                     const UnicodeString& target,
+                                     UErrorCode &status) const;
 
     /**
     * Does the same thing as compare but limits the comparison to a specified 
@@ -288,9 +287,9 @@ public:
     * @stable ICU 2.6
     */
     virtual UCollationResult compare(const UnicodeString& source,
-                                      const UnicodeString& target,
-                                      int32_t length,
-                                      UErrorCode &status) const;
+                                     const UnicodeString& target,
+                                     int32_t length,
+                                     UErrorCode &status) const;
 
     /**
     * The comparison function compares the character data stored in two
@@ -309,8 +308,8 @@ public:
     * @stable ICU 2.6
     */
     virtual UCollationResult compare(const UChar* source, int32_t sourceLength,
-                                      const UChar* target, int32_t targetLength,
-                                      UErrorCode &status) const;
+                                     const UChar* target, int32_t targetLength,
+                                     UErrorCode &status) const;
 
     /**
      * Compares two strings using the Collator.
@@ -366,7 +365,7 @@ public:
      * @return the hash code.
      * @stable ICU 2.0
      */
-    virtual int32_t hashCode(void) const;
+    virtual int32_t hashCode() const;
 
     /**
     * Gets the locale of the Collator
@@ -385,7 +384,7 @@ public:
      * @return the collation tailoring from which this collator was created
      * @stable ICU 2.0
      */
-    const UnicodeString& getRules(void) const;
+    const UnicodeString& getRules() const;
 
     /**
      * Gets the version information for a Collator.
@@ -450,7 +449,7 @@ public:
      * @return memory, owned by the caller, of size 'length' bytes.
      * @deprecated ICU 52. Use cloneBinary() instead.
      */
-    uint8_t *cloneRuleData(int32_t &length, UErrorCode &status);
+    uint8_t *cloneRuleData(int32_t &length, UErrorCode &status) const;
 #endif  /* U_HIDE_DEPRECATED_API */
 
     /** Creates a binary image of a collator. This binary image can be stored and 
@@ -463,7 +462,7 @@ public:
     *  @see ucol_openBinary
     *  @stable ICU 3.4
     */
-    int32_t cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status);
+    int32_t cloneBinary(uint8_t *buffer, int32_t capacity, UErrorCode &status) const;
 
     /**
      * Returns current rules. Delta defines whether full rules are returned or
@@ -476,7 +475,7 @@ public:
      * @stable ICU 2.2
      * @see UCOL_FULL_RULES
      */
-    void getRules(UColRuleOption delta, UnicodeString &buffer);
+    void getRules(UColRuleOption delta, UnicodeString &buffer) const;
 
     /**
      * Universal attribute setter
@@ -801,7 +800,7 @@ private:
      *  This string will be normalized.
      *  The structure and the syntax of the string is defined in the "Naming collators"
      *  section of the users guide: 
-     *  http://icu-project.org/userguide/Collate_Concepts.html#Naming_Collators
+     *  http://userguide.icu-project.org/collation/concepts#TOC-Collator-naming-scheme
      *  This function supports preflighting.
      * 
      *  This is internal, and intended to be used with delegate converters.
