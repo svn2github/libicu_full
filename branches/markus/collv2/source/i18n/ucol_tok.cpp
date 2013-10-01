@@ -20,7 +20,7 @@
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_COLLATION
+#if 0 && !UCONFIG_NO_COLLATION  // TODO: remove this file
 
 #include "unicode/uscript.h"
 #include "unicode/ustring.h"

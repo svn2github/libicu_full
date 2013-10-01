@@ -784,7 +784,7 @@ void AlphabeticIndex::addIndexExemplars(const Locale &locale, UErrorCode &status
 
 UBool AlphabeticIndex::addChineseIndexCharacters(UErrorCode &errorCode) {
     UnicodeSet contractions;
-    ucol_getContractionsAndExpansions(collatorPrimaryOnly_->getUCollator(),
+    ucol_getContractionsAndExpansions(collatorPrimaryOnly_->toUCollator(),
                                       contractions.toUSet(), NULL, FALSE, &errorCode);
     if (U_FAILURE(errorCode)) { return FALSE; }
     UnicodeString firstHanBoundary;

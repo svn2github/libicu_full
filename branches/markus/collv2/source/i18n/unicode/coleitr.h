@@ -13,8 +13,6 @@
 /**
 * File coleitr.h
 *
-* 
-*
 * Created by: Helena Shih
 *
 * Modification History:
@@ -38,15 +36,8 @@
 
 #include "unicode/unistr.h"
 #include "unicode/uobject.h"
-#include "unicode/tblcoll.h"
 
-/** 
- * The UCollationElements struct.
- * For usage in C programs.
- * @stable ICU 2.0
- */
-typedef struct UCollationElements UCollationElements;
-
+struct UCollationElements;
 struct UHashtable;
 
 U_NAMESPACE_BEGIN
@@ -54,7 +45,8 @@ U_NAMESPACE_BEGIN
 struct CollationData;
 
 class CollationIterator;
-class RuleBasedCollator2;
+class RuleBasedCollator;
+class UCollationPCE;
 
 /**
 * The CollationElementIterator class is used as an iterator to walk through     
@@ -295,9 +287,28 @@ public:
      */
     static UHashtable *computeMaxExpansions(const CollationData *data, UErrorCode &errorCode);
 
+#ifndef U_HIDE_INTERNAL_API
+    /** @internal */
+    static inline CollationElementIterator *fromUCollationElements(UCollationElements *uc) {
+        return reinterpret_cast<CollationElementIterator *>(uc);
+    }
+    /** @internal */
+    static inline const CollationElementIterator *fromUCollationElements(const UCollationElements *uc) {
+        return reinterpret_cast<const CollationElementIterator *>(uc);
+    }
+    /** @internal */
+    inline UCollationElements *toUCollationElements() {
+        return reinterpret_cast<UCollationElements *>(this);
+    }
+    /** @internal */
+    inline const UCollationElements *toUCollationElements() const {
+        return reinterpret_cast<const UCollationElements *>(this);
+    }
+#endif  // U_HIDE_INTERNAL_API
+
 private:
     friend class RuleBasedCollator;
-    friend class RuleBasedCollator2;
+    friend class UCollationPCE;
 
     /**
     * CollationElementIterator constructor. This takes the source string and the 
@@ -318,8 +329,6 @@ private:
     // That might require creating an intermediate class that would be used
     // by both CollationElementIterator and RuleBasedCollator
     // but only contain the part of RBC== related to data and rules.
-    CollationElementIterator(const UnicodeString& sourceText,
-        const RuleBasedCollator2* order, UErrorCode& status);
 
     /**
     * CollationElementIterator constructor. This takes the source string and the 
@@ -332,8 +341,6 @@ private:
     */
     CollationElementIterator(const CharacterIterator& sourceText,
         const RuleBasedCollator* order, UErrorCode& status);
-    CollationElementIterator(const CharacterIterator& sourceText,
-        const RuleBasedCollator2* order, UErrorCode& status);
 
     /**
     * Assignment operator
@@ -350,7 +357,7 @@ private:
     // CollationElementIterator private data members ----------------------------
 
     CollationIterator *iter_;  // owned
-    const RuleBasedCollator2 *rbc_;  // aliased
+    const RuleBasedCollator *rbc_;  // aliased
     uint32_t otherHalf_;
     /**
      * <0: backwards; 0: just after reset() (previous() begins from end);
@@ -359,56 +366,28 @@ private:
     int8_t dir_;
 
     UnicodeString string_;
-
-    // TODO: remove the following members, and related code
-    /**
-    * Data wrapper for collation elements
-    */
-    UCollationElements *m_data_;
-
-    /**
-    * Indicates if m_data_ belongs to this object.
-    */
-    UBool isDataOwned_;
 };
 
 // CollationElementIterator inline method definitions --------------------------
 
-/**
-* Get the primary order of a collation order.
-* @param order the collation order
-* @return the primary order of a collation order.
-*/
 inline int32_t CollationElementIterator::primaryOrder(int32_t order)
 {
-    order &= RuleBasedCollator::PRIMARYORDERMASK;
-    return (order >> RuleBasedCollator::PRIMARYORDERSHIFT);
+    return (order >> 16) & 0xffff;
 }
 
-/**
-* Get the secondary order of a collation order.
-* @param order the collation order
-* @return the secondary order of a collation order.
-*/
 inline int32_t CollationElementIterator::secondaryOrder(int32_t order)
 {
-    order = order & RuleBasedCollator::SECONDARYORDERMASK;
-    return (order >> RuleBasedCollator::SECONDARYORDERSHIFT);
+    return (order >> 8) & 0xff;
 }
 
-/**
-* Get the tertiary order of a collation order.
-* @param order the collation order
-* @return the tertiary order of a collation order.
-*/
 inline int32_t CollationElementIterator::tertiaryOrder(int32_t order)
 {
-    return (order &= RuleBasedCollator::TERTIARYORDERMASK);
+    return order & 0xff;
 }
 
 inline UBool CollationElementIterator::isIgnorable(int32_t order)
 {
-    return (primaryOrder(order) == RuleBasedCollator::PRIMIGNORABLE);
+    return (order & 0xffff0000) == 0;
 }
 
 U_NAMESPACE_END

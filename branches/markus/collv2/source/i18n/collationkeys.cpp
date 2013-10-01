@@ -22,10 +22,10 @@
 
 U_NAMESPACE_BEGIN
 
-SortKeyByteSink2::~SortKeyByteSink2() {}
+SortKeyByteSink::~SortKeyByteSink() {}
 
 void
-SortKeyByteSink2::Append(const char *bytes, int32_t n) {
+SortKeyByteSink::Append(const char *bytes, int32_t n) {
     if (n <= 0 || bytes == NULL) {
         return;
     }
@@ -54,7 +54,7 @@ SortKeyByteSink2::Append(const char *bytes, int32_t n) {
 }
 
 char *
-SortKeyByteSink2::GetAppendBuffer(int32_t min_capacity,
+SortKeyByteSink::GetAppendBuffer(int32_t min_capacity,
                                  int32_t desired_capacity_hint,
                                  char *scratch,
                                  int32_t scratch_capacity,
@@ -224,7 +224,7 @@ void
 CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                                           const UBool *compressibleBytes,
                                           const CollationSettings &settings,
-                                          SortKeyByteSink2 &sink,
+                                          SortKeyByteSink &sink,
                                           Collation::Level minLevel, LevelCallback &callback,
                                           UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }

@@ -493,11 +493,6 @@ private :
     // private data members ----------------------------------------------
 
     /**
-    * RuleBasedCollator, contains exactly the same UCollator * in m_strsrch_
-    * @stable ICU 2.0
-    */
-    RuleBasedCollator  m_collator_;
-    /**
     * Pattern text
     * @stable ICU 2.0
     */

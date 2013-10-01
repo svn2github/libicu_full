@@ -1125,6 +1125,25 @@ public:
     nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
                     uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 
+#ifndef U_HIDE_INTERNAL_API
+    /** @internal */
+    static inline Collator *fromUCollator(UCollator *uc) {
+        return reinterpret_cast<Collator *>(uc);
+    }
+    /** @internal */
+    static inline const Collator *fromUCollator(const UCollator *uc) {
+        return reinterpret_cast<const Collator *>(uc);
+    }
+    /** @internal */
+    inline UCollator *toUCollator() {
+        return reinterpret_cast<UCollator *>(this);
+    }
+    /** @internal */
+    inline const UCollator *toUCollator() const {
+        return reinterpret_cast<const UCollator *>(this);
+    }
+#endif  // U_HIDE_INTERNAL_API
+
 private:
     /**
      * Assignment operator. Private for now.

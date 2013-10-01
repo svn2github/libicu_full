@@ -14,7 +14,7 @@
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_COLLATION
+#if 0 && !UCONFIG_NO_COLLATION  // TODO: remove this header
 
 #include "unicode/coll.h"
 #include "unicode/locid.h"
@@ -29,9 +29,9 @@ struct CollationData;
 struct CollationSettings;
 struct CollationTailoring;
 class CollationElementIterator;
-class SortKeyByteSink2;
+class SortKeyByteSink;
 
-class U_I18N_API RuleBasedCollator2 : public Collator {
+class U_I18N_API RuleBasedCollator : public Collator {
 public:
     /**
      * RuleBasedCollator constructor. This takes the table rules and builds a
@@ -42,7 +42,7 @@ public:
      * @see Locale
      * @stable ICU 2.0
      */
-    RuleBasedCollator2(const UnicodeString& rules, UErrorCode& status);
+    RuleBasedCollator(const UnicodeString& rules, UErrorCode& status);
 
     /**
      * RuleBasedCollator constructor. This takes the table rules and builds a
@@ -54,7 +54,7 @@ public:
      * @see Locale
      * @stable ICU 2.0
      */
-    RuleBasedCollator2(const UnicodeString& rules,
+    RuleBasedCollator(const UnicodeString& rules,
                        ECollationStrength collationStrength,
                        UErrorCode& status);
 
@@ -68,7 +68,7 @@ public:
      * @see Locale
      * @stable ICU 2.0
      */
-    RuleBasedCollator2(const UnicodeString& rules,
+    RuleBasedCollator(const UnicodeString& rules,
                     UColAttributeValue decompositionMode,
                     UErrorCode& status);
 
@@ -83,7 +83,7 @@ public:
      * @see Locale
      * @stable ICU 2.0
      */
-    RuleBasedCollator2(const UnicodeString& rules,
+    RuleBasedCollator(const UnicodeString& rules,
                     ECollationStrength collationStrength,
                     UColAttributeValue decompositionMode,
                     UErrorCode& status);
@@ -94,7 +94,7 @@ public:
      * @see Locale
      * @stable ICU 2.0
      */
-    RuleBasedCollator2(const RuleBasedCollator2& other);
+    RuleBasedCollator(const RuleBasedCollator& other);
 
 
     /** Opens a collator from a collator binary image created using
@@ -114,22 +114,22 @@ public:
     *  @see cloneBinary
     *  @stable ICU 3.4
     */
-    RuleBasedCollator2(const uint8_t *bin, int32_t length, 
-                    const RuleBasedCollator2 *base, 
+    RuleBasedCollator(const uint8_t *bin, int32_t length, 
+                    const RuleBasedCollator *base, 
                     UErrorCode &status);
 
     /**
      * Destructor.
      * @stable ICU 2.0
      */
-    virtual ~RuleBasedCollator2();
+    virtual ~RuleBasedCollator();
 
     /**
      * Assignment operator.
      * @param other other RuleBasedCollator object to compare with.
      * @stable ICU 2.0
      */
-    RuleBasedCollator2& operator=(const RuleBasedCollator2& other);
+    RuleBasedCollator& operator=(const RuleBasedCollator& other);
 
     /**
      * Returns true if argument is the same as this object.
@@ -639,10 +639,29 @@ public:
                         int32_t strength,
                         UColAttributeValue decompositionMode,
                         UParseError *outParseError, UErrorCode &errorCode);
+
+    /** @internal */
+    static inline RuleBasedCollator *rbcFromUCollator(UCollator *uc) {
+        return dynamic_cast<RuleBasedCollator *>(fromUCollator(uc));
+    }
+    /** @internal */
+    static inline const RuleBasedCollator *rbcFromUCollator(const UCollator *uc) {
+        return dynamic_cast<const RuleBasedCollator *>(fromUCollator(uc));
+    }
 #endif  // U_HIDE_INTERNAL_API
 
 public:  // TODO: Public only for testing.
-    RuleBasedCollator2(const CollationTailoring *t);
+    RuleBasedCollator(const CollationTailoring *t);
+
+protected:
+   /**
+    * Used internally by registraton to define the requested and valid locales.
+    * @param requestedLocale the requsted locale
+    * @param validLocale the valid locale
+    * @param actualLocale the actual locale
+    * @internal
+    */
+    virtual void setLocales(const Locale& requestedLocale, const Locale& validLocale, const Locale& actualLocale);
 
 private:
     friend class CollationElementIterator;

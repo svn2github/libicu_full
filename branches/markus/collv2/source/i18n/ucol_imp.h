@@ -274,6 +274,7 @@ minimum number for special Jamo
 U_NAMESPACE_BEGIN
 
 typedef struct collIterate : public UMemory {
+#if 0  /* TODO: remove */
   const UChar *string; /* Original string */
   /* UChar *start;  Pointer to the start of the source string. Either points to string
                     or to writableBuffer */
@@ -307,6 +308,7 @@ typedef struct collIterate : public UMemory {
   // The offsetBuffer should probably be a UVector32, but helper functions
   // are an improvement over duplicated code.
   void appendOffset(int32_t offset, UErrorCode &errorCode);
+#endif
 } collIterate;
 
 U_NAMESPACE_END
@@ -325,6 +327,7 @@ struct used internally in getSpecial*CE.
 data similar to collIterate.
 */
 struct collIterateState {
+#if 0  /* TODO: remove */
     const UChar *pos; /* This is position in the string.  Can be to original or writable buf */
     const UChar *returnPos;
     const UChar *fcdPosition; /* Position in the original string to continue FCD check from. */
@@ -334,6 +337,7 @@ struct collIterateState {
     uint8_t   origFlags;
     uint32_t   iteratorIndex;
     int32_t    iteratorMove;
+#endif
 };
 
 U_CAPI void U_EXPORT2
@@ -351,44 +355,6 @@ uprv_delete_collIterate(U_NAMESPACE_QUALIFIER collIterate *s);
 /* @return s->pos == s->endp */
 U_CAPI UBool U_EXPORT2
 uprv_collIterateAtEnd(U_NAMESPACE_QUALIFIER collIterate *s);
-
-#ifdef __cplusplus
-
-U_NAMESPACE_BEGIN
-
-struct UCollationPCE;
-typedef struct UCollationPCE UCollationPCE;
-
-U_NAMESPACE_END
-
-struct UCollationElements : public icu::UMemory
-{
-  /**
-  * Struct wrapper for source data
-  */
-        icu::collIterate iteratordata_;
-  /**
-  * Indicates if this data has been reset.
-  */
-        UBool              reset_;
-  /**
-  * Indicates if the data should be deleted.
-  */
-        UBool              isWritable;
-
-/**
- * Data for getNextProcessed, getPreviousProcessed.
- */
-        icu::UCollationPCE     *pce;
-};
-
-#else
-/*opaque type*/
-struct UCollationElements;
-#endif
-
-U_CAPI void U_EXPORT2
-uprv_init_pce(const struct UCollationElements *elems);
 
 #define UCOL_LEVELTERMINATOR 1
 
@@ -454,25 +420,6 @@ uprv_init_pce(const struct UCollationElements *elems);
 #define UCOL_LAST_T_JAMO  0x11F9
 
 
-#if 0
-/* initializes collIterate structure */
-/* made as macro to speed up things */
-#define init_collIterate(collator, sourceString, sourceLen, s) { \
-    (s)->start = (s)->string = (s)->pos = (UChar *)(sourceString); \
-    (s)->endp  = (sourceLen) == -1 ? NULL :(UChar *)(sourceString)+(sourceLen); \
-    (s)->CEpos = (s)->toReturn = (s)->CEs; \
-    (s)->isThai = TRUE; \
-    (s)->writableBuffer = (s)->stackWritableBuffer; \
-    (s)->writableBufSize = UCOL_WRITABLE_BUFFER_SIZE; \
-    (s)->coll = (collator); \
-    (s)->fcdPosition = 0;   \
-    (s)->flags = 0; \
-    if(((collator)->normalizationMode == UCOL_ON)) (s)->flags |= UCOL_ITER_NORM; \
-}
-#endif
-
-
-
 /*
 * Macro to get the maximum size of an expansion ending with the argument ce.
 * Used in the Boyer Moore algorithm.
@@ -526,57 +473,6 @@ U_CFUNC uint32_t U_EXPORT2 ucol_getPrevCE(const UCollator *coll,
                                           UErrorCode *status);
 /* get some memory */
 void *ucol_getABuffer(const UCollator *coll, uint32_t size);
-
-#ifdef __cplusplus
-
-U_NAMESPACE_BEGIN
-
-class CollationKey;
-class SortKeyByteSink;
-
-U_NAMESPACE_END
-
-/* function used by C++ getCollationKey to prevent restarting the calculation */
-U_CFUNC int32_t
-ucol_getCollationKey(const UCollator *coll,
-                     const UChar *source, int32_t sourceLength,
-                     icu::CollationKey &key,
-                     UErrorCode &errorCode);
-
-typedef void U_CALLCONV
-SortKeyGenerator(const    UCollator    *coll,
-        const    UChar        *source,
-        int32_t        sourceLength,
-        icu::SortKeyByteSink &result,
-        UErrorCode *status);
-
-/* worker function for generating sortkeys */
-U_CFUNC
-void U_CALLCONV
-ucol_calcSortKey(const    UCollator    *coll,
-        const    UChar        *source,
-        int32_t        sourceLength,
-        icu::SortKeyByteSink &result,
-        UErrorCode *status);
-
-U_CFUNC
-void U_CALLCONV
-ucol_calcSortKeySimpleTertiary(const    UCollator    *coll,
-        const    UChar        *source,
-        int32_t        sourceLength,
-        icu::SortKeyByteSink &result,
-        UErrorCode *status);
-
-#else
-
-typedef void U_CALLCONV
-SortKeyGenerator(const    UCollator    *coll,
-        const    UChar        *source,
-        int32_t        sourceLength,
-        void *result,
-        UErrorCode *status);
-
-#endif
 
 /**
  * Used to set requested and valid locales on a collator returned by the collator
@@ -773,6 +669,7 @@ typedef enum {
  */
 
 typedef struct {
+#if 0  /* TODO: remove */
       uint32_t variableTopValue;
       /*UColAttributeValue*/ int32_t frenchCollation;
       /*UColAttributeValue*/ int32_t alternateHandling; /* attribute for handling variable elements*/
@@ -783,9 +680,11 @@ typedef struct {
       /*UColAttributeValue*/ int32_t hiraganaQ;         /* attribute for special Hiragana */
       /*UColAttributeValue*/ int32_t numericCollation;  /* attribute for numeric collation */
       uint32_t reserved[15];                 /* for future use */
+#endif
 } UColOptionSet;
 
 typedef struct {
+#if 0  /* TODO: remove */
   uint32_t UCA_FIRST_TERTIARY_IGNORABLE[2];       /*0x00000000*/
   uint32_t UCA_LAST_TERTIARY_IGNORABLE[2];        /*0x00000000*/
   uint32_t UCA_FIRST_PRIMARY_IGNORABLE[2];        /*0x00008705*/
@@ -821,6 +720,7 @@ typedef struct {
   uint32_t UCA_PRIMARY_TRAILING_MAX; /*0xF0000000*/
   uint32_t UCA_PRIMARY_SPECIAL_MIN; /*0xE8000000*/
   uint32_t UCA_PRIMARY_SPECIAL_MAX; /*0xF0000000*/
+#endif
 } UCAConstants;
 
 /* definition of UCATableHeader moved to common/ucol_data.h */
@@ -832,6 +732,7 @@ typedef struct {
 /* This is the first structure in a state */
 /* it should be machine independent */
 typedef struct {
+#if 0  /* TODO: remove */
   /* this structure is supposed to be readable on all the platforms.*/
   /* first 2 fields hold the size of the structure in a platform independent way */
   uint8_t sizeLo;
@@ -846,6 +747,7 @@ typedef struct {
   uint8_t type;
   /* more stuff to come, keep it on 16 byte boundary */
   uint8_t reserved[7];
+#endif
 } UStateStruct;
 
 /* This structure follows UStatusStruct */
@@ -853,6 +755,7 @@ typedef struct {
 /* Endianess needs to be decided before accessing this structure */
 /* However, it's size IS endianess independent */
 typedef struct {
+#if 0  /* TODO: remove */
   /* size of this structure */
   uint8_t sizeLo;
   uint8_t sizeHi;
@@ -886,6 +789,7 @@ typedef struct {
   uint32_t /*UColAttributeValue*/ strength;
   /* to be immediately 16 byte aligned */
   uint8_t reserved[12];
+#endif
 } UColStateStruct;
 
 #define UCOL_INV_SIZEMASK 0xFFF00000
@@ -901,6 +805,7 @@ ResourceCleaner(UCollator *coll);
 
 
 struct UCollator {
+#if 0  /* TODO: remove */
     UColOptionSet  *options;
     SortKeyGenerator *sortKeyGen;
     uint32_t *latinOneCEs;
@@ -982,6 +887,7 @@ struct UCollator {
     int32_t reorderCodesLength;
     uint8_t* leadBytePermutationTable;
     void  *delegate;  /* if non-null: C++ object to delegate all API calls to. */
+#endif
 };
 
 U_CDECL_END
@@ -1006,13 +912,8 @@ U_CFUNC
 void ucol_putOptionsToHeader(UCollator* result, UColOptionSet * opts, UErrorCode *status);
 #endif
 
-U_CFUNC
-void ucol_updateInternalState(UCollator *coll, UErrorCode *status);
-
 U_CFUNC uint32_t U_EXPORT2 ucol_getFirstCE(const UCollator *coll, UChar u, UErrorCode *status);
 U_CAPI UBool U_EXPORT2 ucol_isTailored(const UCollator *coll, const UChar u, UErrorCode *status);
-
-U_CAPI const InverseUCATableHeader* U_EXPORT2 ucol_initInverseUCA(UErrorCode *status);
 
 U_CAPI void U_EXPORT2 
 uprv_uca_initImplicitConstants(UErrorCode *status);
@@ -1053,40 +954,6 @@ ucol_getLeadBytesForReorderCode(const UCollator *uca, int reorderCode, uint16_t*
 
 U_CFUNC int U_EXPORT2 
 ucol_getReorderCodesForLeadByte(const UCollator *uca, int leadByte, int16_t* returnReorderCodes, int returnCapacity);
-
-#ifdef __cplusplus
-/*
- *  Test whether a character is potentially "unsafe" for use as a collation
- *  starting point.  Unsafe chars are those with combining class != 0 plus
- *  those that are the 2nd thru nth character in a contraction sequence.
- *
- *  Function is in header file because it's used in both collation and string search,
- *  and needs to be inline for performance.
- */
-static inline UBool ucol_unsafeCP(UChar c, const UCollator *coll) {
-    int32_t  hash;
-    uint8_t  htbyte;
-
-    if (c < coll->minUnsafeCP) {
-        return FALSE;
-    }
-
-    hash = c;
-    if (hash >= UCOL_UNSAFECP_TABLE_SIZE*8) {
-        if(U16_IS_SURROGATE(c)) {
-            /*  Lead or trail surrogate             */
-            /*  These are always considered unsafe. */
-            return TRUE;
-        }
-        hash = (hash & UCOL_UNSAFECP_TABLE_MASK) + 256;
-    }
-    htbyte = coll->unsafeCP[hash>>3];
-    return ((htbyte >> (hash & 7)) & 1);
-}
-#endif /* __cplusplus */
-
-/* The offsetBuffer in collIterate might need to be freed to avoid memory leaks. */
-void ucol_freeOffsetBuffer(U_NAMESPACE_QUALIFIER collIterate *s); 
 
 #endif /* #if !UCONFIG_NO_COLLATION */
 

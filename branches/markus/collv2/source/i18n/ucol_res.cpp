@@ -19,11 +19,12 @@
 * 03/01/2001  synwee    Added maxexpansion functionality.
 * 03/16/2001  weiv      Collation framework is rewritten in C and made UCA compliant
 * 12/08/2004  grhoten   Split part of ucol.cpp into ucol_res.cpp
+* 2012-2013   markus    Rewritten in C++ again.
 */
 
 #include "unicode/utypes.h"
 
-#if !UCONFIG_NO_COLLATION
+#if 0 && !UCONFIG_NO_COLLATION  // TODO: rethink & redo
 #include "unicode/uloc.h"
 #include "unicode/coll.h"
 #include "unicode/tblcoll.h"

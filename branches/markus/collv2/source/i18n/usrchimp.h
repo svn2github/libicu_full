@@ -18,6 +18,88 @@
 #include "unicode/ucoleitr.h"
 #include "unicode/ubrk.h"
 
+U_NAMESPACE_BEGIN
+
+class CollationElementIterator;
+class Collator;
+
+struct PCEI
+{
+    uint64_t ce;
+    int32_t  low;
+    int32_t  high;
+};
+
+struct PCEBuffer
+{
+    PCEI    defaultBuffer[16];
+    PCEI   *buffer;
+    int32_t bufferIndex;
+    int32_t bufferSize;
+
+    PCEBuffer();
+    ~PCEBuffer();
+
+    void  reset();
+    UBool empty() const;
+    void  put(uint64_t ce, int32_t ixLow, int32_t ixHigh);
+    const PCEI *get();
+};
+
+class UCollationPCE : public UMemory {
+private:
+    PCEBuffer          pceBuffer;
+    CollationElementIterator *cei;
+    UCollationStrength strength;
+    UBool              toShift;
+    UBool              isShifted;
+    uint32_t           variableTop;
+
+public:
+    UCollationPCE(UCollationElements *elems);
+    UCollationPCE(CollationElementIterator *iter);
+    ~UCollationPCE();
+
+    void init(UCollationElements *elems);
+    void init(CollationElementIterator *iter);
+
+    /**
+     * Get the processed ordering priority of the next collation element in the text.
+     * A single character may contain more than one collation element.
+     *
+     * @param ixLow a pointer to an int32_t to receive the iterator index before fetching the CE.
+     * @param ixHigh a pointer to an int32_t to receive the iterator index after fetching the CE.
+     * @param status A pointer to an UErrorCode to receive any errors.
+     * @return The next collation elements ordering, otherwise returns UCOL_PROCESSED_NULLORDER 
+     *         if an error has occured or if the end of string has been reached
+     */
+    int64_t nextProcessed(int32_t *ixLow, int32_t *ixHigh, UErrorCode *status);
+    /**
+     * Get the processed ordering priority of the previous collation element in the text.
+     * A single character may contain more than one collation element.
+     * Note that internally a stack is used to store buffered collation elements. 
+     * It is very rare that the stack will overflow, however if such a case is 
+     * encountered, the problem can be solved by increasing the size 
+     * UCOL_EXPAND_CE_BUFFER_SIZE in ucol_imp.h.
+     *
+     * @param ixLow A pointer to an int32_t to receive the iterator index after fetching the CE
+     * @param ixHigh A pointer to an int32_t to receiver the iterator index before fetching the CE
+     * @param status A pointer to an UErrorCode to receive any errors. Noteably 
+     *               a U_BUFFER_OVERFLOW_ERROR is returned if the internal stack
+     *               buffer has been exhausted.
+     * @return The previous collation elements ordering, otherwise returns 
+     *         UCOL_PROCESSED_NULLORDER if an error has occured or if the start of
+     *         string has been reached.
+     */
+    int64_t previousProcessed(int32_t *ixLow, int32_t *ixHigh, UErrorCode *status);
+
+private:
+    void init(const Collator &coll);
+    uint64_t processCE(uint32_t ce);
+};
+
+U_NAMESPACE_END
+
 #define INITIAL_ARRAY_SIZE_       256
 #define MAX_TABLE_SIZE_           257
 
@@ -65,6 +147,7 @@ struct UStringSearch {
     // positions within the collation element iterator is used to determine
     // if we are at the start of the text.
            UCollationElements *textIter;
+           icu::UCollationPCE *textProcessedIter;
     // utility collation element, used throughout program for temporary 
     // iteration.
            UCollationElements *utilIter;

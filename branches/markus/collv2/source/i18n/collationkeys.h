@@ -27,12 +27,12 @@ class CollationIterator;
 struct CollationDataReader;
 struct CollationSettings;
 
-class SortKeyByteSink2 : public ByteSink {
+class SortKeyByteSink : public ByteSink {
 public:
-    SortKeyByteSink2(char *dest, int32_t destCapacity)
+    SortKeyByteSink(char *dest, int32_t destCapacity)
             : buffer_(dest), capacity_(destCapacity),
               appended_(0), ignore_(0) {}
-    virtual ~SortKeyByteSink2();
+    virtual ~SortKeyByteSink();
 
     void IgnoreBytes(int32_t numIgnore) { ignore_ = numIgnore; }
 
@@ -81,8 +81,8 @@ protected:
     int32_t ignore_;
 
 private:
-    SortKeyByteSink2(const SortKeyByteSink2 &); // copy constructor not implemented
-    SortKeyByteSink2 &operator=(const SortKeyByteSink2 &); // assignment operator not implemented
+    SortKeyByteSink(const SortKeyByteSink &); // copy constructor not implemented
+    SortKeyByteSink &operator=(const SortKeyByteSink &); // assignment operator not implemented
 };
 
 class U_I18N_API CollationKeys /* not : public UObject because all methods are static */ {
@@ -108,7 +108,7 @@ public:
     static void writeSortKeyUpToQuaternary(CollationIterator &iter,
                                            const UBool *compressibleBytes,
                                            const CollationSettings &settings,
-                                           SortKeyByteSink2 &sink,
+                                           SortKeyByteSink &sink,
                                            Collation::Level minLevel, LevelCallback &callback,
                                            UErrorCode &errorCode);
 private:

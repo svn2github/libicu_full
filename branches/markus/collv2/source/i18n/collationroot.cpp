@@ -22,7 +22,6 @@
 #include "collationsettings.h"
 #include "collationtailoring.h"
 #include "normalizer2impl.h"
-#include "rulebasedcollator.h"
 #include "ucln_in.h"
 #include "udatamem.h"
 #include "umutex.h"

@@ -19,6 +19,7 @@
 
 #include "unicode/caniter.h"
 #include "unicode/normalizer2.h"
+#include "unicode/tblcoll.h"
 #include "unicode/parseerr.h"
 #include "unicode/uchar.h"
 #include "unicode/ucol.h"
@@ -38,7 +39,6 @@
 #include "collationtailoring.h"
 #include "collationweights.h"
 #include "normalizer2impl.h"
-#include "rulebasedcollator.h"
 #include "uassert.h"
 #include "utf16collationiterator.h"
 
@@ -54,7 +54,7 @@ U_NAMESPACE_BEGIN
 // By moving these constructors and helper methods to a separate file,
 // most code will not have a static dependency on the builder code.
 
-RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, UErrorCode &errorCode)
+RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
@@ -65,8 +65,8 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, UErrorCode &e
     buildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, errorCode);
 }
 
-RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, ECollationStrength strength,
-                                       UErrorCode &errorCode)
+RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStrength strength,
+                                     UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
@@ -77,9 +77,9 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules, ECollationStr
     buildTailoring(rules, strength, UCOL_DEFAULT, NULL, errorCode);
 }
 
-RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
-                                       UColAttributeValue decompositionMode,
-                                       UErrorCode &errorCode)
+RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
+                                     UColAttributeValue decompositionMode,
+                                     UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
@@ -90,10 +90,10 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
     buildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, errorCode);
 }
 
-RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
-                                       ECollationStrength strength,
-                                       UColAttributeValue decompositionMode,
-                                       UErrorCode &errorCode)
+RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
+                                     ECollationStrength strength,
+                                     UColAttributeValue decompositionMode,
+                                     UErrorCode &errorCode)
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
@@ -105,10 +105,10 @@ RuleBasedCollator2::RuleBasedCollator2(const UnicodeString &rules,
 }
 
 void
-RuleBasedCollator2::buildTailoring(const UnicodeString &rules,
-                                   int32_t strength,
-                                   UColAttributeValue decompositionMode,
-                                   UParseError *outParseError, UErrorCode &errorCode) {
+RuleBasedCollator::buildTailoring(const UnicodeString &rules,
+                                  int32_t strength,
+                                  UColAttributeValue decompositionMode,
+                                  UParseError *outParseError, UErrorCode &errorCode) {
     const CollationTailoring *base = CollationRoot::getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return; }
     CollationBuilder builder(base, errorCode);

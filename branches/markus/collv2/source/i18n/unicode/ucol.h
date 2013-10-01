@@ -1315,20 +1315,6 @@ U_STABLE USet * U_EXPORT2
 ucol_getTailoredSet(const UCollator *coll, UErrorCode *status);
 
 #ifndef U_HIDE_INTERNAL_API
-/**
- * Universal attribute getter that returns UCOL_DEFAULT if the value is default
- * @param coll collator which attributes are to be changed
- * @param attr attribute type
- * @return attribute value or UCOL_DEFAULT if the value is default
- * @param status to indicate whether the operation went on smoothly or there were errors
- * @see UColAttribute
- * @see UColAttributeValue
- * @see ucol_setAttribute
- * @internal ICU 3.0
- */
-U_INTERNAL UColAttributeValue  U_EXPORT2
-ucol_getAttributeOrDefault(const UCollator *coll, UColAttribute attr, UErrorCode *status);
-
 /** Check whether two collators are equal. Collators are considered equal if they
  *  will sort strings the same. This means that both the current attributes and the
  *  rules must be equivalent. Currently used for RuleBasedCollator::operator==.

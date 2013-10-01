@@ -38,9 +38,7 @@ U_NAMESPACE_BEGIN
 
 /* forward declaration */
 class RuleBasedCollator;
-class RuleBasedCollator2;
 class CollationKeyByteSink;
-class CollationKeyByteSink2;
 
 /**
  *
@@ -281,9 +279,7 @@ private:
     * Allow private access to RuleBasedCollator
     */
     friend  class           RuleBasedCollator;
-    friend  class           RuleBasedCollator2;
     friend  class           CollationKeyByteSink;
-    friend  class           CollationKeyByteSink2;
 
     // Class fields. sizeof(CollationKey) is intended to be 48 bytes
     // on a machine with 64-bit pointers.

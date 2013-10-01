@@ -13,6 +13,7 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/tblcoll.h"
 #include "unicode/udata.h"
 #include "unicode/uniset.h"
 #include "cmemory.h"
@@ -23,14 +24,13 @@
 #include "collationfastlatin.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
-#include "rulebasedcollator.h"
 #include "uassert.h"
 #include "ucmndata.h"
 
 U_NAMESPACE_BEGIN
 
 uint8_t *
-RuleBasedCollator2::cloneRuleData(int32_t &length, UErrorCode &errorCode) const {
+RuleBasedCollator::cloneRuleData(int32_t &length, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return NULL; }
     LocalMemory<uint8_t> buffer((uint8_t *)uprv_malloc(20000));
     if(buffer.isNull()) {
@@ -51,7 +51,7 @@ RuleBasedCollator2::cloneRuleData(int32_t &length, UErrorCode &errorCode) const 
 }
 
 int32_t
-RuleBasedCollator2::cloneBinary(uint8_t *dest, int32_t capacity, UErrorCode &errorCode) const {
+RuleBasedCollator::cloneBinary(uint8_t *dest, int32_t capacity, UErrorCode &errorCode) const {
     int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1];
     return CollationDataWriter::writeTailoring(
             *tailoring, indexes, dest, capacity,

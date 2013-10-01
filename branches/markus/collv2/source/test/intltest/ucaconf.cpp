@@ -15,13 +15,13 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "ucaconf.h"
+#include "unicode/tblcoll.h"
 #include "unicode/ustring.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "uparse.h"
 
 #include "collationroot.h"  // TODO: Temporarily for v2 testing
-#include "rulebasedcollator.h"  // TODO: Temporarily for v2 testing
 
 UCAConformanceTest::UCAConformanceTest() :
 rbUCA(NULL),
@@ -237,7 +237,7 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         if(buflen != 0 && buffer[0] == 0xfffd) {
             continue;
         }
-        if(skipLineBecauseOfBug(buffer, buflen, skipFlags) && dynamic_cast<const RuleBasedCollator2 *>(coll) == NULL /* TODO: remove */) {
+        if(skipLineBecauseOfBug(buffer, buflen, skipFlags)) {
             logln("Skipping line %i because of a known bug", line);
             continue;
         }
@@ -355,14 +355,14 @@ void UCAConformanceTest::TestRulesShifted(/* par */) {
 }
 
 void UCAConformanceTest::TestTable2NonIgnorable() {
-    LocalPointer<Collator> coll(new RuleBasedCollator2(root));
+    LocalPointer<Collator> coll(new RuleBasedCollator(root));
     setCollNonIgnorable(coll.getAlias());
     openTestFile("NON_IGNORABLE");
     testConformance(coll.getAlias());
 }
 
 void UCAConformanceTest::TestTable2Shifted() {
-    LocalPointer<Collator> coll(new RuleBasedCollator2(root));
+    LocalPointer<Collator> coll(new RuleBasedCollator(root));
     setCollShifted(coll.getAlias());
     openTestFile("SHIFTED");
     testConformance(coll.getAlias());

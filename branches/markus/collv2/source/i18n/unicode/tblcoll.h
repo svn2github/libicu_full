@@ -54,6 +54,7 @@
 *                          to implementation file.
 * 01/29/01     synwee      Modified into a C++ wrapper which calls C API
 *                          (ucol.h)
+* 2012-2013    markus      Rewritten in C++ again.
 */
 
 #ifndef TBLCOLL_H
@@ -64,12 +65,15 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/coll.h"
+#include "unicode/locid.h"
+#include "unicode/uiter.h"
 #include "unicode/ucol.h"
-#include "unicode/sortkey.h"
-#include "unicode/normlzr.h"
 
 U_NAMESPACE_BEGIN
 
+struct CollationData;
+struct CollationSettings;
+struct CollationTailoring;
 /**
 * @stable ICU 2.0
 */
@@ -78,6 +82,10 @@ class StringSearch;
 * @stable ICU 2.0
 */
 class CollationElementIterator;
+class CollationKey;
+class SortKeyByteSink;
+class UnicodeSet;
+class UnicodeString;
 
 /**
  * The RuleBasedCollator class provides the simple implementation of
@@ -105,14 +113,9 @@ class CollationElementIterator;
  * <p>
  * Note, RuleBasedCollator is not to be subclassed.
  * @see        Collator
- * @version    2.0 11/15/2001
  */
-class U_I18N_API RuleBasedCollator : public Collator
-{
+class U_I18N_API RuleBasedCollator : public Collator {
 public:
-
-  // constructor -------------------------------------------------------------
-
     /**
      * RuleBasedCollator constructor. This takes the table rules and builds a
      * collation table out of them. Please see RuleBasedCollator class
@@ -197,15 +200,12 @@ public:
     RuleBasedCollator(const uint8_t *bin, int32_t length, 
                     const RuleBasedCollator *base, 
                     UErrorCode &status);
-    // destructor --------------------------------------------------------------
 
     /**
      * Destructor.
      * @stable ICU 2.0
      */
     virtual ~RuleBasedCollator();
-
-    // public methods ----------------------------------------------------------
 
     /**
      * Assignment operator.
@@ -325,6 +325,23 @@ public:
     virtual UCollationResult compare(UCharIterator &sIter,
                                      UCharIterator &tIter,
                                      UErrorCode &status) const;
+
+    /**
+     * Compares two UTF-8 strings using the Collator.
+     * Returns whether the first one compares less than/equal to/greater than
+     * the second one.
+     * This version takes UTF-8 input.
+     * Note that a StringPiece can be implicitly constructed
+     * from a std::string or a NUL-terminated const char * string.
+     * @param source the first UTF-8 string
+     * @param target the second UTF-8 string
+     * @param status ICU status
+     * @return UCOL_LESS, UCOL_EQUAL or UCOL_GREATER
+     * @draft ICU 51
+     */
+    virtual UCollationResult compareUTF8(const StringPiece &source,
+                                         const StringPiece &target,
+                                         UErrorCode &status) const;
 
     /**
     * Transforms a specified region of the string into a series of characters
@@ -623,177 +640,19 @@ public:
      * @see Collator#setReorderCodes
      * @stable ICU 4.8 
      */
-    static int32_t U_EXPORT2 getEquivalentReorderCodes(int32_t reorderCode,
-                                int32_t* dest,
-                                int32_t destCapacity,
-                                UErrorCode& status);
-
-private:
-
-    // private static constants -----------------------------------------------
-
-    enum {
-        /* need look up in .commit() */
-        CHARINDEX = 0x70000000,
-        /* Expand index follows */
-        EXPANDCHARINDEX = 0x7E000000,
-        /* contract indexes follows */
-        CONTRACTCHARINDEX = 0x7F000000,
-        /* unmapped character values */
-        UNMAPPED = 0xFFFFFFFF,
-        /* primary strength increment */
-        PRIMARYORDERINCREMENT = 0x00010000,
-        /* secondary strength increment */
-        SECONDARYORDERINCREMENT = 0x00000100,
-        /* tertiary strength increment */
-        TERTIARYORDERINCREMENT = 0x00000001,
-        /* mask off anything but primary order */
-        PRIMARYORDERMASK = 0xffff0000,
-        /* mask off anything but secondary order */
-        SECONDARYORDERMASK = 0x0000ff00,
-        /* mask off anything but tertiary order */
-        TERTIARYORDERMASK = 0x000000ff,
-        /* mask off ignorable char order */
-        IGNORABLEMASK = 0x0000ffff,
-        /* use only the primary difference */
-        PRIMARYDIFFERENCEONLY = 0xffff0000,
-        /* use only the primary and secondary difference */
-        SECONDARYDIFFERENCEONLY = 0xffffff00,
-        /* primary order shift */
-        PRIMARYORDERSHIFT = 16,
-        /* secondary order shift */
-        SECONDARYORDERSHIFT = 8,
-        /* starting value for collation elements */
-        COLELEMENTSTART = 0x02020202,
-        /* testing mask for primary low element */
-        PRIMARYLOWZEROMASK = 0x00FF0000,
-        /* reseting value for secondaries and tertiaries */
-        RESETSECONDARYTERTIARY = 0x00000202,
-        /* reseting value for tertiaries */
-        RESETTERTIARY = 0x00000002,
-
-        PRIMIGNORABLE = 0x0202
-    };
-
-    // private data members ---------------------------------------------------
-
-    UBool dataIsOwned;
-
-    UBool isWriteThroughAlias;
+    static int32_t U_EXPORT2 getEquivalentReorderCodes(
+            int32_t reorderCode,
+            int32_t* dest, int32_t destCapacity,
+            UErrorCode& status);
 
     /**
-    * c struct for collation. All initialisation for it has to be done through
-    * setUCollator().
-    */
-    UCollator *ucollator;
-
-    /**
-    * Rule UnicodeString
-    */
-    UnicodeString urulestring;
-
-    // friend classes --------------------------------------------------------
-
-    /**
-    * Used to iterate over collation elements in a character source.
-    */
-    friend class CollationElementIterator;
-
-    /**
-    * Collator ONLY needs access to RuleBasedCollator(const Locale&,
-    *                                                       UErrorCode&)
-    */
-    friend class Collator;
-
-    /**
-    * Searching over collation elements in a character source
-    */
-    friend class StringSearch;
-
-    // private constructors --------------------------------------------------
-
-    /**
-     * Default constructor
+     * Implements ucol_strcollUTF8().
+     * @internal
      */
-    RuleBasedCollator();
+    virtual UCollationResult compareUTF8(const char *left, int32_t leftLength,
+                                         const char *right, int32_t rightLength,
+                                         UErrorCode &errorCode) const;
 
-    /**
-     * RuleBasedCollator constructor. This constructor takes a locale. The
-     * only caller of this class should be Collator::createInstance(). If
-     * createInstance() happens to know that the requested locale's collation is
-     * implemented as a RuleBasedCollator, it can then call this constructor.
-     * OTHERWISE IT SHOULDN'T, since this constructor ALWAYS RETURNS A VALID
-     * COLLATION TABLE. It does this by falling back to defaults.
-     * @param desiredLocale locale used
-     * @param status error code status
-     */
-    RuleBasedCollator(const Locale& desiredLocale, UErrorCode& status);
-
-    /**
-     * common constructor implementation
-     *
-     * @param rules the collation rules to build the collation table from.
-     * @param collationStrength default strength for comparison
-     * @param decompositionMode the normalisation mode
-     * @param status reporting a success or an error.
-     */
-    void
-    construct(const UnicodeString& rules,
-              UColAttributeValue collationStrength,
-              UColAttributeValue decompositionMode,
-              UErrorCode& status);
-
-    // private methods -------------------------------------------------------
-
-    /**
-    * Creates the c struct for ucollator
-    * @param locale desired locale
-    * @param status error status
-    */
-    void setUCollator(const Locale& locale, UErrorCode& status);
-
-    /**
-    * Creates the c struct for ucollator
-    * @param locale desired locale name
-    * @param status error status
-    */
-    void setUCollator(const char* locale, UErrorCode& status);
-
-    /**
-    * Creates the c struct for ucollator. This used internally by StringSearch.
-    * Hence the responsibility of cleaning up the ucollator is not done by
-    * this RuleBasedCollator. The isDataOwned flag is set to FALSE.
-    * @param collator new ucollator data
-    */
-    void setUCollator(UCollator *collator);
-
-public:
-#ifndef U_HIDE_INTERNAL_API
-    /**
-    * Get UCollator data struct. Used only by StringSearch & intltest.
-    * @return UCollator data struct
-    * @internal
-    */
-    const UCollator * getUCollator();
-#endif  /* U_HIDE_INTERNAL_API */
-
-protected:
-   /**
-    * Used internally by registraton to define the requested and valid locales.
-    * @param requestedLocale the requsted locale
-    * @param validLocale the valid locale
-    * @param actualLocale the actual locale
-    * @internal
-    */
-    virtual void setLocales(const Locale& requestedLocale, const Locale& validLocale, const Locale& actualLocale);
-
-private:
-    // if not owned and not a write through alias, copy the ucollator
-    void checkOwned(void);
-
-    // utility to init rule string used by checkOwned and construct
-    void setRuleStringFromCollator();
- public:
     /** Get the short definition string for a collator. This internal API harvests the collator's
      *  locale and the attribute set and produces a string that can be used for opening 
      *  a collator with the same properties using the ucol_openFromShortString API.
@@ -829,38 +688,121 @@ private:
     virtual int32_t
     nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
                     uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
-};
-
-// inline method implementation ---------------------------------------------
-
-inline void RuleBasedCollator::setUCollator(const Locale &locale,
-                                               UErrorCode &status)
-{
-    setUCollator(locale.getName(), status);
-}
-
-
-inline void RuleBasedCollator::setUCollator(UCollator     *collator)
-{
-
-    if (ucollator && dataIsOwned) {
-        ucol_close(ucollator);
-    }
-    ucollator   = collator;
-    dataIsOwned = FALSE;
-    isWriteThroughAlias = TRUE;
-    setRuleStringFromCollator();
-}
 
 #ifndef U_HIDE_INTERNAL_API
-inline const UCollator * RuleBasedCollator::getUCollator()
-{
-    return ucollator;
-}
-#endif  /* U_HIDE_INTERNAL_API */
+    /**
+     * Implements ucol_getLocaleByType().
+     * Needed because the lifetime of the locale ID string must match that of the collator.
+     * getLocale() returns a copy of a Locale, with minimal lifetime in a C wrapper.
+     * @internal
+     */
+    const char *getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) const;
+
+    /**
+     * Implements ucol_getContractionsAndExpansions().
+     * Gets this collator's sets of contraction strings and/or
+     * characters and strings that map to multiple collation elements (expansions).
+     * If addPrefixes is TRUE, then contractions that are expressed as
+     * prefix/pre-context rules are included.
+     * @param contractions if not NULL, the set to hold the contractions
+     * @param expansions if not NULL, the set to hold the expansions
+     * @param addPrefixes include prefix contextual mappings
+     * @param errorCode in/out ICU error code
+     * @internal
+     */
+    void getContractionsAndExpansions(
+            UnicodeSet *contractions, UnicodeSet *expansions,
+            UBool addPrefixes, UErrorCode &errorCode) const;
+
+    /**
+     * Implements from-rule constructors, and ucol_openRules().
+     * @internal
+     */
+    void buildTailoring(const UnicodeString &rules,
+                        int32_t strength,
+                        UColAttributeValue decompositionMode,
+                        UParseError *outParseError, UErrorCode &errorCode);
+
+    /** @internal */
+    static inline RuleBasedCollator *rbcFromUCollator(UCollator *uc) {
+        return dynamic_cast<RuleBasedCollator *>(fromUCollator(uc));
+    }
+    /** @internal */
+    static inline const RuleBasedCollator *rbcFromUCollator(const UCollator *uc) {
+        return dynamic_cast<const RuleBasedCollator *>(fromUCollator(uc));
+    }
+#endif  // U_HIDE_INTERNAL_API
+
+public:  // TODO: Public only for testing.
+    RuleBasedCollator(const CollationTailoring *t);
+
+protected:
+   /**
+    * Used internally by registration to define the requested and valid locales.
+    * @param requestedLocale the requested locale
+    * @param validLocale the valid locale
+    * @param actualLocale the actual locale
+    * @internal
+    */
+    virtual void setLocales(const Locale& requestedLocale, const Locale& validLocale, const Locale& actualLocale);
+
+private:
+    friend class CollationElementIterator;
+
+    /**
+     * Enumeration of attributes that are relevant for short definition strings
+     * (e.g., ucol_getShortDefinitionString()).
+     * Effectively extends UColAttribute.
+     */
+    enum Attributes {
+        ATTR_VARIABLE_TOP = UCOL_ATTRIBUTE_COUNT,
+        ATTR_LIMIT
+    };
+
+    void adoptTailoring(CollationTailoring *t);
+
+    // Both lengths must be <0 or else both must be >=0.
+    UCollationResult doCompare(const UChar *left, int32_t leftLength,
+                               const UChar *right, int32_t rightLength,
+                               UErrorCode &errorCode) const;
+    UCollationResult doCompare(const uint8_t *left, int32_t leftLength,
+                               const uint8_t *right, int32_t rightLength,
+                               UErrorCode &errorCode) const;
+
+    void writeSortKey(const UChar *s, int32_t length,
+                      SortKeyByteSink &sink, UErrorCode &errorCode) const;
+
+    void writeIdenticalLevel(const UChar *s, const UChar *limit,
+                             SortKeyByteSink &sink, UErrorCode &errorCode) const;
+
+    const CollationSettings &getDefaultSettings() const;
+    UBool ensureOwnedSettings(UErrorCode &errorCode);
+
+    void setAttributeDefault(int32_t attribute) {
+        explicitlySetAttributes &= ~((uint32_t)1 << attribute);
+    }
+    void setAttributeExplicitly(int32_t attribute) {
+        explicitlySetAttributes |= (uint32_t)1 << attribute;
+    }
+    UBool attributeHasBeenSetExplicitly(int32_t attribute) const {
+        // assert(0 <= attribute < ATTR_LIMIT);
+        return (UBool)((explicitlySetAttributes & ((uint32_t)1 << attribute)) != 0);
+    }
+
+    int32_t getFastLatinOptions() const;
+
+    const CollationData *data;
+    const CollationSettings *settings;  // == &tailoring->settings or ownedSettings
+    const CollationTailoring *tailoring;
+    CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
+    int32_t ownedReorderCodesCapacity;
+    uint32_t explicitlySetAttributes;
+
+    /** Options for CollationFastLatin. Negative if disabled. */
+    int32_t fastLatinOptions;
+};
 
 U_NAMESPACE_END
 
-#endif /* #if !UCONFIG_NO_COLLATION */
-
-#endif
+#endif  // !UCONFIG_NO_COLLATION
+#endif  // TBLCOLL_H

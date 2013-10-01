@@ -37,7 +37,6 @@
 #include "cstring.h"
 #include "intltest.h"
 #include "normalizer2impl.h"
-#include "rulebasedcollator.h"
 #include "ucbuf.h"
 #include "uitercollationiterator.h"
 #include "utf16collationiterator.h"
@@ -937,7 +936,7 @@ void CollationTest::buildBase(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     }
     tailoring->builder = baseBuilder.orphan();
     collData = tailoring->data;
-    Collator *newColl = new RuleBasedCollator2(tailoring.getAlias());
+    Collator *newColl = new RuleBasedCollator(tailoring.getAlias());
     if(newColl == NULL) {
         errln("unable to allocate a new collator");
         errorCode.set(U_MEMORY_ALLOCATION_ERROR);
@@ -957,7 +956,7 @@ void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     }
     if(errorCode.isFailure()) { return; }
     logln(rules);
-    // Duplicate of RuleBasedCollator2::buildTailoring(),
+    // Duplicate of RuleBasedCollator::buildTailoring(),
     // to get more error information.
     CollationBuilder builder(CollationRoot::getRoot(errorCode), errorCode);
     UVersionInfo noVersion = { 0, 0, 0, 0 };
@@ -975,7 +974,7 @@ void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         }
         return;
     }
-    Collator *newColl = new RuleBasedCollator2(tailoring.getAlias());
+    Collator *newColl = new RuleBasedCollator(tailoring.getAlias());
     if(newColl == NULL) {
         errln("unable to allocate a new collator");
         errorCode.set(U_MEMORY_ALLOCATION_ERROR);
@@ -994,7 +993,7 @@ void CollationTest::setRootCollator(IcuTestErrorCode &errorCode) {
         errln("unable to create a root collator");
         return;
     }
-    Collator *newColl = new RuleBasedCollator2(root);
+    Collator *newColl = new RuleBasedCollator(root);
     U_ASSERT(newColl != NULL);
     delete coll;
     collData = NULL;

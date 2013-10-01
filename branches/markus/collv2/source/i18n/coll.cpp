@@ -35,6 +35,7 @@
  *                          Normalizer::EMode
  * 11/23/9      srl         Inlining of some critical functions
  * 01/29/01     synwee      Modified into a C++ wrapper calling C APIs (ucol.h)
+ * 2012-2013    markus      Rewritten in C++ again.
  */
 
 #include <typeinfo>  // for 'typeid' to work  -- TODO: use "utypeinfo.h" when merging with the trunk
@@ -231,33 +232,16 @@ UCollator*
 Collator::createUCollator(const char *loc,
                           UErrorCode *status)
 {
-    UCollator *result = 0;
     if (status && U_SUCCESS(*status) && hasService()) {
         Locale desiredLocale(loc);
         Collator *col = (Collator*)gService->get(desiredLocale, *status);
-        RuleBasedCollator *rbc;
-        if (col && (rbc = dynamic_cast<RuleBasedCollator *>(col))) {
-            if (!rbc->dataIsOwned) {
-                result = ucol_safeClone(rbc->ucollator, NULL, NULL, status);
-            } else {
-                result = rbc->ucollator;
-                rbc->ucollator = NULL; // to prevent free on delete
-            }
+        if (U_SUCCESS(*status)) {
+            return col->toUCollator();
         } else {
-          // should go in a function- ucol_initDelegate(delegate)
-          result = (UCollator *)uprv_malloc(sizeof(UCollator));
-          if(result == NULL) {
-            *status = U_MEMORY_ALLOCATION_ERROR;
-          } else {
-            uprv_memset(result, 0, sizeof(UCollator));
-            result->delegate = col;
-            result->freeOnClose = TRUE; // do free on close.
-            col = NULL; // to prevent free on delete.
-          }
+            delete col;
         }
-        delete col;
     }
-    return result;
+    return NULL;
 }
 #endif /* UCONFIG_NO_SERVICE */
 
@@ -357,7 +341,10 @@ Collator* Collator::makeInstance(const Locale&  desiredLocale,
     // Currently, we don't do this...we always return a RuleBasedCollator, 
     // whether it is strictly correct to do so or not, without checking, because 
     // we currently have no way of checking.
-    
+#if 1
+    // TODO: hoist old code somewhere outside RBC and reenable!
+    return NULL;
+#else
     RuleBasedCollator* collation = new RuleBasedCollator(desiredLocale, 
         status);
     /* test for NULL */
@@ -371,6 +358,7 @@ Collator* Collator::makeInstance(const Locale&  desiredLocale,
         collation = 0;
     }
     return collation;
+#endif
 }
 
 #ifdef U_USE_COLLATION_OBSOLETE_2_6
