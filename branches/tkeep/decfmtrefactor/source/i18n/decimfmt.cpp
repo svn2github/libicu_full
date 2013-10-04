@@ -37,6 +37,7 @@
 ********************************************************************************
 */
 
+#include <iostream>
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_FORMATTING
@@ -71,6 +72,13 @@
 #include "decfmtst.h"
 #include "dcfmtimp.h"
 #include "plurrule_impl.h"
+#include "decimalformatpattern.h"
+
+#define COMPLAIN(W, X, Y) (std::cout << (W) << ": " << (X) << ", got: " << (Y) << std::endl)
+
+#define CHECK_COMPLAIN(W, X, Y) if ((X) != (Y)) COMPLAIN(W, X, Y)
+
+#define CHECK_STRING(W, X, Y) if (((X) == NULL && !(Y).isBogus()) || ((X) != NULL && (Y) != *(X))) COMPLAIN(W, "EXPECTED", "ACTUAL")
 
 /*
  * On certain platforms, round is a macro defined in math.h
@@ -4812,6 +4820,12 @@ DecimalFormat::applyPatternWithoutExpandAffix(const UnicodeString& pattern,
     {
         return;
     }
+    DecimalFormatPatternParser patternParser;
+    if (localized) {
+      patternParser.useSymbols(*fSymbols);
+    }
+    
+
     // Clear error struct
     parseError.offset = -1;
     parseError.preContext[0] = parseError.postContext[0] = (UChar)0;
@@ -5402,6 +5416,51 @@ DecimalFormat::applyPatternWithoutExpandAffix(const UnicodeString& pattern,
 
     // save the pattern
     fFormatPattern = pattern;
+    DecimalFormatPattern out;
+    UParseError parseError2;
+    patternParser.applyPatternWithoutExpandAffix(
+        pattern,
+        out,
+        parseError2,
+        status);
+
+    // Check patternParser
+    CHECK_COMPLAIN("minInt", getMinimumIntegerDigits(), out.fMinimumIntegerDigits);
+    CHECK_COMPLAIN("maxInt", getMaximumIntegerDigits(), out.fMaximumIntegerDigits);
+    CHECK_COMPLAIN("minFrac", getMinimumFractionDigits(), out.fMinimumFractionDigits);
+    CHECK_COMPLAIN("maxFrac", getMaximumFractionDigits(), out.fMaximumFractionDigits);
+    if (fUseSignificantDigits != out.fUseSignificantDigits) {
+      COMPLAIN("usesSigDig", fUseSignificantDigits, out.fUseSignificantDigits);
+    } else if (fUseSignificantDigits) {
+      CHECK_COMPLAIN("minSigDig", fMinSignificantDigits, out.fMinimumSignificantDigits);
+      CHECK_COMPLAIN("maxSigDig", fMaxSignificantDigits, out.fMaximumSignificantDigits);
+    }
+    CHECK_COMPLAIN("useExp", fUseExponentialNotation, out.fUseExponentialNotation);
+    CHECK_COMPLAIN("minExpDig", fMinExponentDigits, out.fMinExponentDigits);
+    CHECK_COMPLAIN("minExpSignAlwaysShown", fExponentSignAlwaysShown, out.fExponentSignAlwaysShown);
+//    CHECK_COMPLAIN("currencyCount", fCurrencySignCount, out.fCurrencySignCount);
+    CHECK_COMPLAIN("groupingUsed", isGroupingUsed(), out.fGroupingUsed);
+    CHECK_COMPLAIN("groupingSize", getGroupingSize(), out.fGroupingSize);
+    CHECK_COMPLAIN("groupingSize2", fGroupingSize2, out.fGroupingSize2);
+    CHECK_COMPLAIN("multiplier", getMultiplier(), out.fMultiplier);
+    CHECK_COMPLAIN("decsepalwaysshown", fDecimalSeparatorAlwaysShown, out.fDecimalSeparatorAlwaysShown);
+    CHECK_COMPLAIN("formatWidth", fFormatWidth, out.fFormatWidth);
+    CHECK_COMPLAIN("roundingincrused", fRoundingIncrement != NULL, out.fRoundingIncrementUsed);
+  // Skipped fRoundingIncrement
+    CHECK_COMPLAIN("fPad", fPad, out.fPad);
+    CHECK_COMPLAIN("fPadPosition", fPadPosition, out.fPadPosition);
+    CHECK_STRING("fNegPrefix", fNegPrefixPattern, out.fNegPrefixPattern);
+    CHECK_STRING("fNegSuffix", fNegSuffixPattern, out.fNegSuffixPattern);
+    CHECK_STRING("fPosPrefix", fPosPrefixPattern, out.fPosPrefixPattern);
+    CHECK_STRING("fPosSuffix", fPosSuffixPattern, out.fPosSuffixPattern);
+
+    if (fPad != out.fPad) {
+      fCurrencySignCount = fCurrencySignCount;
+    }
+    if (U_FAILURE(status)) {
+      std::cout << "Failure: " << std::endl;
+    }
+
 }
 
 
