@@ -531,4 +531,79 @@ ucol_getUCAVersion(const UCollator* coll, UVersionInfo info) {
     }
 }
 
+U_CAPI const UChar * U_EXPORT2
+ucol_getRules(const UCollator *coll, int32_t *length) {
+    const RuleBasedCollator *rbc = RuleBasedCollator::rbcFromUCollator(coll);
+    // OK to crash if coll==NULL: We do not want to check "this" pointers.
+    if(rbc != NULL || coll == NULL) {
+        const UnicodeString &rules = rbc->getRules();
+        *length = rules.length();
+        return rules.getBuffer();
+    }
+    static const UChar _NUL = 0;
+    *length = 0;
+    return &_NUL;
+}
+
+U_CAPI int32_t U_EXPORT2
+ucol_getRulesEx(const UCollator *coll, UColRuleOption delta, UChar *buffer, int32_t bufferLen) {
+    UnicodeString rules;
+    const RuleBasedCollator *rbc = RuleBasedCollator::rbcFromUCollator(coll);
+    if(rbc != NULL || coll == NULL) {
+        rbc->getRules(delta, rules);
+    }
+    if(buffer != NULL && bufferLen > 0) {
+        UErrorCode errorCode = U_ZERO_ERROR;
+        return rules.extract(buffer, bufferLen, errorCode);
+    } else {
+        return rules.length();
+    }
+}
+
+U_CAPI const char * U_EXPORT2
+ucol_getLocale(const UCollator *coll, ULocDataLocaleType type, UErrorCode *status) {
+    return ucol_getLocaleByType(coll, type, status);
+}
+
+U_CAPI const char * U_EXPORT2
+ucol_getLocaleByType(const UCollator *coll, ULocDataLocaleType type, UErrorCode *status) {
+    if(U_FAILURE(*status)) {
+        return NULL;
+    }
+    UTRACE_ENTRY(UTRACE_UCOL_GETLOCALE);
+    UTRACE_DATA1(UTRACE_INFO, "coll=%p", coll);
+
+    const char *result;
+    const RuleBasedCollator *rbc = RuleBasedCollator::rbcFromUCollator(coll);
+    if(rbc == NULL && coll != NULL) {
+        *status = U_UNSUPPORTED_ERROR;
+        result = NULL;
+    } else {
+        result = rbc->getLocaleID(type, *status);
+    }
+
+    UTRACE_DATA1(UTRACE_INFO, "result = %s", result);
+    UTRACE_EXIT_STATUS(*status);
+    return result;
+}
+
+U_CAPI USet * U_EXPORT2
+ucol_getTailoredSet(const UCollator *coll, UErrorCode *status) {
+    if(U_FAILURE(*status)) {
+        return NULL;
+    }
+    UnicodeSet *set = Collator::fromUCollator(coll)->getTailoredSet(*status);
+    if(U_FAILURE(*status)) {
+        delete set;
+        return NULL;
+    }
+    return set->toUSet();
+}
+
+U_CAPI UBool U_EXPORT2
+ucol_equals(const UCollator *source, const UCollator *target) {
+    return source == target ||
+        (*Collator::fromUCollator(source)) == (*Collator::fromUCollator(target));
+}
+
 #endif /* #if !UCONFIG_NO_COLLATION */

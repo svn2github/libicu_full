@@ -46,6 +46,7 @@
 
 #include "unicode/coll.h"
 #include "unicode/tblcoll.h"
+#include "collationtailoring.h"
 #include "ucol_imp.h"
 #include "cstring.h"
 #include "cmemory.h"
@@ -321,44 +322,19 @@ Collator* U_EXPORT2 Collator::createInstance(const Locale& desiredLocale,
 Collator* Collator::makeInstance(const Locale&  desiredLocale, 
                                          UErrorCode& status)
 {
-    // A bit of explanation is required here. Although in the current 
-    // implementation
-    // Collator::createInstance() is just turning around and calling 
-    // RuleBasedCollator(Locale&), this will not necessarily always be the 
-    // case. For example, suppose we modify this code to handle a 
-    // non-table-based Collator, such as that for Thai. In this case, 
-    // createInstance() will have to be modified to somehow determine this fact
-    // (perhaps a field in the resource bundle). Then it can construct the 
-    // non-table-based Collator in some other way, when it sees that it needs 
-    // to.
-    // The specific caution is this: RuleBasedCollator(Locale&) will ALWAYS 
-    // return a valid collation object, if the system is functioning properly.  
-    // The reason is that it will fall back, use the default locale, and even 
-    // use the built-in default collation rules. THEREFORE, createInstance() 
-    // should in general ONLY CALL RuleBasedCollator(Locale&) IF IT KNOWS IN 
-    // ADVANCE that the given locale's collation is properly implemented as a 
-    // RuleBasedCollator.
-    // Currently, we don't do this...we always return a RuleBasedCollator, 
-    // whether it is strictly correct to do so or not, without checking, because 
-    // we currently have no way of checking.
-#if 1
-    // TODO: hoist old code somewhere outside RBC and reenable!
-    return NULL;
-#else
-    RuleBasedCollator* collation = new RuleBasedCollator(desiredLocale, 
-        status);
-    /* test for NULL */
-    if (collation == 0) {
+    Locale validLocale("");
+    const CollationTailoring *t =
+        CollationLoader::loadTailoring(desiredLocale, validLocale, status);
+    if (U_SUCCESS(status)) {
+        Collator *result = new RuleBasedCollator(t);
+        if (result != NULL) {
+            result->setLocales(desiredLocale, validLocale, t->actualLocale);
+            return result;
+        }
         status = U_MEMORY_ALLOCATION_ERROR;
-        return 0;
     }
-    if (U_FAILURE(status))
-    {
-        delete collation;
-        collation = 0;
-    }
-    return collation;
-#endif
+    t->deleteIfZeroRefCount();
+    return NULL;
 }
 
 #ifdef U_USE_COLLATION_OBSOLETE_2_6

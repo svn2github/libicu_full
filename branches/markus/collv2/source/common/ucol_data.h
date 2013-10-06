@@ -28,6 +28,8 @@
 
 #if !UCONFIG_NO_COLLATION
 
+// TODO: support swapping of formatVersion 4
+
 /* let us know whether reserved fields are reset to zero or junked */
 #define UCOL_HEADER_MAGIC 0x20030618
 

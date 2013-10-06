@@ -24,7 +24,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uset.h"
 
-#if !UCONFIG_NO_COLLATION
+#if 0 && !UCONFIG_NO_COLLATION  // TODO: remove this file
 
 #include "ucol_imp.h"
 #include "uhash.h"

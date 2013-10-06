@@ -691,6 +691,12 @@ public:
 
 #ifndef U_HIDE_INTERNAL_API
     /**
+     * Only for use in ucol_openRules().
+     * @internal
+     */
+    RuleBasedCollator();
+
+    /**
      * Implements ucol_getLocaleByType().
      * Needed because the lifetime of the locale ID string must match that of the collator.
      * getLocale() returns a copy of a Locale, with minimal lifetime in a C wrapper.
@@ -731,10 +737,10 @@ public:
     static inline const RuleBasedCollator *rbcFromUCollator(const UCollator *uc) {
         return dynamic_cast<const RuleBasedCollator *>(fromUCollator(uc));
     }
-#endif  // U_HIDE_INTERNAL_API
 
 public:  // TODO: Public only for testing.
     RuleBasedCollator(const CollationTailoring *t);
+#endif  // U_HIDE_INTERNAL_API
 
 protected:
    /**

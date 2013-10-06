@@ -13,9 +13,9 @@
 *   created at the end of XX century
 *   created by: Vladimir Weinstein & Markus Scherer
 *
-*   This program reads the Franctional UCA table and generates
+*   This program reads the Fractional UCA table and generates
 *   internal format for UCA table as well as inverse UCA table.
-*   It then writes binary files containing the data: ucadata.icu & invuca.icu.
+*   It then writes the ucadata.icu binary file containing the data.
 */
 
 #include <stdio.h>
@@ -30,7 +30,6 @@
 #include "collationdatabuilder.h"
 #include "collationdatareader.h"
 #include "collationdatawriter.h"
-#include "collationfastlatinbuilder.h"  // TODO: remove
 #include "collationinfo.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
@@ -38,8 +37,6 @@
 #include "cstring.h"
 #include "normalizer2impl.h"
 #include "toolutil.h"
-#include "ucol_bld.h"
-#include "ucol_elm.h"
 #include "unewdata.h"
 #include "uoptions.h"
 #include "uparse.h"
@@ -910,7 +907,7 @@ buildAndWriteBaseData(CollationBaseDataBuilder &builder,
            (long)totalSize + 32);  // 32 bytes = DataHeader rounded up to 16-byte boundary
 
     CollationTailoring::makeBaseVersion(UCAVersion, ucaDataInfo.dataVersion);
-    UNewDataMemory *pData=udata_create(path, "icu", "ucadata2", &ucaDataInfo,
+    UNewDataMemory *pData=udata_create(path, "icu", "ucadata", &ucaDataInfo,
                                        withCopyright ? U_COPYRIGHT_STRING : NULL, &errorCode);
     if(U_FAILURE(errorCode)) {
         fprintf(stderr, "genuca: udata_create(%s, ucadata.icu) failed - %s\n",

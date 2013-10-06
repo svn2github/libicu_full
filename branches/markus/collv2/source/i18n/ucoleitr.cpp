@@ -421,7 +421,7 @@ UCollationPCE::previousProcessed(
             }
 
             rceb.put((uint32_t)ce, low, high);
-        } while ((ce & UCOL_PRIMARYMASK) == 0);
+        } while ((ce & UCOL_PRIMARYORDERMASK) == 0 || isContinuation(ce));
 
         // process the raw CEs
         while (! rceb.empty()) {
@@ -478,7 +478,7 @@ ucol_getMaxExpansion(const UCollationElements *elems,
     // so we need to look forward and backward from the match to find all
     // of the hits...
 }
- 
+
 U_CAPI void U_EXPORT2
 ucol_setText(      UCollationElements *elems,
              const UChar              *text,

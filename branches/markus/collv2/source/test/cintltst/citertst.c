@@ -1525,6 +1525,10 @@ static void showCodepoints(const UChar *codepoints, int length, char * codepoint
     }
 }
 
+enum {
+    UCOL_BYTE_COMMON = 0x05,
+};
+
 static UBool checkCEValidity(const UCollator *coll, const UChar *codepoints,
                              int length)
 {

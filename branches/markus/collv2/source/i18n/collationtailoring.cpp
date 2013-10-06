@@ -15,6 +15,7 @@
 
 #include "unicode/udata.h"
 #include "unicode/unistr.h"
+#include "unicode/ures.h"
 #include "unicode/uversion.h"
 #include "unicode/uvernum.h"
 #include "cmemory.h"
@@ -34,7 +35,7 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
         : data(NULL),
           actualLocale(""), validLocale(""),
           ownedData(NULL),
-          builder(NULL), memory(NULL),
+          builder(NULL), memory(NULL), bundle(NULL),
           trie(NULL), unsafeBackwardSet(NULL),
           reorderCodes(NULL),
           maxExpansions(NULL), maxExpansionsInitOnce(U_INITONCE_INITIALIZER),
@@ -52,6 +53,7 @@ CollationTailoring::~CollationTailoring() {
     delete ownedData;
     delete builder;
     udata_close(memory);
+    ures_close(bundle);
     utrie2_close(trie);
     delete unsafeBackwardSet;
     uprv_free(reorderCodes);
@@ -67,6 +69,13 @@ CollationTailoring::addRef() const {
 void
 CollationTailoring::removeRef() const {
     if(umtx_atomic_dec(&refCount) == 0) {
+        delete this;
+    }
+}
+
+void
+CollationTailoring::deleteIfZeroRefCount() const {
+    if(refCount == 0) {
         delete this;
     }
 }

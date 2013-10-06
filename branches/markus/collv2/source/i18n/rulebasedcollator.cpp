@@ -5,6 +5,8 @@
 *******************************************************************************
 * rulebasedcollator.cpp
 *
+* (replaced the former tblcoll.cpp)
+*
 * created on: 2012feb14 with new and old collation code
 * created by: Markus W. Scherer
 */
@@ -43,6 +45,7 @@
 #include "collationtailoring.h"
 #include "cstring.h"
 #include "uassert.h"
+#include "ucol_imp.h"
 #include "uhash.h"
 #include "uitercollationiterator.h"
 #include "ustr_imp.h"
@@ -354,13 +357,7 @@ RuleBasedCollator::getRules(UColRuleOption delta, UnicodeString &buffer) const {
     }
     // UCOL_FULL_RULES
     buffer.remove();
-    // TODO: rewire to access the root bundle's UCARules string directly
-    UErrorCode errorCode = U_ZERO_ERROR;
-    LocalPointer<Collator> rootColl(Collator::createInstance(Locale::getRoot(), errorCode));
-    if(U_SUCCESS(errorCode)) {
-        RuleBasedCollator *rbc = static_cast<RuleBasedCollator *>(rootColl.getAlias());
-        rbc->getRules(UCOL_FULL_RULES, buffer);
-    }
+    CollationLoader::appendRootRules(buffer);
     buffer.append(tailoring->rules);
 }
 

@@ -782,6 +782,9 @@ ucol_getUnsafeSet( const UCollator *coll,
                   USet *unsafe,
                   UErrorCode *status)
 {
+#if 1
+    return 0;
+#else  // TODO: really needed in capitst.c??
     UChar buffer[internalBufferSize];
     int32_t len = 0;
 
@@ -824,5 +827,6 @@ ucol_getUnsafeSet( const UCollator *coll,
     uset_close(contractions);
 
     return uset_size(unsafe);
+#endif
 }
 #endif

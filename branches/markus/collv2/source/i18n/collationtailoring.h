@@ -23,11 +23,15 @@
 #include "uhash.h"
 #include "umutex.h"
 
+struct UDataMemory;
+struct UResourceBundle;
 struct UTrie2;
 
 U_NAMESPACE_BEGIN
 
 struct CollationData;
+
+class UnicodeSet;
 
 /**
  * Collation tailoring data & settings.
@@ -56,6 +60,7 @@ struct U_I18N_API CollationTailoring : public UMemory {
      * and auto-deletes "this" if the number becomes 0. Thread-safe.
      */
     void removeRef() const;
+    void deleteIfZeroRefCount() const;
 
     UBool ensureOwnedData(UErrorCode &errorCode);
 
@@ -79,6 +84,7 @@ struct U_I18N_API CollationTailoring : public UMemory {
     CollationData *ownedData;
     UObject *builder;
     UDataMemory *memory;
+    UResourceBundle *bundle;
     UTrie2 *trie;
     UnicodeSet *unsafeBackwardSet;
     int32_t *reorderCodes;

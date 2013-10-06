@@ -40,11 +40,40 @@
 #include "collationweights.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
+#include "ucol_imp.h"
 #include "utf16collationiterator.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 U_NAMESPACE_BEGIN
+
+namespace {
+
+class BundleImporter : public CollationRuleParser::Importer {
+public:
+    BundleImporter() : rules(NULL) {}
+    virtual ~BundleImporter();
+    virtual const UnicodeString *getRules(
+            const char *localeID, const char *collationType,
+            const char *&errorReason, UErrorCode &errorCode);
+
+private:
+    UnicodeString *rules;
+};
+
+BundleImporter::~BundleImporter() {
+    delete rules;
+}
+
+const UnicodeString *
+BundleImporter::getRules(
+        const char *localeID, const char *collationType,
+        const char *& /*errorReason*/, UErrorCode &errorCode) {
+    delete rules;
+    return rules = CollationLoader::loadRules(localeID, collationType, errorCode);
+}
+
+}  // namespace
 
 // RuleBasedCollator implementation ---------------------------------------- ***
 
@@ -53,6 +82,16 @@ U_NAMESPACE_BEGIN
 // Most code using Collator does not need to build a Collator from rules.
 // By moving these constructors and helper methods to a separate file,
 // most code will not have a static dependency on the builder code.
+
+RuleBasedCollator::RuleBasedCollator()
+        : data(NULL),
+          settings(NULL),
+          tailoring(NULL),
+          ownedSettings(NULL),
+          ownedReorderCodesCapacity(0),
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1) {
+}
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &errorCode)
         : data(NULL),
@@ -113,8 +152,9 @@ RuleBasedCollator::buildTailoring(const UnicodeString &rules,
     if(U_FAILURE(errorCode)) { return; }
     CollationBuilder builder(base, errorCode);
     UVersionInfo noVersion = { 0, 0, 0, 0 };
+    BundleImporter importer;
     LocalPointer<CollationTailoring> t(builder.parseAndBuild(rules, noVersion,
-                                                             NULL /* TODO: importer */,
+                                                             &importer,
                                                              outParseError, errorCode));
     if(U_FAILURE(errorCode)) { return; }
     if(strength != UCOL_DEFAULT) {
@@ -1519,5 +1559,30 @@ CollationBuilder::ceStrength(int64_t ce) {
 }
 
 U_NAMESPACE_END
+
+U_NAMESPACE_USE
+
+U_CAPI UCollator * U_EXPORT2
+ucol_openRules(const UChar *rules, int32_t rulesLength,
+               UColAttributeValue normalizationMode, UCollationStrength strength,
+               UParseError *parseError, UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) { return NULL; }
+    if(rules == NULL && rulesLength != 0) {
+        *pErrorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+    RuleBasedCollator *coll = new RuleBasedCollator();
+    if(coll == NULL) {
+        *pErrorCode = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    UnicodeString r((UBool)(rulesLength < 0), rules, rulesLength);
+    coll->buildTailoring(r, strength, normalizationMode, parseError, *pErrorCode);
+    if(U_FAILURE(*pErrorCode)) {
+        delete coll;
+        return NULL;
+    }
+    return coll->toUCollator();
+}
 
 #endif  // !UCONFIG_NO_COLLATION
