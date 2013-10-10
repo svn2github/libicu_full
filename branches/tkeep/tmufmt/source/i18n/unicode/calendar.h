@@ -1708,10 +1708,20 @@ protected:
      * (YEAR_WOY and WEEK_OF_YEAR) to an extended year in the case
      * where YEAR, EXTENDED_YEAR are not set.
      * The Calendar implementation assumes yearWoy is in extended gregorian form
-     * @internal
      * @return the extended year, UCAL_EXTENDED_YEAR
+     * @internal
      */
     virtual int32_t handleGetExtendedYearFromWeekFields(int32_t yearWoy, int32_t woy);
+
+    /**
+     * Validate a single field of this calendar.  Subclasses should
+     * override this method to validate any calendar-specific fields.
+     * Generic fields can be handled by
+     * <code>Calendar::validateField()</code>.
+     * @see #validateField(int, int, int, int&)
+     * @internal
+     */
+    virtual void validateField(UCalendarDateFields field, UErrorCode &status);
 
 #ifndef U_HIDE_INTERNAL_API
     /**
@@ -2293,16 +2303,6 @@ private:
     void validateFields(UErrorCode &status);
 
     /**
-     * Validate a single field of this calendar.  Subclasses should
-     * override this method to validate any calendar-specific fields.
-     * Generic fields can be handled by
-     * <code>Calendar::validateField()</code>.
-     * @see #validateField(int, int, int, int&)
-     * @internal
-     */
-    virtual void validateField(UCalendarDateFields field, UErrorCode &status);
-
-    /**
      * Validate a single field of this calendar given its minimum and
      * maximum allowed value.  If the field is out of range,
      * <code>U_ILLEGAL_ARGUMENT_ERROR</code> will be set.  Subclasses may
@@ -2388,19 +2388,19 @@ private:
 #endif /* !UCONFIG_NO_SERVICE */
 
     /**
-     * @internal
      * @return TRUE if this calendar has a default century (i.e. 03 -> 2003)
+     * @internal
      */
     virtual UBool haveDefaultCentury() const = 0;
 
     /**
-     * @internal
      * @return the start of the default century, as a UDate
+     * @internal
      */
     virtual UDate defaultCenturyStart() const = 0;
     /**
-     * @internal
      * @return the beginning year of the default century, as a year
+     * @internal
      */
     virtual int32_t defaultCenturyStartYear() const = 0;
 

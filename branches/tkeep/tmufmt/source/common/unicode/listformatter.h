@@ -29,6 +29,7 @@ U_NAMESPACE_BEGIN
 /** @internal */
 class Hashtable;
 
+#ifndef U_HIDE_INTERNAL_API
 /** @internal */
 struct ListFormatData : public UMemory {
     UnicodeString twoPattern;
@@ -39,6 +40,7 @@ struct ListFormatData : public UMemory {
   ListFormatData(const UnicodeString& two, const UnicodeString& start, const UnicodeString& middle, const UnicodeString& end) :
       twoPattern(two), startPattern(start), middlePattern(middle), endPattern(end) {}
 };
+#endif  /* U_HIDE_INTERNAL_API */
 
 
 /**
@@ -79,7 +81,6 @@ class U_COMMON_API ListFormatter : public UObject{
      * @param errorCode ICU error code, set if no data available for default locale.
      * @return Pointer to a ListFormatter object for the default locale,
      *     created from internal data derived from CLDR data.
-     * @deprecated
      * @draft ICU 50
      */
     static ListFormatter* createInstance(UErrorCode& errorCode);
@@ -91,11 +92,11 @@ class U_COMMON_API ListFormatter : public UObject{
      * @param errorCode ICU error code, set if no data available for the given locale.
      * @return A ListFormatter object created from internal data derived from
      *     CLDR data.
-     * @deprecated
      * @draft ICU 50
      */
     static ListFormatter* createInstance(const Locale& locale, UErrorCode& errorCode);
 
+#ifndef U_HIDE_INTERNAL_API
     /**
      * Creates a ListFormatter appropriate for a locale and style.
      *
@@ -107,6 +108,7 @@ class U_COMMON_API ListFormatter : public UObject{
      * @internal
      */
     static ListFormatter* createInstance(const Locale& locale, const char* style, UErrorCode& errorCode);
+#endif  /* U_HIDE_INTERNAL_API */
 
     /**
      * Destructor.
@@ -129,10 +131,12 @@ class U_COMMON_API ListFormatter : public UObject{
     UnicodeString& format(const UnicodeString items[], int32_t n_items,
         UnicodeString& appendTo, UErrorCode& errorCode) const;
 
+#ifndef U_HIDE_INTERNAL_API
     /**
      * @internal constructor made public for testing.
      */
     ListFormatter(const ListFormatData* listFormatterData);
+#endif  /* U_HIDE_INTERNAL_API */
 
   private:
     static void initializeHash(UErrorCode& errorCode);

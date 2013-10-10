@@ -2188,7 +2188,7 @@ static void TestUFormattable(void) {
   {
     UErrorCode status = U_ZERO_ERROR;
     UNumberFormat *unum = unum_open(UNUM_DEFAULT, NULL, -1, "en_US_POSIX", NULL, &status);
-    if(assertSuccessCheck("calling ufmt_open()", &status, TRUE)) {
+    if(assertSuccessCheck("calling unum_open()", &status, TRUE)) {
       //! [unum_parseToUFormattable]
       const UChar str[] = { 0x0031, 0x0032, 0x0033, 0x0000 }; /* 123 */
       int32_t result = 0;
@@ -2213,13 +2213,13 @@ static void TestUFormattable(void) {
 
     ufmt = ufmt_open(&status);
     unum = unum_open(UNUM_DEFAULT, NULL, -1, "en_US_POSIX", NULL, &status);
-    if(assertSuccessCheck("calling ufmt_open()", &status, TRUE)) {
+    if(assertSuccessCheck("calling ufmt_open() || unum_open()", &status, TRUE)) {
 
       pattern = "31337";
       log_verbose("-- pattern: %s\n", pattern);
       u_uastrcpy(buffer, pattern);
       unum_parseToUFormattable(unum, ufmt, buffer, -1, NULL, &status);
-      if(assertSuccess("unum_parseToUFormattable[31337]", &status)) {
+      if(assertSuccess("unum_parseToUFormattable(31337)", &status)) {
         assertTrue("ufmt_getLong()=31337", ufmt_getLong(ufmt, &status) == 31337);
         assertTrue("ufmt_getType()=UFMT_LONG", ufmt_getType(ufmt, &status) == UFMT_LONG);
         log_verbose("long = %d\n", ufmt_getLong(ufmt, &status));
@@ -2234,7 +2234,7 @@ static void TestUFormattable(void) {
       log_verbose("-- pattern: %s\n", pattern);
       u_uastrcpy(buffer, pattern);
       unum_parseToUFormattable(unum, ufmt, buffer, -1, NULL, &status);
-      if(assertSuccess("unum_parseToUFormattable[3.14159]", &status)) {
+      if(assertSuccess("unum_parseToUFormattable(3.14159)", &status)) {
         assertTrue("ufmt_getDouble()==3.14159", withinErr(ufmt_getDouble(ufmt, &status), 3.14159, 1e-15));
         assertSuccess("ufmt_getDouble()", &status);
         assertTrue("ufmt_getType()=UFMT_DOUBLE", ufmt_getType(ufmt, &status) == UFMT_DOUBLE);
@@ -2261,11 +2261,11 @@ static void TestUFormattable(void) {
     u_uastrcpy(buffer, pattern);
 
     unum = unum_open(UNUM_DEFAULT, NULL, -1, "en_US_POSIX", NULL, &status);
-    if(assertSuccessCheck("calling ufmt_open()", &status, TRUE)) {
+    if(assertSuccessCheck("calling unum_open()", &status, TRUE)) {
 
-      ufmt = unum_parseToUFormattable(unum, NULL, /* will be unum_open()'ed for us */
+      ufmt = unum_parseToUFormattable(unum, NULL, /* will be ufmt_open()'ed for us */
                                    buffer, -1, NULL, &status);
-      if(assertSuccess("unum_parseToUFormattable(weight of the moon", &status)) {
+      if(assertSuccess("unum_parseToUFormattable(weight of the moon)", &status)) {
         log_verbose("new formattable allocated at %p\n", (void*)ufmt);
         assertTrue("ufmt_isNumeric() TRUE", ufmt_isNumeric(ufmt));
         unum_formatUFormattable(unum, ufmt, out2k, 2048, NULL, &status);

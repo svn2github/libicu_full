@@ -219,8 +219,8 @@ public: // package
     void Test6703(void);
     void Test3785(void);
     void Test1624(void);
-    void Test8449(void);
-    void Test10249(void);
+    void TestIslamicUmAlQura(void);
+    void TestIslamicTabularDates(void);
 
     /**
      * Test the time stamp array recalculation during heavy Calendar usage
@@ -240,8 +240,10 @@ public: // package
 
     void TestCloneLocale(void);
 
+    void TestHebrewMonthValidation(void);
+
     /*
-     * utility methods for Test8449
+     * utility methods for TestIslamicUmAlQura
      */
     void setAndTestCalendar(Calendar* cal, int32_t initMonth, int32_t initDay, int32_t initYear, UErrorCode& status);
     void setAndTestWholeYear(Calendar* cal, int32_t startYear, UErrorCode& status);

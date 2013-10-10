@@ -131,6 +131,16 @@
  *   <li>   Align any particular field, or find out where it is for selection
  *          on the screen.
  * </ul>
+ * <p><strong>Date and Time Patterns:</strong></p>
+ *
+ * <p>Date and time formats are specified by <em>date and time pattern</em> strings.
+ * Within date and time pattern strings, all unquoted ASCII letters [A-Za-z] are reserved
+ * as pattern letters representing calendar fields. <code>UDateFormat</code> supports
+ * the date and time formatting algorithm and pattern letters defined by
+ * <a href="http://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table">UTS#35
+ * Unicode Locale Data Markup Language (LDML)</a> and further documented for ICU in the
+ * <a href="https://sites.google.com/site/icuprojectuserguide/formatparse/datetime?pli=1#TOC-Date-Field-Symbol-Table">ICU
+ * User Guide</a>.</p>
  */
 
 /** A date formatter.
@@ -848,7 +858,7 @@ typedef enum UDateFormatBooleanAttribute {
     UDAT_BOOLEAN_ATTRIBUTE_COUNT
 } UDateFormatBooleanAttribute;
 
-
+#ifndef U_HIDE_INTERNAL_API
 /**
  * Get a boolean attribute associated with a UDateFormat.
  * An example would be a true value for a key of UDAT_PARSE_ALLOW_WHITESPACE indicating allowing whitespace leniency.
@@ -874,6 +884,8 @@ udat_getBooleanAttribute(const UDateFormat* fmt, UDateFormatBooleanAttribute att
  */
 U_INTERNAL void U_EXPORT2
 udat_setBooleanAttribute(UDateFormat *fmt, UDateFormatBooleanAttribute attr, UBool, UErrorCode* status);
+
+#endif  /* U_HIDE_INTERNAL_API */
 
 
 
