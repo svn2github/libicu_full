@@ -322,33 +322,6 @@ public:
      */
     static Collator* U_EXPORT2 createInstance(const Locale& loc, UErrorCode& err);
 
-#ifdef U_USE_COLLATION_OBSOLETE_2_6
-    /**
-     * Create a Collator with a specific version.
-     * This is the same as createInstance(loc, err) except that getVersion() of
-     * the returned object is guaranteed to be the same as the version
-     * parameter.
-     * This is designed to be used to open the same collator for a given
-     * locale even when ICU is updated.
-     * The same locale and version guarantees the same sort keys and
-     * comparison results.
-     * <p>
-     * Note: this API will be removed in a future release.  Use
-     * <tt>createInstance(const Locale&, UErrorCode&) instead.</tt></p>
-     *
-     * @param loc The locale ID for which to open a collator.
-     * @param version The requested collator version.
-     * @param err A reference to a UErrorCode,
-     *            must not indicate a failure before calling this function.
-     * @return A pointer to a Collator, or 0 if an error occurred
-     *         or a collator with the requested version is not available.
-     *
-     * @see getVersion
-     * @obsolete ICU 2.6
-     */
-    static Collator *createInstance(const Locale &loc, UVersionInfo version, UErrorCode &err);
-#endif
-
     /**
      * The comparison function compares the character data stored in two
      * different strings. Returns information about whether a string is less
@@ -1062,7 +1035,7 @@ protected:
 
 
    /**
-    * Used internally by registraton to define the requested and valid locales.
+    * Used internally by registration to define the requested and valid locales.
     * @param requestedLocale the requested locale
     * @param validLocale the valid locale
     * @param actualLocale the actual locale
@@ -1071,16 +1044,6 @@ protected:
     virtual void setLocales(const Locale& requestedLocale, const Locale& validLocale, const Locale& actualLocale);
 
 public:
-#if !UCONFIG_NO_SERVICE
-#ifndef U_HIDE_INTERNAL_API
-    /**
-     * used only by ucol_open, not for public use
-     * @internal
-     */
-    static UCollator* createUCollator(const char* loc, UErrorCode* status);
-#endif  /* U_HIDE_INTERNAL_API */
-#endif
-
     /** Get the short definition string for a collator. This internal API harvests the collator's
      *  locale and the attribute set and produces a string that can be used for opening 
      *  a collator with the same properties using the ucol_openFromShortString API.
@@ -1147,7 +1110,6 @@ public:
 private:
     /**
      * Assignment operator. Private for now.
-     * @internal
      */
     Collator& operator=(const Collator& other);
 

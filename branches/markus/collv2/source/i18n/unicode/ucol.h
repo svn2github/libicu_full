@@ -1315,17 +1315,6 @@ U_STABLE USet * U_EXPORT2
 ucol_getTailoredSet(const UCollator *coll, UErrorCode *status);
 
 #ifndef U_HIDE_INTERNAL_API
-/** Check whether two collators are equal. Collators are considered equal if they
- *  will sort strings the same. This means that both the current attributes and the
- *  rules must be equivalent. Currently used for RuleBasedCollator::operator==.
- *  @param source first collator
- *  @param target second collator
- *  @return TRUE or FALSE
- *  @internal ICU 3.0
- */
-U_INTERNAL UBool U_EXPORT2
-ucol_equals(const UCollator *source, const UCollator *target);
-
 /** Calculates the set of unsafe code points, given a collator.
  *   A character is unsafe if you could append any character and cause the ordering to alter significantly.
  *   Collation sorts in normalized order, so anything that rearranges in normalization can cause this.
@@ -1341,12 +1330,6 @@ U_INTERNAL int32_t U_EXPORT2
 ucol_getUnsafeSet( const UCollator *coll,
                   USet *unsafe,
                   UErrorCode *status);
-
-/** Reset UCA's static pointers. You don't want to use this, unless your static memory can go away.
- * @internal ICU 3.2.1
- */
-U_INTERNAL void U_EXPORT2
-ucol_forgetUCA(void);
 
 /** Touches all resources needed for instantiating a collator from a short string definition,
  *  thus filling up the cache.

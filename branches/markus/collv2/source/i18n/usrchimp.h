@@ -18,6 +18,12 @@
 #include "unicode/ucoleitr.h"
 #include "unicode/ubrk.h"
 
+/**
+ * This indicates an error has occured during processing or there are no more CEs 
+ * to be returned.
+ */
+#define UCOL_PROCESSED_NULLORDER        ((int64_t)U_INT64_MAX)
+
 U_NAMESPACE_BEGIN
 
 class CollationElementIterator;

@@ -4068,6 +4068,7 @@ static void TestSettings(void) {
   }
 }
 
+#if 0  /* TODO: see if C++ operator==() is tested properly; ticket #10476 */
 static int32_t TestEqualsForCollator(const char* locName, UCollator *source, UCollator *target) {
     UErrorCode status = U_ZERO_ERROR;
     int32_t errorNo = 0;
@@ -4206,6 +4207,7 @@ static void TestEquals(void) {
         /*}*/
     }
 }
+#endif
 
 static void TestJ2726(void) {
     UChar a[2] = { 0x61, 0x00 }; /*"a"*/
@@ -7166,7 +7168,6 @@ void addMiscCollTest(TestNode** root)
     TEST(TestHebrewUCA);
     TEST(TestPartialSortKeyTermination);
     TEST(TestSettings);
-    TEST(TestEquals);
     TEST(TestJ2726);
     TEST(NullRule);
     TEST(TestNumericCollation);

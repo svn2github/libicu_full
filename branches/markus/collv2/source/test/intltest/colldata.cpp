@@ -50,7 +50,7 @@ CEList::CEList(UCollator *coll, const UnicodeString &string, UErrorCode &status)
     }
 
     // **** only set flag if string has Han(gul) ****
-    ucol_forceHanImplicit(elems, &status);
+    // ucol_forceHanImplicit(elems, &status); -- removed for ticket #10476
 
     switch (strength)
     {

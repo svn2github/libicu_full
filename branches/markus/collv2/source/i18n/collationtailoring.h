@@ -72,7 +72,9 @@ struct U_I18N_API CollationTailoring : public UMemory {
     const CollationData *data;  // == base data or ownedData
     CollationSettings settings;
     UnicodeString rules;
-    Locale actualLocale, validLocale;  // bogus when built from rules or constructed from a binary blob
+    // The locale is bogus when built from rules or constructed from a binary blob.
+    // It can then be set by the service registration code which is thread-safe.
+    mutable Locale actualLocale;
     // UCA version u.v.w & rules version r.s.t.q:
     // version[0]: builder version (runtime version is mixed in at runtime)
     // version[1]: bits 7..3=u, bits 2..0=v

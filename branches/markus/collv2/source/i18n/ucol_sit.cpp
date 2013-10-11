@@ -15,7 +15,7 @@
 
 #include "unicode/ustring.h"
 #include "unicode/udata.h"
-
+#include "unicode/utf16.h"
 #include "utracimp.h"
 #include "ucol_imp.h"
 #include "cmemory.h"
@@ -782,9 +782,6 @@ ucol_getUnsafeSet( const UCollator *coll,
                   USet *unsafe,
                   UErrorCode *status)
 {
-#if 1
-    return 0;
-#else  // TODO: really needed in capitst.c??
     UChar buffer[internalBufferSize];
     int32_t len = 0;
 
@@ -797,10 +794,9 @@ ucol_getUnsafeSet( const UCollator *coll,
     // add chars that fail the fcd check
     uset_applyPattern(unsafe, cccpattern, 24, USET_IGNORE_SPACE, status);
 
-    // add Thai/Lao prevowels
-    uset_addRange(unsafe, 0xe40, 0xe44);
-    uset_addRange(unsafe, 0xec0, 0xec4);
     // add lead/trail surrogates
+    // (trail surrogates should need to be unsafe only if the caller tests for UTF-16 code *units*,
+    // not when testing code *points*)
     uset_addRange(unsafe, 0xd800, 0xdfff);
 
     USet *contractions = uset_open(0,0);
@@ -827,6 +823,5 @@ ucol_getUnsafeSet( const UCollator *coll,
     uset_close(contractions);
 
     return uset_size(unsafe);
-#endif
 }
 #endif

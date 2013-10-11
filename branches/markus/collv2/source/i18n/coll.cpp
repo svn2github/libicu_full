@@ -227,23 +227,6 @@ hasService(void)
     return retVal;
 }
 
-// -------------------------------------
-
-UCollator* 
-Collator::createUCollator(const char *loc,
-                          UErrorCode *status)
-{
-    if (status && U_SUCCESS(*status) && hasService()) {
-        Locale desiredLocale(loc);
-        Collator *col = (Collator*)gService->get(desiredLocale, *status);
-        if (U_SUCCESS(*status)) {
-            return col->toUCollator();
-        } else {
-            delete col;
-        }
-    }
-    return NULL;
-}
 #endif /* UCONFIG_NO_SERVICE */
 
 static void U_CALLCONV 
@@ -333,39 +316,11 @@ Collator* Collator::makeInstance(const Locale&  desiredLocale,
         }
         status = U_MEMORY_ALLOCATION_ERROR;
     }
-    t->deleteIfZeroRefCount();
+    if (t != NULL) {
+        t->deleteIfZeroRefCount();
+    }
     return NULL;
 }
-
-#ifdef U_USE_COLLATION_OBSOLETE_2_6
-// !!! dlf the following is obsolete, ignore registration for this
-
-Collator *
-Collator::createInstance(const Locale &loc,
-                         UVersionInfo version,
-                         UErrorCode &status)
-{
-    Collator *collator;
-    UVersionInfo info;
-    
-    collator=new RuleBasedCollator(loc, status);
-    /* test for NULL */
-    if (collator == 0) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return 0;
-    }
-    
-    if(U_SUCCESS(status)) {
-        collator->getVersion(info);
-        if(0!=uprv_memcmp(version, info, sizeof(UVersionInfo))) {
-            delete collator;
-            status=U_MISSING_RESOURCE_ERROR;
-            return 0;
-        }
-    }
-    return collator;
-}
-#endif
 
 Collator *
 Collator::safeClone() const {

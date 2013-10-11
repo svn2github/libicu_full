@@ -27,16 +27,6 @@
  */
 #define UCOL_NULLORDER        ((int32_t)0xFFFFFFFF)
 
-#ifndef U_HIDE_INTERNAL_API
-/**
- * This indicates an error has occured during processing or there are no more CEs 
- * to be returned.
- *
- * @internal
- */
-#define UCOL_PROCESSED_NULLORDER        ((int64_t)U_INT64_MAX)
-#endif  /* U_HIDE_INTERNAL_API */
-
 #include "unicode/ucol.h"
 
 /** 
@@ -154,22 +144,6 @@ ucol_closeElements(UCollationElements *elems);
  */
 U_STABLE void U_EXPORT2 
 ucol_reset(UCollationElements *elems);
-
-#ifndef U_HIDE_INTERNAL_API
-/**
- * Set the collation elements to use implicit ordering for Han
- * even if they've been tailored. This will also force Hangul
- * syllables to be ordered by decomposing them to their component
- * Jamo.
- *
- * @param elems The UCollationElements containing the text.
- * @param status A pointer to a UErrorCode to reveive any errors.
- *
- * @internal
- */
-U_INTERNAL void U_EXPORT2
-ucol_forceHanImplicit(UCollationElements *elems, UErrorCode *status);
-#endif  /* U_HIDE_INTERNAL_API */
 
 /**
  * Get the ordering priority of the next collation element in the text.

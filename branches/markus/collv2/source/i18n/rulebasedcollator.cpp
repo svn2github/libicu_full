@@ -141,6 +141,7 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          validLocale(""),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
@@ -164,7 +165,7 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
     CollationDataReader::read(base->tailoring, bin, length, *t, errorCode);
     if(U_FAILURE(errorCode)) { return; }
     t->actualLocale.setToBogus();
-    t->validLocale.setToBogus();
+    validLocale.setToBogus();
     adoptTailoring(t.orphan());
 }
 
@@ -172,6 +173,7 @@ RuleBasedCollator::RuleBasedCollator(const CollationTailoring *t)
         : data(t->data),
           settings(&t->settings),
           tailoring(t),
+          validLocale(t->actualLocale),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
@@ -203,6 +205,7 @@ RuleBasedCollator::adoptTailoring(CollationTailoring *t) {
     settings = &t->settings;
     t->addRef();
     tailoring = t;
+    validLocale = t->actualLocale;
     fastLatinOptions = getFastLatinOptions();
 }
 
@@ -210,6 +213,7 @@ Collator *
 RuleBasedCollator::clone() const {
     LocalPointer<RuleBasedCollator> newCollator(new RuleBasedCollator(tailoring));
     if(newCollator.isNull()) { return NULL; }
+    newCollator->validLocale = validLocale;
     if(ownedSettings != NULL) {
         LocalPointer<CollationSettings> newSettings(new CollationSettings(*newCollator->settings));
         if(newSettings.isNull()) { return NULL; }
@@ -298,12 +302,14 @@ RuleBasedCollator::hashCode() const {
 }
 
 void
-RuleBasedCollator::setLocales(const Locale &requestedLocale, const Locale &validLocale,
-                              const Locale &actualLocale) {
-    U_ASSERT(actualLocale == tailoring->actualLocale);
-    (void)actualLocale;  // TODO: remove?
-    (void)validLocale;  // TODO: move from tailoring to rbc?
-    (void)requestedLocale;  // TODO: drop support?
+RuleBasedCollator::setLocales(const Locale &requested, const Locale &valid,
+                              const Locale &actual) {
+    U_ASSERT(actual == tailoring->actualLocale || tailoring->actualLocale.isBogus());
+    if(tailoring->actualLocale.isBogus()) {
+        tailoring->actualLocale = actual;
+    }
+    validLocale = valid;
+    (void)requested;  // Ignore, see also ticket #10477.
 }
 
 Locale
@@ -315,7 +321,8 @@ RuleBasedCollator::getLocale(ULocDataLocaleType type, UErrorCode& errorCode) con
     case ULOC_ACTUAL_LOCALE:
         return tailoring->actualLocale;
     case ULOC_VALID_LOCALE:
-        return tailoring->validLocale;
+    case ULOC_REQUESTED_LOCALE:  // TODO: Drop this, see ticket #10477.
+        return validLocale;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return Locale::getRoot();
@@ -332,16 +339,13 @@ RuleBasedCollator::getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) c
     case ULOC_ACTUAL_LOCALE:
         result = &tailoring->actualLocale;
     case ULOC_VALID_LOCALE:
-        result = &tailoring->validLocale;
+    case ULOC_REQUESTED_LOCALE:  // TODO: Drop this, see ticket #10477.
+        result = &validLocale;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
     }
-    if(result->isBogus()) {
-        return NULL;  // built from rules or constructed from a binary blob
-    } else {
-        return result->getName();
-    }
+    return result->getName();
 }
 
 const UnicodeString&
@@ -1599,23 +1603,21 @@ RuleBasedCollator::internalGetShortDefinitionString(const char *locale,
     return u_terminateChars(buffer, capacity, result.length(), &errorCode);
 }
 
-namespace {
-
-void computeMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode) {
+void
+RuleBasedCollator::computeMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode) {
     t->maxExpansions = CollationElementIterator::computeMaxExpansions(t->data, errorCode);
 }
 
-UBool initMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode) {
-    umtx_initOnce(t->maxExpansionsInitOnce, computeMaxExpansions, t, errorCode);
+UBool
+RuleBasedCollator::initMaxExpansions(UErrorCode &errorCode) const {
+    umtx_initOnce(tailoring->maxExpansionsInitOnce, computeMaxExpansions, tailoring, errorCode);
     return U_SUCCESS(errorCode);
 }
-
-}  // namespace
 
 CollationElementIterator *
 RuleBasedCollator::createCollationElementIterator(const UnicodeString& source) const {
     UErrorCode errorCode = U_ZERO_ERROR;
-    if(!initMaxExpansions(tailoring, errorCode)) { return NULL; }
+    if(!initMaxExpansions(errorCode)) { return NULL; }
     CollationElementIterator *cei = new CollationElementIterator(source, this, errorCode);
     if(U_FAILURE(errorCode)) {
         delete cei;
@@ -1627,7 +1629,7 @@ RuleBasedCollator::createCollationElementIterator(const UnicodeString& source) c
 CollationElementIterator *
 RuleBasedCollator::createCollationElementIterator(const CharacterIterator& source) const {
     UErrorCode errorCode = U_ZERO_ERROR;
-    if(!initMaxExpansions(tailoring, errorCode)) { return NULL; }
+    if(!initMaxExpansions(errorCode)) { return NULL; }
     CollationElementIterator *cei = new CollationElementIterator(source, this, errorCode);
     if(U_FAILURE(errorCode)) {
         delete cei;
@@ -1639,7 +1641,7 @@ RuleBasedCollator::createCollationElementIterator(const CharacterIterator& sourc
 int32_t
 RuleBasedCollator::getMaxExpansion(int32_t order) const {
     UErrorCode errorCode = U_ZERO_ERROR;
-    (void)initMaxExpansions(tailoring, errorCode);
+    (void)initMaxExpansions(errorCode);
     return CollationElementIterator::getMaxExpansion(tailoring->maxExpansions, order);
 }
 

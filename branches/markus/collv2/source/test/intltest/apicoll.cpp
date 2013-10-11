@@ -56,38 +56,6 @@ CollationAPITest::doAssert(UBool condition, const char *message)
     }
 }
 
-#ifdef U_USE_COLLATION_OBSOLETE_2_6
-/*
- * Test Collator::createInstance(... version...) for some locale. Called by TestProperty().
- */
-static void
-TestOpenVersion(IntlTest &test, const Locale &locale) {
-    UVersionInfo version1, version2;
-    Collator *collator1, *collator2;
-    UErrorCode errorCode;
-
-    errorCode=U_ZERO_ERROR;
-    collator1=Collator::createInstance(locale, errorCode);
-    if(U_SUCCESS(errorCode)) {
-        /* get the current version */
-        collator1->getVersion(version1);
-        delete collator1;
-
-        /* try to get that same version again */
-        collator2=Collator::createInstance(locale, version1, errorCode);
-        if(U_SUCCESS(errorCode)) {
-            collator2->getVersion(version2);
-            if(0!=uprv_memcmp(version1, version2, sizeof(UVersionInfo))) {
-                test.errln("error: Collator::createInstance(\"%s\", (%s collator)->getVersion()) returns a different collator\n", locale.getName(), locale.getName());
-            }
-            delete collator2;
-        } else {
-            test.errln("error: Collator::createInstance(\"%s\", (%s collator)->getVersion()) fails: %s\n", locale.getName(), locale.getName(), u_errorName(errorCode));
-        }
-    }
-}
-#endif
-
 // Collator Class Properties
 // ctor, dtor, createInstance, compare, getStrength/setStrength
 // getDecomposition/setDecomposition, getDisplayName
@@ -263,25 +231,6 @@ CollationAPITest::TestProperty(/* char* par */)
     delete frCol;
     delete aFrCol;
     delete junk;
-
-#ifdef U_USE_COLLATION_OBSOLETE_2_6
-    /* test Collator::createInstance(...version...) */
-    TestOpenVersion(*this, "");
-    TestOpenVersion(*this, "da");
-    TestOpenVersion(*this, "fr");
-    TestOpenVersion(*this, "ja");
-
-    /* try some bogus version */
-    versionArray[0]=0;
-    versionArray[1]=0x99;
-    versionArray[2]=0xc7;
-    versionArray[3]=0xfe;
-    col=Collator::createInstance(Locale(), versionArray, success);
-    if(U_SUCCESS(success)) {
-        errln("error: ucol_openVersion(bogus version) succeeded");
-        delete col;
-    }
-#endif
 }
 
 void 

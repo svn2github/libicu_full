@@ -795,11 +795,15 @@ private:
         return (UBool)((explicitlySetAttributes & ((uint32_t)1 << attribute)) != 0);
     }
 
+    static void computeMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode);
+    UBool initMaxExpansions(UErrorCode &errorCode) const;
+
     int32_t getFastLatinOptions() const;
 
     const CollationData *data;
     const CollationSettings *settings;  // == &tailoring->settings or ownedSettings
     const CollationTailoring *tailoring;
+    Locale validLocale;
     CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
     int32_t ownedReorderCodesCapacity;
     uint32_t explicitlySetAttributes;

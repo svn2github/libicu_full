@@ -281,12 +281,6 @@ public:
     */
     static UClassID U_EXPORT2 getStaticClassID();
 
-    /**
-     * For internal use only.
-     * @internal
-     */
-    static UHashtable *computeMaxExpansions(const CollationData *data, UErrorCode &errorCode);
-
 #ifndef U_HIDE_INTERNAL_API
     /** @internal */
     static inline CollationElementIterator *fromUCollationElements(UCollationElements *uc) {
@@ -351,6 +345,8 @@ private:
         operator=(const CollationElementIterator& other);
 
     CollationElementIterator(); // default constructor not implemented
+
+    static UHashtable *computeMaxExpansions(const CollationData *data, UErrorCode &errorCode);
 
     static int32_t getMaxExpansion(const UHashtable *maxExpansions, int32_t order);
 

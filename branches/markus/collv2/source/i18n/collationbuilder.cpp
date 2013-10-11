@@ -87,6 +87,7 @@ RuleBasedCollator::RuleBasedCollator()
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          validLocale(""),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
@@ -97,6 +98,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          validLocale(""),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
@@ -109,6 +111,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          validLocale(""),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
@@ -122,6 +125,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          validLocale(""),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
@@ -136,6 +140,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          validLocale(""),
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
@@ -165,7 +170,6 @@ RuleBasedCollator::buildTailoring(const UnicodeString &rules,
     }
     if(U_FAILURE(errorCode)) { return; }
     t->actualLocale.setToBogus();
-    t->validLocale.setToBogus();
     adoptTailoring(t.orphan());
 }
 

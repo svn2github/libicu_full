@@ -303,23 +303,6 @@ ucol_reset(UCollationElements *elems)
     CollationElementIterator::fromUCollationElements(elems)->reset();
 }
 
-U_CAPI void U_EXPORT2
-ucol_forceHanImplicit(UCollationElements *elems, UErrorCode *status)
-{
-    if (U_FAILURE(*status)) {
-        return;
-    }
-
-    if (elems == NULL) {
-        *status = U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
-
-#if 0  // TODO: only used once in intltest/colldata.cpp; remove this function?
-    elems->iteratordata_.flags |= UCOL_FORCE_HAN_IMPLICIT;
-#endif
-}
-
 U_CAPI int32_t U_EXPORT2
 ucol_next(UCollationElements *elems, 
           UErrorCode         *status)

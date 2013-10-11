@@ -137,7 +137,6 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
         if(U_FAILURE(errorCode)) { return NULL; }
         validLocale = Locale(vLocale);
     }
-    // TODO: move validLocale from tailoring to rbc
 
     // There are zero or more tailorings in the collations table.
     LocalUResourceBundlePointer collations(
@@ -253,7 +252,6 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
         if(U_SUCCESS(errorCode)) {
             t->rules.setTo(TRUE, s, length);
         }
-        // TODO: else t->rules.setToBogus() ??
     }
 
     if(typeFallback) {
@@ -267,13 +265,6 @@ U_NAMESPACE_END
 
 U_NAMESPACE_USE
 
-U_CAPI void U_EXPORT2
-ucol_forgetUCA() {
-    // TODO: either remove this function or else forget CollationRoot cache too
-    ucol_res_cleanup();
-}
-
-// TODO: move to coll.cpp??
 U_CAPI UCollator*
 ucol_open(const char *loc,
           UErrorCode *status)
