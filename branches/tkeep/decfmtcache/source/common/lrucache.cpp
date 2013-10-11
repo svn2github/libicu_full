@@ -10,91 +10,47 @@
 
 #include "unicode/lrucache.h"
 #include "mutex.h"
-#include "umutex.h"
 #include "uhash.h"
 #include "cstring.h"
 
 U_NAMESPACE_BEGIN
 
-const UObject *Handle::ptr() const {
-    return readWrite != NULL ? readWrite : readOnly;
-}
+class CacheEntry : public UMemory {
+public:
+    CacheEntry *moreRecent;
+    CacheEntry *lessRecent;
+    char *localeId;
+    UObject *cachedData;
+    UErrorCode status;  // This is the error if any from creating cachedData.
+    u_atomic_int32_t refCount;
 
-UObject *Handle::mutablePtr() {
-    if (readWrite == NULL && refCount != NULL &&
-        readOnly != NULL && cloneFunc != NULL) {
-        readWrite = cloneFunc(*readOnly);
-        if (readWrite != NULL) {
-            umtx_atomic_dec(refCount);
-            refCount = NULL;
-            readOnly = NULL;
-        }
-    }
-    return readWrite;
-}
+    CacheEntry();
+    ~CacheEntry();
 
-Handle::~Handle() {
-  release();
-}
-
-void Handle::init(const UObject *ptr, u_atomic_int32_t *rc, CloneFunc cf) {
-    release();
-    readOnly = ptr;
-    readWrite = NULL;
-    refCount = rc;
-    cloneFunc = cf;
-    if (refCount != NULL) {
-        umtx_atomic_inc(refCount);
-    }
-}
-
-void Handle::init(UObject *ptr) {
-    if (ptr == readWrite) {
-        return;
-    }
-    release();
-    readWrite = ptr;
-    refCount = NULL;
-    readOnly = NULL;
-}
-
-void Handle::release() {
-    if (readWrite != NULL) {
-        delete readWrite;
-    }
-    if (refCount != NULL) {
-        umtx_atomic_dec(refCount);
-    }
-}
-
-struct CacheEntry : public UMemory {
-  CacheEntry *moreRecent;
-  CacheEntry *lessRecent;
-  char *localeId;
-  UObject *cachedData;
-  UErrorCode status;  // This is the error if any from creating cachedData.
-  int32_t refCount;
-
-  CacheEntry();
-  ~CacheEntry();
-
-  UBool canEvict();
-  void unlink();
-  void uninit();
-  UBool init(const char *localeId, CreateFunc createFunc);
+    UBool canEvict();
+    void unlink();
+    void uninit();
+    UBool init(const char *localeId, CreateFunc createFunc);
+private:
+    CacheEntry(const CacheEntry& other);
+    CacheEntry &operator=(const CacheEntry& other);
 };
 
 CacheEntry::CacheEntry() 
     : moreRecent(NULL), lessRecent(NULL), localeId(NULL), cachedData(NULL),
-      status(U_ZERO_ERROR), refCount(0) {
+      status(U_ZERO_ERROR) {
+
+    // Count this cache entry as first reference to data.
+    umtx_storeRelease(refCount, 1);
 }
 
 CacheEntry::~CacheEntry() {
-  uninit();
+    uninit();
 }
 
 UBool CacheEntry::canEvict() {
-  return umtx_loadAcquire(*((u_atomic_int32_t *) &refCount)) == 0;
+    // We can evict if there are no other references.
+    return umtx_loadAcquire(refCount) == 1;
 }
 
 void CacheEntry::unlink() {
@@ -132,9 +88,8 @@ LRUCache *LRUCache::newCache(
         int32_t maxSize,
         UMutex *mutex,
         CreateFunc createFunc,
-        CloneFunc cloneFunc,
         UErrorCode &status) {
-    LRUCache *result = new LRUCache(maxSize, mutex, createFunc, cloneFunc, status);
+    LRUCache *result = new LRUCache(maxSize, mutex, createFunc, status);
     if (U_FAILURE(status)) {
         delete result;
         return NULL;
@@ -151,7 +106,7 @@ void LRUCache::moveToMostRecent(CacheEntry *entry) {
 }
 
 
-void LRUCache::get(const char *localeId, Handle &handle, UErrorCode &status) {
+void LRUCache::_get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refPtr, UErrorCode &status) {
     // Begin mutex
     {
         Mutex lock(mutex);
@@ -206,7 +161,8 @@ void LRUCache::get(const char *localeId, Handle &handle, UErrorCode &status) {
                 status = entry->status;
                 return;
             }
-            handle.init(entry->cachedData, (u_atomic_int32_t *) &entry->refCount, cloneFunc);
+            ptr = entry->cachedData;
+            refPtr = &entry->refCount;
             return;
         }
     }
@@ -217,11 +173,12 @@ void LRUCache::get(const char *localeId, Handle &handle, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    handle.init(newData);
+    ptr = newData;
+    refPtr = NULL;
 }
 
-LRUCache::LRUCache(int32_t size, UMutex *mtx, CreateFunc crf, CloneFunc clf, UErrorCode &status) :
-        maxSize(size), mutex(mtx), createFunc(crf), cloneFunc(clf) {
+LRUCache::LRUCache(int32_t size, UMutex *mtx, CreateFunc crf, UErrorCode &status) :
+        maxSize(size), mutex(mtx), createFunc(crf) {
     mostRecentlyUsedMarker = new CacheEntry;
     leastRecentlyUsedMarker = new CacheEntry;
     if (mostRecentlyUsedMarker == NULL || leastRecentlyUsedMarker == NULL) {
