@@ -15,7 +15,6 @@
 #include "hash.h"
 #include "uassert.h"
 
-#include "ucol_imp.h" // internal api needed to test ucollator equality
 #include "cstring.h" // internal api used to compare locale strings
 
 void CollationServiceTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* /*par */)

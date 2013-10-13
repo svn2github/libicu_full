@@ -209,7 +209,7 @@ public:
 
     /**
      * Assignment operator.
-     * @param other other RuleBasedCollator object to compare with.
+     * @param other other RuleBasedCollator object to copy from.
      * @stable ICU 2.0
      */
     RuleBasedCollator& operator=(const RuleBasedCollator& other);
@@ -766,6 +766,8 @@ private:
     };
 
     void adoptTailoring(CollationTailoring *t);
+    void releaseSettings();
+    void cloneSettings(const CollationSettings &otherSettings);
 
     // Both lengths must be <0 or else both must be >=0.
     UCollationResult doCompare(const UChar *left, int32_t leftLength,

@@ -28,8 +28,6 @@
 #include "callcoll.h"
 #include "unicode/ustring.h"
 #include "string.h"
-#include "ucol_imp.h"
-#include "ucol_tok.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "uassert.h"
@@ -529,6 +527,7 @@ static void testEquality(UCollator* col, const UChar* p,const UChar* q){
 }
 
 static void testCollator(UCollator *coll, UErrorCode *status) {
+#if 0  /* TODO: redo for new implementation; seems to verify that relation strings sort as in the rules; how does this work with extensions, prefixes etc.? */
   const UChar *rules = NULL, *current = NULL;
   int32_t ruleLen = 0;
   uint32_t strength = 0;
@@ -656,6 +655,7 @@ static void testCollator(UCollator *coll, UErrorCode *status) {
     uprv_free(src.source);
     uprv_free(src.reorderCodes);
   }
+#endif
 }
 
 static UCollationResult ucaTest(void *collator, const int object, const UChar *source, const int sLen, const UChar *target, const int tLen) {
@@ -916,6 +916,7 @@ static uint32_t testSwitch(tst_strcoll* func, void *collator, int opts, uint32_t
 
 
 static void testAgainstUCA(UCollator *coll, UCollator *UCA, const char *refName, UBool error, UErrorCode *status) {
+#if 0  /* TODO: what does this test for? reenable for new implementation? */
   const UChar *rules = NULL, *current = NULL;
   int32_t ruleLen = 0;
   uint32_t strength = 0;
@@ -1010,6 +1011,7 @@ static void testAgainstUCA(UCollator *coll, UCollator *UCA, const char *refName,
     uprv_free(src.source);
     uprv_free(src.reorderCodes);
   }
+#endif
 }
 
 /*
@@ -1087,6 +1089,7 @@ static void setIndirectBoundaries(uint32_t indexR, uint32_t *start, uint32_t *en
 }
 
 static void testCEs(UCollator *coll, UErrorCode *status) {
+#if 0  /* TODO: what does this test for? reenable for new implementation? [related to ticket #8047?] */
     const UChar *rules = NULL, *current = NULL;
     int32_t ruleLen = 0;
 
@@ -1306,6 +1309,7 @@ static void testCEs(UCollator *coll, UErrorCode *status) {
     }
     ucol_close(UCA);
     uprv_delete_collIterate(c);
+#endif
 }
 
 #if 0
@@ -1445,9 +1449,9 @@ static void RamsRulesTest(void) {
             coll = ucol_open(locName, &status);
             if(U_SUCCESS(status)) {
               if((status != U_USING_DEFAULT_WARNING) && (status != U_USING_FALLBACK_WARNING)) {
-                if(coll->image->jamoSpecial == TRUE) {
+                /* TODO: needed??  if(coll->image->jamoSpecial == TRUE) {
                   log_err("%s has special JAMOs\n", locName);
-                }
+                } */
                 ucol_setAttribute(coll, UCOL_CASE_FIRST, UCOL_OFF, &status);
                 testCollator(coll, &status);
                 testCEs(coll, &status);
@@ -1475,52 +1479,6 @@ static void RamsRulesTest(void) {
         }
     }
 
-}
-
-static void IsTailoredTest(void) {
-    UErrorCode status = U_ZERO_ERROR;
-    uint32_t i = 0;
-    UCollator *coll = NULL;
-    UChar rule[2048];
-    UChar tailored[2048];
-    UChar notTailored[2048];
-    uint32_t ruleLen, tailoredLen, notTailoredLen;
-
-    log_verbose("IsTailoredTest\n");
-
-    u_uastrcpy(rule, "&Z < A, B, C;c < d");
-    ruleLen = u_strlen(rule);
-
-    u_uastrcpy(tailored, "ABCcd");
-    tailoredLen = u_strlen(tailored);
-
-    u_uastrcpy(notTailored, "ZabD");
-    notTailoredLen = u_strlen(notTailored);
-
-    coll = ucol_openRules(rule, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
-    if(U_SUCCESS(status)) {
-        for(i = 0; i<tailoredLen; i++) {
-            if(!ucol_isTailored(coll, tailored[i], &status)) {
-                log_err("%i: %04X should be tailored - it is reported as not\n", i, tailored[i]);
-            }
-        }
-        for(i = 0; i<notTailoredLen; i++) {
-            if(ucol_isTailored(coll, notTailored[i], &status)) {
-                log_err("%i: %04X should not be tailored - it is reported as it is\n", i, notTailored[i]);
-            }
-        }
-        ucol_close(coll);
-    }
-    else {
-        log_err_status(status, "Can't tailor rules\n");
-    }
-    /* Code coverage */
-    status = U_ZERO_ERROR;
-    coll = ucol_open("ja", &status);
-    if(!ucol_isTailored(coll, 0x4E9C, &status)) {
-        log_err_status(status, "0x4E9C should be tailored - it is reported as not\n");
-    }
-    ucol_close(coll);
 }
 
 
@@ -2560,9 +2518,11 @@ static void TestHangulTailoring(void) {
     log_err("Unable to open collator with rules %s\n", rules);
   }
 
+#if 0  /* TODO: review -- useful? do we need to somehow make this work with the new implementation? */
   log_verbose("Setting jamoSpecial to TRUE and testing once more\n");
   ((UCATableHeader *)coll->image)->jamoSpecial = TRUE; /* don't try this at home  */
   genericOrderingTest(coll, koreanData, sizeof(koreanData)/sizeof(koreanData[0]));
+#endif
 
   ucol_close(coll);
 
@@ -2571,6 +2531,7 @@ static void TestHangulTailoring(void) {
 }
 
 static void TestCompressOverlap(void) {
+#if 0  /* TODO: review: we might test for short sort keys but we should not test for exact byte values since they are implementation-dependent; note: the primary/case/quaternary levels also use compression */
     UChar       secstr[150];
     UChar       tertstr[150];
     UErrorCode  status = U_ZERO_ERROR;
@@ -2653,6 +2614,7 @@ static void TestCompressOverlap(void) {
     }
 
     ucol_close(coll);
+#endif
 }
 
 static void TestCyrillicTailoring(void) {
@@ -2982,6 +2944,7 @@ static void TestBocsuCoverage(void) {
 }
 
 static void TestVariableTopSetting(void) {
+#if 0  /* TODO: is this test useful? will it be obsolete when we add the maxVariable attribute and start pinning the variableTop? */
   UErrorCode status = U_ZERO_ERROR;
   const UChar *current = NULL;
   uint32_t varTopOriginal = 0, varTop1, varTop2;
@@ -3217,7 +3180,7 @@ static void TestVariableTopSetting(void) {
   } else {
     log_data_err("Couldn't open UCA collator\n");
   }
-
+#endif
 }
 
 static void TestNonChars(void) {
@@ -4007,7 +3970,7 @@ static void TestPartialSortKeyTermination(void) {
     "\\udc00\\ud800\\ud800"
   };
 
-  int32_t i = sizeof(UCollator);
+  int32_t i;
 
   UErrorCode status = U_ZERO_ERROR;
 
@@ -4401,6 +4364,7 @@ static void TestPinyinProblem(void) {
     genericLocaleStarter("zh__PINYIN", test, sizeof(test)/sizeof(test[0]));
 }
 
+#if 0  /* TODO: do not test implementation details of implicit CEs; can we delete this in favor of CollationTest::TestImplicits()? */
 #define TST_UCOL_MAX_INPUT 0x220001
 #define topByte 0xFF000000;
 #define bottomByte 0xFF;
@@ -4412,8 +4376,10 @@ static void showImplicit(UChar32 i) {
         log_verbose("%08X\t%08X\n", i, uprv_uca_getImplicitFromRaw(i));
     }
 }
+#endif
 
 static void TestImplicitGeneration(void) {
+#if 0
     UErrorCode status = U_ZERO_ERROR;
     UChar32 last = 0;
     UChar32 current;
@@ -4476,6 +4442,7 @@ static void TestImplicitGeneration(void) {
     showImplicit(TST_UCOL_MAX_INPUT-1);
     showImplicit(TST_UCOL_MAX_INPUT);
     ucol_close(coll);
+#endif
 }
 
 /**
@@ -7141,7 +7108,6 @@ void addMiscCollTest(TestNode** root)
     TEST(FunkyATest);
     TEST(BillFairmanTest);
     TEST(RamsRulesTest);
-    TEST(IsTailoredTest);
     TEST(TestCollations);
     TEST(TestChMove);
     TEST(TestImplicitTailoring);

@@ -22,7 +22,6 @@
 #include "unicode/uchar.h"
 #include "unicode/tstdtmod.h"
 #include "cstring.h"
-#include "ucol_tok.h"
 #include "tscoll.h"
 #include "dadrcoll.h"
 
@@ -66,7 +65,7 @@ void DataDrivenCollatorTest::runIndexedTest( int32_t index, UBool exec, const ch
         log(name);
           logln("---");
           logln("");
-          processTest(testData);
+          // processTest(testData); -- TODO: merge DataDrivenCollationTest.txt into collationtest.txt and remove this code
       }
       delete testData;
     } else {
@@ -148,6 +147,7 @@ DataDrivenCollatorTest::getNextInSequence(SeqElement &el) {
 void 
 DataDrivenCollatorTest::processArguments(Collator *col, const UChar *start, int32_t optLen) {
   const UChar *end = start+optLen;
+#if 0  // see TODO above
   UColAttribute attrib;
   UColAttributeValue value;
 
@@ -162,6 +162,7 @@ DataDrivenCollatorTest::processArguments(Collator *col, const UChar *start, int3
     }
     start = ucol_tok_getNextArgument(start, end, &attrib, &value, &status);
   }
+#endif
 }
 
 void

@@ -79,9 +79,6 @@
     <ClCompile Include="apicoll.cpp">
       <Filter>collation</Filter>
     </ClCompile>
-    <ClCompile Include="cntabcol.cpp">
-      <Filter>collation</Filter>
-    </ClCompile>
     <ClCompile Include="currcoll.cpp">
       <Filter>collation</Filter>
     </ClCompile>
@@ -478,9 +475,6 @@
       <Filter>collation</Filter>
     </ClInclude>
     <ClInclude Include="apicoll.h">
-      <Filter>collation</Filter>
-    </ClInclude>
-    <ClInclude Include="cntabcol.h">
       <Filter>collation</Filter>
     </ClInclude>
     <ClInclude Include="currcoll.h">

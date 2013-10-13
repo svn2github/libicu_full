@@ -154,12 +154,6 @@ U_NAMESPACE_END
 U_CFUNC UChar32
 u_writeIdenticalLevelRun(UChar32 prev, const UChar *s, int32_t length, icu::ByteSink &sink);
 
-U_CFUNC int32_t
-u_writeIdenticalLevelRunTwoChars(UChar32 first, UChar32 second, uint8_t *p);
-
-U_CFUNC uint8_t *
-u_writeDiff(int32_t diff, uint8_t *p);
-
 #endif /* #if !UCONFIG_NO_COLLATION */
 
 #endif

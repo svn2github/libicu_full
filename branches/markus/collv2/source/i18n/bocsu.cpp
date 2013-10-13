@@ -27,7 +27,7 @@
  * encode one difference value -0x10ffff..+0x10ffff in 1..4 bytes,
  * preserving lexical order
  */
-U_CFUNC uint8_t *
+static uint8_t *
 u_writeDiff(int32_t diff, uint8_t *p) {
     if(diff>=SLOPE_REACH_NEG_1) {
         if(diff<=SLOPE_REACH_POS_1) {
@@ -137,23 +137,6 @@ u_writeIdenticalLevelRun(UChar32 prev, const UChar *s, int32_t length, icu::Byte
         sink.Append(buffer, (int32_t)(p-reinterpret_cast<uint8_t *>(buffer)));
     }
     return prev;
-}
-
-U_CFUNC int32_t
-u_writeIdenticalLevelRunTwoChars(UChar32 first, UChar32 second, uint8_t *p) {
-    uint8_t *p0 = p;
-    if(first<0x4e00 || first>=0xa000) {
-        first=(first&~0x7f)-SLOPE_REACH_NEG_1;
-    } else {
-        /*
-         * Unihan U+4e00..U+9fa5:
-         * double-bytes down from the upper end
-         */
-        first=0x9fff-SLOPE_REACH_POS_2;
-    }
-
-    p=u_writeDiff(second-first, p);
-    return (int32_t)(p-p0);
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

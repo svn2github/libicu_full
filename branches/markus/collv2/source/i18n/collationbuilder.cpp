@@ -5,6 +5,8 @@
 *******************************************************************************
 * collationbuilder.cpp
 *
+* (replaced the former ucol_bld.cpp)
+*
 * created on: 2013may06
 * created by: Markus W. Scherer
 */

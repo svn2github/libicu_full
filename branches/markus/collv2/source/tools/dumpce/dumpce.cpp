@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "ucol_tok.h"
 #include "cstring.h"
 #include "uoptions.h"
 #include "ucol_imp.h"
@@ -41,6 +40,7 @@
 #include <unicode/uniset.h>
 #include <unicode/usetiter.h>
 
+#if 0  // TODO: remove this tool, or make it work with the new collation implementation
 /**
 * Command line option variables. 
 * These global variables are set according to the options specified on the 
@@ -1078,13 +1078,6 @@ int getScriptElements(UScriptCode script[], int scriptcount,
     src.extraEnd     = src.end + UCOL_TOK_EXTRA_RULE_SPACE_SIZE;
     src.opts         = &opts;
         
-	/*
-	ucol_tok_parseNextToken(&src, &strength, &chOffset, 
-                                              &chLen, &exOffset, &exLen,
-                                              &prefixOffset, &prefixLen,
-                                              &specs, rstart, &parseError,
-                                              &error)
-    */
     while ((current = ucol_tok_parseNextToken(&src, rstart, &parseError,
                                               &error)) != NULL) {
         // contractions handled here
@@ -1536,13 +1529,14 @@ void serializeScripts() {
     outputListHTMLFooter(list);
     fclose(list);
 }
+#endif
 
 /** 
 * Main   --  process command line, read in and pre-process the test file,
 *            call other functions to do the actual tests.
 */
 int main(int argc, char *argv[]) {
-    
+#if 0
     argc = u_parseArgs(argc, argv, sizeof(options)/sizeof(options[0]), 
                        options);
     
@@ -1593,5 +1587,6 @@ int main(int argc, char *argv[]) {
     if (options[9].doesOccur) {
         serializeScripts();
     }
+#endif
     return 0;
 }

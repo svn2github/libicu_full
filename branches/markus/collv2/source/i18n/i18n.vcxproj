@@ -274,19 +274,13 @@
     <ClCompile Include="search.cpp" />
     <ClCompile Include="sortkey.cpp" />
     <ClCompile Include="stsearch.cpp" />
-    <ClCompile Include="tblcoll.cpp" />
     <ClCompile Include="tzfmt.cpp" />
     <ClCompile Include="tzgnames.cpp" />
     <ClCompile Include="tznames.cpp" />
     <ClCompile Include="tznames_impl.cpp" />
     <ClCompile Include="ucol.cpp" />
-    <ClCompile Include="ucol_bld.cpp" />
-    <ClCompile Include="ucol_cnt.cpp" />
-    <ClCompile Include="ucol_elm.cpp" />
     <ClCompile Include="ucol_res.cpp" />
     <ClCompile Include="ucol_sit.cpp" />
-    <ClCompile Include="ucol_tok.cpp" />
-    <ClCompile Include="ucol_wgt.cpp" />
     <ClCompile Include="ucoleitr.cpp" />
     <ClCompile Include="uitercollationiterator.cpp" />
     <ClCompile Include="usearch.cpp" />
@@ -588,16 +582,10 @@
     <ClInclude Include="dcfmtimp.h" />
     <ClInclude Include="numsys_impl.h" />
     <ClInclude Include="region_impl.h" />
-    <ClInclude Include="rulebasedcollator.h" />
     <ClInclude Include="selfmtimpl.h" />
     <ClInclude Include="tzgnames.h" />
     <ClInclude Include="tznames_impl.h" />
-    <ClInclude Include="ucol_bld.h" />
-    <ClInclude Include="ucol_cnt.h" />
-    <ClInclude Include="ucol_elm.h" />
     <ClInclude Include="ucol_imp.h" />
-    <ClInclude Include="ucol_tok.h" />
-    <ClInclude Include="ucol_wgt.h" />
     <CustomBuild Include="unicode\ucoleitr.h">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy "%(FullPath)" ..\..\include\unicode
 </Command>

@@ -15,13 +15,12 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "ucaconf.h"
+#include "unicode/sortkey.h"
 #include "unicode/tblcoll.h"
 #include "unicode/ustring.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "uparse.h"
-
-#include "collationroot.h"  // TODO: Temporarily for v2 testing
 
 UCAConformanceTest::UCAConformanceTest() :
 rbUCA(NULL),
@@ -31,11 +30,6 @@ status(U_ZERO_ERROR)
     UCA = (RuleBasedCollator *)Collator::createInstance(Locale::getRoot(), status);
     if(U_FAILURE(status)) {
         dataerrln("Error - UCAConformanceTest: Unable to open UCA collator! - %s", u_errorName(status));
-    }
-
-    root = CollationRoot::getRoot(status);
-    if(U_FAILURE(status)) {
-        errln("ERROR - UCAConformanceTest: Unable to open CLDR root collator!");
     }
 
     const char *srcDir = IntlTest::getSourceTestData(status);
@@ -65,12 +59,10 @@ void UCAConformanceTest::runIndexedTest( int32_t index, UBool exec, const char* 
         logln("TestSuite UCAConformanceTest: ");
     }
     TESTCASE_AUTO_BEGIN;
-    // TODO: reenable TESTCASE_AUTO(TestTableNonIgnorable);
-    // TODO: reenable TESTCASE_AUTO(TestTableShifted);
-    // TODO: reenable TESTCASE_AUTO(TestRulesNonIgnorable);
-    // TODO: reenable TESTCASE_AUTO(TestRulesShifted);
-    TESTCASE_AUTO(TestTable2NonIgnorable);
-    TESTCASE_AUTO(TestTable2Shifted);
+    TESTCASE_AUTO(TestTableNonIgnorable);
+    TESTCASE_AUTO(TestTableShifted);
+    // TODO: UCARules.txt has problems, see http://unicode.org/cldr/trac/ticket/6745 -- TESTCASE_AUTO(TestRulesNonIgnorable);
+    TESTCASE_AUTO(TestRulesShifted);
     TESTCASE_AUTO_END;
 }
 
@@ -232,11 +224,6 @@ void UCAConformanceTest::testConformance(const Collator *coll)
         }
         buffer[buflen] = 0;
 
-        // TODO: Update conformance test files for UCA 6.3
-        // where U+FFFD has the third-highest primary weight.
-        if(buflen != 0 && buffer[0] == 0xfffd) {
-            continue;
-        }
         if(skipLineBecauseOfBug(buffer, buflen, skipFlags)) {
             logln("Skipping line %i because of a known bug", line);
             continue;
@@ -352,20 +339,6 @@ void UCAConformanceTest::TestRulesShifted(/* par */) {
         openTestFile("SHIFTED");
         testConformance(rbUCA);
     }
-}
-
-void UCAConformanceTest::TestTable2NonIgnorable() {
-    LocalPointer<Collator> coll(new RuleBasedCollator(root));
-    setCollNonIgnorable(coll.getAlias());
-    openTestFile("NON_IGNORABLE");
-    testConformance(coll.getAlias());
-}
-
-void UCAConformanceTest::TestTable2Shifted() {
-    LocalPointer<Collator> coll(new RuleBasedCollator(root));
-    setCollShifted(coll.getAlias());
-    openTestFile("SHIFTED");
-    testConformance(coll.getAlias());
 }
 
 #endif /* #if !UCONFIG_NO_COLLATION */

@@ -237,7 +237,6 @@
     <ClCompile Include="allcoll.cpp" />
     <ClCompile Include="alphaindextst.cpp" />
     <ClCompile Include="apicoll.cpp" />
-    <ClCompile Include="cntabcol.cpp" />
     <ClCompile Include="currcoll.cpp" />
     <ClCompile Include="dadrcoll.cpp" />
     <ClCompile Include="decoll.cpp" />
@@ -423,7 +422,6 @@
     <ClInclude Include="allcoll.h" />
     <ClInclude Include="alphaindextst.h" />
     <ClInclude Include="apicoll.h" />
-    <ClInclude Include="cntabcol.h" />
     <ClInclude Include="currcoll.h" />
     <ClInclude Include="dadrcoll.h" />
     <ClInclude Include="decoll.h" />

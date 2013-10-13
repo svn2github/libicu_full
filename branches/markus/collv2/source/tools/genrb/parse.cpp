@@ -18,7 +18,6 @@
 *******************************************************************************
 */
 
-#include "ucol_imp.h"
 #include "parse.h"
 #include "errmsg.h"
 #include "uhash.h"

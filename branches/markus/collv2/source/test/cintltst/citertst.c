@@ -35,7 +35,6 @@
 #include "filestrm.h"
 #include "cstring.h"
 #include "ucol_imp.h"
-#include "ucol_tok.h"
 #include "uparse.h"
 #include <stdio.h>
 
@@ -1473,6 +1472,15 @@ static void TestDiscontiguos() {
     ucol_close(coll);
 }
 
+/* TODO: This constant is an implementation detail of the old struct collIterate. Review whether this test still makes sense? */
+/* This is the size of the buffer for expansion CE's */
+/* In reality we should not have to deal with expm sequences longer then 16 */
+/* you can change this value if you need memory */
+/* WARNING THIS BUFFER DOES HAVE MALLOC FALLBACK. If you make it too small, you'll get into performance trouble */
+/* Reasonable small value is around 10, if you don't do Arabic or other funky collations that have long expansion sequence */
+/* This is the longest expansion sequence we can handle without bombing out */
+#define UCOL_EXPAND_CE_BUFFER_SIZE 64
+
 static void TestCEBufferOverflow()
 {
     UChar               str[UCOL_EXPAND_CE_BUFFER_SIZE + 1];
@@ -1491,7 +1499,6 @@ static void TestCEBufferOverflow()
     /* 0xDCDC is a trail surrogate hence deemed unsafe by the heuristic
     test. this will cause an overflow in getPrev */
     str[0] = 0x0041;    /* 'A' */
-    /*uprv_memset(str + 1, 0xE0, sizeof(UChar) * UCOL_EXPAND_CE_BUFFER_SIZE);*/
     uprv_memset(str + 1, 0xDC, sizeof(UChar) * UCOL_EXPAND_CE_BUFFER_SIZE);
     str[UCOL_EXPAND_CE_BUFFER_SIZE] = 0x0042;   /* 'B' */
     iter = ucol_openElements(coll, str, UCOL_EXPAND_CE_BUFFER_SIZE + 1,
@@ -1736,6 +1743,7 @@ static void TestCEValidity()
         getCodePoints(line, codepoints, contextCPs);
         checkCEValidity(coll, codepoints, u_strlen(codepoints));
     }
+    T_FileStream_close(file);
 
     log_verbose("Testing UCA elements for the whole range of unicode characters\n");
     for (c = 0; c <= 0xffff; ++c) {
@@ -1754,6 +1762,7 @@ static void TestCEValidity()
 
     ucol_close(coll);
 
+#if 0  /* see TODO below for ticket #8047 */
     /* testing tailored collation elements */
     log_verbose("Testing tailored elements\n");
     if(getTestOption(QUICK_OPTION)) {
@@ -1855,7 +1864,7 @@ static void TestCEValidity()
         ucol_close(coll);
         count ++;
     }
-    T_FileStream_close(file);
+#endif
 }
 
 static void printSortKeyError(const UChar   *codepoints, int length,
@@ -1876,6 +1885,14 @@ static void printSortKeyError(const UChar   *codepoints, int length,
     log_err("\n");
 }
 
+#if 0
+/*
+ * TODO: rewrite this together with ticket #8047;
+ * also be less strict about the byte values:
+ * at most, we should check for the single 00 terminator
+ * and maybe for the expected number of 01 separators,
+ * but otherwise all byte values are allowed
+ */
 /**
 * Checking sort key validity for all levels
 */
@@ -1928,9 +1945,11 @@ static UBool checkSortKeyValidity(UCollator *coll,
     }
     return TRUE;
 }
+#endif
 
 static void TestSortKeyValidity(void)
 {
+#if 0  /* see checkSortKeyValidity() comments */
     /* testing UCA collation elements */
     UErrorCode  status      = U_ZERO_ERROR;
     /* en_US has no tailorings */
@@ -2069,6 +2088,7 @@ static void TestSortKeyValidity(void)
         count ++;
     }
     T_FileStream_close(file);
+#endif
 }
 
 /**

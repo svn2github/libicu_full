@@ -44,7 +44,6 @@
 #include "thcoll.h"
 #include "srchtest.h"
 #include "ssearch.h"
-#include "cntabcol.h"
 #include "lcukocol.h"
 #include "ucaconf.h"
 #include "svccoll.h"
@@ -91,7 +90,8 @@ void IntlTestCollator::runIndexedTest( int32_t index, UBool exec, const char* &n
       TESTCLASS(13, CollationThaiTest);
       TESTCLASS(14, LotusCollationKoreanTest);
       TESTCLASS(15, StringSearchTest);
-      TESTCLASS(16, ContractionTableTest);
+      TESTCLASS(16, CollationGermanTest);  // TODO: remove this dummy duplicate
+      // TODO: TESTCASE_AUTO_SUITE() otherwise skipped tests cause following ones to be skipped too
 #if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
       TESTCLASS(17, DataDrivenCollatorTest);
 #endif
@@ -156,7 +156,7 @@ IntlTestCollator::doTestVariant(Collator* col, const UnicodeString &source, cons
 {   
   UErrorCode status = U_ZERO_ERROR;
 
-  UCollator *myCollation = (UCollator *)((RuleBasedCollator *)col)->getUCollator();
+  UCollator *myCollation = col->toUCollator();  // TODO: why not use col itself here?
 
   Collator::EComparisonResult compareResult = col->compare(source, target);
 

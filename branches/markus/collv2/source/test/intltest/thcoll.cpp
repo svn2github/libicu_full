@@ -17,6 +17,7 @@
 #include "unicode/coll.h"
 #include "unicode/localpointer.h"
 #include "unicode/sortkey.h"
+#include "unicode/tblcoll.h"
 #include "unicode/ustring.h"
 #include "cstring.h"
 #include "filestrm.h"

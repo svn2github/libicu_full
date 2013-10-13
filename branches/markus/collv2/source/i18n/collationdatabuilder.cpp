@@ -5,6 +5,8 @@
 *******************************************************************************
 * collationdatabuilder.cpp
 *
+* (replaced the former ucol_elm.cpp)
+*
 * created on: 2012apr01
 * created by: Markus W. Scherer
 */

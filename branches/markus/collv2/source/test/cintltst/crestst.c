@@ -28,8 +28,6 @@
 #include "crestst.h"
 #include "unicode/ctest.h"
 
-#include "ucol_imp.h" /* collation */
-
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 static void TestOpenDirect(void);

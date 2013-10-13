@@ -5,6 +5,8 @@
 *******************************************************************************
 * collationruleparser.cpp
 *
+* (replaced the former ucol_tok.cpp)
+*
 * created on: 2013apr10
 * created by: Markus W. Scherer
 */
