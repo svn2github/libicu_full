@@ -23,18 +23,10 @@ U_NAMESPACE_BEGIN
  * LRUCache keyed by locale ID.
  */
 
-typedef UObject *(*CreateFunc)(const char *localeId, UErrorCode &status);
+class CacheEntry2;
 
-struct CacheEntry;
-
-class LRUCache : public UMemory {
+class LRUCache : public UObject {
   public:
-    static LRUCache *newCache(
-        int32_t maxSize,
-        UMutex *mutex,
-        CreateFunc createFunc,
-        UErrorCode &status);
-    
     template<typename T>
     void get(const char *localeId, SharedPtr<T> &ptr, UErrorCode &status) {
         UObject *p;
@@ -44,23 +36,28 @@ class LRUCache : public UMemory {
             return;
         }
         if (rp == NULL) {
-            ptr = SharedPtr<T>(p);
+            ptr = SharedPtr<T>((T *) p);
             return;
         }
-        ptr = SharedPtr<T>(p, rp);
+        ptr = SharedPtr<T>((T *) p, rp);
     }
-    ~LRUCache();
+    UBool contains(const char *localeId) const;
+    virtual ~LRUCache();
+  protected:
+    virtual UObject *create(const char *localeId, UErrorCode &status)=0;
+    LRUCache(int32_t maxSize, UMutex *mutex, UErrorCode &status);
   private:
-    CacheEntry *mostRecentlyUsedMarker;
-    CacheEntry *leastRecentlyUsedMarker;
+    LRUCache();
+    LRUCache(const LRUCache &other);
+    LRUCache &operator=(const LRUCache &other);
+    CacheEntry2 *mostRecentlyUsedMarker;
+    CacheEntry2 *leastRecentlyUsedMarker;
     UHashtable *localeIdToEntries;
     int32_t maxSize;
     UMutex *mutex;
-    CreateFunc createFunc;
 
-    LRUCache(int32_t maxSize, UMutex *mutex,
-        CreateFunc createFunc, UErrorCode &status);
-    void moveToMostRecent(CacheEntry *cacheEntry);
+    void moveToMostRecent(CacheEntry2 *cacheEntry);
+    UBool init(const char *localeId, CacheEntry2 *cacheEntry);
     void _get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refPtr, UErrorCode &status);
 };
     

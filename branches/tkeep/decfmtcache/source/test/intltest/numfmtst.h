@@ -14,6 +14,31 @@
 #include "unicode/numfmt.h"
 #include "unicode/decimfmt.h"
 #include "caltztst.h"
+#include "sharedptr.h"
+
+class CopyOnWriteForTesting : public UObject {
+public:
+    CopyOnWriteForTesting() : localeNamePtr(), formatStrPtr(), length(0) {
+    }
+
+    UObject *clone() const {
+        return new CopyOnWriteForTesting(*this);
+    }
+
+    virtual ~CopyOnWriteForTesting() {
+    }
+    SharedPtr<UnicodeString> localeNamePtr;
+    SharedPtr<UnicodeString> formatStrPtr;
+    int32_t length;
+private:
+    CopyOnWriteForTesting(const CopyOnWriteForTesting &other) :
+        localeNamePtr(other.localeNamePtr),
+        formatStrPtr(other.formatStrPtr),
+        length(other.length) {
+    }
+
+    CopyOnWriteForTesting &operator=(const CopyOnWriteForTesting &rhs);
+};
 
 /**
  * Performs various in-depth test on NumberFormat
@@ -175,6 +200,9 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestCustomCurrencySignAndSeparator();
 
     void TestParseSignsAndMarks();
+    void TestSharedPointer();
+    void TestLRUCache();
+    void TestLRUCacheError();
 
  private:
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
@@ -275,6 +303,11 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void checkRounding(DecimalFormat* df, double base, int iterations, double increment);
 
     double checkRound(DecimalFormat* df, double iValue, double lastParsed);
+
+    void verifyString(const UnicodeString &expected, const UnicodeString &actual);
+    void verifyPtr(const void *expected, const void *actual);
+    void verifyReferences(const SharedPtr<CopyOnWriteForTesting>& ptr, int32_t count, int32_t nameCount, int32_t formatCount);
+    void verifySharedPointer(const SharedPtr<CopyOnWriteForTesting>& ptr, const UnicodeString& name, const UnicodeString& format);
 };
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

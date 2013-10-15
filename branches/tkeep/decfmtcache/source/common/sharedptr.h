@@ -33,6 +33,7 @@ public:
     SharedPtr<T> &operator=(const SharedPtr<T> &other) {
         SharedPtr<T> newValue(other);
         swap(newValue);
+        return *this;
     }
 
     ~SharedPtr() {
@@ -44,7 +45,7 @@ public:
         }
     }
 
-    void set(T *p) {
+    void adopt(T *p) {
         SharedPtr<T> newValue(p);
         swap(newValue);
     }
@@ -54,7 +55,7 @@ public:
     }
 
     void swap(SharedPtr<T> &other) {
-        T tempPtr = other.ptr;
+        T *tempPtr = other.ptr;
         u_atomic_int32_t *tempRefPtr = other.refPtr;
         other.ptr = ptr;
         other.refPtr = refPtr;
@@ -71,7 +72,7 @@ public:
             return ptr;
         }
         T *result = (T *) ptr->clone();
-        set(result);
+        adopt(result);
         return ptr;
     }
 private:

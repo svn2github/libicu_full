@@ -32,6 +32,8 @@
 #include "cstring.h"
 #include "unicode/numsys.h"
 #include "fmtableimp.h"
+#include "unicode/lrucache.h"
+#include "umutex.h"
 
 //#define NUMFMTST_CACHE_DEBUG 1
 #include "stdio.h" /* for sprintf */
@@ -45,6 +47,8 @@ static const UChar EUR[] = {69,85,82,0}; // "EUR"
 static const UChar JPY[] = {0x4A, 0x50, 0x59, 0};
 static const UChar CNY[] = {0x43, 0x4E, 0x59, 0};
 static const UChar ISO_CURRENCY_USD[] = {0x55, 0x53, 0x44, 0}; // "USD"
+
+static UMutex gMutex = U_MUTEX_INITIALIZER;
 
 
 // *****************************************************************************
@@ -130,6 +134,9 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
   TESTCASE_AUTO(TestParseNegativeWithAlternateMinusSign);
   TESTCASE_AUTO(TestCustomCurrencySignAndSeparator);
   TESTCASE_AUTO(TestParseSignsAndMarks);
+  TESTCASE_AUTO(TestSharedPointer);
+  TESTCASE_AUTO(TestLRUCache);
+  TESTCASE_AUTO(TestLRUCacheError);
   TESTCASE_AUTO_END;
 }
 
@@ -7281,6 +7288,208 @@ void NumberFormatTest::TestParseSignsAndMarks() {
             dataerrln("FAIL: NumberFormat::createInstance for locale % gives error %s", itemPtr->locale, u_errorName(status));
         }
         delete numfmt;
+    }
+}
+
+class LRUCacheForTesting : public LRUCache {
+public:
+    LRUCacheForTesting(
+        int32_t maxSize, UMutex *mutex,
+        const UnicodeString &dfs, UErrorCode &status);
+    virtual ~LRUCacheForTesting() {
+    }
+protected:
+    virtual UObject *create(const char *localeId, UErrorCode &status);
+private:
+    SharedPtr<UnicodeString> defaultFormatStr;
+};
+
+LRUCacheForTesting::LRUCacheForTesting(
+        int32_t maxSize, UMutex *mutex,
+        const UnicodeString &dfs, UErrorCode &status) :
+    LRUCache(maxSize, mutex, status), defaultFormatStr() {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    defaultFormatStr.adopt(new UnicodeString(dfs));
+}
+
+UObject *LRUCacheForTesting::create(const char *localeId, UErrorCode &status) {
+    if (uprv_strcmp(localeId, "error") == 0) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+    CopyOnWriteForTesting *result = new CopyOnWriteForTesting;
+    result->localeNamePtr.adopt(new UnicodeString(localeId));
+    result->formatStrPtr = defaultFormatStr;
+    result->length = 5;
+    return result;
+}
+
+
+void NumberFormatTest::TestSharedPointer() {
+    UErrorCode status = U_ZERO_ERROR;
+    LRUCacheForTesting cache(3, &gMutex, "little", status);
+    SharedPtr<CopyOnWriteForTesting> ptr;
+    cache.get("boo", ptr, status);
+    verifySharedPointer(ptr, "boo", "little");
+    SharedPtr<CopyOnWriteForTesting> ptrCopy = ptr;
+    verifyPtr(ptr.readOnly(), ptrCopy.readOnly());
+    {
+        SharedPtr<CopyOnWriteForTesting> ptrCopy2(ptrCopy);
+        verifyReferences(ptr, 4, 1, 2);
+    }
+    verifyReferences(ptr, 3, 1, 2);
+    verifyReferences(ptrCopy, 3, 1, 2);
+    *ptrCopy.readWrite()->localeNamePtr.readWrite() = UnicodeString("hi there");
+    *ptrCopy.readWrite()->formatStrPtr.readWrite() = UnicodeString("see you");
+    verifyReferences(ptr, 2, 1, 2);
+    verifyReferences(ptrCopy, 1, 1, 1);
+    verifySharedPointer(ptr, "boo", "little");
+    verifySharedPointer(ptrCopy, "hi there", "see you");
+}
+
+void NumberFormatTest::TestLRUCache() {
+    UErrorCode status = U_ZERO_ERROR;
+    LRUCacheForTesting cache(3, &gMutex, "little", status);
+    SharedPtr<CopyOnWriteForTesting> ptr1;
+    SharedPtr<CopyOnWriteForTesting> ptr2;
+    SharedPtr<CopyOnWriteForTesting> ptr3;
+    SharedPtr<CopyOnWriteForTesting> ptr4;
+    cache.get("foo", ptr1, status);
+    cache.get("bar", ptr2, status);
+    cache.get("baz", ptr3, status);
+    verifySharedPointer(ptr1, "foo", "little");
+    verifySharedPointer(ptr2, "bar", "little");
+    verifySharedPointer(ptr3, "baz", "little");
+
+    // Cache holds a reference to returned data which explains the 2s
+    // Note the '4'. each cached data has a reference to "little" and the
+    // cache itself also has a reference to "little"
+    verifyReferences(ptr1, 2, 1, 4);
+    verifyReferences(ptr2, 2, 1, 4);
+    verifyReferences(ptr3, 2, 1, 4);
+    
+    // Cache is now full and nothing is eligible for eviction.
+    cache.get("full", ptr4, status);
+    verifySharedPointer(ptr4, "full", "little");
+
+
+    // The first '1' indicates that cache does not hold a reference to returned
+    // data as it is already full, but fresh data still holds same reference to
+    // "little" from how we implement create().  Note the '5'.
+    verifyReferences(ptr4, 1, 1, 5);
+
+    // (Most Recent) "baz", "bar", "foo" (Least Recent)
+    cache.get("bar", ptr2, status);
+    verifySharedPointer(ptr2, "bar", "little");
+    verifyReferences(ptr2, 2, 1, 5);
+
+
+    // bar is already most recently used. Note that the data that
+    // ptr4 referenced was deleted as ptr4 was the only reference.
+    // Notice that the reference count to "little" dropped by one.
+    // ptr4, ptr2, and cache all reference "bar" data so the main reference
+    // count is 3.
+    cache.get("bar", ptr4, status);
+    verifySharedPointer(ptr4, "bar", "little");
+    verifyReferences(ptr4, 3, 1, 4);
+
+    // (Most Recent) "bar", "baz", "foo" (Least Recent)
+    if (!cache.contains("foo") || !cache.contains("bar") || !cache.contains("baz")) {
+        errln("Unexpected keys in cache.");
+    }
+
+    // Release references to cached data to make them eligible for eviction.
+    // Note that we still hold a reference to "foo" data.
+    ptr2.adopt(NULL);
+    ptr3.adopt(NULL);
+    ptr4.adopt(NULL);
+
+    cache.get("new1", ptr1, status);
+    verifySharedPointer(ptr1, "new1", "little");
+
+    // "little" reference count remains the same because "baz" data got evicted.
+    verifyReferences(ptr1, 2, 1, 4);
+
+    // "baz" should now be evicted, not "foo"
+    // Although "foo" is least recently used, it is not eligible for eviction
+    // because we still held a reference to it.
+    if (!cache.contains("foo") || !cache.contains("bar") || cache.contains("baz")) {
+        errln("Unexpected keys in cache.");
+    }
+
+    // (Most Recent) "new1", "bar", "foo" (Least Recent)
+    // Now "foo" is eligible for eviction b/c we no longer hold a reference to
+    // it.
+    cache.get("new2", ptr1, status);
+    verifySharedPointer(ptr1, "new2", "little");
+    verifyReferences(ptr1, 2, 1, 4);
+
+    // "foo" and "baz" evicted, but not "bar"
+    if (cache.contains("foo") || cache.contains("baz") || !cache.contains("bar")) {
+        errln("Unexpected keys in cache.");
+    }
+
+    // (Most Recent) "new2", "new1", "bar" (Least Recent)
+    cache.get("new3", ptr1, status);
+    verifySharedPointer(ptr1, "new3", "little");
+    verifyReferences(ptr1, 2, 1, 4);
+
+    // "bar" evicted.
+    if (cache.contains("foo") || cache.contains("baz") || cache.contains("bar")) {
+        errln("Unexpected keys in cache.");
+    }
+    if (!cache.contains("new3") || !cache.contains("new2") || !cache.contains("new1")) {
+        errln("Unexpected keys in cache.");
+    }
+}
+
+void NumberFormatTest::TestLRUCacheError() {
+    UErrorCode status = U_ZERO_ERROR;
+    LRUCacheForTesting cache(3, &gMutex, "little", status);
+    SharedPtr<CopyOnWriteForTesting> ptr1;
+    cache.get("error", ptr1, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected an error.");
+    }
+}
+
+
+void NumberFormatTest::verifySharedPointer(
+        const SharedPtr<CopyOnWriteForTesting>& ptr,
+        const UnicodeString& name,
+        const UnicodeString& format) {
+    const UnicodeString *strPtr = ptr.readOnly()->localeNamePtr.readOnly();
+    verifyString(name, *strPtr);
+    strPtr = ptr.readOnly()->formatStrPtr.readOnly();
+    verifyString(format, *strPtr);
+}
+
+void NumberFormatTest::verifyString(const UnicodeString &expected, const UnicodeString &actual) {
+    if (expected != actual) {
+        errln(UnicodeString("Expected '") + expected + "', got '"+ actual+"'");
+    }
+}
+
+void NumberFormatTest::verifyPtr(const void *expected, const void *actual) {
+    if (expected != actual) {
+       errln("Pointer mismatch.");
+    }
+}
+
+void NumberFormatTest::verifyReferences(const SharedPtr<CopyOnWriteForTesting>& ptr, int32_t count, int32_t nameCount, int32_t formatCount) {
+    int32_t actual = ptr.count();
+    if (count != actual) {
+        errln("Main reference count wrong: Expected %d, got %d", count, actual);
+    }
+    actual = ptr.readOnly()->localeNamePtr.count();
+    if (nameCount != actual) {
+        errln("name reference count wrong: Expected %d, got %d", nameCount, actual);
+    }
+    actual = ptr.readOnly()->formatStrPtr.count();
+    if (formatCount != actual) {
+        errln("format reference count wrong: Expected %d, got %d", formatCount, actual);
     }
 }
 

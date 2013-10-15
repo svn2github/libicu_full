@@ -15,28 +15,30 @@
 
 U_NAMESPACE_BEGIN
 
-class CacheEntry : public UMemory {
+// Named CacheEntry2 to avoid conflict with CacheEntry in serv.cpp
+// Don't know how to make truly private class that the linker can't see.
+class CacheEntry2 : public UMemory {
 public:
-    CacheEntry *moreRecent;
-    CacheEntry *lessRecent;
+    CacheEntry2 *moreRecent;
+    CacheEntry2 *lessRecent;
     char *localeId;
     UObject *cachedData;
     UErrorCode status;  // This is the error if any from creating cachedData.
     u_atomic_int32_t refCount;
 
-    CacheEntry();
-    ~CacheEntry();
+    CacheEntry2();
+    ~CacheEntry2();
 
     UBool canEvict();
     void unlink();
     void uninit();
-    UBool init(const char *localeId, CreateFunc createFunc);
+    UBool init(const char *localeId, UObject *dataToAdopt, UErrorCode err);
 private:
-    CacheEntry(const CacheEntry& other);
-    CacheEntry &operator=(const CacheEntry& other);
+    CacheEntry2(const CacheEntry2& other);
+    CacheEntry2 &operator=(const CacheEntry2& other);
 };
 
-CacheEntry::CacheEntry() 
+CacheEntry2::CacheEntry2() 
     : moreRecent(NULL), lessRecent(NULL), localeId(NULL), cachedData(NULL),
       status(U_ZERO_ERROR) {
 
@@ -44,16 +46,16 @@ CacheEntry::CacheEntry()
     umtx_storeRelease(refCount, 1);
 }
 
-CacheEntry::~CacheEntry() {
+CacheEntry2::~CacheEntry2() {
     uninit();
 }
 
-UBool CacheEntry::canEvict() {
+UBool CacheEntry2::canEvict() {
     // We can evict if there are no other references.
     return umtx_loadAcquire(refCount) == 1;
 }
 
-void CacheEntry::unlink() {
+void CacheEntry2::unlink() {
     if (moreRecent != NULL) {
         moreRecent->lessRecent = lessRecent;
     }
@@ -64,7 +66,7 @@ void CacheEntry::unlink() {
     lessRecent = NULL;
 }
 
-void CacheEntry::uninit() {
+void CacheEntry2::uninit() {
     delete cachedData;
     cachedData = NULL;
     status = U_ZERO_ERROR;
@@ -74,30 +76,20 @@ void CacheEntry::uninit() {
     localeId = NULL;
 }
 
-UBool CacheEntry::init(const char *locId, CreateFunc createFunc) {
+UBool CacheEntry2::init(const char *locId, UObject *dataToAdopt, UErrorCode err) {
     uninit();
     localeId = (char *) uprv_malloc(strlen(locId) + 1);
     if (localeId == NULL) {
+        delete dataToAdopt;
         return FALSE;
     }
     uprv_strcpy(localeId, locId);
-    cachedData = createFunc(locId, status);
+    cachedData = dataToAdopt;
+    status = err;
+    return TRUE;
 }
 
-LRUCache *LRUCache::newCache(
-        int32_t maxSize,
-        UMutex *mutex,
-        CreateFunc createFunc,
-        UErrorCode &status) {
-    LRUCache *result = new LRUCache(maxSize, mutex, createFunc, status);
-    if (U_FAILURE(status)) {
-        delete result;
-        return NULL;
-    }
-    return result;
-} 
-
-void LRUCache::moveToMostRecent(CacheEntry *entry) {
+void LRUCache::moveToMostRecent(CacheEntry2 *entry) {
     entry->unlink();
     entry->moreRecent = mostRecentlyUsedMarker;
     entry->lessRecent = mostRecentlyUsedMarker->lessRecent;
@@ -105,19 +97,29 @@ void LRUCache::moveToMostRecent(CacheEntry *entry) {
     mostRecentlyUsedMarker->lessRecent = entry;
 }
 
+UBool LRUCache::init(const char *localeId, CacheEntry2 *entry) {
+    UErrorCode status = U_ZERO_ERROR;
+    UObject *result = create(localeId, status);
+    return entry->init(localeId, result, status);
+}
+
+UBool LRUCache::contains(const char *localeId) const {
+    return (uhash_get(localeIdToEntries, localeId) != NULL);
+}
+
 
 void LRUCache::_get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refPtr, UErrorCode &status) {
     // Begin mutex
     {
         Mutex lock(mutex);
-        CacheEntry *entry = (CacheEntry *) uhash_get(localeIdToEntries, localeId);
+        CacheEntry2 *entry = (CacheEntry2 *) uhash_get(localeIdToEntries, localeId);
         if (entry != NULL) {
             moveToMostRecent(entry);
         } else {
             // Its a cache miss.
 
             if (uhash_count(localeIdToEntries) < maxSize) {
-                entry = new CacheEntry;
+                entry = new CacheEntry2;
             } else {
                 entry = leastRecentlyUsedMarker->moreRecent;
                 while (entry != mostRecentlyUsedMarker && !entry->canEvict()) {
@@ -138,7 +140,7 @@ void LRUCache::_get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refP
             // full and entry == NULL.
             if (entry != NULL) {
                 // If we were able to get an entry, prepare it with the data.
-                if (!entry->init(localeId, createFunc)) {
+                if (!init(localeId, entry)) {
                     delete entry;
                     entry = NULL;
                 }
@@ -169,7 +171,7 @@ void LRUCache::_get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refP
     // End mutex
 
     // Our data is not cached, just create it from scratch.
-    UObject *newData = createFunc(localeId, status);
+    UObject *newData = create(localeId, status);
     if (U_FAILURE(status)) {
         return;
     }
@@ -177,10 +179,10 @@ void LRUCache::_get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refP
     refPtr = NULL;
 }
 
-LRUCache::LRUCache(int32_t size, UMutex *mtx, CreateFunc crf, UErrorCode &status) :
-        maxSize(size), mutex(mtx), createFunc(crf) {
-    mostRecentlyUsedMarker = new CacheEntry;
-    leastRecentlyUsedMarker = new CacheEntry;
+LRUCache::LRUCache(int32_t size, UMutex *mtx, UErrorCode &status) :
+        maxSize(size), mutex(mtx) {
+    mostRecentlyUsedMarker = new CacheEntry2;
+    leastRecentlyUsedMarker = new CacheEntry2;
     if (mostRecentlyUsedMarker == NULL || leastRecentlyUsedMarker == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
@@ -202,8 +204,8 @@ LRUCache::LRUCache(int32_t size, UMutex *mtx, CreateFunc crf, UErrorCode &status
 
 LRUCache::~LRUCache() {
     uhash_close(localeIdToEntries);
-    for (CacheEntry *i = mostRecentlyUsedMarker; i != NULL;) {
-        CacheEntry *next = i->lessRecent;
+    for (CacheEntry2 *i = mostRecentlyUsedMarker; i != NULL;) {
+        CacheEntry2 *next = i->lessRecent;
         delete i;
         i = next;
     }
