@@ -203,6 +203,7 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestSharedPointer();
     void TestLRUCache();
     void TestLRUCacheError();
+    void TestMine();
 
  private:
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);

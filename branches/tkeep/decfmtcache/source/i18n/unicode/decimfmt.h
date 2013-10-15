@@ -40,6 +40,7 @@
 #include "unicode/stringpiece.h"
 #include "unicode/curramt.h"
 #include "unicode/enumset.h"
+#include "sharedptr.h"
 
 /**
  * \def UNUM_DECIMALFORMAT_INTERNAL_SIZE
@@ -2196,7 +2197,7 @@ private:
     int32_t                 fGroupingSize;
     int32_t                 fGroupingSize2;
     UBool                   fDecimalSeparatorAlwaysShown;
-    DecimalFormatSymbols*   fSymbols;
+    SharedPtr<DecimalFormatSymbols>   fSymbols;
 
     UBool                   fUseSignificantDigits;
     int32_t                 fMinSignificantDigits;
@@ -2396,7 +2397,7 @@ protected:
 
 inline const UnicodeString &
 DecimalFormat::getConstSymbol(DecimalFormatSymbols::ENumberFormatSymbol symbol) const {
-    return fSymbols->getConstSymbol(symbol);
+    return fSymbols.readOnly()->getConstSymbol(symbol);
 }
 
 U_NAMESPACE_END

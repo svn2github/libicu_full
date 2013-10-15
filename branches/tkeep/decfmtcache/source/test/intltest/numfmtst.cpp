@@ -137,6 +137,7 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
   TESTCASE_AUTO(TestSharedPointer);
   TESTCASE_AUTO(TestLRUCache);
   TESTCASE_AUTO(TestLRUCacheError);
+  TESTCASE_AUTO(TestMine);
   TESTCASE_AUTO_END;
 }
 
@@ -7443,6 +7444,17 @@ void NumberFormatTest::TestLRUCache() {
     if (!cache.contains("new3") || !cache.contains("new2") || !cache.contains("new1")) {
         errln("Unexpected keys in cache.");
     }
+}
+
+void NumberFormatTest::TestMine() {
+    UErrorCode status = U_ZERO_ERROR;
+        DecimalFormat *fmt = new DecimalFormat(status);
+    clock_t startTime = clock();
+    for (int32_t i = 0; i < 1000000; i++) {
+      DecimalFormat *fmt2 = new DecimalFormat(*fmt);
+    }
+    clock_t t = clock() - startTime;
+    errln("%f", ((double) t) / CLOCKS_PER_SEC);
 }
 
 void NumberFormatTest::TestLRUCacheError() {

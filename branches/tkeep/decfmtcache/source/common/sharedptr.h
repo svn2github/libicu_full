@@ -3,6 +3,7 @@
 
 #include "unicode/uobject.h"
 #include "umutex.h"
+#include "uassert.h"
 
 U_NAMESPACE_BEGIN
 
@@ -17,9 +18,8 @@ public:
     }
 
     SharedPtr(T *p, u_atomic_int32_t *rp) : ptr(p), refPtr(rp) {
-        if (refPtr != NULL) {
-            umtx_atomic_inc(refPtr);
-        }
+        U_ASSERT(p != NULL && rp != NULL);
+        umtx_atomic_inc(refPtr);
     }
         
 
@@ -51,7 +51,10 @@ public:
     }
 
     int32_t count() const {
-      return umtx_loadAcquire(*refPtr);
+        if (refPtr == NULL) {
+            return 0;
+        }
+        return umtx_loadAcquire(*refPtr);
     }
 
     void swap(SharedPtr<T> &other) {
@@ -68,6 +71,9 @@ public:
     }
 
     T *readWrite() {
+        if (refPtr == NULL) {
+            return NULL;
+        }
         if (umtx_loadAcquire(*refPtr) == 1) {
             return ptr;
         }
