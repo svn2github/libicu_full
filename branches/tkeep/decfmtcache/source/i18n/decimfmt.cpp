@@ -494,7 +494,8 @@ DecimalFormat::construct(UErrorCode&            status,
         return;
     }
     UErrorCode nsStatus = U_ZERO_ERROR;
-    NumberingSystem *ns = NumberingSystem::createInstance(nsStatus);
+    SharedPtr<NumberingSystem> ns;
+    NumberingSystem::getSharedInstance(Locale::getDefault(), ns, nsStatus);
     if (U_FAILURE(nsStatus)) {
         status = nsStatus;
         return;
@@ -509,10 +510,10 @@ DecimalFormat::construct(UErrorCode&            status,
         UResourceBundle *top = ures_open(NULL, Locale::getDefault().getName(), &status);
 
         UResourceBundle *resource = ures_getByKeyWithFallback(top, fgNumberElements, NULL, &status);
-        resource = ures_getByKeyWithFallback(resource, ns->getName(), resource, &status);
+        resource = ures_getByKeyWithFallback(resource, ns.readOnly()->getName(), resource, &status);
         resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &status);
         const UChar *resStr = ures_getStringByKeyWithFallback(resource, fgDecimalFormat, &len, &status);
-        if ( status == U_MISSING_RESOURCE_ERROR && uprv_strcmp(fgLatn,ns->getName())) {
+        if ( status == U_MISSING_RESOURCE_ERROR && uprv_strcmp(fgLatn,ns.readOnly()->getName())) {
             status = U_ZERO_ERROR;
             resource = ures_getByKeyWithFallback(top, fgNumberElements, resource, &status);
             resource = ures_getByKeyWithFallback(resource, fgLatn, resource, &status);
@@ -524,8 +525,6 @@ DecimalFormat::construct(UErrorCode&            status,
         ures_close(resource);
         ures_close(top);
     }
-
-    delete ns;
 
     if (U_FAILURE(status))
     {
@@ -614,7 +613,8 @@ DecimalFormat::setupCurrencyAffixPatterns(UErrorCode& status) {
         return;
     }
 
-    NumberingSystem *ns = NumberingSystem::createInstance(fSymbols.readOnly()->getLocale(),status);
+    SharedPtr<NumberingSystem> ns;
+    NumberingSystem::getSharedInstance(fSymbols.readOnly()->getLocale(), ns, status);
     if (U_FAILURE(status)) {
         return;
     }
@@ -627,11 +627,11 @@ DecimalFormat::setupCurrencyAffixPatterns(UErrorCode& status) {
     
     UResourceBundle *resource = ures_open(NULL, fSymbols.readOnly()->getLocale().getName(), &error);
     UResourceBundle *numElements = ures_getByKeyWithFallback(resource, fgNumberElements, NULL, &error);
-    resource = ures_getByKeyWithFallback(numElements, ns->getName(), resource, &error);
+    resource = ures_getByKeyWithFallback(numElements, ns.readOnly()->getName(), resource, &error);
     resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &error);
     int32_t patLen = 0;
     const UChar *patResStr = ures_getStringByKeyWithFallback(resource, fgCurrencyFormat,  &patLen, &error);
-    if ( error == U_MISSING_RESOURCE_ERROR && uprv_strcmp(ns->getName(),fgLatn)) {
+    if ( error == U_MISSING_RESOURCE_ERROR && uprv_strcmp(ns.readOnly()->getName(),fgLatn)) {
         error = U_ZERO_ERROR;
         resource = ures_getByKeyWithFallback(numElements, fgLatn, resource, &error);
         resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &error);
@@ -639,7 +639,6 @@ DecimalFormat::setupCurrencyAffixPatterns(UErrorCode& status) {
     }
     ures_close(numElements);
     ures_close(resource);
-    delete ns;
 
     if (U_SUCCESS(error)) {
         applyPatternWithoutExpandAffix(UnicodeString(patResStr, patLen), false,

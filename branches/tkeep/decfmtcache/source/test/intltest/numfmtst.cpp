@@ -7451,7 +7451,7 @@ void NumberFormatTest::TestMine() {
         DecimalFormat *fmt = new DecimalFormat(status);
     clock_t startTime = clock();
     for (int32_t i = 0; i < 1000000; i++) {
-      DecimalFormat *fmt2 = new DecimalFormat(*fmt);
+      DecimalFormat *fmt2 = new DecimalFormat(status);
     }
     clock_t t = clock() - startTime;
     errln("%f", ((double) t) / CLOCKS_PER_SEC);

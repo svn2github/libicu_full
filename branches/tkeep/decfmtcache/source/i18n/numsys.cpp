@@ -25,10 +25,41 @@
 #include "cstring.h"
 #include "uresimp.h"
 #include "numsys_impl.h"
+#include "umutex.h"
+#include "unicode/lrucache.h"
 
 #if !UCONFIG_NO_FORMATTING
 
+static UMutex gNumberingSystemCacheLock = U_MUTEX_INITIALIZER;
+static icu::UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
+
 U_NAMESPACE_BEGIN
+
+static LRUCache *gNumberingSystemCache = NULL;
+
+class NumberingSystemCache : public LRUCache {
+public:
+    NumberingSystemCache(
+        int32_t maxSize, UMutex *mutex, UErrorCode& status) :
+        LRUCache(maxSize, mutex, status) {
+    }
+    virtual ~NumberingSystemCache() {
+    }
+protected:
+    virtual UObject *create(const char *localeId, UErrorCode &status);
+};
+
+UObject *NumberingSystemCache::create(
+    const char *localeId, UErrorCode &status) {
+    return NumberingSystem::createInstance(localeId, status);
+}
+
+static void U_CALLCONV initCache(UErrorCode &status) {
+    gNumberingSystemCache = new NumberingSystemCache(
+        100,
+        &gNumberingSystemCacheLock,
+        status);
+}
 
 // Useful constants
 
@@ -99,6 +130,15 @@ NumberingSystem::createInstance(int32_t radix_in, UBool isAlgorithmic_in, const 
     ns->setName(NULL);
     return ns;
     
+}
+
+void U_EXPORT2
+NumberingSystem::getSharedInstance(const Locale& inLocale, SharedPtr<NumberingSystem> &ptr, UErrorCode& status) {
+    umtx_initOnce(gCacheInitOnce, &initCache, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    gNumberingSystemCache->get(inLocale.getName(), ptr, status);
 }
 
 

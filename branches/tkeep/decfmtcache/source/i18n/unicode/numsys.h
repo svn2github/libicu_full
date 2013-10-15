@@ -36,6 +36,7 @@
 
 #include "unicode/format.h"
 #include "unicode/uobject.h"
+#include "sharedptr.h"
 
 U_NAMESPACE_BEGIN
 
@@ -84,6 +85,8 @@ public:
      * @stable ICU 4.2
      */
     static NumberingSystem* U_EXPORT2 createInstance(const Locale & inLocale, UErrorCode& status);
+
+    static void U_EXPORT2 getSharedInstance(const Locale &inLocale, SharedPtr<NumberingSystem>& ptr, UErrorCode &status);
 
     /**
      * Create the default numbering system associated with the default locale.
