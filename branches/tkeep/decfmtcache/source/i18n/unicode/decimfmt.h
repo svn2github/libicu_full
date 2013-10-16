@@ -2397,7 +2397,7 @@ protected:
 
 inline const UnicodeString &
 DecimalFormat::getConstSymbol(DecimalFormatSymbols::ENumberFormatSymbol symbol) const {
-    return fSymbols.readOnly()->getConstSymbol(symbol);
+    return fSymbols->getConstSymbol(symbol);
 }
 
 U_NAMESPACE_END

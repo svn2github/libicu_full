@@ -31,6 +31,9 @@ public:
     }
 
     SharedPtr<T> &operator=(const SharedPtr<T> &other) {
+        // We need not check for identical assignment (this == &other) because
+        // the creation of 'newvalue' prevents our pointer from being deleted
+        // during assignment.
         SharedPtr<T> newValue(other);
         swap(newValue);
         return *this;
@@ -45,9 +48,13 @@ public:
         }
     }
 
-    void adopt(T *p) {
+    void adoptInstead(T *p) {
         SharedPtr<T> newValue(p);
         swap(newValue);
+    }
+
+    void clear() {
+        adoptInstead(NULL);
     }
 
     int32_t count() const {
@@ -66,6 +73,22 @@ public:
         refPtr = tempRefPtr;
     }
 
+    const T *operator->() const {
+        return ptr;
+    }
+
+    const T &operator*() const {
+        return *ptr;
+    }
+
+    bool operator==(const T *other) const {
+        return ptr == other;
+    }
+
+    bool operator!=(const T *other) const {
+        return ptr != other;
+    }
+
     const T *readOnly() const {
         return ptr;
     }
@@ -78,12 +101,18 @@ public:
             return ptr;
         }
         T *result = (T *) ptr->clone();
-        adopt(result);
+        adoptInstead(result);
         return ptr;
     }
 private:
     T *ptr;
     u_atomic_int32_t *refPtr;
+    // No heap allocation. Use only stack.
+    static void * U_EXPORT2 operator new(size_t size);
+    static void * U_EXPORT2 operator new[](size_t size);
+#if U_HAVE_PLACEMENT_NEW
+    static void * U_EXPORT2 operator new(size_t, void *ptr);
+#endif
 };
 
 U_NAMESPACE_END

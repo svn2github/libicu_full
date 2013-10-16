@@ -423,7 +423,7 @@ DecimalFormat::init() {
     fGroupingSize = 0;
     fGroupingSize2 = 0;
     fDecimalSeparatorAlwaysShown = FALSE;
-    fSymbols.adopt(NULL);
+    fSymbols.clear();
     fUseSignificantDigits = FALSE;
     fMinSignificantDigits = 1;
     fMaxSignificantDigits = 6;
@@ -465,7 +465,7 @@ DecimalFormat::construct(UErrorCode&            status,
                          const UnicodeString*   pattern,
                          DecimalFormatSymbols*  symbolsToAdopt)
 {
-    fSymbols.adopt(symbolsToAdopt); // Do this BEFORE aborting on status failure!!!
+    fSymbols.adoptInstead(symbolsToAdopt); // Do this BEFORE aborting on status failure!!!
     fRoundingIncrement = NULL;
     fRoundingMode = kRoundHalfEven;
     fPad = kPatternPadEscape;
@@ -482,7 +482,7 @@ DecimalFormat::construct(UErrorCode&            status,
     fUseExponentialNotation = FALSE;
     fMinExponentDigits = 0;
 
-    if (fSymbols.readOnly() == NULL)
+    if (fSymbols == NULL)
     {
         newDecimalFormatSymbols(fSymbols, status);
         if (U_FAILURE(status)) {
@@ -510,10 +510,10 @@ DecimalFormat::construct(UErrorCode&            status,
         UResourceBundle *top = ures_open(NULL, Locale::getDefault().getName(), &status);
 
         UResourceBundle *resource = ures_getByKeyWithFallback(top, fgNumberElements, NULL, &status);
-        resource = ures_getByKeyWithFallback(resource, ns.readOnly()->getName(), resource, &status);
+        resource = ures_getByKeyWithFallback(resource, ns->getName(), resource, &status);
         resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &status);
         const UChar *resStr = ures_getStringByKeyWithFallback(resource, fgDecimalFormat, &len, &status);
-        if ( status == U_MISSING_RESOURCE_ERROR && uprv_strcmp(fgLatn,ns.readOnly()->getName())) {
+        if ( status == U_MISSING_RESOURCE_ERROR && uprv_strcmp(fgLatn,ns->getName())) {
             status = U_ZERO_ERROR;
             resource = ures_getByKeyWithFallback(top, fgNumberElements, resource, &status);
             resource = ures_getByKeyWithFallback(resource, fgLatn, resource, &status);
@@ -543,7 +543,7 @@ DecimalFormat::construct(UErrorCode&            status,
     UnicodeString currencyPluralPatternForOther;
     // apply pattern
     if (fStyle == UNUM_CURRENCY_PLURAL) {
-        fCurrencyPluralInfo = new CurrencyPluralInfo(fSymbols.readOnly()->getLocale(), status);
+        fCurrencyPluralInfo = new CurrencyPluralInfo(fSymbols->getLocale(), status);
         if (U_FAILURE(status)) {
             return;
         }
@@ -568,7 +568,7 @@ DecimalFormat::construct(UErrorCode&            status,
         // initialize for currency, not only for plural format,
         // but also for mix parsing
         if (fCurrencyPluralInfo == NULL) {
-           fCurrencyPluralInfo = new CurrencyPluralInfo(fSymbols.readOnly()->getLocale(), status);
+           fCurrencyPluralInfo = new CurrencyPluralInfo(fSymbols->getLocale(), status);
            if (U_FAILURE(status)) {
                return;
            }
@@ -614,7 +614,7 @@ DecimalFormat::setupCurrencyAffixPatterns(UErrorCode& status) {
     }
 
     SharedPtr<NumberingSystem> ns;
-    NumberingSystem::getSharedInstance(fSymbols.readOnly()->getLocale(), ns, status);
+    NumberingSystem::getSharedInstance(fSymbols->getLocale(), ns, status);
     if (U_FAILURE(status)) {
         return;
     }
@@ -625,13 +625,13 @@ DecimalFormat::setupCurrencyAffixPatterns(UErrorCode& status) {
     UnicodeString currencyPattern;
     UErrorCode error = U_ZERO_ERROR;   
     
-    UResourceBundle *resource = ures_open(NULL, fSymbols.readOnly()->getLocale().getName(), &error);
+    UResourceBundle *resource = ures_open(NULL, fSymbols->getLocale().getName(), &error);
     UResourceBundle *numElements = ures_getByKeyWithFallback(resource, fgNumberElements, NULL, &error);
-    resource = ures_getByKeyWithFallback(numElements, ns.readOnly()->getName(), resource, &error);
+    resource = ures_getByKeyWithFallback(numElements, ns->getName(), resource, &error);
     resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &error);
     int32_t patLen = 0;
     const UChar *patResStr = ures_getStringByKeyWithFallback(resource, fgCurrencyFormat,  &patLen, &error);
-    if ( error == U_MISSING_RESOURCE_ERROR && uprv_strcmp(ns.readOnly()->getName(),fgLatn)) {
+    if ( error == U_MISSING_RESOURCE_ERROR && uprv_strcmp(ns->getName(),fgLatn)) {
         error = U_ZERO_ERROR;
         resource = ures_getByKeyWithFallback(numElements, fgLatn, resource, &error);
         resource = ures_getByKeyWithFallback(resource, fgPatterns, resource, &error);
@@ -3526,13 +3526,13 @@ DecimalFormat::adoptDecimalFormatSymbols(DecimalFormatSymbols* symbolsToAdopt)
     }
 
     UBool sameSymbols = FALSE;
-    if (fSymbols.readOnly() != NULL) {
+    if (fSymbols != NULL) {
         sameSymbols = (UBool)(getConstSymbol(DecimalFormatSymbols::kCurrencySymbol) ==
             symbolsToAdopt->getConstSymbol(DecimalFormatSymbols::kCurrencySymbol) &&
             getConstSymbol(DecimalFormatSymbols::kIntlCurrencySymbol) ==
             symbolsToAdopt->getConstSymbol(DecimalFormatSymbols::kIntlCurrencySymbol));
     }
-    fSymbols.adopt(symbolsToAdopt);
+    fSymbols.adoptInstead(symbolsToAdopt);
     if (!sameSymbols) {
         // If the currency symbols are the same, there is no need to recalculate.
         setCurrencyForSymbols();
@@ -3618,7 +3618,7 @@ DecimalFormat::setCurrencyForSymbols() {
     // we set the currency to null.
     UErrorCode ec = U_ZERO_ERROR;
     const UChar* c = NULL;
-    const char* loc = fSymbols.readOnly()->getLocale().getName();
+    const char* loc = fSymbols->getLocale().getName();
     UChar intlCurrencySymbol[4];
     ucurr_forLocale(loc, intlCurrencySymbol, 4, &ec);
     UnicodeString currencySymbol;
@@ -4245,7 +4245,7 @@ void DecimalFormat::expandAffix(const UnicodeString& pattern,
                         pluralCountChar.appendInvariantChars(*pluralCount, ec);
                         UBool isChoiceFormat;
                         const UChar* s = ucurr_getPluralName(currencyUChars,
-                            fSymbols.readOnly() != NULL ? fSymbols.readOnly()->getLocale().getName() :
+                            fSymbols != NULL ? fSymbols->getLocale().getName() :
                             Locale::getDefault().getName(), &isChoiceFormat,
                             pluralCountChar.data(), &len, &ec);
                         affix += UnicodeString(s, len);
@@ -4258,7 +4258,7 @@ void DecimalFormat::expandAffix(const UnicodeString& pattern,
                         UBool isChoiceFormat;
                         // If fSymbols is NULL, use default locale
                         const UChar* s = ucurr_getName(currencyUChars,
-                            fSymbols.readOnly() != NULL ? fSymbols.readOnly()->getLocale().getName() : Locale::getDefault().getName(),
+                            fSymbols != NULL ? fSymbols->getLocale().getName() : Locale::getDefault().getName(),
                             UCURR_SYMBOL_NAME, &isChoiceFormat, &len, &ec);
                         if (isChoiceFormat) {
                             // Two modes here: If doFormat is false, we set up
@@ -5467,7 +5467,7 @@ DecimalFormat::applyPattern(const UnicodeString& pattern,
     if (pattern.indexOf(kCurrencySign) != -1) {
         if (fCurrencyPluralInfo == NULL) {
             // initialize currencyPluralInfo if needed
-            fCurrencyPluralInfo = new CurrencyPluralInfo(fSymbols.readOnly()->getLocale(), status);
+            fCurrencyPluralInfo = new CurrencyPluralInfo(fSymbols->getLocale(), status);
         }
         if (fAffixPatternsForCurrency == NULL) {
             setupCurrencyAffixPatterns(status);
@@ -5658,7 +5658,7 @@ void DecimalFormat::setCurrency(const UChar* theCurrency) {
 }
 
 void DecimalFormat::getEffectiveCurrency(UChar* result, UErrorCode& ec) const {
-    if (fSymbols.readOnly() == NULL) {
+    if (fSymbols == NULL) {
         ec = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
@@ -5666,7 +5666,7 @@ void DecimalFormat::getEffectiveCurrency(UChar* result, UErrorCode& ec) const {
     const UChar* c = getCurrency();
     if (*c == 0) {
         const UnicodeString &intl =
-            fSymbols.readOnly()->getConstSymbol(DecimalFormatSymbols::kIntlCurrencySymbol);
+            fSymbols->getConstSymbol(DecimalFormatSymbols::kIntlCurrencySymbol);
         c = intl.getBuffer(); // ok for intl to go out of scope
     }
     u_strncpy(result, c, 3);

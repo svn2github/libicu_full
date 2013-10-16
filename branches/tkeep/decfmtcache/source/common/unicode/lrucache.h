@@ -36,10 +36,16 @@ class LRUCache : public UObject {
             return;
         }
         if (rp == NULL) {
+            // Cache does not hold reference to returned data.
             ptr = SharedPtr<T>((T *) p);
             return;
         }
         ptr = SharedPtr<T>((T *) p, rp);
+
+        // _get incremented our reference counter already to avoid races.
+        // Now that we have our own shared pointer, we can decrement it
+        // back.
+        umtx_atomic_dec(rp);
     }
     UBool contains(const char *localeId) const;
     virtual ~LRUCache();
@@ -50,6 +56,7 @@ class LRUCache : public UObject {
     LRUCache();
     LRUCache(const LRUCache &other);
     LRUCache &operator=(const LRUCache &other);
+    UObject *safeCreate(const char *localeId, UErrorCode &status);
     CacheEntry2 *mostRecentlyUsedMarker;
     CacheEntry2 *leastRecentlyUsedMarker;
     UHashtable *localeIdToEntries;

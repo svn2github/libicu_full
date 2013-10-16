@@ -7312,7 +7312,7 @@ LRUCacheForTesting::LRUCacheForTesting(
     if (U_FAILURE(status)) {
         return;
     }
-    defaultFormatStr.adopt(new UnicodeString(dfs));
+    defaultFormatStr.adoptInstead(new UnicodeString(dfs));
 }
 
 UObject *LRUCacheForTesting::create(const char *localeId, UErrorCode &status) {
@@ -7321,7 +7321,7 @@ UObject *LRUCacheForTesting::create(const char *localeId, UErrorCode &status) {
         return NULL;
     }
     CopyOnWriteForTesting *result = new CopyOnWriteForTesting;
-    result->localeNamePtr.adopt(new UnicodeString(localeId));
+    result->localeNamePtr.adoptInstead(new UnicodeString(localeId));
     result->formatStrPtr = defaultFormatStr;
     result->length = 5;
     return result;
@@ -7340,6 +7340,10 @@ void NumberFormatTest::TestSharedPointer() {
         SharedPtr<CopyOnWriteForTesting> ptrCopy2(ptrCopy);
         verifyReferences(ptr, 4, 1, 2);
     }
+    
+    // Test identity assignment
+    ptr = ptr;
+
     verifyReferences(ptr, 3, 1, 2);
     verifyReferences(ptrCopy, 3, 1, 2);
     *ptrCopy.readWrite()->localeNamePtr.readWrite() = UnicodeString("hi there");
@@ -7403,9 +7407,9 @@ void NumberFormatTest::TestLRUCache() {
 
     // Release references to cached data to make them eligible for eviction.
     // Note that we still hold a reference to "foo" data.
-    ptr2.adopt(NULL);
-    ptr3.adopt(NULL);
-    ptr4.adopt(NULL);
+    ptr2.clear();
+    ptr3.clear();
+    ptr4.clear();
 
     cache.get("new1", ptr1, status);
     verifySharedPointer(ptr1, "new1", "little");
@@ -7472,9 +7476,9 @@ void NumberFormatTest::verifySharedPointer(
         const SharedPtr<CopyOnWriteForTesting>& ptr,
         const UnicodeString& name,
         const UnicodeString& format) {
-    const UnicodeString *strPtr = ptr.readOnly()->localeNamePtr.readOnly();
+    const UnicodeString *strPtr = ptr->localeNamePtr.readOnly();
     verifyString(name, *strPtr);
-    strPtr = ptr.readOnly()->formatStrPtr.readOnly();
+    strPtr = ptr->formatStrPtr.readOnly();
     verifyString(format, *strPtr);
 }
 
@@ -7495,11 +7499,11 @@ void NumberFormatTest::verifyReferences(const SharedPtr<CopyOnWriteForTesting>& 
     if (count != actual) {
         errln("Main reference count wrong: Expected %d, got %d", count, actual);
     }
-    actual = ptr.readOnly()->localeNamePtr.count();
+    actual = ptr->localeNamePtr.count();
     if (nameCount != actual) {
         errln("name reference count wrong: Expected %d, got %d", nameCount, actual);
     }
-    actual = ptr.readOnly()->formatStrPtr.count();
+    actual = ptr->formatStrPtr.count();
     if (formatCount != actual) {
         errln("format reference count wrong: Expected %d, got %d", formatCount, actual);
     }

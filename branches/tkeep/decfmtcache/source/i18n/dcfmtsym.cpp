@@ -225,9 +225,9 @@ DecimalFormatSymbols::initialize(const Locale& loc, UErrorCode& status, UBool us
 
     SharedPtr<NumberingSystem> ns;
     NumberingSystem::getSharedInstance(loc, ns, status);
-    if (U_SUCCESS(status) && ns.readOnly()->getRadix() == 10 && !ns.readOnly()->isAlgorithmic()) {
-        nsName = ns.readOnly()->getName();
-        UnicodeString digitString(ns.readOnly()->getDescription());
+    if (U_SUCCESS(status) && ns->getRadix() == 10 && !ns->isAlgorithmic()) {
+        nsName = ns->getName();
+        UnicodeString digitString(ns->getDescription());
         int32_t digitIndex = 0;
         UChar32 digit = digitString.char32At(0);
         fSymbols[kZeroDigitSymbol].setTo(digit);

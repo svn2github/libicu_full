@@ -97,9 +97,28 @@ void LRUCache::moveToMostRecent(CacheEntry2 *entry) {
     mostRecentlyUsedMarker->lessRecent = entry;
 }
 
+UObject *LRUCache::safeCreate(const char *localeId, UErrorCode &status) {
+    UObject *result = create(localeId, status);
+
+    // Safe guard to ensure that some error is reported for missing data in
+    // case subclass forgets to set status.
+    if (result == NULL && U_SUCCESS(status)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    } 
+
+    // Safe guard to ensure that if subclass reports an error and returns
+    // data that we don't leak memory.
+    if (result != NULL && U_FAILURE(status)) {
+        delete result;
+        return NULL;
+    }
+    return result;
+}
+
 UBool LRUCache::init(const char *localeId, CacheEntry2 *entry) {
     UErrorCode status = U_ZERO_ERROR;
-    UObject *result = create(localeId, status);
+    UObject *result = safeCreate(localeId, status);
     return entry->init(localeId, result, status);
 }
 
@@ -165,13 +184,18 @@ void LRUCache::_get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refP
             }
             ptr = entry->cachedData;
             refPtr = &entry->refCount;
+
+            // Increment reference counter while we have mutex to avoid
+            // possible race where two different threads evict the same
+            // cache entry.
+            umtx_atomic_inc(refPtr);
             return;
         }
     }
     // End mutex
 
     // Our data is not cached, just create it from scratch.
-    UObject *newData = create(localeId, status);
+    UObject *newData = safeCreate(localeId, status);
     if (U_FAILURE(status)) {
         return;
     }
