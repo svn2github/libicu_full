@@ -235,4 +235,8 @@ LRUCache::~LRUCache() {
     }
 }
 
+UObject *SimpleLRUCache::create(const char *localeId, UErrorCode &status) {
+    return createFunc(localeId, status);
+}
+
 U_NAMESPACE_END

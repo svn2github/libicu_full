@@ -35,29 +35,17 @@ static icu::UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
 
 U_NAMESPACE_BEGIN
 
-static LRUCache *gNumberingSystemCache = NULL;
-
-class NumberingSystemCache : public LRUCache {
-public:
-    NumberingSystemCache(
-        int32_t maxSize, UMutex *mutex, UErrorCode& status) :
-        LRUCache(maxSize, mutex, status) {
-    }
-    virtual ~NumberingSystemCache() {
-    }
-protected:
-    virtual UObject *create(const char *localeId, UErrorCode &status);
-};
-
-UObject *NumberingSystemCache::create(
-    const char *localeId, UErrorCode &status) {
-    return NumberingSystem::createInstance(localeId, status);
+static UObject *createNumberingSystem(const char *locale, UErrorCode &status) {
+    return NumberingSystem::createInstance(locale, status);
 }
 
+static LRUCache *gNumberingSystemCache = NULL;
+
 static void U_CALLCONV initCache(UErrorCode &status) {
-    gNumberingSystemCache = new NumberingSystemCache(
+    gNumberingSystemCache = new SimpleLRUCache(
         100,
         &gNumberingSystemCacheLock,
+        createNumberingSystem,
         status);
 }
 

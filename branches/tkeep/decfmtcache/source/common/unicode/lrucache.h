@@ -67,6 +67,25 @@ class LRUCache : public UObject {
     UBool init(const char *localeId, CacheEntry2 *cacheEntry);
     void _get(const char *localeId, UObject *&ptr, u_atomic_int32_t *&refPtr, UErrorCode &status);
 };
+
+typedef UObject *(*CreateFunc)(const char *localeId, UErrorCode &status);
+
+class SimpleLRUCache : public LRUCache {
+public:
+    SimpleLRUCache(
+        int32_t maxSize,
+        UMutex *mutex,
+        CreateFunc cf,
+        UErrorCode &status) :
+            LRUCache(maxSize, mutex, status), createFunc(cf) {
+    }
+    virtual ~SimpleLRUCache() {
+    }
+protected:
+    virtual UObject *create(const char *localeId, UErrorCode &status);
+private:
+    CreateFunc createFunc;
+};
     
 U_NAMESPACE_END
 

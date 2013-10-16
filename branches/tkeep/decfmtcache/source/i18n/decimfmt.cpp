@@ -89,38 +89,21 @@ U_NAMESPACE_BEGIN
 
 static LRUCache *gDecimalFormatSymbolsCache = NULL;
 
-class DecimalFormatSymbolsLRUCache : public LRUCache {
-public:
-    DecimalFormatSymbolsLRUCache(
-        int32_t maxSize, UMutex *mutex, UErrorCode& status) :
-        LRUCache(maxSize, mutex, status) {
-    }
-    virtual ~DecimalFormatSymbolsLRUCache() {
-    }
-protected:
-    virtual UObject *create(const char *localeId, UErrorCode &status);
-};
-
-UObject *DecimalFormatSymbolsLRUCache::create(
-    const char *localeId, UErrorCode &status) {
-    UObject *result = new DecimalFormatSymbols(localeId, status);
-    if (result == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-    return result;
+static UObject *createDecimalFormatSymbols(
+        const char *localeId, UErrorCode &status) {
+    return new DecimalFormatSymbols(localeId, status);
 }
 
-
-static void U_CALLCONV initLRUCache(UErrorCode &status) {
-    gDecimalFormatSymbolsCache = new DecimalFormatSymbolsLRUCache(
+static void U_CALLCONV initCache(UErrorCode &status) {
+    gDecimalFormatSymbolsCache = new SimpleLRUCache(
         100,
         &gDecimalFormatSymbolsCacheLock,
+        createDecimalFormatSymbols,
         status);
 }
 
 static void newDecimalFormatSymbols(SharedPtr<DecimalFormatSymbols> &ptr, UErrorCode &status) {
-    umtx_initOnce(gCacheInitOnce, &initLRUCache, status);
+    umtx_initOnce(gCacheInitOnce, &initCache, status);
     if (U_FAILURE(status)) {
         return;
     }
