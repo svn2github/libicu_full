@@ -204,6 +204,8 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestLRUCache();
     void TestLRUCacheError();
     void TestMine();
+    void Test10419RoundingWith0FractionDigits();
+    void Test10468ApplyPattern();
 
  private:
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
