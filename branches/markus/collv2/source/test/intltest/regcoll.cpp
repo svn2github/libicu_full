@@ -9,6 +9,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/coll.h"
+#include "unicode/localpointer.h"
 #include "unicode/tblcoll.h"
 #include "unicode/unistr.h"
 #include "unicode/sortkey.h"
@@ -84,19 +85,10 @@ void CollationRegressionTest::Test4048446(/* char* par */)
 //
 void CollationRegressionTest::Test4051866(/* char* par */)
 {
-/*
-    RuleBasedCollator c1 = new RuleBasedCollator("< o "
-                                                +"& oe ,o\u3080"
-                                                +"& oe ,\u1530 ,O"
-                                                +"& OE ,O\u3080"
-                                                +"& OE ,\u1520"
-                                                +"< p ,P");
-*/
-
     UnicodeString rules;
     UErrorCode status = U_ZERO_ERROR;
 
-    rules += "< o ";
+    rules += "&n < o ";
     rules += "& oe ,o";
     rules += (UChar)0x3080;
     rules += "& oe ,";
@@ -109,19 +101,20 @@ void CollationRegressionTest::Test4051866(/* char* par */)
     rules += "< p ,P";
 
     // Build a collator containing expanding characters
-    RuleBasedCollator *c1 = new RuleBasedCollator(rules, status);
+    LocalPointer<RuleBasedCollator> c1(new RuleBasedCollator(rules, status));
 
     // Build another using the rules from  the first
-    RuleBasedCollator *c2 = new RuleBasedCollator(c1->getRules(), status);
+    LocalPointer<RuleBasedCollator> c2(new RuleBasedCollator(c1->getRules(), status));
+    if (U_FAILURE(status)) {
+        errln("RuleBasedCollator(rule string) failed - %s", u_errorName(status));
+        return;
+    }
 
     // Make sure they're the same
     if (!(c1->getRules() == c2->getRules()))
     {
         errln("Rules are not equal");
     }
-
-    delete c2;
-    delete c1;
 }
 
 // @bug 4053636

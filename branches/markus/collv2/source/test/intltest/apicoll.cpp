@@ -515,6 +515,10 @@ CollationAPITest::TestCollationKey(/* char* par */)
     logln("Use tertiary comparison level testing ....");
 
     col->getCollationKey(test1, sortk1, key1Status);
+    if (U_FAILURE(key1Status)) {
+        errln("getCollationKey(Abcda) failed - %s", u_errorName(key1Status));
+        return;
+    }
     doAssert((sortk1.compareTo(col->getCollationKey(test2, sortk2, key2Status)))
                  == Collator::GREATER,
                 "Result should be \"Abcda\" >>> \"abcda\"");
@@ -787,8 +791,8 @@ void
 CollationAPITest::TestOperators(/* char* par */)
 {
     UErrorCode success = U_ZERO_ERROR;
-    UnicodeString ruleset1("< a, A < b, B < c, C; ch, cH, Ch, CH < d, D, e, E");
-    UnicodeString ruleset2("< a, A < b, B < c, C < d, D, e, E");
+    UnicodeString ruleset1("&9 < a, A < b, B < c, C; ch, cH, Ch, CH < d, D, e, E");
+    UnicodeString ruleset2("&9 < a, A < b, B < c, C < d, D, e, E");
     RuleBasedCollator *col1 = new RuleBasedCollator(ruleset1, success);
     if (U_FAILURE(success)) {
         errcheckln(success, "RuleBasedCollator creation failed. - %s", u_errorName(success));
@@ -874,16 +878,15 @@ CollationAPITest::TestDuplicate(/* char* par */)
     }
     Collator *col2 = col1->clone();
     doAssert((*col1 == *col2), "Cloned object is not equal to the orginal");
-    UnicodeString *ruleset = new UnicodeString("< a, A < b, B < c, C < d, D, e, E");
-    RuleBasedCollator *col3 = new RuleBasedCollator(*ruleset, status);
-    doAssert((*col1 != *col3), "Cloned object is equal to some dummy");
-    *col3 = *((RuleBasedCollator*)col1);
-    doAssert((*col1 == *col3), "Copied object is not equal to the orginal");
-
+    UnicodeString ruleset("&9 < a, A < b, B < c, C < d, D, e, E");
+    RuleBasedCollator *col3 = new RuleBasedCollator(ruleset, status);
     if (U_FAILURE(status)) {
         logln("Collation tailoring failed.");
         return;
     }
+    doAssert((*col1 != *col3), "Cloned object is equal to some dummy");
+    *col3 = *((RuleBasedCollator*)col1);
+    doAssert((*col1 == *col3), "Copied object is not equal to the orginal");
 
     UCollationResult res;
     UnicodeString first((UChar)0x0061);
@@ -891,7 +894,6 @@ CollationAPITest::TestDuplicate(/* char* par */)
     UnicodeString copiedEnglishRules(((RuleBasedCollator*)col1)->getRules());
 
     delete col1;
-    delete ruleset;
 
     // Try using the cloned collators after deleting the original data
     res = col2->compare(first, second, status);

@@ -236,6 +236,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     parser.setImporter(importer);
     parser.parse(ruleString, *tailoring, outParseError, errorCode);
     errorReason = parser.getErrorReason();
+    if(U_FAILURE(errorCode)) { return NULL; }
     if(dataBuilder->hasMappings()) {
         makeTailoredCEs(errorCode);
         closeOverComposites(errorCode);

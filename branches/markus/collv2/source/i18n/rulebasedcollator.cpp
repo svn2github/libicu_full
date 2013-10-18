@@ -1346,9 +1346,16 @@ RuleBasedCollator::getCollationKey(const UnicodeString &s, CollationKey &key,
 CollationKey &
 RuleBasedCollator::getCollationKey(const UChar *s, int32_t length, CollationKey& key,
                                    UErrorCode &errorCode) const {
-    if(U_FAILURE(errorCode)) { return key; }
+    if(U_FAILURE(errorCode)) {
+        return key.setToBogus();
+    }
     if(s == NULL && length != 0) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return key.setToBogus();
+    }
+    key.reset();  // resets the "bogus" state
+    if(length == 0 || (length < 0 && *s == 0)) {
+        // For an empty string we do not even write the separators nor the terminator.
         return key;
     }
     CollationKeyByteSink sink(key);

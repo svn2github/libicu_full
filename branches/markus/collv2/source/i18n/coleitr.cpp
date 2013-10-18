@@ -222,6 +222,7 @@ void CollationElementIterator::setText(const UnicodeString& source,
     }
     delete iter_;
     iter_ = newIter;
+    dir_ = 0;
 }
 
 // Sets the source to the new character iterator.

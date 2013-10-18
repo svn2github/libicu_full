@@ -535,6 +535,10 @@ IntlTestCollator::Order *IntlTestCollator::getOrders(CollationElementIterator &i
         offset = iter.getOffset();
         size += 1;
     }
+    if (U_FAILURE(status)) {
+        errln("CollationElementIterator.next() failed - %s",
+              u_errorName(status));
+    }
 
     if (maxSize > size)
     {

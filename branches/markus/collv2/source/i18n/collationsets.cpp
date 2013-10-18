@@ -506,7 +506,10 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
                     hangul[0] = (UChar)c;
                     iter.setText(hangul, hangul + 1);
                     int32_t length = iter.fetchCEs(errorCode);
-                    sink->handleExpansion(iter.getCEs(), length);
+                    if(U_FAILURE(errorCode)) { return; }
+                    // Ignore the terminating non-CE.
+                    U_ASSERT(length >= 2 && iter.getCE(length - 1) == Collation::NO_CE);
+                    sink->handleExpansion(iter.getCEs(), length - 1);
                 }
             }
             // Optimization: If we have a prefix,

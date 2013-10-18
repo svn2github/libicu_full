@@ -280,9 +280,14 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             if(forward) { forwardNumCodePoints(1, errorCode); }
             break;
         case Collation::CONTRACTION_TAG: {
-            U_ASSERT(forward);  // Backward contractions are handled by previousCEUnsafe().
             const UChar *p = d->contexts + Collation::indexFromCE32(ce32);
             uint32_t defaultCE32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+            if(!forward) {
+                // Backward contractions are handled by previousCEUnsafe().
+                // c has contractions but they were not found.
+                ce32 = defaultCE32;
+                break;
+            }
             UChar32 nextCp;
             if(skipped == NULL && numCpFwd < 0) {
                 // Some portion of nextCE32FromContraction() pulled out here as an ASCII fast path,

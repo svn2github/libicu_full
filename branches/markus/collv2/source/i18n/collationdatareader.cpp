@@ -34,7 +34,7 @@ U_NAMESPACE_BEGIN
 namespace {
 
 int32_t getIndex(const int32_t *indexes, int32_t length, int32_t i) {
-    return (i < length) ? indexes[i] : 0;
+    return (i < length) ? indexes[i] : -1;
 }
 
 }  // namespace
@@ -79,6 +79,8 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     if(!tailoring.ensureOwnedData(errorCode)) { return; }
     CollationData &data = *tailoring.ownedData;
     CollationSettings &settings = tailoring.settings;
+    // Assume that data and settings are in initial state,
+    // with NULL pointers and 0 lengths.
 
     const CollationData *baseData = base == NULL ? NULL : base->data;
     data.base = baseData;
@@ -111,9 +113,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     if(length >= 4) {
         settings.reorderCodes = reinterpret_cast<const int32_t *>(inBytes + offset);
         settings.reorderCodesLength = length / 4;
-    } else {
-        settings.reorderCodes = NULL;
-        settings.reorderCodesLength = 0;
     }
 
     // There should be a reorder table only if there are reorder codes.
@@ -125,7 +124,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     if(length >= 256) {
         settings.reorderTable = inBytes + offset;
     } else {
-        settings.reorderTable = NULL;
         // If we have reorder codes, then build the reorderTable at the end,
         // when the CollationData is otherwise complete.
     }
@@ -160,8 +158,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         }
         data.ces = reinterpret_cast<const int64_t *>(inBytes + offset);
         data.cesLength = length / 8;
-    } else {
-        data.ces = NULL;
     }
 
     index = IX_CE32S_OFFSET;
@@ -174,8 +170,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         }
         data.ce32s = reinterpret_cast<const uint32_t *>(inBytes + offset);
         data.ce32sLength = length / 4;
-    } else {
-        data.ce32s = NULL;
     }
 
     int32_t jamoCE32sStart = getIndex(inIndexes, indexesLength, IX_JAMO_CE32S_START);
@@ -215,9 +209,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             errorCode = U_INVALID_FORMAT_ERROR;
             return;
         }
-    } else {
-        data.rootElements = NULL;
-        data.rootElementsLength = 0;
     }
 
     index = IX_CONTEXTS_OFFSET;
@@ -230,8 +221,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         }
         data.contexts = reinterpret_cast<const UChar *>(inBytes + offset);
         data.contextsLength = length / 2;
-    } else {
-        data.contexts = NULL;
     }
 
     index = IX_UNSAFE_BWD_OFFSET;
@@ -321,9 +310,6 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     } else if(baseData != NULL) {
         data.scripts = baseData->scripts;
         data.scriptsLength = baseData->scriptsLength;
-    } else {
-        data.scripts = NULL;
-        data.scriptsLength = 0;
     }
 
     index = IX_COMPRESSIBLE_BYTES_OFFSET;
