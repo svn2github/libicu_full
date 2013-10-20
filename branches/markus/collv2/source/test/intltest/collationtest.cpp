@@ -1096,9 +1096,9 @@ UBool CollationTest::getSortKeyParts(const UChar *s, int32_t length,
     uint8_t part[32];
     U_ASSERT(partSize <= LENGTHOF(part));
     UCharIterator iter;
+    uiter_setString(&iter, s, length);
     uint32_t state[2] = { 0, 0 };
     for(;;) {
-        uiter_setString(&iter, s, length);
         int32_t partLength = coll->nextSortKeyPart(&iter, state, part, partSize, errorCode);
         UBool done = partLength < partSize;
         if(done) {

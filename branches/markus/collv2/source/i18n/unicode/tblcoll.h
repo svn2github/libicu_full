@@ -812,6 +812,7 @@ private:
 
     /** Options for CollationFastLatin. Negative if disabled. */
     int32_t fastLatinOptions;
+    UBool actualLocaleIsSameAsValid;
 };
 
 U_NAMESPACE_END

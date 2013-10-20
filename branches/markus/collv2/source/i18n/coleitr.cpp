@@ -136,7 +136,7 @@ UBool CollationElementIterator::operator==(
     return
         (rbc_ == that.rbc_ || *rbc_ == *that.rbc_) &&
         otherHalf_ == that.otherHalf_ &&
-        dir_ == that.dir_ &&
+        normalizeDir() == that.normalizeDir() &&
         string_ == that.string_ &&
         *iter_ == *that.iter_;
 }

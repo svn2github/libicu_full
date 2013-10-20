@@ -138,7 +138,11 @@ UChar
 FCDUIterCollationIterator::handleGetTrailSurrogate() {
     if(state <= ITER_IN_FCD_SEGMENT) {
         UChar32 trail = iter.next(&iter);
-        if(!U16_IS_TRAIL(trail) && trail >= 0) { iter.previous(&iter); }
+        if(U16_IS_TRAIL(trail)) {
+            if(state == ITER_IN_FCD_SEGMENT) { ++pos; }
+        } else if(trail >= 0) {
+            iter.previous(&iter);
+        }
         return (UChar)trail;
     } else {
         U_ASSERT(pos < normalized.length());

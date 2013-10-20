@@ -93,7 +93,8 @@ RuleBasedCollator::RuleBasedCollator()
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1) {
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
 }
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &errorCode)
@@ -104,7 +105,8 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1) {
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
     buildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, errorCode);
 }
 
@@ -117,7 +119,8 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1) {
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
     buildTailoring(rules, strength, UCOL_DEFAULT, NULL, errorCode);
 }
 
@@ -131,7 +134,8 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1) {
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
     buildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, errorCode);
 }
 
@@ -146,7 +150,8 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1) {
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
     buildTailoring(rules, strength, decompositionMode, NULL, errorCode);
 }
 

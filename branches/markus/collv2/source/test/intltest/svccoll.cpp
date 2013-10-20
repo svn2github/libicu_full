@@ -64,9 +64,11 @@ void CollationServiceTest::TestRegister()
           errln(UnicodeString("fr collator's valid locale changed to ") + loc.getName());
         }
 
+        // The requested locale may be the same as the valid locale,
+        // or may not be supported at all. See ticket #10477.
         loc = ncol->getLocale(ULOC_REQUESTED_LOCALE, status);
-        if (loc != US_FOO) {
-            errln(UnicodeString("requested locale for en_US_FOO is not en_US_FOO but ") + loc.getName());
+        if (loc != US_FOO && loc != US) {
+            errln(UnicodeString("requested locale for en_US_FOO is not en_US_FOO nor en_US but ") + loc.getName());
         }
         loc = ncol->getLocale(ULOC_VALID_LOCALE, status);
         if (loc != US) {
@@ -411,9 +413,11 @@ void CollationServiceTest::TestRegisterFactory(void)
             errln("jpcol for fu_FU_FOO failed");
         }
 
+        // The requested locale may be the same as the valid locale,
+        // or may not be supported at all. See ticket #10477.
         Locale loc = ncol->getLocale(ULOC_REQUESTED_LOCALE, status);
-        if (loc != fu_FU_FOO) {
-            errln(UnicodeString("requested locale for fu_FU_FOO is not fu_FU_FOO but ") + loc.getName());
+        if (loc != fu_FU_FOO && loc != fu_FU) {
+            errln(UnicodeString("requested locale for fu_FU_FOO is not fu_FU_FOO nor fu_FU but ") + loc.getName());
         }
         loc = ncol->getLocale(ULOC_VALID_LOCALE, status);
         if (loc != fu_FU) {

@@ -1780,23 +1780,23 @@ void CollationAPITest::TestGetTailoredSet()
     { "& S < \\u0161 <<< \\u0160", { "\\u0161", "s\\u030C", "\\u0160", "S\\u030C" }, 4}
   };
 
-  uint32_t i = 0, j = 0;
+  int32_t i = 0, j = 0;
   UErrorCode status = U_ZERO_ERROR;
 
   RuleBasedCollator *coll = NULL;
   UnicodeString buff; 
   UnicodeSet *set = NULL;
 
-  for(i = 0; i < sizeof(setTest)/sizeof(setTest[0]); i++) {
-    buff = UnicodeString(setTest[i].rules, "").unescape();
-    coll = new RuleBasedCollator(buff, status);
+  for(i = 0; i < LENGTHOF(setTest); i++) {
+    buff = UnicodeString(setTest[i].rules, -1, US_INV).unescape();
+    RuleBasedCollator coll(buff, status);
     if(U_SUCCESS(status)) {
-      set = coll->getTailoredSet(status);
-      if(set->size() != setTest[i].testsize) {
-        errln("Tailored set size different (%d) than expected (%d)", set->size(), setTest[i].testsize);
+      set = coll.getTailoredSet(status);
+      if(set->size() < setTest[i].testsize) {
+        errln("Tailored set size smaller (%d) than expected (%d)", set->size(), setTest[i].testsize);
       }
-      for(j = 0; j < (uint32_t)setTest[i].testsize; j++) {
-        buff = UnicodeString(setTest[i].tests[j], "").unescape();
+      for(j = 0; j < setTest[i].testsize; j++) {
+        buff = UnicodeString(setTest[i].tests[j], -1, US_INV).unescape();
         if(!set->contains(buff)) {
           errln("Tailored set doesn't contain %s... It should", setTest[i].tests[j]);
         }
@@ -1805,7 +1805,6 @@ void CollationAPITest::TestGetTailoredSet()
     } else {
       errcheckln(status, "Couldn't open collator with rules %s - %s", setTest[i].rules, u_errorName(status));
     }
-    delete coll;
   }
 }
 

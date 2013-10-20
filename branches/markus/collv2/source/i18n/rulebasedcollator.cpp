@@ -144,7 +144,8 @@ RuleBasedCollator::RuleBasedCollator(const RuleBasedCollator &other)
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(other.explicitlySetAttributes),
-          fastLatinOptions(other.fastLatinOptions) {
+          fastLatinOptions(other.fastLatinOptions),
+          actualLocaleIsSameAsValid(FALSE) {
     tailoring->addRef();
     if(other.ownedSettings != NULL) {
         cloneSettings(*other.ownedSettings);
@@ -160,7 +161,8 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
           ownedSettings(NULL),
           ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1) {
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
     if(U_FAILURE(errorCode)) { return; }
     if(bin == NULL || length <= 0 || base == NULL) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -346,9 +348,14 @@ RuleBasedCollator::hashCode() const {
 void
 RuleBasedCollator::setLocales(const Locale &requested, const Locale &valid,
                               const Locale &actual) {
-    U_ASSERT(actual == tailoring->actualLocale || tailoring->actualLocale.isBogus());
-    if(tailoring->actualLocale.isBogus()) {
+    if(actual == tailoring->actualLocale) {
+        actualLocaleIsSameAsValid = FALSE;
+    } else if(tailoring->actualLocale.isBogus()) {
         tailoring->actualLocale = actual;
+        actualLocaleIsSameAsValid = FALSE;
+    } else {
+        U_ASSERT(actual == valid);
+        actualLocaleIsSameAsValid = TRUE;
     }
     validLocale = valid;
     (void)requested;  // Ignore, see also ticket #10477.
@@ -361,7 +368,7 @@ RuleBasedCollator::getLocale(ULocDataLocaleType type, UErrorCode& errorCode) con
     }
     switch(type) {
     case ULOC_ACTUAL_LOCALE:
-        return tailoring->actualLocale;
+        return actualLocaleIsSameAsValid ? validLocale : tailoring->actualLocale;
     case ULOC_VALID_LOCALE:
     case ULOC_REQUESTED_LOCALE:  // TODO: Drop this, see ticket #10477.
         return validLocale;
@@ -379,10 +386,12 @@ RuleBasedCollator::getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) c
     const Locale *result;
     switch(type) {
     case ULOC_ACTUAL_LOCALE:
-        result = &tailoring->actualLocale;
+        result = actualLocaleIsSameAsValid ? &validLocale : &tailoring->actualLocale;
+        break;
     case ULOC_VALID_LOCALE:
     case ULOC_REQUESTED_LOCALE:  // TODO: Drop this, see ticket #10477.
         result = &validLocale;
+        break;
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
@@ -1495,10 +1504,9 @@ RuleBasedCollator::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
     }
     if(count == 0) { return 0; }
 
-    // We currently assume that iter is at its start.
-
     FixedSortKeyByteSink sink(reinterpret_cast<char *>(dest), count);
     sink.IgnoreBytes((int32_t)state[1]);
+    iter->move(iter, 0, UITER_START);
 
     Collation::Level level = (Collation::Level)state[0];
     if(level <= Collation::QUATERNARY_LEVEL) {

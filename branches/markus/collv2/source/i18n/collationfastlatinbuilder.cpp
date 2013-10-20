@@ -405,15 +405,13 @@ CollationFastLatinBuilder::getCEsFromContractionCE32(const CollationData &data, 
         addContractionEntry(prevX, ce0, ce1, errorCode);
     }
     if(U_FAILURE(errorCode)) { return FALSE; }
-    if(contractionCEs.size() > contractionIndex + 3) {
-        ce0 = ((int64_t)Collation::NO_CE_PRIMARY << 32) | CONTRACTION_FLAG | contractionIndex;
-        ce1 = 0;
-    } else {
-        // No fast Latin contraction, just return the mapping for c itself.
-        ce0 = contractionCEs.elementAti(contractionIndex + 1);
-        ce1 = contractionCEs.elementAti(contractionIndex + 2);
-        contractionCEs.setSize(contractionIndex);
-    }
+    // Note: There might not be any fast Latin contractions, but
+    // we need to enter contraction handling anyway so that we can bail out
+    // when there is a non-fast-Latin character following.
+    // For example: Danish &Y<<u+umlaut, when we compare Y vs. u\u0308 we need to see the
+    // following umlaut and bail out, rather than return the difference of Y vs. u.
+    ce0 = ((int64_t)Collation::NO_CE_PRIMARY << 32) | CONTRACTION_FLAG | contractionIndex;
+    ce1 = 0;
     return TRUE;
 }
 

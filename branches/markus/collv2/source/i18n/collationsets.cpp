@@ -600,7 +600,7 @@ ContractionsAndExpansions::addStrings(UChar32 start, UChar32 end, UnicodeSet *se
         if(suffix != NULL) {
             s.append(*suffix);
         }
-        expansions->add(s);
+        set->add(s);
         s.truncate(prefixLength);
     } while(++start <= end);
 }

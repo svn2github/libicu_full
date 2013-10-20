@@ -266,7 +266,7 @@ void CollationRegressionTest::Test4059820(/* char* par */)
     UErrorCode status = U_ZERO_ERROR;
 
     RuleBasedCollator *c = NULL;
-    UnicodeString rules = "< a < b , c/a < d < z";
+    UnicodeString rules = "&9 < a < b , c/a < d < z";
 
     c = new RuleBasedCollator(rules, status);
 
@@ -294,7 +294,7 @@ void CollationRegressionTest::Test4060154(/* char* par */)
     UErrorCode status = U_ZERO_ERROR;
     UnicodeString rules;
 
-    rules += "< g, G < h, H < i, I < j, J";
+    rules += "&f < g, G < h, H < i, I < j, J";
     rules +=  " & H < ";
     rules += (UChar)0x0131;
     rules += ", ";
@@ -537,7 +537,7 @@ void CollationRegressionTest::Test4079231(/* char* par */)
 void CollationRegressionTest::Test4078588(/* char *par */)
 {
     UErrorCode status = U_ZERO_ERROR;
-    RuleBasedCollator *rbc = new RuleBasedCollator((UnicodeString)"< a < bb", status);
+    RuleBasedCollator *rbc = new RuleBasedCollator("&9 < a < bb", status);
 
     if (rbc == NULL || U_FAILURE(status))
     {
@@ -609,7 +609,7 @@ void CollationRegressionTest::Test4087241(/* char* par */)
     static const UChar tests[][CollationRegressionTest::MAX_TOKEN_LEN] =
     {
         {0x7a, 0},          {0x3c, 0}, {0x00E6, 0},            // z        < ae
-        {0x61, 0x0308, 0}, {0x3c, 0}, {0x61, 0x030A, 0},      // a-unlaut < a-ring
+        {0x61, 0x0308, 0},  {0x3c, 0}, {0x61, 0x030A, 0},      // a-umlaut < a-ring
         {0x59, 0},          {0x3c, 0}, {0x75, 0x0308, 0},      // Y        < u-umlaut
     };
 
@@ -704,7 +704,7 @@ void CollationRegressionTest::Test4101940(/* char* par */)
 {
     UErrorCode status = U_ZERO_ERROR;
     RuleBasedCollator *c = NULL;
-    UnicodeString rules = "< a < b";
+    UnicodeString rules = "&9 < a < b";
     UnicodeString nothing = "";
 
     c = new RuleBasedCollator(rules, status);
