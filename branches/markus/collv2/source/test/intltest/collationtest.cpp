@@ -1169,7 +1169,7 @@ UBool CollationTest::getCollationKey(const UnicodeString &line,
             }
             dest = mergedKey.allocateInsteadAndReset(mergedKeyCapacity);
         }
-        U_ASSERT(dest != NULL);
+        U_ASSERT(dest != NULL || mergedKeyCapacity == 0);
         if(key1Length == 0) {
             // key2 is the sort key for the first segment.
             uprv_memcpy(dest, key2Bytes, key2Length);
