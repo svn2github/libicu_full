@@ -135,7 +135,7 @@ CollationRuleParser::parseRuleChain(UErrorCode &errorCode) {
         if(result < 0) {
             if(ruleIndex < rules->length() && rules->charAt(ruleIndex) == 0x23) {
                 // '#' starts a comment, until the end of the line
-                ruleIndex = skipWhiteSpace(skipComment(ruleIndex + 1));
+                ruleIndex = skipComment(ruleIndex + 1);
                 continue;
             }
             if(isFirstRelation) {
@@ -206,7 +206,9 @@ CollationRuleParser::parseResetAndPosition(UErrorCode &errorCode) {
 
 int32_t
 CollationRuleParser::parseRelationOperator(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode) || ruleIndex >= rules->length()) { return UCOL_DEFAULT; }
+    if(U_FAILURE(errorCode)) { return UCOL_DEFAULT; }
+    ruleIndex = skipWhiteSpace(ruleIndex);
+    if(ruleIndex >= rules->length()) { return UCOL_DEFAULT; }
     int32_t strength;
     int32_t i = ruleIndex;
     UChar c = rules->charAt(i++);

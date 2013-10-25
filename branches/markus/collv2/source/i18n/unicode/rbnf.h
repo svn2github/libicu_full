@@ -27,7 +27,6 @@
 #else
 #define U_HAVE_RBNF 1
 
-#include "unicode/coll.h"
 #include "unicode/dcfmtsym.h"
 #include "unicode/fmtable.h"
 #include "unicode/locid.h"
@@ -39,6 +38,7 @@ U_NAMESPACE_BEGIN
 
 class NFRuleSet;
 class LocalizationInfo;
+class RuleBasedCollator;
 
 /**
  * Tags for the predefined rulesets.
@@ -52,10 +52,6 @@ enum URBNFRuleSetTag {
     URBNF_NUMBERING_SYSTEM,
     URBNF_COUNT
 };
-
-#if UCONFIG_NO_COLLATION
-class Collator;
-#endif
 
 /**
  * The RuleBasedNumberFormat class formats numbers according to a set of rules. This number formatter is
@@ -951,7 +947,7 @@ private:
     friend class FractionalPartSubstitution;
 
     inline NFRuleSet * getDefaultRuleSet() const;
-    Collator * getCollator() const;
+    const RuleBasedCollator * getCollator() const;
     DecimalFormatSymbols * getDecimalFormatSymbols() const;
 
 private:
@@ -960,7 +956,7 @@ private:
     int32_t numRuleSets;
     NFRuleSet *defaultRuleSet;
     Locale locale;
-    Collator* collator;
+    RuleBasedCollator* collator;
     DecimalFormatSymbols* decimalFormatSymbols;
     UBool lenient;
     UnicodeString* lenientParseRules;

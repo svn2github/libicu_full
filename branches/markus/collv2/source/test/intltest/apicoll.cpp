@@ -499,6 +499,8 @@ CollationAPITest::TestCollationKey(/* char* par */)
     UErrorCode key1Status = U_ZERO_ERROR, key2Status = U_ZERO_ERROR;
 
     logln("Testing weird arguments");
+    // No string vs. empty string vs. completely-ignorable string:
+    // See ICU ticket #10495.
     CollationKey sortkNone;
     int32_t length;
     sortkNone.getByteArray(length);

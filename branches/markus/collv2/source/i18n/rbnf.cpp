@@ -1512,7 +1512,7 @@ RuleBasedNumberFormat::dispose()
  * @return The collator to use for lenient parsing, or null if lenient parsing
  * is turned off.
 */
-Collator*
+const RuleBasedCollator*
 RuleBasedNumberFormat::getCollator() const
 {
 #if !UCONFIG_NO_COLLATION
@@ -1520,7 +1520,7 @@ RuleBasedNumberFormat::getCollator() const
         return NULL;
     }
 
-    // lazy-evaulate the collator
+    // lazy-evaluate the collator
     if (collator == NULL && lenient) {
         // create a default collator based on the formatter's locale,
         // then pull out that collator's rules, append any additional
@@ -1539,7 +1539,7 @@ RuleBasedNumberFormat::getCollator() const
                 newCollator = new RuleBasedCollator(rules, status);
                 // Exit if newCollator could not be created.
                 if (newCollator == NULL) {
-                	return NULL;
+                    return NULL;
                 }
             } else {
                 temp = NULL;
