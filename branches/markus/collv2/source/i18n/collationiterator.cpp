@@ -24,6 +24,7 @@
 #include "collationiterator.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
+#include "uvectr32.h"
 
 U_NAMESPACE_BEGIN
 
@@ -810,19 +811,18 @@ CollationIterator::appendNumericSegmentCEs(const char *digits, int32_t length, U
     ceBuffer.append(Collation::makeCE(primary), errorCode);
 }
 
-// TODO: Backward iteration:
-// So far, this is just the initial code collection.
-
 int64_t
-CollationIterator::previousCE(UErrorCode &errorCode) {
+CollationIterator::previousCE(UVector32 &offsets, UErrorCode &errorCode) {
     if(ceBuffer.length > 0) {
         // Return the previous buffered CE.
         return ceBuffer.get(--ceBuffer.length);
     }
+    offsets.removeAllElements();
+    int32_t limitOffset = getOffset();
     UChar32 c = previousCodePoint(errorCode);
     if(c < 0) { return Collation::NO_CE; }
     if(data->isUnsafeBackward(c, isNumeric)) {
-        return previousCEUnsafe(c, errorCode);
+        return previousCEUnsafe(c, offsets, errorCode);
     }
     // Simple, safe-backwards iteration:
     // Get a CE going backwards, handle prefixes but no contractions.
@@ -839,6 +839,14 @@ CollationIterator::previousCE(UErrorCode &errorCode) {
     }
     appendCEsFromCE32(d, c, ce32, FALSE, errorCode);
     if(U_SUCCESS(errorCode)) {
+        if(ceBuffer.length > 1) {
+            offsets.addElement(getOffset(), errorCode);
+            // For an expansion, the offset of each non-initial CE is the limit offset,
+            // consistent with forward iteration.
+            while(offsets.size() <= ceBuffer.length) {
+                offsets.addElement(limitOffset, errorCode);
+            };
+        }
         return ceBuffer.get(--ceBuffer.length);
     } else {
         return Collation::NO_CE_PRIMARY;
@@ -846,7 +854,7 @@ CollationIterator::previousCE(UErrorCode &errorCode) {
 }
 
 int64_t
-CollationIterator::previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
+CollationIterator::previousCEUnsafe(UChar32 c, UVector32 &offsets, UErrorCode &errorCode) {
     // We just move through the input counting safe and unsafe code points
     // without collecting the unsafe-backward substring into a buffer and
     // switching to it.
@@ -879,16 +887,31 @@ CollationIterator::previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
     cesIndex = 0;
     U_ASSERT(ceBuffer.length == 0);
     // Go forward and collect the CEs.
+    int32_t offset = getOffset();
     while(numCpFwd > 0) {
         // nextCE() normally reads one code point.
         // Contraction matching and digit specials read more and check numCpFwd.
         --numCpFwd;
         // Append one or more CEs to the ceBuffer.
-        nextCE(errorCode);
-        U_ASSERT(U_FAILURE(errorCode) || ceBuffer.get(cesIndex - 1) != Collation::NO_CE);
-        // No need to loop for each expansion CE.
+        (void)nextCE(errorCode);
+        U_ASSERT(U_FAILURE(errorCode) || ceBuffer.get(ceBuffer.length - 1) != Collation::NO_CE);
+        // No need to loop for getting each expansion CE from nextCE().
         cesIndex = ceBuffer.length;
+        // However, we need to write an offset for each CE.
+        // This is for CollationElementIterator::getOffset() to return
+        // intermediate offsets from the unsafe-backwards segment.
+        U_ASSERT(offsets.size() < ceBuffer.length);
+        offsets.addElement(offset, errorCode);
+        // For an expansion, the offset of each non-initial CE is the limit offset,
+        // consistent with forward iteration.
+        offset = getOffset();
+        while(offsets.size() < ceBuffer.length) {
+            offsets.addElement(offset, errorCode);
+        };
     }
+    U_ASSERT(offsets.size() == ceBuffer.length);
+    // End offset corresponding to just after the unsafe-backwards segment.
+    offsets.addElement(offset, errorCode);
     // Reset the forward iteration limit
     // and move backward to before the segment for which we fetched CEs.
     numCpFwd = -1;
@@ -900,8 +923,6 @@ CollationIterator::previousCEUnsafe(UChar32 c, UErrorCode &errorCode) {
     } else {
         return Collation::NO_CE_PRIMARY;
     }
-    // TODO: Does this method deliver backward-iteration offsets tight enough
-    // for string search? Is this equivalent to how v1 behaves?
 }
 
 U_NAMESPACE_END

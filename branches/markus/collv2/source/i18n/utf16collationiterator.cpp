@@ -193,8 +193,10 @@ int32_t
 FCDUTF16CollationIterator::getOffset() const {
     if(checkDir != 0 || start == segmentStart) {
         return (int32_t)(pos - rawStart);
-    } else {
+    } else if(pos == start) {
         return (int32_t)(segmentStart - rawStart);
+    } else {
+        return (int32_t)(segmentLimit - rawStart);
     }
 }
 
@@ -446,8 +448,11 @@ FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
         if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) ||
                             CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
-            while(p != rawStart && nfcImpl.previousFCD16(rawStart, p) > 0xff) {}
-            if(!normalize(p, pos, errorCode)) { return FALSE; }
+            do {
+                q = p;
+            } while(fcd16 > 0xff && p != rawStart &&
+                    (fcd16 = nfcImpl.previousFCD16(rawStart, p)) != 0);
+            if(!normalize(q, pos, errorCode)) { return FALSE; }
             pos = limit;
             break;
         }

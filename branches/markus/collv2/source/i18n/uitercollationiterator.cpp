@@ -94,8 +94,10 @@ FCDUIterCollationIterator::getOffset() const {
         return iter.getIndex(&iter, UITER_CURRENT);
     } else if(state == ITER_IN_FCD_SEGMENT) {
         return pos;
-    } else {
+    } else if(pos == 0) {
         return start;
+    } else {
+        return limit;
     }
 }
 
@@ -400,13 +402,15 @@ FCDUIterCollationIterator::previousSegment(UErrorCode &errorCode) {
         if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) ||
                             CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
-            for(;;) {
+            while(fcd16 > 0xff) {
                 c = uiter_previous32(&iter);
                 if(c < 0) { break; }
-                s.append(c);
-                if(nfcImpl.getFCD16(c) <= 0xff) {
+                fcd16 = nfcImpl.getFCD16(c);
+                if(fcd16 == 0) {
+                    (void)uiter_next32(&iter);
                     break;
                 }
+                s.append(c);
             }
             s.reverse();
             if(!normalize(s, errorCode)) { return FALSE; }

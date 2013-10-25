@@ -40,6 +40,7 @@
 #include "ucol_imp.h"
 #include "uhash.h"
 #include "utf16collationiterator.h"
+#include "uvectr32.h"
 
 /* Constants --------------------------------------------------------------- */
 
@@ -51,13 +52,14 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(CollationElementIterator)
 
 CollationElementIterator::CollationElementIterator(
                                          const CollationElementIterator& other) 
-        : UObject(other), iter_(NULL), rbc_(NULL), otherHalf_(0), dir_(0) {
+        : UObject(other), iter_(NULL), rbc_(NULL), otherHalf_(0), dir_(0), offsets_(NULL) {
     *this = other;
 }
 
 CollationElementIterator::~CollationElementIterator()
 {
     delete iter_;
+    delete offsets_;
 }
 
 /* CollationElementIterator public methods --------------------------------- */
@@ -78,6 +80,17 @@ UBool ceNeedsTwoParts(int64_t ce) {
 
 int32_t CollationElementIterator::getOffset() const
 {
+    if (dir_ < 0 && offsets_ != NULL && !offsets_->isEmpty()) {
+        // CollationIterator::previousCE() decrements the CEs length
+        // while it pops CEs from its internal buffer.
+        int32_t i = iter_->getCEsLength();
+        if (otherHalf_ != 0) {
+            // Return the trailing CE offset while we are in the middle of a 64-bit CE.
+            ++i;
+        }
+        U_ASSERT(i < offsets_->size());
+        return offsets_->elementAti(i);
+    }
     return iter_->getOffset();
 }
 
@@ -89,21 +102,23 @@ int32_t CollationElementIterator::getOffset() const
 int32_t CollationElementIterator::next(UErrorCode& status)
 {
     if (U_FAILURE(status)) { return NULLORDER; }
-    if (dir_ == 0) {
-        // The iter_ is already reset to the start of the text.
-        dir_ = 2;
-    } else if (dir_ < 0) {
-        // illegal change of direction
-        status = U_INVALID_STATE_ERROR;
-        return NULLORDER;
+    if (dir_ > 1) {
+        // Continue forward iteration. Test this first.
+        if (otherHalf_ != 0) {
+            uint32_t oh = otherHalf_;
+            otherHalf_ = 0;
+            return oh;
+        }
     } else if (dir_ == 1) {
         // next() after setOffset()
         dir_ = 2;
-    }
-    if (otherHalf_ != 0) {
-        uint32_t oh = otherHalf_;
-        otherHalf_ = 0;
-        return oh;
+    } else if (dir_ == 0) {
+        // The iter_ is already reset to the start of the text.
+        dir_ = 2;
+    } else /* dir_ < 0 */ {
+        // illegal change of direction
+        status = U_INVALID_STATE_ERROR;
+        return NULLORDER;
     }
     // No need to keep all CEs in the buffer when we iterate.
     iter_->clearCEsIfNoneRemaining();
@@ -150,23 +165,36 @@ UBool CollationElementIterator::operator==(
 int32_t CollationElementIterator::previous(UErrorCode& status)
 {
     if (U_FAILURE(status)) { return NULLORDER; }
-    if (dir_ == 0) {
+    if (dir_ < 0) {
+        // Continue backwards iteration. Test this first.
+        if (otherHalf_ != 0) {
+            uint32_t oh = otherHalf_;
+            otherHalf_ = 0;
+            return oh;
+        }
+    } else if (dir_ == 0) {
         iter_->resetToOffset(string_.length());
         dir_ = -1;
     } else if (dir_ == 1) {
         // previous() after setOffset()
         dir_ = -1;
-    } else if (dir_ > 1) {
+    } else /* dir_ > 1 */ {
         // illegal change of direction
         status = U_INVALID_STATE_ERROR;
         return NULLORDER;
     }
-    if (otherHalf_ != 0) {
-        uint32_t oh = otherHalf_;
-        otherHalf_ = 0;
-        return oh;
+    if (offsets_ == NULL) {
+        offsets_ = new UVector32(status);
+        if (offsets_ == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return NULLORDER;
+        }
     }
-    int64_t ce = iter_->previousCE(status);
+    // If we already have expansion CEs, then we also have offsets.
+    // Otherwise remember the trailing offset in case we need to
+    // write offsets for an artificial expansion.
+    int32_t limitOffset = iter_->getCEsLength() == 0 ? iter_->getOffset() : 0;
+    int64_t ce = iter_->previousCE(*offsets_, status);
     if (ce == Collation::NO_CE) { return NULLORDER; }
     // Turn the 64-bit CE into two old-style 32-bit CEs, without quaternary bits.
     uint32_t p = (uint32_t)(ce >> 32);
@@ -174,6 +202,13 @@ int32_t CollationElementIterator::previous(UErrorCode& status)
     uint32_t firstHalf = getFirstHalf(p, lower32);
     uint32_t secondHalf = getSecondHalf(p, lower32);
     if (secondHalf != 0) {
+        if (offsets_->isEmpty()) {
+            // When we convert a single 64-bit CE into two 32-bit CEs,
+            // we need to make this artificial expansion behave like a normal expansion.
+            // See CollationIterator::previousCE().
+            offsets_->addElement(iter_->getOffset(), status);
+            offsets_->addElement(limitOffset, status);
+        }
         otherHalf_ = firstHalf;
         return secondHalf | 0xc0;  // continuation CE
     }
@@ -186,6 +221,7 @@ int32_t CollationElementIterator::previous(UErrorCode& status)
 void CollationElementIterator::reset()
 {
     iter_ ->resetToOffset(0);
+    otherHalf_ = 0;
     dir_ = 0;
 }
 
@@ -194,6 +230,7 @@ void CollationElementIterator::setOffset(int32_t newOffset,
 {
     if (U_FAILURE(status)) { return; }
     iter_->resetToOffset(newOffset);
+    otherHalf_ = 0;
     dir_ = 1;
 }
 
@@ -222,6 +259,7 @@ void CollationElementIterator::setText(const UnicodeString& source,
     }
     delete iter_;
     iter_ = newIter;
+    otherHalf_ = 0;
     dir_ = 0;
 }
 
@@ -260,7 +298,7 @@ CollationElementIterator::CollationElementIterator(
                                                const UnicodeString &source,
                                                const RuleBasedCollator *coll,
                                                UErrorCode &status)
-        : iter_(NULL), rbc_(coll), otherHalf_(0), dir_(0) {
+        : iter_(NULL), rbc_(coll), otherHalf_(0), dir_(0), offsets_(NULL) {
     setText(source, status);
 }
 
@@ -272,12 +310,12 @@ CollationElementIterator::CollationElementIterator(
                                            const CharacterIterator &source,
                                            const RuleBasedCollator *coll,
                                            UErrorCode &status)
-        : iter_(NULL), rbc_(coll), otherHalf_(0), dir_(0) {
+        : iter_(NULL), rbc_(coll), otherHalf_(0), dir_(0), offsets_(NULL) {
     // We only call source.getText() which should be const anyway.
     setText(const_cast<CharacterIterator &>(source), status);
 }
 
-/* CollationElementIterator protected methods ----------------------------- */
+/* CollationElementIterator private methods -------------------------------- */
 
 const CollationElementIterator& CollationElementIterator::operator=(
                                          const CollationElementIterator& other)
@@ -308,6 +346,15 @@ const CollationElementIterator& CollationElementIterator::operator=(
         dir_ = other.dir_;
 
         string_ = other.string_;
+    }
+    if(other.dir_ < 0 && other.offsets_ != NULL && !other.offsets_->isEmpty()) {
+        UErrorCode errorCode = U_ZERO_ERROR;
+        if(offsets_ == NULL) {
+            offsets_ = new UVector32(other.offsets_->size(), errorCode);
+        }
+        if(offsets_ != NULL) {
+            offsets_->assign(*other.offsets_, errorCode);
+        }
     }
     return *this;
 }

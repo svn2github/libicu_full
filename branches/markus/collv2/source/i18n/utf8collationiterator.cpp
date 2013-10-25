@@ -135,8 +135,10 @@ int32_t
 FCDUTF8CollationIterator::getOffset() const {
     if(state != IN_NORMALIZED) {
         return pos;
-    } else {
+    } else if(pos == 0) {
         return start;
+    } else {
+        return limit;
     }
 }
 
@@ -479,12 +481,15 @@ FCDUTF8CollationIterator::previousSegment(UErrorCode &errorCode) {
         if(trailCC != 0 && ((nextCC != 0 && trailCC > nextCC) ||
                             CollationFCD::isFCD16OfTibetanCompositeVowel(fcd16))) {
             // Fails FCD check. Find the previous FCD boundary and normalize.
-            while(pos != 0) {
+            while(fcd16 > 0xff && pos != 0) {
+                cpLimit = pos;
                 U8_PREV_OR_FFFD(u8, 0, pos, c);
-                s.append(c);
-                if(nfcImpl.getFCD16(c) <= 0xff) {
+                fcd16 = nfcImpl.getFCD16(c);
+                if(fcd16 == 0) {
+                    pos = cpLimit;
                     break;
                 }
+                s.append(c);
             }
             s.reverse();
             if(!normalize(s, errorCode)) { return FALSE; }

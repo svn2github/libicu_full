@@ -239,20 +239,15 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             // by enumerating the Normalizer2Impl data more directly.
             tailoring.unsafeBackwardSet = new UnicodeSet(
                 UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
-            if(tailoring.unsafeBackwardSet == NULL) {
-                errorCode = U_MEMORY_ALLOCATION_ERROR;
-                return;
-            }
             if(U_FAILURE(errorCode)) { return; }
         } else {
-            // Copy the root collator's set contents but don't copy/clone the set as a whole because
-            // that would copy the isFrozen state too.
-            tailoring.unsafeBackwardSet = new UnicodeSet();
-            if(tailoring.unsafeBackwardSet == NULL) {
-                errorCode = U_MEMORY_ALLOCATION_ERROR;
-                return;
-            }
-            tailoring.unsafeBackwardSet->addAll(*baseData->unsafeBackwardSet);
+            // Clone the root collator's set contents.
+            tailoring.unsafeBackwardSet = static_cast<UnicodeSet *>(
+                baseData->unsafeBackwardSet->cloneAsThawed());
+        }
+        if(tailoring.unsafeBackwardSet == NULL) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+            return;
         }
         // Add the ranges from the data file to the unsafe-backward set.
         USerializedSet sset;

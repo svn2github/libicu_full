@@ -47,6 +47,7 @@ struct CollationData;
 class CollationIterator;
 class RuleBasedCollator;
 class UCollationPCE;
+class UVector32;
 
 /**
 * The CollationElementIterator class is used as an iterator to walk through     
@@ -363,6 +364,12 @@ private:
      * 1: just after setOffset(); >1: forward
      */
     int8_t dir_;
+    /**
+     * Stores offsets from expansions and from unsafe-backwards iteration,
+     * so that getOffset() returns intermediate offsets for the CEs
+     * that are consistent with forward iteration.
+     */
+    UVector32 *offsets_;
 
     UnicodeString string_;
 };

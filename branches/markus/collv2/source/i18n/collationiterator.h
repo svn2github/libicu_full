@@ -24,6 +24,7 @@ U_NAMESPACE_BEGIN
 
 class SkippedState;
 class UCharsTrie;
+class UVector32;
 
 /**
  * Collation element iterator and abstract character iterator.
@@ -169,7 +170,7 @@ public:
     /**
      * Returns the previous collation element.
      */
-    int64_t previousCE(UErrorCode &errorCode);
+    int64_t previousCE(UVector32 &offsets, UErrorCode &errorCode);
 
     inline int32_t getCEsLength() const {
         return ceBuffer.length;
@@ -279,7 +280,7 @@ private:
     /**
      * Returns the previous CE when data->isUnsafeBackward(c, isNumeric).
      */
-    int64_t previousCEUnsafe(UChar32 c, UErrorCode &errorCode);
+    int64_t previousCEUnsafe(UChar32 c, UVector32 &offsets, UErrorCode &errorCode);
 
     /**
      * Turns a string of digits (bytes 0..9)
