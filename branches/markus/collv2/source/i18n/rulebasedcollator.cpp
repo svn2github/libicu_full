@@ -1363,10 +1363,6 @@ RuleBasedCollator::getCollationKey(const UChar *s, int32_t length, CollationKey&
         return key.setToBogus();
     }
     key.reset();  // resets the "bogus" state
-    if(length == 0 || (length < 0 && *s == 0)) {
-        // For an empty string we do not even write the separators nor the terminator.
-        return key;
-    }
     CollationKeyByteSink sink(key);
     writeSortKey(s, length, sink, errorCode);
     if(U_FAILURE(errorCode)) {

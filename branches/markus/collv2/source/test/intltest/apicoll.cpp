@@ -499,12 +499,33 @@ CollationAPITest::TestCollationKey(/* char* par */)
     UErrorCode key1Status = U_ZERO_ERROR, key2Status = U_ZERO_ERROR;
 
     logln("Testing weird arguments");
-    col->getCollationKey(NULL, 0, sortk1, key1Status);
-    // key gets reset here
+    CollationKey sortkNone;
     int32_t length;
-    sortk1.getByteArray(length);
-    doAssert(sortk1.isBogus() == FALSE && length == 0,
-             "Empty string should return an empty collation key");
+    sortkNone.getByteArray(length);
+    doAssert(!sortkNone.isBogus() && length == 0,
+             "Default-constructed collation key should be empty");
+    CollationKey sortkEmpty;
+    col->getCollationKey(NULL, 0, sortkEmpty, key1Status);
+    // key gets reset here
+    const uint8_t* byteArrayEmpty = sortkEmpty.getByteArray(length);
+    doAssert(sortkEmpty.isBogus() == FALSE && length == 3 &&
+             byteArrayEmpty[0] == 1 && byteArrayEmpty[1] == 1 && byteArrayEmpty[2] == 0,
+             "Empty string should return a collation key with empty levels");
+    doAssert(sortkNone.compareTo(sortkEmpty) == Collator::LESS,
+             "Expected no collation key < collation key for empty string");
+    doAssert(sortkEmpty.compareTo(sortkNone) == Collator::GREATER,
+             "Expected collation key for empty string > no collation key");
+
+    CollationKey sortkIgnorable;
+    // Most control codes and CGJ are completely ignorable.
+    // A string with only completely ignorables must compare equal to an empty string.
+    col->getCollationKey(UnicodeString((UChar)1).append((UChar)0x34f), sortkIgnorable, key1Status);
+    sortkIgnorable.getByteArray(length);
+    doAssert(!sortkIgnorable.isBogus() && length == 3,
+             "Completely ignorable string should return a collation key with empty levels");
+    doAssert(sortkIgnorable.compareTo(sortkEmpty) == Collator::EQUAL,
+             "Completely ignorable string should compare equal to empty string");
+
     // bogus key returned here
     key1Status = U_ILLEGAL_ARGUMENT_ERROR;
     col->getCollationKey(NULL, 0, sortk1, key1Status);
@@ -523,8 +544,7 @@ CollationAPITest::TestCollationKey(/* char* par */)
                  == Collator::GREATER,
                 "Result should be \"Abcda\" >>> \"abcda\"");
 
-    CollationKey sortk3(sortk2), sortkNew, sortkEmpty;
-
+    CollationKey sortk3(sortk2), sortkNew;
 
     sortkNew = sortk1;
     doAssert((sortk1 != sortk2), "The sort keys should be different");
