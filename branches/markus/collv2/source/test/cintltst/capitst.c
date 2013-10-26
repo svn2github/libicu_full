@@ -2226,6 +2226,18 @@ TestGetContractionsAndUnsafes(void)
 static void
 TestOpenBinary(void)
 {
+    /*
+     * ucol_openBinary() documents:
+     * "The API also takes a base collator which usually should be UCA."
+     * and
+     * "Currently it cannot be NULL."
+     *
+     * However, the check for NULL was commented out in ICU 3.4 (r18149).
+     * Ticket #4355 requested "Make collation work with minimal data.
+     * Optionally without UCA, with relevant parts of UCA copied into the tailoring table."
+     * Revisit with ticket #10517 "require base collator in ucol_openBinary() etc.".
+     */
+#define OPEN_BINARY_ACCEPTS_NULL_BASE 0
     UErrorCode status = U_ZERO_ERROR;
     /*
     char rule[] = "&h < d < c < b";
@@ -2235,7 +2247,9 @@ TestOpenBinary(void)
     /* we have to use Cyrillic letters because latin-1 always gets copied */
     const char rule[] = "&\\u0452 < \\u0434 < \\u0433 < \\u0432"; /* &dje < d < g < v */
     const char *wUCA[] = { "\\u0430", "\\u0452", "\\u0434", "\\u0433", "\\u0432", "\\u0435" }; /* a, dje, d, g, v, e */
+#if OPEN_BINARY_ACCEPTS_NULL_BASE
     const char *noUCA[] = {"\\u0434", "\\u0433", "\\u0432", "\\u0430", "\\u0435", "\\u0452" }; /* d, g, v, a, e, dje */
+#endif
 
     UChar uRules[256];
     int32_t uRulesLen = u_unescape(rule, uRules, 256);
@@ -2271,11 +2285,18 @@ TestOpenBinary(void)
 
     cloneWUCA = ucol_openBinary(image, imageSize, UCA, &status);
     cloneNOUCA = ucol_openBinary(image, imageSize, NULL, &status);
+#if !OPEN_BINARY_ACCEPTS_NULL_BASE
+    if(status != U_ILLEGAL_ARGUMENT_ERROR) {
+        log_err("ucol_openBinary(base=NULL) unexpectedly did not fail - %s\n", u_errorName(status));
+    }
+#endif
 
     genericOrderingTest(coll, wUCA, sizeof(wUCA)/sizeof(wUCA[0]));
 
     genericOrderingTest(cloneWUCA, wUCA, sizeof(wUCA)/sizeof(wUCA[0]));
+#if OPEN_BINARY_ACCEPTS_NULL_BASE
     genericOrderingTest(cloneNOUCA, noUCA, sizeof(noUCA)/sizeof(noUCA[0]));
+#endif
 
     if(image != imageBuffer) {
         free(image);
