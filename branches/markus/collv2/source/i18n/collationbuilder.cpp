@@ -270,6 +270,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     }
     if(U_FAILURE(errorCode)) { return NULL; }
     tailoring->rules = ruleString;
+    tailoring->rules.getTerminatedBuffer();  // ensure NUL-termination
     tailoring->setVersion(base->version, rulesVersion);
     return tailoring.orphan();
 }

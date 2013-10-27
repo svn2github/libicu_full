@@ -46,6 +46,7 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
         U_ASSERT(baseSettings->reorderCodesLength == 0);
         U_ASSERT(baseSettings->reorderTable == NULL);
     }
+    rules.getTerminatedBuffer();  // ensure NUL-termination
     version[0] = version[1] = version[2] = version[3] = 0;
 }
 

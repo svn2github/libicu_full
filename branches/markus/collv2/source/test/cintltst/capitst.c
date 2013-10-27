@@ -32,6 +32,8 @@
 #include "cmemory.h"
 #include "cstring.h"
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 static void TestAttribute(void);
 static void TestDefault(void);
 static void TestDefaultKeyword(void);
@@ -435,7 +437,6 @@ void TestRuleBasedColl()
     UChar ruleset1[60];
     UChar ruleset2[50];
     UChar teststr[10];
-    UChar teststr2[10];
     const UChar *rule1, *rule2, *rule3, *rule4;
     int32_t tempLength;
     UErrorCode status = U_ZERO_ERROR;
@@ -531,17 +532,12 @@ void TestRuleBasedColl()
     ucol_closeElements(iter2);
     ucol_close(col1);
     ucol_close(col2);
-    /* test that we can start a rule without a & or < */
+    /* CLDR 24+ requires a reset before the first relation */
     u_uastrcpy(ruleset1, "< z < a");
     col1 = ucol_openRules(ruleset1, u_strlen(ruleset1), UCOL_DEFAULT, UCOL_DEFAULT_STRENGTH, NULL, &status);
-    if (U_FAILURE(status)) {
-        log_err("RuleBased Collator creation failed.: %s\n", myErrorName(status));
-        return;
-    }
-    u_uastrcpy(teststr, "z");
-    u_uastrcpy(teststr2, "a");
-    if (ucol_greaterOrEqual(col1, teststr, 1, teststr2, 1)) {
-        log_err("Rule \"z < a\" fails");
+    if (status != U_PARSE_ERROR) {
+        log_err("ucol_openRules(without initial reset: '< z < a') "
+                "should fail with U_PARSE_ERROR but yielded %s\n", myErrorName(status));
     }
     ucol_close(col1);
 }
@@ -743,7 +739,7 @@ void TestSafeClone() {
     someClonedCollators[0] = ucol_safeClone(col, buffer[0], &bufferSize, &err);
     doAssert( (ucol_greater(col, umlautUStr, u_strlen(umlautUStr), oeStr, u_strlen(oeStr))), "Original German phonebook collation sorts differently than expected");
     doAssert( (ucol_greater(someClonedCollators[0], umlautUStr, u_strlen(umlautUStr), oeStr, u_strlen(oeStr))), "Cloned German phonebook collation sorts differently than expected");
-#if 0  /* TODO: check for expected collator */
+#if 0  /* ucol_equals() was @internal and was removed. The previous doAssert() should suffice here. */
     if (!ucol_equals(someClonedCollators[0], col)) {
         log_err("FAIL: Cloned German phonebook collator is not equal to original.\n");
     }
@@ -1183,7 +1179,7 @@ void TestSortKey()
     free(sortkEmpty);
 
     log_verbose("testing passing invalid string\n");
-    sortklen = ucol_getSortKey(col, NULL, 0, NULL, 0);
+    sortklen = ucol_getSortKey(col, NULL, 10, NULL, 0);
     if(sortklen != 0) {
       log_err("Invalid string didn't return sortkey size of 0\n");
     }
@@ -1393,7 +1389,6 @@ void TestGetLocale() {
 
   int32_t i = 0;
 
-  /* Now that the collation tree is separate, actual==valid at all times. [alan] */
   static const struct {
     const char* requestedLocale;
     const char* validLocale;
@@ -1414,8 +1409,12 @@ void TestGetLocale() {
       ucol_close(coll);
       continue;
     }
-   locale = ucol_getLocaleByType(coll, ULOC_REQUESTED_LOCALE, &status);
-    if(strcmp(locale, testStruct[i].requestedLocale) != 0) {
+    /*
+     * The requested locale may be the same as the valid locale,
+     * or may not be supported at all. See ticket #10477.
+     */
+    locale = ucol_getLocaleByType(coll, ULOC_REQUESTED_LOCALE, &status);
+    if(strcmp(locale, testStruct[i].requestedLocale) != 0 && strcmp(locale, testStruct[i].validLocale) != 0) {
       log_err("[Coll %s]: Error in requested locale, expected %s, got %s\n", testStruct[i].requestedLocale, testStruct[i].requestedLocale, locale);
     }
     locale = ucol_getLocaleByType(coll, ULOC_VALID_LOCALE, &status);
@@ -1434,9 +1433,10 @@ void TestGetLocale() {
     UCollator *defaultColl = ucol_open(NULL, &status);
     coll = ucol_open("blahaha", &status);
     if(U_SUCCESS(status)) {
+      /* See comment above about ticket #10477.
       if(strcmp(ucol_getLocaleByType(coll, ULOC_REQUESTED_LOCALE, &status), "blahaha")) {
         log_err("Nonexisting locale didn't preserve the requested locale\n");
-      }
+      } */
       if(strcmp(ucol_getLocaleByType(coll, ULOC_VALID_LOCALE, &status),
         ucol_getLocaleByType(defaultColl, ULOC_VALID_LOCALE, &status))) {
         log_err("Valid locale for nonexisting locale locale collator differs "
@@ -1839,13 +1839,13 @@ void TestGetTailoredSet() {
   int32_t buffLen = 0;
   USet *set = NULL;
 
-  for(i = 0; i < sizeof(setTest)/sizeof(setTest[0]); i++) {
+  for(i = 0; i < LENGTHOF(setTest); i++) {
     buffLen = u_unescape(setTest[i].rules, buff, 1024);
     coll = ucol_openRules(buff, buffLen, UCOL_DEFAULT, UCOL_DEFAULT, &pError, &status);
     if(U_SUCCESS(status)) {
       set = ucol_getTailoredSet(coll, &status);
-      if(uset_size(set) != setTest[i].testsize) {
-        log_err("Tailored set size different (%d) than expected (%d)\n", uset_size(set), setTest[i].testsize);
+      if(uset_size(set) < setTest[i].testsize) {
+        log_err("Tailored set size smaller (%d) than expected (%d)\n", uset_size(set), setTest[i].testsize);
       }
       for(j = 0; j < setTest[i].testsize; j++) {
         buffLen = u_unescape(setTest[i].tests[j], buff, 1024);

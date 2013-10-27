@@ -31,6 +31,7 @@
 #include "collation.h"
 #include "cstring.h"
 #include "putilimp.h"
+#include "uassert.h"
 #include "utracimp.h"
 
 U_NAMESPACE_USE
@@ -537,6 +538,7 @@ ucol_getRules(const UCollator *coll, int32_t *length) {
     // OK to crash if coll==NULL: We do not want to check "this" pointers.
     if(rbc != NULL || coll == NULL) {
         const UnicodeString &rules = rbc->getRules();
+        U_ASSERT(rules.getBuffer()[rules.length()] == 0);
         *length = rules.length();
         return rules.getBuffer();
     }

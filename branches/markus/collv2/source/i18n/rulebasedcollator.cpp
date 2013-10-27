@@ -396,7 +396,9 @@ RuleBasedCollator::getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) c
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
     }
-    return result->getName();
+    if(result->isBogus()) { return NULL; }
+    const char *id = result->getName();
+    return id[0] == 0 ? "root" : id;
 }
 
 const UnicodeString&
@@ -413,7 +415,7 @@ RuleBasedCollator::getRules(UColRuleOption delta, UnicodeString &buffer) const {
     // UCOL_FULL_RULES
     buffer.remove();
     CollationLoader::appendRootRules(buffer);
-    buffer.append(tailoring->rules);
+    buffer.append(tailoring->rules).getTerminatedBuffer();
 }
 
 void
