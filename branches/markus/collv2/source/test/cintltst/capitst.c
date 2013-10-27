@@ -2008,15 +2008,22 @@ static void TestShortString(void)
         uint32_t   expectedIdentifier;
     } testCases[] = {
         /*
-         * The following expectedOutput contains a collation weight (2700 from UCA 6.0)
-         * which is the primary weight for the T character (U+0041) in the input.
-         * When that character gets a different weight in FractionalUCA.txt,
-         * the expectedOutput needs to be adjusted.
-         * That is, when we upgrade to a new UCA version or change collation
-         * in such a way that the absolute weight for 'A' changes,
-         * we will get a test failure here and need to adjust the test case.
+         * Note: The first test case sets variableTop to letter 'A'
+         * (which makes little sense because alternate=shifted is meant for
+         * spaces, punctuation, and maybe symbols).
+         * We have agreed to drop support for variableTop in ucol_getShortDefinitionString(),
+         * related to ticket #10372 "deprecate collation APIs for short definition strings",
+         * and because it did not work for most spaces/punctuation/symbols,
+         * as documented in ticket #10386 "collation short definition strings issues":
+         * The old code wrote only 3 hex digits for primary weights below 0x0FFF,
+         * which is a syntax error, and then failed to normalize the result.
+         *
+         * The "B2700" was removed from the expected result ("B2700_KPHONEBOOK_LDE").
+         *
+         * Previously, this test had to be adjusted for root collator changes because the
+         * primary weight of 'A' naturally changed but was baked into the expected result.
          */
-        {"LDE_RDE_KPHONEBOOK_T0041_ZLATN","B2700_KPHONEBOOK_LDE", "de@collation=phonebook", U_USING_FALLBACK_WARNING, 0, 0 },
+        {"LDE_RDE_KPHONEBOOK_T0041_ZLATN","KPHONEBOOK_LDE", "de@collation=phonebook", U_USING_FALLBACK_WARNING, 0, 0 },
 
         {"LEN_RUS_NO_AS_S4","AS_LROOT_NO_S4", NULL, U_USING_DEFAULT_WARNING, 0, 0 },
         {"LDE_VPHONEBOOK_EO_SI","EO_KPHONEBOOK_LDE_SI", "de@collation=phonebook", U_ZERO_ERROR, 0, 0 },
