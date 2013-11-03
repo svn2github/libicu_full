@@ -136,7 +136,7 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
     // The parent prefix default CE32's are compared in a different code path.
     U_ASSERT((tag == Collation::CONTRACTION_TAG) == (baseTag == Collation::CONTRACTION_TAG));
     if(tag == Collation::CONTRACTION_TAG) {
-        U_ASSERT(prefix != NULL);
+        U_ASSERT(!unreversedPrefix.isEmpty());
         return;
     }
 
@@ -247,9 +247,9 @@ TailoredSet::comparePrefixes(UChar32 c, const UChar *p, const UChar *q) {
             addPrefix(baseData, *bp, c, (uint32_t)basePrefixes.getValue());
             bp = NULL;
         } else {
-            prefix = tp;
+            setPrefix(*tp);
             compare(c, (uint32_t)prefixes.getValue(), (uint32_t)basePrefixes.getValue());
-            prefix = NULL;
+            resetPrefix();
             tp = NULL;
             bp = NULL;
         }
@@ -312,14 +312,14 @@ TailoredSet::addPrefixes(const CollationData *d, UChar32 c, const UChar *p) {
 
 void
 TailoredSet::addPrefix(const CollationData *d, const UnicodeString &pfx, UChar32 c, uint32_t ce32) {
+    setPrefix(pfx);
     ce32 = d->getFinalCE32(ce32);
     if(Collation::isContractionCE32(ce32)) {
         const UChar *p = d->contexts + Collation::indexFromCE32(ce32);
-        prefix = &pfx;
         addContractions(c, p + 2);
-        prefix = NULL;
     }
-    tailored->add(UnicodeString(pfx).append(c));
+    tailored->add(UnicodeString(unreversedPrefix).append(c));
+    resetPrefix();
 }
 
 void
@@ -332,22 +332,15 @@ TailoredSet::addContractions(UChar32 c, const UChar *p) {
 
 void
 TailoredSet::addSuffix(UChar32 c, const UnicodeString &sfx) {
-    UnicodeString s;
-    if(prefix != NULL) {
-        s.append(*prefix);
-    }
-    tailored->add(s.append(c).append(sfx));
+    tailored->add(UnicodeString(unreversedPrefix).append(c).append(sfx));
 }
 
 void
 TailoredSet::add(UChar32 c) {
-    if(prefix == NULL && suffix == NULL) {
+    if(unreversedPrefix.isEmpty() && suffix == NULL) {
         tailored->add(c);
     } else {
-        UnicodeString s;
-        if(prefix != NULL) {
-            s.append(*prefix);
-        }
+        UnicodeString s(unreversedPrefix);
         s.append(c);
         if(suffix != NULL) {
             s.append(*suffix);
@@ -451,7 +444,7 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
             }
             // Optimization: If we have a prefix,
             // then the relevant strings have been added already.
-            if(prefix == NULL) {
+            if(unreversedPrefix.isEmpty()) {
                 addExpansions(start, end);
             }
             return;
@@ -466,7 +459,7 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
             }
             // Optimization: If we have a prefix,
             // then the relevant strings have been added already.
-            if(prefix == NULL) {
+            if(unreversedPrefix.isEmpty()) {
                 addExpansions(start, end);
             }
             return;
@@ -477,7 +470,7 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
             }
             // Optimization: If we have a prefix,
             // then the relevant strings have been added already.
-            if(prefix == NULL) {
+            if(unreversedPrefix.isEmpty()) {
                 addExpansions(start, end);
             }
             return;
@@ -514,7 +507,7 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
             }
             // Optimization: If we have a prefix,
             // then the relevant strings have been added already.
-            if(prefix == NULL) {
+            if(unreversedPrefix.isEmpty()) {
                 addExpansions(start, end);
             }
             return;
@@ -537,14 +530,14 @@ ContractionsAndExpansions::handlePrefixes(
     if(!addPrefixes) { return; }
     UCharsTrie::Iterator prefixes(p + 2, 0, errorCode);
     while(prefixes.next(errorCode)) {
-        prefix = &prefixes.getString();
+        setPrefix(prefixes.getString());
         // Prefix/pre-context mappings are special kinds of contractions
         // that always yield expansions.
         addStrings(start, end, contractions);
         addStrings(start, end, expansions);
         handleCE32(start, end, (uint32_t)prefixes.getValue());
     }
-    prefix = NULL;
+    resetPrefix();
 }
 
 void
@@ -556,7 +549,7 @@ ContractionsAndExpansions::handleContractions(
     // In that case, we are underneath a prefix, and the empty prefix
     // maps to the same contractions.
     if(Collation::isContractionCE32(ce32)) {
-        U_ASSERT(prefix != NULL);
+        U_ASSERT(!unreversedPrefix.isEmpty());
     } else {
         handleCE32(start, end, ce32);
     }
@@ -564,7 +557,7 @@ ContractionsAndExpansions::handleContractions(
     while(suffixes.next(errorCode)) {
         suffix = &suffixes.getString();
         addStrings(start, end, contractions);
-        if(prefix != NULL) {
+        if(!unreversedPrefix.isEmpty()) {
             addStrings(start, end, expansions);
         }
         handleCE32(start, end, (uint32_t)suffixes.getValue());
@@ -574,7 +567,7 @@ ContractionsAndExpansions::handleContractions(
 
 void
 ContractionsAndExpansions::addExpansions(UChar32 start, UChar32 end) {
-    if(prefix == NULL && suffix == NULL) {
+    if(unreversedPrefix.isEmpty() && suffix == NULL) {
         if(expansions != NULL) {
             // TODO: verify that UnicodeSet takes a fastpath if start==end
             expansions->add(start, end);
@@ -587,21 +580,14 @@ ContractionsAndExpansions::addExpansions(UChar32 start, UChar32 end) {
 void
 ContractionsAndExpansions::addStrings(UChar32 start, UChar32 end, UnicodeSet *set) {
     if(set == NULL) { return; }
-    UnicodeString s;
-    int32_t prefixLength;
-    if(prefix != NULL) {
-        s = *prefix;
-        prefixLength = prefix->length();
-    } else {
-        prefixLength = 0;
-    }
+    UnicodeString s(unreversedPrefix);
     do {
         s.append(start);
         if(suffix != NULL) {
             s.append(*suffix);
         }
         set->add(s);
-        s.truncate(prefixLength);
+        s.truncate(unreversedPrefix.length());
     } while(++start <= end);
 }
 

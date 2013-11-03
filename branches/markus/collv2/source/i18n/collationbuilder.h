@@ -180,7 +180,7 @@ private:
             ((int64_t)(index & 0xfe000) << 43) +
             // index bits 12..6 -> primary byte 2 = CE bits 55..48 (byte values 40..BF)
             ((int64_t)(index & 0x1fc0) << 42) +
-            // index bits 5..0 -> seconary byte 1 = CE bits 31..24 (byte values 06..45)
+            // index bits 5..0 -> secondary byte 1 = CE bits 31..24 (byte values 06..45)
             ((index & 0x3f) << 24) +
             // strength bits 1..0 -> tertiary byte 1 = CE bits 13..8 (byte values 20..23)
             (strength << 8);

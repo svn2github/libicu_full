@@ -43,7 +43,7 @@ public:
     TailoredSet(UnicodeSet *t)
             : data(NULL), baseData(NULL),
               tailored(t),
-              prefix(NULL), suffix(NULL),
+              suffix(NULL),
               errorCode(U_ZERO_ERROR) {}
 
     void forData(const CollationData *d, UErrorCode &errorCode);
@@ -65,10 +65,19 @@ private:
     void addSuffix(UChar32 c, const UnicodeString &sfx);
     void add(UChar32 c);
 
+    /** Prefixes are reversed in the data structure. */
+    void setPrefix(const UnicodeString &pfx) {
+        unreversedPrefix = pfx;
+        unreversedPrefix.reverse();
+    }
+    void resetPrefix() {
+        unreversedPrefix.remove();
+    }
+
     const CollationData *data;
     const CollationData *baseData;
     UnicodeSet *tailored;
-    const UnicodeString *prefix;
+    UnicodeString unreversedPrefix;
     const UnicodeString *suffix;
     UErrorCode errorCode;
 };
@@ -88,7 +97,7 @@ public:
               sink(s),
               addPrefixes(prefixes),
               checkTailored(0),
-              prefix(NULL), suffix(NULL),
+              suffix(NULL),
               errorCode(U_ZERO_ERROR) {}
 
     void forData(const CollationData *d, UErrorCode &errorCode);
@@ -103,6 +112,15 @@ public:
     void addExpansions(UChar32 start, UChar32 end);
     void addStrings(UChar32 start, UChar32 end, UnicodeSet *set);
 
+    /** Prefixes are reversed in the data structure. */
+    void setPrefix(const UnicodeString &pfx) {
+        unreversedPrefix = pfx;
+        unreversedPrefix.reverse();
+    }
+    void resetPrefix() {
+        unreversedPrefix.remove();
+    }
+
     const CollationData *data;
     const CollationData *tailoring;
     UnicodeSet *contractions;
@@ -112,7 +130,7 @@ public:
     int8_t checkTailored;  // -1: collected tailored  +1: exclude tailored
     UnicodeSet tailored;
     UnicodeSet ranges;
-    const UnicodeString *prefix;
+    UnicodeString unreversedPrefix;
     const UnicodeString *suffix;
     int64_t ces[Collation::MAX_EXPANSION_LENGTH];
     UErrorCode errorCode;

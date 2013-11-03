@@ -2096,7 +2096,7 @@ static void TestShortString(void)
 
 static void
 doSetsTest(const char *locale, const USet *ref, USet *set, const char* inSet, const char* outSet, UErrorCode *status) {
-    UChar buffer[512];
+    UChar buffer[65536];
     int32_t bufLen;
 
     uset_clear(set);
@@ -2108,6 +2108,11 @@ doSetsTest(const char *locale, const USet *ref, USet *set, const char* inSet, co
 
     if(!uset_containsAll(ref, set)) {
         log_err("%s: Some stuff from %s is not present in the set\n", locale, inSet);
+        uset_removeAll(set, ref);
+        bufLen = uset_toPattern(set, buffer, LENGTHOF(buffer), TRUE, status);
+        log_info("    missing: %s\n", aescstrdup(buffer, bufLen));
+        bufLen = uset_toPattern(ref, buffer, LENGTHOF(buffer), TRUE, status);
+        log_info("    total: size=%i  %s\n", uset_getItemCount(ref), aescstrdup(buffer, bufLen));
     }
 
     uset_clear(set);
@@ -2162,7 +2167,19 @@ TestGetContractionsAndUnsafes(void)
             "[jabv]"
         },
         { "ja",
-          "[{\\u3053\\u3099\\u309D}{\\u3053\\u3099\\u309D\\u3099}{\\u3053\\u3099\\u309E}{\\u3053\\u3099\\u30FC}{\\u3053\\u309D}{\\u3053\\u309D\\u3099}{\\u3053\\u309E}{\\u3053\\u30FC}{\\u30B3\\u3099\\u30FC}{\\u30B3\\u3099\\u30FD}{\\u30B3\\u3099\\u30FD\\u3099}{\\u30B3\\u3099\\u30FE}{\\u30B3\\u30FC}{\\u30B3\\u30FD}{\\u30B3\\u30FD\\u3099}{\\u30B3\\u30FE}]",
+          /*
+           * The "collv2" builder omits mappings if the collator maps their
+           * character sequences to the same CEs.
+           * For example, it omits Japanese contractions for NFD forms
+           * of the voiced iteration mark (U+309E = U+309D + U+3099), such as
+           * {\\u3053\\u3099\\u309D\\u3099}{\\u3053\\u309D\\u3099}
+           * {\\u30B3\\u3099\\u30FD\\u3099}{\\u30B3\\u30FD\\u3099}.
+           * It does add mappings for the precomposed forms.
+           */
+          "[{\\u3053\\u3099\\u309D}{\\u3053\\u3099\\u309E}{\\u3053\\u3099\\u30FC}"
+           "{\\u3053\\u309D}{\\u3053\\u309E}{\\u3053\\u30FC}"
+           "{\\u30B3\\u3099\\u30FC}{\\u30B3\\u3099\\u30FD}{\\u30B3\\u3099\\u30FE}"
+           "{\\u30B3\\u30FC}{\\u30B3\\u30FD}{\\u30B3\\u30FE}]",
           "[{\\u30FD\\u3099}{\\u309D\\u3099}{\\u3053\\u3099}{\\u30B3\\u3099}{lj}{nj}]",
             "[\\u30FE\\u00e6]",
             "[a]",
@@ -2170,9 +2187,6 @@ TestGetContractionsAndUnsafes(void)
             "[]"
         }
     };
-
-
-
 
     UErrorCode status = U_ZERO_ERROR;
     UCollator *coll = NULL;
