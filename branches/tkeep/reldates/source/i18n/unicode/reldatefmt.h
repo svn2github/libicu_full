@@ -4,12 +4,12 @@
 * All Rights Reserved.
 ********************************************************************************
 *
-* File RELDATES.H
+* File RELDATEFMT.H
 ********************************************************************************
 */
 
-#ifndef __RELDATES_H
-#define __RELDATES_H
+#ifndef __RELDATEFMT_H
+#define __RELDATEFMT_H
 
 #include "unicode/utypes.h"
 #include "unicode/locid.h"
