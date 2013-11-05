@@ -762,15 +762,10 @@ static void TestSetText()
 
     /* Now set it to point to a null string with fake length*/
     ucol_setText(iter2, NULL, 2, &status);
-    if (U_FAILURE(status))
+    if (status != U_ILLEGAL_ARGUMENT_ERROR)
     {
-        log_err("call to iter2->setText(null) failed. %s\n", myErrorName(status));
-    }
-    else
-    {
-        if (ucol_next(iter2, &status) != UCOL_NULLORDER) {
-            log_err("iter2 with null text expected to return UCOL_NULLORDER\n");
-        }
+        log_err("call to iter2->setText(null, 2) should yield an illegal-argument-error - %s\n",
+                myErrorName(status));
     }
 
     ucol_closeElements(iter2);
@@ -1600,16 +1595,16 @@ static UBool checkCEValidity(const UCollator *coll, const UChar *codepoints,
                 }
                 primaryDone = TRUE;
             } else {
-                if (p1 <= 2 || p1 >= 0xF0) {
-                    /* Primary first bytes F0..FF are specials. */
+                if (p1 <= 2) {
+                    /* Weight first bytes 0..2 are special. */
                     log_err("Primary first byte of %08lX out of range\n", (long)ce);
                     break;
                 }
                 if (p2 == 0) {
                     primaryDone = TRUE;
                 } else {
-                    if (p2 <= 3 || p2 >= 0xFF) {
-                        /* Primary second bytes 03 and FF are sort key compression terminators. */
+                    if (p2 <= 1) {
+                        /* TODO: Primary second bytes 03 and FF are sort key compression terminators, if the primary lead byte is compressible. */
                         log_err("Primary second byte of %08lX out of range\n", (long)ce);
                         break;
                     }
@@ -1624,9 +1619,9 @@ static UBool checkCEValidity(const UCollator *coll, const UChar *codepoints,
                 secondaryDone = TRUE;
             } else {
                 if (secondary <= 2 ||
-                    (UCOL_BYTE_COMMON < secondary && secondary <= (UCOL_BYTE_COMMON + 0x80))
+                    (UCOL_BYTE_COMMON < secondary && secondary <= (UCOL_BYTE_COMMON + 0x40))
                 ) {
-                    /* Secondary first bytes common+1..+0x80 are used for sort key compression. */
+                    /* Secondary first bytes common+1..+0x40 are used for sort key compression. */
                     log_err("Secondary byte of %08lX out of range\n", (long)ce);
                     break;
                 }
@@ -1658,14 +1653,15 @@ static UBool checkCEValidity(const UCollator *coll, const UChar *codepoints,
                 }
                 primaryDone = TRUE;
             } else {
-                if (p1 <= 2) {
+                if (p1 <= 1) {
                     log_err("Primary first byte of %08lX out of range\n", (long)ce);
                     break;
                 }
                 if (p2 == 0) {
                     primaryDone = TRUE;
                 } else {
-                    if (p2 <= 3) {
+                    if (p2 <= 1) {
+                        /* TODO: Primary second bytes 03 and FF are sort key compression terminators, if the primary lead byte is compressible. */
                         log_err("Primary second byte of %08lX out of range\n", (long)ce);
                         break;
                     }
@@ -1678,7 +1674,7 @@ static UBool checkCEValidity(const UCollator *coll, const UChar *codepoints,
             if (secondary == 0) {
                 secondaryDone = TRUE;
             } else {
-                if (secondary <= 2) {
+                if (secondary <= 1) {
                     log_err("Secondary byte of %08lX out of range\n", (long)ce);
                     break;
                 }
@@ -2094,6 +2090,13 @@ static void TestSortKeyValidity(void)
 /**
 * TestSearchCollatorElements tests iterator behavior (forwards and backwards) with
 * normalization on AND jamo tailoring, among other things.
+*
+* Note: This test is sensitive to changes of the root collator,
+* for example whether the ae-ligature maps to three CEs (as in the DUCET)
+* or to two CEs (as in the CLDR 24 FractionalUCA.txt).
+* It is also sensitive to how those CEs map to the iterator's 32-bit CE encoding.
+* For example, the DUCET's artificial secondary CE in the ae-ligature
+* may map to two 32-bit iterator CEs (as it did until ICU 52).
 */
 static const UChar tsceText[] = {   /* Nothing in here should be ignorable */
     0x0020, 0xAC00,                 /* simple LV Hangul */
@@ -2119,7 +2122,7 @@ static const int32_t rootStandardOffsets[] = {
     12, 13,14,15,
     16, 17,18,19,
     20, 21,22,23,
-    24, 25,26,26,26,
+    24, 25,26,  /* plus another 1-2 offset=26 if ae-ligature maps to three CEs */
     26, 27,28,28,
     28,
     29
@@ -2135,7 +2138,7 @@ static const int32_t rootSearchOffsets[] = {
     12, 13,14,15,
     16, 17,18,19,20,
     20, 21,22,22,23,23,23,24,
-    24, 25,26,26,26,
+    24, 25,26,  /* plus another 1-2 offset=26 if ae-ligature maps to three CEs */
     26, 27,28,28,
     28,
     29
@@ -2172,6 +2175,7 @@ static void TestSearchCollatorElements(void)
                 do {
                     offset = ucol_getOffset(uce);
                     element = ucol_next(uce, &status);
+                    log_verbose("(%s) offset=%2d  ce=%08x\n", tsceItemPtr->locale, offset, element);
                     if ( element == 0 ) {
                         log_err("error, locale %s, ucol_next returned element 0\n", tsceItemPtr->locale );
                     }

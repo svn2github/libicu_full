@@ -2204,13 +2204,13 @@ static void TestCase(void)
       };
       log_verbose("mixed case test\n");
       log_verbose("lower first, case level off\n");
-      genericRulesStarter("[casefirst lower]&H<ch<<<Ch<<<CH", lowerFirst, sizeof(lowerFirst)/sizeof(lowerFirst[0]));
+      genericRulesStarter("[caseFirst lower]&H<ch<<<Ch<<<CH", lowerFirst, sizeof(lowerFirst)/sizeof(lowerFirst[0]));
       log_verbose("upper first, case level off\n");
-      genericRulesStarter("[casefirst upper]&H<ch<<<Ch<<<CH", upperFirst, sizeof(upperFirst)/sizeof(upperFirst[0]));
+      genericRulesStarter("[caseFirst upper]&H<ch<<<Ch<<<CH", upperFirst, sizeof(upperFirst)/sizeof(upperFirst[0]));
       log_verbose("lower first, case level on\n");
-      genericRulesStarter("[casefirst lower][caselevel on]&H<ch<<<Ch<<<CH", lowerFirst, sizeof(lowerFirst)/sizeof(lowerFirst[0]));
+      genericRulesStarter("[caseFirst lower][caseLevel on]&H<ch<<<Ch<<<CH", lowerFirst, sizeof(lowerFirst)/sizeof(lowerFirst[0]));
       log_verbose("upper first, case level on\n");
-      genericRulesStarter("[casefirst upper][caselevel on]&H<ch<<<Ch<<<CH", upperFirst, sizeof(upperFirst)/sizeof(upperFirst[0]));
+      genericRulesStarter("[caseFirst upper][caseLevel on]&H<ch<<<Ch<<<CH", upperFirst, sizeof(upperFirst)/sizeof(upperFirst[0]));
     }
 
 }
@@ -3665,6 +3665,8 @@ static void TestRuleOptions(void) {
     const char *data[10];
     const uint32_t len;
   } tests[] = {
+#if 0
+    /* "you cannot go before ...": The parser now sets an error for such nonsensical rules. */
     /* - all befores here amount to zero */
     { "&[before 3][first tertiary ignorable]<<<a",
         { "\\u0000", "a"}, 2
@@ -3673,7 +3675,11 @@ static void TestRuleOptions(void) {
     { "&[before 3][last tertiary ignorable]<<<a",
         { "\\u0000", "a"}, 2
     }, /* you cannot go before last tertiary ignorable */
-
+#endif
+    /*
+     * However, there is a real secondary ignorable (artificial addition in FractionalUCA.txt),
+     * and it *is* possible to "go before" that.
+     */
     { "&[before 3][first secondary ignorable]<<<a",
         { "\\u0000", "a"}, 2
     }, /* you cannot go before first secondary ignorable */
@@ -3684,14 +3690,20 @@ static void TestRuleOptions(void) {
 
     /* 'normal' befores */
 
-    { "&[before 3][first primary ignorable]<<<c<<<b &[first primary ignorable]<a",
+    /*
+     * Note: With a "SPACE first primary" boundary CE in FractionalUCA.txt,
+     * it is not possible to tailor &[first primary ignorable]<a or &[last primary ignorable]<a
+     * because there is no tailoring space before that boundary.
+     * Made the tests work by tailoring to a space instead.
+     */
+    { "&[before 3][first primary ignorable]<<<c<<<b &' '<a",  /* was &[first primary ignorable]<a */
         {  "c", "b", "\\u0332", "a" }, 4
     },
 
     /* we don't have a code point that corresponds to
      * the last primary ignorable
      */
-    { "&[before 3][last primary ignorable]<<<c<<<b &[last primary ignorable]<a",
+    { "&[before 3][last primary ignorable]<<<c<<<b &' '<a",  /* was &[last primary ignorable]<a */
         {  "\\u0332", "\\u20e3", "c", "b", "a" }, 5
     },
 
@@ -3717,14 +3729,14 @@ static void TestRuleOptions(void) {
       "&[first implicit]<a",
         { "b", "\\u4e00", "a", "\\u4e01"}, 4
     },
-
+#if 0  /* The current builder does not support tailoring to unassigned-implicit CEs (seems unnecessary, adds complexity). */
     { "&[before 1][last implicit]<b"
       "&[last implicit]<a",
         { "b", "\\U0010FFFD", "a" }, 3
     },
-
+#endif
     { "&[last variable]<z"
-      "&[last primary ignorable]<x"
+      "&' '<x"  /* was &[last primary ignorable]<x, see above */
       "&[last secondary ignorable]<<y"
       "&[last tertiary ignorable]<<<w"
       "&[top]<u",

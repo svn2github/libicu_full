@@ -282,11 +282,19 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 // to keep tertiary CEs well-formed.
                 // Their case+tertiary weights must be greater than those of
                 // primary and secondary CEs.
-                if(leftTertiary > Collation::MERGE_SEPARATOR_WEIGHT16 && leftLower32 > 0xffff) {
-                    leftTertiary ^= 0x8000;
+                if(leftTertiary > Collation::MERGE_SEPARATOR_WEIGHT16) {
+                    if(leftLower32 > 0xffff) {
+                        leftTertiary ^= 0xc000;
+                    } else {
+                        leftTertiary += 0x4000;
+                    }
                 }
-                if(rightTertiary > Collation::MERGE_SEPARATOR_WEIGHT16 && rightLower32 > 0xffff) {
-                    rightTertiary ^= 0x8000;
+                if(rightTertiary > Collation::MERGE_SEPARATOR_WEIGHT16) {
+                    if(rightLower32 > 0xffff) {
+                        rightTertiary ^= 0xc000;
+                    } else {
+                        rightTertiary += 0x4000;
+                    }
                 }
             }
             return (leftTertiary < rightTertiary) ? UCOL_LESS : UCOL_GREATER;

@@ -402,46 +402,48 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                 U_ASSERT((c & 0xc0) != 0xc0);
                 if((c & 0xc0) == 0 && c > Collation::MERGE_SEPARATOR_BYTE) {
                     ++commonCases;
-                } else if((options & CollationSettings::UPPER_FIRST) == 0) {
-                    // lowerFirst: Compress common weights to nibbles 1..7..13, mixed=14, upper=15.
-                    if(commonCases != 0) {
-                        --commonCases;
-                        while(commonCases >= CASE_LOWER_FIRST_COMMON_MAX_COUNT) {
-                            cases.appendByte(CASE_LOWER_FIRST_COMMON_MIDDLE << 4);
-                            commonCases -= CASE_LOWER_FIRST_COMMON_MAX_COUNT;
-                        }
-                        uint32_t b;
-                        if(c <= Collation::MERGE_SEPARATOR_BYTE) {
-                            b = CASE_LOWER_FIRST_COMMON_LOW + commonCases;
-                        } else {
-                            b = CASE_LOWER_FIRST_COMMON_HIGH - commonCases;
-                        }
-                        cases.appendByte(b << 4);
-                        commonCases = 0;
-                    }
-                    if(c > Collation::MERGE_SEPARATOR_BYTE) {
-                        c = (CASE_LOWER_FIRST_COMMON_HIGH + (c >> 6)) << 4;  // 14 or 15
-                    }
                 } else {
-                    // upperFirst: Compress common weights to nibbles 3..15, mixed=2, upper=1.
-                    // The compressed common case weights only go down from the "high" value
-                    // because with upperFirst the common weight is the highest one.
-                    if(commonCases != 0) {
-                        --commonCases;
-                        while(commonCases >= CASE_UPPER_FIRST_COMMON_MAX_COUNT) {
-                            cases.appendByte(CASE_UPPER_FIRST_COMMON_LOW << 4);
-                            commonCases -= CASE_UPPER_FIRST_COMMON_MAX_COUNT;
+                    if((options & CollationSettings::UPPER_FIRST) == 0) {
+                        // lowerFirst: Compress common weights to nibbles 1..7..13, mixed=14, upper=15.
+                        if(commonCases != 0) {
+                            --commonCases;
+                            while(commonCases >= CASE_LOWER_FIRST_COMMON_MAX_COUNT) {
+                                cases.appendByte(CASE_LOWER_FIRST_COMMON_MIDDLE << 4);
+                                commonCases -= CASE_LOWER_FIRST_COMMON_MAX_COUNT;
+                            }
+                            uint32_t b;
+                            if(c <= Collation::MERGE_SEPARATOR_BYTE) {
+                                b = CASE_LOWER_FIRST_COMMON_LOW + commonCases;
+                            } else {
+                                b = CASE_LOWER_FIRST_COMMON_HIGH - commonCases;
+                            }
+                            cases.appendByte(b << 4);
+                            commonCases = 0;
                         }
-                        cases.appendByte((CASE_UPPER_FIRST_COMMON_HIGH - commonCases) << 4);
-                        commonCases = 0;
+                        if(c > Collation::MERGE_SEPARATOR_BYTE) {
+                            c = (CASE_LOWER_FIRST_COMMON_HIGH + (c >> 6)) << 4;  // 14 or 15
+                        }
+                    } else {
+                        // upperFirst: Compress common weights to nibbles 3..15, mixed=2, upper=1.
+                        // The compressed common case weights only go up from the "low" value
+                        // because with upperFirst the common weight is the highest one.
+                        if(commonCases != 0) {
+                            --commonCases;
+                            while(commonCases >= CASE_UPPER_FIRST_COMMON_MAX_COUNT) {
+                                cases.appendByte(CASE_UPPER_FIRST_COMMON_LOW << 4);
+                                commonCases -= CASE_UPPER_FIRST_COMMON_MAX_COUNT;
+                            }
+                            cases.appendByte((CASE_UPPER_FIRST_COMMON_LOW + commonCases) << 4);
+                            commonCases = 0;
+                        }
+                        if(c > Collation::MERGE_SEPARATOR_BYTE) {
+                            c = (CASE_UPPER_FIRST_COMMON_LOW - (c >> 6)) << 4;  // 2 or 1
+                        }
                     }
-                    if(c > Collation::MERGE_SEPARATOR_BYTE) {
-                        c = (CASE_UPPER_FIRST_COMMON_LOW - (c >> 6)) << 4;  // 2 or 1
-                    }
+                    // c is a separator byte 01 or 02,
+                    // or a left-shifted nibble 0x10, 0x20, ... 0xf0.
+                    cases.appendByte(c);
                 }
-                // c is a separator byte 01 or 02,
-                // or a left-shifted nibble 0x10, 0x20, ... 0xf0.
-                cases.appendByte(c);
             }
         }
 
@@ -639,12 +641,14 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
         for(int32_t i = 0; i < length; ++i) {
             uint8_t c = (uint8_t)cases[i];
             if(c <= Collation::MERGE_SEPARATOR_BYTE) {
+                U_ASSERT(c != 0);
                 if(b != 0) {
                     sink.Append(b);
                     b = 0;
                 }
                 sink.Append(c);
             } else {
+                U_ASSERT((c & 0xf) == 0);
                 if(b == 0) {
                     b = c;
                 } else {
