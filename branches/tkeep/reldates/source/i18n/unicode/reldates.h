@@ -14,6 +14,140 @@
 #include "unicode/utypes.h"
 #include "unicode/locid.h"
 
+
+/**
+ * TODO (tkeep): Copy comments from JAVA once approved.
+ */
+typedef enum UDateRelativeUnit {
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_SECONDS,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_MINUTES,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_HOURS,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_DAYS,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_WEEKS,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_MONTHS, 
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_YEARS, 
+} UDateRelativeUnit;
+
+
+/**
+ * TODO (tkeep): Copy comments from JAVA once approved.
+ */
+typedef enum UDateAbsoluteUnit {
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_SUNDAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_MONDAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_TUESDAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_WEDNESDAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_THURSDAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_FRIDAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_SATURDAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_DAY,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_WEEK,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_MONTH,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_YEAR,
+
+} UDateAbsoluteUnit;
+
+
+/**
+ * TODO (tkeep): Copy comments from JAVA once approved.
+ */
+typedef enum UDateDirection {
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_DIRECTION_LAST,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_DIRECTION_THIS,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_DIRECTION_NEXT,
+
+    /**
+     * @draft ICU 53
+     */
+    UDAT_DIRECTION_PLAIN,
+
+} UDateDirection;
+
+
 U_NAMESPACE_BEGIN 
 
 class NumberFormat;
@@ -21,13 +155,12 @@ class NumberFormat;
 /**
  * TODO (tkeep): Copy class level comments from JAVA once they
  * are approved.
+
+ * The RelativeDateTimeFormatter class is not intended for public subclassing.
 */
 class U_I18N_API RelativeDateTimeFormatter : public UObject {
 public:
 
-    /**
-     * TODO (tkeep): Copy comments from JAVA once approved.
-     */
     enum RelativeUnit {
 
         /**
@@ -66,9 +199,6 @@ public:
         kYears
     };
 
-    /**
-     * TODO (tkeep): Copy comments from JAVA once approved.
-     */
     enum AbsoluteUnit {
 
         /**
@@ -199,7 +329,7 @@ public:
      * @return appendTo
      * @draft ICU 53
      */
-    UnicodeString& format(double quantity, Direction direction, RelativeUnit unit, UnicodeString& appendTo, UErrorCode& status) const;
+    UnicodeString& format(double quantity, UDateDirection direction, UDateRelativeUnit unit, UnicodeString& appendTo, UErrorCode& status) const;
 
     /**
      * TODO(tkeep): Copy comment from JAVA once approved.
@@ -210,7 +340,7 @@ public:
      * @return appendTo
      * @draft ICU 53
      */
-    UnicodeString& format(Direction direction, AbsoluteUnit unit, UnicodeString& appendTo, UErrorCode& status) const;
+    UnicodeString& format(UDateDirection direction, UDateAbsoluteUnit unit, UnicodeString& appendTo, UErrorCode& status) const;
 
     /**
      * TODO(tkeep): Copy comment from JAVA once approved.

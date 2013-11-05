@@ -22,13 +22,13 @@ RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
 
 
 UnicodeString& RelativeDateTimeFormatter::format(
-    double quantity, Direction direction, RelativeUnit unit,
+    double quantity, UDateDirection direction, UDateRelativeUnit unit,
     UnicodeString& appendTo, UErrorCode& status) const {
     return appendTo;
 }
 
 UnicodeString& RelativeDateTimeFormatter::format(
-    Direction direction, AbsoluteUnit unit,
+    UDateDirection direction, UDateAbsoluteUnit unit,
     UnicodeString& appendTo, UErrorCode& status) const {
     return appendTo;
 }
