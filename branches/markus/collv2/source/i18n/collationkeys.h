@@ -110,7 +110,7 @@ public:
                                            const CollationSettings &settings,
                                            SortKeyByteSink &sink,
                                            Collation::Level minLevel, LevelCallback &callback,
-                                           UErrorCode &errorCode);
+                                           UBool preflight, UErrorCode &errorCode);
 private:
     friend struct CollationDataReader;
 

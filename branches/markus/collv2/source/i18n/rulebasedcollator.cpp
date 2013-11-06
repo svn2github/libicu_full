@@ -1412,12 +1412,12 @@ RuleBasedCollator::writeSortKey(const UChar *s, int32_t length,
         UTF16CollationIterator iter(data, numeric, s, s, limit);
         CollationKeys::writeSortKeyUpToQuaternary(iter, data->compressibleBytes, *settings,
                                                   sink, Collation::PRIMARY_LEVEL,
-                                                  callback, errorCode);
+                                                  callback, TRUE, errorCode);
     } else {
         FCDUTF16CollationIterator iter(data, numeric, s, s, limit);
         CollationKeys::writeSortKeyUpToQuaternary(iter, data->compressibleBytes, *settings,
                                                   sink, Collation::PRIMARY_LEVEL,
-                                                  callback, errorCode);
+                                                  callback, TRUE, errorCode);
     }
     if(settings->getStrength() == UCOL_IDENTICAL) {
         writeIdenticalLevel(s, limit, sink, errorCode);
@@ -1513,11 +1513,11 @@ RuleBasedCollator::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
         if(settings->dontCheckFCD()) {
             UIterCollationIterator ci(data, numeric, *iter);
             CollationKeys::writeSortKeyUpToQuaternary(ci, data->compressibleBytes, *settings,
-                                                      sink, level, callback, errorCode);
+                                                      sink, level, callback, FALSE, errorCode);
         } else {
             FCDUIterCollationIterator ci(data, numeric, *iter, 0);
             CollationKeys::writeSortKeyUpToQuaternary(ci, data->compressibleBytes, *settings,
-                                                      sink, level, callback, errorCode);
+                                                      sink, level, callback, FALSE, errorCode);
         }
         if(U_FAILURE(errorCode)) { return 0; }
         if(sink.NumberOfBytesAppended() > count) {

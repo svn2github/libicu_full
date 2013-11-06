@@ -226,7 +226,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                                           const CollationSettings &settings,
                                           SortKeyByteSink &sink,
                                           Collation::Level minLevel, LevelCallback &callback,
-                                          UErrorCode &errorCode) {
+                                          UBool preflight, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
 
     int32_t options = settings.options;
@@ -329,6 +329,15 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
             if(p2 != 0) {
                 char buffer[3] = { p2, (char)(p >> 8), (char)p };
                 sink.Append(buffer, (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : 3);
+            }
+            // Optimization for nextSortKeyPart():
+            // When the primary level overflows we can stop because we need not
+            // calculate (preflight) the whole sort key length.
+            if(!preflight && sink.Overflowed()) {
+                if(U_SUCCESS(errorCode) && !sink.IsOk()) {
+                    errorCode = U_MEMORY_ALLOCATION_ERROR;
+                }
+                return;
             }
         }
 
