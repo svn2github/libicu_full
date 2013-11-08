@@ -128,10 +128,10 @@ CollationData::makeReorderTable(const int32_t *reorder, int32_t length,
     // lowByte == 03
 
     int32_t highByte;
-    for(highByte = 0xff; highByte >= Collation::UNASSIGNED_IMPLICIT_BYTE; --highByte) {
+    for(highByte = 0xff; highByte >= Collation::TRAIL_WEIGHT_BYTE; --highByte) {
         table[highByte] = highByte;
     }
-    // highByte == FC
+    // highByte == FE
 
     // Set intermediate bytes to 0 to indicate that they have not been set yet.
     for(int32_t i = lowByte; i <= highByte; ++i) {

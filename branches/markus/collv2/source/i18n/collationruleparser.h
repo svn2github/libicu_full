@@ -150,7 +150,7 @@ private:
     void parseRelationStrings(int32_t strength, int32_t i, UErrorCode &errorCode);
     void parseStarredCharacters(int32_t strength, int32_t i, UErrorCode &errorCode);
     int32_t parseTailoringString(int32_t i, UnicodeString &raw, UErrorCode &errorCode);
-    int32_t parseString(int32_t i, UBool allowDash, UnicodeString &raw, UErrorCode &errorCode);
+    int32_t parseString(int32_t i, UnicodeString &raw, UErrorCode &errorCode);
 
     /**
      * Sets str to a contraction of U+FFFE and (U+2800 + Position).

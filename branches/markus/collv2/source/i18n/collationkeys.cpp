@@ -255,7 +255,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
     SortKeyLevel tertiaries;
     SortKeyLevel quaternaries;
 
-    uint32_t compressedP1 = 0;
+    uint32_t compressedP1 = 0;  // 0==no compression; otherwise reordered compressible lead byte
     int32_t commonCases = 0;
     int32_t commonSecondaries = 0;
     int32_t commonTertiaries = 0;
@@ -269,8 +269,6 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
         iter.clearCEsIfNoneRemaining();
         int64_t ce = iter.nextCE(errorCode);
         uint32_t p = (uint32_t)(ce >> 32);
-        uint32_t p1 = p >> 24;
-        if(reorderTable != NULL) { p1 = reorderTable[p1]; }
         if(p < variableTop && p > Collation::MERGE_SEPARATOR_PRIMARY) {
             // Variable CE, shift it to quaternary level.
             // Ignore all following primary ignorables, and shift further variable CEs.
@@ -286,6 +284,8 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
             }
             do {
                 if((levels & Collation::QUATERNARY_LEVEL_FLAG) != 0) {
+                    uint32_t p1 = p >> 24;
+                    if(reorderTable != NULL) { p1 = reorderTable[p1]; }
                     if(p1 >= QUAT_SHIFTED_LIMIT_BYTE) {
                         // Prevent shifted primary lead bytes from
                         // overlapping with the common compression range.
@@ -297,8 +297,6 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                     ce = iter.nextCE(errorCode);
                     p = (uint32_t)(ce >> 32);
                 } while(p == 0);
-                p1 = p >> 24;
-                if(reorderTable != NULL) { p1 = reorderTable[p1]; }
             } while(p < variableTop && p > Collation::MERGE_SEPARATOR_PRIMARY);
         }
         // ce could be primary ignorable, or NO_CE, or the merge separator,
@@ -306,6 +304,8 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
         // If ce==NO_CE, then write nothing for the primary level but
         // terminate compression on all levels and then exit the loop.
         if(p > Collation::NO_CE_PRIMARY && (levels & Collation::PRIMARY_LEVEL_FLAG) != 0) {
+            uint32_t p1 = p >> 24;
+            if(reorderTable != NULL) { p1 = reorderTable[p1]; }
             if(p1 != compressedP1) {
                 if(compressedP1 != 0) {
                     if(p1 < compressedP1) {
@@ -319,7 +319,9 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                     }
                 }
                 sink.Append(p1);
-                if(compressibleBytes[p1]) {
+                // Test the un-reordered lead byte for compressibility but
+                // remember the reordered lead byte.
+                if(compressibleBytes[p >> 24]) {
                     compressedP1 = p1;
                 } else {
                     compressedP1 = 0;

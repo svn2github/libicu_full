@@ -535,9 +535,10 @@ void TestRuleBasedColl()
     /* CLDR 24+ requires a reset before the first relation */
     u_uastrcpy(ruleset1, "< z < a");
     col1 = ucol_openRules(ruleset1, u_strlen(ruleset1), UCOL_DEFAULT, UCOL_DEFAULT_STRENGTH, NULL, &status);
-    if (status != U_PARSE_ERROR) {
+    if (status != U_PARSE_ERROR && status != U_INVALID_FORMAT_ERROR) {
         log_err("ucol_openRules(without initial reset: '< z < a') "
-                "should fail with U_PARSE_ERROR but yielded %s\n", myErrorName(status));
+                "should fail with U_PARSE_ERROR or U_INVALID_FORMAT_ERROR but yielded %s\n",
+                myErrorName(status));
     }
     ucol_close(col1);
 }

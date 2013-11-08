@@ -3036,7 +3036,8 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
             // if status is a failure, ucol_getVariableTop returns 0
             strsrch->variableTop = ucol_getVariableTop(collator, status);
             if (U_SUCCESS(*status)) {
-                initialize(strsrch, status);
+                delete strsrch->textProcessedIter;
+                strsrch->textProcessedIter = NULL;
                 ucol_closeElements(strsrch->textIter);
                 strsrch->textIter = ucol_openElements(collator,
                                           strsrch->search->text,
@@ -3045,6 +3046,8 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
                 ucol_closeElements(strsrch->utilIter);
                 strsrch->utilIter = ucol_openElements(
                         collator, strsrch->pattern.text, strsrch->pattern.textLength, status);
+                // initialize() _after_ setting the iterators for the new collator.
+                initialize(strsrch, status);
             }
         }
 

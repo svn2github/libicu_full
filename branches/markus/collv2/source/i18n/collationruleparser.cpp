@@ -289,12 +289,17 @@ CollationRuleParser::parseRelationStrings(int32_t strength, int32_t i, UErrorCod
 void
 CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorCode &errorCode) {
     UnicodeString empty, raw;
-    i = parseString(i, TRUE, raw, errorCode);
+    i = parseString(skipWhiteSpace(i), raw, errorCode);
     if(U_FAILURE(errorCode)) { return; }
+    if(raw.isEmpty()) {
+        setParseError("missing starred-relation string", errorCode);
+        return;
+    }
     UChar32 prev = -1;
-    for(int32_t j = 0; j < raw.length() && U_SUCCESS(errorCode);) {
-        UChar32 c = raw.char32At(j);
-        if(c != 0x2d) {  // '-'
+    int32_t j = 0;
+    for(;;) {
+        while(j < raw.length()) {
+            UChar32 c = raw.char32At(j);
 #if 0  // TODO: reenable or remove (still need nfd then?), http://unicode.org/cldr/trac/ticket/6738
             if(!nfd.isInert(c)) {
                 setParseError("starred-relation string is not all NFD-inert", errorCode);
@@ -302,51 +307,75 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
             }
 #endif
             sink->addRelation(strength, empty, UnicodeString(c), empty, errorReason, errorCode);
+            if(U_FAILURE(errorCode)) {
+                setErrorContext();
+                return;
+            }
             j += U16_LENGTH(c);
             prev = c;
-        } else {
-            if(prev < 0) {
-                setParseError("range without start in starred-relation string", errorCode);
-                return;
-            }
-            if(++j == raw.length()) {
-                setParseError("range without end in starred-relation string", errorCode);
-                return;
-            }
-            c = raw.char32At(j);
+        }
+        if(i >= rules->length() || rules->charAt(i) != 0x2d) {  // '-'
+            break;
+        }
+        if(prev < 0) {
+            setParseError("range without start in starred-relation string", errorCode);
+            return;
+        }
+        i = parseString(i + 1, raw, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        if(raw.isEmpty()) {
+            setParseError("range without end in starred-relation string", errorCode);
+            return;
+        }
+        UChar32 c = raw.char32At(0);
+        if(c < prev) {
+            setParseError("range start greater than end in starred-relation string", errorCode);
+            return;
+        }
+        // range prev-c
+        UnicodeString s;
+        while(++prev <= c) {
 #if 0  // TODO: reenable or remove (still need nfd then?), http://unicode.org/cldr/trac/ticket/6738
-            if(!nfd.isInert(c)) {
-                setParseError("starred-relation string is not all NFD-inert", errorCode);
+            if(!nfd.isInert(prev)) {
+                setParseError("starred-relation string range is not all NFD-inert", errorCode);
                 return;
             }
 #endif
-            if(c < prev) {
-                setParseError("range start greater than end in starred-relation string", errorCode);
+            if(U_IS_SURROGATE(prev)) {
+                setParseError("starred-relation string range contains a surrogate", errorCode);
                 return;
             }
-            j += U16_LENGTH(c);
-            // range prev-c
-            while(++prev <= c) {
-                sink->addRelation(strength, empty, UnicodeString(prev), empty, errorReason, errorCode);
+            if(0xfffd <= prev && prev <= 0xffff) {
+                setParseError("starred-relation string range contains U+FFFD, U+FFFE or U+FFFF", errorCode);
+                return;
             }
-            prev = -1;
+            s.setTo(prev);
+            sink->addRelation(strength, empty, s, empty, errorReason, errorCode);
+            if(U_FAILURE(errorCode)) {
+                setErrorContext();
+                return;
+            }
         }
+        prev = -1;
+        j = U16_LENGTH(c);
     }
-    if(U_FAILURE(errorCode)) { setErrorContext(); }
-    ruleIndex = i;
+    ruleIndex = skipWhiteSpace(i);
 }
 
 int32_t
 CollationRuleParser::parseTailoringString(int32_t i, UnicodeString &raw, UErrorCode &errorCode) {
-    return parseString(i, FALSE, raw, errorCode);
+    i = parseString(skipWhiteSpace(i), raw, errorCode);
+    if(U_SUCCESS(errorCode) && raw.isEmpty()) {
+        setParseError("missing relation string", errorCode);
+    }
+    return skipWhiteSpace(i);
 }
 
 int32_t
-CollationRuleParser::parseString(int32_t i, UBool allowDash, UnicodeString &raw,
-                                 UErrorCode &errorCode) {
+CollationRuleParser::parseString(int32_t i, UnicodeString &raw, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return i; }
     raw.remove();
-    for(i = skipWhiteSpace(i); i < rules->length();) {
+    while(i < rules->length()) {
         UChar32 c = rules->charAt(i++);
         if(isSyntaxChar(c)) {
             if(c == 0x27) {  // apostrophe
@@ -382,8 +411,6 @@ CollationRuleParser::parseString(int32_t i, UBool allowDash, UnicodeString &raw,
                 c = rules->char32At(i);
                 raw.append(c);
                 i += U16_LENGTH(c);
-            } else if(c == 0x2d && allowDash) {  // '-'
-                raw.append((UChar)c);
             } else {
                 // Any other syntax character terminates a string.
                 --i;
@@ -391,15 +418,11 @@ CollationRuleParser::parseString(int32_t i, UBool allowDash, UnicodeString &raw,
             }
         } else if(PatternProps::isWhiteSpace(c)) {
             // Unquoted white space terminates a string.
-            i = skipWhiteSpace(i);
+            --i;
             break;
         } else {
             raw.append((UChar)c);
         }
-    }
-    if(raw.isEmpty()) {
-        setParseError("missing string", errorCode);
-        return i;
     }
     for(int32_t j = 0; j < raw.length();) {
         UChar32 c = raw.char32At(j);
@@ -819,7 +842,9 @@ CollationRuleParser::skipComment(int32_t i) const {
 void
 CollationRuleParser::setParseError(const char *reason, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    errorCode = U_PARSE_ERROR;
+    // Error code consistent with the old parser (from ca. 2001),
+    // rather than U_PARSE_ERROR;
+    errorCode = U_INVALID_FORMAT_ERROR;
     errorReason = reason;
     if(parseError != NULL) { setErrorContext(); }
 }

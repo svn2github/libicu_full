@@ -1547,7 +1547,12 @@ static void TestImplicitTailoring(void) {
     const char *data[10];
     const uint32_t len;
   } tests[] = {
-      { "&[before 1]\\u4e00 < b < c &[before 1]\\u4e00 < d < e", { "d", "e", "b", "c", "\\u4e00"}, 5 },
+      {
+        /* Tailor b and c before U+4E00. */
+        "&[before 1]\\u4e00 < b < c "
+        /* Now, before U+4E00 is c; put d and e after that. */
+        "&[before 1]\\u4e00 < d < e",
+        { "b", "c", "d", "e", "\\u4e00"}, 5 },
       { "&\\u4e00 < a <<< A < b <<< B",   { "\\u4e00", "a", "A", "b", "B", "\\u4e01"}, 6 },
       { "&[before 1]\\u4e00 < \\u4e01 < \\u4e02", { "\\u4e01", "\\u4e02", "\\u4e00"}, 3},
       { "&[before 1]\\u4e01 < \\u4e02 < \\u4e03", { "\\u4e02", "\\u4e03", "\\u4e01"}, 3}
@@ -2669,6 +2674,13 @@ static void TestContraction(void) {
         {0x0063 /* 'c' */, 0x0068 /* 'h' */},
         {0x0063 /* 'c' */, 0x006C /* 'l' */}
     };
+#if 0
+    /*
+     * These pairs of rule strings are not guaranteed to yield the very same mappings.
+     * In fact, LDML 24 recommends an improved way of creating mappings
+     * which always yields different mappings for such pairs. See
+     * http://www.unicode.org/reports/tr35/tr35-33/tr35-collation.html#Orderings
+     */
     const static char *testrules3[] = {
         "&z < xyz &xyzw << B",
         "&z < xyz &xyz << B / w",
@@ -2679,6 +2691,7 @@ static void TestContraction(void) {
         "&a\\ud800\\udc00m << B",
         "&a << B / \\ud800\\udc00m",
     };
+#endif
 
     UErrorCode  status   = U_ZERO_ERROR;
     UCollator  *coll;
@@ -2744,8 +2757,9 @@ static void TestContraction(void) {
         return;
     }
     ucol_close(coll);
-
+#if 0  /* see above */
     for (i = 0; i < sizeof(testrules3) / sizeof(testrules3[0]); i += 2) {
+        log_verbose("testrules3 i==%d  \"%s\" vs. \"%s\"\n", i, testrules3[i], testrules3[i + 1]);
         UCollator          *coll1,
                            *coll2;
         UCollationElements *iter1,
@@ -2772,8 +2786,11 @@ static void TestContraction(void) {
             return;
         }
         while (ce != UCOL_NULLORDER) {
-            if (ce != (uint32_t)ucol_next(iter2, &status)) {
-                log_err("CEs does not match\n");
+            uint32_t ce2 = (uint32_t)ucol_next(iter2, &status);
+            if (ce == ce2) {
+                log_verbose("CEs match: %08x\n", ce);
+            } else {
+                log_err("CEs do not match: %08x vs. %08x\n", ce, ce2);
                 return;
             }
             ce = ucol_next(iter1, &status);
@@ -2791,11 +2808,23 @@ static void TestContraction(void) {
         ucol_close(coll1);
         ucol_close(coll2);
     }
+#endif
 }
 
 static void TestExpansion(void) {
     const static char *testrules[] = {
+#if 0
+        /*
+         * This seems to have tested that M was not mapped to an expansion.
+         * I believe the old builder just did that because it computed the extension CEs
+         * at the very end, which was a bug.
+         * Among other problems, it violated the core tailoring principle
+         * by making an earlier rule depend on a later one.
+         * And, of course, if M did not get an expansion, then it was primary different from K,
+         * unlike what the rule &K<<M says.
+         */
         "&J << K / B & K << M",
+#endif
         "&J << K / B << M"
     };
     const static UChar testdata[][3] = {
@@ -4936,9 +4965,20 @@ TestVI5913(void)
     UCollator *coll =NULL;
     uint8_t  resColl[100], expColl[100];
     int32_t  rLen, tLen, ruleLen, sLen, kLen;
-    UChar rule[256]={0x26, 0x62, 0x3c, 0x1FF3, 0};  /* &a<0x1FF3-omega with Ypogegrammeni*/
+    UChar rule[256]={0x26, 0x62, 0x3c, 0x1FF3, 0};  /* &b<0x1FF3-omega with Ypogegrammeni*/
     UChar rule2[256]={0x26, 0x7a, 0x3c, 0x0161, 0};  /* &z<s with caron*/
-    UChar rule3[256]={0x26, 0x7a, 0x3c, 0x0061, 0x00ea, 0};  /* &z<a+e with circumflex.*/
+    /*
+     * Note: Just tailoring &z<ae^ does not work as expected:
+     * The UCA spec requires for discontiguous contractions that they
+     * extend an *existing match* by one combining mark at a time.
+     * Therefore, ae must be a contraction so that the builder finds
+     * discontiguous contractions for ae^, for example with an intervening underdot.
+     * Only then do we get the expected tail closure with a\u1EC7, a\u1EB9\u0302, etc.
+     */
+    UChar rule3[256]={
+        0x26, 0x78, 0x3c, 0x61, 0x65,      /* &x<ae */
+        0x26, 0x7a, 0x3c, 0x0061, 0x00ea,  /* &z<a+e with circumflex.*/
+        0};
     static const UChar tData[][20]={
         {0x1EAC, 0},
         {0x0041, 0x0323, 0x0302, 0},
@@ -5079,18 +5119,22 @@ TestVI5913(void)
     coll = ucol_openRules(rule3, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
     tLen = u_strlen(tailorData3[3]);
     kLen=ucol_getSortKey(coll, tailorData3[3], tLen, expColl, 100);
+    log_verbose("\n Test Data[3] :%s  \tlen: %d key: ", aescstrdup(tailorData3[3], tLen), tLen);
+    for(i = 0; i<kLen; i++) {
+        log_verbose(" %02X", expColl[i]);
+    }
     for (j=4; j<6; j++) {
         tLen = u_strlen(tailorData3[j]);
         rLen = ucol_getSortKey(coll, tailorData3[j], tLen, resColl, 100);
 
         if ( kLen!=rLen || uprv_memcmp(expColl, resColl, rLen*sizeof(uint8_t))!=0 ) {
-            log_err("\n After tailoring Data[%d] :%s  \tlen: %d key: ", j, tailorData[j], tLen);
+            log_err("\n After tailoring Data[%d] :%s  \tlen: %d key: ", j, aescstrdup(tailorData3[j], tLen), tLen);
             for(i = 0; i<rLen; i++) {
                 log_err(" %02X", resColl[i]);
             }
         }
 
-        log_verbose("\n Test Data[%d] :%s  \tlen: %d key: ", j, tailorData[j], tLen);
+        log_verbose("\n Test Data[%d] :%s  \tlen: %d key: ", j, aescstrdup(tailorData3[j], tLen), tLen);
          for(i = 0; i<rLen; i++) {
              log_verbose(" %02X", resColl[i]);
          }
@@ -5134,11 +5178,15 @@ TestTailor6179(void)
     /*
      * These values from FractionalUCA.txt will change,
      * and need to be updated here.
+     * TODO: Make this not check for particular sort keys.
+     * Instead, test that we get CEs before & after other ignorables; see ticket #6179.
      */
-    static const uint8_t firstPrimaryIgnCE[]={1, 0x88, 1, 5, 0};
-    static const uint8_t lastPrimaryIgnCE[]={1, 0xE3, 1, 5, 0};
-    static const uint8_t firstSecondaryIgnCE[]={1, 1, 0xbf, 0x04, 0};
-    static const uint8_t lastSecondaryIgnCE[]={1, 1, 0xbf, 0x04, 0};
+    static const uint8_t firstPrimaryIgnCE[]={1, 0x83, 1, 5, 0};
+    static const uint8_t lastPrimaryIgnCE[]={1, 0xFC, 1, 5, 0};
+    static const uint8_t firstSecondaryIgnCE[]={1, 1, 0xfe, 0};
+    static const uint8_t lastSecondaryIgnCE[]={1, 1, 0xff, 0};
+
+    UParseError parseError;
 
     /* Test [Last Primary ignorable] */
 
@@ -5172,10 +5220,12 @@ TestTailor6179(void)
 
     /* Test [Last Secondary ignorable] */
     log_verbose("Tailoring test: &[last secondary ignorable]<<<a  &[first secondary ignorable]<<<b\n");
-    ruleLen = u_strlen(rule1);
-    coll = ucol_openRules(rule2, ruleLen, UCOL_OFF, UCOL_TERTIARY, NULL,&status);
+    ruleLen = u_strlen(rule2);
+    coll = ucol_openRules(rule2, ruleLen, UCOL_OFF, UCOL_TERTIARY, &parseError, &status);
     if (U_FAILURE(status)) {
         log_err("Tailoring test: &[last secondary ignorable] failed! -> %s\n", u_errorName(status));
+        log_info("  offset=%d  \"%s\" | \"%s\"\n",
+                 parseError.offset, aescstrdup(parseError.preContext, -1), aescstrdup(parseError.postContext, -1));
         return;
     }
     tLen = u_strlen(tData2[0]);
@@ -5187,16 +5237,14 @@ TestTailor6179(void)
         }
         log_err("\n");
     }
-    if(!log_knownIssue("8982", "debug and fix")) { /* TODO: debug & fix, see ticket #8982 */
-      tLen = u_strlen(tData2[1]);
-      rLen = ucol_getSortKey(coll, tData2[1], tLen, resColl, 100);
-      if (rLen != LEN(firstSecondaryIgnCE) || uprv_memcmp(resColl, firstSecondaryIgnCE, rLen) != 0) {
-        log_err("Bad result for &[lsi]<<<a...: Data[%d] :%s  \tlen: %d key: ", 1, tData2[1], rLen);
-        for(i = 0; i<rLen; i++) {
-          log_err(" %02X", resColl[i]);
-        }
-        log_err("\n");
+    tLen = u_strlen(tData2[1]);
+    rLen = ucol_getSortKey(coll, tData2[1], tLen, resColl, 100);
+    if (rLen != LEN(firstSecondaryIgnCE) || uprv_memcmp(resColl, firstSecondaryIgnCE, rLen) != 0) {
+      log_err("Bad result for &[lsi]<<<a...: Data[%d] :%s  \tlen: %d key: ", 1, tData2[1], rLen);
+      for(i = 0; i<rLen; i++) {
+        log_err(" %02X", resColl[i]);
       }
+      log_err("\n");
     }
     ucol_close(coll);
 }
@@ -5563,6 +5611,10 @@ static void doTestOneTestCase(const OneTestCase testcases[],
     myCollation = ucol_openRules(rule, length, UCOL_ON, UCOL_TERTIARY, &parse_error, &status);
     if(U_FAILURE(status)){
         log_err_status(status, "ERROR: in creation of rule based collator: %s\n", myErrorName(status));
+        log_info("  offset=%d  \"%s\" | \"%s\"\n",
+                 parse_error.offset,
+                 aescstrdup(parse_error.preContext, -1),
+                 aescstrdup(parse_error.postContext, -1));
         return;
     }
     log_verbose("Testing the <<* syntax\n");
@@ -5608,13 +5660,13 @@ const static OneTestCase rangeTestcases[] = {
 static int nRangeTestcases = LEN(rangeTestcases);
 
 const static OneTestCase rangeTestcasesSupplemental[] = {
-  { {0xfffe},                            {0xffff},                          UCOL_LESS }, /* U+FFFE < U+FFFF */
-  { {0xffff},                            {0xd800, 0xdc00},                  UCOL_LESS }, /* U+FFFF < U+10000 */
+  { {0x4e00},                            {0xfffb},                          UCOL_LESS }, /* U+4E00 < U+FFFB */
+  { {0xfffb},                            {0xd800, 0xdc00},                  UCOL_LESS }, /* U+FFFB < U+10000 */
   { {0xd800, 0xdc00},                    {0xd800, 0xdc01},                  UCOL_LESS }, /* U+10000 < U+10001 */
-  { {0xfffe},                            {0xd800, 0xdc01},                  UCOL_LESS }, /* U+FFFE < U+10001 */
+  { {0x4e00},                            {0xd800, 0xdc01},                  UCOL_LESS }, /* U+4E00 < U+10001 */
   { {0xd800, 0xdc01},                    {0xd800, 0xdc02},                  UCOL_LESS }, /* U+10000 < U+10001 */
   { {0xd800, 0xdc01},                    {0xd800, 0xdc02},                  UCOL_LESS }, /* U+10000 < U+10001 */
-  { {0xfffe},                            {0xd800, 0xdc02},                  UCOL_LESS }, /* U+FFFE < U+10001 */
+  { {0x4e00},                            {0xd800, 0xdc02},                  UCOL_LESS }, /* U+4E00 < U+10001 */
 };
 
 static int nRangeTestcasesSupplemental = LEN(rangeTestcasesSupplemental);
@@ -5671,10 +5723,10 @@ static void TestSameStrengthListQuoted(void)
 static void TestSameStrengthListSupplemental(void)
 {
   const char* strRules[] = {
-    "&\\ufffe<\\uffff<\\U00010000<\\U00010001<\\U00010002",
-    "&\\ufffe<\\uffff<\\ud800\\udc00<\\ud800\\udc01<\\ud800\\udc02",
-    "&\\ufffe<*\\uffff\\U00010000\\U00010001\\U00010002",
-    "&\\ufffe<*\\uffff\\ud800\\udc00\\ud800\\udc01\\ud800\\udc02",
+    "&\\u4e00<\\ufffb<\\U00010000<\\U00010001<\\U00010002",
+    "&\\u4e00<\\ufffb<\\ud800\\udc00<\\ud800\\udc01<\\ud800\\udc02",
+    "&\\u4e00<*\\ufffb\\U00010000\\U00010001\\U00010002",
+    "&\\u4e00<*\\ufffb\\ud800\\udc00\\ud800\\udc01\\ud800\\udc02",
   };
   doTestOneTestCase(rangeTestcasesSupplemental, nRangeTestcasesSupplemental, strRules, LEN(strRules));
 }
@@ -5722,7 +5774,8 @@ static void TestSameStrengthListRanges(void)
 static void TestSameStrengthListSupplementalRanges(void)
 {
   const char* strRules[] = {
-    "&\\ufffe<*\\uffff-\\U00010002",
+    /* Note: U+FFFD..U+FFFF are not tailorable, so a range cannot include them. */
+    "&\\u4e00<*\\ufffb\\U00010000-\\U00010002",
   };
   doTestOneTestCase(rangeTestcasesSupplemental, nRangeTestcasesSupplemental, strRules, LEN(strRules));
 }
@@ -7057,7 +7110,7 @@ static const LongUpperStrItem longUpperStrItems[] = {
     { NULL,          0                           }
 };
 
-enum { kCollKeyLenMax = 800 }; /* longest expected is 749, but may change with collation changes */
+enum { kCollKeyLenMax = 850 }; /* may change with collation changes */
 
 /* Text fix for #8445; without fix, could have crash due to stack or heap corruption */
 static void TestCaseLevelBufferOverflow(void)

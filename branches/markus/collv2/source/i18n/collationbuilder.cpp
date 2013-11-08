@@ -1147,6 +1147,18 @@ CollationBuilder::addTailComposites(const UnicodeString &nfdPrefix, const Unicod
             // Ignore mappings that we cannot store.
             continue;
         }
+        // Note: It is possible that the newCEs do not make use of the mapping
+        // for which we are adding the tail composites, in which case we might be adding
+        // unnecessary mappings.
+        // For example, when we add tail composites for ae^ (^=combining circumflex),
+        // UCA discontiguous-contraction matching does not find any matches
+        // for ae_^ (_=any combining diacritic below) *unless* there is also
+        // a contraction mapping for ae.
+        // Thus, if there is no ae contraction, then the ae^ mapping is ignored
+        // while fetching the newCEs for ae_^.
+        // TODO: Try to detect this effectively.
+        // (Alternatively, print a warning when prefix contractions are missing.)
+
         // We do not need an explicit mapping for the NFD strings.
         // It is fine if the NFD input collates like this via a sequence of mappings.
         // It also saves a little bit of space, and may reduce the set of characters with contractions.
