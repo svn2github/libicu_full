@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2012, International Business Machines Corporation and
+ * Copyright (c) 1997-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -20,10 +20,9 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/localpointer.h"
+#include "unicode/sortkey.h"
 #include "unicode/uchar.h"
 #include "unicode/ustring.h"
-
-#include "dadrcoll.h"
 
 #include "encoll.h"
 #include "frcoll.h"
@@ -49,7 +48,6 @@
 #include "svccoll.h"
 #include "cmemory.h"
 #include "alphaindextst.h"
-//#include "rndmcoll.h"
 
 // Set to 1 to test offsets in backAndForth()
 #define TEST_OFFSETS 0
@@ -91,10 +89,8 @@ void IntlTestCollator::runIndexedTest( int32_t index, UBool exec, const char* &n
       TESTCLASS(14, LotusCollationKoreanTest);
       TESTCLASS(15, StringSearchTest);
       TESTCLASS(16, CollationGermanTest);  // TODO: remove this dummy duplicate
+      TESTCLASS(17, CollationGermanTest);  // TODO: remove this dummy duplicate
       // TODO: TESTCASE_AUTO_SUITE() otherwise skipped tests cause following ones to be skipped too
-#if !UCONFIG_NO_FILE_IO && !UCONFIG_NO_LEGACY_CONVERSION
-      TESTCLASS(17, DataDrivenCollatorTest);
-#endif
       TESTCLASS(18, UCAConformanceTest);
       TESTCLASS(19, CollationServiceTest);
       TESTCLASS(20, CollationFinnishTest); // removed by weiv - we have changed Finnish collation

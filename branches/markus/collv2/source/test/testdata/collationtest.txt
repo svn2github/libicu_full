@@ -10,11 +10,13 @@
 
 # A line with "** test: description" is used for verbose and error output.
 
+# A collator can be set with "@ root" or "@ locale language-tag",
+# for example "@ locale de-u-co-phonebk".
+
 # A collator can be built with "@ rawbase" or "@ rules".
 # "@ rawbase" is followed by lines that each contain a string and a list of CEs.
 # An empty leading weight is 0. An empty weight after a non-empty one is a common weight.
-
-# TODO: "@ locale de-u-co-phonebk"
+# An "@ rules" line is followed by one or more lines with the tailoring rules.
 
 # A collator can be modified with "% attribute=value".
 
@@ -1348,3 +1350,475 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 # We need to back up before the identical prefix "1" and compare the full numbers.
 <1 11b
 <1 101a
+
+** test: simple locale data test
+@ locale de
+* compare
+<1 a
+<2 ä
+<1 ae
+<2 æ
+
+@ locale de-u-co-phonebk
+* compare
+<1 a
+<1 ae
+<2 ä
+<2 æ
+
+# The following test cases were moved here from ICU 52's DataDrivenCollationTest.txt.
+
+** test: DataDrivenCollationTest/TestMorePinyin
+# Testing the primary strength.
+@ locale zh
+% strength=primary
+* compare
+< lā
+= lĀ
+= Lā
+= LĀ
+< lān
+= lĀn
+< lē
+= lĒ
+= Lē
+= LĒ
+< lēn
+= lĒn
+
+** test: DataDrivenCollationTest/TestLithuanian
+# Lithuanian sort order.
+@ locale lt
+* compare
+< cz
+< č
+< d
+< iz
+< j
+< sz
+< š
+< t
+< zz
+< ž
+
+** test: DataDrivenCollationTest/TestLatvian
+# Latvian sort order.
+@ locale lv
+* compare
+< cz
+< č
+< d
+< gz
+< ģ
+< h
+< iz
+< j
+< kz
+< ķ
+< l
+< lz
+< ļ
+< m
+< nz
+< ņ
+< o
+< rz
+< ŗ
+< s
+< sz
+< š
+< t
+< zz
+< ž
+
+** test: DataDrivenCollationTest/TestEstonian
+# Estonian sort order.
+@ locale et
+* compare
+< sy
+< š
+< šy
+< z
+< zy
+< ž
+< v
+< w
+< va
+< õ
+< õy
+< ä
+< äy
+< ö
+< öy
+< ü
+< üy
+< x
+
+** test: DataDrivenCollationTest/TestAlbanian
+# Albanian sort order.
+@ locale sq
+* compare
+< cz
+< ç
+< d
+< dz
+< dh
+< e
+< ez
+< ë
+< f
+< gz
+< gj
+< h
+< lz
+< ll
+< m
+< nz
+< nj
+< o
+< rz
+< rr
+< s
+< sz
+< sh
+< t
+< tz
+< th
+< u
+< xz
+< xh
+< y
+< zz
+< zh
+
+** test: DataDrivenCollationTest/TestSimplifiedChineseOrder
+# Sorted file has different order.
+@ root
+# normalization=on turned on & off automatically.
+* compare
+< \u5F20
+< \u5F20\u4E00\u8E3F
+
+** test: DataDrivenCollationTest/TestTibetanNormalizedIterativeCrash
+# This pretty much crashes.
+@ root
+* compare
+< \u0f71\u0f72\u0f80\u0f71\u0f72
+< \u0f80
+
+** test: DataDrivenCollationTest/TestThaiPartialSortKeyProblems
+# These are examples of strings that caused trouble in partial sort key testing.
+@ locale th-TH
+* compare
+< \u0E01\u0E01\u0E38\u0E18\u0E20\u0E31\u0E13\u0E11\u0E4C
+< \u0E01\u0E01\u0E38\u0E2A\u0E31\u0E19\u0E42\u0E18
+* compare
+< \u0E01\u0E07\u0E01\u0E32\u0E23
+< \u0E01\u0E07\u0E42\u0E01\u0E49
+* compare
+< \u0E01\u0E23\u0E19\u0E17\u0E32
+< \u0E01\u0E23\u0E19\u0E19\u0E40\u0E0A\u0E49\u0E32
+* compare
+< \u0E01\u0E23\u0E30\u0E40\u0E08\u0E35\u0E22\u0E27
+< \u0E01\u0E23\u0E30\u0E40\u0E08\u0E35\u0E4A\u0E22\u0E27
+* compare
+< \u0E01\u0E23\u0E23\u0E40\u0E0A\u0E2D
+< \u0E01\u0E23\u0E23\u0E40\u0E0A\u0E49\u0E32
+
+** test: DataDrivenCollationTest/TestJavaStyleRule
+# java.text allows rules to start as '<<<x<<<y...'
+# we emulate this by assuming a &[first tertiary ignorable] in this case.
+@ rules
+&\u0001=equal<<<z<<x<<<w &[first tertiary ignorable]=a &[first primary ignorable]=b
+* compare
+= a
+= equal
+< z
+< x
+= b  # x had become the new first primary ignorable
+< w
+
+** test: DataDrivenCollationTest/TestShiftedIgnorable
+# The UCA states that primary ignorables should be completely
+# ignorable when following a shifted code point.
+@ root
+% alternate=shifted
+% strength=quaternary
+* compare
+< a\u0020b
+= a\u0020\u0300b
+= a\u0020\u0301b
+< a_b
+= a_\u0300b
+= a_\u0301b
+< A\u0020b
+= A\u0020\u0300b
+= A\u0020\u0301b
+< A_b
+= A_\u0300b
+= A_\u0301b
+< a\u0301b
+< A\u0301b
+< a\u0300b
+< A\u0300b
+
+** test: DataDrivenCollationTest/TestNShiftedIgnorable
+# The UCA states that primary ignorables should be completely
+# ignorable when following a shifted code point.
+@ root
+% alternate=non-ignorable
+% strength=tertiary
+* compare
+< a\u0020b
+< A\u0020b
+< a\u0020\u0301b
+< A\u0020\u0301b
+< a\u0020\u0300b
+< A\u0020\u0300b
+< a_b
+< A_b
+< a_\u0301b
+< A_\u0301b
+< a_\u0300b
+< A_\u0300b
+< a\u0301b
+< A\u0301b
+< a\u0300b
+< A\u0300b
+
+** test: DataDrivenCollationTest/TestSafeSurrogates
+# It turned out that surrogates were not skipped properly
+# when iterating backwards if they were in the middle of a
+# contraction. This test assures that this is fixed.
+@ rules
+&a < x\ud800\udc00b
+* compare
+< a
+< x\ud800\udc00b
+
+** test: DataDrivenCollationTest/da_TestPrimary
+# This test goes through primary strength cases
+@ locale da
+% strength=primary
+* compare
+< Lvi
+< Lwi
+* compare
+< L\u00e4vi
+< L\u00f6wi
+* compare
+< L\u00fcbeck
+= Lybeck
+
+** test: DataDrivenCollationTest/da_TestTertiary {
+# This test goes through tertiary strength cases
+@ locale da
+% strength=tertiary
+* compare
+< Luc
+< luck
+* compare
+< luck
+< L\u00fcbeck
+* compare
+< lybeck
+< L\u00fcbeck
+* compare
+< L\u00e4vi
+< L\u00f6we
+* compare
+< L\u00f6ww
+< mast
+
+* compare
+< A/S
+< ANDRE
+< ANDR\u00c9
+< ANDREAS
+< AS
+< CA
+< \u00c7A
+< CB
+< \u00c7C
+< D.S.B.
+< DA
+< \u00d0A
+< DB
+< \u00d0C
+< DSB
+< DSC
+< EKSTRA_ARBEJDE
+< EKSTRABUD0
+< H\u00d8ST
+< HAAG
+< H\u00c5NDBOG
+< HAANDV\u00c6RKSBANKEN
+< Karl
+< karl
+< NIELS\u0020J\u00d8RGEN
+< NIELS-J\u00d8RGEN
+< NIELSEN
+< R\u00c9E,\u0020A
+< REE,\u0020B
+< R\u00c9E,\u0020L
+< REE,\u0020V
+< SCHYTT,\u0020B
+< SCHYTT,\u0020H
+< SCH\u00dcTT,\u0020H
+< SCHYTT,\u0020L
+< SCH\u00dcTT,\u0020M
+< SS
+< \u00df
+< SSA
+< STORE\u0020VILDMOSE
+< STOREK\u00c6R0
+< STORM\u0020PETERSEN
+< STORMLY
+< THORVALD
+< THORVARDUR
+< \u00feORVAR\u00d0UR
+< THYGESEN
+< VESTERG\u00c5RD,\u0020A
+< VESTERGAARD,\u0020A
+< VESTERG\u00c5RD,\u0020B
+< \u00c6BLE
+< \u00c4BLE
+< \u00d8BERG
+< \u00d6BERG
+
+* compare
+< andere
+< chaque
+< chemin
+< cote
+< cot\u00e9
+< c\u00f4te
+< c\u00f4t\u00e9
+< \u010du\u010d\u0113t
+< Czech
+< hi\u0161a
+< irdisch
+< lie
+< lire
+< llama
+< l\u00f5ug
+< l\u00f2za
+< lu\u010d
+< luck
+< L\u00fcbeck
+< lye
+< l\u00e4vi
+< L\u00f6wen
+< m\u00e0\u0161ta
+< m\u00eer
+< myndig
+< M\u00e4nner
+< m\u00f6chten
+< pi\u00f1a
+< pint
+< pylon
+< \u0161\u00e0ran
+< savoir
+< \u0160erb\u016bra
+< Sietla
+< \u015blub
+< subtle
+< symbol
+< s\u00e4mtlich
+< verkehrt
+< vox
+< v\u00e4ga
+< waffle
+< wood
+< yen
+< yuan
+< yucca
+< \u017eal
+< \u017eena
+< \u017den\u0113va
+< zoo0
+< Zviedrija
+< Z\u00fcrich
+< zysk0
+< \u00e4ndere
+
+** test: DataDrivenCollationTest/hi_TestNewRules {
+# This test goes through new rules and tests against old rules
+@ locale hi
+* compare
+< कॐ
+< कं
+< कँ
+< कः
+
+** test: DataDrivenCollationTest/ro_TestNewRules {
+# This test goes through new rules and tests against old rules
+@ locale ro
+* compare
+< xAx
+< xă
+< xĂ
+< Xă
+< XĂ
+< xăx
+< xĂx
+< xâ
+< xÂ
+< Xâ
+< XÂ
+< xâx
+< xÂx
+< xb
+< xIx
+< xî
+< xÎ
+< Xî
+< XÎ
+< xîx
+< xÎx
+< xj
+< xSx
+< xș
+= xş
+< xȘ
+= xŞ
+< Xș
+= Xş
+< XȘ
+= XŞ
+< xșx
+= xşx
+< xȘx
+= xŞx
+< xT
+< xTx
+< xț
+= xţ
+< xȚ
+= xŢ
+< Xț
+= Xţ
+< XȚ
+= XŢ
+< xțx
+= xţx
+< xȚx
+= xŢx
+< xU
+
+** test: DataDrivenCollationTest/testOffsets {
+# This tests cases where forwards and backwards iteration get different offsets
+@ locale en
+% strength=tertiary
+* compare
+< a\uD800\uDC00\uDC00
+< b\uD800\uDC00\uDC00
+* compare
+< \u0301A\u0301\u0301
+< \u0301B\u0301\u0301
+* compare
+< abcd\r\u0301
+< abce\r\u0301
+# TODO: test offsets in new CollationTest
+
+# End of test cases moved here from ICU 52's DataDrivenCollationTest.txt.

@@ -433,6 +433,7 @@ inline uint16_t initializePatternPCETable(UStringSearch *strsrch,
 static
 inline int16_t initializePattern(UStringSearch *strsrch, UErrorCode *status)
 {
+    if (U_FAILURE(*status)) { return 0; }
           UPattern   *pattern     = &(strsrch->pattern);
     const UChar      *patterntext = pattern->text;
           int32_t     length      = pattern->textLength;
@@ -2760,8 +2761,8 @@ U_CAPI void U_EXPORT2 usearch_close(UStringSearch *strsrch)
             uprv_free(strsrch->pattern.PCE);
         }
 
-        ucol_closeElements(strsrch->textIter);
         delete strsrch->textProcessedIter;
+        ucol_closeElements(strsrch->textIter);
         ucol_closeElements(strsrch->utilIter);
 
         if (strsrch->ownCollator && strsrch->collator) {
@@ -3017,6 +3018,11 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
         }
 
         if (strsrch) {
+            delete strsrch->textProcessedIter;
+            strsrch->textProcessedIter = NULL;
+            ucol_closeElements(strsrch->textIter);
+            ucol_closeElements(strsrch->utilIter);
+            strsrch->textIter = strsrch->utilIter = NULL;
             if (strsrch->ownCollator && (strsrch->collator != collator)) {
                 ucol_close((UCollator *)strsrch->collator);
                 strsrch->ownCollator = FALSE;
@@ -3035,20 +3041,14 @@ U_CAPI void U_EXPORT2 usearch_setCollator(      UStringSearch *strsrch,
                                                                 UCOL_SHIFTED;
             // if status is a failure, ucol_getVariableTop returns 0
             strsrch->variableTop = ucol_getVariableTop(collator, status);
-            if (U_SUCCESS(*status)) {
-                delete strsrch->textProcessedIter;
-                strsrch->textProcessedIter = NULL;
-                ucol_closeElements(strsrch->textIter);
-                strsrch->textIter = ucol_openElements(collator,
-                                          strsrch->search->text,
-                                          strsrch->search->textLength,
-                                          status);
-                ucol_closeElements(strsrch->utilIter);
-                strsrch->utilIter = ucol_openElements(
-                        collator, strsrch->pattern.text, strsrch->pattern.textLength, status);
-                // initialize() _after_ setting the iterators for the new collator.
-                initialize(strsrch, status);
-            }
+            strsrch->textIter = ucol_openElements(collator,
+                                      strsrch->search->text,
+                                      strsrch->search->textLength,
+                                      status);
+            strsrch->utilIter = ucol_openElements(
+                    collator, strsrch->pattern.text, strsrch->pattern.textLength, status);
+            // initialize() _after_ setting the iterators for the new collator.
+            initialize(strsrch, status);
         }
 
         // **** are these calls needed?

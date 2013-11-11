@@ -153,22 +153,11 @@ static const uint32_t FROM_RULES = 2;
 
 static UBool
 skipLineBecauseOfBug(const UChar *s, int32_t length, uint32_t flags) {
-    // TODO: Fix ICU ticket #8052
-    if(length >= 3 &&
-            (s[0] == 0xfb2 || s[0] == 0xfb3) &&
-            s[1] == 0x334 &&
-            (s[2] == 0xf73 || s[2] == 0xf75 || s[2] == 0xf81)) {
-        return TRUE;
-    }
-    // TODO: Fix ICU ticket #9361
-    if((flags & IS_SHIFTED) != 0 && length >= 2 && s[0] == 0xfffe) {
-        return TRUE;
-    }
-    // TODO: Fix tailoring builder, ICU ticket #9593.
-    UChar c;
-    if((flags & FROM_RULES) != 0 && length >= 2 && ((c = s[1]) == 0xedc || c == 0xedd)) {
-        return TRUE;
-    }
+    // Add temporary exceptions here if there are ICU bugs, until we can fix them.
+    // For examples see the ICU 52 version of this file.
+    (void)s;
+    (void)length;
+    (void)flags;
     return FALSE;
 }
 
