@@ -86,6 +86,7 @@ class CollationKey;
 class SortKeyByteSink;
 class UnicodeSet;
 class UnicodeString;
+class UVector64;
 
 /**
  * The RuleBasedCollator class provides the simple implementation of
@@ -737,6 +738,12 @@ public:
     static inline const RuleBasedCollator *rbcFromUCollator(const UCollator *uc) {
         return dynamic_cast<const RuleBasedCollator *>(fromUCollator(uc));
     }
+
+    /**
+     * Appends the CEs for the string to the vector.
+     * @internal for tests & tools
+     */
+    void internalGetCEs(const UnicodeString &str, UVector64 &ces, UErrorCode &errorCode) const;
 
 public:  // TODO: Public only for testing.
     RuleBasedCollator(const CollationTailoring *t);

@@ -222,7 +222,7 @@ TailoredSet::comparePrefixes(UChar32 c, const UChar *p, const UChar *q) {
     // Use a string with a U+FFFF as the limit sentinel.
     // U+FFFF is untailorable and will not occur in prefixes.
     UnicodeString none((UChar)0xffff);
-    while(tp != &none || bp != &none) {
+    for(;;) {
         if(tp == NULL) {
             if(prefixes.next(errorCode)) {
                 tp = &prefixes.getString();
@@ -237,6 +237,7 @@ TailoredSet::comparePrefixes(UChar32 c, const UChar *p, const UChar *q) {
                 bp = &none;
             }
         }
+        if(tp == &none && bp == &none) { break; }
         int32_t cmp = tp->compare(*bp);
         if(cmp < 0) {
             // tp occurs in the tailoring but not in the base.
@@ -268,7 +269,7 @@ TailoredSet::compareContractions(UChar32 c, const UChar *p, const UChar *q) {
     // as a single suffix character for a root-collator boundary contraction.
     UnicodeString none((UChar)0xffff);
     none.append((UChar)0xffff);
-    while(ts != &none || bs != &none) {
+    for(;;) {
         if(ts == NULL) {
             if(suffixes.next(errorCode)) {
                 ts = &suffixes.getString();
@@ -283,6 +284,7 @@ TailoredSet::compareContractions(UChar32 c, const UChar *p, const UChar *q) {
                 bs = &none;
             }
         }
+        if(ts == &none && bs == &none) { break; }
         int32_t cmp = ts->compare(*bs);
         if(cmp < 0) {
             // ts occurs in the tailoring but not in the base.

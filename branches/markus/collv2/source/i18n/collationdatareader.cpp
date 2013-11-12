@@ -76,16 +76,11 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         return;
     }
 
-    if(!tailoring.ensureOwnedData(errorCode)) { return; }
-    CollationData &data = *tailoring.ownedData;
     CollationSettings &settings = tailoring.settings;
-    // Assume that data and settings are in initial state,
+    // Assume that tailoring data and settings are in initial state,
     // with NULL pointers and 0 lengths.
 
-    const CollationData *baseData = base == NULL ? NULL : base->data;
-    data.base = baseData;
     int32_t options = inIndexes[IX_OPTIONS];
-    data.numericPrimary = options & 0xff000000;
     settings.options = options & 0xffff;
 
     // Set pointers to non-empty data parts.
@@ -128,21 +123,28 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         // when the CollationData is otherwise complete.
     }
 
+    const CollationData *baseData = base == NULL ? NULL : base->data;
+    if(baseData != NULL && baseData->numericPrimary != (options & 0xff000000)) {
+        errorCode = U_INVALID_FORMAT_ERROR;
+        return;
+    }
+    CollationData *data = NULL;  // Remains NULL if there are no mappings.
+
     index = IX_TRIE_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 8) {
-        data.trie = tailoring.trie = utrie2_openFromSerialized(
+        if(!tailoring.ensureOwnedData(errorCode)) { return; }
+        data = tailoring.ownedData;
+        data->base = baseData;
+        data->numericPrimary = options & 0xff000000;
+        data->trie = tailoring.trie = utrie2_openFromSerialized(
             UTRIE2_32_VALUE_BITS, inBytes + offset, length, NULL,
             &errorCode);
         if(U_FAILURE(errorCode)) { return; }
     } else if(baseData != NULL) {
-        // Copy all mappings from the base data.
-        // The trie value indexes into the arrays must match those arrays.
-        data.trie = baseData->trie;
-        data.ce32s = baseData->ce32s;
-        data.ces = baseData->ces;
-        data.contexts = baseData->contexts;
+        // Use the base data. Only the settings are tailored.
+        tailoring.data = baseData;
     } else {
         errorCode = U_INVALID_FORMAT_ERROR;  // No mappings.
         return;
@@ -152,35 +154,37 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 8) {
-        if(data.ces != NULL) {
+        if(data == NULL) {
             errorCode = U_INVALID_FORMAT_ERROR;  // Tailored ces without tailored trie.
             return;
         }
-        data.ces = reinterpret_cast<const int64_t *>(inBytes + offset);
-        data.cesLength = length / 8;
+        data->ces = reinterpret_cast<const int64_t *>(inBytes + offset);
+        data->cesLength = length / 8;
     }
 
     index = IX_CE32S_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 4) {
-        if(data.ce32s != NULL) {
+        if(data == NULL) {
             errorCode = U_INVALID_FORMAT_ERROR;  // Tailored ce32s without tailored trie.
             return;
         }
-        data.ce32s = reinterpret_cast<const uint32_t *>(inBytes + offset);
-        data.ce32sLength = length / 4;
+        data->ce32s = reinterpret_cast<const uint32_t *>(inBytes + offset);
+        data->ce32sLength = length / 4;
     }
 
     int32_t jamoCE32sStart = getIndex(inIndexes, indexesLength, IX_JAMO_CE32S_START);
     if(jamoCE32sStart >= 0) {
-        if(data.ce32s == NULL) {
+        if(data == NULL) {
             errorCode = U_INVALID_FORMAT_ERROR;  // Index into non-existent ce32s[].
             return;
         }
-        data.jamoCE32s = data.ce32s + jamoCE32sStart;
+        data->jamoCE32s = data->ce32s + jamoCE32sStart;
+    } else if(data == NULL) {
+        // Nothing to do.
     } else if(baseData != NULL) {
-        data.jamoCE32s = baseData->jamoCE32s;
+        data->jamoCE32s = baseData->jamoCE32s;
     } else {
         errorCode = U_INVALID_FORMAT_ERROR;  // No Jamo CE32s for Hangul processing.
         return;
@@ -191,18 +195,18 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 4) {
         length /= 4;
-        data.rootElements = reinterpret_cast<const uint32_t *>(inBytes + offset);
-        data.rootElementsLength = length;
-        if(length <= CollationRootElements::IX_SEC_TER_BOUNDARIES) {
+        if(data == NULL || length <= CollationRootElements::IX_SEC_TER_BOUNDARIES) {
             errorCode = U_INVALID_FORMAT_ERROR;
             return;
         }
-        uint32_t commonSecTer = data.rootElements[CollationRootElements::IX_COMMON_SEC_AND_TER_CE];
+        data->rootElements = reinterpret_cast<const uint32_t *>(inBytes + offset);
+        data->rootElementsLength = length;
+        uint32_t commonSecTer = data->rootElements[CollationRootElements::IX_COMMON_SEC_AND_TER_CE];
         if(commonSecTer != Collation::COMMON_SEC_AND_TER_CE) {
             errorCode = U_INVALID_FORMAT_ERROR;
             return;
         }
-        uint32_t secTerBoundaries = data.rootElements[CollationRootElements::IX_SEC_TER_BOUNDARIES];
+        uint32_t secTerBoundaries = data->rootElements[CollationRootElements::IX_SEC_TER_BOUNDARIES];
         if((secTerBoundaries >> 24) < CollationKeys::SEC_COMMON_HIGH) {
             // [fixed last secondary common byte] is too low,
             // and secondary weights would collide with compressed common secondaries.
@@ -215,18 +219,22 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 2) {
-        if(data.contexts != NULL) {
+        if(data == NULL) {
             errorCode = U_INVALID_FORMAT_ERROR;  // Tailored contexts without tailored trie.
             return;
         }
-        data.contexts = reinterpret_cast<const UChar *>(inBytes + offset);
-        data.contextsLength = length / 2;
+        data->contexts = reinterpret_cast<const UChar *>(inBytes + offset);
+        data->contextsLength = length / 2;
     }
 
     index = IX_UNSAFE_BWD_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 2) {
+        if(data == NULL) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
         if(baseData == NULL) {
             // Create the unsafe-backward set for the root collator.
             // Include all non-zero combining marks and trail surrogates.
@@ -271,10 +279,12 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             }
         }
         tailoring.unsafeBackwardSet->freeze();
-        data.unsafeBackwardSet = tailoring.unsafeBackwardSet;
+        data->unsafeBackwardSet = tailoring.unsafeBackwardSet;
+    } else if(data == NULL) {
+        // Nothing to do.
     } else if(baseData != NULL) {
         // No tailoring-specific data: Alias the root collator's set.
-        data.unsafeBackwardSet = baseData->unsafeBackwardSet;
+        data->unsafeBackwardSet = baseData->unsafeBackwardSet;
     } else {
         errorCode = U_INVALID_FORMAT_ERROR;  // No unsafeBackwardSet.
         return;
@@ -283,22 +293,24 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     // If the fast Latin format version is different,
     // or the version is set to 0 for "no fast Latin table",
     // then just always use the normal string comparison path.
-    data.fastLatinTable = NULL;
-    data.fastLatinTableLength = 0;
-    if(((options >> 16) & 0xff) == CollationFastLatin::VERSION) {
-        index = IX_FAST_LATIN_TABLE_OFFSET;
-        offset = getIndex(inIndexes, indexesLength, index);
-        length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-        if(length > 0) {
-            data.fastLatinTable = reinterpret_cast<const uint16_t *>(inBytes + offset);
-            data.fastLatinTableLength = length / 2;
-            if((*data.fastLatinTable >> 8) != CollationFastLatin::VERSION) {
-                errorCode = U_INVALID_FORMAT_ERROR;  // header vs. table version mismatch
-                return;
+    if(data != NULL) {
+        data->fastLatinTable = NULL;
+        data->fastLatinTableLength = 0;
+        if(((options >> 16) & 0xff) == CollationFastLatin::VERSION) {
+            index = IX_FAST_LATIN_TABLE_OFFSET;
+            offset = getIndex(inIndexes, indexesLength, index);
+            length = getIndex(inIndexes, indexesLength, index + 1) - offset;
+            if(length > 0) {
+                data->fastLatinTable = reinterpret_cast<const uint16_t *>(inBytes + offset);
+                data->fastLatinTableLength = length / 2;
+                if((*data->fastLatinTable >> 8) != CollationFastLatin::VERSION) {
+                    errorCode = U_INVALID_FORMAT_ERROR;  // header vs. table version mismatch
+                    return;
+                }
+            } else if(baseData != NULL) {
+                data->fastLatinTable = baseData->fastLatinTable;
+                data->fastLatinTableLength = baseData->fastLatinTableLength;
             }
-        } else if(baseData != NULL) {
-            data.fastLatinTable = baseData->fastLatinTable;
-            data.fastLatinTableLength = baseData->fastLatinTableLength;
         }
     }
 
@@ -306,35 +318,54 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 2) {
-        data.scripts = reinterpret_cast<const uint16_t *>(inBytes + offset);
-        data.scriptsLength = length / 2;
+        if(data == NULL) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        data->scripts = reinterpret_cast<const uint16_t *>(inBytes + offset);
+        data->scriptsLength = length / 2;
+    } else if(data == NULL) {
+        // Nothing to do.
     } else if(baseData != NULL) {
-        data.scripts = baseData->scripts;
-        data.scriptsLength = baseData->scriptsLength;
+        data->scripts = baseData->scripts;
+        data->scriptsLength = baseData->scriptsLength;
     }
 
     index = IX_COMPRESSIBLE_BYTES_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 256) {
-        data.compressibleBytes = reinterpret_cast<const UBool *>(inBytes + offset);
+        if(data == NULL) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        data->compressibleBytes = reinterpret_cast<const UBool *>(inBytes + offset);
+    } else if(data == NULL) {
+        // Nothing to do.
     } else if(baseData != NULL) {
-        data.compressibleBytes = baseData->compressibleBytes;
+        data->compressibleBytes = baseData->compressibleBytes;
     } else {
         errorCode = U_INVALID_FORMAT_ERROR;  // No compressibleBytes[].
         return;
     }
 
     // Set variableTop from options and scripts data.
-    settings.variableTop = data.getVariableTopForMaxVariable(settings.getMaxVariable());
+    settings.variableTop =
+        (data != NULL ? data : baseData)->getVariableTopForMaxVariable(settings.getMaxVariable());
     if(settings.variableTop == 0) {
         errorCode = U_INVALID_FORMAT_ERROR;
         return;
     }
 
     if(settings.reorderCodes != NULL && settings.reorderTable == NULL) {
-        data.makeReorderTable(settings.reorderCodes, settings.reorderCodesLength,
-                              tailoring.reorderTable, errorCode);
+        if(baseData == NULL) {
+            // We assume for collation settings that
+            // the base data does not have a reordering.
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        baseData->makeReorderTable(settings.reorderCodes, settings.reorderCodesLength,
+                                   tailoring.reorderTable, errorCode);
         if(U_FAILURE(errorCode)) { return; }
         settings.reorderTable = tailoring.reorderTable;
     }

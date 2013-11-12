@@ -51,6 +51,7 @@
 #include "ustr_imp.h"
 #include "utf16collationiterator.h"
 #include "utf8collationiterator.h"
+#include "uvectr64.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -1558,6 +1559,28 @@ RuleBasedCollator::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
     int32_t i = length;
     while(i < count) { dest[i++] = 0; }
     return length;
+}
+
+void
+RuleBasedCollator::internalGetCEs(const UnicodeString &str, UVector64 &ces,
+                                  UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return; }
+    const UChar *s = str.getBuffer();
+    const UChar *limit = s + str.length();
+    UBool numeric = settings->isNumeric();
+    if(settings->dontCheckFCD()) {
+        UTF16CollationIterator iter(data, numeric, s, s, limit);
+        int64_t ce;
+        while((ce = iter.nextCE(errorCode)) != Collation::NO_CE) {
+            ces.addElement(ce, errorCode);
+        }
+    } else {
+        FCDUTF16CollationIterator iter(data, numeric, s, s, limit);
+        int64_t ce;
+        while((ce = iter.nextCE(errorCode)) != Collation::NO_CE) {
+            ces.addElement(ce, errorCode);
+        }
+    }
 }
 
 namespace {

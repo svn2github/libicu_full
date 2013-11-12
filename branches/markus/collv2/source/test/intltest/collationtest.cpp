@@ -17,6 +17,7 @@
 #include "unicode/normalizer2.h"
 #include "unicode/sortkey.h"
 #include "unicode/std_string.h"
+#include "unicode/strenum.h"
 #include "unicode/tblcoll.h"
 #include "unicode/uiter.h"
 #include "unicode/uniset.h"
@@ -24,6 +25,7 @@
 #include "unicode/usetiter.h"
 #include "unicode/ustring.h"
 #include "charstr.h"
+#include "cmemory.h"
 #include "collation.h"
 #include "collationbasedatabuilder.h"
 #include "collationbuilder.h"
@@ -38,10 +40,12 @@
 #include "intltest.h"
 #include "normalizer2impl.h"
 #include "ucbuf.h"
+#include "uhash.h"
 #include "uitercollationiterator.h"
 #include "utf16collationiterator.h"
 #include "utf8collationiterator.h"
 #include "uvectr32.h"
+#include "uvectr64.h"
 #include "writesrc.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -72,6 +76,7 @@ public:
     void TestFCD();
     void TestCollationWeights();
     void TestRootElements();
+    void TestTailoredElements();
     void TestDataDriven();
 
 private:
@@ -159,6 +164,7 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestFCD);
     TESTCASE_AUTO(TestCollationWeights);
     TESTCASE_AUTO(TestRootElements);
+    TESTCASE_AUTO(TestTailoredElements);
     TESTCASE_AUTO(TestDataDriven);
     TESTCASE_AUTO_END;
 }
@@ -631,6 +637,12 @@ UBool isValidCE(const CollationRootElements &re, const CollationData &data,
     return TRUE;
 }
 
+UBool isValidCE(const CollationRootElements &re, const CollationData &data, int64_t ce) {
+    uint32_t p = (uint32_t)(ce >> 32);
+    uint32_t secTer = (uint32_t)ce;
+    return isValidCE(re, data, p, secTer >> 16, secTer & 0xffff);
+}
+
 class RootElementsIterator {
 public:
     RootElementsIterator(const CollationData &root)
@@ -710,7 +722,8 @@ void CollationTest::TestRootElements() {
     cw2.initForSecondary();
     cw3.initForTertiary();
 
-    // Note: The root elements do not include Han-implicit or unassigned-implicit CEs.
+    // Note: The root elements do not include Han-implicit or unassigned-implicit CEs,
+    // nor the special merge-separator CE for U+FFFE.
     uint32_t prevPri = 0;
     uint32_t prevSec = 0;
     uint32_t prevTer = 0;
@@ -735,8 +748,9 @@ void CollationTest::TestRootElements() {
         } else {
             if(pri != prevPri) {
                 uint32_t newWeight = 0;
-                if(prevPri == 0) {
-                    // There is currently no tailoring gap after primary ignorables.
+                if(prevPri == 0 || prevPri >= Collation::FFFD_PRIMARY) {
+                    // There is currently no tailoring gap after primary ignorables,
+                    // and we forbid tailoring after U+FFFD and U+FFFF.
                 } else if(root->isCompressiblePrimary(prevPri)) {
                     if(!cw1c.allocWeights(prevPri, pri, 1)) {
                         errln("no primary/compressible tailoring gap between %08lx and %08lx\n",
@@ -788,6 +802,87 @@ void CollationTest::TestRootElements() {
         prevSec = sec;
         prevTer = ter;
     }
+}
+
+void CollationTest::TestTailoredElements() {
+    IcuTestErrorCode errorCode(*this, "TestTailoredElements");
+    const CollationData *root = CollationRoot::getData(errorCode);
+    if(errorCode.logIfFailureAndReset("CollationRoot::getData()")) {
+        return;
+    }
+    CollationRootElements rootElements(root->rootElements, root->rootElementsLength);
+
+    UHashtable *prevLocales = uhash_open(uhash_hashChars, uhash_compareChars, NULL, errorCode);
+    if(errorCode.logIfFailureAndReset("failed to create a hash table")) {
+        return;
+    }
+    uhash_setKeyDeleter(prevLocales, uprv_free);
+    // TestRootElements() tests the root collator which does not have tailorings.
+    uhash_puti(prevLocales, uprv_strdup(""), 1, errorCode);
+    uhash_puti(prevLocales, uprv_strdup("root"), 1, errorCode);
+    uhash_puti(prevLocales, uprv_strdup("root@collation=standard"), 1, errorCode);
+
+    UVector64 ces(errorCode);
+    LocalPointer<StringEnumeration> locales(Collator::getAvailableLocales());
+    U_ASSERT(locales.isValid());
+    const char *localeID = "root";
+    do {
+        Locale locale(localeID);
+        LocalPointer<StringEnumeration> types(
+                Collator::getKeywordValuesForLocale("collation", locale, FALSE, errorCode));
+        errorCode.assertSuccess();
+        const char *type = NULL;  // default type
+        do {
+            Locale localeWithType(locale);
+            if(type != NULL) {
+                localeWithType.setKeywordValue("collation", type, errorCode);
+            }
+            errorCode.assertSuccess();
+            LocalPointer<Collator> coll(Collator::createInstance(localeWithType, errorCode));
+            if(errorCode.logIfFailureAndReset("Collator::createInstance(%s)",
+                                              localeWithType.getName())) {
+                continue;
+            }
+            Locale actual = coll->getLocale(ULOC_ACTUAL_LOCALE, errorCode);
+            if(uhash_geti(prevLocales, actual.getName()) != 0) {
+                continue;
+            }
+            uhash_puti(prevLocales, uprv_strdup(actual.getName()), 1, errorCode);
+            errorCode.assertSuccess();
+            logln("TestTailoredElements(): requested %s -> actual %s\n",
+                  localeWithType.getName(), actual.getName());
+            RuleBasedCollator *rbc = dynamic_cast<RuleBasedCollator *>(coll.getAlias());
+            if(rbc == NULL) {
+                continue;
+            }
+            // Note: It would be better to get tailored strings such that we can
+            // identify the prefix, and only get the CEs for the prefix+string,
+            // not also for the prefix.
+            // There is currently no API for that.
+            // It would help in an unusual case where a contraction starting in the prefix
+            // extends past its end, and we do not see the intended mapping.
+            // For example, for a mapping p|st, if there is also a contraction ps,
+            // then we get CEs(ps)+CEs(t), rather than CEs(p|st).
+            LocalPointer<UnicodeSet> tailored(coll->getTailoredSet(errorCode));
+            errorCode.assertSuccess();
+            UnicodeSetIterator iter(*tailored);
+            while(iter.next()) {
+                const UnicodeString &s = iter.getString();
+                ces.removeAllElements();
+                rbc->internalGetCEs(s, ces, errorCode);
+                errorCode.assertSuccess();
+                for(int32_t i = 0; i < ces.size(); ++i) {
+                    int64_t ce = ces.elementAti(i);
+                    if(!isValidCE(rootElements, *root, ce)) {
+                        errln("invalid tailored CE %016llx at CE index %d from string:\n",
+                              (long long)ce, (int)i);
+                        infoln(prettify(s));
+                    }
+                }
+            }
+        } while((type = types->next(NULL, errorCode)) != NULL);
+    } while((localeID = locales->next(NULL, errorCode)) != NULL);
+    uhash_close(prevLocales);
 }
 
 UnicodeString CollationTest::printSortKey(const uint8_t *p, int32_t length) {
@@ -1416,6 +1511,45 @@ UBool CollationTest::getCollationKey(const UnicodeString &line,
     }
     int32_t keyLength;
     const uint8_t *keyBytes = key.getByteArray(keyLength);
+    if(keyLength == 0 || keyBytes[keyLength - 1] != 0) {
+        infoln(fileTestName);
+        errln("Collator(normalization=%s).getCollationKey() wrote an empty or unterminated key",
+              norm);
+        infoln(line);
+        infoln(printCollationKey(key));
+        return FALSE;
+    }
+
+    int32_t numLevels = coll->getAttribute(UCOL_STRENGTH, errorCode);
+    if(numLevels < UCOL_IDENTICAL) {
+        ++numLevels;
+    } else {
+        numLevels = 5;
+    }
+    if(coll->getAttribute(UCOL_CASE_LEVEL, errorCode) == UCOL_ON) {
+        ++numLevels;
+    }
+    errorCode.assertSuccess();
+    int32_t numLevelSeparators = 0;
+    for(int32_t i = 0; i < (keyLength - 1); ++i) {
+        uint8_t b = keyBytes[i];
+        if(b == 0) {
+            infoln(fileTestName);
+            errln("Collator(normalization=%s).getCollationKey() contains a 00 byte", norm);
+            infoln(line);
+            infoln(printCollationKey(key));
+            return FALSE;
+        }
+        if(b == 1) { ++numLevelSeparators; }
+    }
+    if(numLevelSeparators != (numLevels - 1)) {
+        infoln(fileTestName);
+        errln("Collator(normalization=%s).getCollationKey() has %d level separators for %d levels",
+              norm, (int)numLevelSeparators, (int)numLevels);
+        infoln(line);
+        infoln(printCollationKey(key));
+        return FALSE;
+    }
 
     // If s contains U+FFFE, check that merged segments make the same key.
     LocalMemory<uint8_t> mergedKey;
