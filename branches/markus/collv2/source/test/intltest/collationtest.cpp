@@ -71,6 +71,7 @@ public:
     void TestIllegalUTF8();
     void TestFCD();
     void TestCollationWeights();
+    void TestRootElements();
     void TestDataDriven();
 
 private:
@@ -157,6 +158,7 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestIllegalUTF8);
     TESTCASE_AUTO(TestFCD);
     TESTCASE_AUTO(TestCollationWeights);
+    TESTCASE_AUTO(TestRootElements);
     TESTCASE_AUTO(TestDataDriven);
     TESTCASE_AUTO_END;
 }
@@ -534,6 +536,258 @@ void CollationTest::TestCollationWeights() {
     cw.initForTertiary();
     // Expect weights 3dxx and both 3e & 3f.
     checkAllocWeights(cw, 0x3d02, 0x4000, 10, 3, 2);
+}
+
+namespace {
+
+UBool isValidCE(const CollationRootElements &re, const CollationData &data,
+                uint32_t p, uint32_t s, uint32_t ctq) {
+    uint32_t p1 = p >> 24;
+    uint32_t p2 = (p >> 16) & 0xff;
+    uint32_t p3 = (p >> 8) & 0xff;
+    uint32_t p4 = p & 0xff;
+    uint32_t s1 = s >> 8;
+    uint32_t s2 = s & 0xff;
+    // ctq = Case, Tertiary, Quaternary
+    uint32_t c = (ctq & Collation::CASE_MASK) >> 14;
+    uint32_t t = ctq & Collation::ONLY_TERTIARY_MASK;
+    uint32_t t1 = t >> 8;
+    uint32_t t2 = t & 0xff;
+    uint32_t q = ctq & Collation::QUATERNARY_MASK;
+    // No leading zero bytes.
+    if((p != 0 && p1 == 0) || (s != 0 && s1 == 0) || (t != 0 && t1 == 0)) {
+        return FALSE;
+    }
+    // No intermediate zero bytes.
+    if(p1 != 0 && p2 == 0 && (p & 0xffff) != 0) {
+        return FALSE;
+    }
+    if(p2 != 0 && p3 == 0 && p4 != 0) {
+        return FALSE;
+    }
+    // Minimum & maximum lead bytes.
+    if((p1 != 0 && p1 <= Collation::MERGE_SEPARATOR_BYTE) ||
+            (s1 != 0 && s1 <= Collation::MERGE_SEPARATOR_BYTE) ||
+            (t1 != 0 && t1 <= Collation::MERGE_SEPARATOR_BYTE)) {
+        return FALSE;
+    }
+    if(t1 != 0 && t1 > 0x3f) {
+        return FALSE;
+    }
+    if(c > 2) {
+        return FALSE;
+    }
+    // The valid byte range for the second primary byte depends on compressibility.
+    if(p2 != 0) {
+        if(data.isCompressibleLeadByte(p1)) {
+            if(p2 <= Collation::PRIMARY_COMPRESSION_LOW_BYTE ||
+                    Collation::PRIMARY_COMPRESSION_HIGH_BYTE <= p2) {
+                return FALSE;
+            }
+        } else {
+            if(p2 <= Collation::LEVEL_SEPARATOR_BYTE) {
+                return FALSE;
+            }
+        }
+    }
+    // Other bytes just need to avoid the level separator.
+    // Trailing zeros are ok.
+    U_ASSERT(Collation::LEVEL_SEPARATOR_BYTE == 1);
+    if(p3 == Collation::LEVEL_SEPARATOR_BYTE || p4 == Collation::LEVEL_SEPARATOR_BYTE ||
+            s2 == Collation::LEVEL_SEPARATOR_BYTE || t2 == Collation::LEVEL_SEPARATOR_BYTE) {
+        return FALSE;
+    }
+    // Well-formed CEs.
+    if(p == 0) {
+        if(s == 0) {
+            if(t == 0) {
+                // Completely ignorable CE.
+                // Quaternary CEs are not supported.
+                if(c != 0 || q != 0) {
+                    return FALSE;
+                }
+            } else {
+                // Tertiary CE.
+                if(t < re.getTertiaryBoundary() || c != 2) {
+                    return FALSE;
+                }
+            }
+        } else {
+            // Secondary CE.
+            if(s < re.getSecondaryBoundary() || t == 0 || t >= re.getTertiaryBoundary()) {
+                return FALSE;
+            }
+        }
+    } else {
+        // Primary CE.
+        if(s == 0 || (Collation::COMMON_WEIGHT16 < s && s <= re.getLastCommonSecondary()) ||
+                s >= re.getSecondaryBoundary()) {
+            return FALSE;
+        }
+        if(t == 0 || t >= re.getTertiaryBoundary()) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+class RootElementsIterator {
+public:
+    RootElementsIterator(const CollationData &root)
+            : data(root),
+              elements(root.rootElements), length(root.rootElementsLength),
+              pri(0), secTer(0),
+              index((int32_t)elements[CollationRootElements::IX_FIRST_TERTIARY_INDEX]) {}
+
+    UBool next() {
+        if(index >= length) { return FALSE; }
+        uint32_t p = elements[index];
+        if(p == CollationRootElements::PRIMARY_SENTINEL) { return FALSE; }
+        if((p & CollationRootElements::SEC_TER_DELTA_FLAG) != 0) {
+            ++index;
+            secTer = p & ~CollationRootElements::SEC_TER_DELTA_FLAG;
+            return TRUE;
+        }
+        if((p & CollationRootElements::PRIMARY_STEP_MASK) != 0) {
+            // End of a range, enumerate the primaries in the range.
+            int32_t step = (int32_t)p & CollationRootElements::PRIMARY_STEP_MASK;
+            p &= 0xffffff00;
+            if(pri == p) {
+                // Finished the range, return the next CE after it.
+                ++index;
+                return next();
+            }
+            U_ASSERT(pri < p);
+            // Return the next primary in this range.
+            UBool isCompressible = data.isCompressiblePrimary(pri);
+            if((pri & 0xffff) == 0) {
+                pri = Collation::incTwoBytePrimaryByOffset(pri, isCompressible, step);
+            } else {
+                pri = Collation::incThreeBytePrimaryByOffset(pri, isCompressible, step);
+            }
+            return TRUE;
+        }
+        // Simple primary CE.
+        ++index;
+        pri = p;
+        secTer = Collation::COMMON_SEC_AND_TER_CE;
+        return TRUE;
+    }
+
+    uint32_t getPrimary() const { return pri; }
+    uint32_t getSecTer() const { return secTer; }
+
+private:
+    const CollationData &data;
+    const uint32_t *elements;
+    int32_t length;
+
+    uint32_t pri;
+    uint32_t secTer;
+    int32_t index;
+};
+
+}  // namespace
+
+void CollationTest::TestRootElements() {
+    IcuTestErrorCode errorCode(*this, "TestRootElements");
+    const CollationData *root = CollationRoot::getData(errorCode);
+    if(errorCode.logIfFailureAndReset("CollationRoot::getData()")) {
+        return;
+    }
+    CollationRootElements rootElements(root->rootElements, root->rootElementsLength);
+    RootElementsIterator iter(*root);
+
+    // We check each root CE for validity,
+    // and we also verify that there is a tailoring gap between each two CEs.
+    CollationWeights cw1c;  // compressible primary weights
+    CollationWeights cw1u;  // uncompressible primary weights
+    CollationWeights cw2;
+    CollationWeights cw3;
+
+    cw1c.initForPrimary(TRUE);
+    cw1u.initForPrimary(FALSE);
+    cw2.initForSecondary();
+    cw3.initForTertiary();
+
+    // Note: The root elements do not include Han-implicit or unassigned-implicit CEs.
+    uint32_t prevPri = 0;
+    uint32_t prevSec = 0;
+    uint32_t prevTer = 0;
+    while(iter.next()) {
+        uint32_t pri = iter.getPrimary();
+        uint32_t secTer = iter.getSecTer();
+        // CollationRootElements CEs must have 0 case and quaternary bits.
+        if((secTer & Collation::CASE_AND_QUATERNARY_MASK) != 0) {
+            errln("CollationRootElements CE has non-zero case and/or quaternary bits: %08lx %08lx\n",
+                  (long)pri, (long)secTer);
+        }
+        uint32_t sec = secTer >> 16;
+        uint32_t ter = secTer & Collation::ONLY_TERTIARY_MASK;
+        uint32_t ctq = ter;
+        if(pri == 0 && sec == 0 && ter != 0) {
+            // Tertiary CEs must have uppercase bits,
+            // but they are not stored in the CollationRootElements.
+            ctq |= 0x8000;
+        }
+        if(!isValidCE(rootElements, *root, pri, sec, ctq)) {
+            errln("invalid root CE %08lx %08lx\n", (long)pri, (long)secTer);
+        } else {
+            if(pri != prevPri) {
+                uint32_t newWeight = 0;
+                if(prevPri == 0) {
+                    // There is currently no tailoring gap after primary ignorables.
+                } else if(root->isCompressiblePrimary(prevPri)) {
+                    if(!cw1c.allocWeights(prevPri, pri, 1)) {
+                        errln("no primary/compressible tailoring gap between %08lx and %08lx\n",
+                              (long)prevPri, (long)pri);
+                    } else {
+                        newWeight = cw1c.nextWeight();
+                    }
+                } else {
+                    if(!cw1u.allocWeights(prevPri, pri, 1)) {
+                        errln("no primary/uncompressible tailoring gap between %08lx and %08lx\n",
+                              (long)prevPri, (long)pri);
+                    } else {
+                        newWeight = cw1u.nextWeight();
+                    }
+                }
+                if(newWeight != 0 && !(prevPri < newWeight && newWeight < pri)) {
+                    errln("mis-allocated primary weight, should get %08lx < %08lx < %08lx\n",
+                          (long)prevPri, (long)newWeight, (long)pri);
+                }
+            } else if(sec != prevSec) {
+                uint32_t lowerLimit =
+                    prevSec == 0 ? rootElements.getSecondaryBoundary() - 0x100 : prevSec;
+                if(!cw2.allocWeights(lowerLimit, sec, 1)) {
+                    errln("no secondary tailoring gap between %04x and %04x\n", lowerLimit, sec);
+                } else {
+                    uint32_t newWeight = cw2.nextWeight();
+                    if(!(prevSec < newWeight && newWeight < sec)) {
+                        errln("mis-allocated secondary weight, should get %04x < %04x < %04x\n",
+                              (long)lowerLimit, (long)newWeight, (long)sec);
+                    }
+                }
+            } else if(ter != prevTer) {
+                uint32_t lowerLimit =
+                    prevTer == 0 ? rootElements.getTertiaryBoundary() - 0x100 : prevTer;
+                if(!cw3.allocWeights(lowerLimit, ter, 1)) {
+                    errln("no teriary tailoring gap between %04x and %04x\n", lowerLimit, ter);
+                } else {
+                    uint32_t newWeight = cw3.nextWeight();
+                    if(!(prevTer < newWeight && newWeight < ter)) {
+                        errln("mis-allocated secondary weight, should get %04x < %04x < %04x\n",
+                              (long)lowerLimit, (long)newWeight, (long)ter);
+                    }
+                }
+            } else {
+                errln("duplicate root CE %08lx %08lx\n", (long)pri, (long)secTer);
+            }
+        }
+        prevPri = pri;
+        prevSec = sec;
+        prevTer = ter;
+    }
 }
 
 UnicodeString CollationTest::printSortKey(const uint8_t *p, int32_t length) {
