@@ -107,7 +107,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    buildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, errorCode);
+    internalBuildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, errorCode);
 }
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStrength strength,
@@ -121,7 +121,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    buildTailoring(rules, strength, UCOL_DEFAULT, NULL, errorCode);
+    internalBuildTailoring(rules, strength, UCOL_DEFAULT, NULL, errorCode);
 }
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
@@ -136,7 +136,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    buildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, errorCode);
+    internalBuildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, errorCode);
 }
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
@@ -152,14 +152,14 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    buildTailoring(rules, strength, decompositionMode, NULL, errorCode);
+    internalBuildTailoring(rules, strength, decompositionMode, NULL, errorCode);
 }
 
 void
-RuleBasedCollator::buildTailoring(const UnicodeString &rules,
-                                  int32_t strength,
-                                  UColAttributeValue decompositionMode,
-                                  UParseError *outParseError, UErrorCode &errorCode) {
+RuleBasedCollator::internalBuildTailoring(const UnicodeString &rules,
+                                          int32_t strength,
+                                          UColAttributeValue decompositionMode,
+                                          UParseError *outParseError, UErrorCode &errorCode) {
     const CollationTailoring *base = CollationRoot::getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return; }
     CollationBuilder builder(base, errorCode);
@@ -1602,7 +1602,7 @@ ucol_openRules(const UChar *rules, int32_t rulesLength,
         return NULL;
     }
     UnicodeString r((UBool)(rulesLength < 0), rules, rulesLength);
-    coll->buildTailoring(r, strength, normalizationMode, parseError, *pErrorCode);
+    coll->internalBuildTailoring(r, strength, normalizationMode, parseError, *pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         delete coll;
         return NULL;

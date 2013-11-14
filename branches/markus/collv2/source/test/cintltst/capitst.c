@@ -2257,7 +2257,9 @@ TestOpenBinary(void)
      * However, the check for NULL was commented out in ICU 3.4 (r18149).
      * Ticket #4355 requested "Make collation work with minimal data.
      * Optionally without UCA, with relevant parts of UCA copied into the tailoring table."
-     * Revisit with ticket #10517 "require base collator in ucol_openBinary() etc.".
+     *
+     * The ICU team agreed with ticket #10517 "require base collator in ucol_openBinary() etc."
+     * to require base!=NULL again.
      */
 #define OPEN_BINARY_ACCEPTS_NULL_BASE 0
     UErrorCode status = U_ZERO_ERROR;

@@ -1552,8 +1552,31 @@ void CollationAPITest::TestGetLocale() {
   const char *rules = "&a<x<y<z";
   UChar rlz[256] = {0};
 
-  Collator *coll = NULL;
-  Locale locale;
+  Collator *coll = Collator::createInstance("root", status);
+  if(U_FAILURE(status)) {
+    dataerrln("Failed to open collator for \"root\" with %s", u_errorName(status));
+    return;
+  }
+  Locale locale = coll->getLocale(ULOC_ACTUAL_LOCALE, status);
+  if(locale != Locale::getRoot()) {
+    errln("Collator::createInstance(\"root\").getLocale(actual) != Locale::getRoot(); "
+          "getLocale().getName() = \"%s\"",
+          locale.getName());
+  }
+  delete coll;
+
+  coll = Collator::createInstance("", status);
+  if(U_FAILURE(status)) {
+    dataerrln("Failed to open collator for \"\" with %s", u_errorName(status));
+    return;
+  }
+  locale = coll->getLocale(ULOC_ACTUAL_LOCALE, status);
+  if(locale != Locale::getRoot()) {
+    errln("Collator::createInstance(\"\").getLocale(actual) != Locale::getRoot(); "
+          "getLocale().getName() = \"%s\"",
+          locale.getName());
+  }
+  delete coll;
 
   int32_t i = 0;
 
@@ -1562,34 +1585,62 @@ void CollationAPITest::TestGetLocale() {
     const char* validLocale;
     const char* actualLocale;
   } testStruct[] = {
-    { "sr_YU", "sr_YU", "root" },
-    { "sh_YU", "sh_YU", "sh" },
-    { "en_US_CALIFORNIA", "en_US", "root" },
-    { "fr_FR_NONEXISTANT", "fr_FR", "fr" }
+    // Note: Locale::getRoot().getName() == "" not "root".
+    { "de_DE", "de_DE", "" },
+    { "sr_RS", "sr_Cyrl_RS", "sr" },
+    { "en_US_CALIFORNIA", "en_US", "" },
+    { "fr_FR_NONEXISTANT", "fr_FR", "" },
+    // pinyin is the default, therefore suppressed.
+    { "zh_CN", "zh_Hans_CN", "zh" },
+    // zh_Hant has default=stroke but the data is in zh.
+    { "zh_TW", "zh_Hant_TW", "zh@collation=stroke" },
+    { "zh_TW@collation=pinyin", "zh_Hant_TW@collation=pinyin", "zh" },
+    { "zh_CN@collation=stroke", "zh_Hans_CN@collation=stroke", "zh@collation=stroke" }
   };
 
   u_unescape(rules, rlz, 256);
 
   /* test opening collators for different locales */
-  for(i = 0; i<(int32_t)(sizeof(testStruct)/sizeof(testStruct[0])); i++) {
+  for(i = 0; i<(int32_t)LENGTHOF(testStruct); i++) {
     status = U_ZERO_ERROR;
     coll = Collator::createInstance(testStruct[i].requestedLocale, status);
     if(U_FAILURE(status)) {
-      log("Failed to open collator for %s with %s\n", testStruct[i].requestedLocale, u_errorName(status));
+      errln("Failed to open collator for %s with %s", testStruct[i].requestedLocale, u_errorName(status));
       delete coll;
       continue;
     }
+    // The requested locale may be the same as the valid locale,
+    // or may not be supported at all. See ticket #10477.
     locale = coll->getLocale(ULOC_REQUESTED_LOCALE, status);
-    if(locale != testStruct[i].requestedLocale) {
-      log("[Coll %s]: Error in requested locale, expected %s, got %s\n", testStruct[i].requestedLocale, testStruct[i].requestedLocale, locale.getName());
+    if(locale != testStruct[i].requestedLocale && locale != testStruct[i].validLocale) {
+      errln("[Coll %s]: Error in requested locale, expected %s or %s, got %s",
+            testStruct[i].requestedLocale,
+            testStruct[i].requestedLocale, testStruct[i].validLocale, locale.getName());
     }
     locale = coll->getLocale(ULOC_VALID_LOCALE, status);
     if(locale != testStruct[i].validLocale) {
-      log("[Coll %s]: Error in valid locale, expected %s, got %s\n", testStruct[i].requestedLocale, testStruct[i].validLocale, locale.getName());
+      errln("[Coll %s]: Error in valid locale, expected %s, got %s",
+            testStruct[i].requestedLocale, testStruct[i].validLocale, locale.getName());
     }
     locale = coll->getLocale(ULOC_ACTUAL_LOCALE, status);
     if(locale != testStruct[i].actualLocale) {
-      log("[Coll %s]: Error in actual locale, expected %s, got %s\n", testStruct[i].requestedLocale, testStruct[i].actualLocale, locale.getName());
+      errln("[Coll %s]: Error in actual locale, expected %s, got %s",
+            testStruct[i].requestedLocale, testStruct[i].actualLocale, locale.getName());
+    }
+    // If we open a collator for the actual locale, we should get an equivalent one again.
+    LocalPointer<Collator> coll2(Collator::createInstance(locale, status));
+    if(U_FAILURE(status)) {
+      errln("Failed to open collator for actual locale \"%s\" with %s",
+            locale.getName(), u_errorName(status));
+    } else {
+      Locale actual2 = coll2->getLocale(ULOC_ACTUAL_LOCALE, status);
+      if(actual2 != locale) {
+        errln("[Coll actual \"%s\"]: Error in actual locale, got different one: \"%s\"",
+              locale.getName(), actual2.getName());
+      }
+      if(*coll2 != *coll) {
+        errln("[Coll actual \"%s\"]: Got different collator than before", locale.getName());
+      }
     }
     delete coll;
   }
@@ -1599,23 +1650,20 @@ void CollationAPITest::TestGetLocale() {
     Collator *defaultColl = Collator::createInstance((const Locale)NULL, status);
     coll = Collator::createInstance("blahaha", status);
     if(U_FAILURE(status)) {
-      log("Failed to open collator with %s\n", u_errorName(status));
+      errln("Failed to open collator with %s", u_errorName(status));
       delete coll;
       delete defaultColl;
       return;
     }
-    if(coll->getLocale(ULOC_REQUESTED_LOCALE, status) != "blahaha") {
-      log("Nonexisting locale didn't preserve the requested locale\n");
-    }
     if(coll->getLocale(ULOC_VALID_LOCALE, status) !=
       defaultColl->getLocale(ULOC_VALID_LOCALE, status)) {
-      log("Valid locale for nonexisting locale locale collator differs "
-        "from valid locale for default collator\n");
+      errln("Valid locale for nonexisting locale locale collator differs "
+        "from valid locale for default collator");
     }
     if(coll->getLocale(ULOC_ACTUAL_LOCALE, status) !=
       defaultColl->getLocale(ULOC_ACTUAL_LOCALE, status)) {
-      log("Actual locale for nonexisting locale locale collator differs "
-        "from actual locale for default collator\n");
+      errln("Actual locale for nonexisting locale locale collator differs "
+        "from actual locale for default collator");
     }
     delete coll;
     delete defaultColl;
@@ -1627,15 +1675,15 @@ void CollationAPITest::TestGetLocale() {
   coll = new RuleBasedCollator(rlz, status);
   locale = coll->getLocale(ULOC_REQUESTED_LOCALE, status);
   if(!locale.isBogus()) {
-    log("For collator instantiated from rules, requested locale %s is not bogus\n", locale.getName());
+    errln("For collator instantiated from rules, requested locale %s is not bogus", locale.getName());
   }
   locale = coll->getLocale(ULOC_VALID_LOCALE, status);
   if(!locale.isBogus()) {
-    log("For collator instantiated from rules, valid locale %s is not bogus\n", locale.getName());
+    errln("For collator instantiated from rules, valid locale %s is not bogus", locale.getName());
   }
   locale = coll->getLocale(ULOC_ACTUAL_LOCALE, status);
   if(!locale.isBogus()) {
-    log("For collator instantiated from rules, actual locale %s is not bogus\n", locale.getName());
+    errln("For collator instantiated from rules, actual locale %s is not bogus", locale.getName());
   }
   delete coll;
 }

@@ -646,7 +646,7 @@ ucol_getContractionsAndExpansions( const UCollator *coll,
         *status = U_UNSUPPORTED_ERROR;
         return;
     }
-    rbc->getContractionsAndExpansions(
+    rbc->internalGetContractionsAndExpansions(
             icu::UnicodeSet::fromUSet(contractions),
             icu::UnicodeSet::fromUSet(expansions),
             addPrefixes, *status);

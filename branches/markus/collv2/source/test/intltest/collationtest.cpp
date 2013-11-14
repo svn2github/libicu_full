@@ -1304,7 +1304,7 @@ void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
     }
     if(errorCode.isFailure()) { return; }
     logln(rules);
-    // Duplicate of RuleBasedCollator::buildTailoring(),
+    // Duplicate of RuleBasedCollator::internalBuildTailoring(),
     // to get more error information.
     CollationBuilder builder(CollationRoot::getRoot(errorCode), errorCode);
     UVersionInfo noVersion = { 0, 0, 0, 0 };
@@ -1480,7 +1480,7 @@ UBool CollationTest::getSortKeyParts(const UChar *s, int32_t length,
     uiter_setString(&iter, s, length);
     uint32_t state[2] = { 0, 0 };
     for(;;) {
-        int32_t partLength = coll->nextSortKeyPart(&iter, state, part, partSize, errorCode);
+        int32_t partLength = coll->internalNextSortKeyPart(&iter, state, part, partSize, errorCode);
         UBool done = partLength < partSize;
         if(done) {
             // At the end, append the next byte as well which should be 00.
@@ -1616,14 +1616,14 @@ UBool CollationTest::getCollationKey(const UnicodeString &line,
         return FALSE;
     }
 
-    // Check that nextSortKeyPart() makes the same key, with several part sizes.
+    // Check that internalNextSortKeyPart() makes the same key, with several part sizes.
     static const int32_t partSizes[] = { 32, 3, 1 };
     for(int32_t psi = 0; psi < LENGTHOF(partSizes); ++psi) {
         int32_t partSize = partSizes[psi];
         CharString parts;
         if(!getSortKeyParts(s, length, parts, 32, errorCode)) {
             infoln(fileTestName);
-            errln("Collator(normalization=%s).nextSortKeyPart(%d) failed: %s",
+            errln("Collator(normalization=%s).internalNextSortKeyPart(%d) failed: %s",
                   norm, (int)partSize, errorCode.errorName());
             infoln(line);
             errorCode.reset();  // TODO: no need to reset except in IcuTestErrorCode-owning caller?
@@ -1631,7 +1631,7 @@ UBool CollationTest::getCollationKey(const UnicodeString &line,
         }
         if(keyLength != parts.length() || uprv_memcmp(keyBytes, parts.data(), keyLength) != 0) {
             infoln(fileTestName);
-            errln("Collator(normalization=%s).getCollationKey() != nextSortKeyPart(%d)",
+            errln("Collator(normalization=%s).getCollationKey() != internalNextSortKeyPart(%d)",
                   norm, (int)partSize);
             infoln(line);
             infoln(printCollationKey(key));
@@ -1791,10 +1791,10 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
     }
     // Test NUL-termination if the strings do not contain NUL characters.
     if(!containNUL) {
-        order = coll->compareUTF8(prevUTF8.c_str(), -1, sUTF8.c_str(), -1, errorCode);
+        order = coll->internalCompareUTF8(prevUTF8.c_str(), -1, sUTF8.c_str(), -1, errorCode);
         if(order != expectedUTF8Order || errorCode.isFailure()) {
             infoln(fileTestName);
-            errln("line %d Collator(normalization=%s).compareUTF8(previous-NUL, current-NUL) wrong order: %d != %d (%s)",
+            errln("line %d Collator(normalization=%s).internalCompareUTF8(previous-NUL, current-NUL) wrong order: %d != %d (%s)",
                   (int)fileLineNumber, norm, order, expectedUTF8Order, errorCode.errorName());
             infoln(prevFileLine);
             infoln(fileLine);
@@ -1803,10 +1803,10 @@ UBool CollationTest::checkCompareTwo(const UnicodeString &prevFileLine,
             errorCode.reset();
             return FALSE;
         }
-        order = coll->compareUTF8(sUTF8.c_str(), -1, prevUTF8.c_str(), -1, errorCode);
+        order = coll->internalCompareUTF8(sUTF8.c_str(), -1, prevUTF8.c_str(), -1, errorCode);
         if(order != -expectedUTF8Order || errorCode.isFailure()) {
             infoln(fileTestName);
-            errln("line %d Collator(normalization=%s).compareUTF8(current-NUL, previous-NUL) wrong order: %d != %d (%s)",
+            errln("line %d Collator(normalization=%s).internalCompareUTF8(current-NUL, previous-NUL) wrong order: %d != %d (%s)",
                   (int)fileLineNumber, norm, order, -expectedUTF8Order, errorCode.errorName());
             infoln(prevFileLine);
             infoln(fileLine);

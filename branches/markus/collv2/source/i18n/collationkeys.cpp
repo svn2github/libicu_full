@@ -332,7 +332,7 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                 char buffer[3] = { p2, (char)(p >> 8), (char)p };
                 sink.Append(buffer, (buffer[1] == 0) ? 1 : (buffer[2] == 0) ? 2 : 3);
             }
-            // Optimization for nextSortKeyPart():
+            // Optimization for internalNextSortKeyPart():
             // When the primary level overflows we can stop because we need not
             // calculate (preflight) the whole sort key length.
             if(!preflight && sink.Overflowed()) {

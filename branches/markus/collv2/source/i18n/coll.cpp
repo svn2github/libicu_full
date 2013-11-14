@@ -817,9 +817,9 @@ Collator::internalGetShortDefinitionString(const char * /*locale*/,
 }
 
 UCollationResult
-Collator::compareUTF8(const char *left, int32_t leftLength,
-                      const char *right, int32_t rightLength,
-                      UErrorCode &errorCode) const {
+Collator::internalCompareUTF8(const char *left, int32_t leftLength,
+                              const char *right, int32_t rightLength,
+                              UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
     if((left == NULL && leftLength != 0) || (right == NULL && rightLength != 0)) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -832,8 +832,8 @@ Collator::compareUTF8(const char *left, int32_t leftLength,
 }
 
 int32_t
-Collator::nextSortKeyPart(UCharIterator * /*iter*/, uint32_t /*state*/[2],
-                          uint8_t * /*dest*/, int32_t /*count*/, UErrorCode &errorCode) const {
+Collator::internalNextSortKeyPart(UCharIterator * /*iter*/, uint32_t /*state*/[2],
+                                  uint8_t * /*dest*/, int32_t /*count*/, UErrorCode &errorCode) const {
     if (U_SUCCESS(errorCode)) {
         errorCode = U_UNSUPPORTED_ERROR;
     }

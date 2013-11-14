@@ -650,9 +650,10 @@ public:
      * Implements ucol_strcollUTF8().
      * @internal
      */
-    virtual UCollationResult compareUTF8(const char *left, int32_t leftLength,
-                                         const char *right, int32_t rightLength,
-                                         UErrorCode &errorCode) const;
+    virtual UCollationResult internalCompareUTF8(
+            const char *left, int32_t leftLength,
+            const char *right, int32_t rightLength,
+            UErrorCode &errorCode) const;
 
     /** Get the short definition string for a collator. This internal API harvests the collator's
      *  locale and the attribute set and produces a string that can be used for opening 
@@ -686,9 +687,9 @@ public:
      * Implements ucol_nextSortKeyPart().
      * @internal
      */
-    virtual int32_t
-    nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
-                    uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
+    virtual int32_t internalNextSortKeyPart(
+            UCharIterator *iter, uint32_t state[2],
+            uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 
 #ifndef U_HIDE_INTERNAL_API
     /**
@@ -703,7 +704,7 @@ public:
      * getLocale() returns a copy of a Locale, with minimal lifetime in a C wrapper.
      * @internal
      */
-    const char *getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) const;
+    const char *internalGetLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) const;
 
     /**
      * Implements ucol_getContractionsAndExpansions().
@@ -717,7 +718,7 @@ public:
      * @param errorCode in/out ICU error code
      * @internal
      */
-    void getContractionsAndExpansions(
+    void internalGetContractionsAndExpansions(
             UnicodeSet *contractions, UnicodeSet *expansions,
             UBool addPrefixes, UErrorCode &errorCode) const;
 
@@ -725,10 +726,11 @@ public:
      * Implements from-rule constructors, and ucol_openRules().
      * @internal
      */
-    void buildTailoring(const UnicodeString &rules,
-                        int32_t strength,
-                        UColAttributeValue decompositionMode,
-                        UParseError *outParseError, UErrorCode &errorCode);
+    void internalBuildTailoring(
+            const UnicodeString &rules,
+            int32_t strength,
+            UColAttributeValue decompositionMode,
+            UParseError *outParseError, UErrorCode &errorCode);
 
     /** @internal */
     static inline RuleBasedCollator *rbcFromUCollator(UCollator *uc) {

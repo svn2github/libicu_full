@@ -131,12 +131,13 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
     if(*name == 0 || uprv_strcmp(name, "root") == 0) { return root; }
 
     LocalUResourceBundlePointer bundle(ures_open(U_ICUDATA_COLL, name, &errorCode));
-    if(U_SUCCESS(errorCode)) {
-        const char *vLocale =
-            ures_getLocaleByType(bundle.getAlias(), ULOC_ACTUAL_LOCALE, &errorCode);
-        if(U_FAILURE(errorCode)) { return NULL; }
-        validLocale = Locale(vLocale);
+    if(errorCode == U_MISSING_RESOURCE_ERROR) {
+        errorCode = U_USING_DEFAULT_WARNING;
+        return root;
     }
+    const char *vLocale = ures_getLocaleByType(bundle.getAlias(), ULOC_ACTUAL_LOCALE, &errorCode);
+    if(U_FAILURE(errorCode)) { return NULL; }
+    validLocale = Locale(vLocale);
 
     // There are zero or more tailorings in the collations table.
     LocalUResourceBundlePointer collations(
@@ -163,7 +164,7 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
                                           &internalErrorCode));
         int32_t length;
         const UChar *s = ures_getString(def.getAlias(), &length, &internalErrorCode);
-        if(U_SUCCESS(errorCode) && length < LENGTHOF(defaultType)) {
+        if(U_SUCCESS(internalErrorCode) && length < LENGTHOF(defaultType)) {
             u_UCharsToChars(s, defaultType, length + 1);
         } else {
             uprv_strcpy(defaultType, "standard");
@@ -214,6 +215,7 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
         return NULL;
     }
 
+    // Is this the same as the root collator? If so, then use that instead.
     const char *actualLocale = ures_getLocaleByType(data.getAlias(), ULOC_ACTUAL_LOCALE, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     if((*actualLocale == 0 || uprv_strcmp(actualLocale, "root") == 0) &&
@@ -224,11 +226,6 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
         return root;
     }
     t->actualLocale = Locale(actualLocale);
-    if(uprv_strcmp(type, defaultType) != 0) {
-        validLocale.setKeywordValue("collation", type, errorCode);
-        t->actualLocale.setKeywordValue("collation", type, errorCode);
-    }
-    if(U_FAILURE(errorCode)) { return NULL; }
 
     // deserialize
     LocalUResourceBundlePointer binary(
@@ -252,6 +249,41 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
         if(U_SUCCESS(errorCode)) {
             t->rules.setTo(TRUE, s, length);
         }
+    }
+
+    // Set the collation types on the informational locales,
+    // except when they match the default types (for brevity and backwards compatibility).
+    // For the valid locale, suppress the default type.
+    if(uprv_strcmp(type, defaultType) != 0) {
+        validLocale.setKeywordValue("collation", type, errorCode);
+        if(U_FAILURE(errorCode)) { return NULL; }
+    }
+
+    // For the actual locale, suppress the default type *according to the actual locale*.
+    // For example, zh has default=pinyin and contains all of the Chinese tailorings.
+    // zh_Hant has default=stroke but has no other data.
+    // For the valid locale "zh_Hant" we need to suppress stroke.
+    // For the actual locale "zh" we need to suppress pinyin instead.
+    if(uprv_strcmp(actualLocale, vLocale) != 0) {
+        // Opening a bundle for the actual locale should always succeed.
+        LocalUResourceBundlePointer actualBundle(
+                ures_open(U_ICUDATA_COLL, actualLocale, &errorCode));
+        if(U_FAILURE(errorCode)) { return NULL; }
+        UErrorCode internalErrorCode = U_ZERO_ERROR;
+        LocalUResourceBundlePointer def(
+                ures_getByKeyWithFallback(actualBundle.getAlias(), "collations/default", NULL,
+                                          &internalErrorCode));
+        int32_t length;
+        const UChar *s = ures_getString(def.getAlias(), &length, &internalErrorCode);
+        if(U_SUCCESS(internalErrorCode) && length < LENGTHOF(defaultType)) {
+            u_UCharsToChars(s, defaultType, length + 1);
+        } else {
+            uprv_strcpy(defaultType, "standard");
+        }
+    }
+    if(uprv_strcmp(type, defaultType) != 0) {
+        t->actualLocale.setKeywordValue("collation", type, errorCode);
+        if(U_FAILURE(errorCode)) { return NULL; }
     }
 
     if(typeFallback) {

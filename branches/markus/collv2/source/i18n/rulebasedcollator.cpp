@@ -380,7 +380,7 @@ RuleBasedCollator::getLocale(ULocDataLocaleType type, UErrorCode& errorCode) con
 }
 
 const char *
-RuleBasedCollator::getLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) const {
+RuleBasedCollator::internalGetLocaleID(ULocDataLocaleType type, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) {
         return NULL;
     }
@@ -444,7 +444,7 @@ RuleBasedCollator::getTailoredSet(UErrorCode &errorCode) const {
 }
 
 void
-RuleBasedCollator::getContractionsAndExpansions(
+RuleBasedCollator::internalGetContractionsAndExpansions(
         UnicodeSet *contractions, UnicodeSet *expansions,
         UBool addPrefixes, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return; }
@@ -841,9 +841,9 @@ RuleBasedCollator::compareUTF8(const StringPiece &left, const StringPiece &right
 }
 
 UCollationResult
-RuleBasedCollator::compareUTF8(const char *left, int32_t leftLength,
-                               const char *right, int32_t rightLength,
-                               UErrorCode &errorCode) const {
+RuleBasedCollator::internalCompareUTF8(const char *left, int32_t leftLength,
+                                       const char *right, int32_t rightLength,
+                                       UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return UCOL_EQUAL; }
     if((left == NULL && leftLength != 0) || (right == NULL && rightLength != 0)) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -1456,13 +1456,13 @@ RuleBasedCollator::writeIdenticalLevel(const UChar *s, const UChar *limit,
 namespace {
 
 /**
- * nextSortKeyPart() calls CollationKeys::writeSortKeyUpToQuaternary()
+ * internalNextSortKeyPart() calls CollationKeys::writeSortKeyUpToQuaternary()
  * with an instance of this callback class.
  * When another level is about to be written, the callback
  * records the level and the number of bytes that will be written until
  * the sink (which is actually a FixedSortKeyByteSink) fills up.
  *
- * When nextSortKeyPart() is called again, it restarts with the last level
+ * When internalNextSortKeyPart() is called again, it restarts with the last level
  * and ignores as many bytes as were written previously for that level.
  */
 class PartLevelCallback : public CollationKeys::LevelCallback {
@@ -1494,8 +1494,8 @@ private:
 }  // namespace
 
 int32_t
-RuleBasedCollator::nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
-                                   uint8_t *dest, int32_t count, UErrorCode &errorCode) const {
+RuleBasedCollator::internalNextSortKeyPart(UCharIterator *iter, uint32_t state[2],
+                                           uint8_t *dest, int32_t count, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return 0; }
     if(iter == NULL || state == NULL || count < 0 || (count > 0 && dest == NULL)) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
@@ -1620,7 +1620,7 @@ RuleBasedCollator::internalGetShortDefinitionString(const char *locale,
         return 0;
     }
     if(locale == NULL) {
-        locale = getLocaleID(ULOC_VALID_LOCALE, errorCode);
+        locale = internalGetLocaleID(ULOC_VALID_LOCALE, errorCode);
     }
 
     char resultLocale[ULOC_FULLNAME_CAPACITY + 1];

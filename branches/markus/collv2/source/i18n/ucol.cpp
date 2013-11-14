@@ -222,7 +222,7 @@ ucol_nextSortKeyPart(const UCollator *coll,
                   coll, iter, state[0], state[1], dest, count);
 
     int32_t i = Collator::fromUCollator(coll)->
-            nextSortKeyPart(iter, state, dest, count, *status);
+            internalNextSortKeyPart(iter, state, dest, count, *status);
 
     // Return number of meaningful sortkey bytes.
     UTRACE_DATA4(UTRACE_VERBOSE, "dest = %vb, state=%d %d",
@@ -470,7 +470,7 @@ ucol_strcollUTF8(
         return UCOL_EQUAL;
     }
 
-    UCollationResult returnVal = Collator::fromUCollator(coll)->compareUTF8(
+    UCollationResult returnVal = Collator::fromUCollator(coll)->internalCompareUTF8(
             source, sourceLength, target, targetLength, *status);
     UTRACE_EXIT_VALUE_STATUS(returnVal, *status);
     return returnVal;
@@ -581,7 +581,7 @@ ucol_getLocaleByType(const UCollator *coll, ULocDataLocaleType type, UErrorCode 
         *status = U_UNSUPPORTED_ERROR;
         result = NULL;
     } else {
-        result = rbc->getLocaleID(type, *status);
+        result = rbc->internalGetLocaleID(type, *status);
     }
 
     UTRACE_DATA1(UTRACE_INFO, "result = %s", result);

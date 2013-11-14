@@ -1076,17 +1076,19 @@ public:
      * Implements ucol_strcollUTF8().
      * @internal
      */
-    virtual UCollationResult compareUTF8(const char *left, int32_t leftLength,
-                                         const char *right, int32_t rightLength,
-                                         UErrorCode &errorCode) const;
+    virtual UCollationResult internalCompareUTF8(
+            const char *left, int32_t leftLength,
+            const char *right, int32_t rightLength,
+            UErrorCode &errorCode) const;
 
     /**
      * Implements ucol_nextSortKeyPart().
      * @internal
      */
     virtual int32_t
-    nextSortKeyPart(UCharIterator *iter, uint32_t state[2],
-                    uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
+    internalNextSortKeyPart(
+            UCharIterator *iter, uint32_t state[2],
+            uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 
 #ifndef U_HIDE_INTERNAL_API
     /** @internal */
