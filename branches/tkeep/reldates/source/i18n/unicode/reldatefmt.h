@@ -62,7 +62,7 @@ typedef enum UDateRelativeUnit {
      * Years
      * @draft ICU 53
      */
-    UDAT_RELATIVE_YEARS, 
+    UDAT_RELATIVE_YEARS
 } UDateRelativeUnit;
 
 /**
@@ -141,7 +141,7 @@ typedef enum UDateAbsoluteUnit {
      * Now
      * @draft ICU 53
      */
-    UDAT_ABSOLUTE_NOW,
+    UDAT_ABSOLUTE_NOW
 
 } UDateAbsoluteUnit;
 
@@ -186,7 +186,7 @@ typedef enum UDateDirection {
      * Plain, which means the absence of a qualifier.
      * @draft ICU 53
      */
-    UDAT_DIRECTION_PLAIN,
+    UDAT_DIRECTION_PLAIN
 
 } UDateDirection;
 
