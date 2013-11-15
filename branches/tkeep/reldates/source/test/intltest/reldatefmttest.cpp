@@ -15,6 +15,8 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "unicode/localpointer.h"
+#include "unicode/numfmt.h"
 #include "unicode/reldatefmt.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
@@ -96,6 +98,19 @@ static WithQuantityExpected kEnglish[] = {
         {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_YEARS, "2 years ago"} 
 };
 
+static WithQuantityExpected kEnglishDecimal[] = {
+        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "in 0.0 seconds"},
+        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "in 0.5 seconds"},
+        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "in 1.0 seconds"},
+        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "in 2.0 seconds"}
+};
+
+static WithQuantityExpected kSerbian[] = {
+        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "за 0 месеци"},
+        {1.2, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "за 1,2 месеца"},
+        {21.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "за 21 месец"}
+};
+
 static WithoutQuantityExpected kEnglishNoQuantity[] = {
         {UDAT_DIRECTION_NEXT_2, UDAT_ABSOLUTE_DAY, ""},
                 
@@ -152,6 +167,11 @@ static WithoutQuantityExpected kEnglishNoQuantity[] = {
         {UDAT_DIRECTION_PLAIN, UDAT_ABSOLUTE_NOW, "now"}
 };
 
+static WithoutQuantityExpected kSpanishNoQuantity[] = {
+        {UDAT_DIRECTION_NEXT_2, UDAT_ABSOLUTE_DAY, "pasado ma\\u00F1ana"},
+        {UDAT_DIRECTION_LAST_2, UDAT_ABSOLUTE_DAY, "antes de ayer"}
+};
+
 class RelativeDateTimeFormatterTest : public IntlTest {
 public:
     RelativeDateTimeFormatterTest() {
@@ -160,7 +180,13 @@ public:
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
     void TestEnglish();
+    void TestSerbian();
     void TestEnglishNoQuantity();
+    void TestSpanishNoQuantity();
+    void TestFormatWithQuantityIllegalArgument();
+    void TestFormatWithoutQuantityIllegalArgument();
+    void TestSetNumberFormat();
+    void TestCombineDateAndTime();
     void RunTest(
             const Locale& locale,
             const WithQuantityExpected* expectedResults,
@@ -187,6 +213,14 @@ private:
             const RelativeDateTimeFormatter& fmt,
             const WithoutQuantityExpected& expectedResult,
             const char* description);
+    void VerifyIllegalArgument(
+            const RelativeDateTimeFormatter& fmt,
+            UDateDirection direction,
+            UDateRelativeUnit unit);
+    void VerifyIllegalArgument(
+            const RelativeDateTimeFormatter& fmt,
+            UDateDirection direction,
+            UDateAbsoluteUnit unit);
 };
 
 void RelativeDateTimeFormatterTest::runIndexedTest(
@@ -196,7 +230,13 @@ void RelativeDateTimeFormatterTest::runIndexedTest(
     }
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(TestEnglish);
+    TESTCASE_AUTO(TestSerbian);
     TESTCASE_AUTO(TestEnglishNoQuantity);
+    TESTCASE_AUTO(TestSpanishNoQuantity);
+    TESTCASE_AUTO(TestFormatWithQuantityIllegalArgument);
+    TESTCASE_AUTO(TestFormatWithoutQuantityIllegalArgument);
+    TESTCASE_AUTO(TestSetNumberFormat);
+    TESTCASE_AUTO(TestCombineDateAndTime);
     TESTCASE_AUTO_END;
 }
 
@@ -204,9 +244,63 @@ void RelativeDateTimeFormatterTest::TestEnglish() {
     RunTest("en", kEnglish, LENGTHOF(kEnglish));
 }
 
+void RelativeDateTimeFormatterTest::TestSerbian() {
+    RunTest("sr", kSerbian, LENGTHOF(kSerbian));
+}
+
 void RelativeDateTimeFormatterTest::TestEnglishNoQuantity() {
     RunTest("en", kEnglishNoQuantity, LENGTHOF(kEnglishNoQuantity));
 }
+
+void RelativeDateTimeFormatterTest::TestSpanishNoQuantity() {
+    RunTest("es", kSpanishNoQuantity, LENGTHOF(kSpanishNoQuantity));
+}
+
+void RelativeDateTimeFormatterTest::TestFormatWithQuantityIllegalArgument() {
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt("en", status);
+    VerifyIllegalArgument(fmt, UDAT_DIRECTION_PLAIN, UDAT_RELATIVE_DAYS);
+    VerifyIllegalArgument(fmt, UDAT_DIRECTION_THIS, UDAT_RELATIVE_DAYS);
+}
+
+void RelativeDateTimeFormatterTest::TestFormatWithoutQuantityIllegalArgument() {
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt("en", status);
+    VerifyIllegalArgument(fmt, UDAT_DIRECTION_LAST, UDAT_ABSOLUTE_NOW);
+    VerifyIllegalArgument(fmt, UDAT_DIRECTION_NEXT, UDAT_ABSOLUTE_NOW);
+    VerifyIllegalArgument(fmt, UDAT_DIRECTION_THIS, UDAT_ABSOLUTE_NOW);
+}
+
+void RelativeDateTimeFormatterTest::TestSetNumberFormat() {
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt("en", status);
+    LocalPointer<NumberFormat> numberFormat(NumberFormat::createInstance("en", status));
+    numberFormat->setMinimumFractionDigits(1);
+    numberFormat->setMaximumFractionDigits(1);
+    fmt.setNumberFormat(*numberFormat);
+
+    // Prove that we made a defensive copy.
+    numberFormat->setMinimumFractionDigits(3);
+    numberFormat->setMaximumFractionDigits(3);
+
+    RunTest(fmt, kEnglishDecimal, LENGTHOF(kEnglishDecimal), "en decimal digits");
+}
+
+void RelativeDateTimeFormatterTest::TestCombineDateAndTime() {
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt("en", status);
+    UnicodeString actual;
+    fmt.combineDateAndTime(
+        UnicodeString("yesterday"),
+        UnicodeString("3:50"),
+        actual,
+        status);
+    UnicodeString expected("yesterday, 3:50");
+    if (expected != actual) {
+        errln("Expected "+expected+", got "+actual);
+    }
+}
+    
 
 void RelativeDateTimeFormatterTest::RunTest(
         const Locale& locale,
@@ -217,7 +311,7 @@ void RelativeDateTimeFormatterTest::RunTest(
     if (U_FAILURE(status)) {
         dataerrln("Unable to create format object - %s", u_errorName(status));
         return;
-    }
+   }
     RunTest(fmt, expectedResults, expectedResultLength, locale.getName());
 }
 
@@ -298,6 +392,30 @@ void RelativeDateTimeFormatterTest::CheckExpectedResult(
         errln(UnicodeString("Fail: Expected: ") + expected
                 + ", Got: " + actual
                 + ", For: " + buffer);
+    }
+}
+
+void RelativeDateTimeFormatterTest::VerifyIllegalArgument(
+        const RelativeDateTimeFormatter& fmt,
+        UDateDirection direction,
+        UDateRelativeUnit unit) {
+    UnicodeString appendTo;
+    UErrorCode status = U_ZERO_ERROR;
+    fmt.format(1.0, direction, unit, appendTo, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
+    }
+}
+
+void RelativeDateTimeFormatterTest::VerifyIllegalArgument(
+        const RelativeDateTimeFormatter& fmt,
+        UDateDirection direction,
+        UDateAbsoluteUnit unit) {
+    UnicodeString appendTo;
+    UErrorCode status = U_ZERO_ERROR;
+    fmt.format(direction, unit, appendTo, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected U_ILLEGAL_ARGUMENT_ERROR, got %s", u_errorName(status));
     }
 }
 
