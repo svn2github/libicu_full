@@ -52,17 +52,6 @@
 // Set to 1 to test offsets in backAndForth()
 #define TEST_OFFSETS 0
 
-#define TESTCLASS(n,classname)        \
-    case n:                           \
-        name = #classname;            \
-        if (exec) {                   \
-            logln(#classname "---");  \
-            logln("");                \
-            classname t;              \
-            callTest(t, par);         \
-        }                             \
-        break
-
 extern IntlTest *createCollationTest();
 
 void IntlTestCollator::runIndexedTest( int32_t index, UBool exec, const char* &name, char* par )
@@ -71,46 +60,33 @@ void IntlTestCollator::runIndexedTest( int32_t index, UBool exec, const char* &n
         logln("TestSuite Collator: ");
     }
 
-    switch (index) {
-      TESTCLASS(0, CollationEnglishTest);
-      TESTCLASS(1, CollationFrenchTest);
-      TESTCLASS(2, CollationGermanTest);
-      TESTCLASS(3, CollationSpanishTest);
-      TESTCLASS(4, CollationKanaTest);
-      TESTCLASS(5, CollationTurkishTest);
-      TESTCLASS(6, CollationDummyTest);
-      TESTCLASS(7, G7CollationTest);
-      TESTCLASS(8, CollationMonkeyTest);
-      TESTCLASS(9, CollationAPITest);
-      TESTCLASS(10, CollationRegressionTest);
-      TESTCLASS(11, CollationCurrencyTest);
-      TESTCLASS(12, CollationIteratorTest);
-      TESTCLASS(13, CollationThaiTest);
-      TESTCLASS(14, LotusCollationKoreanTest);
-      TESTCLASS(15, StringSearchTest);
-      TESTCLASS(16, CollationGermanTest);  // TODO: remove this dummy duplicate
-      TESTCLASS(17, CollationGermanTest);  // TODO: remove this dummy duplicate
-      // TODO: TESTCASE_AUTO_SUITE() otherwise skipped tests cause following ones to be skipped too
-      TESTCLASS(18, UCAConformanceTest);
-      TESTCLASS(19, CollationServiceTest);
-      TESTCLASS(20, CollationFinnishTest); // removed by weiv - we have changed Finnish collation
-      //TESTCLASS(21, RandomCollatorTest); // See ticket 5747 about reenabling this test.
-      TESTCLASS(21, SSearchTest);
-#if !UCONFIG_NO_COLLATION && !UCONFIG_NO_NORMALIZATION
-      TESTCLASS(22, AlphabeticIndexTest);
+    TESTCASE_AUTO_BEGIN;
+    TESTCASE_AUTO_CLASS(CollationEnglishTest);
+    TESTCASE_AUTO_CLASS(CollationFrenchTest);
+    TESTCASE_AUTO_CLASS(CollationGermanTest);
+    TESTCASE_AUTO_CLASS(CollationSpanishTest);
+    TESTCASE_AUTO_CLASS(CollationKanaTest);
+    TESTCASE_AUTO_CLASS(CollationTurkishTest);
+    TESTCASE_AUTO_CLASS(CollationDummyTest);
+    TESTCASE_AUTO_CLASS(G7CollationTest);
+    TESTCASE_AUTO_CLASS(CollationMonkeyTest);
+    TESTCASE_AUTO_CLASS(CollationAPITest);
+    TESTCASE_AUTO_CLASS(CollationRegressionTest);
+    TESTCASE_AUTO_CLASS(CollationCurrencyTest);
+    TESTCASE_AUTO_CLASS(CollationIteratorTest);
+    TESTCASE_AUTO_CLASS(CollationThaiTest);
+    TESTCASE_AUTO_CLASS(LotusCollationKoreanTest);
+    TESTCASE_AUTO_CLASS(StringSearchTest);
+    TESTCASE_AUTO_CLASS(UCAConformanceTest);
+    TESTCASE_AUTO_CLASS(CollationServiceTest);
+    TESTCASE_AUTO_CLASS(CollationFinnishTest); // removed by weiv - we have changed Finnish collation
+      //TESTCASE_AUTO_CLASS(RandomCollatorTest); // See ticket 5747 about reenabling this test.
+    TESTCASE_AUTO_CLASS(SSearchTest);
+#if !UCONFIG_NO_NORMALIZATION
+    TESTCASE_AUTO_CLASS(AlphabeticIndexTest);
 #endif
-      case 23:
-          name = "CollationTest";
-          if (exec) {
-              logln("CollationTest ---");
-              logln();
-              LocalPointer<IntlTest> test(createCollationTest());
-              callTest(*test, par);
-          }
-          break;
-
-      default: name = ""; break;
-    }
+    TESTCASE_AUTO_CREATE_CLASS(CollationTest);
+    TESTCASE_AUTO_END;
 }
 
 UCollationResult 
@@ -152,7 +128,7 @@ IntlTestCollator::doTestVariant(Collator* col, const UnicodeString &source, cons
 {   
   UErrorCode status = U_ZERO_ERROR;
 
-  UCollator *myCollation = col->toUCollator();  // TODO: why not use col itself here?
+  UCollator *myCollation = col->toUCollator();
 
   Collator::EComparisonResult compareResult = col->compare(source, target);
 

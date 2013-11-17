@@ -28,6 +28,7 @@
 #include "callcoll.h"
 #include "unicode/ustring.h"
 #include "string.h"
+#include "ucol_imp.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "uassert.h"
@@ -1449,9 +1450,6 @@ static void RamsRulesTest(void) {
             coll = ucol_open(locName, &status);
             if(U_SUCCESS(status)) {
               if((status != U_USING_DEFAULT_WARNING) && (status != U_USING_FALLBACK_WARNING)) {
-                /* TODO: needed??  if(coll->image->jamoSpecial == TRUE) {
-                  log_err("%s has special JAMOs\n", locName);
-                } */
                 ucol_setAttribute(coll, UCOL_CASE_FIRST, UCOL_OFF, &status);
                 testCollator(coll, &status);
                 testCEs(coll, &status);
@@ -2523,28 +2521,32 @@ static void TestHangulTailoring(void) {
     log_err("Unable to open collator with rules %s\n", rules);
   }
 
-#if 0  /* TODO: review -- useful? do we need to somehow make this work with the new implementation? */
-  log_verbose("Setting jamoSpecial to TRUE and testing once more\n");
-  ((UCATableHeader *)coll->image)->jamoSpecial = TRUE; /* don't try this at home  */
-  genericOrderingTest(coll, koreanData, sizeof(koreanData)/sizeof(koreanData[0]));
-#endif
-
   ucol_close(coll);
 
   log_verbose("Using ko__LOTUS locale\n");
   genericLocaleStarter("ko__LOTUS", koreanData, sizeof(koreanData)/sizeof(koreanData[0]));
 }
 
+/*
+ * The secondary/tertiary compression middle byte
+ * as used by the current implementation.
+ * Subject to change as the sort key compression changes.
+ * See class CollationKeys.
+ */
+enum {
+    SEC_COMMON_MIDDLE = 0x25,  /* range 05..45 */
+    TER_ONLY_COMMON_MIDDLE = 0x65  /* range 05..C5 */
+};
+
 static void TestCompressOverlap(void) {
-#if 0  /* TODO: review: we might test for short sort keys but we should not test for exact byte values since they are implementation-dependent; note: the primary/case/quaternary levels also use compression */
     UChar       secstr[150];
     UChar       tertstr[150];
     UErrorCode  status = U_ZERO_ERROR;
     UCollator  *coll;
-    char        result[200];
+    uint8_t     result[500];
     uint32_t    resultlen;
     int         count = 0;
-    char       *tempptr;
+    uint8_t    *tempptr;
 
     coll = ucol_open("", &status);
 
@@ -2564,29 +2566,29 @@ static void TestCompressOverlap(void) {
 
     /* no compression secstr should have 150 secondary bytes, tertstr should
     have 150 tertiary bytes.
-    with correct overlapping compression, secstr should have 4 secondary
-    bytes, tertstr should have > 2 tertiary bytes */
-    resultlen = ucol_getSortKey(coll, secstr, 150, (uint8_t *)result, 250);
+    with correct compression, secstr should have 6 secondary
+    bytes (149/33 rounded up + accent), tertstr should have > 2 tertiary bytes */
+    resultlen = ucol_getSortKey(coll, secstr, 150, result, LEN(result));
     (void)resultlen;    /* Suppress set but not used warning. */
-    tempptr = uprv_strchr(result, 1) + 1;
+    tempptr = (uint8_t *)uprv_strchr((char *)result, 1) + 1;
     while (*(tempptr + 1) != 1) {
         /* the last secondary collation element is not checked since it is not
         part of the compression */
-        if (*tempptr < UCOL_COMMON_TOP2 - UCOL_TOP_COUNT2) {
-            log_err("Secondary compression overlapped\n");
+        if (*tempptr < SEC_COMMON_MIDDLE) {
+            log_err("Secondary top down compression overlapped\n");
         }
         tempptr ++;
     }
 
     /* tertiary top/bottom/common for en_US is similar to the secondary
     top/bottom/common */
-    resultlen = ucol_getSortKey(coll, tertstr, 150, (uint8_t *)result, 250);
-    tempptr = uprv_strrchr(result, 1) + 1;
+    resultlen = ucol_getSortKey(coll, tertstr, 150, result, LEN(result));
+    tempptr = (uint8_t *)uprv_strrchr((char *)result, 1) + 1;
     while (*(tempptr + 1) != 0) {
         /* the last secondary collation element is not checked since it is not
         part of the compression */
-        if (*tempptr < coll->tertiaryTop - coll->tertiaryTopCount) {
-            log_err("Tertiary compression overlapped\n");
+        if (*tempptr < TER_ONLY_COMMON_MIDDLE) {
+            log_err("Tertiary top down compression overlapped\n");
         }
         tempptr ++;
     }
@@ -2594,32 +2596,31 @@ static void TestCompressOverlap(void) {
     /* bottom up compression ------------------------------------- */
     secstr[count] = 0;
     tertstr[count] = 0;
-    resultlen = ucol_getSortKey(coll, secstr, 150, (uint8_t *)result, 250);
-    tempptr = uprv_strchr(result, 1) + 1;
+    resultlen = ucol_getSortKey(coll, secstr, 150, result, LEN(result));
+    tempptr = (uint8_t *)uprv_strchr((char *)result, 1) + 1;
     while (*(tempptr + 1) != 1) {
         /* the last secondary collation element is not checked since it is not
         part of the compression */
-        if (*tempptr > UCOL_COMMON_BOT2 + UCOL_BOT_COUNT2) {
-            log_err("Secondary compression overlapped\n");
+        if (*tempptr > SEC_COMMON_MIDDLE) {
+            log_err("Secondary bottom up compression overlapped\n");
         }
         tempptr ++;
     }
 
     /* tertiary top/bottom/common for en_US is similar to the secondary
     top/bottom/common */
-    resultlen = ucol_getSortKey(coll, tertstr, 150, (uint8_t *)result, 250);
-    tempptr = uprv_strrchr(result, 1) + 1;
+    resultlen = ucol_getSortKey(coll, tertstr, 150, result, LEN(result));
+    tempptr = (uint8_t *)uprv_strrchr((char *)result, 1) + 1;
     while (*(tempptr + 1) != 0) {
         /* the last secondary collation element is not checked since it is not
         part of the compression */
-        if (*tempptr > coll->tertiaryBottom + coll->tertiaryBottomCount) {
-            log_err("Tertiary compression overlapped\n");
+        if (*tempptr > TER_ONLY_COMMON_MIDDLE) {
+            log_err("Tertiary bottom up compression overlapped\n");
         }
         tempptr ++;
     }
 
     ucol_close(coll);
-#endif
 }
 
 static void TestCyrillicTailoring(void) {
@@ -4072,7 +4073,6 @@ static void TestSettings(void) {
   }
 }
 
-#if 0  /* TODO: see if C++ operator==() is tested properly; ticket #10476 */
 static int32_t TestEqualsForCollator(const char* locName, UCollator *source, UCollator *target) {
     UErrorCode status = U_ZERO_ERROR;
     int32_t errorNo = 0;
@@ -4211,7 +4211,6 @@ static void TestEquals(void) {
         /*}*/
     }
 }
-#endif
 
 static void TestJ2726(void) {
     UChar a[2] = { 0x61, 0x00 }; /*"a"*/
@@ -4403,87 +4402,6 @@ static void TestTibetanConformance(void)
 static void TestPinyinProblem(void) {
     static const char *test[] = { "\\u4E56\\u4E56\\u7761", "\\u4E56\\u5B69\\u5B50" };
     genericLocaleStarter("zh__PINYIN", test, sizeof(test)/sizeof(test[0]));
-}
-
-#if 0  /* TODO: do not test implementation details of implicit CEs; can we delete this in favor of CollationTest::TestImplicits()? */
-#define TST_UCOL_MAX_INPUT 0x220001
-#define topByte 0xFF000000;
-#define bottomByte 0xFF;
-#define fourBytes 0xFFFFFFFF;
-
-
-static void showImplicit(UChar32 i) {
-    if (i >= 0 && i <= TST_UCOL_MAX_INPUT) {
-        log_verbose("%08X\t%08X\n", i, uprv_uca_getImplicitFromRaw(i));
-    }
-}
-#endif
-
-static void TestImplicitGeneration(void) {
-#if 0
-    UErrorCode status = U_ZERO_ERROR;
-    UChar32 last = 0;
-    UChar32 current;
-    UChar32 i = 0, j = 0;
-    UChar32 roundtrip = 0;
-    UChar32 lastBottom = 0;
-    UChar32 currentBottom = 0;
-    UChar32 lastTop = 0;
-    UChar32 currentTop = 0;
-
-    UCollator *coll = ucol_open("root", &status);
-    if(U_FAILURE(status)) {
-        log_err_status(status, "Couldn't open UCA -> %s\n", u_errorName(status));
-        return;
-    }
-
-    uprv_uca_getRawFromImplicit(0xE20303E7);
-
-    for (i = 0; i <= TST_UCOL_MAX_INPUT; ++i) {
-        current = uprv_uca_getImplicitFromRaw(i) & fourBytes;
-
-        /* check that it round-trips AND that all intervening ones are illegal*/
-        roundtrip = uprv_uca_getRawFromImplicit(current);
-        if (roundtrip != i) {
-            log_err("No roundtrip %08X\n", i);
-        }
-        if (last != 0) {
-            for (j = last + 1; j < current; ++j) {
-                roundtrip = uprv_uca_getRawFromImplicit(j);
-                /* raise an error if it *doesn't* find an error*/
-                if (roundtrip != -1) {
-                    log_err("Fails to recognize illegal %08X\n", j);
-                }
-            }
-        }
-        /* now do other consistency checks*/
-        lastBottom = last & bottomByte;
-        currentBottom = current & bottomByte;
-        lastTop = last & topByte;
-        currentTop = current & topByte;
-        (void)lastBottom;     /* Suppress set but not used warnings. */
-        (void)currentBottom;
-
-        /* print out some values for spot-checking*/
-        if (lastTop != currentTop || i == 0x10000 || i == 0x110000) {
-            showImplicit(i-3);
-            showImplicit(i-2);
-            showImplicit(i-1);
-            showImplicit(i);
-            showImplicit(i+1);
-            showImplicit(i+2);
-        }
-        last = current;
-
-        if(uprv_uca_getCodePointFromRaw(uprv_uca_getRawFromCodePoint(i)) != i) {
-            log_err("No raw <-> code point roundtrip for 0x%08X\n", i);
-        }
-    }
-    showImplicit(TST_UCOL_MAX_INPUT-2);
-    showImplicit(TST_UCOL_MAX_INPUT-1);
-    showImplicit(TST_UCOL_MAX_INPUT);
-    ucol_close(coll);
-#endif
 }
 
 /**
@@ -7199,12 +7117,12 @@ void addMiscCollTest(TestNode** root)
     TEST(TestHebrewUCA);
     TEST(TestPartialSortKeyTermination);
     TEST(TestSettings);
+    TEST(TestEquals);
     TEST(TestJ2726);
     TEST(NullRule);
     TEST(TestNumericCollation);
     TEST(TestTibetanConformance);
     TEST(TestPinyinProblem);
-    TEST(TestImplicitGeneration);
     TEST(TestSeparateTrees);
     TEST(TestBeforePinyin);
     TEST(TestBeforeTightening);

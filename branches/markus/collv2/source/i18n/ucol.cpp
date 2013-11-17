@@ -602,4 +602,10 @@ ucol_getTailoredSet(const UCollator *coll, UErrorCode *status) {
     return set->toUSet();
 }
 
+U_CAPI UBool U_EXPORT2
+ucol_equals(const UCollator *source, const UCollator *target) {
+    return source == target ||
+        (*Collator::fromUCollator(source)) == (*Collator::fromUCollator(target));
+}
+
 #endif /* #if !UCONFIG_NO_COLLATION */

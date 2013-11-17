@@ -30,6 +30,19 @@
 
 #if !UCONFIG_NO_COLLATION
 
+#include "unicode/ucol.h"
+
+/** Check whether two collators are equal. Collators are considered equal if they
+ *  will sort strings the same. This means that both the current attributes and the
+ *  rules must be equivalent.
+ *  @param source first collator
+ *  @param target second collator
+ *  @return TRUE or FALSE
+ *  @internal ICU 3.0
+ */
+U_INTERNAL UBool U_EXPORT2
+ucol_equals(const UCollator *source, const UCollator *target);
+
 /**
  * Convenience string denoting the Collation data tree
  */

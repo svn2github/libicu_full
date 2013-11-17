@@ -117,6 +117,30 @@ UnicodeString toString(UBool b);
             break; \
         }
 
+#define TESTCASE_AUTO_CLASS(TestClass) \
+        if (index == testCaseAutoNumber++) { \
+            name = #TestClass; \
+            if (exec) { \
+                logln(#TestClass "---"); \
+                logln(); \
+                TestClass test; \
+                callTest(test, par); \
+            } \
+            break; \
+        }
+
+#define TESTCASE_AUTO_CREATE_CLASS(TestClass) \
+        if (index == testCaseAutoNumber++) { \
+            name = #TestClass; \
+            if (exec) { \
+                logln(#TestClass "---"); \
+                logln(); \
+                LocalPointer<IntlTest> test(create##TestClass()); \
+                callTest(*test, par); \
+            } \
+            break; \
+        }
+
 #define TESTCASE_AUTO_END \
         name = ""; \
         break; \

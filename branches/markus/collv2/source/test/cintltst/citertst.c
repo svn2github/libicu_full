@@ -1260,7 +1260,7 @@ static FileStream * getFractionalUCA(void)
 * Testing the CEs returned by the iterator
 */
 static void TestCEs() {
-#if 0  /* What is the point of this test and duplicating the FractionalUCA.txt parser? Remove?! */
+#if 0  /* TODO: What is the point of this test and duplicating the FractionalUCA.txt parser? Remove?! */
     FileStream *file = NULL;
     char        line[2048];
     char       *str;
