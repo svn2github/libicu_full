@@ -14,6 +14,8 @@
 
 #include "unicode/utypes.h"
 #include "unicode/locid.h"
+#include "sharedptr.h"
+
 
 /**
  * Represents the unit for formatting a relative date. e.g "in 5 days"
@@ -62,7 +64,13 @@ typedef enum UDateRelativeUnit {
      * Years
      * @draft ICU 53
      */
-    UDAT_RELATIVE_YEARS
+    UDAT_RELATIVE_YEARS,
+
+    /**
+     * Count of items in this enum.
+     * @draft ICU 53
+     */
+    UDAT_RELATIVE_COUNT
 } UDateRelativeUnit;
 
 /**
@@ -141,8 +149,13 @@ typedef enum UDateAbsoluteUnit {
      * Now
      * @draft ICU 53
      */
-    UDAT_ABSOLUTE_NOW
+    UDAT_ABSOLUTE_NOW,
 
+    /**
+     * Count of items in this enum.
+     * @draft ICU 53
+     */
+    UDAT_ABSOLUTE_COUNT
 } UDateAbsoluteUnit;
 
 /**
@@ -186,13 +199,19 @@ typedef enum UDateDirection {
      * Plain, which means the absence of a qualifier.
      * @draft ICU 53
      */
-    UDAT_DIRECTION_PLAIN
+    UDAT_DIRECTION_PLAIN,
 
+    /**
+     * Count of items in this enum.
+     * @draft ICU 53
+     */
+    UDAT_DIRECTION_COUNT
 } UDateDirection;
 
 
 U_NAMESPACE_BEGIN 
 
+class RelativeDateTimeData;
 class NumberFormat;
 
 /**
@@ -293,7 +312,6 @@ public:
      */
     virtual ~RelativeDateTimeFormatter();
 
-
     /**
      * Formats a relative date with a quantity such as "in 5 days" or
      * "3 months ago"
@@ -352,6 +370,7 @@ public:
     void setNumberFormat(const NumberFormat& nf);
 private:
     RelativeDateTimeFormatter();
+    SharedPtr<icu::RelativeDateTimeData> ptr;
 };
 
 U_NAMESPACE_END
