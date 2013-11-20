@@ -7,10 +7,18 @@
 
 U_NAMESPACE_BEGIN
 
+// TODO(tkeep): Make resilient to out of memory. In order to do this, the
+// u_atomic_int32_t will have to be wrapped in a UMemory.
 template<typename T>
 class SharedPtr : public UMemory {
 public:
-    explicit SharedPtr(T *p=NULL) : ptr(p), refPtr(NULL) {
+    /**
+     * Constructor. If there is a memory allocation error creating
+     * reference counter then this object will contain NULL. Note that
+     * when passing NULL or no argument to constructor, no memory allocation
+     * error can happen as NULL pointers are never reference counted.
+     */
+    explicit SharedPtr(T *adopted=NULL) : ptr(adopted), refPtr(NULL) {
         if (ptr != NULL) {
             refPtr = new u_atomic_int32_t;
             umtx_storeRelease(*refPtr, 1);
@@ -52,15 +60,27 @@ public:
     ~SharedPtr() {
         if (refPtr != NULL) {
             if (umtx_atomic_dec(refPtr) == 0) {
-                delete ptr;
+                // Cast to UObject to avoid compiler warnings about incomplete
+                // type T.
+                delete (UObject *) ptr;
                 delete refPtr;
             }
         }
     }
 
-    void adoptInstead(T *p) {
-        SharedPtr<T> newValue(p);
+    /**
+     * adoptInstead adopts a new pointer. On success, returns TRUE.
+     * On memory allocation error creating reference counter for adopted
+     * pointer, returns FALSE while leaving this object unchanged.
+     */
+    bool adoptInstead(T *adopted) {
+        SharedPtr<T> newValue(adopted);
+        if (adopted != NULL && newValue.ptr == NULL) {
+            // We couldn't allocate ref counter.
+            return FALSE;
+        }
         swap(newValue);
+        return TRUE;
     }
 
     void clear() {
@@ -103,6 +123,13 @@ public:
         return ptr;
     }
 
+    /**
+     * readWrite returns a writable pointer while copying the data first if
+     * more than one reference to it is held. On success, returns a non NULL
+     * writable pointer with this object referencing the copied data if the
+     * data was copied. On memory allocation error or if this object contains
+     * NULL it returns NULL leaving this object unchanged.
+     */
     T *readWrite() {
         if (refPtr == NULL) {
             return NULL;
@@ -111,7 +138,13 @@ public:
             return ptr;
         }
         T *result = (T *) ptr->clone();
-        adoptInstead(result);
+        if (result == NULL) {
+            // Memory allocation error
+            return NULL;
+        }
+        if (!adoptInstead(result)) {
+            return NULL;
+        }
         return ptr;
     }
 private:

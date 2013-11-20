@@ -73,7 +73,10 @@ UBool CacheEntry2::init(const char *locId, UObject *dataToAdopt, UErrorCode err)
         return FALSE;
     }
     uprv_strcpy(localeId, locId);
-    cachedData.adoptInstead(dataToAdopt);
+    if (!cachedData.adoptInstead(dataToAdopt)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return TRUE;
+    }
     status = err;
     return TRUE;
 }
