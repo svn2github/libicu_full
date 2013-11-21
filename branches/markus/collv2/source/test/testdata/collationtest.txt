@@ -1822,3 +1822,159 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 # TODO: test offsets in new CollationTest
 
 # End of test cases moved here from ICU 52's DataDrivenCollationTest.txt.
+
+** test: was ICU 52 cmsccoll/TestRedundantRules
+@ rules
+& a < b < c < d& [before 1] c < m
+* compare
+<1 a
+<1 b
+<1 m
+<1 c
+<1 d
+
+@ rules
+& a < b <<< c << d <<< e& [before 3] e <<< x
+* compare
+<1 a
+<1 b
+<3 c
+<2 d
+<3 x
+<3 e
+
+@ rules
+& a < b <<< c << d <<< e <<< f < g& [before 1] g < x
+* compare
+<1 a
+<1 b
+<3 c
+<2 d
+<3 e
+<3 f
+<1 x
+<1 g
+
+@ rules
+& a <<< b << c < d& a < m
+* compare
+<1 a
+<3 b
+<2 c
+<1 m
+<1 d
+
+@ rules
+&a<b<<b\u0301 &z<b
+* compare
+<1 a
+<1 b\u0301
+<1 z
+<1 b
+
+@ rules
+&z<m<<<q<<<m
+* compare
+<1 z
+<1 q
+<3 m
+
+@ rules
+&z<<<m<q<<<m
+* compare
+<1 z
+<1 q
+<3 m
+
+@ rules
+& a < b < c < d& r < c
+* compare
+<1 a
+<1 b
+<1 d
+<1 r
+<1 c
+
+@ rules
+& a < b < c < d& c < m
+* compare
+<1 a
+<1 b
+<1 c
+<1 m
+<1 d
+
+@ rules
+& a < b < c < d& a < m
+* compare
+<1 a
+<1 m
+<1 b
+<1 c
+<1 d
+
+** test: was ICU 52 cmsccoll/TestExpansionSyntax
+# The following two rules should sort the particular list of strings the same.
+@ rules
+&AE <<< a << b <<< c &d <<< f
+* compare
+<1 AE
+<3 a
+<2 b
+<3 c
+<1 d
+<3 f
+
+@ rules
+&A <<< a / E << b / E <<< c /E  &d <<< f
+* compare
+<1 AE
+<3 a
+<2 b
+<3 c
+<1 d
+<3 f
+
+# The following two rules should sort the particular list of strings the same.
+@ rules
+&AE <<< a <<< b << c << d < e < f <<< g
+* compare
+<1 AE
+<3 a
+<3 b
+<2 c
+<2 d
+<1 e
+<1 f
+<3 g
+
+@ rules
+&A <<< a / E <<< b / E << c / E << d / E < e < f <<< g
+* compare
+<1 AE
+<3 a
+<3 b
+<2 c
+<2 d
+<1 e
+<1 f
+<3 g
+
+# The following two rules should sort the particular list of strings the same.
+@ rules
+&AE <<< B <<< C / D <<< F
+* compare
+<1 AE
+<3 B
+<3 F
+<1 AED
+<3 C
+
+@ rules
+&A <<< B / E <<< C / ED <<< F / E
+* compare
+<1 AE
+<3 B
+<3 F
+<1 AED
+<3 C
