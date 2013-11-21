@@ -10,7 +10,7 @@
 */
 #include "cstring.h"
 #include "intltest.h"
-#include "unicode/lrucache.h"
+#include "lrucache.h"
 #include "umutex.h"
 
 static UMutex gMutex = U_MUTEX_INITIALIZER;

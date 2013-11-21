@@ -15,7 +15,7 @@
 #include "unicode/msgfmt.h"
 #include "unicode/decimfmt.h"
 #include "unicode/numfmt.h"
-#include "unicode/lrucache.h"
+#include "lrucache.h"
 #include "uresimp.h"
 #include "unicode/ures.h"
 #include "cstring.h"

@@ -8,7 +8,7 @@
 *******************************************************************************
 */
 
-#include "unicode/lrucache.h"
+#include "lrucache.h"
 #include "mutex.h"
 #include "uhash.h"
 #include "cstring.h"
