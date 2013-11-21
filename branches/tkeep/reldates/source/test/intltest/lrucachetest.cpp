@@ -1,3 +1,13 @@
+/*
+*******************************************************************************
+* Copyright (C) 2013, International Business Machines Corporation and         *
+* others. All Rights Reserved.                                                *
+*******************************************************************************
+*
+* File LRUCACHETEST.CPP
+*
+********************************************************************************
+*/
 #include "cstring.h"
 #include "intltest.h"
 #include "unicode/lrucache.h"

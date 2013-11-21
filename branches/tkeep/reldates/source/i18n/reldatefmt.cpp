@@ -1,3 +1,13 @@
+/*
+*******************************************************************************
+* Copyright (C) 2013, International Business Machines Corporation and         
+* others. All Rights Reserved.                                                
+*******************************************************************************
+*                                                                             
+* File RELDATEFMT.CPP                                                             
+*******************************************************************************
+*/
+
 #include "unicode/reldatefmt.h"
 
 #include "unicode/localpointer.h"

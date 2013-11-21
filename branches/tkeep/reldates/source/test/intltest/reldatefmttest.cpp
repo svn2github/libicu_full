@@ -1,12 +1,12 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines Corporation and    *
+* Copyright (C) 2013, International Business Machines Corporation and         *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
 * File RELDATEFMTTEST.CPP
 *
-********************************************************************************
+*******************************************************************************
 */
 #include <stdio.h>
 #include <stdlib.h>
