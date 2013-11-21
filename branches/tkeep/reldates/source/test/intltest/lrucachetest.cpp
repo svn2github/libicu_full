@@ -68,6 +68,7 @@ public:
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
     void TestSharedPointer();
+    void TestErrorCallingConstructor();
     void TestLRUCache();
     void TestLRUCacheError();
     void verifySharedPointer(
@@ -85,6 +86,7 @@ private:
 void LRUCacheTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* /*par*/) {
   TESTCASE_AUTO_BEGIN;
   TESTCASE_AUTO(TestSharedPointer);
+  TESTCASE_AUTO(TestErrorCallingConstructor);
   TESTCASE_AUTO(TestLRUCache);
   TESTCASE_AUTO(TestLRUCacheError);
   TESTCASE_AUTO_END;
@@ -115,6 +117,11 @@ void LRUCacheTest::TestSharedPointer() {
     verifySharedPointer(ptr, "boo", "little");
     verifySharedPointer(ptrCopy, "hi there", "see you");
 }
+
+void LRUCacheTest::TestErrorCallingConstructor() {
+    UErrorCode status = U_MEMORY_ALLOCATION_ERROR;
+    LRUCacheForTesting cache(3, &gMutex, "little", status);
+} 
 
 void LRUCacheTest::TestLRUCache() {
     UErrorCode status = U_ZERO_ERROR;

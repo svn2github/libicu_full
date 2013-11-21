@@ -173,10 +173,20 @@ void LRUCache::_get(const char *localeId, SharedPtr<UObject>& ptr, UErrorCode &s
 }
 
 LRUCache::LRUCache(int32_t size, UMutex *mtx, UErrorCode &status) :
-        maxSize(size), mutex(mtx) {
+        mostRecentlyUsedMarker(NULL),
+        leastRecentlyUsedMarker(NULL),
+        localeIdToEntries(NULL),
+        maxSize(size),
+        mutex(mtx) {
+    if (U_FAILURE(status)) {
+        return;
+    }
     mostRecentlyUsedMarker = new CacheEntry2;
     leastRecentlyUsedMarker = new CacheEntry2;
     if (mostRecentlyUsedMarker == NULL || leastRecentlyUsedMarker == NULL) {
+        delete mostRecentlyUsedMarker;
+        delete leastRecentlyUsedMarker;
+        mostRecentlyUsedMarker = leastRecentlyUsedMarker = NULL;
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }

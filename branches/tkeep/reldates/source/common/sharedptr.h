@@ -14,9 +14,10 @@ class SharedPtr : public UMemory {
 public:
     /**
      * Constructor. If there is a memory allocation error creating
-     * reference counter then this object will contain NULL. Note that
-     * when passing NULL or no argument to constructor, no memory allocation
-     * error can happen as NULL pointers are never reference counted.
+     * reference counter then this object will contain NULL, and adopted
+     * pointer will be freed. Note that when passing NULL or no argument to
+     * constructor, no memory allocation error can happen as NULL pointers
+     * are never reference counted.
      */
     explicit SharedPtr(T *adopted=NULL) : ptr(adopted), refPtr(NULL) {
         if (ptr != NULL) {
