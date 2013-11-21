@@ -79,6 +79,8 @@ typedef enum UDateRelativeUnit {
  */
 typedef enum UDateAbsoluteUnit {
 
+    // Days of week have to remain together and in order from Sunday to
+    // Saturday.
     /**
      * Sunday
      * @draft ICU 53

@@ -3,8 +3,13 @@
 #include "unicode/localpointer.h"
 #include "unicode/plurrule.h"
 #include "unicode/msgfmt.h"
+#include "unicode/decimfmt.h"
 #include "unicode/numfmt.h"
 #include "unicode/lrucache.h"
+#include "uresimp.h"
+#include "unicode/ures.h"
+#include "cstring.h"
+#include "plurrule_impl.h"
 
 #include "sharedptr.h"
 
@@ -12,8 +17,13 @@ U_NAMESPACE_BEGIN
 
 #define MAX_PLURAL_FORMS 6
 
+// other must always be firxt.
+static const char * const gPluralForms[] = {
+        "other", "zero", "one", "two", "few", "many", NULL};
+
 class QualitativeUnits : public UObject {
 public:
+    QualitativeUnits() { }
     UnicodeString data[UDAT_ABSOLUTE_COUNT][UDAT_DIRECTION_COUNT];
     virtual ~QualitativeUnits() {
     }
@@ -24,6 +34,7 @@ private:
 
 class QuantitativeUnits : public UObject {
 public:
+    QuantitativeUnits() { }
     UnicodeString data[UDAT_RELATIVE_COUNT][2][MAX_PLURAL_FORMS];
     virtual ~QuantitativeUnits() {
     }
@@ -64,11 +75,423 @@ static LRUCache *gCache = NULL;
 static UMutex gCacheMutex = U_MUTEX_INITIALIZER;
 static UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
 
+static void getStringWithFallback(
+        const UResourceBundle *resource, 
+        const char *key,
+        UnicodeString &value,
+        UErrorCode &status) {
+    int32_t len = 0;
+    const UChar *resStr = ures_getStringByKeyWithFallback(
+        resource, key, &len, &status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    value.setTo(TRUE, resStr, len);
+}
+
+static void getOptionalStringWithFallback(
+        const UResourceBundle *resource, 
+        const char *key,
+        UnicodeString &value,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    int32_t len = 0;
+    const UChar *resStr = ures_getStringByKey(
+        resource, key, &len, &status);
+    if (status == U_MISSING_RESOURCE_ERROR) {
+        value.remove();
+        status = U_ZERO_ERROR;
+        return;
+    }
+    if (U_FAILURE(status)) {
+        return;
+    }
+    value.setTo(TRUE, resStr, len);
+}
+
+static void getString(
+        const UResourceBundle *resource, 
+        UnicodeString &value,
+        UErrorCode &status) {
+    int32_t len = 0;
+    const UChar *resStr = ures_getString(resource, &len, &status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    value.setTo(TRUE, resStr, len);
+}
+
+static void getStringByIndex(
+        const UResourceBundle *resource, 
+        int32_t idx,
+        UnicodeString &value,
+        UErrorCode &status) {
+    int32_t len = 0;
+    const UChar *resStr = ures_getStringByIndex(
+            resource, idx, &len, &status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    value.setTo(TRUE, resStr, len);
+}
+
+static void addQualitativeUnit(
+            const UResourceBundle *resource,
+            UDateAbsoluteUnit absoluteUnit,
+            const UnicodeString &unitName,
+            QualitativeUnits &qualitativeUnits,
+            UErrorCode &status) {
+    getStringWithFallback(
+            resource, 
+            "-1",
+            qualitativeUnits.data[absoluteUnit][UDAT_DIRECTION_LAST],
+            status);
+    getStringWithFallback(
+            resource, 
+            "0",
+            qualitativeUnits.data[absoluteUnit][UDAT_DIRECTION_THIS],
+            status);
+    getStringWithFallback(
+            resource, 
+            "1",
+            qualitativeUnits.data[absoluteUnit][UDAT_DIRECTION_NEXT],
+            status);
+    getOptionalStringWithFallback(
+            resource,
+            "-2",
+            qualitativeUnits.data[absoluteUnit][UDAT_DIRECTION_LAST_2],
+            status);
+    getOptionalStringWithFallback(
+            resource,
+            "2",
+            qualitativeUnits.data[absoluteUnit][UDAT_DIRECTION_NEXT_2],
+            status);
+    qualitativeUnits.data[absoluteUnit][UDAT_DIRECTION_PLAIN] = unitName;
+}
+
+static int32_t getPluralIndex(const char *pluralForm) {
+    for (int32_t i = 0; gPluralForms[i] != NULL; ++i) {
+        if (uprv_strcmp(pluralForm, gPluralForms[i]) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static void addTimeUnit(
+        const UResourceBundle *resource,
+        UDateRelativeUnit relativeUnit,
+        int32_t pastOrFuture,
+        QuantitativeUnits &quantitativeUnits,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    int32_t size = ures_getSize(resource);
+    for (int32_t i = 0; i < size; ++i) {
+        LocalUResourceBundlePointer pluralBundle(
+                ures_getByIndex(resource, i, NULL, &status));
+        if (U_FAILURE(status)) {
+            return;
+        }
+        int32_t pluralIndex = getPluralIndex(
+                ures_getKey(pluralBundle.getAlias()));
+        if (pluralIndex != -1) {
+            getString(
+                    pluralBundle.getAlias(),
+                    quantitativeUnits.data[relativeUnit][pastOrFuture][pluralIndex],
+                    status);
+            if (U_FAILURE(status)) {
+                return;
+            }
+        }
+    }
+}
+
+static void addTimeUnit(
+        const UResourceBundle *resource,
+        UDateRelativeUnit relativeUnit,
+        QuantitativeUnits &quantitativeUnits,
+        UErrorCode &status) {
+    LocalUResourceBundlePointer topLevel(
+            ures_getByKeyWithFallback(resource, "relativeTime", NULL, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    LocalUResourceBundlePointer futureBundle(ures_getByKeyWithFallback(
+            topLevel.getAlias(), "future", NULL, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    addTimeUnit(
+            futureBundle.getAlias(),
+            relativeUnit,
+            1,
+            quantitativeUnits,
+            status);
+    LocalUResourceBundlePointer pastBundle(ures_getByKeyWithFallback(
+            topLevel.getAlias(), "past", NULL, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    addTimeUnit(
+            pastBundle.getAlias(),
+            relativeUnit,
+            0,
+            quantitativeUnits,
+            status);
+}
+
+static void addTimeUnit(
+        const UResourceBundle *resource,
+        const char *path,
+        UDateRelativeUnit relativeUnit,
+        QuantitativeUnits &quantitativeUnits,
+        UErrorCode &status) {
+    LocalUResourceBundlePointer topLevel(
+            ures_getByKeyWithFallback(resource, path, NULL, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    addTimeUnit(topLevel.getAlias(), relativeUnit, quantitativeUnits, status);
+}
+
+static void addTimeUnit(
+        const UResourceBundle *resource,
+        const char *path,
+        UDateRelativeUnit relativeUnit,
+        UDateAbsoluteUnit absoluteUnit,
+        QuantitativeUnits &quantitativeUnits,
+        QualitativeUnits &qualitativeUnits,
+        UErrorCode &status) {
+    LocalUResourceBundlePointer topLevel(
+            ures_getByKeyWithFallback(resource, path, NULL, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    addTimeUnit(topLevel.getAlias(), relativeUnit, quantitativeUnits, status);
+    UnicodeString unitName;
+    getStringWithFallback(topLevel.getAlias(), "dn", unitName, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    // TODO(Travis Keep): This is a hack to get around CLDR bug 6818.
+    const char *localeId = ures_getLocaleByType(
+            topLevel.getAlias(), ULOC_ACTUAL_LOCALE, &status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    Locale locale(localeId);
+    if (uprv_strcmp("en", locale.getLanguage()) == 0) {
+         unitName.toLower();
+    }
+    // end hack
+    ures_getByKeyWithFallback(
+            topLevel.getAlias(), "relative", topLevel.getAlias(), &status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    addQualitativeUnit(
+            topLevel.getAlias(),
+            absoluteUnit,
+            unitName,
+            qualitativeUnits,
+            status);
+}
+
+static void readDaysOfWeek(
+        const UResourceBundle *resource,
+        const char *path,
+        UnicodeString *daysOfWeek,
+        UErrorCode &status) {
+    LocalUResourceBundlePointer topLevel(
+            ures_getByKeyWithFallback(resource, path, NULL, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    int32_t size = ures_getSize(topLevel.getAlias());
+    if (size != 7) {
+        status = U_INTERNAL_PROGRAM_ERROR;
+        return;
+    }
+    for (int32_t i = 0; i < size; ++i) {
+        getStringByIndex(topLevel.getAlias(), i, daysOfWeek[i], status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+    }
+}
+
+static void addWeekDay(
+        const UResourceBundle *resource,
+        const char *path,
+        const UnicodeString *daysOfWeek,
+        UDateAbsoluteUnit absoluteUnit,
+        QualitativeUnits &qualitativeUnits,
+        UErrorCode &status) {
+    LocalUResourceBundlePointer topLevel(
+            ures_getByKeyWithFallback(resource, path, NULL, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    addQualitativeUnit(
+            topLevel.getAlias(),
+            absoluteUnit,
+            daysOfWeek[absoluteUnit - UDAT_ABSOLUTE_SUNDAY],
+            qualitativeUnits,
+            status);
+}
+
+static void load(
+        const char *localeId,
+        QualitativeUnits &qualitativeUnits,
+        QuantitativeUnits &quantitativeUnits,
+        UErrorCode &status) {
+    LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    addTimeUnit(
+            topLevel.getAlias(),
+            "fields/day",
+            UDAT_RELATIVE_DAYS,
+            UDAT_ABSOLUTE_DAY,
+            quantitativeUnits,
+            qualitativeUnits,
+            status);
+    addTimeUnit(
+            topLevel.getAlias(),
+            "fields/week",
+            UDAT_RELATIVE_WEEKS,
+            UDAT_ABSOLUTE_WEEK,
+            quantitativeUnits,
+            qualitativeUnits,
+            status);
+    addTimeUnit(
+            topLevel.getAlias(),
+            "fields/month",
+            UDAT_RELATIVE_MONTHS,
+            UDAT_ABSOLUTE_MONTH,
+            quantitativeUnits,
+            qualitativeUnits,
+            status);
+    addTimeUnit(
+            topLevel.getAlias(),
+            "fields/year",
+            UDAT_RELATIVE_YEARS,
+            UDAT_ABSOLUTE_YEAR,
+            quantitativeUnits,
+            qualitativeUnits,
+            status);
+    addTimeUnit(
+            topLevel.getAlias(),
+            "fields/second",
+            UDAT_RELATIVE_SECONDS,
+            quantitativeUnits,
+            status);
+    addTimeUnit(
+            topLevel.getAlias(),
+            "fields/minute",
+            UDAT_RELATIVE_MINUTES,
+            quantitativeUnits,
+            status);
+    addTimeUnit(
+            topLevel.getAlias(),
+            "fields/hour",
+            UDAT_RELATIVE_HOURS,
+            quantitativeUnits,
+            status);
+    getStringWithFallback(
+            topLevel.getAlias(),
+            "fields/second/relative/0",
+            qualitativeUnits.data[UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
+            status);
+    UnicodeString daysOfWeek[7];
+    readDaysOfWeek(
+            topLevel.getAlias(),
+            "calendar/gregorian/dayNames/stand-alone/wide",
+            daysOfWeek,
+            status);
+    addWeekDay(
+            topLevel.getAlias(),
+            "fields/mon/relative",
+            daysOfWeek,
+            UDAT_ABSOLUTE_MONDAY,
+            qualitativeUnits,
+            status);
+    addWeekDay(
+            topLevel.getAlias(),
+            "fields/tue/relative",
+            daysOfWeek,
+            UDAT_ABSOLUTE_TUESDAY,
+            qualitativeUnits,
+            status);
+    addWeekDay(
+            topLevel.getAlias(),
+            "fields/wed/relative",
+            daysOfWeek,
+            UDAT_ABSOLUTE_WEDNESDAY,
+            qualitativeUnits,
+            status);
+    addWeekDay(
+            topLevel.getAlias(),
+            "fields/thu/relative",
+            daysOfWeek,
+            UDAT_ABSOLUTE_THURSDAY,
+            qualitativeUnits,
+            status);
+    addWeekDay(
+            topLevel.getAlias(),
+            "fields/fri/relative",
+            daysOfWeek,
+            UDAT_ABSOLUTE_FRIDAY,
+            qualitativeUnits,
+            status);
+    addWeekDay(
+            topLevel.getAlias(),
+            "fields/sat/relative",
+            daysOfWeek,
+            UDAT_ABSOLUTE_SATURDAY,
+            qualitativeUnits,
+            status);
+    addWeekDay(
+            topLevel.getAlias(),
+            "fields/sun/relative",
+            daysOfWeek,
+            UDAT_ABSOLUTE_SUNDAY,
+            qualitativeUnits,
+            status);
+}
+
 static UObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) {
-    // TODO(rocketman): Do qualitative and quantitative units.
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
     LocalPointer<RelativeDateTimeData> result(new RelativeDateTimeData());
+    LocalPointer<QualitativeUnits> qualitativeUnits(new QualitativeUnits());
+    LocalPointer<QuantitativeUnits> quantitativeUnits(new QuantitativeUnits());
+    if (qualitativeUnits.getAlias() == NULL || quantitativeUnits.getAlias() == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    load(localeId, *qualitativeUnits, *quantitativeUnits, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    if (!result->qualitativeUnits.adoptInstead(qualitativeUnits.orphan())) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    if (!result->quantitativeUnits.adoptInstead(quantitativeUnits.orphan())) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+        
+    
     // TODO(rocketman): Change this to use CLDR data
-    LocalPointer<MessageFormat> mf(new MessageFormat(UnicodeString("{0}, {1}"), localeId, status));
+    LocalPointer<MessageFormat> mf(new MessageFormat(UnicodeString("{1}, {0}"), localeId, status));
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -84,8 +507,8 @@ static UObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) 
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-
-    LocalPointer<NumberFormat> nf(NumberFormat::createInstance(localeId, status));
+    LocalPointer<NumberFormat> nf(
+            NumberFormat::createInstance(localeId, status));
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -139,21 +562,66 @@ RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
 
 
 UnicodeString& RelativeDateTimeFormatter::format(
-    double quantity, UDateDirection direction, UDateRelativeUnit unit,
-    UnicodeString& appendTo, UErrorCode& status) const {
-    return appendTo;
+        double quantity, UDateDirection direction, UDateRelativeUnit unit,
+        UnicodeString& appendTo, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    if (direction != UDAT_DIRECTION_LAST && direction != UDAT_DIRECTION_NEXT) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return appendTo;
+    }
+    FixedDecimal dec(quantity);
+    const DecimalFormat *decFmt = dynamic_cast<const DecimalFormat *>(
+            ptr->numberFormat.readOnly());
+    if (decFmt != NULL) {
+        dec = decFmt->getFixedDecimal(quantity, status);
+    }
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    UnicodeString pluralForm(ptr->pluralRules->select(dec));
+    char buffer[256];
+    pluralForm.extract(0, pluralForm.length(), buffer, 256, US_INV);
+    int32_t pluralIndex = getPluralIndex(buffer);
+    if (pluralIndex == -1) {
+        pluralIndex = 0;
+    }
+    int32_t bFuture = direction == UDAT_DIRECTION_NEXT ? 1 : 0;
+    const UnicodeString *pattern = &ptr->quantitativeUnits->data[unit][bFuture][pluralIndex];
+    if (pattern->isEmpty()) {
+        pattern = &ptr->quantitativeUnits->data[unit][bFuture][0];
+    }
+    if (pattern->isEmpty()) {
+        return appendTo;
+    }
+    UnicodeString result(*pattern);
+    UnicodeString formattedNumber;
+    result.findAndReplace(UnicodeString("{0}"), ptr->numberFormat->format(quantity, formattedNumber));
+    return appendTo.append(result);
 }
 
 UnicodeString& RelativeDateTimeFormatter::format(
-    UDateDirection direction, UDateAbsoluteUnit unit,
-    UnicodeString& appendTo, UErrorCode& status) const {
-    return appendTo;
+        UDateDirection direction, UDateAbsoluteUnit unit,
+        UnicodeString& appendTo, UErrorCode& status) const {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    if (unit == UDAT_ABSOLUTE_NOW && direction != UDAT_DIRECTION_PLAIN) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return appendTo;
+    }
+    return appendTo.append(ptr->qualitativeUnits->data[unit][direction]);
 }
 
 UnicodeString& RelativeDateTimeFormatter::combineDateAndTime(
     const UnicodeString& relativeDateString, const UnicodeString& timeString,
     UnicodeString& appendTo, UErrorCode& status) const {
-    return appendTo;
+    Formattable formattable[2];
+    formattable[0].setString(timeString);
+    formattable[1].setString(relativeDateString);
+    FieldPosition fpos(0);
+    return ptr->combinedDateAndTime->format(formattable, 2, appendTo, fpos, status);
 }
 
 void RelativeDateTimeFormatter::setNumberFormat(const NumberFormat& nf) {

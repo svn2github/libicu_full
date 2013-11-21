@@ -106,9 +106,9 @@ static WithQuantityExpected kEnglishDecimal[] = {
 };
 
 static WithQuantityExpected kSerbian[] = {
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "за 0 месеци"},
-        {1.2, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "за 1,2 месеца"},
-        {21.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "за 21 месец"}
+        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 0 \\u043c\\u0435\\u0441\\u0435\\u0446\\u0438"},
+        {1.2, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 1,2 \\u043c\\u0435\\u0441\\u0435\\u0446\\u0430"},
+        {21.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 21 \\u043c\\u0435\\u0441\\u0435\\u0446"}
 };
 
 static WithoutQuantityExpected kEnglishNoQuantity[] = {
@@ -259,6 +259,10 @@ void RelativeDateTimeFormatterTest::TestSpanishNoQuantity() {
 void RelativeDateTimeFormatterTest::TestFormatWithQuantityIllegalArgument() {
     UErrorCode status = U_ZERO_ERROR;
     RelativeDateTimeFormatter fmt("en", status);
+    if (U_FAILURE(status)) {
+        dataerrln("Failure creating format object - %s", u_errorName(status));
+        return;
+    }
     VerifyIllegalArgument(fmt, UDAT_DIRECTION_PLAIN, UDAT_RELATIVE_DAYS);
     VerifyIllegalArgument(fmt, UDAT_DIRECTION_THIS, UDAT_RELATIVE_DAYS);
 }
@@ -266,6 +270,10 @@ void RelativeDateTimeFormatterTest::TestFormatWithQuantityIllegalArgument() {
 void RelativeDateTimeFormatterTest::TestFormatWithoutQuantityIllegalArgument() {
     UErrorCode status = U_ZERO_ERROR;
     RelativeDateTimeFormatter fmt("en", status);
+    if (U_FAILURE(status)) {
+        dataerrln("Failure creating format object - %s", u_errorName(status));
+        return;
+    }
     VerifyIllegalArgument(fmt, UDAT_DIRECTION_LAST, UDAT_ABSOLUTE_NOW);
     VerifyIllegalArgument(fmt, UDAT_DIRECTION_NEXT, UDAT_ABSOLUTE_NOW);
     VerifyIllegalArgument(fmt, UDAT_DIRECTION_THIS, UDAT_ABSOLUTE_NOW);
@@ -274,6 +282,10 @@ void RelativeDateTimeFormatterTest::TestFormatWithoutQuantityIllegalArgument() {
 void RelativeDateTimeFormatterTest::TestSetNumberFormat() {
     UErrorCode status = U_ZERO_ERROR;
     RelativeDateTimeFormatter fmt("en", status);
+    if (U_FAILURE(status)) {
+        dataerrln("Failure creating format object - %s", u_errorName(status));
+        return;
+    }
     LocalPointer<NumberFormat> numberFormat(NumberFormat::createInstance("en", status));
     numberFormat->setMinimumFractionDigits(1);
     numberFormat->setMaximumFractionDigits(1);
@@ -289,6 +301,10 @@ void RelativeDateTimeFormatterTest::TestSetNumberFormat() {
 void RelativeDateTimeFormatterTest::TestCombineDateAndTime() {
     UErrorCode status = U_ZERO_ERROR;
     RelativeDateTimeFormatter fmt("en", status);
+    if (U_FAILURE(status)) {
+        dataerrln("Failure creating format object - %s", u_errorName(status));
+        return;
+    }
     UnicodeString actual;
     fmt.combineDateAndTime(
         UnicodeString("yesterday"),
