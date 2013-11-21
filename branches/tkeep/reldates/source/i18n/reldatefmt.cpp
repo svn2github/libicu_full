@@ -87,10 +87,16 @@ RelativeDateTimeData::RelativeDateTimeData(
         numberFormat(other.numberFormat) {
 }
 
+static char *UnicodeString2Char(
+        const UnicodeString &source, char *buffer, int32_t bufCapacity) {
+    source.extract(0, source.length(), buffer, bufCapacity, US_INV);
+    return buffer;
+}
+
 static void getStringWithFallback(
         const UResourceBundle *resource, 
         const char *key,
-        UnicodeString &value,
+        UnicodeString &result,
         UErrorCode &status) {
     int32_t len = 0;
     const UChar *resStr = ures_getStringByKeyWithFallback(
@@ -98,13 +104,13 @@ static void getStringWithFallback(
     if (U_FAILURE(status)) {
         return;
     }
-    value.setTo(TRUE, resStr, len);
+    result.setTo(TRUE, resStr, len);
 }
 
 static void getOptionalStringWithFallback(
         const UResourceBundle *resource, 
         const char *key,
-        UnicodeString &value,
+        UnicodeString &result,
         UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
@@ -113,32 +119,32 @@ static void getOptionalStringWithFallback(
     const UChar *resStr = ures_getStringByKey(
         resource, key, &len, &status);
     if (status == U_MISSING_RESOURCE_ERROR) {
-        value.remove();
+        result.remove();
         status = U_ZERO_ERROR;
         return;
     }
     if (U_FAILURE(status)) {
         return;
     }
-    value.setTo(TRUE, resStr, len);
+    result.setTo(TRUE, resStr, len);
 }
 
 static void getString(
         const UResourceBundle *resource, 
-        UnicodeString &value,
+        UnicodeString &result,
         UErrorCode &status) {
     int32_t len = 0;
     const UChar *resStr = ures_getString(resource, &len, &status);
     if (U_FAILURE(status)) {
         return;
     }
-    value.setTo(TRUE, resStr, len);
+    result.setTo(TRUE, resStr, len);
 }
 
 static void getStringByIndex(
         const UResourceBundle *resource, 
         int32_t idx,
-        UnicodeString &value,
+        UnicodeString &result,
         UErrorCode &status) {
     int32_t len = 0;
     const UChar *resStr = ures_getStringByIndex(
@@ -146,7 +152,7 @@ static void getStringByIndex(
     if (U_FAILURE(status)) {
         return;
     }
-    value.setTo(TRUE, resStr, len);
+    result.setTo(TRUE, resStr, len);
 }
 
 static void addQualitativeUnit(
@@ -357,16 +363,12 @@ static void addWeekDay(
 }
 
 static void load(
-        const char *localeId,
+        const UResourceBundle *resource,
         QualitativeUnits &qualitativeUnits,
         QuantitativeUnits &quantitativeUnits,
         UErrorCode &status) {
-    LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
-    if (U_FAILURE(status)) {
-        return;
-    }
     addTimeUnit(
-            topLevel.getAlias(),
+            resource,
             "fields/day",
             UDAT_RELATIVE_DAYS,
             UDAT_ABSOLUTE_DAY,
@@ -374,7 +376,7 @@ static void load(
             qualitativeUnits,
             status);
     addTimeUnit(
-            topLevel.getAlias(),
+            resource,
             "fields/week",
             UDAT_RELATIVE_WEEKS,
             UDAT_ABSOLUTE_WEEK,
@@ -382,7 +384,7 @@ static void load(
             qualitativeUnits,
             status);
     addTimeUnit(
-            topLevel.getAlias(),
+            resource,
             "fields/month",
             UDAT_RELATIVE_MONTHS,
             UDAT_ABSOLUTE_MONTH,
@@ -390,7 +392,7 @@ static void load(
             qualitativeUnits,
             status);
     addTimeUnit(
-            topLevel.getAlias(),
+            resource,
             "fields/year",
             UDAT_RELATIVE_YEARS,
             UDAT_ABSOLUTE_YEAR,
@@ -398,78 +400,78 @@ static void load(
             qualitativeUnits,
             status);
     addTimeUnit(
-            topLevel.getAlias(),
+            resource,
             "fields/second",
             UDAT_RELATIVE_SECONDS,
             quantitativeUnits,
             status);
     addTimeUnit(
-            topLevel.getAlias(),
+            resource,
             "fields/minute",
             UDAT_RELATIVE_MINUTES,
             quantitativeUnits,
             status);
     addTimeUnit(
-            topLevel.getAlias(),
+            resource,
             "fields/hour",
             UDAT_RELATIVE_HOURS,
             quantitativeUnits,
             status);
     getStringWithFallback(
-            topLevel.getAlias(),
+            resource,
             "fields/second/relative/0",
             qualitativeUnits.data[UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
             status);
     UnicodeString daysOfWeek[7];
     readDaysOfWeek(
-            topLevel.getAlias(),
+            resource,
             "calendar/gregorian/dayNames/stand-alone/wide",
             daysOfWeek,
             status);
     addWeekDay(
-            topLevel.getAlias(),
+            resource,
             "fields/mon/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_MONDAY,
             qualitativeUnits,
             status);
     addWeekDay(
-            topLevel.getAlias(),
+            resource,
             "fields/tue/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_TUESDAY,
             qualitativeUnits,
             status);
     addWeekDay(
-            topLevel.getAlias(),
+            resource,
             "fields/wed/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_WEDNESDAY,
             qualitativeUnits,
             status);
     addWeekDay(
-            topLevel.getAlias(),
+            resource,
             "fields/thu/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_THURSDAY,
             qualitativeUnits,
             status);
     addWeekDay(
-            topLevel.getAlias(),
+            resource,
             "fields/fri/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_FRIDAY,
             qualitativeUnits,
             status);
     addWeekDay(
-            topLevel.getAlias(),
+            resource,
             "fields/sat/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_SATURDAY,
             qualitativeUnits,
             status);
     addWeekDay(
-            topLevel.getAlias(),
+            resource,
             "fields/sun/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_SUNDAY,
@@ -477,7 +479,48 @@ static void load(
             status);
 }
 
+static void getDateTimePattern(
+        const UResourceBundle *resource,
+        UnicodeString &result,
+        UErrorCode &status) {
+    UnicodeString defaultCalendarName;
+    getStringWithFallback(
+            resource,
+            "calendar/default",
+            defaultCalendarName,
+            status);
+    if (U_FAILURE(status)) {
+        printf("Here1\n");
+        return;
+    }
+    char calendarNameBuffer[128];
+    char pathBuffer[256];
+    sprintf(
+            pathBuffer,
+            "calendar/%s/DateTimePatterns",
+            UnicodeString2Char(
+                    defaultCalendarName,
+                    calendarNameBuffer,
+                    128));
+    printf("Here2 %s\n", pathBuffer);
+    LocalUResourceBundlePointer topLevel(
+            ures_getByKeyWithFallback(resource, pathBuffer, NULL, &status));
+    if (U_FAILURE(status)) {
+        printf("Here3\n");
+        return;
+    }
+    int32_t size = ures_getSize(topLevel.getAlias());
+    if (size < 9) {
+        // Oops, size is to small to access the index that we want, fallback
+        // to a hard-coded value.
+        result = UnicodeString("{1} {0}");
+        return;
+    }
+    getStringByIndex(topLevel.getAlias(), 8, result, status);
+}
+
 static UObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) {
+    LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -488,7 +531,7 @@ static UObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) 
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    load(localeId, *qualitativeUnits, *quantitativeUnits, status);
+    load(topLevel.getAlias(), *qualitativeUnits, *quantitativeUnits, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -502,8 +545,12 @@ static UObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) 
     }
         
     
-    // TODO(rocketman): Change this to use CLDR data
-    LocalPointer<MessageFormat> mf(new MessageFormat(UnicodeString("{1}, {0}"), localeId, status));
+    UnicodeString dateTimePattern;
+    getDateTimePattern(topLevel.getAlias(), dateTimePattern, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    LocalPointer<MessageFormat> mf(new MessageFormat(dateTimePattern, localeId, status));
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -591,10 +638,9 @@ UnicodeString& RelativeDateTimeFormatter::format(
     if (U_FAILURE(status)) {
         return appendTo;
     }
-    UnicodeString pluralForm(ptr->pluralRules->select(dec));
     char buffer[256];
-    pluralForm.extract(0, pluralForm.length(), buffer, 256, US_INV);
-    int32_t pluralIndex = getPluralIndex(buffer);
+    int32_t pluralIndex = getPluralIndex(
+            UnicodeString2Char(ptr->pluralRules->select(dec), buffer, 256));
     if (pluralIndex == -1) {
         pluralIndex = 0;
     }
