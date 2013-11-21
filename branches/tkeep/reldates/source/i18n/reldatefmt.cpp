@@ -10,8 +10,24 @@
 #include "unicode/ures.h"
 #include "cstring.h"
 #include "plurrule_impl.h"
+#include "ucln_in.h"
 
 #include "sharedptr.h"
+
+static icu::LRUCache *gCache = NULL;
+static UMutex gCacheMutex = U_MUTEX_INITIALIZER;
+static icu::UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
+
+U_CDECL_BEGIN
+static UBool U_CALLCONV reldatefmt_cleanup() {
+    gCacheInitOnce.reset();
+    if (gCache) {
+        delete gCache;
+        gCache = NULL;
+    }
+    return TRUE;
+}
+U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
@@ -70,10 +86,6 @@ RelativeDateTimeData::RelativeDateTimeData(
         pluralRules(other.pluralRules),
         numberFormat(other.numberFormat) {
 }
-
-static LRUCache *gCache = NULL;
-static UMutex gCacheMutex = U_MUTEX_INITIALIZER;
-static UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
 
 static void getStringWithFallback(
         const UResourceBundle *resource, 
@@ -521,12 +533,11 @@ static UObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) 
 
 static void U_CALLCONV cacheInit(UErrorCode &status) {
     U_ASSERT(gCache == NULL);
-    // TODO(tkeep): Do cleanup routine stuff
+    ucln_i18n_registerCleanup(UCLN_I18N_RELDATEFMT, reldatefmt_cleanup);
     gCache = new SimpleLRUCache(100, &gCacheMutex, &createData, status);
     if (U_FAILURE(status)) {
         delete gCache;
         gCache = NULL;
-        return;
     }
 }
 
