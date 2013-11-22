@@ -500,7 +500,6 @@ static void getDateTimePattern(
             defaultCalendarName,
             status);
     if (U_FAILURE(status)) {
-        printf("Here1\n");
         return;
     }
     char calendarNameBuffer[128];
@@ -512,11 +511,9 @@ static void getDateTimePattern(
                     defaultCalendarName,
                     calendarNameBuffer,
                     128));
-    printf("Here2 %s\n", pathBuffer);
     LocalUResourceBundlePointer topLevel(
             ures_getByKeyWithFallback(resource, pathBuffer, NULL, &status));
     if (U_FAILURE(status)) {
-        printf("Here3\n");
         return;
     }
     int32_t size = ures_getSize(topLevel.getAlias());
