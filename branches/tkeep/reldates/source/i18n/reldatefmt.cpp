@@ -41,16 +41,18 @@ U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
-#define MAX_PLURAL_FORMS 6
-
-// other must always be firxt.
+// other must always be first.
 static const char * const gPluralForms[] = {
         "other", "zero", "one", "two", "few", "many", NULL};
+
+// Must be equal to number of plural forms just above.
+#define MAX_PLURAL_FORMS 6
+
 
 class QualitativeUnits : public UObject {
 public:
     QualitativeUnits() { }
-    UnicodeString data[UDAT_ABSOLUTE_COUNT][UDAT_DIRECTION_COUNT];
+    UnicodeString data[UDAT_ABSOLUTE_UNIT_COUNT][UDAT_DIRECTION_UNIT_COUNT];
     virtual ~QualitativeUnits() {
     }
 private:
@@ -61,7 +63,7 @@ private:
 class QuantitativeUnits : public UObject {
 public:
     QuantitativeUnits() { }
-    UnicodeString data[UDAT_RELATIVE_COUNT][2][MAX_PLURAL_FORMS];
+    UnicodeString data[UDAT_RELATIVE_UNIT_COUNT][2][MAX_PLURAL_FORMS];
     virtual ~QuantitativeUnits() {
     }
 private:

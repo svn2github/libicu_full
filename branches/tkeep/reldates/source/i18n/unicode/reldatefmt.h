@@ -70,7 +70,7 @@ typedef enum UDateRelativeUnit {
      * Count of items in this enum.
      * @draft ICU 53
      */
-    UDAT_RELATIVE_COUNT
+    UDAT_RELATIVE_UNIT_COUNT
 } UDateRelativeUnit;
 
 /**
@@ -157,7 +157,7 @@ typedef enum UDateAbsoluteUnit {
      * Count of items in this enum.
      * @draft ICU 53
      */
-    UDAT_ABSOLUTE_COUNT
+    UDAT_ABSOLUTE_UNIT_COUNT
 } UDateAbsoluteUnit;
 
 /**
@@ -207,7 +207,7 @@ typedef enum UDateDirection {
      * Count of items in this enum.
      * @draft ICU 53
      */
-    UDAT_DIRECTION_COUNT
+    UDAT_DIRECTION_UNIT_COUNT
 } UDateDirection;
 
 
