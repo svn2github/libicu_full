@@ -54,7 +54,6 @@ void addCollIterTest(TestNode** root)
     addTest(root, &TestBug672Normalize, "tscoll/citertst/TestBug672Normalize");
     addTest(root, &TestSmallBuffer, "tscoll/citertst/TestSmallBuffer");
     addTest(root, &TestDiscontiguos, "tscoll/citertst/TestDiscontiguos");
-    addTest(root, &TestCEBufferOverflow, "tscoll/citertst/TestCEBufferOverflow");
     addTest(root, &TestSearchCollatorElements, "tscoll/citertst/TestSearchCollatorElements");
 }
 
@@ -1107,45 +1106,6 @@ static void TestDiscontiguos() {
         count ++;
     }
     ucol_closeElements(resultiter);
-    ucol_closeElements(iter);
-    ucol_close(coll);
-}
-
-/* TODO: This constant is an implementation detail of the old struct collIterate. Review whether this test still makes sense? */
-/* This is the size of the buffer for expansion CE's */
-/* In reality we should not have to deal with expm sequences longer then 16 */
-/* you can change this value if you need memory */
-/* WARNING THIS BUFFER DOES HAVE MALLOC FALLBACK. If you make it too small, you'll get into performance trouble */
-/* Reasonable small value is around 10, if you don't do Arabic or other funky collations that have long expansion sequence */
-/* This is the longest expansion sequence we can handle without bombing out */
-#define UCOL_EXPAND_CE_BUFFER_SIZE 64
-
-static void TestCEBufferOverflow()
-{
-    UChar               str[UCOL_EXPAND_CE_BUFFER_SIZE + 1];
-    UErrorCode          status = U_ZERO_ERROR;
-    UChar               rule[10];
-    UCollator          *coll;
-    UCollationElements *iter;
-
-    u_uastrcpy(rule, "&z < AB");
-    coll = ucol_openRules(rule, u_strlen(rule), UCOL_OFF, UCOL_DEFAULT_STRENGTH, NULL,&status);
-    if (U_FAILURE(status)) {
-        log_err_status(status, "Rule based collator not created for testing ce buffer overflow -> %s\n", u_errorName(status));
-        return;
-    }
-
-    /* 0xDCDC is a trail surrogate hence deemed unsafe by the heuristic
-    test. this will cause an overflow in getPrev */
-    str[0] = 0x0041;    /* 'A' */
-    uprv_memset(str + 1, 0xDC, sizeof(UChar) * UCOL_EXPAND_CE_BUFFER_SIZE);
-    str[UCOL_EXPAND_CE_BUFFER_SIZE] = 0x0042;   /* 'B' */
-    iter = ucol_openElements(coll, str, UCOL_EXPAND_CE_BUFFER_SIZE + 1,
-                             &status);
-    if (ucol_previous(iter, &status) == UCOL_NULLORDER ||
-        status == U_BUFFER_OVERFLOW_ERROR) {
-        log_err("CE buffer should not overflow with long string of trail surrogates\n");
-    }
     ucol_closeElements(iter);
     ucol_close(coll);
 }

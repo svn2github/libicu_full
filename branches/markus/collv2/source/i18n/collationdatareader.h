@@ -28,6 +28,8 @@ struct CollationTailoring;
  * Collation binary data reader.
  */
 struct U_I18N_API CollationDataReader /* all static */ {
+    // The following constants are also copied into source/common/ucol_swp.cpp.
+    // Keep them in sync!
     enum {
         /**
          * Number of int32_t indexes.

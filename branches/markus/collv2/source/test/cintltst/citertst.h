@@ -84,10 +84,6 @@ static void TestSmallBuffer(void);
 */
 static void TestDiscontiguos(void);
 /**
-* Tests that the iterators bails out when the CEBuffer is exhausted
-*/
-static void TestCEBufferOverflow(void);
-/**
 * TestSearchCollatorElements tests iterator behavior (forwards and backwards) with
 * normalization on AND jamo tailoring, among other things.
 */
