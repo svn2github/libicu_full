@@ -46,6 +46,8 @@
 
 #include "unicode/coll.h"
 #include "unicode/tblcoll.h"
+#include "collationdata.h"
+#include "collationroot.h"
 #include "collationtailoring.h"
 #include "ucol_imp.h"
 #include "cstring.h"
@@ -793,16 +795,18 @@ Collator::setReorderCodes(const int32_t* /* reorderCodes */,
     }
 }
 
-int32_t U_EXPORT2
-Collator::getEquivalentReorderCodes(int32_t /* reorderCode */,
-                                    int32_t* /* dest */,
-                                    int32_t /* destCapacity */,
-                                    UErrorCode& status)
-{
-    if (U_SUCCESS(status)) {
-        status = U_UNSUPPORTED_ERROR;
+int32_t
+Collator::getEquivalentReorderCodes(int32_t reorderCode,
+                                    int32_t *dest, int32_t capacity,
+                                    UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return 0; }
+    if(capacity < 0 || (dest == NULL && capacity > 0)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0;
     }
-    return 0;
+    const CollationData *baseData = CollationRoot::getData(errorCode);
+    if(U_FAILURE(errorCode)) { return 0; }
+    return baseData->getEquivalentScripts(reorderCode, dest, capacity, errorCode);
 }
 
 int32_t

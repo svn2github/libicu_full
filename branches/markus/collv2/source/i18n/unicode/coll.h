@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
-*   Copyright (C) 1996-2012, International Business Machines                 *
-*   Corporation and others.  All Rights Reserved.                            *
+*   Copyright (C) 1996-2013, International Business Machines
+*   Corporation and others.  All Rights Reserved.
 ******************************************************************************
 */
 
@@ -642,7 +642,7 @@ public:
      * Retrieves the reorder codes that are grouped with the given reorder code. Some reorder
      * codes will be grouped and must reorder together.
      * @param reorderCode The reorder code to determine equivalence for. 
-     * @param dest The array to fill with the script equivalene reordering codes.
+     * @param dest The array to fill with the script equivalence reordering codes.
      * @param destCapacity The length of dest. If it is 0, then dest may be NULL and the 
      * function will only return the length of the result without writing any of the result 
      * string (pre-flighting).

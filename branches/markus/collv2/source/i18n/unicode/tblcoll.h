@@ -634,27 +634,6 @@ public:
                                   UErrorCode& status) ;
 
     /**
-     * Retrieves the reorder codes that are grouped with the given reorder code. Some reorder
-     * codes will be grouped and must reorder together.
-     * @param reorderCode The reorder code to determine equivalence for. 
-     * @param dest The array to fill with the script equivalene reordering codes.
-     * @param destCapacity The length of dest. If it is 0, then dest may be NULL and the 
-     * function will only return the length of the result without writing any of the result 
-     * string (pre-flighting).
-     * @param status A reference to an error code value, which must not indicate 
-     * a failure before the function call.
-     * @return The length of the of the reordering code equivalence array.
-     * @see ucol_setReorderCodes
-     * @see Collator#getReorderCodes
-     * @see Collator#setReorderCodes
-     * @stable ICU 4.8 
-     */
-    static int32_t U_EXPORT2 getEquivalentReorderCodes(
-            int32_t reorderCode,
-            int32_t* dest, int32_t destCapacity,
-            UErrorCode& status);
-
-    /**
      * Implements ucol_strcollUTF8().
      * @internal
      */

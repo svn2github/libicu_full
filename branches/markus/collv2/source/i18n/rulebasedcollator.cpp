@@ -723,20 +723,6 @@ RuleBasedCollator::setReorderCodes(const int32_t *reorderCodes, int32_t length,
 }
 
 int32_t
-RuleBasedCollator::getEquivalentReorderCodes(int32_t reorderCode,
-                                             int32_t *dest, int32_t capacity,
-                                             UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return 0; }
-    if(capacity < 0 || (dest == NULL && capacity > 0)) {
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
-    }
-    const CollationData *baseData = CollationRoot::getData(errorCode);
-    if(U_FAILURE(errorCode)) { return 0; }
-    return baseData->getEquivalentScripts(reorderCode, dest, capacity, errorCode);
-}
-
-int32_t
 RuleBasedCollator::getFastLatinOptions() const {
     const uint16_t *flt = data->fastLatinTable;
     if(flt == NULL) { return -1; }

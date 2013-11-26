@@ -384,7 +384,7 @@ ucol_getEquivalentReorderCodes(int32_t reorderCode,
                     int32_t* dest,
                     int32_t destCapacity,
                     UErrorCode *pErrorCode) {
-    return RuleBasedCollator::getEquivalentReorderCodes(reorderCode, dest, destCapacity, *pErrorCode);
+    return Collator::getEquivalentReorderCodes(reorderCode, dest, destCapacity, *pErrorCode);
 }
 
 U_CAPI void U_EXPORT2
