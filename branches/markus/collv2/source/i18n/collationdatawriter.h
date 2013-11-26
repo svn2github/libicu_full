@@ -32,7 +32,7 @@ public:
                              int32_t indexes[], uint8_t *dest, int32_t capacity,
                              UErrorCode &errorCode);
 
-    static int32_t writeTailoring(const CollationTailoring &t,
+    static int32_t writeTailoring(const CollationTailoring &t, const CollationSettings &settings,
                                   int32_t indexes[], uint8_t *dest, int32_t capacity,
                                   UErrorCode &errorCode);
 

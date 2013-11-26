@@ -1853,7 +1853,6 @@ void CollationAPITest::TestGetTailoredSet()
   int32_t i = 0, j = 0;
   UErrorCode status = U_ZERO_ERROR;
 
-  RuleBasedCollator *coll = NULL;
   UnicodeString buff; 
   UnicodeSet *set = NULL;
 
@@ -2290,6 +2289,43 @@ void CollationAPITest::TestClone() {
     delete c2;
 }
 
+void CollationAPITest::TestCloneBinary() {
+    IcuTestErrorCode errorCode(*this, "TestCloneBinary");
+    LocalPointer<Collator> root(Collator::createInstance(Locale::getRoot(), errorCode));
+    LocalPointer<Collator> coll(Collator::createInstance("de@collation=phonebook", errorCode));
+    if(errorCode.logDataIfFailureAndReset("Collator::createInstance(de@collation=phonebook)")) {
+        return;
+    }
+    RuleBasedCollator *rbRoot = dynamic_cast<RuleBasedCollator *>(root.getAlias());
+    RuleBasedCollator *rbc = dynamic_cast<RuleBasedCollator *>(coll.getAlias());
+    if(rbRoot == NULL || rbc == NULL) {
+        infoln("root or de@collation=phonebook is not a RuleBasedCollator");
+        return;
+    }
+    rbc->setAttribute(UCOL_STRENGTH, UCOL_PRIMARY, errorCode);
+    UnicodeString uUmlaut((UChar)0xfc);
+    UnicodeString ue = UNICODE_STRING_SIMPLE("ue");
+    assertEquals("rbc/primary: u-umlaut==ue", UCOL_EQUAL, rbc->compare(uUmlaut, ue, errorCode));
+    uint8_t bin[25000];
+    int32_t binLength = rbc->cloneBinary(bin, LENGTHOF(bin), errorCode);
+    if(errorCode.logDataIfFailureAndReset("rbc->cloneBinary()")) {
+        return;
+    }
+    logln("rbc->cloneBinary() -> %d bytes", (int)binLength);
+
+    RuleBasedCollator rbc2(bin, binLength, rbRoot, errorCode);
+    if(errorCode.logDataIfFailureAndReset("RuleBasedCollator(rbc binary)")) {
+        return;
+    }
+    assertEquals("rbc2.strength==primary", UCOL_PRIMARY, rbc2.getAttribute(UCOL_STRENGTH, errorCode));
+    assertEquals("rbc2: u-umlaut==ue", UCOL_EQUAL, rbc2.compare(uUmlaut, ue, errorCode));
+    assertTrue("rbc==rbc2", *rbc == rbc2);
+    uint8_t bin2[25000];
+    int32_t bin2Length = rbc2.cloneBinary(bin2, LENGTHOF(bin2), errorCode);
+    assertEquals("len(rbc binary)==len(rbc2 binary)", binLength, bin2Length);
+    assertTrue("rbc binary==rbc2 binary", binLength == bin2Length && memcmp(bin, bin2, binLength) == 0);
+}
+
 void CollationAPITest::TestIterNumeric() {
     // Regression test for ticket #9915.
     // The collation code sometimes masked the continuation marker away
@@ -2350,6 +2386,7 @@ void CollationAPITest::runIndexedTest( int32_t index, UBool exec, const char* &n
     TESTCASE_AUTO(TestSubclass);
     TESTCASE_AUTO(TestNULLCharTailoring);
     TESTCASE_AUTO(TestClone);
+    TESTCASE_AUTO(TestCloneBinary);
     TESTCASE_AUTO(TestIterNumeric);
     TESTCASE_AUTO_END;
 }

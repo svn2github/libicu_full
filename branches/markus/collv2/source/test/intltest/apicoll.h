@@ -166,6 +166,7 @@ public:
     void TestNULLCharTailoring();
 
     void TestClone();
+    void TestCloneBinary();
     void TestIterNumeric();
 
 private:

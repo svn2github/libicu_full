@@ -1016,7 +1016,7 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
     }
     int32_t indexes[icu::CollationDataReader::IX_TOTAL_SIZE + 1];
     int32_t totalSize = icu::CollationDataWriter::writeTailoring(
-            *t, indexes, dest, capacity, intStatus);
+            *t, t->settings, indexes, dest, capacity, intStatus);
     if(intStatus == U_BUFFER_OVERFLOW_ERROR) {
         intStatus = U_ZERO_ERROR;
         capacity = totalSize;
@@ -1029,7 +1029,7 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
             return NULL;
         }
         totalSize = icu::CollationDataWriter::writeTailoring(
-                *t, indexes, dest, capacity, intStatus);
+                *t, t->settings, indexes, dest, capacity, intStatus);
     }
     if(U_FAILURE(intStatus)) {
         fprintf(stderr, "CollationDataWriter::writeTailoring() failed: %s\n",

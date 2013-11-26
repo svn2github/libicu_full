@@ -122,10 +122,8 @@ CollationBaseDataBuilder::init(UErrorCode &errorCode) {
 
     utrie2_set32(trie, 0xfffe, Collation::MERGE_SEPARATOR_CE32, &errorCode);
     // No root element for the merge separator which has 02 weights.
-    // If we had 02 weights in the root elements table, then tailoring primary
-    // after an ignorable would try to put a weight before 02 which is not valid.
-    // We could fix this in a complicated way in the from-rule-string builder,
-    // but omitting this special element from the root elements is simple and effective.
+    // Some code assumes that the root first primary CE is the "space first primary"
+    // from FractionalUCA.txt.
 
     uint32_t hangulCE32 = Collation::makeCE32FromTagAndIndex(Collation::HANGUL_TAG, 0);
     utrie2_setRange32(trie, Hangul::HANGUL_BASE, Hangul::HANGUL_END, hangulCE32, TRUE, &errorCode);
@@ -182,7 +180,6 @@ CollationBaseDataBuilder::initHanRanges(const UChar32 ranges[], int32_t length,
     int32_t numHanLeadBytes = (numHan + numHanPerLeadByte - 1) / numHanPerLeadByte;
     uint32_t hanPrimary = (uint32_t)(Collation::UNASSIGNED_IMPLICIT_BYTE - numHanLeadBytes) << 24;
     hanPrimary |= 0x20200;
-    // TODO: Save [fixed first implicit byte xx] and [first implicit [hanPrimary, 05, 05]]
     firstHanPrimary = hanPrimary;
     for(int32_t i = 0; i < length; i += 2) {
         UChar32 start = ranges[i];
@@ -280,16 +277,26 @@ CollationBaseDataBuilder::addRootElement(int64_t ce, UErrorCode &errorCode) {
     U_ASSERT((ce & 0xc0) == 0);  // quaternary==0
     // Ignore the CE if it has a Han primary weight and common secondary/tertiary weights.
     // We will add it later, as part of the Han ranges.
+    uint32_t p = (uint32_t)(ce >> 32);
     uint32_t secTer = (uint32_t)ce;
     if(secTer == Collation::COMMON_SEC_AND_TER_CE) {
-        uint32_t p = (uint32_t)(ce >> 32);
         if(firstHanPrimary <= p && p <= lastHanPrimary) {
             return;
         }
     } else {
-        // TODO: Check that secondary and tertiary weights are >= "common".
+        // Check that secondary and tertiary weights are >= "common".
+        uint32_t s = secTer >> 16;
+        uint32_t t = secTer & Collation::ONLY_TERTIARY_MASK;
+        if((s != 0 && s < Collation::COMMON_WEIGHT16) || (t != 0 && t < Collation::COMMON_WEIGHT16)) {
+            errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+            return;
+        }
     }
-    // TODO: Check that primaries have at most 3 bytes.
+    // Check that primaries have at most 3 bytes.
+    if((p & 0xff) != 0) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
     int32_t i = binarySearch(rootElements, ce);
     if(i < 0) {
         rootElements.insertElementAt(ce, ~i, errorCode);

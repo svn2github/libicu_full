@@ -173,6 +173,14 @@ public:
                     UErrorCode& status);
 
     /**
+     * TODO: document & propose as public API
+     * @internal
+     */
+    RuleBasedCollator(const UnicodeString &rules,
+                      UParseError &parseError, UnicodeString &reason,
+                      UErrorCode &errorCode);
+
+    /**
      * Copy constructor.
      * @param other the RuleBasedCollator object to be copied
      * @see Locale
@@ -730,7 +738,8 @@ public:
             const UnicodeString &rules,
             int32_t strength,
             UColAttributeValue decompositionMode,
-            UParseError *outParseError, UErrorCode &errorCode);
+            UParseError *outParseError, UnicodeString *outReason,
+            UErrorCode &errorCode);
 
     /** @internal */
     static inline RuleBasedCollator *rbcFromUCollator(UCollator *uc) {
@@ -746,9 +755,6 @@ public:
      * @internal for tests & tools
      */
     void internalGetCEs(const UnicodeString &str, UVector64 &ces, UErrorCode &errorCode) const;
-
-public:  // TODO: Public only for testing.
-    RuleBasedCollator(const CollationTailoring *t);
 #endif  // U_HIDE_INTERNAL_API
 
 protected:
@@ -763,6 +769,9 @@ protected:
 
 private:
     friend class CollationElementIterator;
+    friend class Collator;
+
+    RuleBasedCollator(const CollationTailoring *t);
 
     /**
      * Enumeration of attributes that are relevant for short definition strings

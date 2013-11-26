@@ -13,104 +13,99 @@
 # A collator can be set with "@ root" or "@ locale language-tag",
 # for example "@ locale de-u-co-phonebk".
 
-# A collator can be built with "@ rawbase" or "@ rules".
-# "@ rawbase" is followed by lines that each contain a string and a list of CEs.
-# An empty leading weight is 0. An empty weight after a non-empty one is a common weight.
+# A collator can be built with "@ rules".
 # An "@ rules" line is followed by one or more lines with the tailoring rules.
 
 # A collator can be modified with "% attribute=value".
-
-# "* CEs" tests that the following strings map to their expected CEs.
-# It is fragile unless used with "@ rawbase".
-# It only tests CollationIterator which is not sensitive to most attributes.
 
 # "* compare" tests the order (= or <) of the following strings.
 # The relation can be "=" or "<" (the level of the difference is not specified)
 # or "<1", "<2", "<c", "<3", "<4" (indicating the level of the difference).
 
-# Test sections ("* CEs" and "* compare") are terminated by
+# Test sections ("* compare") are terminated by
 # definitions of new collators, changing attributes, or new test sections.
 
 ** test: simple CEs & expansions
-@ rawbase
-\x00    11..           # NUL not ignorable
-\x01    ..             # ^A ignorable
-ä       27.. .9d.       # a-umlaut = mini expansion 27.05.05 .9d.05
-a       27..            # a = 27.05.05
-b       29..
-\u0301  .8d88.          # long-secondary .8d88.05
-\u0300  ..2233          # long-tertiary ..2233
-か       7916..9b        # Hiragana Ka (U+304B)
-が       7916..9b .da95. # Hiragana Ga (U+304C)
-\u3099  .da95.          # voiced sound mark
-\u309a  .daa5.          # semi-voiced sound mark
-\ua001  7a700c..        # Yi Syllable IX = long-primary 7a700C.05.05
-\ua002  7a700c.. 7a7014..  # two long-primary CEs
-\ua003  7a700c.. 7a7014.. 7a701c03..  # three CEs, require 64 bits
-# TODO: Test long and/or duplicate expansions.
+# Many types of mappings are tested elsewhere, including via the UCA conformance tests.
+# Here we mostly cover a few unusual mappings.
+@ rules
+&\x01                           # most control codes are ignorable
+<<<\u0300                       # tertiary CE
+&9<\x00                         # NUL not ignorable
+&\uA00A\uA00B=\uA002            # two long-primary CEs
+&\uA00A\uA00B\u00050005=\uA003  # three CEs, require 64 bits
 
-* CEs
-\x01\x00b               .. 11.. 29..
-äa\u0301\u0300          27.. .9d. 27.. .8d88. ..2233
-a\u3099か\u3099b         27.. .da95. 7916..9b .da95. 29..
-aがb                     27.. 7916..9b .da95. 29..
-\ua001\ua002\ua003      7a700c..  7a700c.. 7a7014..  7a700c.. 7a7014.. 7a701c03..
-
-# TODO: Test U+0000, U+FFFE, U+FFFF
-# TODO: Interesting FCD tests
-# TODO: Try combinations of base vs. tailoring for discontiguous & nested contractions,
-#       to test fallbacks and fetching inner CEs from the original data.
-# TODO: Test CODAN with first digit in base and others in tailoring.
-# TODO: Test prefix, contraction+expansion, prefix+contraction, p+c+e
-# TODO: Test Hangul syllables with * CEs
+* compare
+=  \x01
+=  \x02
+<3 \u0300
+<1 9
+<1 \x00
+=  \x01\x00\x02
+<1 a
+<3 a\u0300
+<2 a\u0308
+=  ä
+<1 b
+<1 か        # Hiragana Ka (U+304B)
+<2 か\u3099  # plus voiced sound mark
+=  が        # Hiragana Ga (U+304C)
+<1 \uA00A\uA00B
+=  \uA002
+<1 \uA00A\uA00B\u00050004
+<1 \uA00A\uA00B\u00050005
+=  \uA003
+<1 \uA00A\uA00B\u00050006
 
 ** test: contractions
-@ rawbase
+# Create some interesting mappings, and map some normalization-inert characters
+# (which are not subject to canonical reordering)
+# to some of the same CEs to check the sequence of CEs.
+@ rules
 
 # Contractions starting with 'a' should not continue with any character < U+0300
 # so that we can test a shortcut for that.
-a                   27..
-b                   29..
-bz                  2a03..
-d                   2d..
-dz\u0301            2e03..      # d+z+acute
-z                   59..
-a\u0301             5a03..      # a+acute sorts after z
-a\u0301\u0301       5a04..      # a+acute+acute
-a\u0301\u0301\u0358 5a05..      # a+acute+acute+dot above right
-a\u030a             5a14..      # a+ring
-a\u0323             5a15..      # a+dot below
-a\u0323\u0358       5a16..      # a+dot below+dot above right
-a\u0327\u0323\u030a 5a17..      # a+cedilla+dot below+ring
-a\u0327\u0323bz     5a18..      # a+cedilla+dot below+b+z
+&a=ⓐ
+&b<bz=ⓑ
+&d<dz\u0301=ⓓ           # d+z+acute
+&z
+<a\u0301=Ⓐ              # a+acute sorts after z
+<a\u0301\u0301=Ⓑ        # a+acute+acute
+<a\u0301\u0301\u0358=Ⓒ  # a+acute+acute+dot above right
+<a\u030a=Ⓓ              # a+ring
+<a\u0323=Ⓔ              # a+dot below
+<a\u0323\u0358=Ⓕ        # a+dot below+dot above right
+<a\u0327\u0323\u030a=Ⓖ  # a+cedilla+dot below+ring
+<a\u0327\u0323bz=Ⓗ      # a+cedilla+dot below+b+z
 
-\U0001D158          0dc9fc..    # musical notehead black
-\U0001D158\U0001D165 0dc9fd..   # musical quarter note
+&\U0001D158=⁰           # musical notehead black (has a symbol primary)
+<\U0001D158\U0001D165=¼ # musical quarter note
 
 # deliberately missing prefix contractions:
-# az
+# dz
 # a\u0327
 # a\u0327\u0323
 # a\u0327\u0323b
 
-\U0001D165          ..1f        # musical stem (ccc=216)
-\U0001D16D          ..20        # musical augmentation dot (ccc=226)
-\U0001D165\U0001D16D ..21       # stem+dot (ccc=216 226)
-\u0301              .8d.        # acute (ccc=230)
-\u030a              .99.        # ring (ccc=230)
-\u0308              .9d.        # diaeresis (ccc=230)
-\u0308\u0301        .9e.        # diaeresis+acute (=dialytika tonos) (ccc=230 230)
-\u0327              .a7.        # cedilla (ccc=202)
-\u0323              .c5.        # dot below (ccc=220)
-\u0331              .d01d.      # macron below (ccc=220)
-\u0331\u0358        .d01e.      # macron below+dot above right (ccc=220 232)
-\u0334              .d02d.      # tilde overlay (ccc=1)
-\u0358              .d06d.      # dot above right (ccc=232)
+&\x01
+<<<\U0001D165=¹         # musical stem (ccc=216)
+<<<\U0001D16D=²         # musical augmentation dot (ccc=226)
+<<<\U0001D165\U0001D16D=³  # stem+dot (ccc=216 226)
+&\u0301=❶               # acute (ccc=230)
+&\u030a=❷               # ring (ccc=230)
+&\u0308=❸               # diaeresis (ccc=230)
+<<\u0308\u0301=❹        # diaeresis+acute (=dialytika tonos) (ccc=230 230)
+&\u0327=❺               # cedilla (ccc=202)
+&\u0323=❻               # dot below (ccc=220)
+&\u0331=❼               # macron below (ccc=220)
+<<\u0331\u0358=❽        # macron below+dot above right (ccc=220 232)
+&\u0334=❾               # tilde overlay (ccc=1)
+&\u0358=❿               # dot above right (ccc=232)
 
-\u0f71              74aa..      # tibetan vowel sign aa
-\u0f72              74ac..      # tibetan vowel sign i
-\u0f71\u0f72        74ae..      # tibetan vowel sign aa + i = ii
-\u0f73              74ae..      # tibetan vowel sign ii (ccc=0 but lccc=129)
+&\u0f71=①               # tibetan vowel sign aa
+&\u0f72=②               # tibetan vowel sign i
+#  \u0f71\u0f72         # tibetan vowel sign aa + i = ii = U+0F73
+&\u0f73=③               # tibetan vowel sign ii (ccc=0 but lccc=129)
 
 ** test: simple contractions
 
@@ -120,89 +115,165 @@ a\u0327\u0323bz     5a18..      # a+cedilla+dot below+b+z
 # When there is no complete match, then the matching code must back out of those
 # so that discontiguous contractions work as specified.
 
-* CEs
+* compare
 # contraction starter with no following text, or mismatch, or blocked
-a                       27..
-aa                      27.. 27..  
-ab                      27.. 29..
-az                      27.. 59..
-a\u0308\u030a           27.. .9d. .99.  # ring blocked by diaeresis
-a\u0327                 27.. .a7.
-\u0308                  .9d.
-\u0308\u030a\u0301      .9d. .99. .8d.  # acute blocked by ring
-\U0001D158              0dc9fc..
+<1 a
+=  ⓐ
+<1 aa
+=  ⓐⓐ
+<1 ab
+=  ⓐb
+<1 az
+=  ⓐz
+
+* compare
+<1 a
+<2 a\u0308\u030a  # ring blocked by diaeresis
+=  ⓐ❸❷
+<2 a\u0327
+=  ⓐ❺
+
+* compare
+<2 \u0308
+=  ❸
+<2 \u0308\u030a\u0301  # acute blocked by ring
+=  ❸❷❶
+
+* compare
+<1 \U0001D158
+=  ⁰
+<1 \U0001D158\U0001D165
+=  ¼
 
 # no discontiguous contraction because of missing prefix contraction d+z,
 # and a starter ('z') after the 'd'
-dz\u0323\u0301          2d.. 59.. .c5. .8d.
+* compare
+<1 dz\u0323\u0301
+=  dz❻❶
 
 # contiguous contractions
-abz                     27.. 2a03..
-abzz                    27.. 2a03.. 59..
-a\u0301                 5a03..
-a\u0301\u0301           5a04..
-a\u0301\u0301\u0358     5a05..
-a\u030a                 5a14..
-a\u0323\u0358           5a16..
-a\u0327\u0323\u030a     5a17..  # match despite missing prefix
-a\u0327\u0323bz         5a18..
-\u0308\u0308\u0301      .9d. .9e.  # acute blocked from first diaeresis, contracts with second
+* compare
+<1 abz
+=  ⓐⓑ
+<1 abzz
+=  ⓐⓑz
 
-\U0001D158\U0001D165    0dc9fd..
-\U0001D165\U0001D16D    ..21
+* compare
+<1 a
+<1 z
+<1 a\u0301
+=  Ⓐ
+<1 a\u0301\u0301
+=  Ⓑ
+<1 a\u0301\u0301\u0358
+=  Ⓒ
+<1 a\u030a
+=  Ⓓ
+<1 a\u0323\u0358
+=  Ⓕ
+<1 a\u0327\u0323\u030a  # match despite missing prefix
+=  Ⓖ
+<1 a\u0327\u0323bz
+=  Ⓗ
+
+* compare
+<2 \u0308\u0308\u0301  # acute blocked from first diaeresis, contracts with second
+=  ❸❹
+
+* compare
+<1 \U0001D158\U0001D165
+=  ¼
+
+* compare
+<3 \U0001D165\U0001D16D
+=  ³
 
 ** test: discontiguous contractions
-* CEs
-a\u0327\u030a           5a14.. .a7.                 # a+ring skips cedilla
-a\u0327\u0327\u030a     5a14.. .a7. .a7.            # a+ring skips 2 cedillas
-a\u0327\u0327\u0327\u030a  5a14.. .a7. .a7. .a7.    # a+ring skips 3 cedillas
-a\u0334\u0327\u0327\u030a  5a14.. .d02d. .a7. .a7.  # a+ring skips tilde overlay & 2 cedillas
-a\u0327\u0323           5a15.. .a7.                 # a+dot below skips cedilla
-a\u0334\u0323\u0358     5a16.. .d02d.               # a+dot below skips tilde overlay
-a\u0323\u0301\u0358     5a16.. .8d.                 # a+dot below+dot ab.r.: 2-char match, then skips acute
-\u0331\u0331\u0358      .d01e. .d01d.               # macron below+dot ab.r. skips the second macron below
+* compare
+<1 a\u0327\u030a                # a+ring skips cedilla
+=  Ⓓ❺
+<2 a\u0327\u0327\u030a          # a+ring skips 2 cedillas
+=  Ⓓ❺❺
+<2 a\u0327\u0327\u0327\u030a    # a+ring skips 3 cedillas
+=  Ⓓ❺❺❺
+<2 a\u0334\u0327\u0327\u030a    # a+ring skips tilde overlay & 2 cedillas
+=  Ⓓ❾❺❺
+<1 a\u0327\u0323                # a+dot below skips cedilla
+=  Ⓔ❺
+<1 a\u0323\u0301\u0358          # a+dot below+dot ab.r.: 2-char match, then skips acute
+=  Ⓕ❶
+<2 a\u0334\u0323\u0358          # a+dot below skips tilde overlay
+=  Ⓕ❾
 
-a\u0334\u0327\u0323\u030a   5a15.. .d02d. .a7. .99. # a+dot below skips tilde overlay & cedilla
-a\u0327\u0327\u0323\u030a   5a15.. .a7. .a7. .99.   # a+dot below skips 2 cedillas
-a\u0327\u0323\u0323\u030a   5a15.. .a7. .c5. .99.   # a+dot below skips cedilla
-a\u0327\u0323\U0001D16D\u030a 5a15.. .a7. ..20 .99. # a+dot below skips cedilla
-a\u0327\u0331\u0323\u030a   5a14.. .a7. .d01d. .c5. # a+ring skips cedilla macron below, dot below (dot blocked by macron)
+* compare
+<2 \u0331\u0331\u0358           # macron below+dot ab.r. skips the second macron below
+=  ❽❼
 
-\U0001D158\u0327\U0001D165  0dc9fd.. .a7.           # quarter note skips cedilla
-a\U0001D165\u0323           5a15.. ..1f             # a+dot below skips stem
+* compare
+<1 a\u0327\u0331\u0323\u030a    # a+ring skips cedilla, macron below, dot below (dot blocked by macron)
+=  Ⓓ❺❼❻
+<1 a\u0327\u0323\U0001D16D\u030a  # a+dot below skips cedilla
+=  Ⓔ❺²❷
+<2 a\u0327\u0327\u0323\u030a    # a+dot below skips 2 cedillas
+=  Ⓔ❺❺❷
+<2 a\u0327\u0323\u0323\u030a    # a+dot below skips cedilla
+=  Ⓔ❺❻❷
+<2 a\u0334\u0327\u0323\u030a    # a+dot below skips tilde overlay & cedilla
+=  Ⓔ❾❺❷
+
+* compare
+<1 \U0001D158\u0327\U0001D165   # quarter note skips cedilla
+=  ¼❺
+<1 a\U0001D165\u0323            # a+dot below skips stem
+=  Ⓔ¹
 
 # partial contiguous match, backs up, matches discontiguous contraction
-a\u0327\u0323b              5a15.. .a7. 29..
-a\u0327\u0323ba             5a15.. .a7. 29.. 27..
+<1 a\u0327\u0323b
+=  Ⓔ❺b
+<1 a\u0327\u0323ba
+=  Ⓔ❺bⓐ
 
 # a+acute+acute+dot above right skips cedilla, continues matching 2 same-ccc combining marks
-a\u0327\u0301\u0301\u0358   5a05.. .a7.
+* compare
+<1 a\u0327\u0301\u0301\u0358
+=  Ⓒ❺
 
 # FCD but not NFD
-a\u0f73\u0301               5a03.. 74ae..           # a+acute skips tibetan ii
+* compare
+<1 a\u0f73\u0301                # a+acute skips tibetan ii
+=  Ⓐ③
 
 # FCD but the 0f71 inside the 0f73 must be skipped
 # to match the discontiguous contraction of the first 0f71 with the trailing 0f72 inside the 0f73
-\u0f71\u0f73                74ae.. 74aa..           # == \u0f73\u0f71 == \u0f71\u0f71\u0f72
+* compare
+<1 \u0f71\u0f73                 # == \u0f73\u0f71 == \u0f71\u0f71\u0f72
+=  ③①
 
 ** test: discontiguous contractions with nested contractions
-* CEs
-a\u0323\u0308\u0301\u0358   5a16.. .9e.
-a\u0323\u0308\u0301\u0308\u0301\u0358   5a16.. .9e. .9e.
+* compare
+<1 a\u0323\u0308\u0301\u0358
+=  Ⓕ❹
+<2 a\u0323\u0308\u0301\u0308\u0301\u0358
+=  Ⓕ❹❹
 
 ** test: discontiguous contractions with interleaved contractions
-* CEs
+* compare
 # a+ring & cedilla & macron below+dot above right
-a\u0327\u0331\u030a\u0358   5a14.. .a7. .d01e.
+<1 a\u0327\u0331\u030a\u0358
+=  Ⓓ❺❽
 
 # a+ring & 1x..3x macron below+dot above right
-a\u0331\u030a\u0358                             5a14.. .d01e.
-a\u0331\u0331\u030a\u0358\u0358                 5a14.. .d01e. .d01e.
+<2 a\u0331\u030a\u0358
+=  Ⓓ❽
+<2 a\u0331\u0331\u030a\u0358\u0358
+=  Ⓓ❽❽
 # also skips acute
-a\u0331\u0331\u0331\u030a\u0301\u0358\u0358\u0358  5a14.. .d01e. .d01e. .d01e. .8d.
+<2 a\u0331\u0331\u0331\u030a\u0301\u0358\u0358\u0358
+=  Ⓓ❽❽❽❶
 
 # a+dot below & stem+augmentation dot, followed by contiguous d+z+acute
-a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
+<1 a\U0001D165\u0323\U0001D16Ddz\u0301
+=  Ⓔ³ⓓ
 
 ** test: some simple string comparisons
 @ root
@@ -1978,3 +2049,13 @@ a\U0001D165\u0323\U0001D16Ddz\u0301             5a15.. ..21 2e03..
 <3 F
 <1 AED
 <3 C
+
+** test: never reorder trailing primaries
+@ root
+% reorder Zzzz Grek
+* compare
+<1 L
+<1 字
+<1 Ω
+<1 \uFFFD
+<1 \uFFFF

@@ -54,7 +54,7 @@ int32_t
 RuleBasedCollator::cloneBinary(uint8_t *dest, int32_t capacity, UErrorCode &errorCode) const {
     int32_t indexes[CollationDataReader::IX_TOTAL_SIZE + 1];
     return CollationDataWriter::writeTailoring(
-            *tailoring, indexes, dest, capacity,
+            *tailoring, *settings, indexes, dest, capacity,
             errorCode);
 }
 
@@ -84,11 +84,11 @@ CollationDataWriter::writeBase(const CollationData &data, const CollationSetting
 }
 
 int32_t
-CollationDataWriter::writeTailoring(const CollationTailoring &t,
+CollationDataWriter::writeTailoring(const CollationTailoring &t, const CollationSettings &settings,
                                     int32_t indexes[], uint8_t *dest, int32_t capacity,
                                     UErrorCode &errorCode) {
     return write(FALSE, t.version,
-                 *t.data, t.settings,
+                 *t.data, settings,
                  NULL, 0,
                  indexes, dest, capacity, errorCode);
 }

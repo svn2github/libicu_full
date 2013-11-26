@@ -107,7 +107,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    internalBuildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, errorCode);
+    internalBuildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, NULL, errorCode);
 }
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStrength strength,
@@ -121,7 +121,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    internalBuildTailoring(rules, strength, UCOL_DEFAULT, NULL, errorCode);
+    internalBuildTailoring(rules, strength, UCOL_DEFAULT, NULL, NULL, errorCode);
 }
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
@@ -136,7 +136,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    internalBuildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, errorCode);
+    internalBuildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, NULL, errorCode);
 }
 
 RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
@@ -152,23 +152,46 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
-    internalBuildTailoring(rules, strength, decompositionMode, NULL, errorCode);
+    internalBuildTailoring(rules, strength, decompositionMode, NULL, NULL, errorCode);
+}
+
+RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
+                                     UParseError &parseError, UnicodeString &reason,
+                                     UErrorCode &errorCode)
+        : data(NULL),
+          settings(NULL),
+          tailoring(NULL),
+          validLocale(""),
+          ownedSettings(NULL),
+          ownedReorderCodesCapacity(0),
+          explicitlySetAttributes(0),
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
+    internalBuildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, &parseError, &reason, errorCode);
 }
 
 void
 RuleBasedCollator::internalBuildTailoring(const UnicodeString &rules,
                                           int32_t strength,
                                           UColAttributeValue decompositionMode,
-                                          UParseError *outParseError, UErrorCode &errorCode) {
+                                          UParseError *outParseError, UnicodeString *outReason,
+                                          UErrorCode &errorCode) {
     const CollationTailoring *base = CollationRoot::getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return; }
+    if(outReason != NULL) { outReason->remove(); }
     CollationBuilder builder(base, errorCode);
     UVersionInfo noVersion = { 0, 0, 0, 0 };
     BundleImporter importer;
     LocalPointer<CollationTailoring> t(builder.parseAndBuild(rules, noVersion,
                                                              &importer,
                                                              outParseError, errorCode));
-    if(U_FAILURE(errorCode)) { return; }
+    if(U_FAILURE(errorCode)) {
+        const char *reason = builder.getErrorReason();
+        if(reason != NULL && outReason != NULL) {
+            *outReason = UnicodeString(reason, -1, US_INV);
+        }
+        return;
+    }
     if(strength != UCOL_DEFAULT) {
         t->settings.setStrength(strength, 0, errorCode);
     }
@@ -1602,7 +1625,7 @@ ucol_openRules(const UChar *rules, int32_t rulesLength,
         return NULL;
     }
     UnicodeString r((UBool)(rulesLength < 0), rules, rulesLength);
-    coll->internalBuildTailoring(r, strength, normalizationMode, parseError, *pErrorCode);
+    coll->internalBuildTailoring(r, strength, normalizationMode, parseError, NULL, *pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         delete coll;
         return NULL;

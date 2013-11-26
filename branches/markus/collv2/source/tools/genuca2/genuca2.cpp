@@ -50,7 +50,7 @@ U_NAMESPACE_USE
 
 static UBool beVerbose=FALSE, withCopyright=TRUE;
 
-static UVersionInfo UCAVersion;
+static UVersionInfo UCAVersion={ 0, 0, 0, 0 };
 
 static UDataInfo ucaDataInfo={
     sizeof(UDataInfo),
@@ -278,9 +278,6 @@ static int64_t getOptionValue(const char *name) {
 
 static UnicodeString *leadByteScripts = NULL;
 
-// TODO: How best to return the option values?
-// Probably enum constants?
-// Maybe put values into ces[0]?
 static void readAnOption(
         CollationBaseDataBuilder &builder, char *buffer, UErrorCode *status) {
     for (int32_t cnt = 0; cnt<LENGTHOF(vt); cnt++) {
@@ -523,7 +520,8 @@ readAnElement(FILE *data,
         // other characters.
     } else {
         // Rudimentary check for valid bytes in CE weights.
-        // For a more comprehensive check see cintltst /tscoll/citertst/TestCEValidity
+        // For a more comprehensive check see CollationTest::TestRootElements(),
+        // intltest collate/CollationTest/TestRootElements
         for (int32_t i = 0; i < cesLength; ++i) {
             int64_t ce = ces[i];
             UBool isCompressible = FALSE;
@@ -570,8 +568,6 @@ parseFractionalUCA(const char *filename,
         return;
     }
     uint32_t line = 0;
-    // TODO: Turn UCAConstants into fields in the inverse-base table.
-    // Pass the inverse-base builder into the parsing function.
 
     UChar32 maxCodePoint = 0;
     while(!feof(data)) {
@@ -705,7 +701,7 @@ parseFractionalUCA(const char *filename,
     }
     printf("** set %d ranges with %d code points\n", (int)numRanges, (int)numRangeCodePoints);
 
-    // TODO: Probably best to work in two passes.
+    // Idea: Probably best to work in two passes.
     // Pass 1 for reading all data, setting isCompressible flags (and reordering groups)
     // and finding ranges.
     // Then set the ranges in a newly initialized builder
@@ -731,58 +727,6 @@ parseFractionalUCA(const char *filename,
     if (beVerbose) {
         printf("\nLines read: %u\n", (int)line);
     }
-
-
-    /* produce canonical closure for table */
-#if 0  // TODO
-    /* do the closure */
-    UnicodeSet closed;
-    int32_t noOfClosures = uprv_uca_canonicalClosure(t, NULL, &closed, status);
-    if(noOfClosures != 0) {
-        fprintf(stderr, "Warning: %i canonical closures occured!\n", (int)noOfClosures);
-        UnicodeString pattern;
-        std::string utf8;
-        closed.toPattern(pattern, TRUE).toUTF8String(utf8);
-        fprintf(stderr, "UTF-8 pattern string: %s\n", utf8.c_str());
-    }
-
-    /* test */
-    UCATableHeader *myData = uprv_uca_assembleTable(t, status);  
-
-    if (beVerbose) {
-        printf("Compacted data breakdown:\n");
-        /*printf("Compact array stage1 top: %i, stage2 top: %i\n", t->mapping->stage1Top, t->mapping->stage2Top);*/
-        printf("Number of contractions: %u\n", (int)noOfContractions);
-        printf("Contraction image size: %u\n", (int)t->image->contractionSize);
-        printf("Expansions size: %i\n", (int)t->expansions->position);
-    }
-
-    if(U_FAILURE(*status)) {
-        fprintf(stderr, "Error creating table: %s\n", u_errorName(*status));
-        fclose(data);
-        return -1;
-    }
-
-    /* populate the version info struct with version info*/
-    myData->version[0] = UCOL_BUILDER_VERSION;
-    myData->version[1] = UCAVersion[0];
-    myData->version[2] = UCAVersion[1];
-    myData->version[3] = UCAVersion[2];
-    /*TODO:The fractional rules version should be taken from FractionalUCA.txt*/
-    // Removed this macro. Instead, we use the fields below
-    //myD->version[1] = UCOL_FRACTIONAL_UCA_VERSION;
-    //myD->UCAVersion = UCAVersion; // out of FractionalUCA.txt
-    uprv_memcpy(myData->UCAVersion, UCAVersion, sizeof(UVersionInfo));
-    u_getUnicodeVersion(myData->UCDVersion);
-
-    writeOutData(myData, &consts, &leadByteConstants, contractions, noOfContractions, outputDir, copyright, status);
-    uprv_free(myData);
-
-    InverseUCATableHeader *inverse = assembleInverseTable(status);
-    uprv_memcpy(inverse->UCAVersion, UCAVersion, sizeof(UVersionInfo));
-    writeOutInverseData(inverse, outputDir, copyright, status);
-    uprv_free(inverse);
-#endif
 
     fclose(data);
 
