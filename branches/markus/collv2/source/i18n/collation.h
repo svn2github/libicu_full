@@ -112,6 +112,8 @@ public:
 
     static const uint32_t UNASSIGNED_CE32 = 0xffffffff;  // Compute an unassigned-implicit CE.
 
+    static const uint32_t NO_CE32 = 0x100;
+
     /** No CE: End of input. Only used in runtime code, not stored in data. */
     static const uint32_t NO_CE_PRIMARY = 1;  // not a left-adjusted weight
     static const uint32_t NO_CE_WEIGHT16 = 0x0100;  // weight of LEVEL_SEPARATOR_BYTE

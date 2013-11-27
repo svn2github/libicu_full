@@ -2059,3 +2059,76 @@
 <1 Ω
 <1 \uFFFD
 <1 \uFFFF
+
+** test: fall back to mappings with shorter prefixes, not immediately to ones with no prefixes
+@ rules
+&u=ab|cd
+&v=b|ce
+* compare
+<1 abc
+<1 abcc
+<1 abcf
+<1 abcd
+=  abu
+<1 abce
+=  abv
+
+# With the following rules, there is only one prefix per composite ĉ or ç,
+# but both prefixes apply to just c in NFD form.
+# We would get different results for composed vs. NFD input
+# if we fell back directly from longest-prefix mappings to no-prefix mappings.
+@ rules
+&x=op|ĉ
+&y=p|ç
+* compare
+<1 opc
+<2 opć
+<1 opcz
+<1 opd
+<1 opĉ
+=  opc\u0302
+=  opx
+<1 opç
+=  opc\u0327
+=  opy
+
+# The mapping is used which has the longest matching prefix for which
+# there is also a suffix match, with the longest suffix match among several for that prefix.
+@ rules
+&❶=d
+&❷=de
+&❸=def
+&①=c|d
+&②=c|de
+&③=c|def
+&④=bc|d
+&⑤=bc|de
+&⑥=bc|def
+&⑦=abc|d
+&⑧=abc|de
+&⑨=abc|def
+* compare
+<1 9aadzz
+=  9aa❶zz
+<1 9aadez
+=  9aa❷z
+<1 9aadef
+=  9aa❸
+<1 9acdzz
+=  9ac①zz
+<1 9acdez
+=  9ac②z
+<1 9acdef
+=  9ac③
+<1 9bcdzz
+=  9bc④zz
+<1 9bcdez
+=  9bc⑤z
+<1 9bcdef
+=  9bc⑥
+<1 abcdzz
+=  abc⑦zz
+<1 abcdez
+=  abc⑧z
+<1 abcdef
+=  abc⑨

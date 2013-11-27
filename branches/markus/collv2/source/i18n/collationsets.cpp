@@ -132,8 +132,8 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
     }
 
     // The contraction default CE32 might be another contraction CE32.
-    // This is the case if it's the same as the default CE32 of the parent prefix data.
-    // The parent prefix default CE32's are compared in a different code path.
+    // That would be a fallback to the mappings for a shorter prefix.
+    // They are compared in a different code path.
     U_ASSERT((tag == Collation::CONTRACTION_TAG) == (baseTag == Collation::CONTRACTION_TAG));
     if(tag == Collation::CONTRACTION_TAG) {
         U_ASSERT(!unreversedPrefix.isEmpty());
@@ -548,7 +548,7 @@ ContractionsAndExpansions::handleContractions(
     const UChar *p = data->contexts + Collation::indexFromCE32(ce32);
     ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
     // Ignore the default mapping if it falls back to another set of contractions:
-    // In that case, we are underneath a prefix, and the empty prefix
+    // In that case, we are underneath a prefix, and a shorter prefix
     // maps to the same contractions.
     if(Collation::isContractionCE32(ce32)) {
         U_ASSERT(!unreversedPrefix.isEmpty());

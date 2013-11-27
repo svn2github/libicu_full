@@ -50,10 +50,25 @@ CollationDataBuilder::CEModifier::~CEModifier() {}
  * Context strings must be unique and in ascending order.
  */
 struct ConditionalCE32 : public UMemory {
-    ConditionalCE32(const UnicodeString &ct, uint32_t ce) : context(ct), ce32(ce), next(-1) {}
+    ConditionalCE32(const UnicodeString &ct, uint32_t ce)
+            : context(ct),
+              ce32(ce), defaultCE32(Collation::NO_CE32),
+              next(-1) {}
 
     inline UBool hasContext() const { return context.length() > 1; }
     inline int32_t prefixLength() const { return context.charAt(0); }
+
+    UBool hasSamePrefixAs(const ConditionalCE32 &other) const {
+        int32_t length = prefixLength();
+        return length == other.prefixLength() &&
+            (length == 0 || context.compare(1, length, other.context, 1, length) == 0);
+    }
+
+    UBool prefixMatchesBefore(const UnicodeString &s, int32_t i) const {
+        int32_t length = prefixLength();
+        return length <= i &&
+            (length == 0 || s.compare(i - length, length, context, 1, length) == 0);
+    }
 
     /**
      * "\0" for the first entry for any code point, with its default CE32.
@@ -67,6 +82,12 @@ struct ConditionalCE32 : public UMemory {
      * Can be special (e.g., for an expansion) but not contextual (prefix or contraction tag).
      */
     uint32_t ce32;
+    /**
+     * Default CE32 for all contexts with this same prefix.
+     * Initially NO_CE32. Set only while building runtime data structures,
+     * and only on one of the nodes of a sub-list with the same prefix.
+     */
+    uint32_t defaultCE32;
     /**
      * Index of the next ConditionalCE32.
      * Negative for the end of the list.
@@ -443,14 +464,14 @@ CollationDataBuilder::encodeOneCEAsCE32(int64_t ce) {
         // long-secondary form ssssttC2
         return Collation::makeLongSecondaryCE32(lower32);
     }
-    return Collation::UNASSIGNED_CE32;
+    return Collation::NO_CE32;
 }
 
 uint32_t
 CollationDataBuilder::encodeOneCE(int64_t ce, UErrorCode &errorCode) {
     // Try to encode one CE as one CE32.
     uint32_t ce32 = encodeOneCEAsCE32(ce);
-    if(ce32 != Collation::UNASSIGNED_CE32) { return ce32; }
+    if(ce32 != Collation::NO_CE32) { return ce32; }
     int32_t index = addCE(ce, errorCode);
     if(U_FAILURE(errorCode)) { return 0; }
     if(index > Collation::MAX_INDEX) {
@@ -502,7 +523,7 @@ CollationDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength,
             return encodeExpansion32(newCE32s, cesLength, errorCode);
         }
         uint32_t ce32 = encodeOneCEAsCE32(ces[i]);
-        if(ce32 == Collation::UNASSIGNED_CE32) { break; }
+        if(ce32 == Collation::NO_CE32) { break; }
         newCE32s[i] = (int32_t)ce32;
     }
     return encodeExpansion(ces, cesLength, errorCode);
@@ -672,7 +693,7 @@ CollationDataBuilder::copyContractionsFromBaseCE32(UnicodeString &context, UChar
     const UChar *p = base->contexts + Collation::indexFromCE32(ce32);
     ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
     // Ignore the default mapping if it falls back to another set of contractions:
-    // In that case, we are underneath a prefix, and the empty prefix
+    // In that case, we are underneath a prefix, and a shorter prefix
     // maps to the same contractions.
     int32_t index;
     if(Collation::isContractionCE32(ce32)) {
@@ -1153,11 +1174,12 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
     uint32_t emptyPrefixCE32 = cond->ce32;
     UCharsTrieBuilder prefixBuilder(errorCode);
     UCharsTrieBuilder contractionBuilder(errorCode);
+    ConditionalCE32 *firstPrefixCond = NULL;
     do {
         cond = getConditionalCE32(cond->next);
         // The prefix or suffix can be empty, but not both.
         U_ASSERT(cond->hasContext());
-        int32_t prefixLength = cond->context[0];
+        int32_t prefixLength = cond->prefixLength();
         UnicodeString prefix(cond->context, 0, prefixLength + 1);
         // Collect all contraction suffixes for one prefix.
         ConditionalCE32 *firstCond = cond;
@@ -1166,7 +1188,6 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
                 (cond = getConditionalCE32(cond->next))->context.startsWith(prefix)) {
             lastCond = cond;
         }
-        uint32_t ce32;
         int32_t suffixStart = prefixLength + 1;  // == prefix.length()
         if(lastCond->context.length() == suffixStart) {
             // One prefix without contraction suffix.
@@ -1188,10 +1209,23 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
                 // There is no mapping for the prefix and just the single character.
                 // (There is no p|c, only p|cd, p|ce etc.)
                 // When the prefix matches but none of the prefix-specific suffixes,
-                // we fall back to no prefix, which might be another set of contractions.
+                // then we fall back to the mappings with the next-longest prefix,
+                // and ultimately to mappings with no prefix.
+                // Each fallback might be another set of contractions.
                 // For example, if there are mappings for ch, p|cd, p|ce, but not for p|c,
                 // then in text "pch" we find the ch contraction.
                 emptySuffixCE32 = emptyPrefixCE32;
+                if(prefixLength > 1 && firstPrefixCond != NULL) {
+                    for(cond = firstPrefixCond;; cond = getConditionalCE32(cond->next)) {
+                        int32_t length = cond->prefixLength();
+                        if(length == prefixLength) { break; }
+                        if(cond->defaultCE32 != Collation::NO_CE32 &&
+                                prefix.endsWith(cond->context, 1, length)) {
+                            emptySuffixCE32 = cond->defaultCE32;
+                        }
+                    }
+                    cond = firstCond;
+                }
             }
             // Latin optimization: Flags bit 1 indicates whether
             // the first character of every contraction suffix is >=U+0300.
@@ -1219,6 +1253,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             ce32 = Collation::makeCE32FromTagAndIndex(Collation::CONTRACTION_TAG, index) | flags;
         }
         U_ASSERT(cond == lastCond);
+        firstCond->defaultCE32 = ce32;
         if(prefixLength == 0) {
             if(cond->next < 0) {
                 // No non-empty prefixes, only contractions.
@@ -1231,6 +1266,7 @@ CollationDataBuilder::buildContext(UChar32 c, UErrorCode &errorCode) {
             prefix.remove(0, 1);  // Remove the length unit.
             prefix.reverse();
             prefixBuilder.add(prefix, (int32_t)ce32, errorCode);
+            if(firstPrefixCond == NULL) { firstPrefixCond = firstCond; }
         }
     } while(cond->next >= 0);
     int32_t index = addContextTrie(emptyPrefixCE32, prefixBuilder, errorCode);
@@ -1421,48 +1457,34 @@ CollationDataBuilder::getCE32FromContext(const UnicodeString &s, uint32_t ce32,
                                          int32_t sIndex, UnicodeSet &consumed) const {
     U_ASSERT(Collation::isContractionCE32(ce32));
     ConditionalCE32 *cond = getConditionalCE32ForCE32(ce32);
+    ce32 = cond->ce32;
     int32_t cpStart = sIndex - U16_LENGTH(s.char32At(sIndex - 1));
-    if(cpStart == 0 && sIndex == s.length()) { return cond->ce32; }  // single-character string
+    if(cpStart == 0 && sIndex == s.length()) { return ce32; }  // single-character string
 
-    // Find the longest matching prefix.
-    int32_t matchingPrefixLength = 0;
-    ConditionalCE32 *firstNoPrefixCond = cond;
-    ConditionalCE32 *lastNoPrefixCond = cond;
-    ConditionalCE32 *firstPrefixCond = NULL;
-    ConditionalCE32 *lastPrefixCond = NULL;
+    // Match prefixes and suffixes.
+    // Return the value for the longest matching prefix for which there is also a suffix match.
     U_ASSERT(cond->next >= 0);
+    ConditionalCE32 *nextCond = getConditionalCE32(cond->next);
+    ConditionalCE32 *firstCond = nextCond;
     do {
-        cond = getConditionalCE32(cond->next);
+        cond = nextCond;
+        nextCond = cond->next >= 0 ? getConditionalCE32(cond->next) : NULL;
         // The prefix or suffix can be empty, but not both.
         U_ASSERT(cond->hasContext());
-        int32_t prefixLength = cond->context[0];
-        if(prefixLength == 0) {
-            lastNoPrefixCond = cond;
-        } else if(prefixLength == matchingPrefixLength) {
-            if(cond->context.compare(1, prefixLength,
-                                     firstPrefixCond->context, 1, prefixLength) == 0) {
-                lastPrefixCond = cond;
+        if(nextCond == NULL || !cond->hasSamePrefixAs(*nextCond)) {
+            // firstCond..cond have the same prefix, and nextCond has the next prefix.
+            if(cond->prefixMatchesBefore(s, cpStart)) {
+                // Try the contractions for the matching prefix.
+                uint32_t contractionCE32 =
+                    getCE32FromContraction(s, sIndex, consumed, firstCond, cond);
+                if(contractionCE32 != Collation::NO_CE32) {
+                    ce32 = contractionCE32;
+                }
             }
-        } else if(prefixLength > matchingPrefixLength && prefixLength <= cpStart &&
-                s.compare(cpStart - prefixLength, prefixLength,
-                          cond->context, 1, prefixLength) == 0) {
-            firstPrefixCond = lastPrefixCond = cond;
-            matchingPrefixLength = prefixLength;
+            firstCond = nextCond;
         }
-    } while(cond->next >= 0);
-
-    if(firstPrefixCond != NULL) {
-        // Try the contractions for the longest matching prefix.
-        uint32_t contractionCE32 =
-            getCE32FromContraction(s, sIndex, consumed, firstPrefixCond, lastPrefixCond);
-        if(contractionCE32 != Collation::UNASSIGNED_CE32) {
-            return contractionCE32;
-        }
-    }
-
-    // Try the no-prefix contractions.
-    // Falls back to the no-context value.
-    return getCE32FromContraction(s, sIndex, consumed, firstNoPrefixCond, lastNoPrefixCond);
+    } while(nextCond != NULL);
+    return ce32;
 }
 
 uint32_t
@@ -1476,7 +1498,7 @@ CollationDataBuilder::getCE32FromContraction(const UnicodeString &s,
     if(firstCond->context.length() == matchLength) {
         ce32 = firstCond->ce32;
     } else {
-        ce32 = Collation::UNASSIGNED_CE32;
+        ce32 = Collation::NO_CE32;
     }
 
     // Find the longest contiguous match.

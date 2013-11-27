@@ -322,7 +322,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             ce32 = nextCE32FromContraction(d, p + 2, defaultCE32,
                                            (ce32 & Collation::CONTRACT_TRAILING_CCC) != 0,
                                            nextCp, errorCode);
-            if(ce32 == 0x100) {
+            if(ce32 == Collation::NO_CE32) {
                 // CEs from a discontiguous contraction plus the skipped combining marks.
                 return;
             }
@@ -651,7 +651,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
             // and resets the reading position to the beginning.
         }
         skipped->clear();
-        ce32 = 0x100;  // Signal to the caller that the result is in the ceBuffer.
+        ce32 = Collation::NO_CE32;  // Signal to the caller that the result is in the ceBuffer.
     }
     return ce32;
 }
