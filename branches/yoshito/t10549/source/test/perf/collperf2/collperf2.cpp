@@ -386,7 +386,6 @@ void CppCompareUTF8::call(UErrorCode* status) {
     if (U_FAILURE(*status)) return;
 
     StringPiece src, tgt;
-    int32_t srcLen, tgtLen;
     if (roundRobin) {
         // call compareUTF8 for all permutations
         int32_t cmp = 0;
