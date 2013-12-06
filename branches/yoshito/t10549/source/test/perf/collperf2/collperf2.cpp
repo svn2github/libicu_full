@@ -40,11 +40,17 @@ struct CompactArrays{\
 COMPATCT_ARRAY(CA_uchar, UChar)
 COMPATCT_ARRAY(CA_char, char)
 
+#define MAX_TEST_STRINGS_FOR_PERMUTING 1000
+
 // C API test cases
+
+//
+// Test case taking a single test data array, calling ucol_strcoll by permuting the test data
+//
 class Strcoll : public UPerfFunction
 {
 public:
-    Strcoll(const UCollator* coll, CA_uchar* source, CA_uchar* target, UBool useLen, UBool roundRobin);
+    Strcoll(const UCollator* coll, CA_uchar* source, UBool useLen);
     ~Strcoll();
     virtual void call(UErrorCode* status);
     virtual long getOperationsPerIteration();
@@ -52,18 +58,16 @@ public:
 private:
     const UCollator *coll;
     CA_uchar *source;
-    CA_uchar *target;
     UBool useLen;
-    UBool roundRobin;
+    int32_t maxTestStrings;
 };
 
-Strcoll::Strcoll(const UCollator* coll, CA_uchar* source, CA_uchar* target, UBool useLen, UBool roundRobin)
+Strcoll::Strcoll(const UCollator* coll, CA_uchar* source, UBool useLen)
     :   coll(coll),
         source(source),
-        target(target),
-        useLen(useLen),
-        roundRobin(roundRobin)
+        useLen(useLen)
 {
+    maxTestStrings = source->count > MAX_TEST_STRINGS_FOR_PERMUTING ? MAX_TEST_STRINGS_FOR_PERMUTING : source->count;
 }
 
 Strcoll::~Strcoll()
@@ -74,45 +78,91 @@ void Strcoll::call(UErrorCode* status)
 {
     if (U_FAILURE(*status)) return;
 
+    // call strcoll for permutation
+    int32_t divisor = source->count / maxTestStrings;
     int32_t srcLen, tgtLen;
-    if (roundRobin) {
-        // call strcoll for all permutations
-        int32_t cmp = 0;
-        for (int32_t i = 0; i < source->count; i++) {
-            srcLen = useLen ? source->lengthOf(i) : -1;
-            for (int32_t j = 0; j < target->count; j++) {
-                tgtLen = useLen ? target->lengthOf(j) : -1;
-                cmp += ucol_strcoll(coll, source->dataOf(i), srcLen, target->dataOf(j), tgtLen);
-            }
+    int32_t cmp = 0;
+    for (int32_t i = 0, numTestStringsI = 0; i < source->count && numTestStringsI < maxTestStrings; i++) {
+        if (i % divisor) continue;
+        numTestStringsI++;
+        srcLen = useLen ? source->lengthOf(i) : -1;
+        for (int32_t j = 0, numTestStringsJ = 0; j < source->count && numTestStringsJ < maxTestStrings; j++) {
+            if (j % divisor) continue;
+            numTestStringsJ++;
+            tgtLen = useLen ? source->lengthOf(j) : -1;
+            cmp += ucol_strcoll(coll, source->dataOf(i), srcLen, source->dataOf(j), tgtLen);
         }
-        // At the end, cmp must be 0
-        if (cmp != 0) {
-            *status = U_INTERNAL_PROGRAM_ERROR;
-        }
-    } else {
-        // call strcoll for two strings at the same index
-        if (source->count < target->count) {
-            *status = U_ILLEGAL_ARGUMENT_ERROR;
-        } else {
-            for (int32_t i = 0; i < source->count; i++) {
-                srcLen = useLen ? source->lengthOf(i) : -1;
-                tgtLen = useLen ? target->lengthOf(i) : -1;
-                ucol_strcoll(coll, source->dataOf(i), srcLen, target->dataOf(i), tgtLen);
-            }
-        }
+    }
+    // At the end, cmp must be 0
+    if (cmp != 0) {
+        *status = U_INTERNAL_PROGRAM_ERROR;
     }
 }
 
 long Strcoll::getOperationsPerIteration()
 {
-    long numOps = roundRobin? (source->count) * (target->count) : source->count;
-    return numOps > 0 ? numOps : 1;
+    return maxTestStrings * maxTestStrings;
 }
 
+//
+// Test case taking two test data arrays, calling ucol_strcoll for strings at a same index
+//
+class Strcoll_2 : public UPerfFunction
+{
+public:
+    Strcoll_2(const UCollator* coll, CA_uchar* source, CA_uchar* target, UBool useLen);
+    ~Strcoll_2();
+    virtual void call(UErrorCode* status);
+    virtual long getOperationsPerIteration();
+
+private:
+    const UCollator *coll;
+    CA_uchar *source;
+    CA_uchar *target;
+    UBool useLen;
+};
+
+Strcoll_2::Strcoll_2(const UCollator* coll, CA_uchar* source, CA_uchar* target, UBool useLen)
+    :   coll(coll),
+        source(source),
+        target(target),
+        useLen(useLen)
+{
+}
+
+Strcoll_2::~Strcoll_2()
+{
+}
+
+void Strcoll_2::call(UErrorCode* status)
+{
+    if (U_FAILURE(*status)) return;
+
+    // call strcoll for two strings at the same index
+    if (source->count < target->count) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+    } else {
+        for (int32_t i = 0; i < source->count; i++) {
+            int32_t srcLen = useLen ? source->lengthOf(i) : -1;
+            int32_t tgtLen = useLen ? target->lengthOf(i) : -1;
+            ucol_strcoll(coll, source->dataOf(i), srcLen, target->dataOf(i), tgtLen);
+        }
+    }
+}
+
+long Strcoll_2::getOperationsPerIteration()
+{
+    return source->count;
+}
+
+
+//
+// Test case taking a single test data array, calling ucol_strcollUTF8 by permuting the test data
+//
 class StrcollUTF8 : public UPerfFunction
 {
 public:
-    StrcollUTF8(const UCollator* coll, CA_char* source, CA_char* target, UBool useLen, UBool roundRobin);
+    StrcollUTF8(const UCollator* coll, CA_char* source, UBool useLen);
     ~StrcollUTF8();
     virtual void call(UErrorCode* status);
     virtual long getOperationsPerIteration();
@@ -120,18 +170,16 @@ public:
 private:
     const UCollator *coll;
     CA_char *source;
-    CA_char *target;
     UBool useLen;
-    UBool roundRobin;
+    int32_t maxTestStrings;
 };
 
-StrcollUTF8::StrcollUTF8(const UCollator* coll, CA_char* source, CA_char* target, UBool useLen, UBool roundRobin)
+StrcollUTF8::StrcollUTF8(const UCollator* coll, CA_char* source, UBool useLen)
     :   coll(coll),
         source(source),
-        target(target),
-        useLen(useLen),
-        roundRobin(roundRobin)
+        useLen(useLen)
 {
+    maxTestStrings = source->count > MAX_TEST_STRINGS_FOR_PERMUTING ? MAX_TEST_STRINGS_FOR_PERMUTING : source->count;
 }
 
 StrcollUTF8::~StrcollUTF8()
@@ -140,42 +188,88 @@ StrcollUTF8::~StrcollUTF8()
 
 void StrcollUTF8::call(UErrorCode* status)
 {
+    if (U_FAILURE(*status)) return;
+
+    // call strcollUTF8 for permutation
+    int32_t divisor = source->count / maxTestStrings;
     int32_t srcLen, tgtLen;
-    if (roundRobin) {
-        // call strcollUTF8 for all permutations
-        int32_t cmp = 0;
-        for (int32_t i = 0; U_SUCCESS(*status) && i < source->count; i++) {
-            srcLen = useLen ? source->lengthOf(i) : -1;
-            for (int32_t j = 0; j < target->count; j++) {
-                tgtLen = useLen ? target->lengthOf(j) : -1;
-                cmp += ucol_strcollUTF8(coll, source->dataOf(i), srcLen, target->dataOf(j), tgtLen, status);
-            }
+    int32_t cmp = 0;
+    for (int32_t i = 0, numTestStringsI = 0; U_SUCCESS(*status) && i < source->count && numTestStringsI < maxTestStrings; i++) {
+        if (i % divisor) continue;
+        numTestStringsI++;
+        srcLen = useLen ? source->lengthOf(i) : -1;
+        for (int32_t j = 0, numTestStringsJ = 0; U_SUCCESS(*status) && j < source->count && numTestStringsJ < maxTestStrings; j++) {
+            if (j % divisor) continue;
+            numTestStringsJ++;
+            tgtLen = useLen ? source->lengthOf(j) : -1;
+            cmp += ucol_strcollUTF8(coll, source->dataOf(i), srcLen, source->dataOf(j), tgtLen, status);
         }
-        // At the end, cmp must be 0
-        if (cmp != 0) {
-            *status = U_INTERNAL_PROGRAM_ERROR;
-        }
-    } else {
-        // call strcoll for two strings at the same index
-        if (source->count < target->count) {
-            *status = U_ILLEGAL_ARGUMENT_ERROR;
-        } else {
-            for (int32_t i = 0; U_SUCCESS(*status) && i < source->count; i++) {
-                srcLen = useLen ? source->lengthOf(i) : -1;
-                tgtLen = useLen ? target->lengthOf(i) : -1;
-                ucol_strcollUTF8(coll, source->dataOf(i), srcLen, target->dataOf(i), tgtLen, status);
-            }
-        }
+    }
+    // At the end, cmp must be 0
+    if (cmp != 0) {
+        *status = U_INTERNAL_PROGRAM_ERROR;
     }
 }
 
 long StrcollUTF8::getOperationsPerIteration()
 {
-    long numOps = (source->count) * (target->count);
-    return numOps > 0 ? numOps : 1;
+    return maxTestStrings * maxTestStrings;
 }
 
+//
+// Test case taking two test data arrays, calling ucol_strcoll for strings at a same index
+//
+class StrcollUTF8_2 : public UPerfFunction
+{
+public:
+    StrcollUTF8_2(const UCollator* coll, CA_char* source, CA_char* target, UBool useLen);
+    ~StrcollUTF8_2();
+    virtual void call(UErrorCode* status);
+    virtual long getOperationsPerIteration();
 
+private:
+    const UCollator *coll;
+    CA_char *source;
+    CA_char *target;
+    UBool useLen;
+};
+
+StrcollUTF8_2::StrcollUTF8_2(const UCollator* coll, CA_char* source, CA_char* target, UBool useLen)
+    :   coll(coll),
+        source(source),
+        target(target),
+        useLen(useLen)
+{
+}
+
+StrcollUTF8_2::~StrcollUTF8_2()
+{
+}
+
+void StrcollUTF8_2::call(UErrorCode* status)
+{
+    if (U_FAILURE(*status)) return;
+
+    // call strcoll for two strings at the same index
+    if (source->count < target->count) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+    } else {
+        for (int32_t i = 0; U_SUCCESS(*status) && i < source->count; i++) {
+            int32_t srcLen = useLen ? source->lengthOf(i) : -1;
+            int32_t tgtLen = useLen ? target->lengthOf(i) : -1;
+            ucol_strcollUTF8(coll, source->dataOf(i), srcLen, target->dataOf(i), tgtLen, status);
+        }
+    }
+}
+
+long StrcollUTF8_2::getOperationsPerIteration()
+{
+    return source->count;
+}
+
+//
+// Test case taking a single test data array, calling ucol_getSortKey for each
+//
 class GetSortKey : public UPerfFunction
 {
 public:
@@ -223,10 +317,13 @@ void GetSortKey::call(UErrorCode* status)
 
 long GetSortKey::getOperationsPerIteration()
 {
-    return source->count > 0 ? source->count : 1;
+    return source->count;
 }
 
-
+//
+// Test case taking a single test data array, calling ucol_nextSortKeyPart for each for the
+// given buffer size
+//
 class NextSortKeyPart : public UPerfFunction
 {
 public:
@@ -234,21 +331,23 @@ public:
     ~NextSortKeyPart();
     virtual void call(UErrorCode* status);
     virtual long getOperationsPerIteration();
+    virtual long getEventsPerIteration();
 
 private:
     const UCollator *coll;
     CA_uchar *source;
     int32_t bufSize;
     int32_t maxIteration;
-    long ops;
+    long events;
 };
 
+// Note: maxIteration = -1 -> repeat until the end of collation key
 NextSortKeyPart::NextSortKeyPart(const UCollator* coll, CA_uchar* source, int32_t bufSize, int32_t maxIteration /* = -1 */)
     :   coll(coll),
         source(source),
         bufSize(bufSize),
         maxIteration(maxIteration),
-        ops(0)
+        events(0)
 {
 }
 
@@ -264,7 +363,7 @@ void NextSortKeyPart::call(UErrorCode* status)
     uint32_t state[2];
     UCharIterator iter;
 
-    ops = 0;
+    events = 0;
     for (int i = 0; i < source->count && U_SUCCESS(*status); i++) {
         uiter_setString(&iter, source->dataOf(i), source->lengthOf(i));
         state[0] = 0;
@@ -272,7 +371,7 @@ void NextSortKeyPart::call(UErrorCode* status)
         int32_t partLen = bufSize;
         for (int32_t n = 0; partLen == bufSize && (maxIteration < 0 || n < maxIteration); n++) {
             partLen = ucol_nextSortKeyPart(coll, &iter, state, part, bufSize, status);
-            ops++;
+            events++;
         }
     }
     free(part);
@@ -280,15 +379,23 @@ void NextSortKeyPart::call(UErrorCode* status)
 
 long NextSortKeyPart::getOperationsPerIteration()
 {
-    return ops > 0 ? ops : 1;
+    return source->count;
 }
 
+long NextSortKeyPart::getEventsPerIteration()
+{
+    return events;
+}
 
 // CPP API test cases
+
+//
+// Test case taking a single test data array, calling Collator::compare by permuting the test data
+//
 class CppCompare : public UPerfFunction
 {
 public:
-    CppCompare(const Collator* coll, CA_uchar* source, CA_uchar* target, UBool useLen, UBool roundRobin);
+    CppCompare(const Collator* coll, CA_uchar* source, UBool useLen);
     ~CppCompare();
     virtual void call(UErrorCode* status);
     virtual long getOperationsPerIteration();
@@ -296,18 +403,16 @@ public:
 private:
     const Collator *coll;
     CA_uchar *source;
-    CA_uchar *target;
     UBool useLen;
-    UBool roundRobin;
+    int32_t maxTestStrings;
 };
 
-CppCompare::CppCompare(const Collator* coll, CA_uchar* source, CA_uchar* target, UBool useLen, UBool roundRobin)
+CppCompare::CppCompare(const Collator* coll, CA_uchar* source, UBool useLen)
     :   coll(coll),
         source(source),
-        target(target),
-        useLen(useLen),
-        roundRobin(roundRobin)
+        useLen(useLen)
 {
+    maxTestStrings = source->count > MAX_TEST_STRINGS_FOR_PERMUTING ? MAX_TEST_STRINGS_FOR_PERMUTING : source->count;
 }
 
 CppCompare::~CppCompare()
@@ -317,46 +422,90 @@ CppCompare::~CppCompare()
 void CppCompare::call(UErrorCode* status) {
     if (U_FAILURE(*status)) return;
 
+    // call compare for permutation of test data
+    int32_t divisor = source->count / maxTestStrings;
     int32_t srcLen, tgtLen;
-    if (roundRobin) {
-        // call strcoll for all permutations
-        int32_t cmp = 0;
-        for (int32_t i = 0; i < source->count; i++) {
-            srcLen = useLen ? source->lengthOf(i) : -1;
-            for (int32_t j = 0; j < target->count; j++) {
-                tgtLen = useLen ? target->lengthOf(j) : -1;
-                cmp += coll->compare(source->dataOf(i), srcLen, target->dataOf(j), tgtLen);
-            }
+    int32_t cmp = 0;
+    for (int32_t i = 0, numTestStringsI = 0; i < source->count && numTestStringsI < maxTestStrings; i++) {
+        if (i % divisor) continue;
+        numTestStringsI++;
+        srcLen = useLen ? source->lengthOf(i) : -1;
+        for (int32_t j = 0, numTestStringsJ = 0; j < source->count && numTestStringsJ < maxTestStrings; j++) {
+            if (j % divisor) continue;
+            numTestStringsJ++;
+            tgtLen = useLen ? source->lengthOf(j) : -1;
+            cmp += coll->compare(source->dataOf(i), srcLen, source->dataOf(j), tgtLen);
         }
-        // At the end, cmp must be 0
-        if (cmp != 0) {
-            *status = U_INTERNAL_PROGRAM_ERROR;
-        }
-    } else {
-        // call strcoll for two strings at the same index
-        if (source->count < target->count) {
-            *status = U_ILLEGAL_ARGUMENT_ERROR;
-        } else {
-            for (int32_t i = 0; i < source->count; i++) {
-                srcLen = useLen ? source->lengthOf(i) : -1;
-                tgtLen = useLen ? target->lengthOf(i) : -1;
-                coll->compare(source->dataOf(i), srcLen, target->dataOf(i), tgtLen);
-            }
-        }
+    }
+    // At the end, cmp must be 0
+    if (cmp != 0) {
+        *status = U_INTERNAL_PROGRAM_ERROR;
     }
 }
 
 long CppCompare::getOperationsPerIteration()
 {
-    long numOps = (source->count) * (target->count);
-    return numOps > 0 ? numOps : 1;
+    return maxTestStrings * maxTestStrings;
+}
+
+//
+// Test case taking two test data arrays, calling Collator::compare for strings at a same index
+//
+class CppCompare_2 : public UPerfFunction
+{
+public:
+    CppCompare_2(const Collator* coll, CA_uchar* source, CA_uchar* target, UBool useLen);
+    ~CppCompare_2();
+    virtual void call(UErrorCode* status);
+    virtual long getOperationsPerIteration();
+
+private:
+    const Collator *coll;
+    CA_uchar *source;
+    CA_uchar *target;
+    UBool useLen;
+};
+
+CppCompare_2::CppCompare_2(const Collator* coll, CA_uchar* source, CA_uchar* target, UBool useLen)
+    :   coll(coll),
+        source(source),
+        target(target),
+        useLen(useLen)
+{
+}
+
+CppCompare_2::~CppCompare_2()
+{
+}
+
+void CppCompare_2::call(UErrorCode* status) {
+    if (U_FAILURE(*status)) return;
+
+    // call strcoll for two strings at the same index
+    if (source->count < target->count) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+    } else {
+        for (int32_t i = 0; i < source->count; i++) {
+            int32_t srcLen = useLen ? source->lengthOf(i) : -1;
+            int32_t tgtLen = useLen ? target->lengthOf(i) : -1;
+            coll->compare(source->dataOf(i), srcLen, target->dataOf(i), tgtLen);
+        }
+    }
+}
+
+long CppCompare_2::getOperationsPerIteration()
+{
+    return source->count;
 }
 
 
+//
+// Test case taking a single test data array, calling Collator::compareUTF8 by permuting the test data
+//
 class CppCompareUTF8 : public UPerfFunction
 {
 public:
-    CppCompareUTF8(const Collator* coll, CA_char* source, CA_char* target, UBool useLen, UBool roundRobin);
+    CppCompareUTF8(const Collator* coll, CA_char* source, UBool useLen);
     ~CppCompareUTF8();
     virtual void call(UErrorCode* status);
     virtual long getOperationsPerIteration();
@@ -364,18 +513,16 @@ public:
 private:
     const Collator *coll;
     CA_char *source;
-    CA_char *target;
     UBool useLen;
-    UBool roundRobin;
+    int32_t maxTestStrings;
 };
 
-CppCompareUTF8::CppCompareUTF8(const Collator* coll, CA_char* source, CA_char* target, UBool useLen, UBool roundRobin)
+CppCompareUTF8::CppCompareUTF8(const Collator* coll, CA_char* source, UBool useLen)
     :   coll(coll),
         source(source),
-        target(target),
-        useLen(useLen),
-        roundRobin(roundRobin)
+        useLen(useLen)
 {
+    maxTestStrings = source->count > MAX_TEST_STRINGS_FOR_PERMUTING ? MAX_TEST_STRINGS_FOR_PERMUTING : source->count;
 }
 
 CppCompareUTF8::~CppCompareUTF8()
@@ -385,55 +532,103 @@ CppCompareUTF8::~CppCompareUTF8()
 void CppCompareUTF8::call(UErrorCode* status) {
     if (U_FAILURE(*status)) return;
 
+    // call compareUTF8 for all permutations
+    int32_t divisor = source->count / maxTestStrings;
     StringPiece src, tgt;
-    if (roundRobin) {
-        // call compareUTF8 for all permutations
-        int32_t cmp = 0;
-        for (int32_t i = 0; U_SUCCESS(*status) && i < source->count; i++) {
-            if (useLen) {
-                src.set(source->dataOf(i), source->lengthOf(i));
-            } else {
-                src.set(source->dataOf(i));
-            }
-            for (int32_t j = 0; j < target->count; j++) {
-                if (useLen) {
-                    tgt.set(target->dataOf(i), target->lengthOf(i));
-                } else {
-                    tgt.set(target->dataOf(i));
-                }
-                cmp += coll->compareUTF8(src, tgt, *status);
-            }
-        }
-        // At the end, cmp must be 0
-        if (cmp != 0) {
-            *status = U_INTERNAL_PROGRAM_ERROR;
-        }
-    } else {
-        // call strcoll for two strings at the same index
-        if (source->count < target->count) {
-            *status = U_ILLEGAL_ARGUMENT_ERROR;
+    int32_t cmp = 0;
+    for (int32_t i = 0, numTestStringsI = 0; U_SUCCESS(*status) && i < source->count && numTestStringsI < maxTestStrings; i++) {
+        if (i % divisor) continue;
+        numTestStringsI++;
+
+        if (useLen) {
+            src.set(source->dataOf(i), source->lengthOf(i));
         } else {
-            for (int32_t i = 0; U_SUCCESS(*status) && i < source->count; i++) {
-                if (useLen) {
-                    src.set(source->dataOf(i), source->lengthOf(i));
-                    tgt.set(target->dataOf(i), target->lengthOf(i));
-                } else {
-                    src.set(source->dataOf(i));
-                    tgt.set(target->dataOf(i));
-                }
-                coll->compareUTF8(src, tgt, *status);
-            }
+            src.set(source->dataOf(i));
         }
+        for (int32_t j = 0, numTestStringsJ = 0; U_SUCCESS(*status) && j < source->count && numTestStringsJ < maxTestStrings; j++) {
+            if (j % divisor) continue;
+            numTestStringsJ++;
+
+            if (useLen) {
+                tgt.set(source->dataOf(i), source->lengthOf(i));
+            } else {
+                tgt.set(source->dataOf(i));
+            }
+            cmp += coll->compareUTF8(src, tgt, *status);
+        }
+    }
+    // At the end, cmp must be 0
+    if (cmp != 0) {
+        *status = U_INTERNAL_PROGRAM_ERROR;
     }
 }
 
 long CppCompareUTF8::getOperationsPerIteration()
 {
-    long numOps = (source->count) * (target->count);
-    return numOps > 0 ? numOps : 1;
+    return maxTestStrings * maxTestStrings;
 }
 
 
+//
+// Test case taking two test data arrays, calling Collator::compareUTF8 for strings at a same index
+//
+class CppCompareUTF8_2 : public UPerfFunction
+{
+public:
+    CppCompareUTF8_2(const Collator* coll, CA_char* source, CA_char* target, UBool useLen);
+    ~CppCompareUTF8_2();
+    virtual void call(UErrorCode* status);
+    virtual long getOperationsPerIteration();
+
+private:
+    const Collator *coll;
+    CA_char *source;
+    CA_char *target;
+    UBool useLen;
+};
+
+CppCompareUTF8_2::CppCompareUTF8_2(const Collator* coll, CA_char* source, CA_char* target, UBool useLen)
+    :   coll(coll),
+        source(source),
+        target(target),
+        useLen(useLen)
+{
+}
+
+CppCompareUTF8_2::~CppCompareUTF8_2()
+{
+}
+
+void CppCompareUTF8_2::call(UErrorCode* status) {
+    if (U_FAILURE(*status)) return;
+
+    // call strcoll for two strings at the same index
+    StringPiece src, tgt;
+    if (source->count < target->count) {
+        *status = U_ILLEGAL_ARGUMENT_ERROR;
+    } else {
+        for (int32_t i = 0; U_SUCCESS(*status) && i < source->count; i++) {
+            if (useLen) {
+                src.set(source->dataOf(i), source->lengthOf(i));
+                tgt.set(target->dataOf(i), target->lengthOf(i));
+            } else {
+                src.set(source->dataOf(i));
+                tgt.set(target->dataOf(i));
+            }
+            coll->compareUTF8(src, tgt, *status);
+        }
+    }
+}
+
+long CppCompareUTF8_2::getOperationsPerIteration()
+{
+    return source->count;
+}
+
+
+//
+// Test case taking a single test data array, calling Collator::getCollationKey for each
+//
 class CppGetCollationKey : public UPerfFunction
 {
 public:
@@ -470,7 +665,7 @@ void CppGetCollationKey::call(UErrorCode* status)
 }
 
 long CppGetCollationKey::getOperationsPerIteration() {
-    return source->count > 0 ? source->count : 1;
+    return source->count;
 }
 
 
@@ -541,23 +736,6 @@ CollPerf2Test::CollPerf2Test(int32_t argc, const char *argv[], UErrorCode &statu
         return;
     }
 
-    UOption options[] = {
-        UOPTION_DEF("c_french", 'f', UOPT_REQUIRES_ARG),    // --french <on | OFF>
-        UOPTION_DEF("c_alternate", 'a', UOPT_REQUIRES_ARG), // --alternate <NON_IGNORE | shifted>
-        UOPTION_DEF("c_casefirst", 'c', UOPT_REQUIRES_ARG), // --casefirst <lower | upper | OFF>
-        UOPTION_DEF("c_caselevel", 'l', UOPT_REQUIRES_ARG), // --caselevel <on | OFF>
-        UOPTION_DEF("c_normal", 'n', UOPT_REQUIRES_ARG),    // --normal <on | OFF> 
-        UOPTION_DEF("c_strength", 's', UOPT_REQUIRES_ARG),  // --strength <1-5>
-    };
-    int32_t opt_len = (sizeof(options)/sizeof(options[0]));
-    enum {f,a,c,l,n,s};   // The buffer between the option items' order and their references
-
-    _remainingArgc = u_parseArgs(_remainingArgc, (char**)argv, opt_len, options);
-    if (_remainingArgc < 0) {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-        return;
-    }
-
     if (locale == NULL){
         locale = "en_US";   // set default locale
     }
@@ -565,99 +743,129 @@ CollPerf2Test::CollPerf2Test(int32_t argc, const char *argv[], UErrorCode &statu
     //  Set up an ICU collator
     coll = ucol_open(locale, &status);
     collObj = Collator::createInstance(locale, status);
-    if (U_FAILURE(status)) {
-        return;
-    }
 
-    if (options[f].doesOccur) {
-        if (strcmp("on", options[f].value) == 0) {
-            ucol_setAttribute(coll, UCOL_FRENCH_COLLATION, UCOL_ON, &status);
-            collObj->setAttribute(UCOL_FRENCH_COLLATION, UCOL_ON, status);
-        } else if (strcmp("off", options[f].value) == 0) {
-            ucol_setAttribute(coll, UCOL_FRENCH_COLLATION, UCOL_OFF, &status);
-            collObj->setAttribute(UCOL_FRENCH_COLLATION, UCOL_OFF, status);
+    // Keyword support should be actually a part of ICU collator
+    char keyBuffer[256];
+    UColAttributeValue val;
+    if (uloc_getKeywordValue(locale, "strength", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "primary") == 0) {
+            val = UCOL_PRIMARY;
+        } else if (strcmp(keyBuffer, "secondary") == 0) {
+            val = UCOL_SECONDARY;
+        } else if (strcmp(keyBuffer, "tertiary") == 0) {
+            val = UCOL_TERTIARY;
+        } else if (strcmp(keyBuffer, "quaternary") == 0) {
+            val = UCOL_QUATERNARY;
+        } else if (strcmp(keyBuffer, "identical") == 0) {
+            val = UCOL_IDENTICAL;
         } else {
             status = U_ILLEGAL_ARGUMENT_ERROR;
-            return;
+        }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_STRENGTH, val, &status);
+            collObj->setAttribute(UCOL_STRENGTH, val, status);
         }
     }
-
-    if (options[a].doesOccur) {
-        if (strcmp("shifted", options[a].value) == 0) {
-            ucol_setAttribute(coll, UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, &status);
-            collObj->setAttribute(UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, status);
-        } else if (strcmp("non-ignorable", options[a].value) == 0) {
-            ucol_setAttribute(coll, UCOL_ALTERNATE_HANDLING, UCOL_NON_IGNORABLE, &status);
-            collObj->setAttribute(UCOL_ALTERNATE_HANDLING, UCOL_NON_IGNORABLE, status);
+    if (uloc_getKeywordValue(locale, "alternate", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "non-ignorable") == 0) {
+            val = UCOL_NON_IGNORABLE;
+        } else if (strcmp(keyBuffer, "shifted") == 0) {
+            val = UCOL_SHIFTED;
         } else {
             status = U_ILLEGAL_ARGUMENT_ERROR;
-            return;
+        }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_ALTERNATE_HANDLING, val, &status);
+            collObj->setAttribute(UCOL_ALTERNATE_HANDLING, val, status);
         }
     }
-
-    if (options[c].doesOccur) {
-        if (strcmp("lower", options[c].value) == 0) {
-            ucol_setAttribute(coll, UCOL_CASE_FIRST, UCOL_LOWER_FIRST, &status);
-            collObj->setAttribute(UCOL_CASE_FIRST, UCOL_LOWER_FIRST, status);
-        } else if (strcmp("upper", options[c].value) == 0) {
-            ucol_setAttribute(coll, UCOL_CASE_FIRST, UCOL_UPPER_FIRST, &status);
-            collObj->setAttribute(UCOL_CASE_FIRST, UCOL_UPPER_FIRST, status);
-        } else if (strcmp("off", options[c].value) == 0) {
-            ucol_setAttribute(coll, UCOL_CASE_FIRST, UCOL_OFF, &status);
-            collObj->setAttribute(UCOL_CASE_FIRST, UCOL_OFF, status);
+    if (uloc_getKeywordValue(locale, "backwards", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "on") == 0) {
+            val = UCOL_ON;
+        } else if (strcmp(keyBuffer, "off") == 0) {
+            val = UCOL_OFF;
         } else {
             status = U_ILLEGAL_ARGUMENT_ERROR;
-            return;
+        }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_FRENCH_COLLATION, val, &status);
+            collObj->setAttribute(UCOL_FRENCH_COLLATION, val, status);
         }
     }
-
-    if (options[l].doesOccur){
-        if (strcmp("on", options[l].value) == 0) {
-            ucol_setAttribute(coll, UCOL_CASE_LEVEL, UCOL_ON, &status);
-            collObj->setAttribute(UCOL_CASE_LEVEL, UCOL_ON, status);
-        } else if (strcmp("off", options[l].value) == 0) {
-            ucol_setAttribute(coll, UCOL_CASE_LEVEL, UCOL_OFF, &status);
-            collObj->setAttribute(UCOL_CASE_LEVEL, UCOL_OFF, status);
+    if (uloc_getKeywordValue(locale, "normalization", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "on") == 0) {
+            val = UCOL_ON;
+        } else if (strcmp(keyBuffer, "off") == 0) {
+            val = UCOL_OFF;
         } else {
             status = U_ILLEGAL_ARGUMENT_ERROR;
-            return;
+        }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_NORMALIZATION_MODE, val, &status);
+            collObj->setAttribute(UCOL_NORMALIZATION_MODE, val, status);
         }
     }
-
-    if (options[n].doesOccur){
-        if (strcmp("on", options[n].value) == 0) {
-            ucol_setAttribute(coll, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
-            collObj->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
-        } else if (strcmp("off", options[n].value) == 0) {
-            ucol_setAttribute(coll, UCOL_NORMALIZATION_MODE, UCOL_OFF, &status);
-            collObj->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_OFF, status);
+    if (uloc_getKeywordValue(locale, "caseLevel", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "on") == 0) {
+            val = UCOL_ON;
+        } else if (strcmp(keyBuffer, "off") == 0) {
+            val = UCOL_OFF;
         } else {
             status = U_ILLEGAL_ARGUMENT_ERROR;
-            return;
+        }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_CASE_LEVEL, val, &status);
+            collObj->setAttribute(UCOL_CASE_LEVEL, val, status);
         }
     }
-
-    if (options[s].doesOccur) {
-        char *endp;
-        int tmp = strtol(options[s].value, &endp, 0);
-        if (endp == options[s].value) {
-            status = U_ILLEGAL_ARGUMENT_ERROR;
-            return;
+    if (uloc_getKeywordValue(locale, "caseFirst", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "upper") == 0) {
+            val = UCOL_UPPER_FIRST;
+        } else if (strcmp(keyBuffer, "lower") == 0) {
+            val = UCOL_LOWER_FIRST;
+        } else if (strcmp(keyBuffer, "off") == 0) {
+            val = UCOL_OFF;
         } else {
-            UColAttributeValue strength = UCOL_DEFAULT;
-            switch (tmp) {
-                case 1: strength = UCOL_PRIMARY; break;
-                case 2: strength = UCOL_SECONDARY; break;
-                case 3: strength = UCOL_TERTIARY; break;
-                case 4: strength = UCOL_QUATERNARY; break;
-                case 5: strength = UCOL_IDENTICAL; break;
-                default: status = U_ILLEGAL_ARGUMENT_ERROR; return;
-            }
-            if (U_SUCCESS(status)) {
-                ucol_setAttribute(coll, UCOL_STRENGTH, strength, &status);
-                collObj->setAttribute(UCOL_STRENGTH, strength, status);
-            }
+            status = U_ILLEGAL_ARGUMENT_ERROR;
         }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_CASE_FIRST, val, &status);
+            collObj->setAttribute(UCOL_CASE_FIRST, val, status);
+        }
+    }
+    if (uloc_getKeywordValue(locale, "hiraganaQuaternary", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "on") == 0) {
+            val = UCOL_ON;
+        } else if (strcmp(keyBuffer, "off") == 0) {
+            val = UCOL_OFF;
+        } else {
+            status = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_HIRAGANA_QUATERNARY_MODE, val, &status);
+            collObj->setAttribute(UCOL_HIRAGANA_QUATERNARY_MODE, val, status);
+        }
+    }
+    if (uloc_getKeywordValue(locale, "numeric", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        if (strcmp(keyBuffer, "on") == 0) {
+            val = UCOL_ON;
+        } else if (strcmp(keyBuffer, "off") == 0) {
+            val = UCOL_OFF;
+        } else {
+            status = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+        if (U_SUCCESS(status)) {
+            ucol_setAttribute(coll, UCOL_NUMERIC_COLLATION, val, &status);
+            collObj->setAttribute(UCOL_NUMERIC_COLLATION, val, status);
+        }
+    }
+    if (uloc_getKeywordValue(locale, "variableTop", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        // no support for now
+        status = U_UNSUPPORTED_ERROR;
+    }
+    if (uloc_getKeywordValue(locale, "reorder", keyBuffer, sizeof(keyBuffer)/sizeof(keyBuffer[0]), &status)) {
+        // no support for now
+        status = U_UNSUPPORTED_ERROR;
     }
 }
 
@@ -878,7 +1086,7 @@ CollPerf2Test::runIndexedTest(int32_t index, UBool exec, const char *&name, char
 UPerfFunction* CollPerf2Test::TestStrcoll()
 {
     UErrorCode status = U_ZERO_ERROR;
-    Strcoll *testCase = new Strcoll(coll, getData16(status), getData16(status), TRUE /* useLen */, TRUE /* roundRobin */);
+    Strcoll *testCase = new Strcoll(coll, getData16(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -889,7 +1097,7 @@ UPerfFunction* CollPerf2Test::TestStrcoll()
 UPerfFunction* CollPerf2Test::TestStrcollNull()
 {
     UErrorCode status = U_ZERO_ERROR;
-    Strcoll *testCase = new Strcoll(coll, getData16(status), getData16(status), FALSE /* useLen */, TRUE /* roundRobin */);
+    Strcoll *testCase = new Strcoll(coll, getData16(status), FALSE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -900,7 +1108,7 @@ UPerfFunction* CollPerf2Test::TestStrcollNull()
 UPerfFunction* CollPerf2Test::TestStrcollSimilar()
 {
     UErrorCode status = U_ZERO_ERROR;
-    Strcoll *testCase = new Strcoll(coll, getData16(status), getModData16(status), TRUE /* useLen */, FALSE /* roundRobin */);
+    Strcoll_2 *testCase = new Strcoll_2(coll, getData16(status), getModData16(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -911,7 +1119,7 @@ UPerfFunction* CollPerf2Test::TestStrcollSimilar()
 UPerfFunction* CollPerf2Test::TestStrcollUTF8()
 {
     UErrorCode status = U_ZERO_ERROR;
-    StrcollUTF8 *testCase = new StrcollUTF8(coll, getData8(status), getData8(status), TRUE /* useLen */, TRUE /* roundRobin */);
+    StrcollUTF8 *testCase = new StrcollUTF8(coll, getData8(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -922,7 +1130,7 @@ UPerfFunction* CollPerf2Test::TestStrcollUTF8()
 UPerfFunction* CollPerf2Test::TestStrcollUTF8Null()
 {
     UErrorCode status = U_ZERO_ERROR;
-    StrcollUTF8 *testCase = new StrcollUTF8(coll, getData8(status), getData8(status), FALSE /* useLen */, TRUE /* roundRobin */);
+    StrcollUTF8 *testCase = new StrcollUTF8(coll, getData8(status),FALSE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -933,7 +1141,7 @@ UPerfFunction* CollPerf2Test::TestStrcollUTF8Null()
 UPerfFunction* CollPerf2Test::TestStrcollUTF8Similar()
 {
     UErrorCode status = U_ZERO_ERROR;
-    StrcollUTF8 *testCase = new StrcollUTF8(coll, getData8(status), getModData8(status), TRUE /* useLen */, FALSE /* roundRobin */);
+    StrcollUTF8_2 *testCase = new StrcollUTF8_2(coll, getData8(status), getModData8(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -999,7 +1207,7 @@ UPerfFunction* CollPerf2Test::TestNextSortKeyPart32_2()
 UPerfFunction* CollPerf2Test::TestCppCompare()
 {
     UErrorCode status = U_ZERO_ERROR;
-    CppCompare *testCase = new CppCompare(collObj, getData16(status), getData16(status), TRUE /* useLen */, TRUE /* roundRobin */);
+    CppCompare *testCase = new CppCompare(collObj, getData16(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -1010,7 +1218,7 @@ UPerfFunction* CollPerf2Test::TestCppCompare()
 UPerfFunction* CollPerf2Test::TestCppCompareNull()
 {
     UErrorCode status = U_ZERO_ERROR;
-    CppCompare *testCase = new CppCompare(collObj, getData16(status), getData16(status), FALSE /* useLen */, TRUE /* roundRobin */);
+    CppCompare *testCase = new CppCompare(collObj, getData16(status), FALSE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -1021,7 +1229,7 @@ UPerfFunction* CollPerf2Test::TestCppCompareNull()
 UPerfFunction* CollPerf2Test::TestCppCompareSimilar()
 {
     UErrorCode status = U_ZERO_ERROR;
-    CppCompare *testCase = new CppCompare(collObj, getData16(status), getModData16(status), TRUE /* useLen */, FALSE /* roundRobin */);
+    CppCompare_2 *testCase = new CppCompare_2(collObj, getData16(status), getModData16(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -1032,7 +1240,7 @@ UPerfFunction* CollPerf2Test::TestCppCompareSimilar()
 UPerfFunction* CollPerf2Test::TestCppCompareUTF8()
 {
     UErrorCode status = U_ZERO_ERROR;
-    CppCompareUTF8 *testCase = new CppCompareUTF8(collObj, getData8(status), getData8(status), TRUE /* useLen */, TRUE /* roundRobin */);
+    CppCompareUTF8 *testCase = new CppCompareUTF8(collObj, getData8(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -1043,7 +1251,7 @@ UPerfFunction* CollPerf2Test::TestCppCompareUTF8()
 UPerfFunction* CollPerf2Test::TestCppCompareUTF8Null()
 {
     UErrorCode status = U_ZERO_ERROR;
-    CppCompareUTF8 *testCase = new CppCompareUTF8(collObj, getData8(status), getData8(status), FALSE /* useLen */, TRUE /* roundRobin */);
+    CppCompareUTF8 *testCase = new CppCompareUTF8(collObj, getData8(status), FALSE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -1054,7 +1262,7 @@ UPerfFunction* CollPerf2Test::TestCppCompareUTF8Null()
 UPerfFunction* CollPerf2Test::TestCppCompareUTF8Similar()
 {
     UErrorCode status = U_ZERO_ERROR;
-    CppCompareUTF8 *testCase = new CppCompareUTF8(collObj, getData8(status), getModData8(status), TRUE /* useLen */, FALSE /* roundRobin */);
+    CppCompareUTF8_2 *testCase = new CppCompareUTF8_2(collObj, getData8(status), getModData8(status), TRUE /* useLen */);
     if (U_FAILURE(status)) {
         delete testCase;
         return NULL;
@@ -1102,4 +1310,5 @@ int main(int argc, const char *argv[])
     }
     return 0;
 }
+
 
