@@ -244,6 +244,18 @@ protected:
 
     virtual void backwardNumCodePoints(int32_t num, UErrorCode &errorCode) = 0;
 
+    /**
+     * Returns the CE32 from the data trie.
+     * Normally the same as data->getCE32(), but overridden in the builder.
+     * Call this only when the faster data->getCE32() cannot be used.
+     */
+    virtual uint32_t getDataCE32(UChar32 c) const;
+
+    virtual uint32_t getCE32FromBuilderData(uint32_t ce32, UErrorCode &errorCode);
+
+    void appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                           UBool forward, UErrorCode &errorCode);
+
     // Main lookup trie of the data object.
     const UTrie2 *trie;
     const CollationData *data;
@@ -251,9 +263,6 @@ protected:
 private:
     int64_t nextCEFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                            UErrorCode &errorCode);
-
-    void appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                           UBool forward, UErrorCode &errorCode);
 
     /**
      * Computes a CE from c's ce32 which has the OFFSET_TAG.

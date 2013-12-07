@@ -34,6 +34,7 @@ struct ConditionalCE32;
 
 class CollationFastLatinBuilder;
 class CopyHelper;
+class DataBuilderCollationIterator;
 class UCharsTrieBuilder;
 
 /**
@@ -159,12 +160,13 @@ public:
      *
      * @return incremented cesLength
      */
-    int32_t getCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength) const;
+    int32_t getCEs(const UnicodeString &s, int64_t ces[], int32_t cesLength);
     int32_t getCEs(const UnicodeString &prefix, const UnicodeString &s,
-                   int64_t ces[], int32_t cesLength) const;
+                   int64_t ces[], int32_t cesLength);
 
 protected:
     friend class CopyHelper;
+    friend class DataBuilderCollationIterator;
 
     uint32_t getCE32FromOffsetCE32(UBool fromBase, UChar32 c, uint32_t ce32) const;
 
@@ -177,6 +179,13 @@ protected:
     }
     inline ConditionalCE32 *getConditionalCE32ForCE32(uint32_t ce32) const {
         return getConditionalCE32(Collation::indexFromCE32(ce32));
+    }
+
+    static uint32_t makeBuilderContextCE32(int32_t index) {
+        return Collation::makeCE32FromTagAndIndex(Collation::BUILDER_DATA_TAG, index);
+    }
+    static inline UBool isBuilderContextCE32(uint32_t ce32) {
+        return Collation::hasCE32Tag(ce32, Collation::BUILDER_DATA_TAG);
     }
 
     static uint32_t encodeOneCEAsCE32(int64_t ce);
@@ -199,40 +208,28 @@ protected:
 
     void buildMappings(CollationData &data, UErrorCode &errorCode);
 
+    void clearContexts();
     void buildContexts(UErrorCode &errorCode);
-    void buildContext(UChar32 c, UErrorCode &errorCode);
+    uint32_t buildContext(ConditionalCE32 *cond, UErrorCode &errorCode);
     int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
                            UErrorCode &errorCode);
 
     void buildFastLatinTable(CollationData &data, UErrorCode &errorCode);
 
-    int32_t getCEs(const UnicodeString &s, int32_t start, int64_t ces[], int32_t cesLength) const;
-    int32_t appendCEsFromCodePoint(const UnicodeString &s, UChar32 c,
-                                   int32_t i, UnicodeSet &consumed,
-                                   int64_t ces[], int32_t cesLength) const;
+    int32_t getCEs(const UnicodeString &s, int32_t start, int64_t ces[], int32_t cesLength);
 
-    uint32_t getCE32FromContext(const UnicodeString &s, uint32_t ce32,
-                                int32_t sIndex, UnicodeSet &consumed) const;
-    uint32_t getCE32FromContraction(const UnicodeString &s,
-                                    int32_t sIndex, UnicodeSet &consumed,
-                                    ConditionalCE32 *firstCond,
-                                    ConditionalCE32 *lastCond) const;
-
-    uint32_t getCE32FromBasePrefix(const UnicodeString &s, uint32_t ce32, int32_t i) const;
-
-    uint32_t getCE32FromBaseContraction(const UnicodeString &s,
-                                        uint32_t ce32, int32_t sIndex,
-                                        UnicodeSet &consumed) const;
-
-    static int32_t appendCE(int64_t ces[], int32_t cesLength, int64_t ce) {
-        if(ce != 0) {
-            if(cesLength < Collation::MAX_EXPANSION_LENGTH) {
-                ces[cesLength] = ce;
-            }
-            ++cesLength;
-        }
-        return cesLength;
+    static UChar32 jamoCpFromIndex(int32_t i) {
+        // 0 <= i < CollationData::JAMO_CE32S_LENGTH = 19 + 21 + 27
+        if(i < Hangul::JAMO_L_COUNT) { return Hangul::JAMO_L_BASE + i; }
+        i -= Hangul::JAMO_L_COUNT;
+        if(i < Hangul::JAMO_V_COUNT) { return Hangul::JAMO_V_BASE + i; }
+        i -= Hangul::JAMO_V_COUNT;
+        // i < 27
+        return Hangul::JAMO_T_BASE + 1 + i;
     }
+
+    /** @see Collation::BUILDER_DATA_TAG */
+    static const uint32_t IS_BUILDER_JAMO_CE32 = 0x100;
 
     const Normalizer2Impl &nfcImpl;
     const CollationData *base;
@@ -250,6 +247,8 @@ protected:
 
     UBool fastLatinEnabled;
     CollationFastLatinBuilder *fastLatinBuilder;
+
+    DataBuilderCollationIterator *iter;
 };
 
 U_NAMESPACE_END

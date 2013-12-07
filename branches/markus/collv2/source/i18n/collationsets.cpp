@@ -424,7 +424,7 @@ ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32)
         case Collation::FALLBACK_TAG:
             return;
         case Collation::RESERVED_TAG_3:
-        case Collation::RESERVED_TAG_7:
+        case Collation::BUILDER_DATA_TAG:
         case Collation::LEAD_SURROGATE_TAG:
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
             return;

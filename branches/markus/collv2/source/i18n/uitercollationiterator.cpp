@@ -30,7 +30,7 @@ U_NAMESPACE_BEGIN
 
 void
 UIterCollationIterator::resetToOffset(int32_t newOffset) {
-    CollationIterator::reset();
+    reset();
     iter.move(&iter, newOffset, UITER_START);
 }
 

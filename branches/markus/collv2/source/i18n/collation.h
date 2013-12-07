@@ -148,8 +148,8 @@ public:
 
     /**
      * Special-CE32 tags, from bits 3..0 of a special 32-bit CE.
-     * Bits 31..8 are available for data.
-     * Bits 5..4 are reserved. They may be used to indicate lccc!=0 and tccc!=0.
+     * Bits 31..8 are available for tag-specific data.
+     * Bits  5..4: Reserved. May be used in the future to indicate lccc!=0 and tccc!=0.
      */
     enum {
         /**
@@ -171,8 +171,9 @@ public:
         LONG_SECONDARY_TAG = 2,
         /**
          * Unused.
-         * May be used for single-byte secondary CEs (SHORT_SECONDARY_TAG),
-         * storing the ccc in CE32 bits 23..16.
+         * May be used in the future for single-byte secondary CEs (SHORT_SECONDARY_TAG),
+         * storing the secondary in bits 31..24, the ccc in bits 23..16,
+         * and the tertiary in bits 15..8.
          */
         RESERVED_TAG_3 = 3,
         /**
@@ -195,9 +196,18 @@ public:
          */
         EXPANSION_TAG = 6,
         /**
-         * Unused.
+         * Builder data, used only in the CollationDataBuilder, not in runtime data.
+         *
+         * If bit 8 is 0: Builder context, points to a list of context-sensitive mappings.
+         * Bits 31..13: Index to the builder's list of ConditionalCE32 for this character.
+         * Bits 12.. 9: Unused, 0.
+         *
+         * If bit 8 is 1 (IS_BUILDER_JAMO_CE32): Builder-only jamoCE32 value.
+         * The builder fetches the Jamo CE32 from the trie.
+         * Bits 31..13: Jamo code point.
+         * Bits 12.. 9: Unused, 0.
          */
-        RESERVED_TAG_7 = 7,
+        BUILDER_DATA_TAG = 7,
         /**
          * Points to prefix trie.
          * Bits 31..13: Index into prefix/contraction data.
@@ -227,7 +237,8 @@ public:
         U0000_TAG = 11,
         /**
          * Tag for a Hangul syllable.
-         * Bits 31..8: Unused, 0.
+         * Bits 31..9: Unused, 0.
+         * Bit      8: HANGUL_NO_SPECIAL_JAMO flag.
          */
         HANGUL_TAG = 12,
         /**

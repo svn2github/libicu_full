@@ -220,6 +220,17 @@ CollationIterator::forbidSurrogateCodePoints() const {
     return FALSE;
 }
 
+uint32_t
+CollationIterator::getDataCE32(UChar32 c) const {
+    return data->getCE32(c);
+}
+
+uint32_t
+CollationIterator::getCE32FromBuilderData(uint32_t /*ce32*/, UErrorCode &errorCode) {
+    if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
+    return 0;
+}
+
 int64_t
 CollationIterator::nextCEFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                                   UErrorCode &errorCode) {
@@ -239,7 +250,6 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
         switch(Collation::tagFromCE32(ce32)) {
         case Collation::FALLBACK_TAG:
         case Collation::RESERVED_TAG_3:
-        case Collation::RESERVED_TAG_7:
             if(U_SUCCESS(errorCode)) { errorCode = U_INTERNAL_PROGRAM_ERROR; }
             return;
         case Collation::LONG_PRIMARY_TAG:
@@ -275,6 +285,14 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             }
             return;
         }
+        case Collation::BUILDER_DATA_TAG:
+            ce32 = getCE32FromBuilderData(ce32, errorCode);
+            if(U_FAILURE(errorCode)) { return; }
+            if(ce32 == Collation::FALLBACK_CE32) {
+                d = data->base;
+                ce32 = d->getCE32(c);
+            }
+            break;
         case Collation::PREFIX_TAG:
             if(forward) { backwardNumCodePoints(1, errorCode); }
             ce32 = getCE32FromPrefix(d, ce32, errorCode);
@@ -639,7 +657,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
             // rather than from the CollationData where we found the contraction.
             if(!skipped->hasNext()) { break; }
             c = skipped->next();
-            ce32 = data->getCE32(c);
+            ce32 = getDataCE32(c);
             if(ce32 == Collation::FALLBACK_CE32) {
                 d = data->base;
                 ce32 = d->getCE32(c);

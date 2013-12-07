@@ -28,7 +28,7 @@ U_NAMESPACE_BEGIN
 
 void
 UTF8CollationIterator::resetToOffset(int32_t newOffset) {
-    CollationIterator::reset();
+    reset();
     pos = newOffset;
 }
 
@@ -126,7 +126,7 @@ UTF8CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorCo
 
 void
 FCDUTF8CollationIterator::resetToOffset(int32_t newOffset) {
-    CollationIterator::reset();
+    reset();
     start = pos = newOffset;
     state = CHECK_FWD;
 }

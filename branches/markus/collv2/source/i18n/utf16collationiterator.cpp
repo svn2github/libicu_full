@@ -43,7 +43,7 @@ UTF16CollationIterator::operator==(const CollationIterator &other) const {
 
 void
 UTF16CollationIterator::resetToOffset(int32_t newOffset) {
-    CollationIterator::reset();
+    reset();
     pos = start + newOffset;
 }
 
@@ -183,7 +183,7 @@ FCDUTF16CollationIterator::operator==(const CollationIterator &other) const {
 
 void
 FCDUTF16CollationIterator::resetToOffset(int32_t newOffset) {
-    CollationIterator::reset();
+    reset();
     start = segmentStart = pos = rawStart + newOffset;
     limit = rawLimit;
     checkDir = 1;
