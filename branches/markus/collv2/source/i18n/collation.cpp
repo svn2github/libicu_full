@@ -18,9 +18,6 @@
 
 U_NAMESPACE_BEGIN
 
-const uint32_t Collation::ONLY_TERTIARY_MASK;
-const uint32_t Collation::CASE_AND_TERTIARY_MASK;
-
 uint32_t
 Collation::incTwoBytePrimaryByOffset(uint32_t basePrimary, UBool isCompressible, int32_t offset) {
     // Extract the second byte, minus the minimum byte value,

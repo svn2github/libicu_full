@@ -1777,13 +1777,12 @@ static void TestVariableTopSetting(void) {
 
   log_verbose("Testing setting variable top to contractions\n");
   {
-    status = U_ZERO_ERROR;
-
     UChar first[4] = { 0 };
     first[0] = 0x0040;
     first[1] = 0x0050;
     first[2] = 0x0000;
 
+    status = U_ZERO_ERROR;
     ucol_setVariableTop(coll, first, -1, &status);
 
     if(U_SUCCESS(status)) {
