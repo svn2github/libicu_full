@@ -241,7 +241,7 @@
     <ClCompile Include="errmsg.c" />
     <ClCompile Include="genrb.c" />
     <ClCompile Include="parse.cpp">
-      <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</DisableLanguageExtensions>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
     <ClCompile Include="prscmnts.cpp" />
     <ClCompile Include="rbutil.c" />

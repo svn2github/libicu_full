@@ -225,9 +225,11 @@
   <ItemGroup>
     <ClCompile Include="bytestrietest.cpp" />
     <ClCompile Include="collationtest.cpp">
-      <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</DisableLanguageExtensions>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
-    <ClCompile Include="colldata.cpp" />
+    <ClCompile Include="colldata.cpp">
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
+    </ClCompile>
     <ClCompile Include="regiontst.cpp" />
     <ClCompile Include="ucharstrietest.cpp" />
     <ClCompile Include="itrbbi.cpp" />
