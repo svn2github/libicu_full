@@ -38,7 +38,7 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
           builder(NULL), memory(NULL), bundle(NULL),
           trie(NULL), unsafeBackwardSet(NULL),
           reorderCodes(NULL),
-          maxExpansions(NULL), maxExpansionsInitOnce(U_INITONCE_INITIALIZER),
+          maxExpansions(NULL),
           refCount(0) {
     if(baseSettings != NULL) {
         settings.options = baseSettings->options;
@@ -48,6 +48,7 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
     }
     rules.getTerminatedBuffer();  // ensure NUL-termination
     version[0] = version[1] = version[2] = version[3] = 0;
+    maxExpansionsInitOnce.reset();
 }
 
 CollationTailoring::~CollationTailoring() {
