@@ -102,7 +102,11 @@ my $dataFiles = {
 
     "ru",
     [
-        "TestNames_Russian.txt",
+        "TestNames_Russian.txt"
+    ],
+
+    "ru\@strength=quaternary;alternate=shifted",
+    [
         "TestRandomWordsUDHR_ru.txt"
     ],
 
