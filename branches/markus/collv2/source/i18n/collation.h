@@ -112,7 +112,7 @@ public:
 
     static const uint32_t UNASSIGNED_CE32 = 0xffffffff;  // Compute an unassigned-implicit CE.
 
-    static const uint32_t NO_CE32 = 0x100;
+    static const uint32_t NO_CE32 = 1;
 
     /** No CE: End of input. Only used in runtime code, not stored in data. */
     static const uint32_t NO_CE_PRIMARY = 1;  // not a left-adjusted weight
@@ -217,9 +217,10 @@ public:
         /**
          * Points to contraction data.
          * Bits 31..13: Index into prefix/contraction data.
-         * Bits 12..10: Unused, 0.
-         * Bit       9: Set if the first character of every contraction suffix is >=U+0300.
-         * Bit       8: Set if any contraction suffix ends with cc != 0.
+         * Bits 12..11: Unused, 0.
+         * Bit      10: CONTRACT_TRAILING_CCC flag.
+         * Bit       9: CONTRACT_NEXT_CCC flag.
+         * Bit       8: CONTRACT_SINGLE_CP_NO_MATCH flag.
          */
         CONTRACTION_TAG = 9,
         /**
@@ -281,10 +282,18 @@ public:
     static const int32_t MAX_EXPANSION_LENGTH = 31;
     static const int32_t MAX_INDEX = 0x7ffff;
 
-    /** Set if the first character of every contraction suffix is >=U+0300. */
-    static const uint32_t CONTRACT_MIN_0300 = 0x200;
-    /** Set if any contraction suffix ends with cc != 0. */
-    static const uint32_t CONTRACT_TRAILING_CCC = 0x100;
+    /**
+     * Set if there is no match for the single (no-suffix) character itself.
+     * This is only possible if there is a prefix.
+     * In this case, discontiguous contraction matching cannot add combining marks
+     * starting from an empty suffix.
+     * The default CE32 is used anyway if there is no suffix match.
+     */
+    static const uint32_t CONTRACT_SINGLE_CP_NO_MATCH = 0x100;
+    /** Set if the first character of every contraction suffix has lccc!=0. */
+    static const uint32_t CONTRACT_NEXT_CCC = 0x200;
+    /** Set if any contraction suffix ends with lccc!=0. */
+    static const uint32_t CONTRACT_TRAILING_CCC = 0x400;
 
     /** For HANGUL_TAG: None of its Jamo CE32s isSpecialCE32(). */
     static const uint32_t HANGUL_NO_SPECIAL_JAMO = 0x100;

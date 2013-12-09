@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012, International Business Machines
+* Copyright (C) 2012-2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationfcd.h
@@ -15,6 +15,8 @@
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_COLLATION
+
+#include "unicode/utf16.h"
 
 U_NAMESPACE_BEGIN
 
@@ -75,6 +77,18 @@ public:
             c >= 0xc0 &&
             (i = tcccIndex[c >> 5]) != 0 &&
             (tcccBits[i] & ((uint32_t)1 << (c & 0x1f))) != 0;
+    }
+
+    static inline UBool mayHaveLccc(UChar32 c) {
+        // Handles all of Unicode 0..10FFFF.
+        // c can be negative, e.g., U_SENTINEL.
+        // U+0300 is the first character with lccc!=0.
+        if(c < 0x300) { return FALSE; }
+        if(c > 0xffff) { c = U16_LEAD(c); }
+        int32_t i;
+        return
+            (i = lcccIndex[c >> 5]) != 0 &&
+            (lcccBits[i] & ((uint32_t)1 << (c & 0x1f))) != 0;
     }
 
     /**

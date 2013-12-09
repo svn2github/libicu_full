@@ -210,7 +210,7 @@ protected:
 
     void clearContexts();
     void buildContexts(UErrorCode &errorCode);
-    uint32_t buildContext(ConditionalCE32 *cond, UErrorCode &errorCode);
+    uint32_t buildContext(ConditionalCE32 *head, UErrorCode &errorCode);
     int32_t addContextTrie(uint32_t defaultCE32, UCharsTrieBuilder &trieBuilder,
                            UErrorCode &errorCode);
 

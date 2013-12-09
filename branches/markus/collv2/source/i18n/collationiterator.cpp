@@ -21,6 +21,7 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
+#include "collationfcd.h"
 #include "collationiterator.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
@@ -316,9 +317,10 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
                     // No more text.
                     ce32 = defaultCE32;
                     break;
-                } else if(nextCp < 0x300 && (ce32 & Collation::CONTRACT_MIN_0300) != 0) {
-                    // The next code point is below U+0300
-                    // but all contraction suffixes start with characters >=U+0300.
+                } else if((ce32 & Collation::CONTRACT_NEXT_CCC) != 0 &&
+                        !CollationFCD::mayHaveLccc(nextCp)) {
+                    // All contraction suffixes start with characters with lccc!=0
+                    // but the next code point has lccc==0.
                     backwardNumCodePoints(1, errorCode);
                     ce32 = defaultCE32;
                     break;
@@ -329,19 +331,19 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
                     // No more text.
                     ce32 = defaultCE32;
                     break;
-                } else if(nextCp < 0x300 && (ce32 & Collation::CONTRACT_MIN_0300) != 0) {
-                    // The next code point is below U+0300
-                    // but all contraction suffixes start with characters >=U+0300.
+                } else if((ce32 & Collation::CONTRACT_NEXT_CCC) != 0 &&
+                        !CollationFCD::mayHaveLccc(nextCp)) {
+                    // All contraction suffixes start with characters with lccc!=0
+                    // but the next code point has lccc==0.
                     backwardNumSkipped(1, errorCode);
                     ce32 = defaultCE32;
                     break;
                 }
             }
-            ce32 = nextCE32FromContraction(d, p + 2, defaultCE32,
-                                           (ce32 & Collation::CONTRACT_TRAILING_CCC) != 0,
-                                           nextCp, errorCode);
+            ce32 = nextCE32FromContraction(d, ce32, p + 2, defaultCE32, nextCp, errorCode);
             if(ce32 == Collation::NO_CE32) {
-                // CEs from a discontiguous contraction plus the skipped combining marks.
+                // CEs from a discontiguous contraction plus the skipped combining marks
+                // have been appended already.
                 return;
             }
             break;
@@ -482,13 +484,13 @@ CollationIterator::backwardNumSkipped(int32_t n, UErrorCode &errorCode) {
 }
 
 uint32_t
-CollationIterator::nextCE32FromContraction(const CollationData *d, const UChar *p, uint32_t ce32,
-                                           UBool maybeDiscontiguous, UChar32 c,
+CollationIterator::nextCE32FromContraction(const CollationData *d, uint32_t contractionCE32,
+                                           const UChar *p, uint32_t ce32, UChar32 c,
                                            UErrorCode &errorCode) {
     // c: next code point after the original one
 
     // Number of code points read beyond the original code point.
-    // Only needed as input to nextCE32FromDiscontiguousContraction().
+    // Needed for discontiguous contraction matching.
     int32_t lookAhead = 1;
     // Number of code points read since the last match (initially only c).
     int32_t sinceMatch = 1;
@@ -510,7 +512,11 @@ CollationIterator::nextCE32FromContraction(const CollationData *d, const UChar *
         } else if(match == USTRINGTRIE_NO_MATCH || (nextCp = nextSkippedCodePoint(errorCode)) < 0) {
             // No match for c, or partial match (USTRINGTRIE_NO_VALUE) and no further text.
             // Back up if necessary, and try a discontiguous contraction.
-            if(maybeDiscontiguous) {
+            if((contractionCE32 & Collation::CONTRACT_TRAILING_CCC) != 0 &&
+                    // Discontiguous contraction matching extends an existing match.
+                    // If there is no match yet, then there is nothing to do.
+                    ((contractionCE32 & Collation::CONTRACT_SINGLE_CP_NO_MATCH) == 0 ||
+                        sinceMatch < lookAhead)) {
                 // The last character of at least one suffix has lccc!=0,
                 // allowing for discontiguous contractions.
                 // UCA S2.1.1 only processes non-starters immediately following

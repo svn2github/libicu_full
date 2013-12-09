@@ -2132,3 +2132,53 @@
 =  abc⑧z
 <1 abcdef
 =  abc⑨
+
+** test: prefix + discontiguous contraction with missing prefix contraction
+# Unfortunate terminology: The first "prefix" here is the pre-context,
+# the second "prefix" refers to the contraction/relation string that is
+# one shorter than the one being tested.
+@ rules
+&x=p|e
+&y=p|ê
+&z=op|ê
+# No mapping for op|e:
+# Discontiguous contraction matching should not match op|ê in opệ
+# because it would have to skip the dot below and extend a match on op|e by the circumflex,
+# but there is no match on op|e.
+* compare
+<1 oPe
+<1 ope
+=  opx
+<1 opệ
+=  opy\u0323  # y not z
+<1 opê
+=  opz
+
+# We cannot test for fallback by whether the contraction default CE32
+# is for another contraction. With the following rules, there is no mapping for op|e,
+# and the fallback to prefix p has no contractions.
+@ rules
+&x=p|e
+&z=op|ê
+* compare
+<1 oPe
+<1 ope
+=  opx
+<2 opệ
+=  opx\u0323\u0302  # x not z
+<1 opê
+=  opz
+
+# One more variation: Fallback to the simple code point, no shorter non-empty prefix.
+@ rules
+&x=e
+&z=op|ê
+* compare
+<1 ope
+=  opx
+<3 oPe
+=  oPx
+<2 opệ
+=  opx\u0323\u0302  # x not z
+<1 opê
+=  opz

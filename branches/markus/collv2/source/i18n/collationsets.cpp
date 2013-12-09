@@ -99,10 +99,18 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
 
     if(Collation::isContractionCE32(ce32)) {
         const UChar *p = data->contexts + Collation::indexFromCE32(ce32);
-        ce32 = data->getFinalCE32(((uint32_t)p[0] << 16) | p[1]);
+        if((ce32 & Collation::CONTRACT_SINGLE_CP_NO_MATCH) != 0) {
+            ce32 = Collation::NO_CE32;
+        } else {
+            ce32 = data->getFinalCE32(((uint32_t)p[0] << 16) | p[1]);
+        }
         if(Collation::isContractionCE32(baseCE32)) {
             const UChar *q = baseData->contexts + Collation::indexFromCE32(baseCE32);
-            baseCE32 = baseData->getFinalCE32(((uint32_t)q[0] << 16) | q[1]);
+            if((baseCE32 & Collation::CONTRACT_SINGLE_CP_NO_MATCH) != 0) {
+                baseCE32 = Collation::NO_CE32;
+            } else {
+                baseCE32 = baseData->getFinalCE32(((uint32_t)q[0] << 16) | q[1]);
+            }
             compareContractions(c, p + 2, q + 2);
         } else {
             addContractions(c, p + 2);
@@ -116,6 +124,8 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
     int32_t tag;
     if(Collation::isSpecialCE32(ce32)) {
         tag = Collation::tagFromCE32(ce32);
+        U_ASSERT(tag != Collation::PREFIX_TAG);
+        U_ASSERT(tag != Collation::CONTRACTION_TAG);
         // Currently, the tailoring data builder does not write offset tags.
         // They might be useful for saving space,
         // but they would complicate the builder,
@@ -127,20 +137,11 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
     int32_t baseTag;
     if(Collation::isSpecialCE32(baseCE32)) {
         baseTag = Collation::tagFromCE32(baseCE32);
+        U_ASSERT(baseTag != Collation::PREFIX_TAG);
+        U_ASSERT(baseTag != Collation::CONTRACTION_TAG);
     } else {
         baseTag = -1;
     }
-
-    // The contraction default CE32 might be another contraction CE32.
-    // That would be a fallback to the mappings for a shorter prefix.
-    // They are compared in a different code path.
-    U_ASSERT((tag == Collation::CONTRACTION_TAG) == (baseTag == Collation::CONTRACTION_TAG));
-    if(tag == Collation::CONTRACTION_TAG) {
-        U_ASSERT(!unreversedPrefix.isEmpty());
-        return;
-    }
-
-    U_ASSERT(tag != Collation::PREFIX_TAG);
 
     // Non-contextual mappings, expansions, etc.
     if(baseTag == Collation::OFFSET_TAG) {
@@ -546,13 +547,14 @@ void
 ContractionsAndExpansions::handleContractions(
         UChar32 start, UChar32 end, uint32_t ce32) {
     const UChar *p = data->contexts + Collation::indexFromCE32(ce32);
-    ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
-    // Ignore the default mapping if it falls back to another set of contractions:
-    // In that case, we are underneath a prefix, and a shorter prefix
-    // maps to the same contractions.
-    if(Collation::isContractionCE32(ce32)) {
+    if((ce32 & Collation::CONTRACT_SINGLE_CP_NO_MATCH) != 0) {
+        // No match on the single code point.
+        // We are underneath a prefix, and the default mapping is just
+        // a fallback to the mappings for a shorter prefix.
         U_ASSERT(!unreversedPrefix.isEmpty());
     } else {
+        ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+        U_ASSERT(!Collation::isContractionCE32(ce32));
         handleCE32(start, end, ce32);
     }
     UCharsTrie::Iterator suffixes(p + 2, 0, errorCode);

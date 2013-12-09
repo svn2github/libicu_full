@@ -277,8 +277,8 @@ private:
     void backwardNumSkipped(int32_t n, UErrorCode &errorCode);
 
     uint32_t nextCE32FromContraction(
-            const CollationData *d, const UChar *p, uint32_t ce32,
-            UBool maybeDiscontiguous, UChar32 c,
+            const CollationData *d, uint32_t contractionCE32,
+            const UChar *p, uint32_t ce32, UChar32 c,
             UErrorCode &errorCode);
 
     uint32_t nextCE32FromDiscontiguousContraction(
