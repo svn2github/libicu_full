@@ -38,6 +38,8 @@ public:
 
     UTF16CollationIterator(const UTF16CollationIterator &other, const UChar *newText);
 
+    virtual ~UTF16CollationIterator();
+
     virtual UBool operator==(const CollationIterator &other) const;
 
     virtual void resetToOffset(int32_t newOffset);
@@ -89,6 +91,8 @@ public:
               checkDir(1) {}
 
     FCDUTF16CollationIterator(const FCDUTF16CollationIterator &other, const UChar *newText);
+
+    virtual ~FCDUTF16CollationIterator();
 
     virtual UBool operator==(const CollationIterator &other) const;
 

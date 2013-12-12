@@ -226,6 +226,7 @@ public:
 
     void load(const char *packageName, const char *name, UErrorCode &errorCode);
 
+    void addLcccChars(UnicodeSet &set) const;
     void addPropertyStarts(const USetAdder *sa, UErrorCode &errorCode) const;
     void addCanonIterPropertyStarts(const USetAdder *sa, UErrorCode &errorCode) const;
 
@@ -246,6 +247,7 @@ public:
             return UNORM_NO;
         }
     }
+    UBool isAlgorithmicNoNo(uint16_t norm16) const { return limitNoNo<=norm16 && norm16<minMaybeYes; }
     UBool isCompNo(uint16_t norm16) const { return minNoNo<=norm16 && norm16<minMaybeYes; }
     UBool isDecompYes(uint16_t norm16) const { return norm16<minYesNo || minMaybeYes<=norm16; }
 

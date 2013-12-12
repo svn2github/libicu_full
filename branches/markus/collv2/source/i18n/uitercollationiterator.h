@@ -34,6 +34,8 @@ public:
     UIterCollationIterator(const CollationData *d, UBool numeric, UCharIterator &ui)
             : CollationIterator(d, numeric), iter(ui) {}
 
+    virtual ~UIterCollationIterator();
+
     virtual void resetToOffset(int32_t newOffset);
 
     virtual int32_t getOffset() const;
@@ -64,6 +66,8 @@ public:
             : UIterCollationIterator(data, numeric, ui),
               state(ITER_CHECK_FWD), start(startIndex),
               nfcImpl(data->nfcImpl) {}
+
+    virtual ~FCDUIterCollationIterator();
 
     virtual void resetToOffset(int32_t newOffset);
 

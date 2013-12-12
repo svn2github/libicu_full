@@ -33,6 +33,8 @@ UTF16CollationIterator::UTF16CollationIterator(const UTF16CollationIterator &oth
           limit(other.limit == NULL ? NULL : newText + (other.limit - other.start)) {
 }
 
+UTF16CollationIterator::~UTF16CollationIterator() {}
+
 UBool
 UTF16CollationIterator::operator==(const CollationIterator &other) const {
     if(!CollationIterator::operator==(other)) { return FALSE; }
@@ -164,6 +166,8 @@ FCDUTF16CollationIterator::FCDUTF16CollationIterator(const FCDUTF16CollationIter
         limit = start + normalized.length();
     }
 }
+
+FCDUTF16CollationIterator::~FCDUTF16CollationIterator() {}
 
 UBool
 FCDUTF16CollationIterator::operator==(const CollationIterator &other) const {

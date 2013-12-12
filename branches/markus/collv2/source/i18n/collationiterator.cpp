@@ -53,7 +53,7 @@ CollationIterator::CEBuffer::ensureAppendCapacity(int32_t appCap, UErrorCode &er
 
 // State of combining marks skipped in discontiguous contraction.
 // We create a state object on first use and keep it around deactivated between uses.
-class SkippedState {
+class SkippedState : public UMemory {
 public:
     // Born active but empty.
     SkippedState() : pos(0), skipLengthAtMatch(0) {}

@@ -242,8 +242,8 @@ void
 RuleBasedCollator::cloneSettings(const CollationSettings &otherSettings) {
     LocalPointer<CollationSettings> newSettings(new CollationSettings(otherSettings));
     if(newSettings.isNull()) { return; }
-    LocalArray<uint8_t> newReorderTable;
-    LocalArray<int32_t> newReorderCodes;
+    LocalMemory<uint8_t> newReorderTable;
+    LocalMemory<int32_t> newReorderCodes;
     const CollationSettings &defaultSettings = getDefaultSettings();
     if(otherSettings.reorderTable == NULL) {
         newSettings->reorderTable = NULL;
@@ -269,7 +269,7 @@ RuleBasedCollator::cloneSettings(const CollationSettings &otherSettings) {
         newSettings->reorderCodes = newReorderCodes.getAlias();
         ownedReorderCodesCapacity = length;
     }
-        newSettings->reorderCodesLength = length;
+    newSettings->reorderCodesLength = length;
     // The settings themselves do not take ownership of their arrays.
     // The collator takes ownership of both the settings and arrays now.
     settings = ownedSettings = newSettings.orphan();
@@ -682,7 +682,7 @@ RuleBasedCollator::setReorderCodes(const int32_t *reorderCodes, int32_t length,
         fastLatinOptions = getFastLatinOptions();
         return;
     }
-    LocalArray<uint8_t> newReorderTable;
+    LocalMemory<uint8_t> newReorderTable;
     uint8_t *ownedReorderTable;
     if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
         ownedReorderTable = const_cast<uint8_t *>(ownedSettings->reorderTable);

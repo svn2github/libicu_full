@@ -35,6 +35,8 @@ public:
             : CollationIterator(d, numeric),
               u8(s), pos(p), length(len) {}
 
+    virtual ~UTF8CollationIterator();
+
     virtual void resetToOffset(int32_t newOffset);
 
     virtual int32_t getOffset() const;
@@ -80,6 +82,8 @@ public:
             : UTF8CollationIterator(data, numeric, s, p, len),
               state(CHECK_FWD), start(p),
               nfcImpl(data->nfcImpl) {}
+
+    virtual ~FCDUTF8CollationIterator();
 
     virtual void resetToOffset(int32_t newOffset);
 

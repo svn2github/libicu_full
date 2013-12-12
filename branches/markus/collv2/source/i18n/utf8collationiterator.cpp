@@ -26,6 +26,8 @@
 
 U_NAMESPACE_BEGIN
 
+UTF8CollationIterator::~UTF8CollationIterator() {}
+
 void
 UTF8CollationIterator::resetToOffset(int32_t newOffset) {
     reset();
@@ -123,6 +125,8 @@ UTF8CollationIterator::backwardNumCodePoints(int32_t num, UErrorCode & /*errorCo
 }
 
 // FCDUTF8CollationIterator ------------------------------------------------ ***
+
+FCDUTF8CollationIterator::~FCDUTF8CollationIterator() {}
 
 void
 FCDUTF8CollationIterator::resetToOffset(int32_t newOffset) {

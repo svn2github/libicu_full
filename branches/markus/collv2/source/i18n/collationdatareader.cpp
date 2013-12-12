@@ -25,6 +25,7 @@
 #include "collationrootelements.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
+#include "normalizer2impl.h"
 #include "uassert.h"
 #include "ucmndata.h"
 #include "utrie2.h"
@@ -243,19 +244,24 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             // The root data builder only needs the new FractionalUCA.txt data,
             // but it need not be built with a version of ICU already updated to
             // the corresponding new Unicode Character Database.
-            // TODO: Optimize, and reduce dependencies,
-            // by enumerating the Normalizer2Impl data more directly.
-            tailoring.unsafeBackwardSet = new UnicodeSet(
-                UNICODE_STRING_SIMPLE("[[:^lccc=0:][\\udc00-\\udfff]]"), errorCode);
-            if(U_FAILURE(errorCode)) { return; }
+            //
+            // The following is an optimized version of
+            // new UnicodeSet("[[:^lccc=0:][\\udc00-\\udfff]]").
+            // It is faster and requires fewer code dependencies.
+            tailoring.unsafeBackwardSet = new UnicodeSet(0xdc00, 0xdfff);  // trail surrogates
+            if(tailoring.unsafeBackwardSet == NULL) {
+                errorCode = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            data->nfcImpl.addLcccChars(*tailoring.unsafeBackwardSet);
         } else {
             // Clone the root collator's set contents.
             tailoring.unsafeBackwardSet = static_cast<UnicodeSet *>(
                 baseData->unsafeBackwardSet->cloneAsThawed());
-        }
-        if(tailoring.unsafeBackwardSet == NULL) {
-            errorCode = U_MEMORY_ALLOCATION_ERROR;
-            return;
+            if(tailoring.unsafeBackwardSet == NULL) {
+                errorCode = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
         }
         // Add the ranges from the data file to the unsafe-backward set.
         USerializedSet sset;
