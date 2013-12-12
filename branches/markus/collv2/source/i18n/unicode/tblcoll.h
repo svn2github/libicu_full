@@ -710,6 +710,13 @@ public:
             UBool addPrefixes, UErrorCode &errorCode) const;
 
     /**
+     * Adds the contractions that start with character c to the set.
+     * Ignores prefixes. Used by AlphabeticIndex.
+     * @internal
+     */
+    void internalAddContractions(UChar32 c, UnicodeSet &set, UErrorCode &errorCode) const;
+
+    /**
      * Implements from-rule constructors, and ucol_openRules().
      * @internal
      */

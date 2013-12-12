@@ -457,6 +457,12 @@ RuleBasedCollator::internalGetContractionsAndExpansions(
     ContractionsAndExpansions(contractions, expansions, NULL, addPrefixes).forData(data, errorCode);
 }
 
+void
+RuleBasedCollator::internalAddContractions(UChar32 c, UnicodeSet &set, UErrorCode &errorCode) const {
+    if(U_FAILURE(errorCode)) { return; }
+    ContractionsAndExpansions(&set, NULL, NULL, FALSE).forCodePoint(data, c, errorCode);
+}
+
 const CollationSettings &
 RuleBasedCollator::getDefaultSettings() const {
     return tailoring->settings;

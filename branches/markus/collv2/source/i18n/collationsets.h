@@ -101,6 +101,7 @@ public:
               errorCode(U_ZERO_ERROR) {}
 
     void forData(const CollationData *d, UErrorCode &errorCode);
+    void forCodePoint(const CollationData *d, UChar32 c, UErrorCode &ec);
 
     // all following: @internal, only public for access by callback
 

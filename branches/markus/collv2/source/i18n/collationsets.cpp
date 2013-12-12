@@ -412,6 +412,20 @@ ContractionsAndExpansions::forData(const CollationData *d, UErrorCode &ec) {
 }
 
 void
+ContractionsAndExpansions::forCodePoint(const CollationData *d, UChar32 c, UErrorCode &ec) {
+    if(U_FAILURE(ec)) { return; }
+    errorCode = ec;  // Preserve info & warning codes.
+    uint32_t ce32 = d->getCE32(c);
+    if(ce32 == Collation::FALLBACK_CE32) {
+        d = d->base;
+        ce32 = d->getCE32(c);
+    }
+    data = d;
+    handleCE32(c, c, ce32);
+    ec = errorCode;
+}
+
+void
 ContractionsAndExpansions::handleCE32(UChar32 start, UChar32 end, uint32_t ce32) {
     for(;;) {
         if((ce32 & 0xff) < Collation::SPECIAL_CE32_LOW_BYTE) {
