@@ -706,13 +706,6 @@ void AlphabeticIndex::internalResetBucketIterator() {
 
 
 void AlphabeticIndex::addIndexExemplars(const Locale &locale, UErrorCode &status) {
-    if (U_FAILURE(status)) { return; }
-    // Chinese index characters, which are specific to each of the several Chinese tailorings,
-    // take precedence over the single locale data exemplar set per language.
-    if (addChineseIndexCharacters(status) || U_FAILURE(status)) {
-        return;
-    }
-
     LocalULocaleDataPointer uld(ulocdata_open(locale.getName(), &status));
     if (U_FAILURE(status)) {
         return;
@@ -948,7 +941,9 @@ void AlphabeticIndex::init(const Locale *locale, UErrorCode &status) {
         }
     }
 
-    if (locale != NULL) {
+    // Chinese index characters, which are specific to each of the several Chinese tailorings,
+    // take precedence over the single locale data exemplar set per language.
+    if (!addChineseIndexCharacters(status) && locale != NULL) {
         addIndexExemplars(*locale, status);
     }
 }
