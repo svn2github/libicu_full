@@ -576,6 +576,54 @@ RuleBasedCollator::setAttribute(UColAttribute attr, UColAttributeValue value,
     }
 }
 
+Collator &
+RuleBasedCollator::setMaxVariable(UColReorderCode group, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { return *this; }
+    // Convert the reorder code into a MaxVariable number, or UCOL_DEFAULT=-1.
+    int32_t value;
+    if(group == UCOL_REORDER_CODE_DEFAULT) {
+        value = UCOL_DEFAULT;
+    } else if(UCOL_REORDER_CODE_FIRST <= group && group <= UCOL_REORDER_CODE_CURRENCY) {
+        value = group - UCOL_REORDER_CODE_FIRST;
+    } else {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return *this;
+    }
+    CollationSettings::MaxVariable oldValue = settings->getMaxVariable();
+    if(value == oldValue) {
+        setAttributeExplicitly(ATTR_VARIABLE_TOP);
+        return *this;
+    }
+    if(ownedSettings == NULL) {
+        if(value == UCOL_DEFAULT) {
+            setAttributeDefault(ATTR_VARIABLE_TOP);
+            return *this;
+        }
+        if(!ensureOwnedSettings(errorCode)) { return *this; }
+    }
+
+    if(group == UCOL_REORDER_CODE_DEFAULT) {
+        group = (UColReorderCode)(UCOL_REORDER_CODE_FIRST + getDefaultSettings().getMaxVariable());
+    }
+    uint32_t varTop = data->getLastPrimaryForGroup(group);
+    U_ASSERT(varTop != 0);
+    ownedSettings->setMaxVariable(value, getDefaultSettings().options, errorCode);
+    if(U_FAILURE(errorCode)) { return *this; }
+    ownedSettings->variableTop = varTop;
+    fastLatinOptions = getFastLatinOptions();
+    if(value == UCOL_DEFAULT) {
+        setAttributeDefault(ATTR_VARIABLE_TOP);
+    } else {
+        setAttributeExplicitly(ATTR_VARIABLE_TOP);
+    }
+    return *this;
+}
+
+UColReorderCode
+RuleBasedCollator::getMaxVariable() const {
+    return (UColReorderCode)(UCOL_REORDER_CODE_FIRST + settings->getMaxVariable());
+}
+
 uint32_t
 RuleBasedCollator::getVariableTop(UErrorCode & /*errorCode*/) const {
     return settings->variableTop;
@@ -619,9 +667,26 @@ RuleBasedCollator::setVariableTop(const UnicodeString &varTop, UErrorCode &error
 
 void
 RuleBasedCollator::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode) || varTop == settings->variableTop) { return; }
-    if(!ensureOwnedSettings(errorCode)) { return; }
-    ownedSettings->variableTop = varTop;
+    if(U_FAILURE(errorCode)) { return; }
+    if(varTop != settings->variableTop) {
+        // Pin the variable top to the end of the reordering group which contains it.
+        // Only a few special groups are supported.
+        int32_t group = data->getGroupForPrimary(varTop);
+        if(group < UCOL_REORDER_CODE_FIRST || UCOL_REORDER_CODE_CURRENCY < group) {
+            errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+            return;
+        }
+        uint32_t v = data->getLastPrimaryForGroup(group);
+        U_ASSERT(v != 0 && v >= varTop);
+        varTop = v;
+        if(varTop != settings->variableTop) {
+            if(!ensureOwnedSettings(errorCode)) { return; }
+            ownedSettings->setMaxVariable(group - UCOL_REORDER_CODE_FIRST,
+                                          getDefaultSettings().options, errorCode);
+            if(U_FAILURE(errorCode)) { return; }
+            ownedSettings->variableTop = varTop;
+        }
+    }
     if(varTop == getDefaultSettings().variableTop) {
         setAttributeDefault(ATTR_VARIABLE_TOP);
     } else {

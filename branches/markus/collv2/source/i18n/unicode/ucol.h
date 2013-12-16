@@ -1158,55 +1158,91 @@ ucol_setAttribute(UCollator *coll, UColAttribute attr, UColAttributeValue value,
 U_STABLE UColAttributeValue  U_EXPORT2 
 ucol_getAttribute(const UCollator *coll, UColAttribute attr, UErrorCode *status);
 
-/** Variable top
- * is a two byte primary value which causes all the codepoints with primary values that
- * are less or equal than the variable top to be shifted when alternate handling is set
- * to UCOL_SHIFTED.
- * Sets the variable top to a collation element value of a string supplied. 
- * @param coll collator which variable top needs to be changed
+#ifndef U_HIDE_DRAFT_API
+
+/**
+ * Sets the variable top to the top of the specified reordering group.
+ * The variable top determines the highest-sorting character
+ * which is affected by UCOL_ALTERNATE_HANDLING.
+ * If that attribute is set to UCOL_NON_IGNORABLE, then the variable top has no effect.
+ * @param coll the collator
+ * @param group one of UCOL_REORDER_CODE_SPACE, UCOL_REORDER_CODE_PUNCTUATION,
+ *              UCOL_REORDER_CODE_SYMBOL, UCOL_REORDER_CODE_CURRENCY;
+ *              or UCOL_REORDER_CODE_DEFAULT to restore the default max variable group
+ * @param pErrorCode Standard ICU error code. Its input value must
+ *                   pass the U_SUCCESS() test, or else the function returns
+ *                   immediately. Check for U_FAILURE() on output or use with
+ *                   function chaining. (See User Guide for details.)
+ * @see ucol_getMaxVariable
+ * @draft ICU 53
+ */
+U_DRAFT void U_EXPORT2
+ucol_setMaxVariable(UCollator *coll, UColReorderCode group, UErrorCode *pErrorCode);
+
+/**
+ * Returns the maximum reordering group whose characters are affected by UCOL_ALTERNATE_HANDLING.
+ * @param coll the collator
+ * @return the maximum variable reordering group.
+ * @see ucol_setMaxVariable
+ * @draft ICU 53
+ */
+U_DRAFT UColReorderCode U_EXPORT2
+ucol_getMaxVariable(const UCollator *coll);
+
+#endif  /* U_HIDE_DRAFT_API */
+
+/**
+ * Sets the variable top to the primary weight of the specified string.
+ *
+ * Beginning with ICU 53, the variable top is pinned to
+ * the top of one of the supported reordering groups,
+ * and it must not be beyond the last of those groups.
+ * See ucol_setMaxVariable().
+ * @param coll the collator
  * @param varTop one or more (if contraction) UChars to which the variable top should be set
  * @param len length of variable top string. If -1 it is considered to be zero terminated.
- * @param status error code. If error code is set, the return value is undefined. 
- *               Errors set by this function are: <br>
- *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such 
- *    a contraction<br>
- *    U_PRIMARY_TOO_LONG_ERROR if the primary for the variable top has more than two bytes
- * @return a 32 bit value containing the value of the variable top in upper 16 bits. 
- *         Lower 16 bits are undefined
+ * @param status error code. If error code is set, the return value is undefined.
+ *               Errors set by this function are:<br>
+ *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such contraction<br>
+ *    U_ILLEGAL_ARGUMENT_ERROR if the variable top is beyond
+ *    the last reordering group supported by ucol_setMaxVariable()
+ * @return variable top primary weight
  * @see ucol_getVariableTop
  * @see ucol_restoreVariableTop
- * @stable ICU 2.0
+ * @deprecated ICU 53 Call ucol_setMaxVariable() instead.
  */
-U_STABLE uint32_t U_EXPORT2 
+U_DEPRECATED uint32_t U_EXPORT2 
 ucol_setVariableTop(UCollator *coll, 
                     const UChar *varTop, int32_t len, 
                     UErrorCode *status);
 
 /** 
  * Gets the variable top value of a Collator. 
- * Lower 16 bits are undefined and should be ignored.
  * @param coll collator which variable top needs to be retrieved
  * @param status error code (not changed by function). If error code is set, 
  *               the return value is undefined.
- * @return the variable top value of a Collator.
+ * @return the variable top primary weight
+ * @see ucol_getMaxVariable
  * @see ucol_setVariableTop
  * @see ucol_restoreVariableTop
  * @stable ICU 2.0
  */
 U_STABLE uint32_t U_EXPORT2 ucol_getVariableTop(const UCollator *coll, UErrorCode *status);
 
-/** 
- * Sets the variable top to a collation element value supplied. Variable top is 
- * set to the upper 16 bits. 
- * Lower 16 bits are ignored.
- * @param coll collator which variable top needs to be changed
- * @param varTop CE value, as returned by ucol_setVariableTop or ucol)getVariableTop
- * @param status error code (not changed by function)
+/**
+ * Sets the variable top to the specified primary weight.
+ *
+ * Beginning with ICU 53, the variable top is pinned to
+ * the top of one of the supported reordering groups,
+ * and it must not be beyond the last of those groups.
+ * See ucol_setMaxVariable().
+ * @param varTop primary weight, as returned by ucol_setVariableTop or ucol_getVariableTop
+ * @param status error code
  * @see ucol_getVariableTop
  * @see ucol_setVariableTop
- * @stable ICU 2.0
+ * @deprecated ICU 53 Call ucol_setMaxVariable() instead.
  */
-U_STABLE void U_EXPORT2 
+U_DEPRECATED void U_EXPORT2 
 ucol_restoreVariableTop(UCollator *coll, const uint32_t varTop, UErrorCode *status);
 
 /**

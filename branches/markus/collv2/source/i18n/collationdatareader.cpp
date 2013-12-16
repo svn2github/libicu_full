@@ -177,7 +177,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
 
     int32_t jamoCE32sStart = getIndex(inIndexes, indexesLength, IX_JAMO_CE32S_START);
     if(jamoCE32sStart >= 0) {
-        if(data == NULL) {
+        if(data == NULL || data->ce32s == NULL) {
             errorCode = U_INVALID_FORMAT_ERROR;  // Index into non-existent ce32s[].
             return;
         }
@@ -357,7 +357,8 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
 
     // Set variableTop from options and scripts data.
     settings.variableTop =
-        (data != NULL ? data : baseData)->getVariableTopForMaxVariable(settings.getMaxVariable());
+        (data != NULL ? data : baseData)->getLastPrimaryForGroup(
+            UCOL_REORDER_CODE_FIRST + settings.getMaxVariable());
     if(settings.variableTop == 0) {
         errorCode = U_INVALID_FORMAT_ERROR;
         return;

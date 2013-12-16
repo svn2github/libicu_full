@@ -287,7 +287,8 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     }
     CollationSettings::MaxVariable maxVariable = tailoring->settings.getMaxVariable();
     if(maxVariable != base->settings.getMaxVariable()) {
-        uint32_t variableTop = tailoring->data->getVariableTopForMaxVariable(maxVariable);
+        uint32_t variableTop = tailoring->data->getLastPrimaryForGroup(
+            UCOL_REORDER_CODE_FIRST + maxVariable);
         U_ASSERT(variableTop != 0);  // The rule parser should enforce valid settings.
         tailoring->settings.variableTop = variableTop;
     }

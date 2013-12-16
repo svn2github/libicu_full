@@ -1022,7 +1022,6 @@ static const struct {
 void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
     int32_t start = skipSpaces(1);
     int32_t equalPos = fileLine.indexOf(0x3d);
-    // TODO: handle  % maxVariable symbol
     if(equalPos < 0) {
         if(fileLine.compare(start, 7, UNICODE_STRING("reorder", 7)) == 0) {
             parseAndSetReorderCodes(start + 7, errorCode);
@@ -1035,6 +1034,34 @@ void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
     }
 
     UnicodeString attrString = fileLine.tempSubStringBetween(start, equalPos);
+    UnicodeString valueString = fileLine.tempSubString(equalPos+1);
+    if(attrString == UNICODE_STRING("maxVariable", 11)) {
+        UColReorderCode max;
+        if(valueString == UNICODE_STRING("space", 5)) {
+            max = UCOL_REORDER_CODE_SPACE;
+        } else if(valueString == UNICODE_STRING("punct", 5)) {
+            max = UCOL_REORDER_CODE_PUNCTUATION;
+        } else if(valueString == UNICODE_STRING("symbol", 6)) {
+            max = UCOL_REORDER_CODE_SYMBOL;
+        } else if(valueString == UNICODE_STRING("currency", 8)) {
+            max = UCOL_REORDER_CODE_CURRENCY;
+        } else {
+            errln("invalid attribute value name on line %d", (int)fileLineNumber);
+            infoln(fileLine);
+            errorCode.set(U_PARSE_ERROR);
+            return;
+        }
+        coll->setMaxVariable(max, errorCode);
+        if(errorCode.isFailure()) {
+            errln("setMaxVariable() failed on line %d: %s",
+                  (int)fileLineNumber, errorCode.errorName());
+            infoln(fileLine);
+            return;
+        }
+        fileLine.remove();
+        return;
+    }
+
     UColAttribute attr;
     for(int32_t i = 0;; ++i) {
         if(i == LENGTHOF(attributes)) {
@@ -1049,7 +1076,6 @@ void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
         }
     }
 
-    UnicodeString valueString = fileLine.tempSubString(equalPos+1);
     UColAttributeValue value;
     for(int32_t i = 0;; ++i) {
         if(i == LENGTHOF(attributeValues)) {

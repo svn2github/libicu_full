@@ -774,6 +774,19 @@ Collator::setStrength(ECollationStrength newStrength) {
     setAttribute(UCOL_STRENGTH, (UColAttributeValue)newStrength, intStatus);
 }
 
+Collator &
+Collator::setMaxVariable(UColReorderCode /*group*/, UErrorCode &errorCode) {
+    if (U_SUCCESS(errorCode)) {
+        errorCode = U_UNSUPPORTED_ERROR;
+    }
+    return *this;
+}
+
+UColReorderCode
+Collator::getMaxVariable() const {
+    return UCOL_REORDER_CODE_PUNCTUATION;
+}
+
 int32_t
 Collator::getReorderCodes(int32_t* /* dest*/,
                           int32_t /* destCapacity*/,

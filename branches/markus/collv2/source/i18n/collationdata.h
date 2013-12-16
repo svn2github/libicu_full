@@ -16,10 +16,8 @@
 
 #if !UCONFIG_NO_COLLATION
 
-#include "unicode/ucol.h"
 #include "unicode/uniset.h"
 #include "collation.h"
-#include "collationsettings.h"
 #include "normalizer2impl.h"
 #include "utrie2.h"
 
@@ -97,17 +95,26 @@ struct U_I18N_API CollationData : public UMemory {
     }
 
     /**
-     * Finds the variable top primary weight for the maximum variable reordering group.
-     * Returns 0 if the maxVariable is not valid.
-     */
-    uint32_t getVariableTopForMaxVariable(CollationSettings::MaxVariable maxVariable) const;
-
-    /**
      * Returns the first primary for the script's reordering group.
      * @return the primary with only the first primary lead byte of the group
-     *         (not necessarily an actual root collator primary weight)
+     *         (not necessarily an actual root collator primary weight),
+     *         or 0 if the script is unknown
      */
     uint32_t getFirstPrimaryForGroup(int32_t script) const;
+
+    /**
+     * Returns the last primary for the script's reordering group.
+     * @return the last primary of the group
+     *         (not an actual root collator primary weight),
+     *         or 0 if the script is unknown
+     */
+    uint32_t getLastPrimaryForGroup(int32_t script) const;
+
+    /**
+     * Finds the reordering group which contains the primary weight.
+     * @return the first script of the group, or -1 if the weight is beyond the last group
+     */
+    int32_t getGroupForPrimary(uint32_t p) const;
 
     int32_t getEquivalentScripts(int32_t script,
                                  int32_t dest[], int32_t capacity, UErrorCode &errorCode) const;

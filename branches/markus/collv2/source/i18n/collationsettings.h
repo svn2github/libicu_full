@@ -48,11 +48,12 @@ struct U_I18N_API CollationSettings : public UMemory {
      */
     static const int32_t ALTERNATE_MASK = 0xc;
     /**
-     * Options bits 7..4: The 4-bit maxVariable value bit field is shifted by this value.
+     * Options bits 6..4: The 3-bit maxVariable value bit field is shifted by this value.
      */
     static const int32_t MAX_VARIABLE_SHIFT = 4;
     /** maxVariable options bit mask before shifting. */
-    static const int32_t MAX_VARIABLE_MASK = 0xf0;
+    static const int32_t MAX_VARIABLE_MASK = 0x70;
+    /** Options bit 7: Reserved/unused/0. */
     /**
      * Options bit 8: Sort uppercase first if caseLevel or caseFirst is on.
      */

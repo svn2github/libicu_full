@@ -19,7 +19,6 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
-#include "collationsettings.h"
 #include "uassert.h"
 #include "utrie2.h"
 
@@ -50,8 +49,18 @@ CollationData::getFinalCE32(uint32_t ce32) const {
 }
 
 uint32_t
-CollationData::getVariableTopForMaxVariable(CollationSettings::MaxVariable maxVariable) const {
-    int32_t index = findScript(UCOL_REORDER_CODE_FIRST + maxVariable);
+CollationData::getFirstPrimaryForGroup(int32_t script) const {
+    int32_t index = findScript(script);
+    if(index < 0) {
+        return 0;
+    }
+    uint32_t head = scripts[index];
+    return (head & 0xff00) << 16;
+}
+
+uint32_t
+CollationData::getLastPrimaryForGroup(int32_t script) const {
+    int32_t index = findScript(script);
     if(index < 0) {
         return 0;
     }
@@ -60,14 +69,16 @@ CollationData::getVariableTopForMaxVariable(CollationSettings::MaxVariable maxVa
     return ((lastByte + 1) << 24) - 1;
 }
 
-uint32_t
-CollationData::getFirstPrimaryForGroup(int32_t script) const {
-    int32_t index = findScript(script);
-    if(index < 0) {
-        return 0;
+int32_t
+CollationData::getGroupForPrimary(uint32_t p) const {
+    p >>= 24;  // Reordering groups are distinguished by primary lead bytes.
+    for(int32_t i = 0; i < scriptsLength; i = i + 2 + scripts[i + 1]) {
+        uint32_t lastByte = scripts[i] & 0xff;
+        if(p <= lastByte) {
+            return scripts[i + 2];
+        }
     }
-    uint32_t head = scripts[index];
-    return (head & 0xff00) << 16;
+    return -1;
 }
 
 int32_t

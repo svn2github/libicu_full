@@ -856,41 +856,88 @@ public:
                                             UErrorCode &status) const = 0;
 
     /**
-     * Sets the variable top to a collation element value of a string supplied.
+     * Sets the variable top to the top of the specified reordering group.
+     * The variable top determines the highest-sorting character
+     * which is affected by UCOL_ALTERNATE_HANDLING.
+     * If that attribute is set to UCOL_NON_IGNORABLE, then the variable top has no effect.
+     *
+     * The base class implementation sets U_UNSUPPORTED_ERROR.
+     * @param group one of UCOL_REORDER_CODE_SPACE, UCOL_REORDER_CODE_PUNCTUATION,
+     *              UCOL_REORDER_CODE_SYMBOL, UCOL_REORDER_CODE_CURRENCY;
+     *              or UCOL_REORDER_CODE_DEFAULT to restore the default max variable group
+     * @param errorCode Standard ICU error code. Its input value must
+     *                  pass the U_SUCCESS() test, or else the function returns
+     *                  immediately. Check for U_FAILURE() on output or use with
+     *                  function chaining. (See User Guide for details.)
+     * @return *this
+     * @see getMaxVariable
+     * @draft ICU 53
+     */
+    virtual Collator &setMaxVariable(UColReorderCode group, UErrorCode &errorCode);
+
+    /**
+     * Returns the maximum reordering group whose characters are affected by UCOL_ALTERNATE_HANDLING.
+     *
+     * The base class implementation returns UCOL_REORDER_CODE_PUNCTUATION.
+     * @return the maximum variable reordering group.
+     * @see setMaxVariable
+     * @draft ICU 53
+     */
+    virtual UColReorderCode getMaxVariable() const;
+
+    /**
+     * Sets the variable top to the primary weight of the specified string.
+     *
+     * Beginning with ICU 53, the variable top is pinned to
+     * the top of one of the supported reordering groups,
+     * and it must not be beyond the last of those groups.
+     * See setMaxVariable().
      * @param varTop one or more (if contraction) UChars to which the variable top should be set
      * @param len length of variable top string. If -1 it is considered to be zero terminated.
      * @param status error code. If error code is set, the return value is undefined. Errors set by this function are: <br>
-     *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such a contraction<br>
-     *    U_PRIMARY_TOO_LONG_ERROR if the primary for the variable top has more than two bytes
-     * @return a 32 bit value containing the value of the variable top in upper 16 bits. Lower 16 bits are undefined
-     * @stable ICU 2.0
+     *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such contraction<br>
+     *    U_ILLEGAL_ARGUMENT_ERROR if the variable top is beyond
+     *    the last reordering group supported by setMaxVariable()
+     * @return variable top primary weight
+     * @deprecated ICU 53 Call setMaxVariable() instead.
      */
     virtual uint32_t setVariableTop(const UChar *varTop, int32_t len, UErrorCode &status) = 0;
 
     /**
-     * Sets the variable top to a collation element value of a string supplied.
+     * Sets the variable top to the primary weight of the specified string.
+     *
+     * Beginning with ICU 53, the variable top is pinned to
+     * the top of one of the supported reordering groups,
+     * and it must not be beyond the last of those groups.
+     * See setMaxVariable().
      * @param varTop an UnicodeString size 1 or more (if contraction) of UChars to which the variable top should be set
      * @param status error code. If error code is set, the return value is undefined. Errors set by this function are: <br>
-     *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such a contraction<br>
-     *    U_PRIMARY_TOO_LONG_ERROR if the primary for the variable top has more than two bytes
-     * @return a 32 bit value containing the value of the variable top in upper 16 bits. Lower 16 bits are undefined
-     * @stable ICU 2.0
+     *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such contraction<br>
+     *    U_ILLEGAL_ARGUMENT_ERROR if the variable top is beyond
+     *    the last reordering group supported by setMaxVariable()
+     * @return variable top primary weight
+     * @deprecated ICU 53 Call setMaxVariable() instead.
      */
     virtual uint32_t setVariableTop(const UnicodeString &varTop, UErrorCode &status) = 0;
 
     /**
-     * Sets the variable top to a collation element value supplied. Variable top is set to the upper 16 bits.
-     * Lower 16 bits are ignored.
-     * @param varTop CE value, as returned by setVariableTop or ucol)getVariableTop
-     * @param status error code (not changed by function)
-     * @stable ICU 2.0
+     * Sets the variable top to the specified primary weight.
+     *
+     * Beginning with ICU 53, the variable top is pinned to
+     * the top of one of the supported reordering groups,
+     * and it must not be beyond the last of those groups.
+     * See setMaxVariable().
+     * @param varTop primary weight, as returned by setVariableTop or ucol_getVariableTop
+     * @param status error code
+     * @deprecated ICU 53 Call setMaxVariable() instead.
      */
     virtual void setVariableTop(uint32_t varTop, UErrorCode &status) = 0;
 
     /**
      * Gets the variable top value of a Collator.
-     * Lower 16 bits are undefined and should be ignored.
      * @param status error code (not changed by function). If error code is set, the return value is undefined.
+     * @return the variable top primary weight
+     * @see getMaxVariable
      * @stable ICU 2.0
      */
     virtual uint32_t getVariableTop(UErrorCode &status) const = 0;

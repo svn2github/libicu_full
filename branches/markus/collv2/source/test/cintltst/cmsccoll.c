@@ -1759,7 +1759,7 @@ static void TestVariableTopSetting(void) {
       ucol_equal(coll, &nul, 0, &dollar, 1) ||
       ucol_equal(coll, &nul, 0, &zero, 1) ||
       ucol_greaterOrEqual(coll, &degree, 1, &dollar, 1)) {
-    log_err("ucol_setVariableTop(dollar) did not work - %s\n", u_errorName(status));
+    log_err("ucol_setVariableTop(degree) did not work - %s\n", u_errorName(status));
   }
 
   varTop1 = ucol_setVariableTop(coll, &dollar, 1, &status);
@@ -1815,6 +1815,95 @@ static void TestVariableTopSetting(void) {
   } else {
     log_data_err("Couldn't open UCA collator\n");
   }
+}
+
+static void TestMaxVariable() {
+  UErrorCode status = U_ZERO_ERROR;
+  UColReorderCode oldMax, max;
+  UCollator *coll = ucol_open("", &status);
+  if(U_FAILURE(status)) {
+    log_data_err("Couldn't open root collator\n");
+    return;
+  }
+
+  static const UChar nul = 0;
+  static const UChar space = 0x20;
+  static const UChar dot = 0x2e;  /* punctuation */
+  static const UChar degree = 0xb0;  /* symbol */
+  static const UChar dollar = 0x24;  /* currency symbol */
+  static const UChar zero = 0x30;  /* digit */
+
+  oldMax = ucol_getMaxVariable(coll);
+  log_verbose("ucol_getMaxVariable(root) -> %04x\n", oldMax);
+  ucol_setAttribute(coll, UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, &status);
+
+  ucol_setMaxVariable(coll, UCOL_REORDER_CODE_SPACE, &status);
+  max = ucol_getMaxVariable(coll);
+  log_verbose("ucol_setMaxVariable(space) -> %04x\n", max);
+  if(U_FAILURE(status) || max != UCOL_REORDER_CODE_SPACE ||
+      !ucol_equal(coll, &nul, 0, &space, 1) ||
+      ucol_equal(coll, &nul, 0, &dot, 1) ||
+      ucol_equal(coll, &nul, 0, &degree, 1) ||
+      ucol_equal(coll, &nul, 0, &dollar, 1) ||
+      ucol_equal(coll, &nul, 0, &zero, 1) ||
+      ucol_greaterOrEqual(coll, &space, 1, &dot, 1)) {
+    log_err("ucol_setMaxVariable(space) did not work - %s\n", u_errorName(status));
+  }
+
+  ucol_setMaxVariable(coll, UCOL_REORDER_CODE_PUNCTUATION, &status);
+  max = ucol_getMaxVariable(coll);
+  log_verbose("ucol_setMaxVariable(punctuation) -> %04x\n", max);
+  if(U_FAILURE(status) || max != UCOL_REORDER_CODE_PUNCTUATION ||
+      !ucol_equal(coll, &nul, 0, &space, 1) ||
+      !ucol_equal(coll, &nul, 0, &dot, 1) ||
+      ucol_equal(coll, &nul, 0, &degree, 1) ||
+      ucol_equal(coll, &nul, 0, &dollar, 1) ||
+      ucol_equal(coll, &nul, 0, &zero, 1) ||
+      ucol_greaterOrEqual(coll, &dot, 1, &degree, 1)) {
+    log_err("ucol_setMaxVariable(punctuation) did not work - %s\n", u_errorName(status));
+  }
+
+  ucol_setMaxVariable(coll, UCOL_REORDER_CODE_SYMBOL, &status);
+  max = ucol_getMaxVariable(coll);
+  log_verbose("ucol_setMaxVariable(symbol) -> %04x\n", max);
+  if(U_FAILURE(status) || max != UCOL_REORDER_CODE_SYMBOL ||
+      !ucol_equal(coll, &nul, 0, &space, 1) ||
+      !ucol_equal(coll, &nul, 0, &dot, 1) ||
+      !ucol_equal(coll, &nul, 0, &degree, 1) ||
+      ucol_equal(coll, &nul, 0, &dollar, 1) ||
+      ucol_equal(coll, &nul, 0, &zero, 1) ||
+      ucol_greaterOrEqual(coll, &degree, 1, &dollar, 1)) {
+    log_err("ucol_setMaxVariable(symbol) did not work - %s\n", u_errorName(status));
+  }
+
+  ucol_setMaxVariable(coll, UCOL_REORDER_CODE_CURRENCY, &status);
+  max = ucol_getMaxVariable(coll);
+  log_verbose("ucol_setMaxVariable(currency) -> %04x\n", max);
+  if(U_FAILURE(status) || max != UCOL_REORDER_CODE_CURRENCY ||
+      !ucol_equal(coll, &nul, 0, &space, 1) ||
+      !ucol_equal(coll, &nul, 0, &dot, 1) ||
+      !ucol_equal(coll, &nul, 0, &degree, 1) ||
+      !ucol_equal(coll, &nul, 0, &dollar, 1) ||
+      ucol_equal(coll, &nul, 0, &zero, 1) ||
+      ucol_greaterOrEqual(coll, &dollar, 1, &zero, 1)) {
+    log_err("ucol_setMaxVariable(currency) did not work - %s\n", u_errorName(status));
+  }
+
+  log_verbose("Test restoring maxVariable\n");
+  status = U_ZERO_ERROR;
+  ucol_setMaxVariable(coll, oldMax, &status);
+  if(oldMax != ucol_getMaxVariable(coll)) {
+    log_err("Couldn't restore old maxVariable\n");
+  }
+
+  log_verbose("Testing calling with error set\n");
+  status = U_INTERNAL_PROGRAM_ERROR;
+  ucol_setMaxVariable(coll, UCOL_REORDER_CODE_SPACE, &status);
+  max = ucol_getMaxVariable(coll);
+  if(max != oldMax || status != U_INTERNAL_PROGRAM_ERROR) {
+    log_err("Bad reaction to passed error!\n");
+  }
+  ucol_close(coll);
 }
 
 static void TestNonChars(void) {
@@ -5687,6 +5776,7 @@ void addMiscCollTest(TestNode** root)
     TEST(TestExtremeCompression);
     TEST(TestSurrogates);
     TEST(TestVariableTopSetting);
+    TEST(TestMaxVariable);
     TEST(TestBocsuCoverage);
     TEST(TestCyrillicTailoring);
     TEST(TestCase);

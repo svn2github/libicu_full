@@ -299,6 +299,17 @@ ucol_getBound(const uint8_t       *source,
     }
 }
 
+U_CAPI void U_EXPORT2
+ucol_setMaxVariable(UCollator *coll, UColReorderCode group, UErrorCode *pErrorCode) {
+    if(U_FAILURE(*pErrorCode)) { return; }
+    Collator::fromUCollator(coll)->setMaxVariable(group, *pErrorCode);
+}
+
+U_CAPI UColReorderCode U_EXPORT2
+ucol_getMaxVariable(const UCollator *coll) {
+    return Collator::fromUCollator(coll)->getMaxVariable();
+}
+
 U_CAPI uint32_t  U_EXPORT2
 ucol_setVariableTop(UCollator *coll, const UChar *varTop, int32_t len, UErrorCode *status) {
     if(U_FAILURE(*status) || coll == NULL) {

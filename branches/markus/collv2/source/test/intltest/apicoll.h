@@ -134,6 +134,7 @@ public:
     * Tests the setters and getters of variable top
     */
     void TestVariableTopSetting();
+    void TestMaxVariable();
 
     /**
     * Tests GetLocale for a Collator

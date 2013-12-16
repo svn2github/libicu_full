@@ -1527,24 +1527,72 @@ void CollationAPITest::TestVariableTopSetting() {
 
   uint32_t oldVarTop = coll->getVariableTop(status);
 
+  // ICU 53+: The character must be in a supported reordering group,
+  // and the variable top is pinned to the end of that group.
   vt[0] = 0x0041;
 
+  (void)coll->setVariableTop(vt, 1, status);
+  if(status != U_ILLEGAL_ARGUMENT_ERROR) {
+    errln("setVariableTop(letter) did not detect illegal argument - %s", u_errorName(status));
+  }
+
+  status = U_ZERO_ERROR;
+  vt[0] = 0x24;  // dollar sign (currency symbol)
   uint32_t newVarTop = coll->setVariableTop(vt, 1, status);
 
-  if((newVarTop & 0xFFFF0000) != (coll->getVariableTop(status) & 0xFFFF0000)) {
-    errln("Didn't set vartop properly\n");
+  if(newVarTop != coll->getVariableTop(status)) {
+    errln("setVariableTop(dollar sign) != following getVariableTop()");
   }
+
+  uint32_t newVarTop2 = coll->setVariableTop(UnicodeString((UChar)0x20AC), status);  // Euro
+  if(newVarTop2 != coll->getVariableTop(status)) {
+    errln("setVariableTop(Euro sign) != following getVariableTop()");
+  }
+  if(newVarTop2 != newVarTop) {
+    errln("setVariableTop(Euro sign) != setVariableTop(dollar sign) (should pin to top of currency group)");
+  }
+
+  coll->setAttribute(UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, status);
+  assertEquals("empty==dollar", UCOL_EQUAL, coll->compare(UnicodeString(), UnicodeString((UChar)0x24)));
+  assertEquals("empty==euro", UCOL_EQUAL, coll->compare(UnicodeString(), UnicodeString((UChar)0x20AC)));
+  assertEquals("dollar<zero", UCOL_LESS, coll->compare(UnicodeString((UChar)0x24), UnicodeString((UChar)0x30)));
 
   coll->setVariableTop(oldVarTop, status);
 
   uint32_t newerVarTop = coll->setVariableTop(UnicodeString(vt, 1), status);
 
-  if((newVarTop & 0xFFFF0000) != (newerVarTop & 0xFFFF0000)) {
+  if(newVarTop != newerVarTop) {
     errln("Didn't set vartop properly from UnicodeString!\n");
   }
 
   delete coll;
 
+}
+
+void CollationAPITest::TestMaxVariable() {
+  UErrorCode errorCode = U_ZERO_ERROR;
+  LocalPointer<Collator> coll(Collator::createInstance(Locale::getRoot(), errorCode));
+  if(U_FAILURE(errorCode)) {
+    errcheckln(errorCode, "Collator creation failed with error %s", u_errorName(errorCode));
+    return;
+  }
+
+  (void)coll->setMaxVariable(UCOL_REORDER_CODE_OTHERS, errorCode);
+  if(errorCode != U_ILLEGAL_ARGUMENT_ERROR) {
+    errln("setMaxVariable(others) did not detect illegal argument - %s", u_errorName(errorCode));
+  }
+
+  errorCode = U_ZERO_ERROR;
+  (void)coll->setMaxVariable(UCOL_REORDER_CODE_CURRENCY, errorCode);
+
+  if(UCOL_REORDER_CODE_CURRENCY != coll->getMaxVariable()) {
+    errln("setMaxVariable(currency) != following getMaxVariable()");
+  }
+
+  coll->setAttribute(UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, errorCode);
+  assertEquals("empty==dollar", UCOL_EQUAL, coll->compare(UnicodeString(), UnicodeString((UChar)0x24)));
+  assertEquals("empty==euro", UCOL_EQUAL, coll->compare(UnicodeString(), UnicodeString((UChar)0x20AC)));
+  assertEquals("dollar<zero", UCOL_LESS, coll->compare(UnicodeString((UChar)0x24), UnicodeString((UChar)0x30)));
 }
 
 void CollationAPITest::TestGetLocale() {
@@ -2378,6 +2426,7 @@ void CollationAPITest::runIndexedTest( int32_t index, UBool exec, const char* &n
     TESTCASE_AUTO(TestDisplayName);
     TESTCASE_AUTO(TestAttribute);
     TESTCASE_AUTO(TestVariableTopSetting);
+    TESTCASE_AUTO(TestMaxVariable);
     TESTCASE_AUTO(TestRules);
     TESTCASE_AUTO(TestGetLocale);
     TESTCASE_AUTO(TestBounds);

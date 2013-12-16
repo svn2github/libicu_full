@@ -2182,3 +2182,26 @@
 =  opx\u0323\u0302  # x not z
 <1 opê
 =  opz
+
+** test: maxVariable via rules
+@ rules
+[maxVariable space][alternate shifted]
+* compare
+=  \u0020
+=  \u000A
+<1 .
+<1 °  # degree sign
+<1 $
+<1 0
+
+** test: maxVariable via setting
+@ root
+% maxVariable=currency
+% alternate=shifted
+* compare
+=  \u0020
+=  \u000A
+=  .
+=  °  # degree sign
+=  $
+<1 0
