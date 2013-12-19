@@ -1820,11 +1820,7 @@ static void TestVariableTopSetting(void) {
 static void TestMaxVariable() {
   UErrorCode status = U_ZERO_ERROR;
   UColReorderCode oldMax, max;
-  UCollator *coll = ucol_open("", &status);
-  if(U_FAILURE(status)) {
-    log_data_err("Couldn't open root collator\n");
-    return;
-  }
+  UCollator *coll;
 
   static const UChar nul = 0;
   static const UChar space = 0x20;
@@ -1832,6 +1828,12 @@ static void TestMaxVariable() {
   static const UChar degree = 0xb0;  /* symbol */
   static const UChar dollar = 0x24;  /* currency symbol */
   static const UChar zero = 0x30;  /* digit */
+
+  coll = ucol_open("", &status);
+  if(U_FAILURE(status)) {
+    log_data_err("Couldn't open root collator\n");
+    return;
+  }
 
   oldMax = ucol_getMaxVariable(coll);
   log_verbose("ucol_getMaxVariable(root) -> %04x\n", oldMax);
