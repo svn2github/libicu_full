@@ -139,18 +139,14 @@ CollationKeyByteSink::Resize(int32_t appendCapacity, int32_t length) {
 
 RuleBasedCollator::RuleBasedCollator(const RuleBasedCollator &other)
         : data(other.data),
-          settings(&other.tailoring->settings),  // default settings
+          settings(other.settings),
           tailoring(other.tailoring),
           validLocale(other.validLocale),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(other.explicitlySetAttributes),
           fastLatinOptions(other.fastLatinOptions),
-          actualLocaleIsSameAsValid(FALSE) {
+          actualLocaleIsSameAsValid(other.actualLocaleIsSameAsValid) {
+    settings->addRef();
     tailoring->addRef();
-    if(other.ownedSettings != NULL) {
-        cloneSettings(*other.ownedSettings);
-    }
 }
 
 RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
@@ -159,8 +155,6 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
           settings(NULL),
           tailoring(NULL),
           validLocale(""),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
@@ -175,8 +169,8 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
         errorCode = U_UNSUPPORTED_ERROR;
         return;
     }
-    LocalPointer<CollationTailoring> t(new CollationTailoring(&base->tailoring->settings));
-    if(t.isNull()) {
+    LocalPointer<CollationTailoring> t(new CollationTailoring(base->tailoring->settings));
+    if(t.isNull() || t->isBogus()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
@@ -188,19 +182,21 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
 
 RuleBasedCollator::RuleBasedCollator(const CollationTailoring *t)
         : data(t->data),
-          settings(&t->settings),
+          settings(t->settings),
           tailoring(t),
           validLocale(t->actualLocale),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1) {
+          fastLatinOptions(-1),
+          actualLocaleIsSameAsValid(FALSE) {
+    settings->addRef();
     tailoring->addRef();
     fastLatinOptions = getFastLatinOptions();
 }
 
 RuleBasedCollator::~RuleBasedCollator() {
-    releaseSettings();
+    if(settings != NULL) {
+        settings->removeRef();
+    }
     if(tailoring != NULL) {
         tailoring->removeRef();
     }
@@ -210,27 +206,13 @@ void
 RuleBasedCollator::adoptTailoring(CollationTailoring *t) {
     U_ASSERT(settings == NULL && data == NULL && tailoring == NULL);
     data = t->data;
-    settings = &t->settings;
+    settings = t->settings;
+    settings->addRef();
     t->addRef();
     tailoring = t;
     validLocale = t->actualLocale;
     fastLatinOptions = getFastLatinOptions();
-}
-
-void
-RuleBasedCollator::releaseSettings() {
-    if(ownedSettings != NULL) {
-        const CollationSettings &defaultSettings = getDefaultSettings();
-        if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
-            uprv_free(const_cast<uint8_t *>(ownedSettings->reorderTable));
-        }
-        if(ownedSettings->reorderCodes != defaultSettings.reorderCodes) {
-            uprv_free(const_cast<int32_t *>(ownedSettings->reorderCodes));
-        }
-        delete ownedSettings;
-        settings = ownedSettings = NULL;
-        ownedReorderCodesCapacity = 0;
-    }
+    actualLocaleIsSameAsValid = FALSE;
 }
 
 Collator *
@@ -238,62 +220,15 @@ RuleBasedCollator::clone() const {
     return new RuleBasedCollator(*this);
 }
 
-void
-RuleBasedCollator::cloneSettings(const CollationSettings &otherSettings) {
-    LocalPointer<CollationSettings> newSettings(new CollationSettings(otherSettings));
-    if(newSettings.isNull()) { return; }
-    LocalMemory<uint8_t> newReorderTable;
-    LocalMemory<int32_t> newReorderCodes;
-    const CollationSettings &defaultSettings = getDefaultSettings();
-    if(otherSettings.reorderTable == NULL) {
-        newSettings->reorderTable = NULL;
-    } else if(defaultSettings.reorderTable != NULL &&
-            uprv_memcmp(defaultSettings.reorderTable, otherSettings.reorderTable, 256) == 0) {
-        newSettings->reorderTable = defaultSettings.reorderTable;
-    } else {
-        newReorderTable.adoptInstead((uint8_t *)uprv_malloc(256));
-        if(newReorderTable.isNull()) { return; }
-        uprv_memcpy(newReorderTable.getAlias(), otherSettings.reorderTable, 256);
-        newSettings->reorderTable = newReorderTable.getAlias();
-    }
-    int32_t length = otherSettings.reorderCodesLength;
-    if(length == 0) {
-        // leave empty
-    } else if(length == defaultSettings.reorderCodesLength &&
-            uprv_memcmp(defaultSettings.reorderCodes, otherSettings.reorderCodes, length * 4) == 0) {
-        newSettings->reorderCodes = defaultSettings.reorderCodes;
-    } else {
-        newReorderCodes.adoptInstead((int32_t *)uprv_malloc(length * 4));
-        if(newReorderCodes.isNull()) { return; }
-        uprv_memcpy(newReorderCodes.getAlias(), otherSettings.reorderCodes, length * 4);
-        newSettings->reorderCodes = newReorderCodes.getAlias();
-        ownedReorderCodesCapacity = length;
-    }
-    newSettings->reorderCodesLength = length;
-    // The settings themselves do not take ownership of their arrays.
-    // The collator takes ownership of both the settings and arrays now.
-    settings = ownedSettings = newSettings.orphan();
-    newReorderTable.orphan();
-    newReorderCodes.orphan();
-}
-
 RuleBasedCollator &RuleBasedCollator::operator=(const RuleBasedCollator &other) {
     if(this == &other) { return *this; }
-    releaseSettings();  // before changing this->settings
-    const CollationTailoring *t = other.tailoring;
-    if(t != tailoring) {
-        tailoring->removeRef();
-        t->addRef();
-        data = t->data;
-        settings = &t->settings;
-        tailoring = t;
-    }
+    SharedObject::copyPtr(other.settings, settings);
+    SharedObject::copyPtr(other.tailoring, tailoring);
+    data = tailoring->data;
     validLocale = other.validLocale;
-    if(other.ownedSettings != NULL) {
-        cloneSettings(*other.ownedSettings);
-    }
-    explicitlySetAttributes = other.explicitlySetAttributes;;
+    explicitlySetAttributes = other.explicitlySetAttributes;
     fastLatinOptions = other.fastLatinOptions;
+    actualLocaleIsSameAsValid = other.actualLocaleIsSameAsValid;
     return *this;
 }
 
@@ -465,20 +400,7 @@ RuleBasedCollator::internalAddContractions(UChar32 c, UnicodeSet &set, UErrorCod
 
 const CollationSettings &
 RuleBasedCollator::getDefaultSettings() const {
-    return tailoring->settings;
-}
-
-UBool
-RuleBasedCollator::ensureOwnedSettings(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return FALSE; }
-    if(ownedSettings != NULL) { return TRUE; }
-    ownedSettings = new CollationSettings(getDefaultSettings());
-    if(ownedSettings == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return FALSE;
-    }
-    settings = ownedSettings;
-    return TRUE;
+    return *tailoring->settings;
 }
 
 UColAttributeValue
@@ -523,15 +445,19 @@ RuleBasedCollator::setAttribute(UColAttribute attr, UColAttributeValue value,
         setAttributeExplicitly(attr);
         return;
     }
-    if(ownedSettings == NULL) {
+    const CollationSettings &defaultSettings = getDefaultSettings();
+    if(settings == &defaultSettings) {
         if(value == UCOL_DEFAULT) {
             setAttributeDefault(attr);
             return;
         }
-        if(!ensureOwnedSettings(errorCode)) { return; }
+    }
+    CollationSettings *ownedSettings = SharedObject::copyOnWrite(settings);
+    if(ownedSettings == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
 
-    const CollationSettings &defaultSettings = getDefaultSettings();
     switch(attr) {
     case UCOL_FRENCH_COLLATION:
         ownedSettings->setFlag(CollationSettings::BACKWARD_SECONDARY, value,
@@ -594,20 +520,25 @@ RuleBasedCollator::setMaxVariable(UColReorderCode group, UErrorCode &errorCode) 
         setAttributeExplicitly(ATTR_VARIABLE_TOP);
         return *this;
     }
-    if(ownedSettings == NULL) {
+    const CollationSettings &defaultSettings = getDefaultSettings();
+    if(settings == &defaultSettings) {
         if(value == UCOL_DEFAULT) {
             setAttributeDefault(ATTR_VARIABLE_TOP);
             return *this;
         }
-        if(!ensureOwnedSettings(errorCode)) { return *this; }
+    }
+    CollationSettings *ownedSettings = SharedObject::copyOnWrite(settings);
+    if(ownedSettings == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return *this;
     }
 
     if(group == UCOL_REORDER_CODE_DEFAULT) {
-        group = (UColReorderCode)(UCOL_REORDER_CODE_FIRST + getDefaultSettings().getMaxVariable());
+        group = (UColReorderCode)(UCOL_REORDER_CODE_FIRST + defaultSettings.getMaxVariable());
     }
     uint32_t varTop = data->getLastPrimaryForGroup(group);
     U_ASSERT(varTop != 0);
-    ownedSettings->setMaxVariable(value, getDefaultSettings().options, errorCode);
+    ownedSettings->setMaxVariable(value, defaultSettings.options, errorCode);
     if(U_FAILURE(errorCode)) { return *this; }
     ownedSettings->variableTop = varTop;
     fastLatinOptions = getFastLatinOptions();
@@ -680,7 +611,11 @@ RuleBasedCollator::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
         U_ASSERT(v != 0 && v >= varTop);
         varTop = v;
         if(varTop != settings->variableTop) {
-            if(!ensureOwnedSettings(errorCode)) { return; }
+            CollationSettings *ownedSettings = SharedObject::copyOnWrite(settings);
+            if(ownedSettings == NULL) {
+                errorCode = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
             ownedSettings->setMaxVariable(group - UCOL_REORDER_CODE_FIRST,
                                           getDefaultSettings().options, errorCode);
             if(U_FAILURE(errorCode)) { return; }
@@ -721,74 +656,40 @@ RuleBasedCollator::setReorderCodes(const int32_t *reorderCodes, int32_t length,
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
-    if(length == 0 && settings->reorderCodesLength == 0) {
+    if(length == settings->reorderCodesLength &&
+            uprv_memcmp(reorderCodes, settings->reorderCodes, length * 4) == 0) {
         return;
     }
     const CollationSettings &defaultSettings = getDefaultSettings();
     if(length == 1 && reorderCodes[0] == UCOL_REORDER_CODE_DEFAULT) {
-        if(ownedSettings != NULL) {
-            if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
-                uprv_free(const_cast<uint8_t *>(ownedSettings->reorderTable));
-                ownedSettings->reorderTable = defaultSettings.reorderTable;
+        if(settings != &defaultSettings) {
+            CollationSettings *ownedSettings = SharedObject::copyOnWrite(settings);
+            if(ownedSettings == NULL) {
+                errorCode = U_MEMORY_ALLOCATION_ERROR;
+                return;
             }
-            if(ownedSettings->reorderCodes != defaultSettings.reorderCodes) {
-                uprv_free(const_cast<int32_t *>(ownedSettings->reorderCodes));
-                ownedReorderCodesCapacity = 0;
-                ownedSettings->reorderCodes = defaultSettings.reorderCodes;
-            }
-            ownedSettings->reorderCodesLength = defaultSettings.reorderCodesLength;
+            ownedSettings->aliasReordering(defaultSettings.reorderCodes,
+                                           defaultSettings.reorderCodesLength,
+                                           defaultSettings.reorderTable);
         }
         fastLatinOptions = getFastLatinOptions();
         return;
     }
-    if(!ensureOwnedSettings(errorCode)) { return; }
+    CollationSettings *ownedSettings = SharedObject::copyOnWrite(settings);
+    if(ownedSettings == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
     if(length == 0) {
-        // When we turn off reordering, we want to set a NULL permutation
-        // rather than a no-op permutation.
-        if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
-            uprv_free(const_cast<uint8_t *>(ownedSettings->reorderTable));
-            ownedSettings->reorderTable = NULL;
-        }
-        ownedSettings->reorderCodesLength = 0;
-        fastLatinOptions = getFastLatinOptions();
-        return;
-    }
-    LocalMemory<uint8_t> newReorderTable;
-    uint8_t *ownedReorderTable;
-    if(ownedSettings->reorderTable != defaultSettings.reorderTable) {
-        ownedReorderTable = const_cast<uint8_t *>(ownedSettings->reorderTable);
+        ownedSettings->resetReordering();
     } else {
-        newReorderTable.adoptInstead((uint8_t *)uprv_malloc(256));
-        if(newReorderTable.isNull()) {
+        uint8_t reorderTable[256];
+        data->makeReorderTable(reorderCodes, length, reorderTable, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        if(!ownedSettings->setReordering(reorderCodes, length, reorderTable)) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
-        // Do not modify the ownedSettings->reorderTable until everything is ok.
-        ownedReorderTable = newReorderTable.getAlias();
-    }
-    data->makeReorderTable(reorderCodes, length, ownedReorderTable, errorCode);
-    if(U_FAILURE(errorCode)) { return; }
-    int32_t *ownedReorderCodes;
-    if(length <= ownedReorderCodesCapacity) {
-        // We own this array if capacity > 0.
-        ownedReorderCodes = const_cast<int32_t *>(ownedSettings->reorderCodes);
-    } else {
-        int32_t newCapacity = length + 20;
-        ownedReorderCodes = (int32_t *)uprv_malloc(newCapacity * 4);
-        if(ownedReorderCodes == NULL) {
-            errorCode = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-        if(ownedSettings->reorderCodes != defaultSettings.reorderCodes) {
-            uprv_free(const_cast<int32_t *>(ownedSettings->reorderCodes));
-        }
-        ownedSettings->reorderCodes = ownedReorderCodes;
-        ownedReorderCodesCapacity = newCapacity;
-    }
-    uprv_memcpy(ownedReorderCodes, reorderCodes, length * 4);
-    ownedSettings->reorderCodesLength = length;
-    if(newReorderTable.isValid()) {
-        ownedSettings->reorderTable = newReorderTable.orphan();
     }
     fastLatinOptions = getFastLatinOptions();
 }

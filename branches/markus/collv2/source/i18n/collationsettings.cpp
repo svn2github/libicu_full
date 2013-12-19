@@ -14,10 +14,63 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/ucol.h"
+#include "cmemory.h"
 #include "collation.h"
 #include "collationsettings.h"
+#include "uassert.h"
+#include "umutex.h"
 
 U_NAMESPACE_BEGIN
+
+SharedObject::~SharedObject() {}
+
+void
+SharedObject::addRef() const {
+    umtx_atomic_inc(&refCount);
+}
+
+void
+SharedObject::removeRef() const {
+    if(umtx_atomic_dec(&refCount) == 0) {
+        delete this;
+    }
+}
+
+int32_t
+SharedObject::getRefCount() const {
+    return umtx_loadAcquire(refCount);
+}
+
+void
+SharedObject::deleteIfZeroRefCount() const {
+    if(getRefCount() == 0) {
+        delete this;
+    }
+}
+
+CollationSettings::CollationSettings(const CollationSettings &other)
+        : SharedObject(other),
+          options(other.options), variableTop(other.variableTop),
+          reorderTable(NULL),
+          reorderCodes(NULL), reorderCodesLength(0), reorderCodesCapacity(0) {
+    int32_t length = other.reorderCodesLength;
+    if(length == 0) {
+        U_ASSERT(other.reorderTable == NULL);
+    } else {
+        U_ASSERT(other.reorderTable != NULL);
+        if(other.reorderCodesCapacity == 0) {
+            aliasReordering(other.reorderCodes, length, other.reorderTable);
+        } else {
+            setReordering(other.reorderCodes, length, other.reorderTable);
+        }
+    }
+}
+
+CollationSettings::~CollationSettings() {
+    if(reorderCodesCapacity != 0) {
+        uprv_free(const_cast<int32_t *>(reorderCodes));
+    }
+}
 
 UBool
 CollationSettings::operator==(const CollationSettings &other) const {
@@ -39,6 +92,60 @@ CollationSettings::hashCode() const {
         h ^= (reorderCodes[i] << i);
     }
     return h;
+}
+
+void
+CollationSettings::resetReordering() {
+    // When we turn off reordering, we want to set a NULL permutation
+    // rather than a no-op permutation.
+    // Keep the memory via reorderCodes and its capacity.
+    reorderTable = NULL;
+    reorderCodesLength = 0;
+}
+
+void
+CollationSettings::aliasReordering(const int32_t *codes, int32_t length, const uint8_t *table) {
+    if(length == 0) {
+        resetReordering();
+    } else {
+        // We need to release the memory before setting the alias pointer.
+        if(reorderCodesCapacity != 0) {
+            uprv_free(const_cast<int32_t *>(reorderCodes));
+            reorderCodesCapacity = 0;
+        }
+        reorderTable = table;
+        reorderCodes = codes;
+        reorderCodesLength = length;
+    }
+}
+
+UBool
+CollationSettings::setReordering(const int32_t *codes, int32_t length, const uint8_t table[256]) {
+    if(length == 0) {
+        resetReordering();
+    } else {
+        uint8_t *ownedTable;
+        int32_t *ownedCodes;
+        if(length <= reorderCodesCapacity) {
+            ownedTable = const_cast<uint8_t *>(reorderTable);
+            ownedCodes = const_cast<int32_t *>(reorderCodes);
+        } else {
+            // Allocate one memory block for the codes and the 16-aligned table.
+            int32_t capacity = (length + 3) & ~3;  // round up to a multiple of 4 ints
+            uint8_t *bytes = (uint8_t *)uprv_malloc(256 + capacity * 4);
+            if(bytes == NULL) { return FALSE; }
+            if(reorderCodesCapacity != 0) {
+                uprv_free(const_cast<int32_t *>(reorderCodes));
+            }
+            reorderTable = ownedTable = bytes + capacity * 4;
+            reorderCodes = ownedCodes = (int32_t *)bytes;
+            reorderCodesCapacity = capacity;
+        }
+        uprv_memcpy(ownedTable, table, 256);
+        uprv_memcpy(ownedCodes, codes, length * 4);
+        reorderCodesLength = length;
+    }
+    return TRUE;
 }
 
 void

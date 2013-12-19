@@ -77,12 +77,8 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         return;
     }
 
-    CollationSettings &settings = tailoring.settings;
-    // Assume that tailoring data and settings are in initial state,
+    // Assume that the tailoring data is in initial state,
     // with NULL pointers and 0 lengths.
-
-    int32_t options = inIndexes[IX_OPTIONS];
-    settings.options = options & 0xffff;
 
     // Set pointers to non-empty data parts.
     // Do this in order of their byte offsets. (Should help porting to Java.)
@@ -103,29 +99,42 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         return;
     }
 
+    const CollationData *baseData = base == NULL ? NULL : base->data;
+    const int32_t *reorderCodes = NULL;
+    int32_t reorderCodesLength = 0;
     index = IX_REORDER_CODES_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 4) {
-        settings.reorderCodes = reinterpret_cast<const int32_t *>(inBytes + offset);
-        settings.reorderCodesLength = length / 4;
+        if(baseData == NULL) {
+            // We assume for collation settings that
+            // the base data does not have a reordering.
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return;
+        }
+        reorderCodes = reinterpret_cast<const int32_t *>(inBytes + offset);
+        reorderCodesLength = length / 4;
     }
 
     // There should be a reorder table only if there are reorder codes.
     // However, when there are reorder codes the reorder table may be omitted to reduce
     // the data size.
+    const uint8_t *reorderTable = NULL;
     index = IX_REORDER_TABLE_OFFSET;
     offset = getIndex(inIndexes, indexesLength, index);
     length = getIndex(inIndexes, indexesLength, index + 1) - offset;
     if(length >= 256) {
-        settings.reorderTable = inBytes + offset;
+        if(reorderCodesLength == 0) {
+            errorCode = U_INVALID_FORMAT_ERROR;  // Reordering table without reordering codes.
+            return;
+        }
+        reorderTable = inBytes + offset;
     } else {
         // If we have reorder codes, then build the reorderTable at the end,
         // when the CollationData is otherwise complete.
     }
 
-    const CollationData *baseData = base == NULL ? NULL : base->data;
-    if(baseData != NULL && baseData->numericPrimary != (options & 0xff000000)) {
+    if(baseData != NULL && baseData->numericPrimary != (inIndexes[IX_OPTIONS] & 0xff000000)) {
         errorCode = U_INVALID_FORMAT_ERROR;
         return;
     }
@@ -138,7 +147,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         if(!tailoring.ensureOwnedData(errorCode)) { return; }
         data = tailoring.ownedData;
         data->base = baseData;
-        data->numericPrimary = options & 0xff000000;
+        data->numericPrimary = inIndexes[IX_OPTIONS] & 0xff000000;
         data->trie = tailoring.trie = utrie2_openFromSerialized(
             UTRIE2_32_VALUE_BITS, inBytes + offset, length, NULL,
             &errorCode);
@@ -302,7 +311,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     if(data != NULL) {
         data->fastLatinTable = NULL;
         data->fastLatinTableLength = 0;
-        if(((options >> 16) & 0xff) == CollationFastLatin::VERSION) {
+        if(((inIndexes[IX_OPTIONS] >> 16) & 0xff) == CollationFastLatin::VERSION) {
             index = IX_FAST_LATIN_TABLE_OFFSET;
             offset = getIndex(inIndexes, indexesLength, index);
             length = getIndex(inIndexes, indexesLength, index + 1) - offset;
@@ -355,26 +364,39 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
         return;
     }
 
+    const CollationSettings &ts = *tailoring.settings;
+    int32_t options = inIndexes[IX_OPTIONS] & 0xffff;
+    if(options == ts.options && ts.variableTop != 0 &&
+            reorderCodesLength == ts.reorderCodesLength &&
+            uprv_memcmp(reorderCodes, ts.reorderCodes, reorderCodesLength * 4) == 0) {
+        return;
+    }
+
+    CollationSettings *settings = SharedObject::copyOnWrite(tailoring.settings);
+    if(settings == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    settings->options = options;
     // Set variableTop from options and scripts data.
-    settings.variableTop =
+    settings->variableTop =
         (data != NULL ? data : baseData)->getLastPrimaryForGroup(
-            UCOL_REORDER_CODE_FIRST + settings.getMaxVariable());
-    if(settings.variableTop == 0) {
+            UCOL_REORDER_CODE_FIRST + settings->getMaxVariable());
+    if(settings->variableTop == 0) {
         errorCode = U_INVALID_FORMAT_ERROR;
         return;
     }
 
-    if(settings.reorderCodes != NULL && settings.reorderTable == NULL) {
-        if(baseData == NULL) {
-            // We assume for collation settings that
-            // the base data does not have a reordering.
-            errorCode = U_INVALID_FORMAT_ERROR;
+    if(reorderCodesLength == 0 || reorderTable != NULL) {
+        settings->aliasReordering(reorderCodes, reorderCodesLength, reorderTable);
+    } else {
+        uint8_t table[256];
+        baseData->makeReorderTable(reorderCodes, reorderCodesLength, table, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
+        if(!settings->setReordering(reorderCodes, reorderCodesLength,table)) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
             return;
         }
-        baseData->makeReorderTable(settings.reorderCodes, settings.reorderCodesLength,
-                                   tailoring.reorderTable, errorCode);
-        if(U_FAILURE(errorCode)) { return; }
-        settings.reorderTable = tailoring.reorderTable;
     }
 }
 

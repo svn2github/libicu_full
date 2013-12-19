@@ -22,7 +22,6 @@
 #include "collationdata.h"
 #include "collationsettings.h"
 #include "collationtailoring.h"
-#include "mutex.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
 #include "uhash.h"
@@ -32,19 +31,20 @@
 U_NAMESPACE_BEGIN
 
 CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
-        : data(NULL),
+        : data(NULL), settings(baseSettings),
           actualLocale(""),
           ownedData(NULL),
           builder(NULL), memory(NULL), bundle(NULL),
           trie(NULL), unsafeBackwardSet(NULL),
-          reorderCodes(NULL),
-          maxExpansions(NULL),
-          refCount(0) {
+          maxExpansions(NULL) {
     if(baseSettings != NULL) {
-        settings.options = baseSettings->options;
-        settings.variableTop = baseSettings->variableTop;
         U_ASSERT(baseSettings->reorderCodesLength == 0);
         U_ASSERT(baseSettings->reorderTable == NULL);
+    } else {
+        settings = new CollationSettings();
+    }
+    if(settings != NULL) {
+        settings->addRef();
     }
     rules.getTerminatedBuffer();  // ensure NUL-termination
     version[0] = version[1] = version[2] = version[3] = 0;
@@ -52,34 +52,17 @@ CollationTailoring::CollationTailoring(const CollationSettings *baseSettings)
 }
 
 CollationTailoring::~CollationTailoring() {
+    if(settings != NULL) {
+        settings->removeRef();
+    }
     delete ownedData;
     delete builder;
     udata_close(memory);
     ures_close(bundle);
     utrie2_close(trie);
     delete unsafeBackwardSet;
-    uprv_free(reorderCodes);
     uhash_close(maxExpansions);
     maxExpansionsInitOnce.reset();
-}
-
-void
-CollationTailoring::addRef() const {
-    umtx_atomic_inc(&refCount);
-}
-
-void
-CollationTailoring::removeRef() const {
-    if(umtx_atomic_dec(&refCount) == 0) {
-        delete this;
-    }
-}
-
-void
-CollationTailoring::deleteIfZeroRefCount() const {
-    if(refCount == 0) {
-        delete this;
-    }
 }
 
 UBool

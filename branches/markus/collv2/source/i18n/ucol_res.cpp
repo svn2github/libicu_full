@@ -209,8 +209,8 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
     }
     if(U_FAILURE(errorCode)) { return NULL; }
 
-    LocalPointer<CollationTailoring> t(new CollationTailoring(&root->settings));
-    if(t.isNull()) {
+    LocalPointer<CollationTailoring> t(new CollationTailoring(root->settings));
+    if(t.isNull() || t->isBogus()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }

@@ -18,14 +18,88 @@
 
 #include "unicode/ucol.h"
 #include "collation.h"
+#include "umutex.h"
 
 U_NAMESPACE_BEGIN
+
+/**
+ * Base class for shared, reference-counted, auto-deleted objects.
+ * Subclasses can be immutable.
+ * If they are mutable, then they must implement their copy constructor
+ * so that copyOnWrite() works.
+ *
+ * Either stack-allocate, use LocalPointer, or use addRef()/removeRef().
+ * Sharing requires reference-counting.
+ *
+ * TODO: Consider making this more widely available inside ICU,
+ * or else adopting a different model.
+ */
+class U_I18N_API SharedObject : public UObject {
+public:
+    /** Initializes refCount to 0. */
+    SharedObject() : refCount(0) {}
+
+    /** Initializes refCount to 0. */
+    SharedObject(const SharedObject &/*other*/) : refCount(0) {}
+
+    virtual ~SharedObject();
+
+    /**
+     * Increments the number of references to this object. Thread-safe.
+     */
+    void addRef() const;
+    /**
+     * Decrements the number of references to this object,
+     * and auto-deletes "this" if the number becomes 0. Thread-safe.
+     */
+    void removeRef() const;
+
+    /**
+     * Returns the reference counter. Uses a memory barrier.
+     */
+    int32_t getRefCount() const;
+
+    void deleteIfZeroRefCount() const;
+
+    /**
+     * Returns a writable version of ptr.
+     * If there is exactly one owner, then ptr itself is returned as a non-const pointer.
+     * If there are multiple owners, then ptr is replaced with a copy-constructed clone,
+     * and that is returned.
+     * Returns NULL if cloning failed.
+     *
+     * T must be a subclass of SharedObject.
+     */
+    template<typename T>
+    static T *copyOnWrite(const T *&ptr) {
+        const T *p = ptr;
+        if(p->getRefCount() <= 1) { return const_cast<T *>(p); }
+        T *p2 = new T(*p);
+        if(p2 == NULL) { return NULL; }
+        p->removeRef();
+        ptr = p2;
+        p2->addRef();
+        return p2;
+    }
+
+    template<typename T>
+    static void copyPtr(const T *src, const T *&dest) {
+        if(src != dest) {
+            if(dest != NULL) { dest->removeRef(); }
+            dest = src;
+            if(src != NULL) { src->addRef(); }
+        }
+    }
+
+private:
+    mutable u_atomic_int32_t refCount;
+};
 
 /**
  * Collation settings/options/attributes.
  * These are the values that can be changed via API.
  */
-struct U_I18N_API CollationSettings : public UMemory {
+struct U_I18N_API CollationSettings : public SharedObject {
     /**
      * Options bit 0: Perform the FCD check on the input text and deliver normalized text.
      */
@@ -101,7 +175,10 @@ struct U_I18N_API CollationSettings : public UMemory {
                       (MAX_VAR_PUNCT << MAX_VARIABLE_SHIFT)),
               variableTop(0),
               reorderTable(NULL),
-              reorderCodes(NULL), reorderCodesLength(0) {}
+              reorderCodes(NULL), reorderCodesLength(0), reorderCodesCapacity(0) {}
+
+    CollationSettings(const CollationSettings &other);
+    virtual ~CollationSettings();
 
     UBool operator==(const CollationSettings &other) const;
 
@@ -110,6 +187,10 @@ struct U_I18N_API CollationSettings : public UMemory {
     }
 
     int32_t hashCode() const;
+
+    void resetReordering();
+    void aliasReordering(const int32_t *codes, int32_t length, const uint8_t *table);
+    UBool setReordering(const int32_t *codes, int32_t length, const uint8_t table[256]);
 
     void setStrength(int32_t value, int32_t defaultOptions, UErrorCode &errorCode);
 
@@ -186,9 +267,17 @@ struct U_I18N_API CollationSettings : public UMemory {
     uint32_t variableTop;
     /** 256-byte table for reordering permutation of primary lead bytes; NULL if no reordering. */
     const uint8_t *reorderTable;
-    /** Array of reorder codes; NULL if no reordering. */
+    /** Array of reorder codes; ignored if reorderCodesLength == 0. */
     const int32_t *reorderCodes;
+    /** Number of reorder codes; 0 if no reordering. */
     int32_t reorderCodesLength;
+    /**
+     * Capacity of reorderCodes.
+     * If 0, then the table and codes are aliases.
+     * Otherwise, this object owns the memory via the reorderCodes pointer;
+     * the table and the codes are in the same memory block, with the codes first.
+     */
+    int32_t reorderCodesCapacity;
 };
 
 U_NAMESPACE_END

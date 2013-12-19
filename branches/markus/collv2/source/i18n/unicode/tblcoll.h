@@ -813,8 +813,6 @@ private:
     };
 
     void adoptTailoring(CollationTailoring *t);
-    void releaseSettings();
-    void cloneSettings(const CollationSettings &otherSettings);
 
     // Both lengths must be <0 or else both must be >=0.
     UCollationResult doCompare(const UChar *left, int32_t leftLength,
@@ -831,7 +829,6 @@ private:
                              SortKeyByteSink &sink, UErrorCode &errorCode) const;
 
     const CollationSettings &getDefaultSettings() const;
-    UBool ensureOwnedSettings(UErrorCode &errorCode);
 
     void setAttributeDefault(int32_t attribute) {
         explicitlySetAttributes &= ~((uint32_t)1 << attribute);
@@ -850,11 +847,9 @@ private:
     int32_t getFastLatinOptions() const;
 
     const CollationData *data;
-    const CollationSettings *settings;  // == &tailoring->settings or ownedSettings
-    const CollationTailoring *tailoring;
+    const CollationSettings *settings;  // reference-counted
+    const CollationTailoring *tailoring;  // reference-counted
     Locale validLocale;
-    CollationSettings *ownedSettings;  // NULL until cloned from default settings & modified
-    int32_t ownedReorderCodesCapacity;
     uint32_t explicitlySetAttributes;
 
     /** Options for CollationFastLatin. Negative if disabled. */

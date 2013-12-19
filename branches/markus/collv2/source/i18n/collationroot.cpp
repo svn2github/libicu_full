@@ -30,7 +30,7 @@ U_NAMESPACE_BEGIN
 
 namespace {
 
-static CollationTailoring *rootSingleton = NULL;
+static const CollationTailoring *rootSingleton = NULL;
 static UInitOnce initOnce = U_INITONCE_INITIALIZER;
 
 }  // namespace
@@ -38,7 +38,7 @@ static UInitOnce initOnce = U_INITONCE_INITIALIZER;
 U_CDECL_BEGIN
 
 static UBool U_CALLCONV uprv_collation_root_cleanup() {
-    delete rootSingleton;
+    rootSingleton->removeRef();
     rootSingleton = NULL;
     initOnce.reset();
     return TRUE;
@@ -50,7 +50,7 @@ void
 CollationRoot::load(UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     LocalPointer<CollationTailoring> t(new CollationTailoring(NULL));
-    if(t.isNull()) {
+    if(t.isNull() || t->isBogus()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
@@ -62,7 +62,7 @@ CollationRoot::load(UErrorCode &errorCode) {
     CollationDataReader::read(NULL, inBytes, udata_getLength(t->memory), *t, errorCode);
     if(U_FAILURE(errorCode)) { return; }
     ucln_i18n_registerCleanup(UCLN_I18N_COLLATION_ROOT, uprv_collation_root_cleanup);
-    t->refCount = 1;  // The rootSingleton takes ownership.
+    t->addRef();  // The rootSingleton takes ownership.
     rootSingleton = t.orphan();
 }
 
@@ -84,7 +84,7 @@ const CollationSettings *
 CollationRoot::getSettings(UErrorCode &errorCode) {
     const CollationTailoring *root = getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
-    return &root->settings;
+    return root->settings;
 }
 
 U_NAMESPACE_END

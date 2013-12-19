@@ -90,8 +90,6 @@ RuleBasedCollator::RuleBasedCollator()
           settings(NULL),
           tailoring(NULL),
           validLocale(""),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
@@ -102,8 +100,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
           settings(NULL),
           tailoring(NULL),
           validLocale(""),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
@@ -116,8 +112,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
           settings(NULL),
           tailoring(NULL),
           validLocale(""),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
@@ -131,8 +125,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           settings(NULL),
           tailoring(NULL),
           validLocale(""),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
@@ -147,8 +139,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           settings(NULL),
           tailoring(NULL),
           validLocale(""),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
@@ -162,8 +152,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           settings(NULL),
           tailoring(NULL),
           validLocale(""),
-          ownedSettings(NULL),
-          ownedReorderCodesCapacity(0),
           explicitlySetAttributes(0),
           fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
@@ -192,11 +180,21 @@ RuleBasedCollator::internalBuildTailoring(const UnicodeString &rules,
         }
         return;
     }
-    if(strength != UCOL_DEFAULT) {
-        t->settings.setStrength(strength, 0, errorCode);
-    }
-    if(decompositionMode != UCOL_DEFAULT) {
-        t->settings.setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
+    if((strength != UCOL_DEFAULT && strength != t->settings->getStrength()) ||
+            (decompositionMode != UCOL_DEFAULT &&
+                decompositionMode != t->settings->getFlag(CollationSettings::CHECK_FCD))
+    ) {
+        CollationSettings *ownedSettings = SharedObject::copyOnWrite(t->settings);
+        if(ownedSettings == NULL) {
+            errorCode = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        if(strength != UCOL_DEFAULT) {
+            ownedSettings->setStrength(strength, 0, errorCode);
+        }
+        if(decompositionMode != UCOL_DEFAULT) {
+            ownedSettings->setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
+        }
     }
     if(U_FAILURE(errorCode)) { return; }
     t->actualLocale.setToBogus();
@@ -247,8 +245,8 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
         errorReason = "missing root elements data, tailoring not supported";
         return NULL;
     }
-    LocalPointer<CollationTailoring> tailoring(new CollationTailoring(&base->settings));
-    if(tailoring.isNull()) {
+    LocalPointer<CollationTailoring> tailoring(new CollationTailoring(base->settings));
+    if(tailoring.isNull() || tailoring->isBogus()) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
@@ -259,7 +257,7 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     // If we wanted this to change after [maxVariable x], then we would keep
     // the tailoring.settings pointer here and read its variableTop when we need it.
     // See http://unicode.org/cldr/trac/ticket/6070
-    variableTop = base->settings.variableTop;
+    variableTop = base->settings->variableTop;
     parser.setSink(this);
     parser.setImporter(importer);
     parser.parse(ruleString, *tailoring, outParseError, errorCode);
@@ -284,13 +282,6 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
         dataBuilder = NULL;
     } else {
         tailoring->data = baseData;
-    }
-    CollationSettings::MaxVariable maxVariable = tailoring->settings.getMaxVariable();
-    if(maxVariable != base->settings.getMaxVariable()) {
-        uint32_t variableTop = tailoring->data->getLastPrimaryForGroup(
-            UCOL_REORDER_CODE_FIRST + maxVariable);
-        U_ASSERT(variableTop != 0);  // The rule parser should enforce valid settings.
-        tailoring->settings.variableTop = variableTop;
     }
     if(U_FAILURE(errorCode)) { return NULL; }
     tailoring->rules = ruleString;

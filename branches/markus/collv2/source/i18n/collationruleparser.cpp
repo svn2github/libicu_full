@@ -32,6 +32,7 @@
 #include "cstring.h"
 #include "patternprops.h"
 #include "uassert.h"
+#include "uvectr32.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -73,7 +74,11 @@ CollationRuleParser::parse(const UnicodeString &ruleString,
                            UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
     tailoring = &outTailoring;
-    settings = &outTailoring.settings;
+    settings = SharedObject::copyOnWrite(outTailoring.settings);
+    if(settings == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
     parseError = outParseError;
     if(parseError != NULL) {
         parseError->line = 0;
@@ -553,6 +558,9 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
             }
             if(value != UCOL_DEFAULT) {
                 settings->setMaxVariable(value, 0, errorCode);
+                settings->variableTop = baseData->getLastPrimaryForGroup(
+                    UCOL_REORDER_CODE_FIRST + value);
+                U_ASSERT(settings->variableTop != 0);
                 ruleIndex = j;
                 return;
             }
@@ -687,21 +695,12 @@ CollationRuleParser::parseReordering(const UnicodeString &raw, UErrorCode &error
     int32_t i = 7;  // after "reorder"
     if(i == raw.length()) {
         // empty [reorder] with no codes
-        uprv_free(const_cast<uint8_t *>(settings->reorderTable));
-        settings->reorderTable = NULL;
+        settings->resetReordering();
         return;
     }
-    // Count the codes in [reorder aa bb cc], same as the number of collapsed spaces.
-    int32_t length = 0;
-    for(int32_t j = i; j < raw.length(); ++j) {
-        if(raw.charAt(j) == 0x20) { ++length; }
-    }
-    LocalMemory<int32_t> newReorderCodes((int32_t *)uprv_malloc(length * 4));
-    if(newReorderCodes.isNull()) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    int32_t codeIndex = 0;
+    // Parse the codes in [reorder aa bb cc].
+    UVector32 reorderCodes(errorCode);
+    if(U_FAILURE(errorCode)) { return; }
     CharString word;
     while(i < raw.length()) {
         ++i;  // skip the word-separating space
@@ -714,25 +713,22 @@ CollationRuleParser::parseReordering(const UnicodeString &raw, UErrorCode &error
             setParseError("unknown script or reorder code", errorCode);
             return;
         }
-        newReorderCodes[codeIndex++] = code;
+        reorderCodes.addElement(code, errorCode);
+        if(U_FAILURE(errorCode)) { return; }
         i = limit;
     }
-    U_ASSERT(codeIndex == length);
-    if(length == 1 && newReorderCodes[0] == UCOL_REORDER_CODE_DEFAULT) {
+    int32_t length = reorderCodes.size();
+    if(length == 1 && reorderCodes.elementAti(0) == UCOL_REORDER_CODE_DEFAULT) {
         // The root collator does not have a reordering, by definition.
-        uprv_free(tailoring->reorderCodes);
-        settings->reorderCodes = tailoring->reorderCodes = NULL;
-        settings->reorderCodesLength = 0;
-        settings->reorderTable = NULL;
+        settings->resetReordering();
         return;
     }
-    baseData->makeReorderTable(newReorderCodes.getAlias(), length,
-                               tailoring->reorderTable, errorCode);
+    uint8_t table[256];
+    baseData->makeReorderTable(reorderCodes.getBuffer(), length, table, errorCode);
     if(U_FAILURE(errorCode)) { return; }
-    uprv_free(tailoring->reorderCodes);
-    settings->reorderCodes = tailoring->reorderCodes = newReorderCodes.orphan();
-    settings->reorderCodesLength = length;
-    settings->reorderTable = tailoring->reorderTable;
+    if(!settings->setReordering(reorderCodes.getBuffer(), length, table)) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+    }
 }
 
 static const char *const gSpecialReorderCodes[] = {

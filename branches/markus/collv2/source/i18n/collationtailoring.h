@@ -41,26 +41,16 @@ class UnicodeSet;
  * It is logically immutable: Do not modify its values.
  * The fields are public for convenience.
  *
- * It is shared, reference-counted, and auto-deleted.
- * Use either LocalPointer or addRef()/removeRef().
- * Reference-counting avoids having to be able to clone every field,
- * and saves memory, when a Collator is cloned.
- * The constructors initialize refCount to 0.
+ * It is shared, reference-counted, and auto-deleted; see SharedObject.
  */
-struct U_I18N_API CollationTailoring : public UMemory {
+struct U_I18N_API CollationTailoring : public SharedObject {
     CollationTailoring(const CollationSettings *baseSettings);
-    ~CollationTailoring();
+    virtual ~CollationTailoring();
 
     /**
-     * Increments the number of references to this object. Thread-safe.
+     * Returns TRUE if the constructor could not initialize properly.
      */
-    void addRef() const;
-    /**
-     * Decrements the number of references to this object,
-     * and auto-deletes "this" if the number becomes 0. Thread-safe.
-     */
-    void removeRef() const;
-    void deleteIfZeroRefCount() const;
+    UBool isBogus() { return settings == NULL; }
 
     UBool ensureOwnedData(UErrorCode &errorCode);
 
@@ -70,7 +60,7 @@ struct U_I18N_API CollationTailoring : public UMemory {
 
     // data for sorting etc.
     const CollationData *data;  // == base data or ownedData
-    CollationSettings settings;
+    const CollationSettings *settings;  // reference-counted
     UnicodeString rules;
     // The locale is bogus when built from rules or constructed from a binary blob.
     // It can then be set by the service registration code which is thread-safe.
@@ -89,12 +79,15 @@ struct U_I18N_API CollationTailoring : public UMemory {
     UResourceBundle *bundle;
     UTrie2 *trie;
     UnicodeSet *unsafeBackwardSet;
-    int32_t *reorderCodes;
-    uint8_t reorderTable[256];
     mutable UHashtable *maxExpansions;
     mutable UInitOnce maxExpansionsInitOnce;
 
-    mutable u_atomic_int32_t refCount;
+private:
+    /**
+     * No copy constructor: A CollationTailoring cannot be copied.
+     * It is immutable, and the data trie cannot be copied either.
+     */
+    CollationTailoring(const CollationTailoring &other);
 };
 
 U_NAMESPACE_END
