@@ -161,10 +161,10 @@ static int64_t parseCE(const CollationDataBuilder &builder, char *&s, UErrorCode
         if(*s == ']') {  // [U+4E00, 10]
             ++s;
             // Set the tertiary weight to w.
-            return (ce & 0xffffffffffff0000) | (w >> 16);
+            return (ce & INT64_C(0xffffffffffff0000)) | (w >> 16);
         }
         // Set the secondary weight to w: [U+9F9C, 70, 20]
-        ce = (ce & 0xffffffff00000000) | w;
+        ce = (ce & INT64_C(0xffffffff00000000)) | w;
         // Parse and set the tertiary weight.
         s = skipWhiteSpace(s + 1);
         w = parseWeight(s, "]", 2, errorCode);
