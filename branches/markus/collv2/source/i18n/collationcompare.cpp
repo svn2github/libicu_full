@@ -53,7 +53,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 anyVariable = TRUE;
                 do {
                     // Store only the primary of the variable CE.
-                    left.setCurrentCE(ce & 0xffffffff00000000);
+                    left.setCurrentCE(ce & INT64_C(0xffffffff00000000));
                     for(;;) {
                         ce = left.nextCE(errorCode);
                         leftPrimary = (uint32_t)(ce >> 32);
@@ -78,7 +78,7 @@ CollationCompare::compareUpToQuaternary(CollationIterator &left, CollationIterat
                 anyVariable = TRUE;
                 do {
                     // Store only the primary of the variable CE.
-                    right.setCurrentCE(ce & 0xffffffff00000000);
+                    right.setCurrentCE(ce & INT64_C(0xffffffff00000000));
                     for(;;) {
                         ce = right.nextCE(errorCode);
                         rightPrimary = (uint32_t)(ce >> 32);

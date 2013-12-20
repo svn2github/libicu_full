@@ -1545,12 +1545,10 @@ void CollationAPITest::TestVariableTopSetting() {
   }
 
   uint32_t newVarTop2 = coll->setVariableTop(UnicodeString((UChar)0x20AC), status);  // Euro
-  if(newVarTop2 != coll->getVariableTop(status)) {
-    errln("setVariableTop(Euro sign) != following getVariableTop()");
-  }
-  if(newVarTop2 != newVarTop) {
-    errln("setVariableTop(Euro sign) != setVariableTop(dollar sign) (should pin to top of currency group)");
-  }
+  assertEquals("setVariableTop(Euro sign) == following getVariableTop()",
+               (int64_t)newVarTop2, (int64_t)coll->getVariableTop(status));
+  assertEquals("setVariableTop(Euro sign) == setVariableTop(dollar sign) (should pin to top of currency group)",
+               (int64_t)newVarTop2, (int64_t)newVarTop);
 
   coll->setAttribute(UCOL_ALTERNATE_HANDLING, UCOL_SHIFTED, status);
   assertEquals("empty==dollar", UCOL_EQUAL, coll->compare(UnicodeString(), UnicodeString((UChar)0x24)));

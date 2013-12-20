@@ -143,7 +143,8 @@ private:
 };
 
 CollationIterator::CollationIterator(const CollationIterator &other)
-        : trie(other.trie),
+        : UObject(other),
+          trie(other.trie),
           data(other.data),
           cesIndex(other.cesIndex),
           skipped(NULL),
