@@ -231,6 +231,7 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
 }
 
 CollationBuilder::~CollationBuilder() {
+    delete dataBuilder;
 }
 
 CollationTailoring *
