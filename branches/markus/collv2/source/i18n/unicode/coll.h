@@ -43,7 +43,8 @@
 *                          critical accessors.
 * 05/15/00     helena      Added version information API.
 * 01/29/01     synwee      Modified into a C++ wrapper which calls C apis
-*                          (ucoll.h).
+*                          (ucol.h).
+* 2012-2013    markus      Rewritten in C++ again.
 */
 
 #ifndef COLL_H
@@ -82,12 +83,7 @@ class CollationKey;
 * The <code>Collator</code> class performs locale-sensitive string
 * comparison.<br>
 * You use this class to build searching and sorting routines for natural
-* language text.<br>
-* <em>Important: </em>The ICU collation service has been reimplemented
-* in order to achieve better performance and UCA compliance.
-* For details, see the
-* <a href="http://source.icu-project.org/repos/icu/icuhtml/trunk/design/collation/ICU_collation_design.htm">
-* collation design document</a>.
+* language text.
 * <p>
 * <code>Collator</code> is an abstract base class. Subclasses implement
 * specific collation strategies. One subclass,
@@ -122,7 +118,7 @@ class CollationKey;
 * determine the level of difference considered significant in comparisons.
 * Five strengths are provided: <code>PRIMARY</code>, <code>SECONDARY</code>,
 * <code>TERTIARY</code>, <code>QUATERNARY</code> and <code>IDENTICAL</code>.
-* The exact assignment of strengths to language features is locale dependant.
+* The exact assignment of strengths to language features is locale dependent.
 * For example, in Czech, "e" and "f" are considered primary differences,
 * while "e" and "\u00EA" are secondary differences, "e" and "E" are tertiary
 * differences and "e" and "e" are identical. The following shows how both case
@@ -132,7 +128,7 @@ class CollationKey;
 * \code
 * //Get the Collator for US English and set its strength to PRIMARY
 * UErrorCode success = U_ZERO_ERROR;
-* Collator* usCollator = Collator::createInstance(Locale::US, success);
+* Collator* usCollator = Collator::createInstance(Locale::getUS(), success);
 * usCollator->setStrength(Collator::PRIMARY);
 * if (usCollator->compare("abc", "ABC") == 0)
 *     cout << "'abc' and 'ABC' strings are equivalent with strength PRIMARY" << endl;
@@ -153,10 +149,8 @@ class CollationKey;
 * bytes but not zero bytes.
 * </p>
 * <p>
-* An older set of APIs returns a <code>CollationKey</code> object that wraps
+* Another set of APIs returns a <code>CollationKey</code> object that wraps
 * the sort key bytes instead of returning the bytes themselves.
-* Its use is deprecated, but it is still available for compatibility with
-* Java.
 * </p>
 * <p>
 * <strong>Note:</strong> <code>Collator</code>s with different Locale,
@@ -299,8 +293,8 @@ public:
 
     /**
      * Gets the table-based collation object for the desired locale. The
-     * resource of the desired locale will be loaded by ResourceLoader.
-     * Locale::ENGLISH is the base collation table and all other languages are
+     * resource of the desired locale will be loaded.
+     * Locale::getRoot() is the base collation table and all other languages are
      * built on top of it with additional language-specific modifications.
      * The UErrorCode& err parameter is used to return status information to the user.
      * To check whether the construction succeeded or not, you should check
@@ -396,7 +390,7 @@ public:
      * .       UChar abc[] = {0x61, 0x62, 0x63, 0};  // = "abc"
      * .       UErrorCode status = U_ZERO_ERROR;
      * .       Collator *myCollation =
-     * .                         Collator::createInstance(Locale::US, status);
+     * .                         Collator::createInstance(Locale::getUS(), status);
      * .       if (U_FAILURE(status)) return;
      * .       myCollation->setStrength(Collator::PRIMARY);
      * .       // result would be Collator::EQUAL ("abc" == "ABC")
@@ -587,7 +581,7 @@ public:
      * <pre>
      *  \code
      *  UErrorCode status = U_ZERO_ERROR;
-     *  Collator*myCollation = Collator::createInstance(Locale::US, status);
+     *  Collator*myCollation = Collator::createInstance(Locale::getUS(), status);
      *  if (U_FAILURE(status)) return;
      *  myCollation->setStrength(Collator::PRIMARY);
      *  // result will be "abc" == "ABC"
@@ -764,7 +758,7 @@ public:
      * applications who wish to cache collators, or otherwise reuse
      * collators when possible.  The functional equivalent may change
      * over time.  For more information, please see the <a
-     * href="http://icu-project.org/userguide/locale.html#services">
+     * href="http://userguide.icu-project.org/locale#TOC-Locales-and-Services">
      * Locales and Services</a> section of the ICU User Guide.
      * @param keyword a particular keyword as enumerated by
      * ucol_getKeywords.
@@ -910,7 +904,7 @@ public:
      * the top of one of the supported reordering groups,
      * and it must not be beyond the last of those groups.
      * See setMaxVariable().
-     * @param varTop an UnicodeString size 1 or more (if contraction) of UChars to which the variable top should be set
+     * @param varTop a UnicodeString size 1 or more (if contraction) of UChars to which the variable top should be set
      * @param status error code. If error code is set, the return value is undefined. Errors set by this function are: <br>
      *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such contraction<br>
      *    U_ILLEGAL_ARGUMENT_ERROR if the variable top is beyond
@@ -943,12 +937,12 @@ public:
     virtual uint32_t getVariableTop(UErrorCode &status) const = 0;
 
     /**
-     * Get an UnicodeSet that contains all the characters and sequences
+     * Get a UnicodeSet that contains all the characters and sequences
      * tailored in this collator.
      * @param status      error code of the operation
      * @return a pointer to a UnicodeSet object containing all the
      *         code points and sequences that may sort differently than
-     *         in the UCA. The object must be disposed of by using delete
+     *         in the root collator. The object must be disposed of by using delete
      * @stable ICU 2.4
      */
     virtual UnicodeSet *getTailoredSet(UErrorCode &status) const;
@@ -963,7 +957,7 @@ public:
     virtual Collator* safeClone(void) const;
 
     /**
-     * Get the sort key as an array of bytes from an UnicodeString.
+     * Get the sort key as an array of bytes from a UnicodeString.
      * Sort key byte arrays are zero-terminated and can be compared using
      * strcmp().
      * @param source string to be processed.
@@ -979,7 +973,7 @@ public:
                               int32_t resultLength) const = 0;
 
     /**
-     * Get the sort key as an array of bytes from an UChar buffer.
+     * Get the sort key as an array of bytes from a UChar buffer.
      * Sort key byte arrays are zero-terminated and can be compared using
      * strcmp().
      * @param source string to be processed.
@@ -1097,7 +1091,7 @@ public:
      *  This string will be normalized.
      *  The structure and the syntax of the string is defined in the "Naming collators"
      *  section of the users guide: 
-     *  http://icu-project.org/userguide/Collate_Concepts.html#Naming_Collators
+     *  http://userguide.icu-project.org/collation/concepts#TOC-Collator-naming-scheme
      *  This function supports preflighting.
      * 
      *  This is internal, and intended to be used with delegate converters.
@@ -1168,16 +1162,6 @@ private:
     friend class ICUCollatorService;
     static Collator* makeInstance(const Locale& desiredLocale,
                                   UErrorCode& status);
-
-    // Collator private data members ---------------------------------------
-
-    /*
-    synwee : removed as attributes to be handled by child class
-    UCollationStrength  strength;
-    Normalizer::EMode  decmp;
-    */
-    /* This is useless information */
-/*  static const UVersionInfo fVersion;*/
 };
 
 #if !UCONFIG_NO_SERVICE

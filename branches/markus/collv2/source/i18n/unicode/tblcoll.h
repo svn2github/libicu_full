@@ -89,28 +89,20 @@ class UnicodeString;
 class UVector64;
 
 /**
- * The RuleBasedCollator class provides the simple implementation of
+ * The RuleBasedCollator class provides the implementation of
  * Collator, using data-driven tables. The user can create a customized
  * table-based collation.
- * <P>
- * <em>Important: </em>The ICU collation service has been reimplemented 
- * in order to achieve better performance and UCA compliance. 
- * For details, see the 
- * <a href="http://source.icu-project.org/repos/icu/icuhtml/trunk/design/collation/ICU_collation_design.htm">
- * collation design document</a>.
- * <p>
- * RuleBasedCollator is a thin C++ wrapper over the C implementation.
  * <p>
  * For more information about the collation service see 
- * <a href="http://icu-project.org/userguide/Collate_Intro.html">the users guide</a>.
+ * <a href="http://userguide.icu-project.org/collation">the User Guide</a>.
  * <p>
  * Collation service provides correct sorting orders for most locales supported in ICU. 
  * If specific data for a locale is not available, the orders eventually falls back
- * to the <a href="http://www.unicode.org/unicode/reports/tr10/">UCA sort order</a>. 
+ * to the <a href="http://www.unicode.org/reports/tr35/tr35-collation.html#Root_Collation">CLDR root sort order</a>. 
  * <p>
  * Sort ordering may be customized by providing your own set of rules. For more on
- * this subject see the <a href="http://icu-project.org/userguide/Collate_Customization.html">
- * Collation customization</a> section of the users guide.
+ * this subject see the <a href="http://userguide.icu-project.org/collation/customization">
+ * Collation Customization</a> section of the User Guide.
  * <p>
  * Note, RuleBasedCollator is not to be subclassed.
  * @see        Collator
@@ -574,7 +566,7 @@ public:
      * the top of one of the supported reordering groups,
      * and it must not be beyond the last of those groups.
      * See setMaxVariable().
-     * @param varTop an UnicodeString size 1 or more (if contraction) of UChars to which the variable top should be set
+     * @param varTop a UnicodeString size 1 or more (if contraction) of UChars to which the variable top should be set
      * @param status error code. If error code is set, the return value is undefined. Errors set by this function are: <br>
      *    U_CE_NOT_FOUND_ERROR if more than one character was passed and there is no such contraction<br>
      *    U_ILLEGAL_ARGUMENT_ERROR if the variable top is beyond
@@ -607,18 +599,18 @@ public:
     virtual uint32_t getVariableTop(UErrorCode &status) const;
 
     /**
-     * Get an UnicodeSet that contains all the characters and sequences tailored in 
+     * Get a UnicodeSet that contains all the characters and sequences tailored in 
      * this collator.
      * @param status      error code of the operation
      * @return a pointer to a UnicodeSet object containing all the 
      *         code points and sequences that may sort differently than
-     *         in the UCA. The object must be disposed of by using delete
+     *         in the root collator. The object must be disposed of by using delete
      * @stable ICU 2.4
      */
     virtual UnicodeSet *getTailoredSet(UErrorCode &status) const;
 
     /**
-     * Get the sort key as an array of bytes from an UnicodeString.
+     * Get the sort key as an array of bytes from a UnicodeString.
      * @param source string to be processed.
      * @param result buffer to store result in. If NULL, number of bytes needed
      *        will be returned.
@@ -631,7 +623,7 @@ public:
                                int32_t resultLength) const;
 
     /**
-     * Get the sort key as an array of bytes from an UChar buffer.
+     * Get the sort key as an array of bytes from a UChar buffer.
      * @param source string to be processed.
      * @param sourceLength length of string to be processed. If -1, the string
      *        is 0 terminated and length will be decided by the function.

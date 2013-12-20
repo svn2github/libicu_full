@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 2001-2011, International Business Machines
+*   Copyright (C) 2001-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *
@@ -45,12 +45,12 @@ typedef struct UCollationElements UCollationElements;
  * ordering priority of the positioned character. The ordering priority of a 
  * character, which we refer to as a key, defines how a character is collated 
  * in the given collation object.
- * For example, consider the following in Spanish:
+ * For example, consider the following in Slovak and in traditional Spanish collation:
  * <pre>
  * .       "ca" -> the first key is key('c') and second key is key('a').
  * .       "cha" -> the first key is key('ch') and second key is key('a').
  * </pre>
- * And in German,
+ * And in German phonebook collation,
  * <pre>
  * .       "<ae ligature>b"-> the first key is key('a'), the second key is key('e'), and
  * .       the third key is key('b').
@@ -92,7 +92,7 @@ typedef struct UCollationElements UCollationElements;
  * collation orders with the value UCOL_IGNORABLE are ignored.
  * Character based on the comparison level of the collator.  A collation order 
  * consists of primary order, secondary order and tertiary order.  The data 
- * type of the collation order is <strong>t_int32</strong>. 
+ * type of the collation order is <strong>int32_t</strong>. 
  *
  * @see UCollator
  */
@@ -103,7 +103,7 @@ typedef struct UCollationElements UCollationElements;
  * @param coll The collator containing the desired collation rules.
  * @param text The text to iterate over.
  * @param textLength The number of characters in text, or -1 if null-terminated
- * @param status A pointer to an UErrorCode to receive any errors.
+ * @param status A pointer to a UErrorCode to receive any errors.
  * @return a struct containing collation element information
  * @stable ICU 2.0
  */
@@ -149,7 +149,7 @@ ucol_reset(UCollationElements *elems);
  * Get the ordering priority of the next collation element in the text.
  * A single character may contain more than one collation element.
  * @param elems The UCollationElements containing the text.
- * @param status A pointer to an UErrorCode to receive any errors.
+ * @param status A pointer to a UErrorCode to receive any errors.
  * @return The next collation elements ordering, otherwise returns NULLORDER 
  *         if an error has occured or if the end of string has been reached
  * @stable ICU 2.0
@@ -162,7 +162,7 @@ ucol_next(UCollationElements *elems, UErrorCode *status);
  * A single character may contain more than one collation element.
  * Note that internally a stack is used to store buffered collation elements. 
  * @param elems The UCollationElements containing the text.
- * @param status A pointer to an UErrorCode to receive any errors. Noteably 
+ * @param status A pointer to a UErrorCode to receive any errors. Noteably 
  *               a U_BUFFER_OVERFLOW_ERROR is returned if the internal stack
  *               buffer has been exhausted.
  * @return The previous collation elements ordering, otherwise returns 
@@ -195,7 +195,7 @@ ucol_getMaxExpansion(const UCollationElements *elems, int32_t order);
  * @param elems The UCollationElements to set.
  * @param text The source text containing the collation elements.
  * @param textLength The length of text, or -1 if null-terminated.
- * @param status A pointer to an UErrorCode to receive any errors.
+ * @param status A pointer to a UErrorCode to receive any errors.
  * @see ucol_getText
  * @stable ICU 2.0
  */
@@ -225,7 +225,7 @@ ucol_getOffset(const UCollationElements *elems);
  * the API reset() has to be called.
  * @param elems The UCollationElements to set.
  * @param offset The desired character offset.
- * @param status A pointer to an UErrorCode to receive any errors.
+ * @param status A pointer to a UErrorCode to receive any errors.
  * @see ucol_getOffset
  * @stable ICU 2.0
  */

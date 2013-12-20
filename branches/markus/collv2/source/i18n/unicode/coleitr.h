@@ -25,6 +25,7 @@
 * 01/25/01    swquek      Modified into a C++ wrapper calling C APIs (ucoliter.h)
 * 02/19/01    swquek      Removed CollationElementsIterator() since it is 
 *                         private constructor and no calls are made to it
+* 2012-2013   markus      Rewritten in C++ again.
 */
 
 #ifndef COLEITR_H
@@ -55,11 +56,11 @@ class UVector32;
 * ordering priority of the positioned character. The ordering priority of a 
 * character, which we refer to as a key, defines how a character is collated in 
 * the given collation object.
-* For example, consider the following in Spanish:
+* For example, consider the following in Slovak and in traditional Spanish collation:
 * <pre>
 *        "ca" -> the first key is key('c') and second key is key('a').
 *        "cha" -> the first key is key('ch') and second key is key('a').</pre>
-* And in German,
+* And in German phonebook collation,
 * <pre> \htmlonly       "&#x00E6;b"-> the first key is key('a'), the second key is key('e'), and
 *        the third key is key('b'). \endhtmlonly </pre>
 * The key of a character, is an integer composed of primary order(short),
@@ -105,7 +106,7 @@ class UVector32;
 * with the value UCOL_IGNORABLE are ignored.
 * Character based on the comparison level of the collator.  A collation order 
 * consists of primary order, secondary order and tertiary order.  The data 
-* type of the collation order is <strong>t_int32</strong>. 
+* type of the collation order is <strong>int32_t</strong>. 
 *
 * Note, CollationElementIterator should not be subclassed.
 * @see     Collator
