@@ -1035,7 +1035,7 @@ CollationBuilder::setCaseBits(const UnicodeString &nfdString,
     }
 
     for(int32_t i = 0; i < cesLength; ++i) {
-        int64_t ce = ces[i] & 0xffffffffffff3fff;  // clear old case bits
+        int64_t ce = ces[i] & INT64_C(0xffffffffffff3fff);  // clear old case bits
         int32_t strength = ceStrength(ce);
         if(strength == UCOL_PRIMARY) {
             ce |= (cases & 3) << 14;
@@ -1592,7 +1592,7 @@ int32_t
 CollationBuilder::ceStrength(int64_t ce) {
     return
         isTempCE(ce) ? strengthFromTempCE(ce) :
-        (ce & 0xff00000000000000) != 0 ? UCOL_PRIMARY :
+        (ce & INT64_C(0xff00000000000000)) != 0 ? UCOL_PRIMARY :
         ((uint32_t)ce & 0xff000000) != 0 ? UCOL_SECONDARY :
         ce != 0 ? UCOL_TERTIARY :
         UCOL_IDENTICAL;

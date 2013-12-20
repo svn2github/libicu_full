@@ -43,11 +43,9 @@ namespace {
  */
 int32_t
 compareInt64AsUnsigned(int64_t a, int64_t b) {
-    a += 0x8000000000000000;
-    b += 0x8000000000000000;
-    if(a < b) {
+    if((uint64_t)a < (uint64_t)b) {
         return -1;
-    } else if(a > b) {
+    } else if((uint64_t)a > (uint64_t)b) {
         return 1;
     } else {
         return 0;
@@ -642,7 +640,7 @@ CollationFastLatinBuilder::encodeContractions(UErrorCode &errorCode) {
         UBool firstTriple = TRUE;
         for(int32_t index = (int32_t)ce & 0x7fffffff;; index += 3) {
             int32_t x = contractionCEs.elementAti(index);
-            if(x == CollationFastLatin::CONTR_CHAR_MASK && !firstTriple) { break; }
+            if((uint32_t)x == CollationFastLatin::CONTR_CHAR_MASK && !firstTriple) { break; }
             int64_t cce0 = contractionCEs.elementAti(index + 1);
             int64_t cce1 = contractionCEs.elementAti(index + 2);
             uint32_t miniCE = encodeTwoCEs(cce0, cce1);

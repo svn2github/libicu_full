@@ -248,7 +248,7 @@ protected:
     UBool fastLatinEnabled;
     CollationFastLatinBuilder *fastLatinBuilder;
 
-    DataBuilderCollationIterator *iter;
+    DataBuilderCollationIterator *collIter;
 };
 
 U_NAMESPACE_END

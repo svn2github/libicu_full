@@ -501,11 +501,8 @@ $(BUILDDIR)/%.icu: $(SRCDATADIR)/in/%.icu
 $(BUILDDIR)/%.nrm: $(SRCDATADIR)/in/%.nrm
 	$(INVOKE) $(TOOLBINDIR)/icupkg -t$(ICUDATA_CHAR) $< $@
 
-# $(BUILDDIR)/coll/%.icu: $(SRCDATADIR)/in/coll/%.icu  -- TODO: reenable!
-#	$(INVOKE) $(TOOLBINDIR)/icupkg -t$(ICUDATA_CHAR) $< $@
-
-$(BUILDDIR)/coll/ucadata.icu: $(SRCDATADIR)/in/coll/ucadata.icu  # TODO: remove
-	cp $< $@
+$(BUILDDIR)/coll/%.icu: $(SRCDATADIR)/in/coll/%.icu
+	$(INVOKE) $(TOOLBINDIR)/icupkg -t$(ICUDATA_CHAR) $< $@
 
 ####################################################    SPP
 # SPP FILES

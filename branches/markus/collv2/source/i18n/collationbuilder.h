@@ -175,7 +175,7 @@ private:
     static inline int64_t tempCEFromIndexAndStrength(int32_t index, int32_t strength) {
         return
             // CE byte offsets, to ensure valid CE bytes, and case bits 11
-            0x4040000006002000 +
+            INT64_C(0x4040000006002000) +
             // index bits 19..13 -> primary byte 1 = CE bits 63..56 (byte values 40..BF)
             ((int64_t)(index & 0xfe000) << 43) +
             // index bits 12..6 -> primary byte 2 = CE bits 55..48 (byte values 40..BF)
@@ -186,7 +186,7 @@ private:
             (strength << 8);
     }
     static inline int32_t indexFromTempCE(int64_t tempCE) {
-        tempCE -= 0x4040000006002000;
+        tempCE -= INT64_C(0x4040000006002000);
         return
             ((int32_t)(tempCE >> 43) & 0xfe000) |
             ((int32_t)(tempCE >> 42) & 0x1fc0) |
@@ -284,10 +284,10 @@ private:
     }
 
     static inline int64_t changeNodePreviousIndex(int64_t node, int32_t previous) {
-        return (node & 0xffff00000fffffff) | nodeFromPreviousIndex(previous);
+        return (node & INT64_C(0xffff00000fffffff)) | nodeFromPreviousIndex(previous);
     }
     static inline int64_t changeNodeNextIndex(int64_t node, int32_t next) {
-        return (node & 0xfffffffff00000ff) | nodeFromNextIndex(next);
+        return (node & INT64_C(0xfffffffff00000ff)) | nodeFromNextIndex(next);
     }
 
     const Normalizer2 &nfd, &fcd;

@@ -18,6 +18,8 @@
 *   It then writes the ucadata.icu binary file containing the data.
 */
 
+#define U_NO_DEFAULT_INCLUDE_UTF_HEADERS 1
+
 #include <stdio.h>
 #include "unicode/utypes.h"
 #include "unicode/errorcode.h"
@@ -41,8 +43,6 @@
 #include "uoptions.h"
 #include "uparse.h"
 #include "writesrc.h"
-
-#define U_NO_DEFAULT_INCLUDE_UTF_HEADERS 1
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 

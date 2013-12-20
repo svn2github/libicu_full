@@ -73,7 +73,7 @@ uint32_t getSecondHalf(uint32_t p, uint32_t lower32) {
     return (p << 16) | ((lower32 >> 8) & 0xff00) | (lower32 & 0x3f);
 }
 UBool ceNeedsTwoParts(int64_t ce) {
-    return (ce & 0xffff00ff003f) != 0;
+    return (ce & INT64_C(0xffff00ff003f)) != 0;
 }
 
 }  // namespace

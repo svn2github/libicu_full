@@ -39,11 +39,9 @@ namespace {
  */
 int32_t
 compareInt64AsUnsigned(int64_t a, int64_t b) {
-    a += 0x8000000000000000;
-    b += 0x8000000000000000;
-    if(a < b) {
+    if((uint64_t)a < (uint64_t)b) {
         return -1;
-    } else if(a > b) {
+    } else if((uint64_t)a > (uint64_t)b) {
         return 1;
     } else {
         return 0;
@@ -273,7 +271,7 @@ void
 CollationBaseDataBuilder::addRootElement(int64_t ce, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode) || ce == 0) { return; }
     // Remove case bits.
-    ce &= 0xffffffffffff3fff;
+    ce &= INT64_C(0xffffffffffff3fff);
     U_ASSERT((ce & 0xc0) == 0);  // quaternary==0
     // Ignore the CE if it has a Han primary weight and common secondary/tertiary weights.
     // We will add it later, as part of the Han ranges.

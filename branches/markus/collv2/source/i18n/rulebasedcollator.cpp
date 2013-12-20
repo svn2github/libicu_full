@@ -138,7 +138,8 @@ CollationKeyByteSink::Resize(int32_t appendCapacity, int32_t length) {
 }
 
 RuleBasedCollator::RuleBasedCollator(const RuleBasedCollator &other)
-        : data(other.data),
+        : Collator(other),
+          data(other.data),
           settings(other.settings),
           tailoring(other.tailoring),
           validLocale(other.validLocale),

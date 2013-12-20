@@ -117,7 +117,7 @@ public:
     /** No CE: End of input. Only used in runtime code, not stored in data. */
     static const uint32_t NO_CE_PRIMARY = 1;  // not a left-adjusted weight
     static const uint32_t NO_CE_WEIGHT16 = 0x0100;  // weight of LEVEL_SEPARATOR_BYTE
-    static const int64_t NO_CE = 0x101000100;  // NO_CE_PRIMARY, NO_CE_WEIGHT16, NO_CE_WEIGHT16
+    static const int64_t NO_CE = INT64_C(0x101000100);  // NO_CE_PRIMARY, NO_CE_WEIGHT16, NO_CE_WEIGHT16
 
     /** Sort key levels. */
     enum Level {

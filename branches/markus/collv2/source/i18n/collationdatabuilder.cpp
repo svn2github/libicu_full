@@ -292,7 +292,7 @@ CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
           ce32s(errorCode), ce64s(errorCode), conditionalCE32s(errorCode),
           modified(FALSE),
           fastLatinEnabled(FALSE), fastLatinBuilder(NULL),
-          iter(NULL) {
+          collIter(NULL) {
     // Reserve the first CE32 for U+0000.
     ce32s.addElement(0, errorCode);
     conditionalCE32s.setDeleter(uprv_deleteConditionalCE32);
@@ -301,7 +301,7 @@ CollationDataBuilder::CollationDataBuilder(UErrorCode &errorCode)
 CollationDataBuilder::~CollationDataBuilder() {
     utrie2_close(trie);
     delete fastLatinBuilder;
-    delete iter;
+    delete collIter;
 }
 
 void
@@ -632,10 +632,10 @@ CollationDataBuilder::encodeOneCEAsCE32(int64_t ce) {
     uint32_t lower32 = (uint32_t)ce;
     uint32_t t = (uint32_t)(ce & 0xffff);
     U_ASSERT((t & 0xc000) != 0xc000);  // Impossible case bits 11 mark special CE32s.
-    if((ce & 0xffff00ff00ff) == 0) {
+    if((ce & INT64_C(0xffff00ff00ff)) == 0) {
         // normal form ppppsstt
         return p | (lower32 >> 16) | (t >> 8);
-    } else if((ce & 0xffffffffff) == Collation::COMMON_SEC_AND_TER_CE) {
+    } else if((ce & INT64_C(0xffffffffff)) == Collation::COMMON_SEC_AND_TER_CE) {
         // long-primary form ppppppC1
         return Collation::makeLongPrimaryCE32(p);
     } else if(p == 0 && (t & 0xff) == 0) {
@@ -682,8 +682,8 @@ CollationDataBuilder::encodeCEs(const int64_t ces[], int32_t cesLength,
         int64_t ce0 = ces[0];
         int64_t ce1 = ces[1];
         uint32_t p0 = (uint32_t)(ce0 >> 32);
-        if((ce0 & 0xffffffffff00ff) == Collation::COMMON_SECONDARY_CE &&
-                (ce1 & 0xffffffff00ffffff) == Collation::COMMON_TERTIARY_CE &&
+        if((ce0 & INT64_C(0xffffffffff00ff)) == Collation::COMMON_SECONDARY_CE &&
+                (ce1 & INT64_C(0xffffffff00ffffff)) == Collation::COMMON_TERTIARY_CE &&
                 p0 != 0) {
             // Latin mini expansion
             return
@@ -1528,11 +1528,11 @@ CollationDataBuilder::getCEs(const UnicodeString &prefix, const UnicodeString &s
 int32_t
 CollationDataBuilder::getCEs(const UnicodeString &s, int32_t start,
                              int64_t ces[], int32_t cesLength) {
-    if(iter == NULL) {
-        iter = new DataBuilderCollationIterator(*this);
-        if(iter == NULL) { return 0; }
+    if(collIter == NULL) {
+        collIter = new DataBuilderCollationIterator(*this);
+        if(collIter == NULL) { return 0; }
     }
-    return iter->fetchCEs(s, start, ces, cesLength);
+    return collIter->fetchCEs(s, start, ces, cesLength);
 }
 
 U_NAMESPACE_END
