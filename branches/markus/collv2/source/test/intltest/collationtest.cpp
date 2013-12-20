@@ -10,6 +10,9 @@
 */
 
 #include "unicode/utypes.h"
+
+#if !UCONFIG_NO_COLLATION
+
 #include "unicode/coll.h"
 #include "unicode/errorcode.h"
 #include "unicode/localpointer.h"
@@ -1708,3 +1711,5 @@ void CollationTest::TestDataDriven() {
         }
     }
 }
+
+#endif  // !UCONFIG_NO_COLLATION

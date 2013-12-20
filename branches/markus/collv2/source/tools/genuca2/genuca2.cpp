@@ -46,6 +46,17 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
+#if UCONFIG_NO_COLLATION
+
+extern "C" int
+main(int argc, char* argv[]) {
+    (void)argc;
+    (void)argv;
+    return 1;
+}
+
+#else
+
 U_NAMESPACE_USE
 
 static UBool beVerbose=FALSE, withCopyright=TRUE;
@@ -1089,3 +1100,5 @@ main(int argc, char* argv[]) {
 
     return errorCode;
 }
+
+#endif  // UCONFIG_NO_COLLATION

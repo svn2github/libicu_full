@@ -31,6 +31,7 @@
 #include "genrb.h"
 #include "unicode/ustring.h"
 #include "unicode/uscript.h"
+#include "unicode/utf16.h"
 #include "unicode/putil.h"
 #include "collationbuilder.h"
 #include "collationdata.h"
@@ -636,6 +637,10 @@ parseAlias(ParseState* state, char *tag, uint32_t startline, const struct UStrin
     return result;
 }
 
+#if !UCONFIG_NO_COLLATION
+
+namespace {
+
 static struct SResource* resLookup(struct SResource* res, const char* key){
     struct SResource *current = NULL;
     struct SResTable *list;
@@ -654,8 +659,6 @@ static struct SResource* resLookup(struct SResource* res, const char* key){
     }
     return NULL;
 }
-
-namespace {
 
 class GenrbImporter : public icu::CollationRuleParser::Importer {
 public:
@@ -827,8 +830,6 @@ finish:
     return &rules;
 }
 
-}  // namespace
-
 // Quick-and-dirty escaping function.
 // Assumes that we are on an ASCII-based platform.
 static void
@@ -849,6 +850,10 @@ escape(const UChar *s, char *buffer) {
         }
     }
 }
+
+}  // namespace
+
+#endif  // !UCONFIG_NO_COLLATION
 
 static struct SResource *
 addCollation(ParseState* state, struct SResource  *result, const char *collationType,
@@ -962,6 +967,7 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
 
 #if UCONFIG_NO_COLLATION || UCONFIG_NO_FILE_IO
     warning(line, "Not building collation elements because of UCONFIG_NO_COLLATION and/or UCONFIG_NO_FILE_IO, see uconfig.h");
+    (void)collationType;
 #else
     if(!state->makeBinaryCollation) {
         if(isVerbose()) {

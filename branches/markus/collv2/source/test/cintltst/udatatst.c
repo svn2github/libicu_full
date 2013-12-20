@@ -1700,11 +1700,13 @@ TestSwapData() {
             pkg=U_ICUDATA_BRKITR;
             nm=swapCases[i].name;
             uprv_strcpy(name, U_ICUDATA_BRKITR);
+#if !UCONFIG_NO_COLLATION
         } else if (uprv_strcmp(swapCases[i].name, "ucadata")==0
             || uprv_strcmp(swapCases[i].name, "invuca")==0) {
             pkg=U_ICUDATA_COLL;
             nm=swapCases[i].name;
             uprv_strcpy(name, U_ICUDATA_COLL);
+#endif  /* !UCONFIG_NO_COLLATION */
         } else {
             pkg=NULL;
             nm=swapCases[i].name;
