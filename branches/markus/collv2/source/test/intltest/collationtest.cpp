@@ -30,6 +30,7 @@
 #include "cmemory.h"
 #include "collation.h"
 #include "collationdata.h"
+#include "collationfcd.h"
 #include "collationiterator.h"
 #include "collationroot.h"
 #include "collationrootelements.h"
@@ -73,6 +74,7 @@ public:
     void TestImplicits();
     void TestNulTerminated();
     void TestIllegalUTF8();
+    void TestShortFCDData();
     void TestFCD();
     void TestCollationWeights();
     void TestRootElements();
@@ -140,6 +142,7 @@ void CollationTest::runIndexedTest(int32_t index, UBool exec, const char *&name,
     TESTCASE_AUTO(TestImplicits);
     TESTCASE_AUTO(TestNulTerminated);
     TESTCASE_AUTO(TestIllegalUTF8);
+    TESTCASE_AUTO(TestShortFCDData);
     TESTCASE_AUTO(TestFCD);
     TESTCASE_AUTO(TestCollationWeights);
     TESTCASE_AUTO(TestRootElements);
@@ -303,6 +306,61 @@ void CollationTest::TestIllegalUTF8() {
                   (int)i, order);
         }
     }
+}
+
+namespace {
+
+void addLeadSurrogatesForSupplementary(const UnicodeSet &src, UnicodeSet &dest) {
+    for(UChar32 c = 0x10000; c < 0x110000;) {
+        UChar32 next = c + 0x400;
+        if(src.containsSome(c, next - 1)) {
+            dest.add(U16_LEAD(c));
+        }
+        c = next;
+    }
+}
+
+}  // namespace
+
+void CollationTest::TestShortFCDData() {
+    // See CollationFCD class comments.
+    IcuTestErrorCode errorCode(*this, "TestShortFCDData");
+    UnicodeSet expectedLccc("[:^lccc=0:]", errorCode);
+    errorCode.assertSuccess();
+    expectedLccc.add(0xdc00, 0xdfff);  // add all trail surrogates
+    addLeadSurrogatesForSupplementary(expectedLccc, expectedLccc);
+    UnicodeSet lccc;  // actual
+    for(UChar32 c = 0; c <= 0xffff; ++c) {
+        if(CollationFCD::hasLccc(c)) { lccc.add(c); }
+    }
+    UnicodeSet diff(expectedLccc);
+    diff.removeAll(lccc);
+    diff.remove(0x10000, 0x10ffff);  // hasLccc() only works for the BMP
+    UnicodeString empty("[]");
+    UnicodeString diffString;
+    diff.toPattern(diffString, TRUE);
+    assertEquals("CollationFCD::hasLccc() expected-actual", empty, diffString);
+    diff = lccc;
+    diff.removeAll(expectedLccc);
+    diff.toPattern(diffString, TRUE);
+    assertEquals("CollationFCD::hasLccc() actual-expected", empty, diffString);
+
+    UnicodeSet expectedTccc("[:^tccc=0:]", errorCode);
+    errorCode.assertSuccess();
+    addLeadSurrogatesForSupplementary(expectedLccc, expectedTccc);
+    addLeadSurrogatesForSupplementary(expectedTccc, expectedTccc);
+    UnicodeSet tccc;  // actual
+    for(UChar32 c = 0; c <= 0xffff; ++c) {
+        if(CollationFCD::hasTccc(c)) { tccc.add(c); }
+    }
+    diff = expectedTccc;
+    diff.removeAll(tccc);
+    diff.remove(0x10000, 0x10ffff);  // hasTccc() only works for the BMP
+    assertEquals("CollationFCD::hasTccc() expected-actual", empty, diffString);
+    diff = tccc;
+    diff.removeAll(expectedTccc);
+    diff.toPattern(diffString, TRUE);
+    assertEquals("CollationFCD::hasTccc() actual-expected", empty, diffString);
 }
 
 class CodePointIterator {
@@ -1252,7 +1310,6 @@ UBool CollationTest::getCollationKey(const char *norm, const UnicodeString &line
         errln("Collator(%s).getCollationKey() failed: %s",
               norm, errorCode.errorName());
         infoln(line);
-        errorCode.reset();
         return FALSE;
     }
     int32_t keyLength;
@@ -1358,7 +1415,6 @@ UBool CollationTest::getCollationKey(const char *norm, const UnicodeString &line
         infoln(line);
         infoln(printCollationKey(key));
         infoln(printSortKey(mergedKey.getAlias(), mergedKeyLength));
-        errorCode.reset();
         return FALSE;
     }
 
@@ -1372,7 +1428,6 @@ UBool CollationTest::getCollationKey(const char *norm, const UnicodeString &line
             errln("Collator(%s).internalNextSortKeyPart(%d) failed: %s",
                   norm, (int)partSize, errorCode.errorName());
             infoln(line);
-            errorCode.reset();  // TODO: no need to reset except in IcuTestErrorCode-owning caller?
             return FALSE;
         }
         if(keyLength != parts.length() || uprv_memcmp(keyBytes, parts.data(), keyLength) != 0) {
@@ -1382,7 +1437,6 @@ UBool CollationTest::getCollationKey(const char *norm, const UnicodeString &line
             infoln(line);
             infoln(printCollationKey(key));
             infoln(printSortKey(reinterpret_cast<uint8_t *>(parts.data()), parts.length()));
-            errorCode.reset();
             return FALSE;
         }
     }
@@ -1442,7 +1496,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
         infoln(fileLine);
         infoln(printCollationKey(prevKey));
         infoln(printCollationKey(key));
-        errorCode.reset();
         return FALSE;
     }
     order = coll->compare(s, prevString, errorCode);
@@ -1454,7 +1507,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
         infoln(fileLine);
         infoln(printCollationKey(prevKey));
         infoln(printCollationKey(key));
-        errorCode.reset();
         return FALSE;
     }
     // Test NUL-termination if the strings do not contain NUL characters.
@@ -1469,7 +1521,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
             infoln(fileLine);
             infoln(printCollationKey(prevKey));
             infoln(printCollationKey(key));
-            errorCode.reset();
             return FALSE;
         }
         order = coll->compare(s.getBuffer(), -1, prevString.getBuffer(), -1, errorCode);
@@ -1481,7 +1532,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
             infoln(fileLine);
             infoln(printCollationKey(prevKey));
             infoln(printCollationKey(key));
-            errorCode.reset();
             return FALSE;
         }
     }
@@ -1513,7 +1563,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
         infoln(fileLine);
         infoln(printCollationKey(prevKey));
         infoln(printCollationKey(key));
-        errorCode.reset();
         return FALSE;
     }
     order = coll->compareUTF8(sUTF8, prevUTF8, errorCode);
@@ -1525,7 +1574,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
         infoln(fileLine);
         infoln(printCollationKey(prevKey));
         infoln(printCollationKey(key));
-        errorCode.reset();
         return FALSE;
     }
     // Test NUL-termination if the strings do not contain NUL characters.
@@ -1539,7 +1587,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
             infoln(fileLine);
             infoln(printCollationKey(prevKey));
             infoln(printCollationKey(key));
-            errorCode.reset();
             return FALSE;
         }
         order = coll->internalCompareUTF8(sUTF8.c_str(), -1, prevUTF8.c_str(), -1, errorCode);
@@ -1551,7 +1598,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
             infoln(fileLine);
             infoln(printCollationKey(prevKey));
             infoln(printCollationKey(key));
-            errorCode.reset();
             return FALSE;
         }
     }
@@ -1571,7 +1617,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
         infoln(fileLine);
         infoln(printCollationKey(prevKey));
         infoln(printCollationKey(key));
-        errorCode.reset();
         return FALSE;
     }
 
@@ -1584,7 +1629,6 @@ UBool CollationTest::checkCompareTwo(const char *norm, const UnicodeString &prev
         infoln(fileLine);
         infoln(printCollationKey(prevKey));
         infoln(printCollationKey(key));
-        errorCode.reset();
         return FALSE;
     }
     if(order != UCOL_EQUAL && expectedLevel != Collation::NO_LEVEL) {
@@ -1651,8 +1695,11 @@ void CollationTest::checkCompareStrings(UCHARBUF *f, IcuTestErrorCode &errorCode
             pn.getTerminatedBuffer();
             n.getTerminatedBuffer();
             errorCode.assertSuccess();
-            checkCompareTwo("NFD input", prevFileLine, pn, n,
-                            expectedOrder, expectedLevel, errorCode);
+            isOk = checkCompareTwo("NFD input", prevFileLine, pn, n,
+                                   expectedOrder, expectedLevel, errorCode);
+        }
+        if(!isOk) {
+            errorCode.reset();  // already reported
         }
         prevFileLine = fileLine;
         prevString = s;

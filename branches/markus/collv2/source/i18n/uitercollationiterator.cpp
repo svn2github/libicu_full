@@ -24,8 +24,6 @@
 #include "uassert.h"
 #include "uitercollationiterator.h"
 
-// TODO: Do we still need unorm_it.h / unorm_openIter()?
-
 U_NAMESPACE_BEGIN
 
 UIterCollationIterator::~UIterCollationIterator() {}

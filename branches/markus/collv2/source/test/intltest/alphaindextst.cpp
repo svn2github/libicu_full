@@ -603,9 +603,9 @@ void AlphabeticIndexTest::TestPinyinFirst() {
     assertEquals("getBucketIndex(i)", 9, bucketIndex);
     bucketIndex = index.getBucketIndex(UnicodeString((UChar)0x03B1), status);
     assertEquals("getBucketIndex(Greek alpha)", (int32_t)27, bucketIndex);
-    // TODO: Test with an unassigned code point (not just U+FFFF)
-    // when unassigned code points are not in the Hani reordering group any more.
-    // String unassigned = UTF16.valueOf(0x50005);
+    // U+50005 is an unassigned code point which sorts at the end, independent of the Hani group.
+    bucketIndex = index.getBucketIndex(UnicodeString(0x50005), status);
+    assertEquals("getBucketIndex(U+50005)", 27, bucketIndex);
     bucketIndex = index.getBucketIndex(UnicodeString((UChar)0xFFFF), status);
     assertEquals("getBucketIndex(U+FFFF)", 27, bucketIndex);
 }

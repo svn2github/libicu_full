@@ -75,7 +75,6 @@ protected:
     // UTF-16 string pointers.
     // limit can be NULL for NUL-terminated strings.
     const UChar *start, *pos, *limit;
-    // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
 };
 
 /**

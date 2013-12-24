@@ -11,7 +11,7 @@
 
 #include "cmemory.h"
 #include "cstring.h"
-#include "ucol_imp.h"
+#include "usrchimp.h"
 
 #include "unicode/coll.h"
 #include "unicode/tblcoll.h"

@@ -37,7 +37,6 @@
 #include "collationsets.h"
 #include "collationtailoring.h"
 #include "uassert.h"
-#include "ucol_imp.h"
 #include "uhash.h"
 #include "utf16collationiterator.h"
 #include "uvectr32.h"

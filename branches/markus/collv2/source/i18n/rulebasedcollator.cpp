@@ -1106,7 +1106,9 @@ RuleBasedCollator::doCompare(const UChar *left, int32_t leftLength,
         return (UCollationResult)result;
     }
 
-    // TODO: If NUL-terminated, get actual limits from iterators?
+    // Note: If NUL-terminated, we could get the actual limits from the iterators now.
+    // That would complicate the iterators a bit, NUL-terminated strings are only a C convenience,
+    // and the benefit seems unlikely to be measurable.
 
     // Compare identical level.
     const Normalizer2Impl &nfcImpl = data->nfcImpl;
@@ -1224,7 +1226,9 @@ RuleBasedCollator::doCompare(const uint8_t *left, int32_t leftLength,
         return (UCollationResult)result;
     }
 
-    // TODO: If NUL-terminated, get actual limits from iterators?
+    // Note: If NUL-terminated, we could get the actual limits from the iterators now.
+    // That would complicate the iterators a bit, NUL-terminated strings are only a C convenience,
+    // and the benefit seems unlikely to be measurable.
 
     // Compare identical level.
     const Normalizer2Impl &nfcImpl = data->nfcImpl;
@@ -1600,7 +1604,8 @@ RuleBasedCollator::internalGetShortDefinitionString(const char *locale,
     if(attributeHasBeenSetExplicitly(UCOL_ALTERNATE_HANDLING)) {
         appendAttribute(result, 'A', getAttribute(UCOL_ALTERNATE_HANDLING, errorCode), errorCode);
     }
-    // TODO: ATTR_VARIABLE_TOP, or maybe drop it because 'B' was broken?? remove enum Attributes?
+    // ATTR_VARIABLE_TOP not supported because 'B' was broken.
+    // See ICU tickets #10372 and #10386.
     if(attributeHasBeenSetExplicitly(UCOL_CASE_FIRST)) {
         appendAttribute(result, 'C', getAttribute(UCOL_CASE_FIRST, errorCode), errorCode);
     }

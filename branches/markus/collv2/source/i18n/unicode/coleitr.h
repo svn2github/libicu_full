@@ -103,7 +103,7 @@ class UVector32;
 * <p>
 * The result of a forward iterate (next()) and reversed result of the backward
 * iterate (previous()) on the same string are equivalent, if collation orders
-* with the value UCOL_IGNORABLE are ignored.
+* with the value 0 are ignored.
 * Character based on the comparison level of the collator.  A collation order 
 * consists of primary order, secondary order and tertiary order.  The data 
 * type of the collation order is <strong>int32_t</strong>. 

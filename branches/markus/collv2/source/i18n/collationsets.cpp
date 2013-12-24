@@ -25,8 +25,6 @@
 #include "utf16collationiterator.h"
 #include "utrie2.h"
 
-// TODO: This code is untested. Test & debug!
-
 U_NAMESPACE_BEGIN
 
 U_CDECL_BEGIN
@@ -587,7 +585,6 @@ void
 ContractionsAndExpansions::addExpansions(UChar32 start, UChar32 end) {
     if(unreversedPrefix.isEmpty() && suffix == NULL) {
         if(expansions != NULL) {
-            // TODO: verify that UnicodeSet takes a fastpath if start==end
             expansions->add(start, end);
         }
     } else {

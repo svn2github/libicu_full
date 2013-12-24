@@ -1012,7 +1012,13 @@ static void TestJB1401(void)
 */
 static void TestVariableTop(void)
 {
-#if 0  /* TODO: collv2 does not support [variable top] as a relation string; probably just delete this test? */
+#if 0
+    /*
+     * Starting with ICU 53, setting the variable top via a pseudo relation string
+     * is not supported any more.
+     * It was replaced by the [maxVariable symbol] setting.
+     * See ICU tickets #9958 and #8032.
+     */
     static const char       str[]          = "&z = [variable top]";
           int         len          = strlen(str);
           UChar      rules[sizeof(str)];

@@ -54,7 +54,6 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API CollationFCD {
 public:
-    // TODO: add unit tests to make sure this agrees with other properties APIs
     static inline UBool hasLccc(UChar32 c) {
         // assert c <= 0xffff
         // c can be negative, e.g., U_SENTINEL from UCharIterator;

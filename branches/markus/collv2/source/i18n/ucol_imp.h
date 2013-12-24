@@ -48,36 +48,6 @@ ucol_equals(const UCollator *source, const UCollator *target);
  */
 #define U_ICUDATA_COLL U_ICUDATA_NAME U_TREE_SEPARATOR_STRING "coll"
 
-/* TODO: can we move some of the following into test header files? */
-
-/* mask off anything but primary order */
-#define UCOL_PRIMARYORDERMASK 0xffff0000
-/* mask off anything but secondary order */
-#define UCOL_SECONDARYORDERMASK 0x0000ff00
-/* mask off anything but tertiary order */
-#define UCOL_TERTIARYORDERMASK 0x000000ff
-/* primary order shift */
-#define UCOL_PRIMARYORDERSHIFT 16
-/* secondary order shift */
-#define UCOL_SECONDARYORDERSHIFT 8
-
-#define UCOL_IGNORABLE 0
-
-/* get weights from a CE */
-#define UCOL_PRIMARYORDER(order) (((order) >> 16) & 0xffff)
-#define UCOL_SECONDARYORDER(order) (((order) & UCOL_SECONDARYORDERMASK)>> UCOL_SECONDARYORDERSHIFT)
-#define UCOL_TERTIARYORDER(order) ((order) & UCOL_TERTIARYORDERMASK)
-
-#define UCOL_UPPER_CASE 0x80
-#define UCOL_MIXED_CASE 0x40
-#define UCOL_LOWER_CASE 0x00
-
-#define UCOL_CONTINUATION_MARKER 0xC0
-#define UCOL_REMOVE_CONTINUATION 0xFFFFFF3F
-
-#define isContinuation(CE) (((CE) & UCOL_CONTINUATION_MARKER) == UCOL_CONTINUATION_MARKER)
-
-/* TODO: move the following to a new collationloader.h header (rename this one??), or remove other definitions? */
 #ifdef __cplusplus
 
 U_NAMESPACE_BEGIN
@@ -87,6 +57,7 @@ struct CollationTailoring;
 class Locale;
 class UnicodeString;
 
+/** Implemented in ucol_res.cpp. */
 class CollationLoader {
 public:
     static void appendRootRules(UnicodeString &s);

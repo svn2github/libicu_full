@@ -1681,7 +1681,7 @@
 < L\u00fcbeck
 = Lybeck
 
-** test: DataDrivenCollationTest/da_TestTertiary {
+** test: DataDrivenCollationTest/da_TestTertiary
 # This test goes through tertiary strength cases
 @ locale da
 % strength=tertiary
@@ -1813,7 +1813,7 @@
 < zysk0
 < \u00e4ndere
 
-** test: DataDrivenCollationTest/hi_TestNewRules {
+** test: DataDrivenCollationTest/hi_TestNewRules
 # This test goes through new rules and tests against old rules
 @ locale hi
 * compare
@@ -1822,7 +1822,7 @@
 < कँ
 < कः
 
-** test: DataDrivenCollationTest/ro_TestNewRules {
+** test: DataDrivenCollationTest/ro_TestNewRules
 # This test goes through new rules and tests against old rules
 @ locale ro
 * compare
@@ -1877,7 +1877,7 @@
 = xŢx
 < xU
 
-** test: DataDrivenCollationTest/testOffsets {
+** test: DataDrivenCollationTest/testOffsets
 # This tests cases where forwards and backwards iteration get different offsets
 @ locale en
 % strength=tertiary

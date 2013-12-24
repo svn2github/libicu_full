@@ -56,7 +56,6 @@ protected:
     UCharIterator &iter;
 };
 
-// TODO: The following class only inherits the "iter" field from its parent. Keep this class hierarchy?
 /**
  * Incrementally checks the input text for FCD and normalizes where necessary.
  */

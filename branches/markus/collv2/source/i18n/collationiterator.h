@@ -313,9 +313,6 @@ private:
 
     // Number of code points to read forward, or -1.
     // Used as a forward iteration limit in previousCEUnsafe().
-    // TODO: Test this with contiguous & discontiguous contractions and digit specials!
-    //       Try to start iterating backwards from all code point boundaries
-    //       inside varied text.
     int32_t numCpFwd;
     // Numeric collation (CollationSettings::NUMERIC).
     UBool isNumeric;

@@ -1,7 +1,7 @@
 /*
  ******************************************************************************
- *   Copyright (C) 1996-2012, International Business Machines                 *
- *   Corporation and others.  All Rights Reserved.                            *
+ *   Copyright (C) 1996-2013, International Business Machines
+ *   Corporation and others.  All Rights Reserved.
  ******************************************************************************
  */
 
@@ -27,7 +27,7 @@
 #include "hash.h"
 #include "normalizer2impl.h"
 #include "uhash.h"
-#include "ucol_imp.h"
+#include "usrchimp.h"
 #include "uassert.h"
 
 #include "colldata.h"

@@ -237,7 +237,51 @@ private:
 private:
     CollationFastLatin();  // no constructor
 };
-// TODO: document data structure
+
+/*
+ * Format of the CollationFastLatin data table.
+ * CollationFastLatin::VERSION = 1.
+ *
+ * This table contains data for a Latin-text collation fastpath.
+ * The data is stored as an array of uint16_t which contains the following parts.
+ *
+ * uint16_t  -- version & header length
+ *   Bits 15..8: version, must match the VERSION
+ *         7..0: length of the header
+ *
+ * uint16_t varTops[header length - 1]
+ *   Each of these values maps the variable top lead byte of a supported maxVariable group
+ *   to the highest CollationFastLatin long-primary weight.
+ *   The values are stored in ascending order.
+ *   Bits 15..7: max fast-Latin long-primary weight (bits 11..3 shifted left by 4 bits)
+ *         6..0: regular primary lead byte
+ *
+ * uint16_t miniCEs[0x1c0]
+ *   A mini collation element for each character U+0000..U+017F and U+2000..U+203F.
+ *   Each value encodes one or two mini CEs (two are possible if the first one
+ *   has a short mini primary and the second one is a secondary CE, i.e., primary == 0),
+ *   or points to an expansion or to a contraction table.
+ *   U+0000 always has a contraction entry,
+ *   so that NUL-termination need not be tested in the fastpath.
+ *   If the collation elements for a character or contraction cannot be encoded in this format,
+ *   then the BAIL_OUT value is stored.
+ *   For details see the comments for the class constants.
+ *
+ * uint16_t expansions[variable length];
+ *   Expansion mini CEs contain an offset relative to just after the miniCEs table.
+ *   An expansions contains exactly 2 mini CEs.
+ *
+ * uint16_t contractions[variable length];
+ *   Contraction mini CEs contain an offset relative to just after the miniCEs table.
+ *   It points to a list of tuples which map from a contraction suffix character to a result.
+ *   First uint16_t of each tuple:
+ *     Bits 10..9: Length of the result (1..3), see comments on CONTR_LENGTH_SHIFT.
+ *     Bits  8..0: Contraction character, see comments on CONTR_CHAR_MASK.
+ *   This is followed by 0, 1, or 2 uint16_t according to the length.
+ *   Each list is terminated by an entry with CONTR_CHAR_MASK.
+ *   Each list starts with such an entry which also contains the default result
+ *   for when there is no contraction match.
+ */
 
 U_NAMESPACE_END
 

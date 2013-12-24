@@ -69,7 +69,6 @@ protected:
     const uint8_t *u8;
     int32_t pos;
     int32_t length;  // <0 for NUL-terminated strings
-    // TODO: getter for limit, so that caller can find out length of NUL-terminated text?
 };
 
 /**

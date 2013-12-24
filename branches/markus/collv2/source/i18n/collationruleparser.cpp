@@ -305,7 +305,7 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
     for(;;) {
         while(j < raw.length()) {
             UChar32 c = raw.char32At(j);
-#if 0  // TODO: reenable or remove (still need nfd then?), http://unicode.org/cldr/trac/ticket/6738
+#if 0  // TODO: reenable: http://unicode.org/cldr/trac/ticket/6738
             if(!nfd.isInert(c)) {
                 setParseError("starred-relation string is not all NFD-inert", errorCode);
                 return;
@@ -340,7 +340,7 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
         // range prev-c
         UnicodeString s;
         while(++prev <= c) {
-#if 0  // TODO: reenable or remove (still need nfd then?), http://unicode.org/cldr/trac/ticket/6738
+#if 0  // TODO: reenable: http://unicode.org/cldr/trac/ticket/6738
             if(!nfd.isInert(prev)) {
                 setParseError("starred-relation string range is not all NFD-inert", errorCode);
                 return;

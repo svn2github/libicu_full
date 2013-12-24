@@ -24,7 +24,6 @@
 #include "unicode/ustring.h"
 #include "unicode/sortkey.h"
 #include "unicode/uobject.h"
-#include "ucol_imp.h"
 #include "cmemory.h"
 #include "usrchimp.h"
 

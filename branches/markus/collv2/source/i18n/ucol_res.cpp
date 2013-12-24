@@ -230,14 +230,14 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
     // deserialize
     LocalUResourceBundlePointer binary(
             ures_getByKey(data.getAlias(), "%%CollationBin", NULL, &errorCode));
-    // TODO: U_MISSING_RESOURCE_ERROR --> old code built from rules if available
-    // but that created undesirable dependencies
+    // Note: U_MISSING_RESOURCE_ERROR --> The old code built from rules if available
+    // but that created undesirable dependencies.
     int32_t length;
     const uint8_t *inBytes = ures_getBinary(binary.getAlias(), &length, &errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     CollationDataReader::read(root, inBytes, length, *t, errorCode);
-    // TODO: U_COLLATOR_VERSION_MISMATCH --> old code built from rules if available
-    // but that created undesirable dependencies
+    // Note: U_COLLATOR_VERSION_MISMATCH --> The old code built from rules if available
+    // but that created undesirable dependencies.
     if(U_FAILURE(errorCode)) { return NULL; }
 
     // Try to fetch the optional rules string.

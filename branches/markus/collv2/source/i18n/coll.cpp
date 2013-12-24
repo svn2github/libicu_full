@@ -38,7 +38,7 @@
  * 2012-2013    markus      Rewritten in C++ again.
  */
 
-#include <typeinfo>  // for 'typeid' to work  -- TODO: use "utypeinfo.h" when merging with the trunk
+#include "utypeinfo.h"  // for 'typeid' to work 
 
 #include "unicode/utypes.h"
 

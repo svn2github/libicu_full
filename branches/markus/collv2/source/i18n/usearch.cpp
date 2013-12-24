@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2001-2011 IBM and others. All rights reserved.
+*   Copyright (C) 2001-2013 IBM and others. All rights reserved.
 **********************************************************************
 *   Date        Name        Description
 *  07/02/2001   synwee      Creation.
@@ -16,7 +16,6 @@
 #include "unicode/uchar.h"
 #include "unicode/utf16.h"
 #include "normalizer2impl.h"
-#include "ucol_imp.h"
 #include "usrchimp.h"
 #include "cmemory.h"
 #include "ucln_in.h"

@@ -61,7 +61,7 @@ void UCAConformanceTest::runIndexedTest( int32_t index, UBool exec, const char* 
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(TestTableNonIgnorable);
     TESTCASE_AUTO(TestTableShifted);
-    // TODO: UCARules.txt has problems, see http://unicode.org/cldr/trac/ticket/6745 -- TESTCASE_AUTO(TestRulesNonIgnorable);
+    TESTCASE_AUTO(TestRulesNonIgnorable);
     TESTCASE_AUTO(TestRulesShifted);
     TESTCASE_AUTO_END;
 }
@@ -307,6 +307,7 @@ void UCAConformanceTest::TestTableShifted(/* par */) {
 }
 
 void UCAConformanceTest::TestRulesNonIgnorable(/* par */) {
+    if(logKnownIssue("cldrbug:6745", "UCARules.txt has problems")) { return; }
     initRbUCA();
 
     if(U_SUCCESS(status)) {

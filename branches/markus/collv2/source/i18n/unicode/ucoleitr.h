@@ -89,7 +89,7 @@ typedef struct UCollationElements UCollationElements;
  * undefined.
  * The result of a forward iterate (ucol_next) and reversed result of the  
  * backward iterate (ucol_prev) on the same string are equivalent, if 
- * collation orders with the value UCOL_IGNORABLE are ignored.
+ * collation orders with the value 0 are ignored.
  * Character based on the comparison level of the collator.  A collation order 
  * consists of primary order, secondary order and tertiary order.  The data 
  * type of the collation order is <strong>int32_t</strong>. 

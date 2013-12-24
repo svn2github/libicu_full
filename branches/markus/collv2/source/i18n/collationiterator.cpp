@@ -894,8 +894,6 @@ CollationIterator::previousCEUnsafe(UChar32 c, UVector32 &offsets, UErrorCode &e
     // But this should not be the common case for previousCE(),
     // and correctness and maintainability are more important than
     // complex optimizations.
-    // TODO: Verify that the v1 code uses a backward buffer and gets into trouble
-    // with a prefix match that would need to move before the backward buffer.
     // Find the first safe character before c.
     int32_t numBackward = 1;
     while((c = previousCodePoint(errorCode)) >= 0) {

@@ -530,8 +530,6 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                     U_ASSERT(0x8600 <= t && t <= 0xbfff);
                     t += 0x4000;
                 }
-                // TODO: does v1 handle 03 & 04 tertiary weights properly? 02?
-                //       try &[before 3]a<<<x and U+FFFE with all case settings
                 if(commonTertiaries != 0) {
                     --commonTertiaries;
                     while(commonTertiaries >= TER_UPPER_FIRST_COMMON_MAX_COUNT) {

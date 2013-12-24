@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2001-2011 IBM and others. All rights reserved.
+*   Copyright (C) 2001-2013 IBM and others. All rights reserved.
 **********************************************************************
 *   Date        Name        Description
 *  08/13/2001   synwee      Creation.
@@ -17,6 +17,28 @@
 #include "unicode/ucol.h"
 #include "unicode/ucoleitr.h"
 #include "unicode/ubrk.h"
+
+/* mask off anything but primary order */
+#define UCOL_PRIMARYORDERMASK 0xffff0000
+/* mask off anything but secondary order */
+#define UCOL_SECONDARYORDERMASK 0x0000ff00
+/* mask off anything but tertiary order */
+#define UCOL_TERTIARYORDERMASK 0x000000ff
+/* primary order shift */
+#define UCOL_PRIMARYORDERSHIFT 16
+/* secondary order shift */
+#define UCOL_SECONDARYORDERSHIFT 8
+
+#define UCOL_IGNORABLE 0
+
+/* get weights from a CE */
+#define UCOL_PRIMARYORDER(order) (((order) >> 16) & 0xffff)
+#define UCOL_SECONDARYORDER(order) (((order) & UCOL_SECONDARYORDERMASK)>> UCOL_SECONDARYORDERSHIFT)
+#define UCOL_TERTIARYORDER(order) ((order) & UCOL_TERTIARYORDERMASK)
+
+#define UCOL_CONTINUATION_MARKER 0xC0
+
+#define isContinuation(CE) (((CE) & UCOL_CONTINUATION_MARKER) == UCOL_CONTINUATION_MARKER)
 
 /**
  * This indicates an error has occured during processing or there are no more CEs 
@@ -83,10 +105,6 @@ public:
     /**
      * Get the processed ordering priority of the previous collation element in the text.
      * A single character may contain more than one collation element.
-     * Note that internally a stack is used to store buffered collation elements. 
-     * It is very rare that the stack will overflow, however if such a case is 
-     * encountered, the problem can be solved by increasing the size 
-     * UCOL_EXPAND_CE_BUFFER_SIZE in ucol_imp.h.
      *
      * @param ixLow A pointer to an int32_t to receive the iterator index after fetching the CE
      * @param ixHigh A pointer to an int32_t to receiver the iterator index before fetching the CE

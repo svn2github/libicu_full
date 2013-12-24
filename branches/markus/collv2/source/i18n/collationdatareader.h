@@ -107,11 +107,99 @@ private:
     CollationDataReader();  // no constructor
 };
 
-/**
+/*
  * Format of collation data (ucadata.icu, binary data in coll/ *.res files).
  * Format version 4.0.
  *
- * TODO: document format, see normalizer2impl.h
+ * The root collation data is stored in the ucadata.icu file.
+ * Tailorings are stored inside .res resource bundle files, with a complete file header.
+ *
+ * Collation data begins with a standard ICU data file header
+ * (DataHeader, see ucmndata.h and unicode/udata.h).
+ * The UDataInfo.dataVersion field contains the UCA and other version numbers,
+ * see the comments for CollationTailoring.version.
+ *
+ * After the header, the file contains the following parts.
+ * Constants are defined as enum values of the CollationDataReader class.
+ * See also the Collation class.
+ *
+ * int32_t indexes[indexesLength];
+ *      The indexes array has variable length.
+ *      Some tailorings only need the length and the options,
+ *      others only add reorderCodes and the reorderTable,
+ *      some need to store mappings.
+ *      Only as many indexes are stored as needed to read all of the data.
+ *
+ *      Index 0: indexesLength
+ *      Index 1: numericPrimary, CollationFastLatin::VERSION, and options: see IX_OPTIONS
+ *      Index 2..3: Unused/reserved/0.
+ *      Index 4: Index into the ce32s array where the CE32s of the conjoining Jamo
+ *               are stored in a short, contiguous part of the ce32s array.
+ *
+ *      Indexes 5..19 are byte offsets in ascending order.
+ *      Each byte offset marks the start of the next part in the data file,
+ *      and the end of the previous one.
+ *      When two consecutive byte offsets are the same (or too short),
+ *      then the corresponding part is empty.
+ *      Byte offsets are offsets from after the header,
+ *      that is, from the beginning of the indexes[].
+ *      Each part starts at an offset with proper alignment for its data.
+ *      If necessary, the previous part may include padding bytes to achieve this alignment.
+ *      The last byte offset that is stored in the indexes indicates the total size of the data
+ *      (starting with the indexes).
+ *
+ * int32_t reorderCodes[]; -- empty in root
+ *      The list of script and reordering codes.
+ *
+ * uint8_t reorderTable[256]; -- empty in root; can be longer to include padding bytes
+ *      Primary-weight lead byte permutation table.
+ *      Normally present when the reorderCodes are, but can be built at load time.
+ *
+ * UTrie2 trie; -- see utrie2_impl.h and utrie2.h
+ *      The trie holds the main collation data. Each code point is mapped to a 32-bit value.
+ *      It encodes a simple collation element (CE) in compact form, unless bits 7..6 are both set,
+ *      in which case it is a special CE32 and contains a 4-bit tag and further data.
+ *      See the Collation class for details.
+ *
+ *      The trie has a value for each lead surrogate code unit with some bits encoding
+ *      collective properties of the 1024 supplementary characters whose UTF-16 form starts with
+ *      the lead surrogate. See Collation::LEAD_SURROGATE_TAG..
+ *
+ * int64_t ces[];
+ *      64-bit CEs and expansions that cannot be stored in a more compact form.
+ *
+ * uint32_t ce32s[];
+ *      CE32s for expansions in compact form, and for characters whose trie values
+ *      contain special data.
+ *
+ * uint32_t rootElements[]; -- empty in all tailorings
+ *      Compact storage for all of the CEs that occur in the root collation.
+ *      See the CollationRootElements class.
+ *
+ * UChar *contexts[];
+ *      Serialized UCharsTrie structures with prefix (pre-context) and contraction mappings.
+ *
+ * uint16_t unsafeBackwardSet[]; -- see UnicodeSet::serialize()
+ *      Serialized form of characters that are unsafe when iterating backwards,
+ *      and at the end of an identical string prefix.
+ *      Back up to a safe character.
+ *      Lead surrogates are "unsafe" when any of their corresponding supplementary
+ *      code points are unsafe.
+ *      Does not include [:^lccc=0:][:^tccc=0:].
+ *      For each tailoring, the root unsafeBackwardSet is subtracted.
+ *      (As a result, in many tailorings no set needs to be stored.)
+ *
+ * uint16_t fastLatinTable[];
+ *      Optional optimization for Latin text.
+ *      See the CollationFastLatin class.
+ *
+ * uint16_t scripts[]; -- empty in all tailorings
+ *      Table of the reordering groups with their first and last lead bytes,
+ *      and their script and reordering codes.
+ *      See CollationData::scripts.
+ *
+ * UBool compressibleBytes[]; -- empty in all tailorings
+ *      Flag for getSortKey(), indicating primary weight lead bytes that are compressible.
  */
 
 U_NAMESPACE_END
