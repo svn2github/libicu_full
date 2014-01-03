@@ -1,6 +1,6 @@
 /*
 ********************************************************************************
-* Copyright (C) 2013, International Business Machines Corporation and
+* Copyright (C) 2014, International Business Machines Corporation and
 * others.
 * All Rights Reserved.
 ********************************************************************************
@@ -17,7 +17,6 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/locid.h"
-#include "sharedptr.h"
 
 
 /**
@@ -391,7 +390,7 @@ public:
 
 private:
     RelativeDateTimeFormatter();
-    SharedPtr<icu::RelativeDateTimeData> ptr;
+    const RelativeDateTimeData* ptr;
 };
 
 U_NAMESPACE_END

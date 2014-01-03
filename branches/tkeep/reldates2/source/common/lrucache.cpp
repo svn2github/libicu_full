@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines Corporation and         
+* Copyright (C) 2014, International Business Machines Corporation and         
 * others. All Rights Reserved.                                                
 *******************************************************************************
 *                                                                             
@@ -21,7 +21,7 @@ public:
     CacheEntry2 *moreRecent;
     CacheEntry2 *lessRecent;
     char *localeId;
-    SharedPtr<UObject> cachedData;
+    const SharedObject *cachedData;
     UErrorCode status;  // This is the error if any from creating cachedData.
 
     CacheEntry2();
@@ -29,14 +29,14 @@ public:
 
     void unlink();
     void uninit();
-    UBool init(const char *localeId, UObject *dataToAdopt, UErrorCode err);
+    UBool init(const char *localeId, SharedObject *dataToAdopt, UErrorCode err);
 private:
     CacheEntry2(const CacheEntry2& other);
     CacheEntry2 &operator=(const CacheEntry2& other);
 };
 
 CacheEntry2::CacheEntry2() 
-    : moreRecent(NULL), lessRecent(NULL), localeId(NULL), cachedData(),
+    : moreRecent(NULL), lessRecent(NULL), localeId(NULL), cachedData(NULL),
       status(U_ZERO_ERROR) {
 }
 
@@ -56,7 +56,7 @@ void CacheEntry2::unlink() {
 }
 
 void CacheEntry2::uninit() {
-    cachedData.clear();
+    SharedObject::clearPtr(cachedData);
     status = U_ZERO_ERROR;
     if (localeId != NULL) {
         uprv_free(localeId);
@@ -64,7 +64,7 @@ void CacheEntry2::uninit() {
     localeId = NULL;
 }
 
-UBool CacheEntry2::init(const char *locId, UObject *dataToAdopt, UErrorCode err) {
+UBool CacheEntry2::init(const char *locId, SharedObject *dataToAdopt, UErrorCode err) {
     uninit();
     localeId = (char *) uprv_malloc(strlen(locId) + 1);
     if (localeId == NULL) {
@@ -72,10 +72,7 @@ UBool CacheEntry2::init(const char *locId, UObject *dataToAdopt, UErrorCode err)
         return FALSE;
     }
     uprv_strcpy(localeId, locId);
-    if (!cachedData.adoptInstead(dataToAdopt)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return TRUE;
-    }
+    SharedObject::copyPtr(dataToAdopt, cachedData);
     status = err;
     return TRUE;
 }
@@ -88,8 +85,8 @@ void LRUCache::moveToMostRecent(CacheEntry2 *entry) {
     mostRecentlyUsedMarker->lessRecent = entry;
 }
 
-UObject *LRUCache::safeCreate(const char *localeId, UErrorCode &status) {
-    UObject *result = create(localeId, status);
+SharedObject *LRUCache::safeCreate(const char *localeId, UErrorCode &status) {
+    SharedObject *result = create(localeId, status);
 
     // Safe guard to ensure that some error is reported for missing data in
     // case subclass forgets to set status.
@@ -109,7 +106,7 @@ UObject *LRUCache::safeCreate(const char *localeId, UErrorCode &status) {
 
 UBool LRUCache::init(const char *localeId, CacheEntry2 *entry) {
     UErrorCode status = U_ZERO_ERROR;
-    UObject *result = safeCreate(localeId, status);
+    SharedObject *result = safeCreate(localeId, status);
     return entry->init(localeId, result, status);
 }
 
@@ -118,7 +115,7 @@ UBool LRUCache::contains(const char *localeId) const {
 }
 
 
-void LRUCache::_get(const char *localeId, SharedPtr<UObject>& ptr, UErrorCode &status) {
+const SharedObject *LRUCache::_get(const char *localeId, UErrorCode &status) {
     CacheEntry2 *entry = (CacheEntry2 *) uhash_get(localeIdToEntries, localeId);
     if (entry != NULL) {
         moveToMostRecent(entry);
@@ -159,15 +156,15 @@ void LRUCache::_get(const char *localeId, SharedPtr<UObject>& ptr, UErrorCode &s
     }
     if (entry == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        return NULL;
     }
 
     // If we get here our data is cached.
     if (U_FAILURE(entry->status)) {
         status = entry->status;
-        return;
+        return NULL;
     }
-    ptr = entry->cachedData;
+    return entry->cachedData;
 }
 
 LRUCache::LRUCache(int32_t size, UErrorCode &status) :
@@ -214,7 +211,7 @@ LRUCache::~LRUCache() {
 SimpleLRUCache::~SimpleLRUCache() {
 }
 
-UObject *SimpleLRUCache::create(const char *localeId, UErrorCode &status) {
+SharedObject *SimpleLRUCache::create(const char *localeId, UErrorCode &status) {
     return createFunc(localeId, status);
 }
 

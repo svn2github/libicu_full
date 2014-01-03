@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines Corporation and         
+* Copyright (C) 2014, International Business Machines Corporation and         
 * others. All Rights Reserved.                                                
 *******************************************************************************
 *                                                                             
@@ -52,12 +52,10 @@ static const char * const gPluralForms[] = {
 #define MAX_PLURAL_FORMS 6
 
 
-class QualitativeUnits : public UObject {
+class QualitativeUnits : public UMemory {
 public:
     QualitativeUnits() { }
     UnicodeString data[UDAT_ABSOLUTE_UNIT_COUNT][UDAT_DIRECTION_COUNT];
-    virtual ~QualitativeUnits() {
-    }
 private:
     QualitativeUnits(const QualitativeUnits &other);
     QualitativeUnits &operator=(const QualitativeUnits& other);
@@ -99,38 +97,34 @@ struct UnitPattern {
     }
 };
 
-class QuantitativeUnits : public UObject {
+class QuantitativeUnits : public UMemory {
 public:
     QuantitativeUnits() { }
     UnitPattern data[UDAT_RELATIVE_UNIT_COUNT][2][MAX_PLURAL_FORMS];
-    virtual ~QuantitativeUnits() {
-    }
 private:
     QuantitativeUnits(const QuantitativeUnits &other);
     QuantitativeUnits &operator=(const QuantitativeUnits& other);
 };
 
-class RelativeDateTimeData : public UObject {
+class RelativeDateTimeData : public SharedObject {
 public:
     RelativeDateTimeData() {
     }
+    RelativeDateTimeData(const RelativeDateTimeData &other);
     SharedPtr<QualitativeUnits> qualitativeUnits;
     SharedPtr<QuantitativeUnits> quantitativeUnits;
     SharedPtr<MessageFormat> combinedDateAndTime;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
-    RelativeDateTimeData *clone() const {
-        return new RelativeDateTimeData(*this);
-    }
     virtual ~RelativeDateTimeData() {
     }
 private:
-    RelativeDateTimeData(const RelativeDateTimeData &other);
     RelativeDateTimeData &operator=(const RelativeDateTimeData& other);
 };
 
 RelativeDateTimeData::RelativeDateTimeData(
         const RelativeDateTimeData &other) :
+        SharedObject(other),
         qualitativeUnits(other.qualitativeUnits),
         quantitativeUnits(other.quantitativeUnits),
         combinedDateAndTime(other.combinedDateAndTime),
@@ -582,7 +576,7 @@ static void getDateTimePattern(
     getStringByIndex(topLevel.getAlias(), 8, result, status);
 }
 
-static UObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) {
+static SharedObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) {
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
     if (U_FAILURE(status)) {
         return NULL;
@@ -651,7 +645,7 @@ static void U_CALLCONV cacheInit(UErrorCode &status) {
     }
 }
 
-static void getFromCache(const char *locale, SharedPtr<RelativeDateTimeData>& ptr, UErrorCode &status) {
+static void getFromCache(const char *locale, const RelativeDateTimeData *&ptr, UErrorCode &status) {
     umtx_initOnce(gCacheInitOnce, &cacheInit, status);
     if (U_FAILURE(status)) {
         return;
@@ -660,21 +654,21 @@ static void getFromCache(const char *locale, SharedPtr<RelativeDateTimeData>& pt
     gCache->get(locale, ptr, status);
 }
 
-RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) {
+RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) : ptr(NULL) {
     getFromCache(Locale::getDefault().getName(), ptr, status);
 }
 
-RelativeDateTimeFormatter::RelativeDateTimeFormatter(const Locale& locale, UErrorCode& status) {
+RelativeDateTimeFormatter::RelativeDateTimeFormatter(const Locale& locale, UErrorCode& status) : ptr(NULL) {
     getFromCache(locale.getName(), ptr, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
-        const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status) {
+        const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status) : ptr(NULL) {
     getFromCache(locale.getName(), ptr, status);
     if (U_FAILURE(status)) {
         return;
     }
-    RelativeDateTimeData* wptr = ptr.readWrite();
+    RelativeDateTimeData* wptr = SharedObject::copyOnWrite(ptr);
     if (wptr == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
@@ -685,23 +679,24 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
     }
 }
 
-const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
-    return *ptr->numberFormat;
-}
-
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(const RelativeDateTimeFormatter& other) : ptr(other.ptr) {
+    ptr->addRef();
 }
 
 RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(const RelativeDateTimeFormatter& other) {
     if (this != &other) {
-        ptr = other.ptr;
+        SharedObject::copyPtr(other.ptr, ptr);
     }
     return *this;
 }
 
 RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
+    ptr->removeRef();
 }
 
+const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
+    return *ptr->numberFormat;
+}
 
 UnicodeString& RelativeDateTimeFormatter::format(
         double quantity, UDateDirection direction, UDateRelativeUnit unit,

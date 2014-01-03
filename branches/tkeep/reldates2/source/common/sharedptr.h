@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines Corporation and         
+* Copyright (C) 2014, International Business Machines Corporation and         
 * others. All Rights Reserved.                                                
 *******************************************************************************
 *                                                                             
@@ -82,7 +82,7 @@ public:
      */
     template<typename U>
     SharedPtr(const SharedPtr<U> &other) :
-            ptr((T *) other.ptr), refPtr(other.refPtr) {
+            ptr(other.ptr), refPtr(other.refPtr) {
         if (refPtr != NULL) {
             umtx_atomic_inc(&refPtr->value);
         }
@@ -118,9 +118,7 @@ public:
     ~SharedPtr() {
         if (refPtr != NULL) {
             if (umtx_atomic_dec(&refPtr->value) == 0) {
-                // Cast to UObject to avoid compiler warnings about incomplete
-                // type T.
-                delete (UObject *) ptr;
+                delete ptr;
                 delete refPtr;
             }
         }

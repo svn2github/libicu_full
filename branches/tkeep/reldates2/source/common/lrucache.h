@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines Corporation and         
+* Copyright (C) 2014, International Business Machines Corporation and         
 * others. All Rights Reserved.                                                
 *******************************************************************************
 *                                                                             
@@ -12,7 +12,7 @@
 #define __LRU_CACHE_H__
 
 #include "unicode/uobject.h"
-#include "sharedptr.h"
+#include "sharedobject.h"
 
 struct UHashtable;
 
@@ -22,29 +22,29 @@ U_NAMESPACE_BEGIN
  * LRUCache keyed by locale ID.
  */
 
+class SharedObject;
 class CacheEntry2;
 
 class U_COMMON_API LRUCache : public UObject {
   public:
     template<typename T>
-    void get(const char *localeId, SharedPtr<T> &ptr, UErrorCode &status) {
-        SharedPtr<UObject> p;
-        _get(localeId, p, status);
+    void get(const char *localeId, const T *&ptr, UErrorCode &status) {
+        const T *value = (const T *) _get(localeId, status);
         if (U_FAILURE(status)) {
             return;
         }
-        ptr = p;
+        SharedObject::copyPtr(value, ptr);
     }
     UBool contains(const char *localeId) const;
     virtual ~LRUCache();
   protected:
-    virtual UObject *create(const char *localeId, UErrorCode &status)=0;
+    virtual SharedObject *create(const char *localeId, UErrorCode &status)=0;
     LRUCache(int32_t maxSize, UErrorCode &status);
   private:
     LRUCache();
     LRUCache(const LRUCache &other);
     LRUCache &operator=(const LRUCache &other);
-    UObject *safeCreate(const char *localeId, UErrorCode &status);
+    SharedObject *safeCreate(const char *localeId, UErrorCode &status);
     CacheEntry2 *mostRecentlyUsedMarker;
     CacheEntry2 *leastRecentlyUsedMarker;
     UHashtable *localeIdToEntries;
@@ -52,10 +52,10 @@ class U_COMMON_API LRUCache : public UObject {
 
     void moveToMostRecent(CacheEntry2 *cacheEntry);
     UBool init(const char *localeId, CacheEntry2 *cacheEntry);
-    void _get(const char *localeId, SharedPtr<UObject> &ptr, UErrorCode &status);
+    const SharedObject *_get(const char *localeId, UErrorCode &status);
 };
 
-typedef UObject *(*CreateFunc)(const char *localeId, UErrorCode &status);
+typedef SharedObject *(*CreateFunc)(const char *localeId, UErrorCode &status);
 
 class U_COMMON_API SimpleLRUCache : public LRUCache {
 public:
@@ -67,7 +67,7 @@ public:
     }
     virtual ~SimpleLRUCache();
 protected:
-    virtual UObject *create(const char *localeId, UErrorCode &status);
+    virtual SharedObject *create(const char *localeId, UErrorCode &status);
 private:
     CreateFunc createFunc;
 };
