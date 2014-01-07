@@ -112,12 +112,6 @@ private:
     RelativeDateTimeData &operator=(const RelativeDateTimeData& other);
 };
 
-static char *UnicodeString2Char(
-        const UnicodeString &source, char *buffer, int32_t bufCapacity) {
-    source.extract(0, source.length(), buffer, bufCapacity, US_INV);
-    return buffer;
-}
-
 static UBool getStringWithFallback(
         const UResourceBundle *resource, 
         const char *key,
