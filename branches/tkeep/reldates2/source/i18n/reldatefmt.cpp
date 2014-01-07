@@ -1,11 +1,11 @@
 /*
-*******************************************************************************
+******************************************************************************
 * Copyright (C) 2014, International Business Machines Corporation and         
 * others. All Rights Reserved.                                                
-*******************************************************************************
+******************************************************************************
 *                                                                             
 * File RELDATEFMT.CPP                                                             
-*******************************************************************************
+******************************************************************************
 */
 
 #include "unicode/reldatefmt.h"
@@ -77,7 +77,10 @@ struct UnitPattern {
         valid = TRUE;
     }
 
-    UnicodeString& append(double quantity, const NumberFormat &nf, UnicodeString &appendTo) const {
+    UnicodeString& append(
+            double quantity,
+            const NumberFormat &nf,
+            UnicodeString &appendTo) const {
         if (!valid) {
             return appendTo;
         }
@@ -87,7 +90,8 @@ struct UnitPattern {
         }
         appendTo.append(pattern.tempSubStringBetween(0, offset));
         nf.format(quantity, appendTo);
-        appendTo.append(pattern.tempSubStringBetween(offset + LENGTHOF(gPlaceholder)));
+        appendTo.append(pattern.tempSubStringBetween(
+                offset + LENGTHOF(gPlaceholder)));
         return appendTo;
     }
 };
@@ -272,7 +276,8 @@ static void addTimeUnit(
         QuantitativeUnits &quantitativeUnits,
         UErrorCode &status) {
     LocalUResourceBundlePointer topLevel(
-            ures_getByKeyWithFallback(resource, "relativeTime", NULL, &status));
+            ures_getByKeyWithFallback(
+                    resource, "relativeTime", NULL, &status));
     if (U_FAILURE(status)) {
         return;
     }
@@ -548,7 +553,8 @@ static UBool getDateTimePattern(
     return getStringByIndex(topLevel.getAlias(), 8, result, status);
 }
 
-static SharedObject *U_CALLCONV createData(const char *localeId, UErrorCode &status) {
+static SharedObject *U_CALLCONV createData(
+        const char *localeId, UErrorCode &status) {
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
     if (U_FAILURE(status)) {
         return NULL;
@@ -556,11 +562,17 @@ static SharedObject *U_CALLCONV createData(const char *localeId, UErrorCode &sta
     LocalPointer<RelativeDateTimeData> result(new RelativeDateTimeData());
     LocalPointer<QualitativeUnits> qualitativeUnits(new QualitativeUnits());
     LocalPointer<QuantitativeUnits> quantitativeUnits(new QuantitativeUnits());
-    if (result.getAlias() == NULL || qualitativeUnits.getAlias() == NULL || quantitativeUnits.getAlias() == NULL) {
+    if (result.getAlias() == NULL
+            || qualitativeUnits.getAlias() == NULL
+            || quantitativeUnits.getAlias() == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    if (!load(topLevel.getAlias(), *qualitativeUnits, *quantitativeUnits, status)) {
+    if (!load(
+            topLevel.getAlias(),
+            *qualitativeUnits,
+            *quantitativeUnits,
+            status)) {
         return NULL;
     }
     if (!result->qualitativeUnits.adoptInstead(qualitativeUnits.orphan())) {
@@ -577,7 +589,8 @@ static SharedObject *U_CALLCONV createData(const char *localeId, UErrorCode &sta
     if (!getDateTimePattern(topLevel.getAlias(), dateTimePattern, status)) {
         return NULL;
     }
-    LocalPointer<MessageFormat> mf(new MessageFormat(dateTimePattern, localeId, status));
+    LocalPointer<MessageFormat> mf(
+            new MessageFormat(dateTimePattern, localeId, status));
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -619,7 +632,10 @@ static void U_CALLCONV cacheInit(UErrorCode &status) {
     }
 }
 
-static void getFromCache(const char *locale, const RelativeDateTimeData *&ptr, UErrorCode &status) {
+static void getFromCache(
+        const char *locale,
+        const RelativeDateTimeData *&ptr,
+        UErrorCode &status) {
     umtx_initOnce(gCacheInitOnce, &cacheInit, status);
     if (U_FAILURE(status)) {
         return;
@@ -628,16 +644,19 @@ static void getFromCache(const char *locale, const RelativeDateTimeData *&ptr, U
     gCache->get(locale, ptr, status);
 }
 
-RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) : ptr(NULL) {
+RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status)
+        : ptr(NULL) {
     getFromCache(Locale::getDefault().getName(), ptr, status);
 }
 
-RelativeDateTimeFormatter::RelativeDateTimeFormatter(const Locale& locale, UErrorCode& status) : ptr(NULL) {
+RelativeDateTimeFormatter::RelativeDateTimeFormatter(
+        const Locale& locale, UErrorCode& status) : ptr(NULL) {
     getFromCache(locale.getName(), ptr, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
-        const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status) : ptr(NULL) {
+        const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status)
+        : ptr(NULL) {
     getFromCache(locale.getName(), ptr, status);
     if (U_FAILURE(status)) {
         return;
@@ -653,11 +672,13 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
     }
 }
 
-RelativeDateTimeFormatter::RelativeDateTimeFormatter(const RelativeDateTimeFormatter& other) : ptr(other.ptr) {
+RelativeDateTimeFormatter::RelativeDateTimeFormatter(
+        const RelativeDateTimeFormatter& other) : ptr(other.ptr) {
     ptr->addRef();
 }
 
-RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(const RelativeDateTimeFormatter& other) {
+RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(
+        const RelativeDateTimeFormatter& other) {
     if (this != &other) {
         SharedObject::copyPtr(other.ptr, ptr);
     }

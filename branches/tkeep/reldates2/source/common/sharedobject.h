@@ -1,8 +1,8 @@
 /*
-*******************************************************************************
+******************************************************************************
 * Copyright (C) 2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
-*******************************************************************************
+******************************************************************************
 * sharedobject.h
 */
 
@@ -53,8 +53,10 @@ public:
 
     /**
      * Returns a writable version of ptr.
-     * If there is exactly one owner, then ptr itself is returned as a non-const pointer.
-     * If there are multiple owners, then ptr is replaced with a copy-constructed clone,
+     * If there is exactly one owner, then ptr itself is returned as a
+     *  non-const pointer.
+     * If there are multiple owners, then ptr is replaced with a 
+     * copy-constructed clone,
      * and that is returned.
      * Returns NULL if cloning failed.
      *

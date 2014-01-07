@@ -1,11 +1,11 @@
 /*
-*******************************************************************************
+******************************************************************************
 * Copyright (C) 2014, International Business Machines Corporation and         
 * others. All Rights Reserved.                                                
-*******************************************************************************
+******************************************************************************
 *                                                                             
 * File LRUCACHE.CPP                                                             
-*******************************************************************************
+******************************************************************************
 */
 
 #include "lrucache.h"
@@ -65,7 +65,8 @@ void CacheEntry2::reset() {
     localeId = NULL;
 }
 
-void CacheEntry2::init(char *adoptedLocId, SharedObject *dataToAdopt, UErrorCode err) {
+void CacheEntry2::init(
+        char *adoptedLocId, SharedObject *dataToAdopt, UErrorCode err) {
     U_ASSERT(localeId == NULL);
     localeId = adoptedLocId;
     SharedObject::copyPtr(dataToAdopt, cachedData);
@@ -114,7 +115,8 @@ UBool LRUCache::contains(const char *localeId) const {
 
 
 const SharedObject *LRUCache::_get(const char *localeId, UErrorCode &status) {
-    CacheEntry2 *entry = (CacheEntry2 *) uhash_get(localeIdToEntries, localeId);
+    CacheEntry2 *entry = (CacheEntry2 *) uhash_get(
+            localeIdToEntries, localeId);
     // TODO (Travis Keep): Consider stripping irrelevant locale keywords.
     if (entry != NULL) {
         moveToMostRecent(entry);
