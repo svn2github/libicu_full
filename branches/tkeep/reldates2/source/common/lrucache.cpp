@@ -11,6 +11,7 @@
 #include "lrucache.h"
 #include "uhash.h"
 #include "cstring.h"
+#include "uassert.h"
 
 U_NAMESPACE_BEGIN
 
@@ -28,8 +29,8 @@ public:
     ~CacheEntry2();
 
     void unlink();
-    void uninit();
-    UBool init(const char *localeId, SharedObject *dataToAdopt, UErrorCode err);
+    void reset();
+    void init(char *adoptedLocId, SharedObject *dataToAdopt, UErrorCode err);
 private:
     CacheEntry2(const CacheEntry2& other);
     CacheEntry2 &operator=(const CacheEntry2& other);
@@ -41,7 +42,7 @@ CacheEntry2::CacheEntry2()
 }
 
 CacheEntry2::~CacheEntry2() {
-    uninit();
+    reset();
 }
 
 void CacheEntry2::unlink() {
@@ -55,7 +56,7 @@ void CacheEntry2::unlink() {
     lessRecent = NULL;
 }
 
-void CacheEntry2::uninit() {
+void CacheEntry2::reset() {
     SharedObject::clearPtr(cachedData);
     status = U_ZERO_ERROR;
     if (localeId != NULL) {
@@ -64,20 +65,17 @@ void CacheEntry2::uninit() {
     localeId = NULL;
 }
 
-UBool CacheEntry2::init(const char *locId, SharedObject *dataToAdopt, UErrorCode err) {
-    uninit();
-    localeId = (char *) uprv_malloc(strlen(locId) + 1);
-    if (localeId == NULL) {
-        delete dataToAdopt;
-        return FALSE;
-    }
-    uprv_strcpy(localeId, locId);
+void CacheEntry2::init(char *adoptedLocId, SharedObject *dataToAdopt, UErrorCode err) {
+    U_ASSERT(localeId == NULL);
+    localeId = adoptedLocId;
     SharedObject::copyPtr(dataToAdopt, cachedData);
     status = err;
-    return TRUE;
 }
 
 void LRUCache::moveToMostRecent(CacheEntry2 *entry) {
+    if (entry->moreRecent == mostRecentlyUsedMarker) {
+        return;
+    }
     entry->unlink();
     entry->moreRecent = mostRecentlyUsedMarker;
     entry->lessRecent = mostRecentlyUsedMarker->lessRecent;
@@ -104,10 +102,10 @@ SharedObject *LRUCache::safeCreate(const char *localeId, UErrorCode &status) {
     return result;
 }
 
-UBool LRUCache::init(const char *localeId, CacheEntry2 *entry) {
+void LRUCache::init(char *adoptedLocId, CacheEntry2 *entry) {
     UErrorCode status = U_ZERO_ERROR;
-    SharedObject *result = safeCreate(localeId, status);
-    return entry->init(localeId, result, status);
+    SharedObject *result = safeCreate(adoptedLocId, status);
+    entry->init(adoptedLocId, result, status);
 }
 
 UBool LRUCache::contains(const char *localeId) const {
@@ -117,6 +115,7 @@ UBool LRUCache::contains(const char *localeId) const {
 
 const SharedObject *LRUCache::_get(const char *localeId, UErrorCode &status) {
     CacheEntry2 *entry = (CacheEntry2 *) uhash_get(localeIdToEntries, localeId);
+    // TODO (Travis Keep): Consider stripping irrelevant locale keywords.
     if (entry != NULL) {
         moveToMostRecent(entry);
     } else {
@@ -128,16 +127,18 @@ const SharedObject *LRUCache::_get(const char *localeId, UErrorCode &status) {
             entry = leastRecentlyUsedMarker->moreRecent;
             uhash_remove(localeIdToEntries, entry->localeId);
             entry->unlink();
-            entry->uninit();
+            entry->reset();
         }
  
         // entry is an uninitialized, unlinked cache entry 
         // or entry is null if memory could not be allocated.
         if (entry != NULL) {
-            if (!init(localeId, entry)) {
+            char *dupLocaleId = uprv_strdup(localeId);
+            if (dupLocaleId == NULL) {
                 delete entry;
                 entry = NULL;
             }
+            init(dupLocaleId, entry);
         }
 
         // Entry is initialized, but unlinked or entry is null on

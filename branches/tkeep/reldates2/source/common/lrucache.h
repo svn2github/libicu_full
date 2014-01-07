@@ -26,7 +26,7 @@ class SharedObject;
 class CacheEntry2;
 
 class U_COMMON_API LRUCache : public UObject {
-  public:
+public:
     template<typename T>
     void get(const char *localeId, const T *&ptr, UErrorCode &status) {
         const T *value = (const T *) _get(localeId, status);
@@ -37,10 +37,10 @@ class U_COMMON_API LRUCache : public UObject {
     }
     UBool contains(const char *localeId) const;
     virtual ~LRUCache();
-  protected:
+protected:
     virtual SharedObject *create(const char *localeId, UErrorCode &status)=0;
     LRUCache(int32_t maxSize, UErrorCode &status);
-  private:
+private:
     LRUCache();
     LRUCache(const LRUCache &other);
     LRUCache &operator=(const LRUCache &other);
@@ -51,11 +51,11 @@ class U_COMMON_API LRUCache : public UObject {
     int32_t maxSize;
 
     void moveToMostRecent(CacheEntry2 *cacheEntry);
-    UBool init(const char *localeId, CacheEntry2 *cacheEntry);
+    void init(char *localeId, CacheEntry2 *cacheEntry);
     const SharedObject *_get(const char *localeId, UErrorCode &status);
 };
 
-typedef SharedObject *(*CreateFunc)(const char *localeId, UErrorCode &status);
+typedef SharedObject *CreateFunc(const char *localeId, UErrorCode &status);
 
 class U_COMMON_API SimpleLRUCache : public LRUCache {
 public:
@@ -69,7 +69,7 @@ public:
 protected:
     virtual SharedObject *create(const char *localeId, UErrorCode &status);
 private:
-    CreateFunc createFunc;
+    CreateFunc *createFunc;
 };
     
 U_NAMESPACE_END
