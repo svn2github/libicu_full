@@ -22,17 +22,31 @@
  * \brief C++ API: Formatter for measure objects.
  */
 
+/**
+ * Constants for various widths.
+ * There are 3 widths: Wide, Short, Narrow.
+ * For example, for English, when formatting "3 hours"
+ * Wide is "3 hours"; short is "3 hrs"; narrow is "3h"
+ * @draft ICU 53
+ */
+enum UMeasureFormatWidth {
+    /** @draft ICU 53 */
+    UMEASFMT_WIDE_WIDTH,
+    /** @draft ICU 53 */
+    UMEASFMT_SHORT_WIDTH,
+    /** @draft ICU 53 */
+    UMEASFMT_NARROW_WIDTH
+};
+/** @draft ICU 53 */
+typedef enum UMeasureFormatWidth UMeasureFormatWidth; 
+
 U_NAMESPACE_BEGIN
+
+class NumberFormat;
 
 /**
  * 
- * A formatter for measure objects.  This is an abstract base class.
- *
- * <p>To format or parse a measure object, first create a formatter
- * object using a MeasureFormat factory method.  Then use that
- * object's format and parse methods.
- *
- * <p>This is an abstract class.
+ * A formatter for measure objects.
  *
  * @see Format
  * @author Alan Liu
@@ -40,11 +54,93 @@ U_NAMESPACE_BEGIN
  */
 class U_I18N_API MeasureFormat : public Format {
  public:
+
+    /**
+     * Constructor.
+     * @draft ICU 53.
+     */
+    MeasureFormat(
+            const Locale &locale, UMeasureFormatWidth width, UErrorCode &status);
+
+    /**
+     * Constructor.
+     * @draft ICU 53.
+     */
+    MeasureFormat(
+            const Locale &locale,
+            UMeasureFormatWidth width,
+            NumberFormat *nfToAdopt,
+            UErrorCode &status);
+
+    /**
+     * Copy constructor.
+     * @draft ICU 53.
+     */
+    MeasureFormat(const MeasureFormat &other);
+
+    /**
+     * Assignment operator.
+     * @draft ICU 53.
+     */
+    MeasureFormat &operator=(const MeasureFormat &rhs);
+    
     /**
      * Destructor.
      * @stable ICU 3.0
      */
     virtual ~MeasureFormat();
+
+    /**
+     * Return true if given Format objects are semantically equal.
+     * @draft ICU 53
+     */
+    virtual UBool operator==(const Format &other) const;
+
+    /**
+     * Clones this object polymorphically.
+     * @draft ICU 53
+     */
+    virtual Format *clone() const;
+
+    /**
+     * Formats object to produce a string.
+     * @draft ICU 53
+     */
+    virtual UnicodeString &format(
+            const Formattable &obj,
+            UnicodeString &appendTo,
+            FieldPosition &pos,
+            UErrorCode &status) const;
+
+    /**
+     * Parse a string to produce an object. This implementation sets
+     * status to U_UNSUPPORTED_ERROR.
+     *
+     * @draft ICU 53
+     */
+    virtual void parseObject(
+            const UnicodeString &source,
+            Formattable &reslt,
+            ParsePosition &pos) const;
+
+    /**
+     * Formats measure objects to produce a string.
+     * @param measures wrapped measure objects.
+     * @param measureCount the number of measure objects.
+     * @param appendTo formatted string appended here.
+     * @param pos the field position.
+     * @param status the error.
+     * @return appendTo reference
+     *
+     * @draft ICU 53
+     */
+    UnicodeString &formatMeasures(
+            const Formattable *measures,
+            int32_t measureCount,
+            UnicodeString &appendTo,
+            FieldPosition &pos,
+            UErrorCode &status) const;
+
 
     /**
      * Return a formatter for CurrencyAmount objects in the given

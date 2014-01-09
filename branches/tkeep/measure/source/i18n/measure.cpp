@@ -55,13 +55,6 @@ UBool Measure::operator==(const UObject& other) const {
         (unit != NULL && *unit == m->getUnit());
 }
 
-//----------------------------------------------------------------------
-// MeasureUnit implementation
-
-MeasureUnit:: MeasureUnit() {}
-
-MeasureUnit::~MeasureUnit() {}
-
 U_NAMESPACE_END
 
 #endif // !UCONFIG_NO_FORMATTING

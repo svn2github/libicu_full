@@ -17,9 +17,66 @@
 
 U_NAMESPACE_BEGIN
 
+MeasureFormat::MeasureFormat(
+        const Locale &locale, UMeasureFormatWidth width, UErrorCode &status) {
+    
+}
+
+MeasureFormat::MeasureFormat(
+            const Locale &locale,
+            UMeasureFormatWidth width,
+            NumberFormat *nfToAdopt,
+            UErrorCode &status) {
+}
+
+MeasureFormat::MeasureFormat(const MeasureFormat &other) : Format(other) {
+}
+
+MeasureFormat &MeasureFormat::operator=(const MeasureFormat &rhs) {
+    if (this == &rhs) {
+        return *this;
+    }
+    return *this;
+}
+
 MeasureFormat::MeasureFormat() {}
 
 MeasureFormat::~MeasureFormat() {}
+
+UBool MeasureFormat::operator==(const Format &other) const {
+    const MeasureFormat *rhs = dynamic_cast<const MeasureFormat *>(&other);
+    if (rhs == NULL) {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+Format *MeasureFormat::clone() const {
+    return new MeasureFormat(*this);
+}
+
+UnicodeString &MeasureFormat::format(
+        const Formattable &obj,
+        UnicodeString &appendTo,
+        FieldPosition &pos,
+        UErrorCode &status) const {
+    return appendTo;
+}
+
+void MeasureFormat::parseObject(
+        const UnicodeString &source,
+        Formattable &reslt,
+        ParsePosition& pos) const {
+}
+
+UnicodeString &MeasureFormat::formatMeasures(
+        const Formattable *measures,
+        int32_t measureCount,
+        UnicodeString &appendTo,
+        FieldPosition &pos,
+        UErrorCode &status) const {
+    return appendTo;
+}
 
 MeasureFormat* U_EXPORT2 MeasureFormat::createCurrencyFormat(const Locale& locale,
                                                    UErrorCode& ec) {
