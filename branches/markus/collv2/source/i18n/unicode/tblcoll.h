@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-* Copyright (C) 1996-2013, International Business Machines Corporation and
+* Copyright (C) 1996-2014, International Business Machines Corporation and
 * others. All Rights Reserved.
 ******************************************************************************
 */
@@ -836,7 +836,7 @@ private:
     static void computeMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode);
     UBool initMaxExpansions(UErrorCode &errorCode) const;
 
-    int32_t getFastLatinOptions() const;
+    void setFastLatinOptions(CollationSettings &ownedSettings) const;
 
     const CollationData *data;
     const CollationSettings *settings;  // reference-counted
@@ -844,8 +844,6 @@ private:
     Locale validLocale;
     uint32_t explicitlySetAttributes;
 
-    /** Options for CollationFastLatin. Negative if disabled. */
-    int32_t fastLatinOptions;
     UBool actualLocaleIsSameAsValid;
 };
 

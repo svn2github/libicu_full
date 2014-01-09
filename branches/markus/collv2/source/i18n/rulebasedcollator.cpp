@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 1996-2013, International Business Machines
+* Copyright (C) 1996-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * rulebasedcollator.cpp
@@ -144,7 +144,6 @@ RuleBasedCollator::RuleBasedCollator(const RuleBasedCollator &other)
           tailoring(other.tailoring),
           validLocale(other.validLocale),
           explicitlySetAttributes(other.explicitlySetAttributes),
-          fastLatinOptions(other.fastLatinOptions),
           actualLocaleIsSameAsValid(other.actualLocaleIsSameAsValid) {
     settings->addRef();
     tailoring->addRef();
@@ -157,7 +156,6 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
           tailoring(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
     if(U_FAILURE(errorCode)) { return; }
     if(bin == NULL || length <= 0 || base == NULL) {
@@ -187,11 +185,9 @@ RuleBasedCollator::RuleBasedCollator(const CollationTailoring *t)
           tailoring(t),
           validLocale(t->actualLocale),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
     settings->addRef();
     tailoring->addRef();
-    fastLatinOptions = getFastLatinOptions();
 }
 
 RuleBasedCollator::~RuleBasedCollator() {
@@ -212,7 +208,6 @@ RuleBasedCollator::adoptTailoring(CollationTailoring *t) {
     t->addRef();
     tailoring = t;
     validLocale = t->actualLocale;
-    fastLatinOptions = getFastLatinOptions();
     actualLocaleIsSameAsValid = FALSE;
 }
 
@@ -228,7 +223,6 @@ RuleBasedCollator &RuleBasedCollator::operator=(const RuleBasedCollator &other) 
     data = tailoring->data;
     validLocale = other.validLocale;
     explicitlySetAttributes = other.explicitlySetAttributes;
-    fastLatinOptions = other.fastLatinOptions;
     actualLocaleIsSameAsValid = other.actualLocaleIsSameAsValid;
     return *this;
 }
@@ -495,7 +489,7 @@ RuleBasedCollator::setAttribute(UColAttribute attr, UColAttributeValue value,
         break;
     }
     if(U_FAILURE(errorCode)) { return; }
-    fastLatinOptions = getFastLatinOptions();
+    setFastLatinOptions(*ownedSettings);
     if(value == UCOL_DEFAULT) {
         setAttributeDefault(attr);
     } else {
@@ -542,7 +536,7 @@ RuleBasedCollator::setMaxVariable(UColReorderCode group, UErrorCode &errorCode) 
     ownedSettings->setMaxVariable(value, defaultSettings.options, errorCode);
     if(U_FAILURE(errorCode)) { return *this; }
     ownedSettings->variableTop = varTop;
-    fastLatinOptions = getFastLatinOptions();
+    setFastLatinOptions(*ownedSettings);
     if(value == UCOL_DEFAULT) {
         setAttributeDefault(ATTR_VARIABLE_TOP);
     } else {
@@ -621,6 +615,7 @@ RuleBasedCollator::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
                                           getDefaultSettings().options, errorCode);
             if(U_FAILURE(errorCode)) { return; }
             ownedSettings->variableTop = varTop;
+            setFastLatinOptions(*ownedSettings);
         }
     }
     if(varTop == getDefaultSettings().variableTop) {
@@ -628,7 +623,6 @@ RuleBasedCollator::setVariableTop(uint32_t varTop, UErrorCode &errorCode) {
     } else {
         setAttributeExplicitly(ATTR_VARIABLE_TOP);
     }
-    fastLatinOptions = getFastLatinOptions();
 }
 
 int32_t
@@ -672,8 +666,8 @@ RuleBasedCollator::setReorderCodes(const int32_t *reorderCodes, int32_t length,
             ownedSettings->aliasReordering(defaultSettings.reorderCodes,
                                            defaultSettings.reorderCodesLength,
                                            defaultSettings.reorderTable);
+            setFastLatinOptions(*ownedSettings);
         }
-        fastLatinOptions = getFastLatinOptions();
         return;
     }
     CollationSettings *ownedSettings = SharedObject::copyOnWrite(settings);
@@ -692,55 +686,14 @@ RuleBasedCollator::setReorderCodes(const int32_t *reorderCodes, int32_t length,
             return;
         }
     }
-    fastLatinOptions = getFastLatinOptions();
+    setFastLatinOptions(*ownedSettings);
 }
 
-int32_t
-RuleBasedCollator::getFastLatinOptions() const {
-    const uint16_t *flt = data->fastLatinTable;
-    if(flt == NULL) { return -1; }
-
-    int32_t miniVarTop;
-    if((settings->options & CollationSettings::ALTERNATE_MASK) == 0) {
-        // No mini primaries are variable, set a variableTop just below the
-        // lowest long mini primary.
-        miniVarTop = (int32_t)CollationFastLatin::MIN_LONG - 1;
-        // Shift it above other options.
-        miniVarTop <<= 16;
-    } else {
-        uint32_t v1 = settings->variableTop >> 24;
-        int32_t headerLength = *flt & 0xff;
-        int32_t i = headerLength - 1;
-        if(i <= 0 || v1 > (flt[i] & 0x7f)) {
-            return -1;  // variableTop >= digits, should not occur
-        }
-        while(i > 1 && v1 <= (flt[i - 1] & 0x7f)) { --i; }
-        // Shift the miniCE variableTop above other options.
-        // In the table header, it is in bits 15..7, with 4 zero bits 19..16 implied.
-        // At compare time, options>>16 makes it comparable with long mini primaries
-        // in bits 15..3.
-        miniVarTop = (int32_t)(flt[i] & 0xff80) << 12;
-    }
-
-    const uint8_t *reorderTable = settings->reorderTable;
-    if(reorderTable != NULL) {
-        const uint16_t *scripts = data->scripts;
-        int32_t length = data->scriptsLength;
-        uint32_t prevLastByte = 0;
-        for(int32_t i = 0; i < length;) {
-            // reordered last byte of the group
-            uint32_t lastByte = reorderTable[scripts[i] & 0xff];
-            if(lastByte < prevLastByte) {
-                // The permutation affects the groups up to Latin.
-                return -1;
-            }
-            if(scripts[i + 2] == USCRIPT_LATIN) { break; }
-            i = i + 2 + scripts[i + 1];
-            prevLastByte = lastByte;
-        }
-    }
-
-    return miniVarTop | settings->options;
+void
+RuleBasedCollator::setFastLatinOptions(CollationSettings &ownedSettings) const {
+    ownedSettings.fastLatinOptions = CollationFastLatin::getOptions(
+            data, ownedSettings,
+            ownedSettings.fastLatinPrimaries, LENGTHOF(ownedSettings.fastLatinPrimaries));
 }
 
 UCollationResult
@@ -1067,19 +1020,24 @@ RuleBasedCollator::doCompare(const UChar *left, int32_t leftLength,
     }
 
     int32_t result;
+    int32_t fastLatinOptions = settings->fastLatinOptions;
     if(fastLatinOptions >= 0 &&
-            equalPrefixLength != leftLength &&
-            left[equalPrefixLength] <= CollationFastLatin::LATIN_MAX &&
-            equalPrefixLength != rightLength &&
-            right[equalPrefixLength] <= CollationFastLatin::LATIN_MAX) {
+            (equalPrefixLength == leftLength ||
+                left[equalPrefixLength] <= CollationFastLatin::LATIN_MAX) &&
+            (equalPrefixLength == rightLength ||
+                right[equalPrefixLength] <= CollationFastLatin::LATIN_MAX)) {
         if(leftLength >= 0) {
-            result = CollationFastLatin::compareUTF16(data->fastLatinTable, fastLatinOptions,
+            result = CollationFastLatin::compareUTF16(data->fastLatinTable,
+                                                      settings->fastLatinPrimaries,
+                                                      fastLatinOptions,
                                                       left + equalPrefixLength,
                                                       leftLength - equalPrefixLength,
                                                       right + equalPrefixLength,
                                                       rightLength - equalPrefixLength);
         } else {
-            result = CollationFastLatin::compareUTF16(data->fastLatinTable, fastLatinOptions,
+            result = CollationFastLatin::compareUTF16(data->fastLatinTable,
+                                                      settings->fastLatinPrimaries,
+                                                      fastLatinOptions,
                                                       left + equalPrefixLength, -1,
                                                       right + equalPrefixLength, -1);
         }
@@ -1191,19 +1149,24 @@ RuleBasedCollator::doCompare(const uint8_t *left, int32_t leftLength,
     }
 
     int32_t result;
+    int32_t fastLatinOptions = settings->fastLatinOptions;
     if(fastLatinOptions >= 0 &&
-            equalPrefixLength != leftLength &&
-            left[equalPrefixLength] <= CollationFastLatin::LATIN_MAX_UTF8_LEAD &&
-            equalPrefixLength != rightLength &&
-            right[equalPrefixLength] <= CollationFastLatin::LATIN_MAX_UTF8_LEAD) {
+            (equalPrefixLength == leftLength ||
+                left[equalPrefixLength] <= CollationFastLatin::LATIN_MAX_UTF8_LEAD) &&
+            (equalPrefixLength == rightLength ||
+                right[equalPrefixLength] <= CollationFastLatin::LATIN_MAX_UTF8_LEAD)) {
         if(leftLength >= 0) {
-            result = CollationFastLatin::compareUTF8(data->fastLatinTable, fastLatinOptions,
+            result = CollationFastLatin::compareUTF8(data->fastLatinTable,
+                                                     settings->fastLatinPrimaries,
+                                                     fastLatinOptions,
                                                      left + equalPrefixLength,
                                                      leftLength - equalPrefixLength,
                                                      right + equalPrefixLength,
                                                      rightLength - equalPrefixLength);
         } else {
-            result = CollationFastLatin::compareUTF8(data->fastLatinTable, fastLatinOptions,
+            result = CollationFastLatin::compareUTF8(data->fastLatinTable,
+                                                     settings->fastLatinPrimaries,
+                                                     fastLatinOptions,
                                                      left + equalPrefixLength, -1,
                                                      right + equalPrefixLength, -1);
         }

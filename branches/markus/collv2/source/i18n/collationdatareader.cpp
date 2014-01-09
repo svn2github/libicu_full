@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationdatareader.cpp
@@ -29,6 +29,8 @@
 #include "uassert.h"
 #include "ucmndata.h"
 #include "utrie2.h"
+
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 U_NAMESPACE_BEGIN
 
@@ -366,9 +368,16 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
 
     const CollationSettings &ts = *tailoring.settings;
     int32_t options = inIndexes[IX_OPTIONS] & 0xffff;
+    uint16_t fastLatinPrimaries[CollationFastLatin::LATIN_LIMIT];
+    int32_t fastLatinOptions = CollationFastLatin::getOptions(
+            tailoring.data, ts, fastLatinPrimaries, LENGTHOF(fastLatinPrimaries));
     if(options == ts.options && ts.variableTop != 0 &&
             reorderCodesLength == ts.reorderCodesLength &&
-            uprv_memcmp(reorderCodes, ts.reorderCodes, reorderCodesLength * 4) == 0) {
+            uprv_memcmp(reorderCodes, ts.reorderCodes, reorderCodesLength * 4) == 0 &&
+            fastLatinOptions == ts.fastLatinOptions &&
+            (fastLatinOptions < 0 ||
+                uprv_memcmp(fastLatinPrimaries, ts.fastLatinPrimaries,
+                            sizeof(fastLatinPrimaries)) == 0)) {
         return;
     }
 
@@ -379,8 +388,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
     }
     settings->options = options;
     // Set variableTop from options and scripts data.
-    settings->variableTop =
-        (data != NULL ? data : baseData)->getLastPrimaryForGroup(
+    settings->variableTop = tailoring.data->getLastPrimaryForGroup(
             UCOL_REORDER_CODE_FIRST + settings->getMaxVariable());
     if(settings->variableTop == 0) {
         errorCode = U_INVALID_FORMAT_ERROR;
@@ -398,6 +406,10 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             return;
         }
     }
+
+    settings->fastLatinOptions = CollationFastLatin::getOptions(
+        tailoring.data, *settings,
+        settings->fastLatinPrimaries, LENGTHOF(settings->fastLatinPrimaries));
 }
 
 UBool U_CALLCONV

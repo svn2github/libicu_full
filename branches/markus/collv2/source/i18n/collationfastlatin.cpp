@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationfastlatin.cpp
@@ -14,6 +14,7 @@
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/ucol.h"
+#include "collationdata.h"
 #include "collationfastlatin.h"
 #include "collationsettings.h"
 #include "putilimp.h"  // U_ALIGN_CODE
@@ -22,7 +23,72 @@
 U_NAMESPACE_BEGIN
 
 int32_t
-CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
+CollationFastLatin::getOptions(const CollationData *data, const CollationSettings &settings,
+                               uint16_t *primaries, int32_t capacity) {
+    const uint16_t *table = data->fastLatinTable;
+    if(table == NULL) { return -1; }
+    U_ASSERT(capacity == LATIN_LIMIT);
+    if(capacity != LATIN_LIMIT) { return -1; }
+
+    uint32_t miniVarTop;
+    if((settings.options & CollationSettings::ALTERNATE_MASK) == 0) {
+        // No mini primaries are variable, set a variableTop just below the
+        // lowest long mini primary.
+        miniVarTop = MIN_LONG - 1;
+    } else {
+        uint32_t v1 = settings.variableTop >> 24;
+        int32_t headerLength = *table & 0xff;
+        int32_t i = headerLength - 1;
+        if(i <= 0 || v1 > (table[i] & 0x7f)) {
+            return -1;  // variableTop >= digits, should not occur
+        }
+        while(i > 1 && v1 <= (table[i - 1] & 0x7f)) { --i; }
+        // In the table header, the miniVarTop is in bits 15..7, with 4 zero bits 19..16 implied.
+        // Shift right to make it comparable with long mini primaries in bits 15..3.
+        miniVarTop = (table[i] & 0xff80) >> 4;
+    }
+
+    const uint8_t *reorderTable = settings.reorderTable;
+    if(reorderTable != NULL) {
+        const uint16_t *scripts = data->scripts;
+        int32_t length = data->scriptsLength;
+        uint32_t prevLastByte = 0;
+        for(int32_t i = 0; i < length;) {
+            // reordered last byte of the group
+            uint32_t lastByte = reorderTable[scripts[i] & 0xff];
+            if(lastByte < prevLastByte) {
+                // The permutation affects the groups up to Latin.
+                return -1;
+            }
+            if(scripts[i + 2] == USCRIPT_LATIN) { break; }
+            i = i + 2 + scripts[i + 1];
+            prevLastByte = lastByte;
+        }
+    }
+
+    table += (table[0] & 0xff);  // skip the header
+    for(UChar32 c = 0; c < LATIN_LIMIT; ++c) {
+        uint32_t p = table[c];
+        if(p >= MIN_SHORT) {
+            p &= SHORT_PRIMARY_MASK;
+        } else if(p > miniVarTop) {
+            p &= LONG_PRIMARY_MASK;
+        } else {
+            p = 0;
+        }
+        primaries[c] = (uint16_t)p;
+    }
+    if((settings.options & CollationSettings::NUMERIC) != 0) {
+        // Bail out for digits.
+        for(UChar32 c = 0x30; c <= 0x39; ++c) { primaries[c] = 0; }
+    }
+
+    // Shift the miniVarTop above other options.
+    return ((int32_t)miniVarTop << 16) | settings.options;
+}
+
+int32_t
+CollationFastLatin::compareUTF16(const uint16_t *table, const uint16_t *primaries, int32_t options,
                                  const UChar *left, int32_t leftLength,
                                  const UChar *right, int32_t rightLength) {
     // This is a modified copy of CollationCompare::compareUpToQuaternary(),
@@ -53,6 +119,8 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
             }
             UChar32 c = left[leftIndex++];
             if(c <= LATIN_MAX) {
+                leftPair = primaries[c];
+                if(leftPair != 0) { break; }
                 if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
                     return BAIL_OUT_RESULT;
                 }
@@ -82,6 +150,8 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
             }
             UChar32 c = right[rightIndex++];
             if(c <= LATIN_MAX) {
+                rightPair = primaries[c];
+                if(rightPair != 0) { break; }
                 if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
                     return BAIL_OUT_RESULT;
                 }
@@ -358,7 +428,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, int32_t options,
 }
 
 int32_t
-CollationFastLatin::compareUTF8(const uint16_t *table, int32_t options,
+CollationFastLatin::compareUTF8(const uint16_t *table, const uint16_t *primaries, int32_t options,
                                  const uint8_t *left, int32_t leftLength,
                                  const uint8_t *right, int32_t rightLength) {
     // Keep compareUTF16() and compareUTF8() in sync very closely!
@@ -390,6 +460,8 @@ CollationFastLatin::compareUTF8(const uint16_t *table, int32_t options,
             UChar32 c = left[leftIndex++];
             uint8_t t;
             if(c <= 0x7f) {
+                leftPair = primaries[c];
+                if(leftPair != 0) { break; }
                 if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
                     return BAIL_OUT_RESULT;
                 }
@@ -397,7 +469,10 @@ CollationFastLatin::compareUTF8(const uint16_t *table, int32_t options,
             } else if(c <= LATIN_MAX_UTF8_LEAD && 0xc2 <= c && leftIndex != leftLength &&
                     0x80 <= (t = left[leftIndex]) && t <= 0xbf) {
                 ++leftIndex;
-                leftPair = table[((c - 0xc2) << 6) + t];
+                c = ((c - 0xc2) << 6) + t;
+                leftPair = primaries[c];
+                if(leftPair != 0) { break; }
+                leftPair = table[c];
             } else {
                 leftPair = lookupUTF8(table, c, left, leftIndex, leftLength);
             }
@@ -422,6 +497,8 @@ CollationFastLatin::compareUTF8(const uint16_t *table, int32_t options,
             UChar32 c = right[rightIndex++];
             uint8_t t;
             if(c <= 0x7f) {
+                rightPair = primaries[c];
+                if(rightPair != 0) { break; }
                 if(c <= 0x39 && c >= 0x30 && (options & CollationSettings::NUMERIC) != 0) {
                     return BAIL_OUT_RESULT;
                 }
@@ -429,7 +506,10 @@ CollationFastLatin::compareUTF8(const uint16_t *table, int32_t options,
             } else if(c <= LATIN_MAX_UTF8_LEAD && 0xc2 <= c && rightIndex != rightLength &&
                     0x80 <= (t = right[rightIndex]) && t <= 0xbf) {
                 ++rightIndex;
-                rightPair = table[((c - 0xc2) << 6) + t];
+                c = ((c - 0xc2) << 6) + t;
+                rightPair = primaries[c];
+                if(rightPair != 0) { break; }
+                rightPair = table[c];
             } else {
                 rightPair = lookupUTF8(table, c, right, rightIndex, rightLength);
             }

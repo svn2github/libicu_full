@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationbuilder.cpp
@@ -34,6 +34,7 @@
 #include "collationbuilder.h"
 #include "collationdata.h"
 #include "collationdatabuilder.h"
+#include "collationfastlatin.h"
 #include "collationroot.h"
 #include "collationrootelements.h"
 #include "collationruleparser.h"
@@ -91,7 +92,6 @@ RuleBasedCollator::RuleBasedCollator()
           tailoring(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
 }
 
@@ -101,7 +101,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
           tailoring(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
     internalBuildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, NULL, NULL, errorCode);
 }
@@ -113,7 +112,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
           tailoring(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
     internalBuildTailoring(rules, strength, UCOL_DEFAULT, NULL, NULL, errorCode);
 }
@@ -126,7 +124,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           tailoring(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
     internalBuildTailoring(rules, UCOL_DEFAULT, decompositionMode, NULL, NULL, errorCode);
 }
@@ -140,7 +137,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           tailoring(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
     internalBuildTailoring(rules, strength, decompositionMode, NULL, NULL, errorCode);
 }
@@ -153,7 +149,6 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
           tailoring(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
-          fastLatinOptions(-1),
           actualLocaleIsSameAsValid(FALSE) {
     internalBuildTailoring(rules, UCOL_DEFAULT, UCOL_DEFAULT, &parseError, &reason, errorCode);
 }
@@ -180,10 +175,17 @@ RuleBasedCollator::internalBuildTailoring(const UnicodeString &rules,
         }
         return;
     }
-    if((strength != UCOL_DEFAULT && strength != t->settings->getStrength()) ||
+    const CollationSettings &ts = *t->settings;
+    uint16_t fastLatinPrimaries[CollationFastLatin::LATIN_LIMIT];
+    int32_t fastLatinOptions = CollationFastLatin::getOptions(
+            t->data, ts, fastLatinPrimaries, LENGTHOF(fastLatinPrimaries));
+    if((strength != UCOL_DEFAULT && strength != ts.getStrength()) ||
             (decompositionMode != UCOL_DEFAULT &&
-                decompositionMode != t->settings->getFlag(CollationSettings::CHECK_FCD))
-    ) {
+                decompositionMode != ts.getFlag(CollationSettings::CHECK_FCD)) ||
+            fastLatinOptions != ts.fastLatinOptions ||
+            (fastLatinOptions >= 0 &&
+                uprv_memcmp(fastLatinPrimaries, ts.fastLatinPrimaries,
+                            sizeof(fastLatinPrimaries)) != 0)) {
         CollationSettings *ownedSettings = SharedObject::copyOnWrite(t->settings);
         if(ownedSettings == NULL) {
             errorCode = U_MEMORY_ALLOCATION_ERROR;
@@ -195,6 +197,9 @@ RuleBasedCollator::internalBuildTailoring(const UnicodeString &rules,
         if(decompositionMode != UCOL_DEFAULT) {
             ownedSettings->setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
         }
+        ownedSettings->fastLatinOptions = CollationFastLatin::getOptions(
+            t->data, *ownedSettings,
+            ownedSettings->fastLatinPrimaries, LENGTHOF(ownedSettings->fastLatinPrimaries));
     }
     if(U_FAILURE(errorCode)) { return; }
     t->actualLocale.setToBogus();

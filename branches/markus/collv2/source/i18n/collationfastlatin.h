@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationfastlatin.h
@@ -17,6 +17,9 @@
 #if !UCONFIG_NO_COLLATION
 
 U_NAMESPACE_BEGIN
+
+struct CollationData;
+struct CollationSettings;
 
 class U_I18N_API CollationFastLatin /* all static */ {
 public:
@@ -196,11 +199,20 @@ public:
         }
     }
 
-    static int32_t compareUTF16(const uint16_t *table, int32_t options,
+    /**
+     * Computes the options value for the compare functions
+     * and writes the precomputed primary weights.
+     * Returns -1 if the Latin fastpath is not supported for the data and settings.
+     * The capacity must be LATIN_LIMIT.
+     */
+    static int32_t getOptions(const CollationData *data, const CollationSettings &settings,
+                              uint16_t *primaries, int32_t capacity);
+
+    static int32_t compareUTF16(const uint16_t *table, const uint16_t *primaries, int32_t options,
                                 const UChar *left, int32_t leftLength,
                                 const UChar *right, int32_t rightLength);
 
-    static int32_t compareUTF8(const uint16_t *table, int32_t options,
+    static int32_t compareUTF8(const uint16_t *table, const uint16_t *primaries, int32_t options,
                                const uint8_t *left, int32_t leftLength,
                                const uint8_t *right, int32_t rightLength);
 

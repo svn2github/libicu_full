@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationsettings.h
@@ -175,7 +175,8 @@ struct U_I18N_API CollationSettings : public SharedObject {
                       (MAX_VAR_PUNCT << MAX_VARIABLE_SHIFT)),
               variableTop(0),
               reorderTable(NULL),
-              reorderCodes(NULL), reorderCodesLength(0), reorderCodesCapacity(0) {}
+              reorderCodes(NULL), reorderCodesLength(0), reorderCodesCapacity(0),
+              fastLatinOptions(-1) {}
 
     CollationSettings(const CollationSettings &other);
     virtual ~CollationSettings();
@@ -278,6 +279,10 @@ struct U_I18N_API CollationSettings : public SharedObject {
      * the table and the codes are in the same memory block, with the codes first.
      */
     int32_t reorderCodesCapacity;
+
+    /** Options for CollationFastLatin. Negative if disabled. */
+    int32_t fastLatinOptions;
+    uint16_t fastLatinPrimaries[0x180];
 };
 
 U_NAMESPACE_END

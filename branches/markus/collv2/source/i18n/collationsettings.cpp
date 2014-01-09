@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationsettings.cpp
@@ -52,7 +52,8 @@ CollationSettings::CollationSettings(const CollationSettings &other)
         : SharedObject(other),
           options(other.options), variableTop(other.variableTop),
           reorderTable(NULL),
-          reorderCodes(NULL), reorderCodesLength(0), reorderCodesCapacity(0) {
+          reorderCodes(NULL), reorderCodesLength(0), reorderCodesCapacity(0),
+          fastLatinOptions(other.fastLatinOptions) {
     int32_t length = other.reorderCodesLength;
     if(length == 0) {
         U_ASSERT(other.reorderTable == NULL);
@@ -63,6 +64,9 @@ CollationSettings::CollationSettings(const CollationSettings &other)
         } else {
             setReordering(other.reorderCodes, length, other.reorderTable);
         }
+    }
+    if(fastLatinOptions >= 0) {
+        uprv_memcpy(fastLatinPrimaries, other.fastLatinPrimaries, sizeof(fastLatinPrimaries));
     }
 }
 
