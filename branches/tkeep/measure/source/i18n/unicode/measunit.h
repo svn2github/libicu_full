@@ -32,6 +32,12 @@ class U_I18N_API MeasureUnit: public UObject {
  public:
 
     /**
+     * Default constructor.
+     * @stable ICU 3.0
+     */
+    MeasureUnit();
+
+    /**
      * Copy constructor.
      * @draft ICU 53
      */
@@ -81,16 +87,10 @@ class U_I18N_API MeasureUnit: public UObject {
 
     /**
      * getAvailable gets all of the available units.
-     * getAvailable creates a new MeasureUnit object on the heap for each
-     * available unit and stores the pointers in dest.
      * If there are too many units to fit into destCapacity then the
      * error code is set to U_BUFFER_OVERFLOW_ERROR.
      *
-     * On success, the caller owns all the allocated MeasureUnit objects
-     * and must free each one. On failure, getAvailable will free any
-     * allocated MeasureUnit objects before returning.
-     *
-     * @param destCapacity number of const pointers available at dest.
+     * @param destCapacity number of MeasureUnit instances available at dest.
      * @param dest destination buffer.
      * @param errorCode ICU error code.
      * @return number of available units.
@@ -98,22 +98,16 @@ class U_I18N_API MeasureUnit: public UObject {
      */
     static int32_t getAvailable(
             int32_t destCapacity,
-            MeasureUnit **dest,
+            MeasureUnit *dest,
             UErrorCode &errorCode);
 
     /**
      * getAvailable gets all of the available units for a specific type.
-     * getAvailable creates a new MeasureUnit object on the heap for each
-     * available unit and stores the pointers in dest.
      * If there are too many units to fit into destCapacity then the
      * error code is set to U_BUFFER_OVERFLOW_ERROR.
      *
-     * On success, the caller owns all the allocated MeasureUnit objects
-     * and must free each one. On failure, getAvailable will free any
-     * allocated MeasureUnit objects before returning.
-     *
      * @param type the type
-     * @param destCapacity number of const pointers available at dest.
+     * @param destCapacity number of MeasureUnit instances available at dest.
      * @param dest destination buffer.
      * @param errorCode ICU error code.
      * @return number of available units for type.
@@ -122,17 +116,16 @@ class U_I18N_API MeasureUnit: public UObject {
     static int32_t getAvailable(
             const UnicodeString &type,
             int32_t destCapacity,
-            MeasureUnit **dest,
+            MeasureUnit *dest,
             UErrorCode &errorCode);
 
     /**
      * getAvailableTypes gets all of the available types.
-     * getAvailableTypes copies each type to dest.
      * If there are too many types to fit into destCapacity then the
      * error code is set to U_BUFFER_OVERFLOW_ERROR.
      *
      * @param dest destination buffer.
-     * @param destCapacity number of const pointers available at dest.
+     * @param destCapacity number of UnicodeString instances available at dest.
      * @param errorCode ICU error code.
      * @return number of types.
      * @draft ICU 53
@@ -163,12 +156,6 @@ class U_I18N_API MeasureUnit: public UObject {
     MeasureUnit(const UnicodeString &type, const UnicodeString &subType);
 
  protected:
-    /**
-     * Default constructor.
-     * @stable ICU 3.0
-     */
-    MeasureUnit();
-
     /**
      * For ICU use only.
      * @internal ICU 53

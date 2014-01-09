@@ -54,6 +54,8 @@ class NumberFormat;
  */
 class U_I18N_API MeasureFormat : public Format {
  public:
+    using Format::parseObject;
+    using Format::format;
 
     /**
      * Constructor.
@@ -163,12 +165,12 @@ class U_I18N_API MeasureFormat : public Format {
     static MeasureFormat* U_EXPORT2 createCurrencyFormat(UErrorCode& ec);
 
  protected:
-
     /**
      * Default constructor.
      * @stable ICU 3.0
      */
     MeasureFormat();
+
 };
 
 U_NAMESPACE_END
