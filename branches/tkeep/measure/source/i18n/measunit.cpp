@@ -34,17 +34,17 @@ static const UChar * const gAccelerationSubTypes[] = {
         NULL
 };
 
-static const int32_t kYear = 0;
-static const UChar gYear[] = {
-        'y', 'e', 'a', 'r', 0x0};
-    
-static const int32_t kMonth = 1;
+static const int32_t kMonth = 0;
 static const UChar gMonth[] = {
         'm', 'o', 'n', 't', 'h', 0x0};
 
+static const int32_t kYear = 1;
+static const UChar gYear[] = {
+        'y', 'e', 'a', 'r', 0x0};
+    
 static const UChar * const gDurationSubTypes[] = {
-        gYear,
         gMonth,
+        gYear,
         NULL
 };
 
