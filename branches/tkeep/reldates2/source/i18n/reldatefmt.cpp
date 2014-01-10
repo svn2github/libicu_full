@@ -112,9 +112,13 @@ public:
     SharedPtr<MessageFormat> combinedDateAndTime;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
+    virtual ~RelativeDateTimeData();
 private:
     RelativeDateTimeData &operator=(const RelativeDateTimeData& other);
 };
+
+RelativeDateTimeData::~RelativeDateTimeData() {
+}
 
 static UBool getStringWithFallback(
         const UResourceBundle *resource, 
