@@ -44,7 +44,9 @@ private:
     LRUCache();
     LRUCache(const LRUCache &other);
     LRUCache &operator=(const LRUCache &other);
-    SharedObject *safeCreate(const char *localeId, UErrorCode &status);
+
+    // TODO (Travis Keep): Consider replacing both of these end nodes with a
+    // single sentinel.
     CacheEntry2 *mostRecentlyUsedMarker;
     CacheEntry2 *leastRecentlyUsedMarker;
     UHashtable *localeIdToEntries;

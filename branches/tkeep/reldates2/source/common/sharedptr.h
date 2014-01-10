@@ -44,6 +44,9 @@ struct _AtomicInt : public UMemory {
  * management by reference counting their T objects. T objects that are
  * referenced by no SharedPtr<T> instances get deleted automatically.
  */
+
+// TODO (Travis Keep): Leave interface the same, but find a more efficient
+// implementation that is easier to understand.
 template<typename T>
 class SharedPtr {
 public:

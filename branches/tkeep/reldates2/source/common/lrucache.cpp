@@ -15,6 +15,9 @@
 
 U_NAMESPACE_BEGIN
 
+// TODO (Travis Keep): Consider building synchronization into this cache
+// instead of leaving synchronization up to the clients.
+
 // Named CacheEntry2 to avoid conflict with CacheEntry in serv.cpp
 // Don't know how to make truly private class that the linker can't see.
 class CacheEntry2 : public UMemory {
@@ -84,28 +87,9 @@ void LRUCache::moveToMostRecent(CacheEntry2 *entry) {
     mostRecentlyUsedMarker->lessRecent = entry;
 }
 
-SharedObject *LRUCache::safeCreate(const char *localeId, UErrorCode &status) {
-    SharedObject *result = create(localeId, status);
-
-    // Safe guard to ensure that some error is reported for missing data in
-    // case subclass forgets to set status.
-    if (result == NULL && U_SUCCESS(status)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    } 
-
-    // Safe guard to ensure that if subclass reports an error and returns
-    // data that we don't leak memory.
-    if (result != NULL && U_FAILURE(status)) {
-        delete result;
-        return NULL;
-    }
-    return result;
-}
-
 void LRUCache::init(char *adoptedLocId, CacheEntry2 *entry) {
     UErrorCode status = U_ZERO_ERROR;
-    SharedObject *result = safeCreate(adoptedLocId, status);
+    SharedObject *result = create(adoptedLocId, status);
     entry->init(adoptedLocId, result, status);
 }
 
@@ -115,17 +99,21 @@ UBool LRUCache::contains(const char *localeId) const {
 
 
 const SharedObject *LRUCache::_get(const char *localeId, UErrorCode &status) {
+    // TODO (Travis Keep): Consider stripping irrelevant locale keywords.
     CacheEntry2 *entry = (CacheEntry2 *) uhash_get(
             localeIdToEntries, localeId);
-    // TODO (Travis Keep): Consider stripping irrelevant locale keywords.
-    if (entry != NULL) {
-        moveToMostRecent(entry);
-    } else {
+    if (entry == NULL) {
         // Its a cache miss.
 
         if (uhash_count(localeIdToEntries) < maxSize) {
+            // Cache not full. There is room for a new entry.
             entry = new CacheEntry2;
+            if (entry == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                return NULL;
+            }
         } else {
+            // Cache full. Must evict an entry and re-use it.
             entry = leastRecentlyUsedMarker->moreRecent;
             uhash_remove(localeIdToEntries, entry->localeId);
             entry->unlink();
@@ -133,36 +121,25 @@ const SharedObject *LRUCache::_get(const char *localeId, UErrorCode &status) {
         }
  
         // entry is an uninitialized, unlinked cache entry 
-        // or entry is null if memory could not be allocated.
-        if (entry != NULL) {
-            char *dupLocaleId = uprv_strdup(localeId);
-            if (dupLocaleId == NULL) {
-                delete entry;
-                entry = NULL;
-            }
-            init(dupLocaleId, entry);
+        char *dupLocaleId = uprv_strdup(localeId);
+        if (dupLocaleId == NULL) {
+            delete entry;
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
         }
+        init(dupLocaleId, entry);
 
-        // Entry is initialized, but unlinked or entry is null on
-        // memory allocation error.
-        if (entry != NULL) {
-            // Add to hashtable
-            uhash_put(localeIdToEntries, entry->localeId, entry, &status);
-            if (U_FAILURE(status)) {
-                delete entry;
-                entry = NULL;
-            }
-        }
-        if (entry != NULL) {
-            moveToMostRecent(entry);
+        // Entry is initialized, add to hashtable
+        uhash_put(localeIdToEntries, entry->localeId, entry, &status);
+        if (U_FAILURE(status)) {
+            delete entry;
+            return NULL;
         }
     }
-    if (entry == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
 
-    // If we get here our data is cached.
+    // Re-link entry so that it is the most recent.
+    moveToMostRecent(entry);
+
     if (U_FAILURE(entry->status)) {
         status = entry->status;
         return NULL;
