@@ -23,7 +23,6 @@ U_NAMESPACE_BEGIN
  */
 
 class SharedObject;
-class CacheEntry2;
 
 class U_COMMON_API LRUCache : public UObject {
 public:
@@ -41,19 +40,38 @@ protected:
     virtual SharedObject *create(const char *localeId, UErrorCode &status)=0;
     LRUCache(int32_t maxSize, UErrorCode &status);
 private:
+    class CacheEntry : public UMemory {
+    public:
+        CacheEntry *moreRecent;
+        CacheEntry *lessRecent;
+        char *localeId;
+        const SharedObject *cachedData;
+        UErrorCode status;  // This is the error if any from creating
+                            // cachedData.
+        CacheEntry();
+        ~CacheEntry();
+
+        void unlink();
+        void reset();
+        void init(
+               char *adoptedLocId, SharedObject *dataToAdopt, UErrorCode err);
+    private:
+        CacheEntry(const CacheEntry& other);
+        CacheEntry &operator=(const CacheEntry& other);
+    };
     LRUCache();
     LRUCache(const LRUCache &other);
     LRUCache &operator=(const LRUCache &other);
 
     // TODO (Travis Keep): Consider replacing both of these end nodes with a
     // single sentinel.
-    CacheEntry2 *mostRecentlyUsedMarker;
-    CacheEntry2 *leastRecentlyUsedMarker;
+    CacheEntry *mostRecentlyUsedMarker;
+    CacheEntry *leastRecentlyUsedMarker;
     UHashtable *localeIdToEntries;
     int32_t maxSize;
 
-    void moveToMostRecent(CacheEntry2 *cacheEntry);
-    void init(char *localeId, CacheEntry2 *cacheEntry);
+    void moveToMostRecent(CacheEntry *cacheEntry);
+    void init(char *localeId, CacheEntry *cacheEntry);
     const SharedObject *_get(const char *localeId, UErrorCode &status);
 };
 

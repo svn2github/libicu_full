@@ -18,37 +18,16 @@ U_NAMESPACE_BEGIN
 // TODO (Travis Keep): Consider building synchronization into this cache
 // instead of leaving synchronization up to the clients.
 
-// Named CacheEntry2 to avoid conflict with CacheEntry in serv.cpp
-// Don't know how to make truly private class that the linker can't see.
-class CacheEntry2 : public UMemory {
-public:
-    CacheEntry2 *moreRecent;
-    CacheEntry2 *lessRecent;
-    char *localeId;
-    const SharedObject *cachedData;
-    UErrorCode status;  // This is the error if any from creating cachedData.
-
-    CacheEntry2();
-    ~CacheEntry2();
-
-    void unlink();
-    void reset();
-    void init(char *adoptedLocId, SharedObject *dataToAdopt, UErrorCode err);
-private:
-    CacheEntry2(const CacheEntry2& other);
-    CacheEntry2 &operator=(const CacheEntry2& other);
-};
-
-CacheEntry2::CacheEntry2() 
+LRUCache::CacheEntry::CacheEntry() 
     : moreRecent(NULL), lessRecent(NULL), localeId(NULL), cachedData(NULL),
       status(U_ZERO_ERROR) {
 }
 
-CacheEntry2::~CacheEntry2() {
+LRUCache::CacheEntry::~CacheEntry() {
     reset();
 }
 
-void CacheEntry2::unlink() {
+void LRUCache::CacheEntry::unlink() {
     if (moreRecent != NULL) {
         moreRecent->lessRecent = lessRecent;
     }
@@ -59,7 +38,7 @@ void CacheEntry2::unlink() {
     lessRecent = NULL;
 }
 
-void CacheEntry2::reset() {
+void LRUCache::CacheEntry::reset() {
     SharedObject::clearPtr(cachedData);
     status = U_ZERO_ERROR;
     if (localeId != NULL) {
@@ -68,7 +47,7 @@ void CacheEntry2::reset() {
     localeId = NULL;
 }
 
-void CacheEntry2::init(
+void LRUCache::CacheEntry::init(
         char *adoptedLocId, SharedObject *dataToAdopt, UErrorCode err) {
     U_ASSERT(localeId == NULL);
     localeId = adoptedLocId;
@@ -76,7 +55,7 @@ void CacheEntry2::init(
     status = err;
 }
 
-void LRUCache::moveToMostRecent(CacheEntry2 *entry) {
+void LRUCache::moveToMostRecent(LRUCache::CacheEntry *entry) {
     if (entry->moreRecent == mostRecentlyUsedMarker) {
         return;
     }
@@ -87,7 +66,7 @@ void LRUCache::moveToMostRecent(CacheEntry2 *entry) {
     mostRecentlyUsedMarker->lessRecent = entry;
 }
 
-void LRUCache::init(char *adoptedLocId, CacheEntry2 *entry) {
+void LRUCache::init(char *adoptedLocId, LRUCache::CacheEntry *entry) {
     UErrorCode status = U_ZERO_ERROR;
     SharedObject *result = create(adoptedLocId, status);
     entry->init(adoptedLocId, result, status);
@@ -100,14 +79,14 @@ UBool LRUCache::contains(const char *localeId) const {
 
 const SharedObject *LRUCache::_get(const char *localeId, UErrorCode &status) {
     // TODO (Travis Keep): Consider stripping irrelevant locale keywords.
-    CacheEntry2 *entry = (CacheEntry2 *) uhash_get(
+    LRUCache::CacheEntry *entry = (LRUCache::CacheEntry *) uhash_get(
             localeIdToEntries, localeId);
     if (entry == NULL) {
         // Its a cache miss.
 
         if (uhash_count(localeIdToEntries) < maxSize) {
             // Cache not full. There is room for a new entry.
-            entry = new CacheEntry2;
+            entry = new LRUCache::CacheEntry;
             if (entry == NULL) {
                 status = U_MEMORY_ALLOCATION_ERROR;
                 return NULL;
@@ -155,8 +134,8 @@ LRUCache::LRUCache(int32_t size, UErrorCode &status) :
     if (U_FAILURE(status)) {
         return;
     }
-    mostRecentlyUsedMarker = new CacheEntry2;
-    leastRecentlyUsedMarker = new CacheEntry2;
+    mostRecentlyUsedMarker = new LRUCache::CacheEntry;
+    leastRecentlyUsedMarker = new LRUCache::CacheEntry;
     if (mostRecentlyUsedMarker == NULL || leastRecentlyUsedMarker == NULL) {
         delete mostRecentlyUsedMarker;
         delete leastRecentlyUsedMarker;
@@ -181,8 +160,8 @@ LRUCache::LRUCache(int32_t size, UErrorCode &status) :
 
 LRUCache::~LRUCache() {
     uhash_close(localeIdToEntries);
-    for (CacheEntry2 *i = mostRecentlyUsedMarker; i != NULL;) {
-        CacheEntry2 *next = i->lessRecent;
+    for (LRUCache::CacheEntry *i = mostRecentlyUsedMarker; i != NULL;) {
+        LRUCache::CacheEntry *next = i->lessRecent;
         delete i;
         i = next;
     }
