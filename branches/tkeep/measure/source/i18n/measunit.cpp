@@ -10,6 +10,8 @@
 */
 #include "unicode/measunit.h"
 
+#define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
+
 U_NAMESPACE_BEGIN
 
 static const int32_t kAcceleration = 0;
@@ -20,7 +22,7 @@ static const int32_t kDuration = 1;
 static const UChar gDuration[] = {
         'd', 'u', 'r', 'a', 't', 'i', 'o', 'n', 0x0};
 
-static const UChar * const gTypes[] = {
+static const UChar *gTypes[] = {
     gAcceleration,
     gDuration
 };
@@ -29,7 +31,7 @@ static const int32_t kGforce = 0;
 static const UChar gGforce[] = {
         'g', '-', 'f', 'o', 'r', 'c', 'e', 0x0};
 
-static const UChar * const gAccelerationSubTypes[] = {
+static const UChar *gAccelerationSubTypes[] = {
         gGforce,
         NULL
 };
@@ -42,13 +44,13 @@ static const int32_t kYear = 1;
 static const UChar gYear[] = {
         'y', 'e', 'a', 'r', 0x0};
     
-static const UChar * const gDurationSubTypes[] = {
+static const UChar *gDurationSubTypes[] = {
         gMonth,
         gYear,
         NULL
 };
 
-static const UChar * const * const gSubTypes[] = {
+static const UChar * const *gSubTypes[] = {
         gAccelerationSubTypes,
         gDurationSubTypes
 };
@@ -88,7 +90,24 @@ int32_t MeasureUnit::getAvailable(
         int32_t destCapacity,
         MeasureUnit *dest,
         UErrorCode &errorCode) {
-    return 0;
+    if (U_FAILURE(errorCode)) {
+        return 0;
+    }
+    int32_t result = 0;
+    for (int32_t typeIdx = 0; typeIdx < LENGTHOF(gSubTypes); ++typeIdx) {
+        int32_t subTypeIdx = 0;
+        while (gSubTypes[typeIdx][subTypeIdx] != NULL) {
+            if (result < destCapacity) {
+                dest[result].fType.setTo(TRUE, gTypes[typeIdx], -1);
+                dest[result].fSubType.setTo(TRUE, gSubTypes[typeIdx][subTypeIdx], -1);
+            } else {
+                errorCode = U_BUFFER_OVERFLOW_ERROR;
+            }
+            ++result;
+            ++subTypeIdx;
+        }
+    }
+    return result;
 }
 
 int32_t MeasureUnit::getAvailable(

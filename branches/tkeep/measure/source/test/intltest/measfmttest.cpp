@@ -16,6 +16,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/measfmt.h"
+#include "unicode/measunit.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
 
@@ -40,6 +41,24 @@ void MeasureFormatTest::runIndexedTest(
 }
 
 void MeasureFormatTest::TestGetAvailable() {
+    MeasureUnit *units = NULL;
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t len = MeasureUnit::getAvailable(0, units, status);
+    while (status == U_BUFFER_OVERFLOW_ERROR) {
+        status = U_ZERO_ERROR;
+        delete [] units;
+        units = new MeasureUnit[len];
+        len = MeasureUnit::getAvailable(len, units, status);
+    }
+    if (U_FAILURE(status)) {
+        dataerrln("Failure creating format object - %s", u_errorName(status));
+        delete [] units;
+        return;
+    }
+    for (int i = 0; i < len; ++i) {
+      errln("Type: " + units[i].getType() + " Subtype: " + units[i].getSubtype());
+    }
+    delete [] units;
 }
 
 extern IntlTest *createMeasureFormatTest() {
