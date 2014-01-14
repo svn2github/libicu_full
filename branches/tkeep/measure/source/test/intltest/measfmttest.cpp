@@ -59,6 +59,46 @@ void MeasureFormatTest::TestGetAvailable() {
       errln("Type: %s Subtype: %s", units[i].getType(), units[i].getSubtype());
     }
     delete [] units;
+    const char **types = NULL;
+    int32_t typeCount = MeasureUnit::getAvailableTypes(0, types, status);
+    while (status == U_BUFFER_OVERFLOW_ERROR) {
+        status = U_ZERO_ERROR;
+        delete [] types;
+        types = new const char *[typeCount];
+        typeCount = MeasureUnit::getAvailableTypes(typeCount, types, status);
+    }
+    if (U_FAILURE(status)) {
+        dataerrln("Failure getting types - %s", u_errorName(status));
+        delete [] types;
+        return;
+    }
+    units = NULL;
+    int32_t unitCapacity = 0;
+    for (int i = 0; i < typeCount; ++i) {
+        errln("Type: %s", types[i]);
+        int32_t unitCount = MeasureUnit::getAvailable(types[i], unitCapacity, units, status);
+        while (status == U_BUFFER_OVERFLOW_ERROR) {
+            status = U_ZERO_ERROR;
+            delete [] units;
+            units = new MeasureUnit[unitCount];
+            unitCapacity = unitCount;
+            unitCount = MeasureUnit::getAvailable(types[i], unitCapacity, units, status);
+        }
+        if (U_FAILURE(status)) {
+            dataerrln("Failure getting units - %s", u_errorName(status));
+            delete [] units;
+            delete[] types;
+            return;
+        }
+        for (int j = 0; j < unitCount; ++j) {
+           errln("Type: %s Subtype: %s", units[j].getType(), units[j].getSubtype());
+        }
+    }
+    delete [] units;
+    delete[] types;
+    MeasureUnit *ptr = MeasureUnit::createArcminute(status);
+    errln("Type: %s Subtype: %s", ptr->getType(), ptr->getSubtype());
+    delete ptr;
 }
 
 extern IntlTest *createMeasureFormatTest() {

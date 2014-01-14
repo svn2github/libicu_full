@@ -48,7 +48,7 @@ static const int32_t gIndexes[] = {
     46
 };
 
-static const char *gTypes[] = {
+static const char * const gTypes[] = {
     "acceleration",
     "angle",
     "area",
@@ -63,7 +63,7 @@ static const char *gTypes[] = {
     "volume"
 };
 
-static const char *gSubTypes[] = {
+static const char * const gSubTypes[] = {
     "g-force",
     "arc-minute",
     "arc-second",
