@@ -56,7 +56,7 @@ void MeasureFormatTest::TestGetAvailable() {
         return;
     }
     for (int i = 0; i < len; ++i) {
-      errln("Type: " + units[i].getType() + " Subtype: " + units[i].getSubtype());
+      errln("Type: %s Subtype: %s", units[i].getType(), units[i].getSubtype());
     }
     delete [] units;
 }

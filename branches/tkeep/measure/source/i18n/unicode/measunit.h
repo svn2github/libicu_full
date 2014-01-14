@@ -35,14 +35,16 @@ class U_I18N_API MeasureUnit: public UObject {
      * Default constructor.
      * @stable ICU 3.0
      */
-    MeasureUnit();
-
+    MeasureUnit() : fTypeId(0), fSubTypeId(0) { 
+        fCurrency[0] = 0;
+    }
+    
     /**
      * Copy constructor.
      * @draft ICU 53
      */
     MeasureUnit(const MeasureUnit &other);
-
+        
     /**
      * Assignment operator.
      * @draft ICU 53.
@@ -73,17 +75,19 @@ class U_I18N_API MeasureUnit: public UObject {
      * Get the type.
      * @draft ICU 53
      */
-    const UnicodeString &getType() const {
-        return fType;
-    }
+    const char *getType() const;
 
     /**
      * Get the sub type.
      * @draft ICU 53
      */
-    const UnicodeString &getSubtype() const {
-        return fSubType;
-    }
+    const char *getSubtype() const;
+
+    /**
+     * Internal. ICU use only.
+     * @draft ICU 53
+     */
+    int32_t getIndex() const;
 
     /**
      * getAvailable gets all of the available units.
@@ -114,7 +118,7 @@ class U_I18N_API MeasureUnit: public UObject {
      * @draft ICU 53
      */
     static int32_t getAvailable(
-            const UnicodeString &type,
+            const char *type,
             int32_t destCapacity,
             MeasureUnit *dest,
             UErrorCode &errorCode);
@@ -125,53 +129,185 @@ class U_I18N_API MeasureUnit: public UObject {
      * error code is set to U_BUFFER_OVERFLOW_ERROR.
      *
      * @param dest destination buffer.
-     * @param destCapacity number of UnicodeString instances available at dest.
+     * @param destCapacity number of const char * instances available at dest.
      * @param errorCode ICU error code.
      * @return number of types.
      * @draft ICU 53
      */
     static int32_t getAvailableTypes(
             int32_t destCapacity,
-            UnicodeString *dest,
+            const char **dest,
             UErrorCode &errorCode);
 
     /**
-     * CreateGForce returns a MeasureUnit representing GForce.
-     * Caller owns returned value.
-     * @draft ICU 53.
+     * Internal. ICU use only.
+     * @draft ICU 53
      */
-    static MeasureUnit *createGForce(UErrorCode &status);
+    static int32_t getMaxIndex();
 
-    /**
-     * CreateGForce returns a MeasureUnit representing year.
-     * Caller owns returned value.
-     * @draft ICU 53.
-     */
+    /** Constant for unit of acceleration: g-force */
+    static MeasureUnit *createGforce(UErrorCode &status);
+
+    /** Constant for unit of angle: arc-minute */
+    static MeasureUnit *createArcminute(UErrorCode &status);
+
+    /** Constant for unit of angle: arc-second */
+    static MeasureUnit *createArcsecond(UErrorCode &status);
+
+    /** Constant for unit of angle: degree */
+    static MeasureUnit *createDegree(UErrorCode &status);
+
+    /** Constant for unit of area: acre */
+    static MeasureUnit *createAcre(UErrorCode &status);
+
+    /** Constant for unit of area: hectare */
+    static MeasureUnit *createHectare(UErrorCode &status);
+
+    /** Constant for unit of area: square-foot */
+    static MeasureUnit *createSquarefoot(UErrorCode &status);
+
+    /** Constant for unit of area: square-kilometer */
+    static MeasureUnit *createSquarekilometer(UErrorCode &status);
+
+    /** Constant for unit of area: square-meter */
+    static MeasureUnit *createSquaremeter(UErrorCode &status);
+
+    /** Constant for unit of area: square-mile */
+    static MeasureUnit *createSquaremile(UErrorCode &status);
+
+    /** Constant for unit of duration: day */
+    static MeasureUnit *createDay(UErrorCode &status);
+
+    /** Constant for unit of duration: hour */
+    static MeasureUnit *createHour(UErrorCode &status);
+
+    /** Constant for unit of duration: millisecond */
+    static MeasureUnit *createMillisecond(UErrorCode &status);
+
+    /** Constant for unit of duration: minute */
+    static MeasureUnit *createMinute(UErrorCode &status);
+
+    /** Constant for unit of duration: month */
+    static MeasureUnit *createMonth(UErrorCode &status);
+
+    /** Constant for unit of duration: second */
+    static MeasureUnit *createSecond(UErrorCode &status);
+
+    /** Constant for unit of duration: week */
+    static MeasureUnit *createWeek(UErrorCode &status);
+
+    /** Constant for unit of duration: year */
     static MeasureUnit *createYear(UErrorCode &status);
 
-    /**
-     * For ICU use only.
-     * @internal ICU 53
-     */
-    MeasureUnit(const UnicodeString &type, const UnicodeString &subType);
+    /** Constant for unit of length: centimeter */
+    static MeasureUnit *createCentimeter(UErrorCode &status);
+
+    /** Constant for unit of length: foot */
+    static MeasureUnit *createFoot(UErrorCode &status);
+
+    /** Constant for unit of length: inch */
+    static MeasureUnit *createInch(UErrorCode &status);
+
+    /** Constant for unit of length: kilometer */
+    static MeasureUnit *createKilometer(UErrorCode &status);
+
+    /** Constant for unit of length: light-year */
+    static MeasureUnit *createLightyear(UErrorCode &status);
+
+    /** Constant for unit of length: meter */
+    static MeasureUnit *createMeter(UErrorCode &status);
+
+    /** Constant for unit of length: mile */
+    static MeasureUnit *createMile(UErrorCode &status);
+
+    /** Constant for unit of length: millimeter */
+    static MeasureUnit *createMillimeter(UErrorCode &status);
+
+    /** Constant for unit of length: picometer */
+    static MeasureUnit *createPicometer(UErrorCode &status);
+
+    /** Constant for unit of length: yard */
+    static MeasureUnit *createYard(UErrorCode &status);
+
+    /** Constant for unit of mass: gram */
+    static MeasureUnit *createGram(UErrorCode &status);
+
+    /** Constant for unit of mass: kilogram */
+    static MeasureUnit *createKilogram(UErrorCode &status);
+
+    /** Constant for unit of mass: ounce */
+    static MeasureUnit *createOunce(UErrorCode &status);
+
+    /** Constant for unit of mass: pound */
+    static MeasureUnit *createPound(UErrorCode &status);
+
+    /** Constant for unit of power: horsepower */
+    static MeasureUnit *createHorsepower(UErrorCode &status);
+
+    /** Constant for unit of power: kilowatt */
+    static MeasureUnit *createKilowatt(UErrorCode &status);
+
+    /** Constant for unit of power: watt */
+    static MeasureUnit *createWatt(UErrorCode &status);
+
+    /** Constant for unit of pressure: hectopascal */
+    static MeasureUnit *createHectopascal(UErrorCode &status);
+
+    /** Constant for unit of pressure: inch-hg */
+    static MeasureUnit *createInchhg(UErrorCode &status);
+
+    /** Constant for unit of pressure: millibar */
+    static MeasureUnit *createMillibar(UErrorCode &status);
+
+    /** Constant for unit of speed: kilometer-per-hour */
+    static MeasureUnit *createKilometerperhour(UErrorCode &status);
+
+    /** Constant for unit of speed: meter-per-second */
+    static MeasureUnit *createMeterpersecond(UErrorCode &status);
+
+    /** Constant for unit of speed: mile-per-hour */
+    static MeasureUnit *createMileperhour(UErrorCode &status);
+
+    /** Constant for unit of temperature: celsius */
+    static MeasureUnit *createCelsius(UErrorCode &status);
+
+    /** Constant for unit of temperature: fahrenheit */
+    static MeasureUnit *createFahrenheit(UErrorCode &status);
+
+    /** Constant for unit of volume: cubic-kilometer */
+    static MeasureUnit *createCubickilometer(UErrorCode &status);
+
+    /** Constant for unit of volume: cubic-mile */
+    static MeasureUnit *createCubicmile(UErrorCode &status);
+
+    /** Constant for unit of volume: liter */
+    static MeasureUnit *createLiter(UErrorCode &status);
 
  protected:
-    /**
-     * For ICU use only.
-     * @internal ICU 53
-     */
-    MeasureUnit(int32_t typeId, int32_t subTypeId);
 
     /**
      * For ICU use only.
      * @internal ICU 53
      */
-    MeasureUnit(int32_t typeId, const UnicodeString &subType);
+    void initTime(const char *timeId);
 
+    /**
+     * For ICU use only.
+     * @internal ICU 53
+     */
+    void initCurrency(const char *isoCurrency);
 private:
-    UnicodeString fType;
-    UnicodeString fSubType;
-    static MeasureUnit *create(int32_t typeId, int32_t subTypeId, UErrorCode &status);
+    int32_t fTypeId;
+    int32_t fSubTypeId;
+    char fCurrency[4];
+
+    MeasureUnit(int32_t typeId, int32_t subTypeId) : fTypeId(typeId), fSubTypeId(subTypeId) {
+        fCurrency[0] = 0;
+    }
+    void setTo(int32_t typeId, int32_t subTypeId);
+    int32_t getOffset() const;
+    static MeasureUnit *create(int typeId, int subTypeId, UErrorCode &status);
+
 };
 
 U_NAMESPACE_END
