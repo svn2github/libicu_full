@@ -72,6 +72,15 @@ class U_I18N_API MeasureUnit: public UObject {
     virtual UBool operator==(const UObject& other) const;
 
     /**
+     * Inequality operator.  Return true if this object is not equal
+     * to the given object.
+     * @draft ICU 53
+     */
+    UBool operator!=(const UObject& other) const {
+        return !(*this == other);
+    }
+
+    /**
      * Get the type.
      * @draft ICU 53
      */

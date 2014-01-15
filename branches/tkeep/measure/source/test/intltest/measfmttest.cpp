@@ -27,6 +27,7 @@ public:
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
+    void TestBasic();
     void TestGetAvailable();
 };
 
@@ -36,8 +37,42 @@ void MeasureFormatTest::runIndexedTest(
         logln("TestSuite MeasureFormatTest: ");
     }
     TESTCASE_AUTO_BEGIN;
+    TESTCASE_AUTO(TestBasic);
     TESTCASE_AUTO(TestGetAvailable);
     TESTCASE_AUTO_END;
+}
+
+void MeasureFormatTest::TestBasic() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureUnit *ptr1 = MeasureUnit::createArcminute(status);
+    MeasureUnit *ptr2 = MeasureUnit::createArcminute(status);
+    if (!(*ptr1 == *ptr2)) {
+        errln("Expect == to work.");
+    }
+    if (*ptr1 != *ptr2) {
+        errln("Expect != to work.");
+    }
+    MeasureUnit *ptr3 = MeasureUnit::createMeter(status);
+    if (*ptr1 == *ptr3) {
+        errln("Expect == to work.");
+    }
+    if (!(*ptr1 != *ptr3)) {
+        errln("Expect != to work.");
+    }
+    MeasureUnit *ptr4 = (MeasureUnit *) ptr1->clone();
+    if (*ptr1 != *ptr4) {
+        errln("Expect clone to work.");
+    }
+    MeasureUnit stack;
+    stack = *ptr1;
+    if (*ptr1 != stack) {
+        errln("Expect assignment to work.");
+    }
+
+    delete ptr1;
+    delete ptr2;
+    delete ptr3;
+    delete ptr4;
 }
 
 void MeasureFormatTest::TestGetAvailable() {
@@ -91,7 +126,7 @@ void MeasureFormatTest::TestGetAvailable() {
             return;
         }
         for (int j = 0; j < unitCount; ++j) {
-           errln("Type: %s Subtype: %s", units[j].getType(), units[j].getSubtype());
+           errln("Type: %s Subtype: %s index: %d", units[j].getType(), units[j].getSubtype(), units[j].getIndex());
         }
     }
     delete [] units;
