@@ -70,13 +70,6 @@ class U_I18N_API CurrencyUnit: public MeasureUnit {
     virtual ~CurrencyUnit();
 
     /**
-     * Equality operator.  Return true if this object is equal
-     * to the given object.
-     * @stable ICU 3.0
-     */
-    UBool operator==(const UObject& other) const;
-
-    /**
      * Returns a unique class ID for this object POLYMORPHICALLY.
      * This method implements a simple form of RTTI used by ICU.
      * @return The class ID for this object. All objects of a given

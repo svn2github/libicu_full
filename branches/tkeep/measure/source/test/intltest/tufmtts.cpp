@@ -138,21 +138,28 @@ void TimeUnitTest::testAPI() {
 
     TimeUnit::UTimeUnitFields field = tmunit_m->getTimeUnitField();
     assertTrue("field of month time unit is month", (field == TimeUnit::UTIMEUNIT_MONTH));
-    TimeUnit **ptrs = new TimeUnit *[TimeUnit::UTIMEUNIT_FIELD_COUNT];
-    // Make sure createInstance works for all UTimeUnits.
+
+    //===== Interropability with MeasureUnit ======
+    MeasureUnit **ptrs = new MeasureUnit *[TimeUnit::UTIMEUNIT_FIELD_COUNT];
+
+    ptrs[TimeUnit::UTIMEUNIT_YEAR] = MeasureUnit::createYear(status);
+    ptrs[TimeUnit::UTIMEUNIT_MONTH] = MeasureUnit::createMonth(status);
+    ptrs[TimeUnit::UTIMEUNIT_DAY] = MeasureUnit::createDay(status);
+    ptrs[TimeUnit::UTIMEUNIT_WEEK] = MeasureUnit::createWeek(status);
+    ptrs[TimeUnit::UTIMEUNIT_HOUR] = MeasureUnit::createHour(status);
+    ptrs[TimeUnit::UTIMEUNIT_MINUTE] = MeasureUnit::createMinute(status);
+    ptrs[TimeUnit::UTIMEUNIT_SECOND] = MeasureUnit::createSecond(status);
+    if (!assertSuccess("TimeUnit::createInstance", status)) return;
+
     for (TimeUnit::UTimeUnitFields j = TimeUnit::UTIMEUNIT_YEAR; 
             j < TimeUnit::UTIMEUNIT_FIELD_COUNT; 
             j = (TimeUnit::UTimeUnitFields)(j+1)) {
-        ptrs[j] = TimeUnit::createInstance(j, status);
-    }
-    for (int i = 0; i < TimeUnit::UTIMEUNIT_FIELD_COUNT; ++i) {
-        for (int j = 0; j < TimeUnit::UTIMEUNIT_FIELD_COUNT; ++j) {
-            if (i == j) {
-                assertTrue("Equal time indexes are equal", *ptrs[i] == *ptrs[j]);
-            } else {
-                assertTrue("different time indexes are not equal", *ptrs[i] != *ptrs[j]);
-            }
-        }
+        MeasureUnit *ptr = TimeUnit::createInstance(j, status);
+        if (!assertSuccess("TimeUnit::createInstance", status)) return;
+        assertTrue(
+                "Time unit should be equal to corresponding MeasureUnit",
+                *ptr == *ptrs[j]);
+        delete ptr;
     }
     delete tmunit;
     delete another;
@@ -162,13 +169,6 @@ void TimeUnitTest::testAPI() {
     }
     delete [] ptrs;
 
-    // Make sure TimeUnit interroperates with MeasureUnit.
-    MeasureUnit *dayUnit1 = MeasureUnit::createDay(status);
-    MeasureUnit *dayUnit2 = TimeUnit::createInstance(TimeUnit::UTIMEUNIT_DAY, status);
-    assertTrue("MeasureUnit interropability works.", *dayUnit1 == *dayUnit2);
-    delete dayUnit1;
-    delete dayUnit2;
-    
     //
     //================= TimeUnitAmount =================
 
