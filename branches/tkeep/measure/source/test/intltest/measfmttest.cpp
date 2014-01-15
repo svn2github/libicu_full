@@ -78,20 +78,20 @@ void MeasureFormatTest::TestBasic() {
 void MeasureFormatTest::TestGetAvailable() {
     MeasureUnit *units = NULL;
     UErrorCode status = U_ZERO_ERROR;
-    int32_t len = MeasureUnit::getAvailable(0, units, status);
+    int32_t totalCount = MeasureUnit::getAvailable(0, units, status);
     while (status == U_BUFFER_OVERFLOW_ERROR) {
         status = U_ZERO_ERROR;
         delete [] units;
-        units = new MeasureUnit[len];
-        len = MeasureUnit::getAvailable(len, units, status);
+        units = new MeasureUnit[totalCount];
+        totalCount = MeasureUnit::getAvailable(totalCount, units, status);
     }
     if (U_FAILURE(status)) {
         dataerrln("Failure creating format object - %s", u_errorName(status));
         delete [] units;
         return;
     }
-    for (int i = 0; i < len; ++i) {
-      errln("Type: %s Subtype: %s", units[i].getType(), units[i].getSubtype());
+    if (totalCount < 200) {
+        errln("Expect at least 200 measure units including currencies.");
     }
     delete [] units;
     const char **types = NULL;
@@ -107,10 +107,13 @@ void MeasureFormatTest::TestGetAvailable() {
         delete [] types;
         return;
     }
+    if (typeCount < 10) {
+        errln("Expect at least 10 distinct unit types.");
+    }
     units = NULL;
     int32_t unitCapacity = 0;
+    int32_t unitCountSum = 0;
     for (int i = 0; i < typeCount; ++i) {
-        errln("Type: %s", types[i]);
         int32_t unitCount = MeasureUnit::getAvailable(types[i], unitCapacity, units, status);
         while (status == U_BUFFER_OVERFLOW_ERROR) {
             status = U_ZERO_ERROR;
@@ -125,15 +128,16 @@ void MeasureFormatTest::TestGetAvailable() {
             delete[] types;
             return;
         }
-        for (int j = 0; j < unitCount; ++j) {
-           errln("Type: %s Subtype: %s index: %d", units[j].getType(), units[j].getSubtype(), units[j].getIndex());
+        if (unitCount < 1) {
+            errln("Expect at least one unit count per type.");
         }
+        unitCountSum += unitCount;
+    }
+    if (unitCountSum != totalCount) {
+        errln("Expected total unit count to equal sum of unit counts by type.");
     }
     delete [] units;
     delete[] types;
-    MeasureUnit *ptr = MeasureUnit::createArcminute(status);
-    errln("Type: %s Subtype: %s", ptr->getType(), ptr->getSubtype());
-    delete ptr;
 }
 
 extern IntlTest *createMeasureFormatTest() {
