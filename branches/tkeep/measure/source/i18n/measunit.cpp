@@ -9,6 +9,7 @@
 **********************************************************************
 */
 #include "unicode/measunit.h"
+#include "unicode/strenum.h"
 #include "cstring.h"
 #include "uassert.h"
 
@@ -372,15 +373,15 @@ static const char * const gSubTypes[] = {
     "liter"
 };
 
-MeasureUnit *MeasureUnit::createGforce(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createGForce(UErrorCode &status) {
     return MeasureUnit::create(0, 0, status);
 }
 
-MeasureUnit *MeasureUnit::createArcminute(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createArcMinute(UErrorCode &status) {
     return MeasureUnit::create(1, 0, status);
 }
 
-MeasureUnit *MeasureUnit::createArcsecond(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createArcSecond(UErrorCode &status) {
     return MeasureUnit::create(1, 1, status);
 }
 
@@ -396,19 +397,19 @@ MeasureUnit *MeasureUnit::createHectare(UErrorCode &status) {
     return MeasureUnit::create(2, 1, status);
 }
 
-MeasureUnit *MeasureUnit::createSquarefoot(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createSquareFoot(UErrorCode &status) {
     return MeasureUnit::create(2, 2, status);
 }
 
-MeasureUnit *MeasureUnit::createSquarekilometer(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createSquareKilometer(UErrorCode &status) {
     return MeasureUnit::create(2, 3, status);
 }
 
-MeasureUnit *MeasureUnit::createSquaremeter(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createSquareMeter(UErrorCode &status) {
     return MeasureUnit::create(2, 4, status);
 }
 
-MeasureUnit *MeasureUnit::createSquaremile(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createSquareMile(UErrorCode &status) {
     return MeasureUnit::create(2, 5, status);
 }
 
@@ -460,7 +461,7 @@ MeasureUnit *MeasureUnit::createKilometer(UErrorCode &status) {
     return MeasureUnit::create(5, 3, status);
 }
 
-MeasureUnit *MeasureUnit::createLightyear(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createLightYear(UErrorCode &status) {
     return MeasureUnit::create(5, 4, status);
 }
 
@@ -516,7 +517,7 @@ MeasureUnit *MeasureUnit::createHectopascal(UErrorCode &status) {
     return MeasureUnit::create(8, 0, status);
 }
 
-MeasureUnit *MeasureUnit::createInchhg(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createInchHg(UErrorCode &status) {
     return MeasureUnit::create(8, 1, status);
 }
 
@@ -524,15 +525,15 @@ MeasureUnit *MeasureUnit::createMillibar(UErrorCode &status) {
     return MeasureUnit::create(8, 2, status);
 }
 
-MeasureUnit *MeasureUnit::createKilometerperhour(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createKilometerPerHour(UErrorCode &status) {
     return MeasureUnit::create(9, 0, status);
 }
 
-MeasureUnit *MeasureUnit::createMeterpersecond(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createMeterPerSecond(UErrorCode &status) {
     return MeasureUnit::create(9, 1, status);
 }
 
-MeasureUnit *MeasureUnit::createMileperhour(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createMilePerHour(UErrorCode &status) {
     return MeasureUnit::create(9, 2, status);
 }
 
@@ -544,11 +545,11 @@ MeasureUnit *MeasureUnit::createFahrenheit(UErrorCode &status) {
     return MeasureUnit::create(10, 1, status);
 }
 
-MeasureUnit *MeasureUnit::createCubickilometer(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createCubicKilometer(UErrorCode &status) {
     return MeasureUnit::create(11, 0, status);
 }
 
-MeasureUnit *MeasureUnit::createCubicmile(UErrorCode &status) {
+MeasureUnit *MeasureUnit::createCubicMile(UErrorCode &status) {
     return MeasureUnit::create(11, 1, status);
 }
 
@@ -619,8 +620,8 @@ int32_t MeasureUnit::getIndex() const {
 }
 
 int32_t MeasureUnit::getAvailable(
-        int32_t destCapacity,
         MeasureUnit *dest,
+        int32_t destCapacity,
         UErrorCode &errorCode) {
     if (U_FAILURE(errorCode)) {
         return 0;
@@ -643,8 +644,8 @@ int32_t MeasureUnit::getAvailable(
 
 int32_t MeasureUnit::getAvailable(
         const char *type,
-        int32_t destCapacity,
         MeasureUnit *dest,
+        int32_t destCapacity,
         UErrorCode &errorCode) {
     if (U_FAILURE(errorCode)) {
         return 0;
@@ -664,21 +665,61 @@ int32_t MeasureUnit::getAvailable(
     return len;
 }
 
-int32_t MeasureUnit::getAvailableTypes(
-        int32_t destCapacity,
-        const char **dest,
-        UErrorCode &errorCode) {
+class MeasureUnitTypeEnumeration : public StringEnumeration {
+    public:
+        MeasureUnitTypeEnumeration(
+                const char * const *types, int32_t typeLen, int32_t index);
+        virtual StringEnumeration *clone() const;
+        virtual const char* next(int32_t *resultLength, UErrorCode& status);
+        virtual void reset(UErrorCode &status);
+        virtual int32_t count(UErrorCode& status) const;
+        virtual ~MeasureUnitTypeEnumeration();
+    private:
+        const char * const *fTypes;
+        int32_t fTypeLen;
+        int32_t fIndex;
+};
+
+MeasureUnitTypeEnumeration::MeasureUnitTypeEnumeration(
+        const char * const *types, int32_t typeLen, int32_t index)
+        : fTypes(types), fTypeLen(typeLen), fIndex(index) {
+}
+
+StringEnumeration *MeasureUnitTypeEnumeration::clone() const {
+    return new MeasureUnitTypeEnumeration(fTypes, fTypeLen, fIndex);
+}
+
+const char *MeasureUnitTypeEnumeration::next(
+        int32_t *resultLength, UErrorCode& status) {
+    if (U_FAILURE(status) || fIndex == fTypeLen) {
+        return NULL;
+    }
+    const char *result = fTypes[fIndex];
+    if (resultLength != NULL) {
+        *resultLength = uprv_strlen(result);
+    }
+    ++fIndex;
+    return result;
+}
+
+void MeasureUnitTypeEnumeration::reset(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    fIndex = 0;
+}
+
+int32_t MeasureUnitTypeEnumeration::count(UErrorCode &/*status*/) const {
+    return fTypeLen;
+}
+
+MeasureUnitTypeEnumeration::~MeasureUnitTypeEnumeration() { }
+
+StringEnumeration* MeasureUnit::getAvailableTypes(UErrorCode &errorCode) {
     if (U_FAILURE(errorCode)) {
-        return 0;
+        return NULL;
     }
-    if (destCapacity < LENGTHOF(gTypes)) {
-        errorCode = U_BUFFER_OVERFLOW_ERROR;
-        return LENGTHOF(gTypes);
-    }
-    for (int typeIdx = 0; typeIdx < LENGTHOF(gTypes); ++typeIdx) {
-        dest[typeIdx] = gTypes[typeIdx];
-    }
-    return LENGTHOF(gTypes);
+    return new MeasureUnitTypeEnumeration(gTypes, LENGTHOF(gTypes), 0);
 }
 
 int32_t MeasureUnit::getMaxIndex() {

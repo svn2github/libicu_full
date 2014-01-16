@@ -31,11 +31,15 @@
  */
 enum UMeasureFormatWidth {
     /** @draft ICU 53 */
-    UMEASFMT_WIDE_WIDTH,
+    UMEASFMT_WIDTH_WIDE,
     /** @draft ICU 53 */
-    UMEASFMT_SHORT_WIDTH,
+    UMEASFMT_WIDTH_SHORT,
     /** @draft ICU 53 */
-    UMEASFMT_NARROW_WIDTH
+    UMEASFMT_WIDTH_NARROW,
+    /** @draft ICU 53 */
+    UMEASFMT_WIDTH_NUMERIC,
+    /** @draft ICU 53 */
+    UMEASFMT_WIDTH_COUNT
 };
 /** @draft ICU 53 */
 typedef enum UMeasureFormatWidth UMeasureFormatWidth; 

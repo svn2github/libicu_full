@@ -44,8 +44,8 @@ void MeasureFormatTest::runIndexedTest(
 
 void MeasureFormatTest::TestBasic() {
     UErrorCode status = U_ZERO_ERROR;
-    MeasureUnit *ptr1 = MeasureUnit::createArcminute(status);
-    MeasureUnit *ptr2 = MeasureUnit::createArcminute(status);
+    MeasureUnit *ptr1 = MeasureUnit::createArcMinute(status);
+    MeasureUnit *ptr2 = MeasureUnit::createArcMinute(status);
     if (!(*ptr1 == *ptr2)) {
         errln("Expect == to work.");
     }
@@ -78,12 +78,12 @@ void MeasureFormatTest::TestBasic() {
 void MeasureFormatTest::TestGetAvailable() {
     MeasureUnit *units = NULL;
     UErrorCode status = U_ZERO_ERROR;
-    int32_t totalCount = MeasureUnit::getAvailable(0, units, status);
+    int32_t totalCount = MeasureUnit::getAvailable(units, 0, status);
     while (status == U_BUFFER_OVERFLOW_ERROR) {
         status = U_ZERO_ERROR;
         delete [] units;
         units = new MeasureUnit[totalCount];
-        totalCount = MeasureUnit::getAvailable(totalCount, units, status);
+        totalCount = MeasureUnit::getAvailable(units, totalCount, status);
     }
     if (U_FAILURE(status)) {
         dataerrln("Failure creating format object - %s", u_errorName(status));
@@ -94,38 +94,34 @@ void MeasureFormatTest::TestGetAvailable() {
         errln("Expect at least 200 measure units including currencies.");
     }
     delete [] units;
-    const char **types = NULL;
-    int32_t typeCount = MeasureUnit::getAvailableTypes(0, types, status);
-    while (status == U_BUFFER_OVERFLOW_ERROR) {
-        status = U_ZERO_ERROR;
-        delete [] types;
-        types = new const char *[typeCount];
-        typeCount = MeasureUnit::getAvailableTypes(typeCount, types, status);
-    }
+    StringEnumeration *types = MeasureUnit::getAvailableTypes(status);
     if (U_FAILURE(status)) {
         dataerrln("Failure getting types - %s", u_errorName(status));
-        delete [] types;
+        delete types;
         return;
     }
-    if (typeCount < 10) {
+    if (types->count(status) < 10) {
         errln("Expect at least 10 distinct unit types.");
     }
     units = NULL;
     int32_t unitCapacity = 0;
     int32_t unitCountSum = 0;
-    for (int i = 0; i < typeCount; ++i) {
-        int32_t unitCount = MeasureUnit::getAvailable(types[i], unitCapacity, units, status);
+    for (
+            const char* type = types->next(NULL, status);
+            type != NULL;
+            type = types->next(NULL, status)) {
+        int32_t unitCount = MeasureUnit::getAvailable(type, units, unitCapacity, status);
         while (status == U_BUFFER_OVERFLOW_ERROR) {
             status = U_ZERO_ERROR;
             delete [] units;
             units = new MeasureUnit[unitCount];
             unitCapacity = unitCount;
-            unitCount = MeasureUnit::getAvailable(types[i], unitCapacity, units, status);
+            unitCount = MeasureUnit::getAvailable(type, units, unitCapacity, status);
         }
         if (U_FAILURE(status)) {
             dataerrln("Failure getting units - %s", u_errorName(status));
             delete [] units;
-            delete[] types;
+            delete types;
             return;
         }
         if (unitCount < 1) {
@@ -137,7 +133,7 @@ void MeasureFormatTest::TestGetAvailable() {
         errln("Expected total unit count to equal sum of unit counts by type.");
     }
     delete [] units;
-    delete[] types;
+    delete types;
 }
 
 extern IntlTest *createMeasureFormatTest() {

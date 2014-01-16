@@ -21,6 +21,8 @@
  
 U_NAMESPACE_BEGIN
 
+class StringEnumeration;
+
 /**
  * A unit such as length, mass, volume, currency, etc.  A unit is
  * coupled with a numeric amount to produce a Measure.
@@ -103,15 +105,15 @@ class U_I18N_API MeasureUnit: public UObject {
      * If there are too many units to fit into destCapacity then the
      * error code is set to U_BUFFER_OVERFLOW_ERROR.
      *
+     * @param destArray destination buffer.
      * @param destCapacity number of MeasureUnit instances available at dest.
-     * @param dest destination buffer.
      * @param errorCode ICU error code.
      * @return number of available units.
      * @draft ICU 53
      */
     static int32_t getAvailable(
+            MeasureUnit *destArray,
             int32_t destCapacity,
-            MeasureUnit *dest,
             UErrorCode &errorCode);
 
     /**
@@ -120,33 +122,26 @@ class U_I18N_API MeasureUnit: public UObject {
      * error code is set to U_BUFFER_OVERFLOW_ERROR.
      *
      * @param type the type
+     * @param destArray destination buffer.
      * @param destCapacity number of MeasureUnit instances available at dest.
-     * @param dest destination buffer.
      * @param errorCode ICU error code.
      * @return number of available units for type.
      * @draft ICU 53
      */
     static int32_t getAvailable(
             const char *type,
+            MeasureUnit *destArray,
             int32_t destCapacity,
-            MeasureUnit *dest,
             UErrorCode &errorCode);
 
     /**
      * getAvailableTypes gets all of the available types.
-     * If there are too many types to fit into destCapacity then the
-     * error code is set to U_BUFFER_OVERFLOW_ERROR.
      *
-     * @param dest destination buffer.
-     * @param destCapacity number of const char * instances available at dest.
      * @param errorCode ICU error code.
-     * @return number of types.
+     * @return the types.
      * @draft ICU 53
      */
-    static int32_t getAvailableTypes(
-            int32_t destCapacity,
-            const char **dest,
-            UErrorCode &errorCode);
+    static StringEnumeration* getAvailableTypes(UErrorCode &errorCode);
 
     /**
      * Internal. ICU use only.
@@ -155,13 +150,13 @@ class U_I18N_API MeasureUnit: public UObject {
     static int32_t getMaxIndex();
 
     /** Constant for unit of acceleration: g-force */
-    static MeasureUnit *createGforce(UErrorCode &status);
+    static MeasureUnit *createGForce(UErrorCode &status);
 
     /** Constant for unit of angle: arc-minute */
-    static MeasureUnit *createArcminute(UErrorCode &status);
+    static MeasureUnit *createArcMinute(UErrorCode &status);
 
     /** Constant for unit of angle: arc-second */
-    static MeasureUnit *createArcsecond(UErrorCode &status);
+    static MeasureUnit *createArcSecond(UErrorCode &status);
 
     /** Constant for unit of angle: degree */
     static MeasureUnit *createDegree(UErrorCode &status);
@@ -173,16 +168,16 @@ class U_I18N_API MeasureUnit: public UObject {
     static MeasureUnit *createHectare(UErrorCode &status);
 
     /** Constant for unit of area: square-foot */
-    static MeasureUnit *createSquarefoot(UErrorCode &status);
+    static MeasureUnit *createSquareFoot(UErrorCode &status);
 
     /** Constant for unit of area: square-kilometer */
-    static MeasureUnit *createSquarekilometer(UErrorCode &status);
+    static MeasureUnit *createSquareKilometer(UErrorCode &status);
 
     /** Constant for unit of area: square-meter */
-    static MeasureUnit *createSquaremeter(UErrorCode &status);
+    static MeasureUnit *createSquareMeter(UErrorCode &status);
 
     /** Constant for unit of area: square-mile */
-    static MeasureUnit *createSquaremile(UErrorCode &status);
+    static MeasureUnit *createSquareMile(UErrorCode &status);
 
     /** Constant for unit of duration: day */
     static MeasureUnit *createDay(UErrorCode &status);
@@ -221,7 +216,7 @@ class U_I18N_API MeasureUnit: public UObject {
     static MeasureUnit *createKilometer(UErrorCode &status);
 
     /** Constant for unit of length: light-year */
-    static MeasureUnit *createLightyear(UErrorCode &status);
+    static MeasureUnit *createLightYear(UErrorCode &status);
 
     /** Constant for unit of length: meter */
     static MeasureUnit *createMeter(UErrorCode &status);
@@ -263,19 +258,19 @@ class U_I18N_API MeasureUnit: public UObject {
     static MeasureUnit *createHectopascal(UErrorCode &status);
 
     /** Constant for unit of pressure: inch-hg */
-    static MeasureUnit *createInchhg(UErrorCode &status);
+    static MeasureUnit *createInchHg(UErrorCode &status);
 
     /** Constant for unit of pressure: millibar */
     static MeasureUnit *createMillibar(UErrorCode &status);
 
     /** Constant for unit of speed: kilometer-per-hour */
-    static MeasureUnit *createKilometerperhour(UErrorCode &status);
+    static MeasureUnit *createKilometerPerHour(UErrorCode &status);
 
     /** Constant for unit of speed: meter-per-second */
-    static MeasureUnit *createMeterpersecond(UErrorCode &status);
+    static MeasureUnit *createMeterPerSecond(UErrorCode &status);
 
     /** Constant for unit of speed: mile-per-hour */
-    static MeasureUnit *createMileperhour(UErrorCode &status);
+    static MeasureUnit *createMilePerHour(UErrorCode &status);
 
     /** Constant for unit of temperature: celsius */
     static MeasureUnit *createCelsius(UErrorCode &status);
@@ -284,10 +279,10 @@ class U_I18N_API MeasureUnit: public UObject {
     static MeasureUnit *createFahrenheit(UErrorCode &status);
 
     /** Constant for unit of volume: cubic-kilometer */
-    static MeasureUnit *createCubickilometer(UErrorCode &status);
+    static MeasureUnit *createCubicKilometer(UErrorCode &status);
 
     /** Constant for unit of volume: cubic-mile */
-    static MeasureUnit *createCubicmile(UErrorCode &status);
+    static MeasureUnit *createCubicMile(UErrorCode &status);
 
     /** Constant for unit of volume: liter */
     static MeasureUnit *createLiter(UErrorCode &status);
@@ -316,7 +311,6 @@ private:
     void setTo(int32_t typeId, int32_t subTypeId);
     int32_t getOffset() const;
     static MeasureUnit *create(int typeId, int subTypeId, UErrorCode &status);
-
 };
 
 U_NAMESPACE_END
