@@ -9,7 +9,8 @@
 **********************************************************************
 */
 #include "unicode/measunit.h"
-#include "unicode/strenum.h"
+#include "unicode/uenum.h"
+#include "ustrenum.h"
 #include "cstring.h"
 #include "uassert.h"
 
@@ -665,61 +666,20 @@ int32_t MeasureUnit::getAvailable(
     return len;
 }
 
-class MeasureUnitTypeEnumeration : public StringEnumeration {
-    public:
-        MeasureUnitTypeEnumeration(
-                const char * const *types, int32_t typeLen, int32_t index);
-        virtual StringEnumeration *clone() const;
-        virtual const char* next(int32_t *resultLength, UErrorCode& status);
-        virtual void reset(UErrorCode &status);
-        virtual int32_t count(UErrorCode& status) const;
-        virtual ~MeasureUnitTypeEnumeration();
-    private:
-        const char * const *fTypes;
-        int32_t fTypeLen;
-        int32_t fIndex;
-};
-
-MeasureUnitTypeEnumeration::MeasureUnitTypeEnumeration(
-        const char * const *types, int32_t typeLen, int32_t index)
-        : fTypes(types), fTypeLen(typeLen), fIndex(index) {
-}
-
-StringEnumeration *MeasureUnitTypeEnumeration::clone() const {
-    return new MeasureUnitTypeEnumeration(fTypes, fTypeLen, fIndex);
-}
-
-const char *MeasureUnitTypeEnumeration::next(
-        int32_t *resultLength, UErrorCode& status) {
-    if (U_FAILURE(status) || fIndex == fTypeLen) {
-        return NULL;
-    }
-    const char *result = fTypes[fIndex];
-    if (resultLength != NULL) {
-        *resultLength = uprv_strlen(result);
-    }
-    ++fIndex;
-    return result;
-}
-
-void MeasureUnitTypeEnumeration::reset(UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return;
-    }
-    fIndex = 0;
-}
-
-int32_t MeasureUnitTypeEnumeration::count(UErrorCode &/*status*/) const {
-    return fTypeLen;
-}
-
-MeasureUnitTypeEnumeration::~MeasureUnitTypeEnumeration() { }
-
 StringEnumeration* MeasureUnit::getAvailableTypes(UErrorCode &errorCode) {
+    UEnumeration *uenum = uenum_openCharStringsEnumeration(
+            gTypes, LENGTHOF(gTypes), &errorCode);
     if (U_FAILURE(errorCode)) {
+        uenum_close(uenum);
         return NULL;
     }
-    return new MeasureUnitTypeEnumeration(gTypes, LENGTHOF(gTypes), 0);
+    StringEnumeration *result = new UStringEnumeration(uenum);
+    if (result == NULL) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        uenum_close(uenum);
+        return NULL;
+    }
+    return result;
 }
 
 int32_t MeasureUnit::getMaxIndex() {
