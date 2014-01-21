@@ -70,7 +70,7 @@ void MeasureFormat::parseObject(
 }
 
 UnicodeString &MeasureFormat::formatMeasures(
-        const Formattable *measures,
+        const Measure *measures,
         int32_t measureCount,
         UnicodeString &appendTo,
         FieldPosition &pos,

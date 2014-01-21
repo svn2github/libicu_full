@@ -16,7 +16,9 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/measfmt.h"
+#include "unicode/measure.h"
 #include "unicode/measunit.h"
+#include "unicode/tmutamt.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
 
@@ -29,6 +31,7 @@ public:
 private:
     void TestBasic();
     void TestGetAvailable();
+    void TestExamplesInDocs();
 };
 
 void MeasureFormatTest::runIndexedTest(
@@ -39,6 +42,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(TestBasic);
     TESTCASE_AUTO(TestGetAvailable);
+    TESTCASE_AUTO(TestExamplesInDocs);
     TESTCASE_AUTO_END;
 }
 
@@ -135,6 +139,151 @@ void MeasureFormatTest::TestGetAvailable() {
     delete [] units;
     delete types;
 }
+
+void MeasureFormatTest::TestExamplesInDocs() {
+    UnicodeString buffer;
+    FieldPosition pos(0);
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmtFr(Locale::getFrench(), UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating fmtFr.", status)) {
+        return;
+    }
+    Measure measureC(23, MeasureUnit::createCelsius(status), status);
+    if (!assertSuccess("Error creating measureC.", status)) {
+        return;
+    }
+    fmtFr.formatMeasures(
+            &measureC,
+            1,
+            buffer,
+            pos,
+            status);
+    if (!assertSuccess("Error formatting measureC.", status)) {
+        return;
+    }
+    assertEquals(
+            "formatting measureC",
+            UnicodeString("23 \\u00B0C").unescape(),
+            buffer);
+    buffer.remove();
+
+    Measure measureF(70, MeasureUnit::createFahrenheit(status), status);
+    if (!assertSuccess("Error creating measureF.", status)) {
+        return;
+    }
+    fmtFr.formatMeasures(
+            &measureF,
+            1,
+            buffer,
+            pos,
+            status);
+    if (!assertSuccess("Error formatting measureF.", status)) {
+        return;
+    }
+    assertEquals(
+            "formatting measureF",
+            UnicodeString("70 \\u00B0F").unescape(),
+            buffer);
+    buffer.remove();
+    
+    MeasureFormat fmtFrFull(
+            Locale::getFrench(), UMEASFMT_WIDTH_WIDE, status);
+    if (!assertSuccess("Error creating fmtFrFull.", status)) {
+        return;
+    }
+    Measure poundsAndOunces[] = {
+            Measure(70, MeasureUnit::createPound(status), status),
+            Measure(5.3, MeasureUnit::createOunce(status), status)};
+    if (!assertSuccess("Error creating poundsAndOunces.", status)) {
+        return;
+    }
+    fmtFrFull.formatMeasures(
+            poundsAndOunces,
+            LENGTHOF(poundsAndOunces),
+            buffer,
+            pos,
+            status);
+    if (!assertSuccess("Error formatting poundsAndOunces.", status)) {
+        return;
+    }
+    assertEquals(
+            "formatting poundsAndOunces",
+            UnicodeString("70 pieds et 5,3 pouces"),
+            buffer);
+    buffer.remove();
+    Measure poundAndOunce[] = {
+            Measure(1, MeasureUnit::createPound(status), status),
+            Measure(1, MeasureUnit::createOunce(status), status)};
+    if (!assertSuccess("Error creating poundAndOunce.", status)) {
+        return;
+    }
+    fmtFrFull.formatMeasures(
+            poundAndOunce,
+            LENGTHOF(poundAndOunce),
+            buffer,
+            pos,
+            status);
+    if (!assertSuccess("Error formatting poundAndOunce.", status)) {
+        return;
+    }
+    assertEquals(
+            "formatting poundAndOunce",
+            UnicodeString("1 pied et 1 pouce"),
+            buffer);
+    buffer.remove();
+
+    MeasureFormat fmtFrNarrow(
+            Locale::getFrench(), UMEASFMT_WIDTH_NARROW, status);
+    if (!assertSuccess("Error creating fmtFrNarrow.", status)) {
+        return;
+    }
+    Measure footAndInch[] = {
+            Measure(1, MeasureUnit::createFoot(status), status),
+            Measure(1, MeasureUnit::createInch(status), status)};
+    if (!assertSuccess("Error creating footAndInch.", status)) {
+        return;
+    }
+    fmtFrNarrow.formatMeasures(
+            footAndInch,
+            LENGTHOF(footAndInch),
+            buffer,
+            pos,
+            status);
+    if (!assertSuccess("Error formatting footAndInch.", status)) {
+        return;
+    }
+    assertEquals(
+            "formatting footAndInch",
+            UnicodeString("1\\u2032 1\\u2033").unescape(),
+            buffer);
+    buffer.remove();
+
+    MeasureFormat fmtEn(Locale::getUS(), UMEASFMT_WIDTH_WIDE, status);
+    if (!assertSuccess("Error creating fmtEn.", status)) {
+        return;
+    }
+    Measure inchAndFeet[] = {
+            Measure(1, MeasureUnit::createInch(status), status),
+            Measure(2, MeasureUnit::createFoot(status), status)};
+    if (!assertSuccess("Error creating inchAndFeet.", status)) {
+        return;
+    }
+    fmtEn.formatMeasures(
+            inchAndFeet,
+            LENGTHOF(inchAndFeet),
+            buffer,
+            pos,
+            status);
+    if (!assertSuccess("Error formatting inchAndFeet.", status)) {
+        return;
+    }
+    assertEquals(
+            "formatting inchAndFeet",
+            UnicodeString("1 inch, 2 feet"),
+            buffer);
+    buffer.remove();
+}
+
 
 extern IntlTest *createMeasureFormatTest() {
     return new MeasureFormatTest();

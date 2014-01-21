@@ -44,6 +44,10 @@ Measure& Measure::operator=(const Measure& other) {
     return *this;
 }
 
+UObject *Measure::clone() const {
+    return new Measure(*this);
+}
+
 Measure::~Measure() {
     delete unit;
 }

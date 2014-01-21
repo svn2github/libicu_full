@@ -12,6 +12,7 @@
 #define MEASUREFORMAT_H
 
 #include "unicode/utypes.h"
+#include "unicode/measure.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -131,7 +132,7 @@ class U_I18N_API MeasureFormat : public Format {
 
     /**
      * Formats measure objects to produce a string.
-     * @param measures wrapped measure objects.
+     * @param measures measure objects.
      * @param measureCount the number of measure objects.
      * @param appendTo formatted string appended here.
      * @param pos the field position.
@@ -141,7 +142,7 @@ class U_I18N_API MeasureFormat : public Format {
      * @draft ICU 53
      */
     UnicodeString &formatMeasures(
-            const Formattable *measures,
+            const Measure *measures,
             int32_t measureCount,
             UnicodeString &appendTo,
             FieldPosition &pos,
