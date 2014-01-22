@@ -13,6 +13,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/measfmt.h"
+#include "unicode/numfmt.h"
 #include "currfmt.h"
 
 U_NAMESPACE_BEGIN
