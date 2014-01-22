@@ -88,10 +88,11 @@ struct UnitPattern {
             appendTo.append(pattern);
             return appendTo;
         }
-        appendTo.append(pattern.tempSubStringBetween(0, offset));
+        appendTo.append(pattern, 0, offset);
         nf.format(quantity, appendTo);
-        appendTo.append(pattern.tempSubStringBetween(
-                offset + LENGTHOF(gPlaceholder)));
+        appendTo.append(pattern,
+                offset + LENGTHOF(gPlaceholder),
+                0x7fffffff);
         return appendTo;
     }
 };
@@ -579,11 +580,11 @@ static SharedObject *U_CALLCONV createData(
             status)) {
         return NULL;
     }
-    if (!result->qualitativeUnits.adoptInstead(qualitativeUnits.orphan())) {
+    if (!result->qualitativeUnits.reset(qualitativeUnits.orphan())) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    if (!result->quantitativeUnits.adoptInstead(quantitativeUnits.orphan())) {
+    if (!result->quantitativeUnits.reset(quantitativeUnits.orphan())) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
@@ -602,7 +603,7 @@ static SharedObject *U_CALLCONV createData(
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    if (!result->combinedDateAndTime.adoptInstead(mf.orphan())) {
+    if (!result->combinedDateAndTime.reset(mf.orphan())) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
@@ -610,7 +611,7 @@ static SharedObject *U_CALLCONV createData(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    if (!result->pluralRules.adoptInstead(pr.orphan())) {
+    if (!result->pluralRules.reset(pr.orphan())) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
@@ -619,7 +620,7 @@ static SharedObject *U_CALLCONV createData(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    if (!result->numberFormat.adoptInstead(nf.orphan())) {
+    if (!result->numberFormat.reset(nf.orphan())) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
@@ -670,7 +671,7 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    if (!wptr->numberFormat.adoptInstead(nfToAdopt)) {
+    if (!wptr->numberFormat.reset(nfToAdopt)) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
