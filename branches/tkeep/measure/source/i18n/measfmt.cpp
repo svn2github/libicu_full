@@ -27,6 +27,7 @@ MeasureFormat::MeasureFormat(
             UMeasureFormatWidth width,
             NumberFormat *nfToAdopt,
             UErrorCode &status) {
+      delete nfToAdopt;
 }
 
 MeasureFormat::MeasureFormat(const MeasureFormat &other) : Format(other) {
