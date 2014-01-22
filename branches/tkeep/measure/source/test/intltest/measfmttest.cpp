@@ -42,6 +42,7 @@ private:
     void TestFormatPeriodEn();
     void Test10219FractionalPlurals();
     void TestGreek();
+    void TestFormatSingleArg();
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -67,6 +68,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestFormatPeriodEn);
     TESTCASE_AUTO(Test10219FractionalPlurals);
     TESTCASE_AUTO(TestGreek);
+    TESTCASE_AUTO(TestFormatSingleArg);
     TESTCASE_AUTO_END;
 }
 
@@ -595,6 +597,24 @@ void MeasureFormatTest::TestGreek() {
             }
         }
     }
+}
+
+void MeasureFormatTest::TestFormatSingleArg() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_WIDE, status);
+    assertSuccess("Error creating formatter", status);
+    UnicodeString buffer;
+    FieldPosition pos(0);
+    fmt.format(
+            new Measure(3.5, MeasureUnit::createFoot(status), status),
+            buffer,
+            pos,
+            status);
+    assertSuccess("Error formatting", status);
+    assertEquals(
+            "TestFormatSingleArg",
+            UnicodeString("3.5 feet"),
+            buffer);
 }
 
 void MeasureFormatTest::verifyFormat(
