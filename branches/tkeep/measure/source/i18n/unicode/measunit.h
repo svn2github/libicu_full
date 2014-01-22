@@ -54,7 +54,7 @@ class U_I18N_API MeasureUnit: public UObject {
     MeasureUnit &operator=(const MeasureUnit &other);
 
     /**
-     * Return a polymorphic clone of this object.  The result will
+     * Returns a polymorphic clone of this object.  The result will
      * have the same class as returned by getDynamicClassID().
      * @stable ICU 3.0
      */
@@ -135,7 +135,8 @@ class U_I18N_API MeasureUnit: public UObject {
             UErrorCode &errorCode);
 
     /**
-     * getAvailableTypes gets all of the available types.
+     * getAvailableTypes gets all of the available types. Caller owns the
+     * returned StringEnumeration and must delete it when finished using it.
      *
      * @param errorCode ICU error code.
      * @return the types.

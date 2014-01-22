@@ -31,15 +31,36 @@
  * @draft ICU 53
  */
 enum UMeasureFormatWidth {
-    /** @draft ICU 53 */
+
+    /**
+     * Spell out measure units.
+     * @draft ICU 53 
+     */
     UMEASFMT_WIDTH_WIDE,
-    /** @draft ICU 53 */
+ 
+    /**
+     * Abbreviate measure units.
+     * @draft ICU 53
+     */
     UMEASFMT_WIDTH_SHORT,
-    /** @draft ICU 53 */
+
+    /**
+     * Use symbols for measure units when possible.
+     * @draft ICU 53
+     */
     UMEASFMT_WIDTH_NARROW,
-    /** @draft ICU 53 */
+
+    /**
+     * Completely omit measure units when possible. For example, format
+     * '5 hours, 37 minutes' as '5:37'
+     * @draft ICU 53
+     */
     UMEASFMT_WIDTH_NUMERIC,
-    /** @draft ICU 53 */
+
+    /**
+     * Count of values in this enum.
+     * @draft ICU 53
+     */
     UMEASFMT_WIDTH_COUNT
 };
 /** @draft ICU 53 */
