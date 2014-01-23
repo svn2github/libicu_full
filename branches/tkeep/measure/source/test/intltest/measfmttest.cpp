@@ -43,6 +43,13 @@ private:
     void Test10219FractionalPlurals();
     void TestGreek();
     void TestFormatSingleArg();
+    void TestFormatMeasuresZeroArg();
+    void TestMultiples();
+    void TestGram();
+    void TestCurrencies();
+    void TestFieldPosition();
+    void TestFieldPositionMultiple();
+    void TestBadArg();
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -54,6 +61,18 @@ private:
         const MeasureFormat &fmt,
         const ExpectedResult *expectedResults,
         int32_t count);
+    void helperTestMultiples(
+        const Locale &locale,
+        UMeasureFormatWidth width,
+        const char *expected);
+    void verifyFieldPosition(
+        const char *description,
+        const MeasureFormat &fmt,
+        const Measure *measures,
+        int32_t measureCount,
+        NumberFormat::EAlignmentFields field,
+        int32_t start,
+        int32_t end);
 };
 
 void MeasureFormatTest::runIndexedTest(
@@ -69,6 +88,13 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(Test10219FractionalPlurals);
     TESTCASE_AUTO(TestGreek);
     TESTCASE_AUTO(TestFormatSingleArg);
+    TESTCASE_AUTO(TestFormatMeasuresZeroArg);
+    TESTCASE_AUTO(TestMultiples);
+    TESTCASE_AUTO(TestGram);
+    TESTCASE_AUTO(TestCurrencies);
+    TESTCASE_AUTO(TestFieldPosition);
+    TESTCASE_AUTO(TestFieldPositionMultiple);
+    TESTCASE_AUTO(TestBadArg);
     TESTCASE_AUTO_END;
 }
 
@@ -167,147 +193,69 @@ void MeasureFormatTest::TestGetAvailable() {
 }
 
 void MeasureFormatTest::TestExamplesInDocs() {
-    UnicodeString buffer;
-    FieldPosition pos(0);
     UErrorCode status = U_ZERO_ERROR;
     MeasureFormat fmtFr(Locale::getFrench(), UMEASFMT_WIDTH_SHORT, status);
-    if (!assertSuccess("Error creating fmtFr.", status)) {
+    MeasureFormat fmtFrFull(
+            Locale::getFrench(), UMEASFMT_WIDTH_WIDE, status);
+    MeasureFormat fmtFrNarrow(
+            Locale::getFrench(), UMEASFMT_WIDTH_NARROW, status);
+    MeasureFormat fmtEn(Locale::getUS(), UMEASFMT_WIDTH_WIDE, status);
+    if (!assertSuccess("Error creating formatters", status)) {
         return;
     }
     Measure measureC(23, MeasureUnit::createCelsius(status), status);
-    if (!assertSuccess("Error creating measureC.", status)) {
-        return;
-    }
-    fmtFr.formatMeasures(
-            &measureC,
-            1,
-            buffer,
-            pos,
-            status);
-    if (!assertSuccess("Error formatting measureC.", status)) {
-        return;
-    }
-    assertEquals(
-            "formatting measureC",
-            UnicodeString("23 \\u00B0C").unescape(),
-            buffer);
-    buffer.remove();
-
     Measure measureF(70, MeasureUnit::createFahrenheit(status), status);
-    if (!assertSuccess("Error creating measureF.", status)) {
-        return;
-    }
-    fmtFr.formatMeasures(
-            &measureF,
-            1,
-            buffer,
-            pos,
-            status);
-    if (!assertSuccess("Error formatting measureF.", status)) {
-        return;
-    }
-    assertEquals(
-            "formatting measureF",
-            UnicodeString("70 \\u00B0F").unescape(),
-            buffer);
-    buffer.remove();
-    
-    MeasureFormat fmtFrFull(
-            Locale::getFrench(), UMEASFMT_WIDTH_WIDE, status);
-    if (!assertSuccess("Error creating fmtFrFull.", status)) {
-        return;
-    }
     Measure poundsAndOunces[] = {
             Measure(70, MeasureUnit::createPound(status), status),
             Measure(5.3, MeasureUnit::createOunce(status), status)};
-    if (!assertSuccess("Error creating poundsAndOunces.", status)) {
-        return;
-    }
-    fmtFrFull.formatMeasures(
-            poundsAndOunces,
-            LENGTHOF(poundsAndOunces),
-            buffer,
-            pos,
-            status);
-    if (!assertSuccess("Error formatting poundsAndOunces.", status)) {
-        return;
-    }
-    assertEquals(
-            "formatting poundsAndOunces",
-            UnicodeString("70 pieds et 5,3 pouces"),
-            buffer);
-    buffer.remove();
     Measure poundAndOunce[] = {
             Measure(1, MeasureUnit::createPound(status), status),
             Measure(1, MeasureUnit::createOunce(status), status)};
-    if (!assertSuccess("Error creating poundAndOunce.", status)) {
-        return;
-    }
-    fmtFrFull.formatMeasures(
-            poundAndOunce,
-            LENGTHOF(poundAndOunce),
-            buffer,
-            pos,
-            status);
-    if (!assertSuccess("Error formatting poundAndOunce.", status)) {
-        return;
-    }
-    assertEquals(
-            "formatting poundAndOunce",
-            UnicodeString("1 pied et 1 pouce"),
-            buffer);
-    buffer.remove();
-
-    MeasureFormat fmtFrNarrow(
-            Locale::getFrench(), UMEASFMT_WIDTH_NARROW, status);
-    if (!assertSuccess("Error creating fmtFrNarrow.", status)) {
-        return;
-    }
     Measure footAndInch[] = {
             Measure(1, MeasureUnit::createFoot(status), status),
             Measure(1, MeasureUnit::createInch(status), status)};
-    if (!assertSuccess("Error creating footAndInch.", status)) {
-        return;
-    }
-    fmtFrNarrow.formatMeasures(
-            footAndInch,
-            LENGTHOF(footAndInch),
-            buffer,
-            pos,
-            status);
-    if (!assertSuccess("Error formatting footAndInch.", status)) {
-        return;
-    }
-    assertEquals(
-            "formatting footAndInch",
-            UnicodeString("1\\u2032 1\\u2033").unescape(),
-            buffer);
-    buffer.remove();
-
-    MeasureFormat fmtEn(Locale::getUS(), UMEASFMT_WIDTH_WIDE, status);
-    if (!assertSuccess("Error creating fmtEn.", status)) {
-        return;
-    }
     Measure inchAndFeet[] = {
             Measure(1, MeasureUnit::createInch(status), status),
             Measure(2, MeasureUnit::createFoot(status), status)};
-    if (!assertSuccess("Error creating inchAndFeet.", status)) {
+    if (!assertSuccess("Error creating measurements.", status)) {
         return;
     }
-    fmtEn.formatMeasures(
+    verifyFormat(
+            "TestExamplesInDocs",
+            fmtFr,
+            &measureC,
+            1,
+            "23 \\u00B0C");
+    verifyFormat(
+            "TestExamplesInDocs",
+            fmtFr,
+            &measureF,
+            1,
+            "70 \\u00B0F");
+    verifyFormat(
+            "TestExamplesInDocs",
+            fmtFrFull,
+            poundsAndOunces,
+            LENGTHOF(poundsAndOunces),
+            "70 pieds et 5,3 pouces");
+    verifyFormat(
+            "TestExamplesInDocs",
+            fmtFrFull,
+            poundAndOunce,
+            LENGTHOF(poundAndOunce),
+            "1 pied et 1 pouce");
+    verifyFormat(
+            "TestExamplesInDocs",
+            fmtFrNarrow,
+            footAndInch,
+            LENGTHOF(footAndInch),
+            "1\\u2032 1\\u2033");
+    verifyFormat(
+            "TestExamplesInDocs",
+            fmtEn,
             inchAndFeet,
             LENGTHOF(inchAndFeet),
-            buffer,
-            pos,
-            status);
-    if (!assertSuccess("Error formatting inchAndFeet.", status)) {
-        return;
-    }
-    assertEquals(
-            "formatting inchAndFeet",
-            UnicodeString("1 inch, 2 feet"),
-            buffer);
-    buffer.remove();
+            "1 inch, 2 feet");
 }
 
 void MeasureFormatTest::TestFormatPeriodEn() {
@@ -602,7 +550,9 @@ void MeasureFormatTest::TestGreek() {
 void MeasureFormatTest::TestFormatSingleArg() {
     UErrorCode status = U_ZERO_ERROR;
     MeasureFormat fmt("en", UMEASFMT_WIDTH_WIDE, status);
-    assertSuccess("Error creating formatter", status);
+    if (!assertSuccess("Error creating formatter", status)) {
+        return;
+    }
     UnicodeString buffer;
     FieldPosition pos(0);
     fmt.format(
@@ -610,11 +560,226 @@ void MeasureFormatTest::TestFormatSingleArg() {
             buffer,
             pos,
             status);
-    assertSuccess("Error formatting", status);
+    if (!assertSuccess("Error formatting", status)) {
+        return;
+    }
     assertEquals(
             "TestFormatSingleArg",
             UnicodeString("3.5 feet"),
             buffer);
+}
+
+void MeasureFormatTest::TestFormatMeasuresZeroArg() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_WIDE, status);
+    verifyFormat("TestFormatMeasuresZeroArg", fmt, NULL, 0, "");
+}
+
+void MeasureFormatTest::TestMultiples() {
+    Locale ru("ru");
+    Locale en("en");
+    helperTestMultiples(en, UMEASFMT_WIDTH_WIDE, "2 miles, 1 foot, 2.3 inches");
+    helperTestMultiples(en, UMEASFMT_WIDTH_SHORT, "2 mi, 1 fft, 2.3 in");
+    helperTestMultiples(en, UMEASFMT_WIDTH_NARROW, "2mi 1\\u2032 2.3\\u2033");
+    helperTestMultiples(ru, UMEASFMT_WIDTH_WIDE, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442 \\u0438 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
+    helperTestMultiples(ru, UMEASFMT_WIDTH_SHORT, "2 \\u043C\\u0438\\u043B\\u0438 1 \\u0444\\u0443\\u0442 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
+    helperTestMultiples(ru, UMEASFMT_WIDTH_NARROW, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442, 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
+}
+
+void MeasureFormatTest::helperTestMultiples(
+        const Locale &locale,
+        UMeasureFormatWidth width,
+        const char *expected) {
+    UErrorCode status = U_ZERO_ERROR;
+    FieldPosition pos(0);
+    MeasureFormat fmt(locale, width, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    Measure measures[] = {
+            Measure(2, MeasureUnit::createMile(status), status),
+            Measure(1, MeasureUnit::createFoot(status), status),
+            Measure(2.3, MeasureUnit::createInch(status), status)};
+    if (!assertSuccess("Error creating measures", status)) {
+        return;
+    }
+    UnicodeString buffer;
+    fmt.formatMeasures(measures, LENGTHOF(measures), buffer, pos, status);
+    if (!assertSuccess("Error formatting measures", status)) {
+        return;
+    }
+    assertEquals("TestMultiples", UnicodeString(expected).unescape(), buffer);
+}
+
+void MeasureFormatTest::TestGram() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    Measure gram(1, MeasureUnit::createGram(status), status);
+    Measure gforce(1, MeasureUnit::createGForce(status), status);
+    if (!assertSuccess("Error creating measures", status)) {
+        return;
+    }
+    verifyFormat("TestGram", fmt, &gram, 1, "1 g");
+    verifyFormat("TestGram", fmt, &gforce, 1, "1 G");
+}
+
+void MeasureFormatTest::TestCurrencies() {
+    UChar USD[] = {'U', 'S', 'D', 0};
+    UErrorCode status = U_ZERO_ERROR;
+    CurrencyAmount USD_1(1.0, USD, status);
+    CurrencyAmount USD_2(2.0, USD, status);
+    CurrencyAmount USD_NEG_1(-1.0, USD, status);
+    if (!assertSuccess("Error creating measures", status)) {
+        return;
+    }
+    Locale en("en");
+    MeasureFormat fmt(en, UMEASFMT_WIDTH_WIDE, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    verifyFormat("TestCurrenciesWide", fmt, &USD_NEG_1, 1, "-1.00 US dollars");
+    verifyFormat("TestCurrenciesWide", fmt, &USD_1, 1, "1.00 US dollars");
+    verifyFormat("TestCurrenciesWide", fmt, &USD_2, 1, "2.00 US dollars");
+    fmt = MeasureFormat(en, UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    verifyFormat("TestCurrenciesShort", fmt, &USD_NEG_1, 1, "-USD1.00");
+    verifyFormat("TestCurrenciesShort", fmt, &USD_1, 1, "USD1.00");
+    verifyFormat("TestCurrenciesShort", fmt, &USD_2, 1, "USD2.00");
+    fmt = MeasureFormat(en, UMEASFMT_WIDTH_NARROW, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    verifyFormat("TestCurrenciesNarrow", fmt, &USD_NEG_1, 1, "-$1.00");
+    verifyFormat("TestCurrenciesNarrow", fmt, &USD_1, 1, "$1.00");
+    verifyFormat("TestCurrenciesNarrow", fmt, &USD_2, 1, "$2.00");
+    fmt = MeasureFormat(en, UMEASFMT_WIDTH_NUMERIC, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    verifyFormat("TestCurrenciesNumeric", fmt, &USD_NEG_1, 1, "-$1.00");
+    verifyFormat("TestCurrenciesNumeric", fmt, &USD_1, 1, "$1.00");
+    verifyFormat("TestCurrenciesNumeric", fmt, &USD_2, 1, "$2.00");
+}
+
+void MeasureFormatTest::TestFieldPosition() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    Measure measure(43.5, MeasureUnit::createFoot(status), status);
+    if (!assertSuccess("Error creating measure object 1", status)) {
+        return;
+    }
+    verifyFieldPosition(
+            "TestFieldPosition",
+            fmt,
+            &measure,
+            1,
+            NumberFormat::kDecimalSeparatorField,
+            2,
+            3);
+    measure = Measure(43, MeasureUnit::createFoot(status), status);
+    if (!assertSuccess("Error creating measure object 2", status)) {
+        return;
+    }
+    verifyFieldPosition(
+            "TestFieldPosition",
+            fmt,
+            &measure,
+            1,
+            NumberFormat::kDecimalSeparatorField,
+            0,
+            0);
+}
+
+void MeasureFormatTest::TestFieldPositionMultiple() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    Measure first[] = {
+            Measure(354, MeasureUnit::createMeter(status), status),
+            Measure(23, MeasureUnit::createCentimeter(status), status)};
+    Measure second[] = {
+            Measure(354, MeasureUnit::createMeter(status), status),
+            Measure(23, MeasureUnit::createCentimeter(status), status),
+            Measure(5.4, MeasureUnit::createMillimeter(status), status)};
+    Measure third[] = {
+            Measure(3, MeasureUnit::createMeter(status), status),
+            Measure(23, MeasureUnit::createCentimeter(status), status),
+            Measure(5, MeasureUnit::createMillimeter(status), status)};
+    if (!assertSuccess("Error creating measure objects", status)) {
+        return;
+    }
+    verifyFieldPosition(
+            "TestFieldPositionMultiple",
+            fmt,
+            first,
+            LENGTHOF(first),
+            NumberFormat::kIntegerField,
+            0,
+            3);
+    verifyFieldPosition(
+            "TestFieldPositionMultiple",
+            fmt,
+            second,
+            LENGTHOF(second),
+            NumberFormat::kDecimalSeparatorField,
+            15,
+            16);
+    verifyFieldPosition(
+            "TestFieldPositionMultiple",
+            fmt,
+            third,
+            LENGTHOF(third),
+            NumberFormat::kDecimalSeparatorField,
+            0,
+            0);
+}
+
+void MeasureFormatTest::TestBadArg() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    FieldPosition pos(0);
+    UnicodeString buffer;
+    fmt.format(
+            9.3,
+            buffer,
+            pos,
+            status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected ILLEGAL_ARGUMENT_ERROR");
+    }
+}
+
+
+void MeasureFormatTest::verifyFieldPosition(
+        const char *description,
+        const MeasureFormat &fmt,
+        const Measure *measures,
+        int32_t measureCount,
+        NumberFormat::EAlignmentFields field,
+        int32_t start,
+        int32_t end) {
+    UnicodeString result;
+    FieldPosition pos(field);
+    UErrorCode status = U_ZERO_ERROR;
+    fmt.formatMeasures(measures, measureCount, result, pos, status);
+    if (!assertSuccess("Error formatting", status)) {
+        return;
+    }
+    assertEquals(description, start, pos.getBeginIndex());
+    assertEquals(description, end, pos.getBeginIndex());
 }
 
 void MeasureFormatTest::verifyFormat(
@@ -627,7 +792,9 @@ void MeasureFormatTest::verifyFormat(
     FieldPosition pos(0);
     UErrorCode status = U_ZERO_ERROR;
     fmt.formatMeasures(measures, measureCount, result, pos, status);
-    assertSuccess("Error creating formatter", status);
+    if (!assertSuccess("Error formatting", status)) {
+        return;
+    }
     assertEquals(description, UnicodeString(expected).unescape(), result);
 }
 
