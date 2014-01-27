@@ -144,6 +144,7 @@ UBool Template::compile(const UnicodeString &pattern, UErrorCode &status) {
             break;
         default:
             U_ASSERT(FALSE);
+            break;
         }
     }
     switch (state) {
@@ -158,6 +159,7 @@ UBool Template::compile(const UnicodeString &pattern, UErrorCode &status) {
         break;
     default:
         U_ASSERT(false);
+        break;
     }
     noPlaceholders.releaseBuffer(len);
     return TRUE;
@@ -166,7 +168,7 @@ UBool Template::compile(const UnicodeString &pattern, UErrorCode &status) {
 UnicodeString& Template::evaluate(
         const UnicodeString *placeholderValues,
         int32_t placeholderValueCount,
-        UnicodeString appendTo,
+        UnicodeString &appendTo,
         UErrorCode &status) const {
     return evaluate(
             placeholderValues,
@@ -177,13 +179,74 @@ UnicodeString& Template::evaluate(
             status);
 }
 
+static void updatePlaceholderOffset(
+        int32_t placeholderId,
+        int32_t placeholderOffset,
+        int32_t *offsetArray,
+        int32_t offsetArrayLength) {
+    if (placeholderId < offsetArrayLength) {
+        offsetArray[placeholderId] = placeholderOffset;
+    }
+}
+
+static void appendRange(
+        const UnicodeString &src,
+        int32_t start,
+        int32_t end,
+        UnicodeString &dest) {
+    dest.append(src, start, end - start);
+}
+
 UnicodeString& Template::evaluate(
         const UnicodeString *placeholderValues,
         int32_t placeholderValueCount,
-        UnicodeString appendTo,
+        UnicodeString &appendTo,
         int32_t *offsetArray,
         int32_t offsetArrayLength,
         UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    if (placeholderValueCount < placeholderCount) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return appendTo;
+    }
+    for (int32_t i = 0; i < offsetArrayLength; ++i) {
+        offsetArray[i] = -1;
+    }
+    if (placeholderSize == 0) {
+        appendTo.append(noPlaceholders);
+        return appendTo;
+    }
+    appendRange(
+            noPlaceholders,
+            0,
+            placeholdersByOffset[0],
+            appendTo);
+    updatePlaceholderOffset(
+            placeholdersByOffset[1],
+            appendTo.length(),
+            offsetArray,
+            offsetArrayLength);
+    appendTo.append(placeholderValues[placeholdersByOffset[1]]);
+    for (int32_t i = 1; i < placeholderSize; ++i) {
+        appendRange(
+                noPlaceholders,
+                placeholdersByOffset[2 * i - 2],
+                placeholdersByOffset[2 * i],
+                appendTo);
+        updatePlaceholderOffset(
+                placeholdersByOffset[2 * i + 1],
+                appendTo.length(),
+                offsetArray,
+                offsetArrayLength);
+        appendTo.append(placeholderValues[placeholdersByOffset[2 * i + 1]]);
+    }
+    appendRange(
+            noPlaceholders,
+            placeholdersByOffset[2 * placeholderSize - 2],
+            noPlaceholders.length(),
+            appendTo);
     return appendTo;
 }
 

@@ -47,16 +47,18 @@ void TemplateTest::TestNoPlaceholders() {
                     0,
                     appendTo,
                     status));
+    appendTo.remove();
     t.compile("This has {} bad {012d placeholders", status);
     assertEquals("PlaceholderCount", 0, t.getPlaceholderCount());
     assertEquals(
             "Evaluate",
-            "This has bad {012d placeholders", 
+            "This has {} bad {012d placeholders", 
             t.evaluate(
                     NULL,
                     0,
                     appendTo,
                     status));
+    appendTo.remove();
     assertSuccess("Status", status);
 }
 
@@ -75,6 +77,7 @@ void TemplateTest::TestOnePlaceholder() {
                     1,
                     appendTo,
                     status));
+    appendTo.remove();
     assertSuccess("Status", status);
 
     // assignment
@@ -88,6 +91,7 @@ void TemplateTest::TestOnePlaceholder() {
                     1,
                     appendTo,
                     status));
+    appendTo.remove();
 
     // Copy constructor
     Template r(t);
@@ -99,6 +103,7 @@ void TemplateTest::TestOnePlaceholder() {
                     1,
                     appendTo,
                     status));
+    appendTo.remove();
     assertSuccess("Status", status);
 }
 
@@ -123,6 +128,7 @@ void TemplateTest::TestManyPlaceholders() {
                     offsets,
                     LENGTHOF(offsets),
                     status));
+    appendTo.remove();
     assertSuccess("Status", status);
     for (int32_t i = 0; i < LENGTHOF(expectedOffsets); ++i) {
         if (expectedOffsets[i] != offsets[i]) {
@@ -140,6 +146,7 @@ void TemplateTest::TestManyPlaceholders() {
         errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
     }
     status = U_ZERO_ERROR;
+    offsets[LENGTHOF(offsets) - 1] = 289;
     t.evaluate(
             values,
             LENGTHOF(values),
@@ -147,10 +154,8 @@ void TemplateTest::TestManyPlaceholders() {
             offsets,
             LENGTHOF(offsets) - 1,
             status);
-    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
-        errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
-    }
-    status = U_ZERO_ERROR;
+    appendTo.remove();
+    assertEquals("Offsets buffer length", 289, offsets[LENGTHOF(offsets) - 1]);
 
     // Test assignment
     Template s;
@@ -163,6 +168,7 @@ void TemplateTest::TestManyPlaceholders() {
                     LENGTHOF(values),
                     appendTo,
                     status));
+    appendTo.remove();
 
     // Copy constructor
     Template r(t);
@@ -174,6 +180,7 @@ void TemplateTest::TestManyPlaceholders() {
                     LENGTHOF(values),
                     appendTo,
                     status));
+    appendTo.remove();
     r.compile("{0} meter", status);
     assertEquals("PlaceholderCount", 1, r.getPlaceholderCount());
     assertEquals(
@@ -184,6 +191,7 @@ void TemplateTest::TestManyPlaceholders() {
                     1,
                     appendTo,
                     status));
+    appendTo.remove();
     assertSuccess("Status", status);
 }
 

@@ -32,12 +32,12 @@ public:
     UnicodeString &evaluate(
             const UnicodeString *placeholderValues,
             int32_t placeholderValueCount,
-            UnicodeString appendTo,
+            UnicodeString &appendTo,
             UErrorCode &status) const;
     UnicodeString &evaluate(
             const UnicodeString *placeholderValues,
             int32_t placeholderValueCount,
-            UnicodeString appendTo,
+            UnicodeString &appendTo,
             int32_t *offsetArray,
             int32_t offsetArrayLength,
             UErrorCode &status) const;
