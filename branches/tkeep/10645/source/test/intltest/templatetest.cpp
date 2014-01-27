@@ -47,6 +47,16 @@ void TemplateTest::TestNoPlaceholders() {
                     0,
                     appendTo,
                     status));
+    t.compile("This has {} bad {012d placeholders", status);
+    assertEquals("PlaceholderCount", 0, t.getPlaceholderCount());
+    assertEquals(
+            "Evaluate",
+            "This has bad {012d placeholders", 
+            t.evaluate(
+                    NULL,
+                    0,
+                    appendTo,
+                    status));
     assertSuccess("Status", status);
 }
 
@@ -162,6 +172,16 @@ void TemplateTest::TestManyPlaceholders() {
             r.evaluate(
                     values,
                     LENGTHOF(values),
+                    appendTo,
+                    status));
+    r.compile("{0} meter", status);
+    assertEquals("PlaceholderCount", 1, r.getPlaceholderCount());
+    assertEquals(
+            "Assignment",
+            "freddy meter",
+            r.evaluate(
+                    values,
+                    1,
                     appendTo,
                     status));
     assertSuccess("Status", status);
