@@ -29,6 +29,9 @@ U_NAMESPACE_BEGIN
 /** @internal */
 class Hashtable;
 
+/** @internal */
+struct ListFormatInternal;
+
 /* The following can't be #ifndef U_HIDE_INTERNAL_API, needed for other .h file declarations */
 /** @internal */
 struct ListFormatData : public UMemory {
@@ -134,18 +137,18 @@ class U_COMMON_API ListFormatter : public UObject{
     /**
      * @internal constructor made public for testing.
      */
-    ListFormatter(const ListFormatData* listFormatterData);
+    ListFormatter(const ListFormatData &data);
+    ListFormatter(const ListFormatInternal* listFormatterInternal);
 #endif  /* U_HIDE_INTERNAL_API */
 
   private:
     static void initializeHash(UErrorCode& errorCode);
-    static const ListFormatData* getListFormatData(const Locale& locale, const char *style, UErrorCode& errorCode);
+    static const ListFormatInternal* getListFormatInternal(const Locale& locale, const char *style, UErrorCode& errorCode);
 
     ListFormatter();
-    void addNewString(const UnicodeString& pattern, UnicodeString& originalString,
-                      const UnicodeString& newString, UErrorCode& errorCode) const;
 
-    const ListFormatData* data;
+    ListFormatInternal* owned;
+    const ListFormatInternal* data;
 };
 
 U_NAMESPACE_END

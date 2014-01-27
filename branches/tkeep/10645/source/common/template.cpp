@@ -57,6 +57,16 @@ Template::Template() :
         placeholderCount(0) {
 }
 
+Template::Template(const UnicodeString &pattern) :
+        noPlaceholders(),
+        placeholdersByOffset(placeholderBuffer),
+        placeholderSize(0),
+        placeholderCapacity(EXPECTED_PLACEHOLDER_COUNT),
+        placeholderCount(0) {
+    UErrorCode status = U_ZERO_ERROR;
+    compile(pattern, status);
+}
+
 Template::Template(const Template &other) :
         noPlaceholders(other.noPlaceholders),
         placeholdersByOffset(placeholderBuffer),
@@ -166,7 +176,7 @@ UBool Template::compile(const UnicodeString &pattern, UErrorCode &status) {
 }
 
 UnicodeString& Template::evaluate(
-        const UnicodeString *placeholderValues,
+        const UnicodeString * const *placeholderValues,
         int32_t placeholderValueCount,
         UnicodeString &appendTo,
         UErrorCode &status) const {
@@ -198,7 +208,7 @@ static void appendRange(
 }
 
 UnicodeString& Template::evaluate(
-        const UnicodeString *placeholderValues,
+        const UnicodeString * const *placeholderValues,
         int32_t placeholderValueCount,
         UnicodeString &appendTo,
         int32_t *offsetArray,
@@ -228,7 +238,7 @@ UnicodeString& Template::evaluate(
             appendTo.length(),
             offsetArray,
             offsetArrayLength);
-    appendTo.append(placeholderValues[placeholdersByOffset[1]]);
+    appendTo.append(*placeholderValues[placeholdersByOffset[1]]);
     for (int32_t i = 1; i < placeholderSize; ++i) {
         appendRange(
                 noPlaceholders,
@@ -240,7 +250,7 @@ UnicodeString& Template::evaluate(
                 appendTo.length(),
                 offsetArray,
                 offsetArrayLength);
-        appendTo.append(placeholderValues[placeholdersByOffset[2 * i + 1]]);
+        appendTo.append(*placeholderValues[placeholdersByOffset[2 * i + 1]]);
     }
     appendRange(
             noPlaceholders,

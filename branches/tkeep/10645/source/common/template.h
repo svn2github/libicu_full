@@ -22,6 +22,7 @@ U_NAMESPACE_BEGIN
 class U_COMMON_API Template : public UMemory {
 public:
     Template();
+    explicit Template(const UnicodeString& pattern);
     Template(const Template& other);
     Template &operator=(const Template& other);
     ~Template();
@@ -30,12 +31,12 @@ public:
         return placeholderCount;
      }
     UnicodeString &evaluate(
-            const UnicodeString *placeholderValues,
+            const UnicodeString * const *placeholderValues,
             int32_t placeholderValueCount,
             UnicodeString &appendTo,
             UErrorCode &status) const;
     UnicodeString &evaluate(
-            const UnicodeString *placeholderValues,
+            const UnicodeString * const *placeholderValues,
             int32_t placeholderValueCount,
             UnicodeString &appendTo,
             int32_t *offsetArray,
