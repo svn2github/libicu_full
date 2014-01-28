@@ -3,7 +3,7 @@
 * Copyright (C) 2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 ******************************************************************************
-* sharedobject.h
+* template.h
 */
 
 #ifndef __TEMPLATE_H__
