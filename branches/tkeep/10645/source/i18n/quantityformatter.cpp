@@ -3,9 +3,9 @@
 * Copyright (C) 2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 ******************************************************************************
-* pluraltemplate.cpp
+* quantityformatter.cpp
 */
-#include "pluraltemplate.h"
+#include "quantityformatter.h"
 #include "template.h"
 #include "uassert.h"
 #include "unicode/unistr.h"
@@ -34,13 +34,13 @@ static int32_t getPluralIndex(const char *pluralForm) {
     return -1;
 }
 
-PluralTemplate::PluralTemplate() {
+QuantityFormatter::QuantityFormatter() {
     for (int32_t i = 0; i < LENGTHOF(templates); ++i) {
         templates[i] = NULL;
     }
 }
 
-PluralTemplate::PluralTemplate(const PluralTemplate &other) {
+QuantityFormatter::QuantityFormatter(const QuantityFormatter &other) {
     for (int32_t i = 0; i < LENGTHOF(templates); ++i) {
         if (other.templates[i] == NULL) {
             templates[i] = NULL;
@@ -50,7 +50,8 @@ PluralTemplate::PluralTemplate(const PluralTemplate &other) {
     }
 }
 
-PluralTemplate &PluralTemplate::operator=(const PluralTemplate& other) {
+QuantityFormatter &QuantityFormatter::operator=(
+        const QuantityFormatter& other) {
     if (this == &other) {
         return *this;
     }
@@ -65,32 +66,32 @@ PluralTemplate &PluralTemplate::operator=(const PluralTemplate& other) {
     return *this;
 }
 
-PluralTemplate::~PluralTemplate() {
+QuantityFormatter::~QuantityFormatter() {
     for (int32_t i = 0; i < LENGTHOF(templates); ++i) {
         delete templates[i];
     }
 }
 
-void PluralTemplate::reset() {
+void QuantityFormatter::reset() {
     for (int32_t i = 0; i < LENGTHOF(templates); ++i) {
         delete templates[i];
         templates[i] = NULL;
     }
 }
 
-UBool PluralTemplate::add(
-        const char *pluralForm,
-        const UnicodeString &pattern,
+UBool QuantityFormatter::add(
+        const char *variant,
+        const UnicodeString &rawPattern,
         UErrorCode &status) {
     if (U_FAILURE(status)) {
         return FALSE;
     }
-    int32_t pluralIndex = getPluralIndex(pluralForm);
+    int32_t pluralIndex = getPluralIndex(variant);
     if (pluralIndex == -1) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return FALSE;
     }
-    Template *newTemplate = new Template(pattern);
+    Template *newTemplate = new Template(rawPattern);
     if (newTemplate == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return FALSE;
@@ -105,10 +106,10 @@ UBool PluralTemplate::add(
     return TRUE;
 }
 
-UnicodeString &PluralTemplate::evaluate(
+UnicodeString &QuantityFormatter::format(
             const Formattable& quantity,
-            const PluralRules &rules,
             const NumberFormat &fmt,
+            const PluralRules &rules,
             UnicodeString &appendTo,
             UErrorCode &status) const {
     if (U_FAILURE(status)) {

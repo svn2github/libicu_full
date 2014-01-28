@@ -13,7 +13,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/localpointer.h"
-#include "pluraltemplate.h"
+#include "quantityformatter.h"
 #include "unicode/plurrule.h"
 #include "unicode/msgfmt.h"
 #include "unicode/decimfmt.h"
@@ -61,7 +61,7 @@ private:
 class QuantitativeUnits : public UMemory {
 public:
     QuantitativeUnits() { }
-    PluralTemplate data[UDAT_RELATIVE_UNIT_COUNT][2];
+    QuantityFormatter data[UDAT_RELATIVE_UNIT_COUNT][2];
 private:
     QuantitativeUnits(const QuantitativeUnits &other);
     QuantitativeUnits &operator=(const QuantitativeUnits& other);
@@ -648,10 +648,10 @@ UnicodeString& RelativeDateTimeFormatter::format(
         return appendTo;
     }
     int32_t bFuture = direction == UDAT_DIRECTION_NEXT ? 1 : 0;
-    return ptr->quantitativeUnits->data[unit][bFuture].evaluate(
+    return ptr->quantitativeUnits->data[unit][bFuture].format(
             quantity,
-            *ptr->pluralRules,
             *ptr->numberFormat,
+            *ptr->pluralRules,
             appendTo,
             status);
 }
