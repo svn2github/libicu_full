@@ -71,6 +71,13 @@ PluralTemplate::~PluralTemplate() {
     }
 }
 
+void PluralTemplate::reset() {
+    for (int32_t i = 0; i < LENGTHOF(templates); ++i) {
+        delete templates[i];
+        templates[i] = NULL;
+    }
+}
+
 UBool PluralTemplate::add(
         const char *pluralForm,
         const UnicodeString &pattern,
@@ -83,12 +90,18 @@ UBool PluralTemplate::add(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return FALSE;
     }
-    delete templates[pluralIndex];
-    templates[pluralIndex] = new Template(pattern);
-    if (templates[pluralIndex] == NULL) {
+    Template *newTemplate = new Template(pattern);
+    if (newTemplate == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return FALSE;
     }
+    if (newTemplate->getPlaceholderCount() > 1) {
+        delete newTemplate;
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return FALSE;
+    }
+    delete templates[pluralIndex];
+    templates[pluralIndex] = newTemplate;
     return TRUE;
 }
 
@@ -134,6 +147,10 @@ UnicodeString &PluralTemplate::evaluate(
     if (pattern == NULL) {
         pattern = templates[0];
     }
+    if (pattern == NULL) {
+        status = U_INVALID_STATE_ERROR;
+        return appendTo;
+    }
     UnicodeString formattedNumber;
     FieldPosition pos(0);
     fmt.format(quantity, formattedNumber, pos, status);
@@ -141,5 +158,4 @@ UnicodeString &PluralTemplate::evaluate(
     return pattern->evaluate(params, LENGTHOF(params), appendTo, status);
 }
 
-    
 U_NAMESPACE_END

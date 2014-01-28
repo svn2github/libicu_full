@@ -27,9 +27,9 @@ U_NAMESPACE_BEGIN
  * by a single quote, it becomes a curly brace instead of the start of a
  * placeholder. Two single quotes resolve to one single quote. 
  * <p>
- * Concurrent calls only to const methods of a Template object are safe,
- * but concurrent const and non-const method calls of a Template object are
- * not safe and require synchronization.
+ * Concurrent calls only to const methods on a Template object are safe,
+ * but concurrent const and non-const method calls on a Template object
+ * are not safe and require synchronization.
  * <p>
  * Example:
  * <pre>

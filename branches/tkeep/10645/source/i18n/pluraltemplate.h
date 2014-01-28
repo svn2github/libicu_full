@@ -21,11 +21,23 @@ class NumberFormat;
 class Formattable;
 
 /**
+ * A plural aware template that is good for expressing a single quantity and
+ * a unit.
+ * <p>
+ * First use the add() methods to add a pattern for each plural variant.
+ * There must be a pattern for the "other" variant.
+ * Then use the evaluate() method to evaluate the template.
+ * <p>
+ * Concurrent calls only to const methods on a PluralTemplate object are safe,
+ * but concurrent const and non-const method calls on a PluralTemplate object
+ * are not safe and require synchronization.
+ * 
  */
 class U_COMMON_API PluralTemplate : public UMemory {
+// TODO(Travis Keep): Add test for copy constructor, assignment, and reset.
 public:
     /**
-     * Default constructor
+     * Default constructor.
      */
     PluralTemplate();
 
@@ -45,12 +57,34 @@ public:
     ~PluralTemplate();
 
     /**
+     * Removes all variants from this object including the "other" variant.
      */
+    void reset();
+
+    /**
+      * Adds a plural variant.
+      *
+      * @param pluralForm "zero", "one", "two", "few", "many", "other"
+      * @param rawPattern the pattern for the variant e.g "{0} meters"
+      * @param status any error returned here.
+      * @return TRUE on success; FALSE otherwise.
+      */
     UBool add(
             const char *pluralForm,
             const UnicodeString &rawPattern,
             UErrorCode &status);
+
     /**
+     * Evaluates this object appending the result to appendTo.
+     * At least the "other" variant must be added to this object for this
+     * method to work.
+     * 
+     * @param quantity the single quantity.
+     * @param rules computes the plural variant to use.
+     * @param fmt formats the quantity
+     * @param appendTo result appended here.
+     * @param status any error returned here.
+     * @return appendTo
      */
     UnicodeString &evaluate(
             const Formattable &quantity,
