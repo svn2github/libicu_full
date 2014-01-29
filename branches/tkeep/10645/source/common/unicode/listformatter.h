@@ -135,6 +135,16 @@ class U_COMMON_API ListFormatter : public UObject{
 
 #ifndef U_HIDE_INTERNAL_API
     /**
+      @internal for MeasureFormat
+    */
+    UnicodeString& format(
+            const UnicodeString items[],
+            int32_t n_items,
+            UnicodeString& appendTo,
+            int32_t index,
+            int32_t &offset,
+            UErrorCode& errorCode) const;
+    /**
      * @internal constructor made public for testing.
      */
     ListFormatter(const ListFormatData &data);

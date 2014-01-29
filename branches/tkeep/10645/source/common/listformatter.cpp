@@ -259,12 +259,33 @@ static void joinStrings(
         const UnicodeString& first,
         const UnicodeString& second,
         UnicodeString &result,
+        UBool recordOffset,
+        int32_t offset,
         UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
         return;
     }
     const UnicodeString *params[2] = {&first, &second};
-    pat.evaluate(params, LENGTHOF(params), result, errorCode);
+    int32_t offsets[2];
+    pat.evaluate(
+            params,
+            LENGTHOF(params),
+            result,
+            offsets,
+            LENGTHOF(offsets),
+            errorCode);
+    if (U_FAILURE(errorCode)) {
+        return;
+    }
+    if (offsets[0] == -1 || offsets[1] == -1) {
+        errorCode = U_INVALID_FORMAT_ERROR;
+        return;
+    }
+    if (recordOffset) {
+        offset = offsets[1];
+    } else if (offset >= 0) {
+        offset += offsets[0];
+    }
 }
 
 UnicodeString& ListFormatter::format(
@@ -272,6 +293,18 @@ UnicodeString& ListFormatter::format(
         int32_t nItems,
         UnicodeString& appendTo,
         UErrorCode& errorCode) const {
+    int32_t offset;
+    return format(items, nItems, appendTo, -1, offset, errorCode);
+}
+
+UnicodeString& ListFormatter::format(
+        const UnicodeString items[],
+        int32_t nItems,
+        UnicodeString& appendTo,
+        int32_t index,
+        int32_t &offset,
+        UErrorCode& errorCode) const {
+    offset = -1;
     if (U_FAILURE(errorCode)) {
         return appendTo;
     }
@@ -284,24 +317,37 @@ UnicodeString& ListFormatter::format(
         return appendTo;
     }
     if (nItems == 1) {
+        if (index == 0) {
+            offset = appendTo.length();
+        }
         appendTo.append(items[0]);
         return appendTo;
     }
     if (nItems == 2) {
+        if (index == 0) {
+            offset = 0;
+        }
         joinStrings(
                 data->twoPattern,
                 items[0],
                 items[1],
                 appendTo,
+                index == 1,
+                offset,
                 errorCode);
         return appendTo;
     }
     UnicodeString temp[2];
+    if (index == 0) {
+        offset = 0;
+    }
     joinStrings(
             data->startPattern,
             items[0],
             items[1],
             temp[0],
+            index == 1,
+            offset,
             errorCode);
     int32_t i;
     int32_t pos = 0;
@@ -313,6 +359,8 @@ UnicodeString& ListFormatter::format(
                  temp[pos],
                  items[i],
                  temp[npos],
+                 index == i,
+                 offset,
                  errorCode);
          pos = npos;
          npos = (pos + 1) & 1;
@@ -323,8 +371,11 @@ UnicodeString& ListFormatter::format(
             temp[pos],
             items[nItems - 1],
             temp[npos],
+            index == nItems - 1,
+            offset,
             errorCode);
     if (U_SUCCESS(errorCode)) {
+        offset += appendTo.length();
         appendTo += temp[npos];
     }
     return appendTo;
