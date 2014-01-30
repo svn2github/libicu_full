@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2012-2013, International Business Machines
+*   Copyright (C) 2012-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -29,7 +29,10 @@ U_NAMESPACE_BEGIN
 /** @internal */
 class Hashtable;
 
-#ifndef U_HIDE_INTERNAL_API
+/** @internal */
+struct ListFormatInternal;
+
+/* The following can't be #ifndef U_HIDE_INTERNAL_API, needed for other .h file declarations */
 /** @internal */
 struct ListFormatData : public UMemory {
     UnicodeString twoPattern;
@@ -40,7 +43,6 @@ struct ListFormatData : public UMemory {
   ListFormatData(const UnicodeString& two, const UnicodeString& start, const UnicodeString& middle, const UnicodeString& end) :
       twoPattern(two), startPattern(start), middlePattern(middle), endPattern(end) {}
 };
-#endif  /* U_HIDE_INTERNAL_API */
 
 
 /**
@@ -133,20 +135,30 @@ class U_COMMON_API ListFormatter : public UObject{
 
 #ifndef U_HIDE_INTERNAL_API
     /**
+      @internal for MeasureFormat
+    */
+    UnicodeString& format(
+            const UnicodeString items[],
+            int32_t n_items,
+            UnicodeString& appendTo,
+            int32_t index,
+            int32_t &offset,
+            UErrorCode& errorCode) const;
+    /**
      * @internal constructor made public for testing.
      */
-    ListFormatter(const ListFormatData* listFormatterData);
+    ListFormatter(const ListFormatData &data);
+    ListFormatter(const ListFormatInternal* listFormatterInternal);
 #endif  /* U_HIDE_INTERNAL_API */
 
   private:
     static void initializeHash(UErrorCode& errorCode);
-    static const ListFormatData* getListFormatData(const Locale& locale, const char *style, UErrorCode& errorCode);
+    static const ListFormatInternal* getListFormatInternal(const Locale& locale, const char *style, UErrorCode& errorCode);
 
     ListFormatter();
-    void addNewString(const UnicodeString& pattern, UnicodeString& originalString,
-                      const UnicodeString& newString, UErrorCode& errorCode) const;
 
-    const ListFormatData* data;
+    ListFormatInternal* owned;
+    const ListFormatInternal* data;
 };
 
 U_NAMESPACE_END

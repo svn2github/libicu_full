@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2013, International Business Machines Corporation and
+ * Copyright (c) 1997-2014, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -34,6 +34,7 @@ static IntlTest *createLocalPointerTest();
 extern IntlTest *createUCharsTrieTest();
 static IntlTest *createEnumSetTest();
 extern IntlTest *createLRUCacheTest();
+extern IntlTest *createSimplePatternFormatterTest();
 
 #define CASE(id, test) case id:                               \
                           name = #test;                       \
@@ -101,6 +102,14 @@ void IntlTestUtilities::runIndexedTest( int32_t index, UBool exec, const char* &
             if (exec) {
                 logln("TestSuite LRUCacheTest---"); logln();
                 LocalPointer<IntlTest> test(createLRUCacheTest());
+                callTest(*test, par);
+            }
+            break;
+        case 21:
+            name = "SimplePatternFormatterTest";
+            if (exec) {
+                logln("TestSuite SimplePatternFormatterTest---"); logln();
+                LocalPointer<IntlTest> test(createSimplePatternFormatterTest());
                 callTest(*test, par);
             }
             break;
