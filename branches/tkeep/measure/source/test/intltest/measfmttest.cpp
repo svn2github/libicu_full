@@ -20,6 +20,7 @@
 #include "unicode/measure.h"
 #include "unicode/measunit.h"
 #include "unicode/tmutamt.h"
+#include "charstr.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
 
@@ -324,7 +325,7 @@ void MeasureFormatTest::TestFormatPeriodEn() {
             {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2 yrs, 5 mths, 3 wks, 4 days"}};
 
     ExpectedResult narrowData[] = {
-            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1m 59.9996 s"},
+            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1m 59.9996s"},
             {t_19m, LENGTHOF(t_19m), "19m"},
             {t_1h_23_5s, LENGTHOF(t_1h_23_5s), "1h 23.5s"},
             {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1h 23.5m"},
@@ -576,7 +577,7 @@ void MeasureFormatTest::TestMultiples() {
     Locale ru("ru");
     Locale en("en");
     helperTestMultiples(en, UMEASFMT_WIDTH_WIDE, "2 miles, 1 foot, 2.3 inches");
-    helperTestMultiples(en, UMEASFMT_WIDTH_SHORT, "2 mi, 1 fft, 2.3 in");
+    helperTestMultiples(en, UMEASFMT_WIDTH_SHORT, "2 mi, 1 ft, 2.3 in");
     helperTestMultiples(en, UMEASFMT_WIDTH_NARROW, "2mi 1\\u2032 2.3\\u2033");
     helperTestMultiples(ru, UMEASFMT_WIDTH_WIDE, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442 \\u0438 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
     helperTestMultiples(ru, UMEASFMT_WIDTH_SHORT, "2 \\u043C\\u0438\\u043B\\u0438 1 \\u0444\\u0443\\u0442 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
@@ -674,19 +675,19 @@ void MeasureFormatTest::TestFieldPosition() {
         return;
     }
     verifyFieldPosition(
-            "TestFieldPosition",
+            "",
             fmt,
             &measure,
             1,
             NumberFormat::kDecimalSeparatorField,
-            2,
-            3);
+            10,
+            11);
     measure = Measure(43, MeasureUnit::createFoot(status), status);
     if (!assertSuccess("Error creating measure object 2", status)) {
         return;
     }
     verifyFieldPosition(
-            "TestFieldPosition",
+            "",
             fmt,
             &measure,
             1,
@@ -716,23 +717,23 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
         return;
     }
     verifyFieldPosition(
-            "TestFieldPositionMultiple",
+            "Integer",
             fmt,
             first,
             LENGTHOF(first),
             NumberFormat::kIntegerField,
-            0,
-            3);
+            8,
+            11);
     verifyFieldPosition(
-            "TestFieldPositionMultiple",
+            "Decimal separator",
             fmt,
             second,
             LENGTHOF(second),
             NumberFormat::kDecimalSeparatorField,
-            15,
-            16);
+            23,
+            24);
     verifyFieldPosition(
-            "TestFieldPositionMultiple",
+            "no decimal separator",
             fmt,
             third,
             LENGTHOF(third),
@@ -768,15 +769,23 @@ void MeasureFormatTest::verifyFieldPosition(
         NumberFormat::EAlignmentFields field,
         int32_t start,
         int32_t end) {
-    UnicodeString result;
+    // 8 char lead
+    UnicodeString result("123456: ");
     FieldPosition pos(field);
     UErrorCode status = U_ZERO_ERROR;
+    CharString ch;
+    const char *prefix = ch.append(description, status)
+            .append(": ", status).data();
+    CharString beginIndex;
+    beginIndex.append(prefix, status).append("beginIndex", status);
+    CharString endIndex;
+    endIndex.append(prefix, status).append("endIndex", status);
     fmt.formatMeasures(measures, measureCount, result, pos, status);
     if (!assertSuccess("Error formatting", status)) {
         return;
     }
-    assertEquals(description, start, pos.getBeginIndex());
-    assertEquals(description, end, pos.getBeginIndex());
+    assertEquals(beginIndex.data(), start, pos.getBeginIndex());
+    assertEquals(endIndex.data(), end, pos.getEndIndex());
 }
 
 void MeasureFormatTest::verifyFormat(

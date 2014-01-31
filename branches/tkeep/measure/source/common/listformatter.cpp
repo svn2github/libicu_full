@@ -264,7 +264,7 @@ static void joinStrings(
         const UnicodeString& second,
         UnicodeString &result,
         UBool recordOffset,
-        int32_t offset,
+        int32_t &offset,
         UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
         return;
@@ -379,7 +379,9 @@ UnicodeString& ListFormatter::format(
             offset,
             errorCode);
     if (U_SUCCESS(errorCode)) {
-        offset += appendTo.length();
+        if (offset >= 0) {
+            offset += appendTo.length();
+        }
         appendTo += temp[npos];
     }
     return appendTo;

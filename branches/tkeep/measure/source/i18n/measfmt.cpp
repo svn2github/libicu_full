@@ -264,7 +264,9 @@ MeasureFormat::MeasureFormat(
         NumberFormat *nfToAdopt,
         UErrorCode &status) 
         : ptr(NULL), width(w) {
-    getFromCache(locale.getName(), ptr, status);
+    const char *name = locale.getName();
+    setLocaleIDs(name, name);
+    getFromCache(name, ptr, status);
     if (U_FAILURE(status)) {
         return;
     }
