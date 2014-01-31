@@ -57,6 +57,13 @@ private:
         const Measure *measures,
         int32_t measureCount,
         const char *expected);
+    void verifyFormatWithPrefix(
+        const char *description,
+        const MeasureFormat &fmt,
+        const UnicodeString &prefix,
+        const Measure *measures,
+        int32_t measureCount,
+        const char *expected);
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -69,6 +76,7 @@ private:
     void verifyFieldPosition(
         const char *description,
         const MeasureFormat &fmt,
+        const UnicodeString &prefix,
         const Measure *measures,
         int32_t measureCount,
         NumberFormat::EAlignmentFields field,
@@ -224,6 +232,13 @@ void MeasureFormatTest::TestExamplesInDocs() {
             &measureC,
             1,
             "23 \\u00B0C");
+    verifyFormatWithPrefix(
+            "Celsius",
+            fmtFr,
+            "Prefix: ",
+            &measureC,
+            1,
+            "Prefix: 23 \\u00B0C");
     verifyFormat(
             "Fahrenheit",
             fmtFr,
@@ -236,6 +251,13 @@ void MeasureFormatTest::TestExamplesInDocs() {
             feetAndInches,
             LENGTHOF(feetAndInches),
             "70 pieds et 5,3 pouces");
+    verifyFormatWithPrefix(
+            "Feet and inches",
+            fmtFrFull,
+            "Prefix: ",
+            feetAndInches,
+            LENGTHOF(feetAndInches),
+            "Prefix: 70 pieds et 5,3 pouces");
     verifyFormat(
             "Foot and inch",
             fmtFrFull,
@@ -674,9 +696,11 @@ void MeasureFormatTest::TestFieldPosition() {
     if (!assertSuccess("Error creating measure object 1", status)) {
         return;
     }
+    UnicodeString prefix("123456: ");
     verifyFieldPosition(
             "",
             fmt,
+            prefix,
             &measure,
             1,
             NumberFormat::kDecimalSeparatorField,
@@ -689,6 +713,7 @@ void MeasureFormatTest::TestFieldPosition() {
     verifyFieldPosition(
             "",
             fmt,
+            prefix,
             &measure,
             1,
             NumberFormat::kDecimalSeparatorField,
@@ -716,9 +741,11 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
     if (!assertSuccess("Error creating measure objects", status)) {
         return;
     }
+    UnicodeString prefix("123456: ");
     verifyFieldPosition(
             "Integer",
             fmt,
+            prefix,
             first,
             LENGTHOF(first),
             NumberFormat::kIntegerField,
@@ -727,6 +754,7 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
     verifyFieldPosition(
             "Decimal separator",
             fmt,
+            prefix,
             second,
             LENGTHOF(second),
             NumberFormat::kDecimalSeparatorField,
@@ -735,6 +763,7 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
     verifyFieldPosition(
             "no decimal separator",
             fmt,
+            prefix,
             third,
             LENGTHOF(third),
             NumberFormat::kDecimalSeparatorField,
@@ -764,22 +793,23 @@ void MeasureFormatTest::TestBadArg() {
 void MeasureFormatTest::verifyFieldPosition(
         const char *description,
         const MeasureFormat &fmt,
+        const UnicodeString &prefix,
         const Measure *measures,
         int32_t measureCount,
         NumberFormat::EAlignmentFields field,
         int32_t start,
         int32_t end) {
     // 8 char lead
-    UnicodeString result("123456: ");
+    UnicodeString result(prefix);
     FieldPosition pos(field);
     UErrorCode status = U_ZERO_ERROR;
     CharString ch;
-    const char *prefix = ch.append(description, status)
+    const char *descPrefix = ch.append(description, status)
             .append(": ", status).data();
     CharString beginIndex;
-    beginIndex.append(prefix, status).append("beginIndex", status);
+    beginIndex.append(descPrefix, status).append("beginIndex", status);
     CharString endIndex;
-    endIndex.append(prefix, status).append("endIndex", status);
+    endIndex.append(descPrefix, status).append("endIndex", status);
     fmt.formatMeasures(measures, measureCount, result, pos, status);
     if (!assertSuccess("Error formatting", status)) {
         return;
@@ -794,7 +824,23 @@ void MeasureFormatTest::verifyFormat(
         const Measure *measures,
         int32_t measureCount,
         const char *expected) {
-    UnicodeString result;
+    verifyFormatWithPrefix(
+            description,
+            fmt,
+            "",
+            measures,
+            measureCount,
+            expected);
+}
+
+void MeasureFormatTest::verifyFormatWithPrefix(
+        const char *description,
+        const MeasureFormat &fmt,
+        const UnicodeString &prefix,
+        const Measure *measures,
+        int32_t measureCount,
+        const char *expected) {
+    UnicodeString result(prefix);
     FieldPosition pos(0);
     UErrorCode status = U_ZERO_ERROR;
     fmt.formatMeasures(measures, measureCount, result, pos, status);
