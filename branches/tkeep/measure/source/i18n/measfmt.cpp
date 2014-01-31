@@ -72,6 +72,13 @@ private:
 MeasureFormatData::~MeasureFormatData() {
 }
 
+static int32_t widthToIndex(UMeasureFormatWidth width) {
+    if (width > UMEASFMT_WIDTH_NARROW) {
+        return UMEASFMT_WIDTH_NARROW;
+    }
+    return width;
+}
+
 static UBool isCurrency(const MeasureUnit &unit) {
     return (uprv_strcmp(unit.getType(), "currency") == 0);
 }
@@ -97,7 +104,7 @@ static UBool load(
     if (U_FAILURE(status)) {
         return FALSE;
     }
-    const char *widthPath[] = {"units", "unitsShort", "unitsNarrow"};
+    static const char *widthPath[] = {"units", "unitsShort", "unitsNarrow"};
     MeasureUnit *units = NULL;
     int32_t unitCount = MeasureUnit::getAvailable(units, 0, status);
     while (status == U_BUFFER_OVERFLOW_ERROR) {
@@ -110,19 +117,26 @@ static UBool load(
         }
         unitCount = MeasureUnit::getAvailable(units, unitCount, status);
     }
-    if (U_FAILURE(status)) {
-        delete [] units;
-        return FALSE;
-    }
     for (int32_t currentWidth = 0; currentWidth <= UMEASFMT_WIDTH_NARROW; ++currentWidth) {
-        LocalUResourceBundlePointer widthBundle(
-                ures_getByKeyWithFallback(
-                        resource, widthPath[currentWidth], NULL, &status));
+        // Be sure status is clear since next resource bundle lookup may fail.
         if (U_FAILURE(status)) {
             delete [] units;
             return FALSE;
         }
+        LocalUResourceBundlePointer widthBundle(
+                ures_getByKeyWithFallback(
+                        resource, widthPath[currentWidth], NULL, &status));
+        // We may not have data for all widths in all locales.
+        if (status == U_MISSING_RESOURCE_ERROR) {
+            status = U_ZERO_ERROR;
+            continue;
+        }
         for (int32_t currentUnit = 0; currentUnit < unitCount; ++currentUnit) {
+            // Be sure status is clear next lookup may fail.
+            if (U_FAILURE(status)) {
+                delete [] units;
+                return FALSE;
+            }
             if (isCurrency(units[currentUnit])) {
                 continue;
             }
@@ -136,6 +150,12 @@ static UBool load(
                             pathBuffer.data(),
                             NULL,
                             &status));
+            // We may not have data for all units in all widths
+            if (status == U_MISSING_RESOURCE_ERROR) {
+                status = U_ZERO_ERROR;
+                continue;
+            }
+            // We must have the unit bundle to proceed
             if (U_FAILURE(status)) {
                 delete [] units;
                 return FALSE;
@@ -325,6 +345,7 @@ UnicodeString &MeasureFormat::formatMeasures(
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const {
+    static const char *listStyles[] = {"unit", "unit-short", "unit-narrow"};
     if (U_FAILURE(status)) {
         return appendTo;
     }
@@ -337,7 +358,9 @@ UnicodeString &MeasureFormat::formatMeasures(
     //TODO: Numeric
     LocalPointer<ListFormatter> lf(
             ListFormatter::createInstance(
-                    getLocale(ULOC_VALID_LOCALE, status), status));
+                    getLocale(ULOC_VALID_LOCALE, status),
+                    listStyles[widthToIndex(width)],
+                    status));
     if (U_FAILURE(status)) {
         return appendTo;
     }
@@ -375,7 +398,7 @@ UnicodeString &MeasureFormat::formatMeasure(
         return appendTo;
     }
     const QuantityFormatter *quantityFormatter = getQuantityFormatter(
-            amtUnit.getIndex(), width, status);
+            amtUnit.getIndex(), widthToIndex(width), status);
     if (U_FAILURE(status)) {
         return appendTo;
     }
@@ -389,18 +412,15 @@ UnicodeString &MeasureFormat::formatMeasure(
 
 const QuantityFormatter *MeasureFormat::getQuantityFormatter(
         int32_t index,
-        UMeasureFormatWidth width,
+        int32_t widthIndex,
         UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return NULL;
     }
     const QuantityFormatter *formatters =
             ptr->unitFormatters->formatters[index];
-    if (width > UMEASFMT_WIDTH_NARROW) {
-        width = UMEASFMT_WIDTH_NARROW;
-    }
-    if (formatters[width].isValid()) {
-        return &formatters[width];
+    if (formatters[widthIndex].isValid()) {
+        return &formatters[widthIndex];
     }
     if (formatters[UMEASFMT_WIDTH_SHORT].isValid()) {
         return &formatters[UMEASFMT_WIDTH_SHORT];

@@ -206,7 +206,7 @@ class U_I18N_API MeasureFormat : public Format {
 
     const QuantityFormatter *getQuantityFormatter(
             int32_t index,
-            UMeasureFormatWidth width,
+            int32_t widthIndex,
             UErrorCode &status) const;
     UnicodeString &formatMeasure(
         const Measure &measure,

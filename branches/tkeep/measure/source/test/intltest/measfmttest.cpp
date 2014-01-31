@@ -205,12 +205,9 @@ void MeasureFormatTest::TestExamplesInDocs() {
     }
     Measure measureC(23, MeasureUnit::createCelsius(status), status);
     Measure measureF(70, MeasureUnit::createFahrenheit(status), status);
-    Measure poundsAndOunces[] = {
-            Measure(70, MeasureUnit::createPound(status), status),
-            Measure(5.3, MeasureUnit::createOunce(status), status)};
-    Measure poundAndOunce[] = {
-            Measure(1, MeasureUnit::createPound(status), status),
-            Measure(1, MeasureUnit::createOunce(status), status)};
+    Measure feetAndInches[] = {
+            Measure(70, MeasureUnit::createFoot(status), status),
+            Measure(5.3, MeasureUnit::createInch(status), status)};
     Measure footAndInch[] = {
             Measure(1, MeasureUnit::createFoot(status), status),
             Measure(1, MeasureUnit::createInch(status), status)};
@@ -221,37 +218,37 @@ void MeasureFormatTest::TestExamplesInDocs() {
         return;
     }
     verifyFormat(
-            "TestExamplesInDocs",
+            "Celsius",
             fmtFr,
             &measureC,
             1,
             "23 \\u00B0C");
     verifyFormat(
-            "TestExamplesInDocs",
+            "Fahrenheit",
             fmtFr,
             &measureF,
             1,
             "70 \\u00B0F");
     verifyFormat(
-            "TestExamplesInDocs",
+            "Feet and inches",
             fmtFrFull,
-            poundsAndOunces,
-            LENGTHOF(poundsAndOunces),
+            feetAndInches,
+            LENGTHOF(feetAndInches),
             "70 pieds et 5,3 pouces");
     verifyFormat(
-            "TestExamplesInDocs",
+            "Foot and inch",
             fmtFrFull,
-            poundAndOunce,
-            LENGTHOF(poundAndOunce),
+            footAndInch,
+            LENGTHOF(footAndInch),
             "1 pied et 1 pouce");
     verifyFormat(
-            "TestExamplesInDocs",
+            "Foot and inch narrow",
             fmtFrNarrow,
             footAndInch,
             LENGTHOF(footAndInch),
             "1\\u2032 1\\u2033");
     verifyFormat(
-            "TestExamplesInDocs",
+            "Inch and feet",
             fmtEn,
             inchAndFeet,
             LENGTHOF(inchAndFeet),
@@ -272,7 +269,7 @@ void MeasureFormatTest::TestFormatPeriodEn() {
     Measure t_1h_0m_23s[] = {
             Measure(1.0, MeasureUnit::createHour(status), status),
             Measure(0.0, MeasureUnit::createMinute(status), status),
-            Measure(23.5, MeasureUnit::createSecond(status), status)
+            Measure(23, MeasureUnit::createSecond(status), status)
     };
     Measure t_2y_5M_3w_4d[] = {
             Measure(2.0, MeasureUnit::createYear(status), status),
