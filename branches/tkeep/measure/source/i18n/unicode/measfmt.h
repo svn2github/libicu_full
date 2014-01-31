@@ -32,6 +32,7 @@
  */
 enum UMeasureFormatWidth {
 
+    // Wide, short, and narrow must be first and in this order.
     /**
      * Spell out measure units.
      * @draft ICU 53 
@@ -69,6 +70,9 @@ typedef enum UMeasureFormatWidth UMeasureFormatWidth;
 U_NAMESPACE_BEGIN
 
 class NumberFormat;
+class MeasureFormatData;
+class QuantityFormatter;
+class ListFormatter;
 
 /**
  * 
@@ -196,7 +200,26 @@ class U_I18N_API MeasureFormat : public Format {
      * @stable ICU 3.0
      */
     MeasureFormat();
+ private:
+    const MeasureFormatData *ptr;
+    UMeasureFormatWidth width;    
 
+    const QuantityFormatter *getQuantityFormatter(
+            int32_t index,
+            UMeasureFormatWidth width,
+            UErrorCode &status) const;
+    UnicodeString &formatMeasure(
+        const Measure &measure,
+        UnicodeString &appendTo,
+        FieldPosition &pos,
+        UErrorCode &status) const;
+    UnicodeString &formatMeasuresSlowTrack(
+        const Measure *measures,
+        int32_t measureCount,
+        const ListFormatter& lf,
+        UnicodeString& appendTo,
+        FieldPosition& pos,
+        UErrorCode& status) const;
 };
 
 U_NAMESPACE_END
