@@ -130,22 +130,13 @@ static UBool load(
             pathBuffer.append(units[currentUnit].getType(), status)
                     .append("/", status)
                     .append(units[currentUnit].getSubtype(), status);
-            LocalUResourceBundlePointer unitBundle2(
-                    ures_getByKeyWithFallback(
-                            widthBundle.getAlias(),
-//                            pathBuffer.data(),
-                            "area",
-                            NULL,
-                            &status));
             LocalUResourceBundlePointer unitBundle(
                     ures_getByKeyWithFallback(
                             widthBundle.getAlias(),
-//                            pathBuffer.data(),
-                            "area/square-kilometer",
+                            pathBuffer.data(),
                             NULL,
                             &status));
             if (U_FAILURE(status)) {
-                int32_t s = ures_getSize(unitBundle2.getAlias());
                 delete [] units;
                 return FALSE;
             }
