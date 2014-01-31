@@ -27,6 +27,7 @@
 #include "ucln_in.h"
 #include "unicode/listformatter.h"
 #include "charstr.h"
+#include "unicode/putil.h"
 
 #include "sharedptr.h"
 
@@ -64,6 +65,7 @@ public:
     SharedPtr<UnitFormatters> unitFormatters;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
+    SharedPtr<NumberFormat> currencyFormats[UMEASFMT_WIDTH_NARROW + 1];
     virtual ~MeasureFormatData();
 private:
     MeasureFormatData &operator=(const MeasureFormatData& other);
@@ -185,6 +187,8 @@ static UBool load(
 static SharedObject *U_CALLCONV createData(
         const char *localeId, UErrorCode &status) {
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
+    static UNumberFormatStyle currencyStyles[] = {
+            UNUM_CURRENCY_PLURAL, UNUM_CURRENCY_ISO, UNUM_CURRENCY};
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -223,6 +227,19 @@ static SharedObject *U_CALLCONV createData(
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
+    for (int32_t i = 0; i <= UMEASFMT_WIDTH_NARROW; ++i) {
+        LocalPointer<NumberFormat> cf(
+                NumberFormat::createInstance(
+                        localeId, currencyStyles[i], status));
+        if (U_FAILURE(status)) {
+            return NULL;
+        }
+        if (!result->currencyFormats[i].reset(cf.orphan())) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
+        }
+    }
+
     return result.orphan();
 }
 
@@ -336,9 +353,9 @@ UnicodeString &MeasureFormat::format(
 }
 
 void MeasureFormat::parseObject(
-        const UnicodeString &source,
-        Formattable &reslt,
-        ParsePosition& pos) const {
+        const UnicodeString & /*source*/,
+        Formattable & /*result*/,
+        ParsePosition& /*pos*/) const {
     return;
 }
 
@@ -394,11 +411,14 @@ UnicodeString &MeasureFormat::formatMeasure(
     }
     const Formattable& amtNumber = measure.getNumber();
     const MeasureUnit& amtUnit = measure.getUnit();
-//TODO: currencies
-
     if (isCurrency(amtUnit)) {
-        status = U_UNSUPPORTED_ERROR;
-        return appendTo;
+        UChar isoCode[4];
+        u_charsToUChars(amtUnit.getSubtype(), isoCode, 4);
+        return ptr->currencyFormats[widthToIndex(width)]->format(
+                new CurrencyAmount(amtNumber, isoCode, status),
+                appendTo,
+                pos,
+                status);
     }
     const QuantityFormatter *quantityFormatter = getQuantityFormatter(
             amtUnit.getIndex(), widthToIndex(width), status);
