@@ -288,6 +288,7 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
     if (this == &other) {
         return *this;
     }
+    Format::operator=(other);
     SharedObject::copyPtr(other.ptr, ptr);
     width = other.width;
     return *this;
