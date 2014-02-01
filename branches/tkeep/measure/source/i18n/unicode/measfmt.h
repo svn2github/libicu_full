@@ -17,6 +17,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/format.h"
+#include "unicode/udat.h"
 
 /**
  * \file 
@@ -73,6 +74,7 @@ class NumberFormat;
 class MeasureFormatData;
 class QuantityFormatter;
 class ListFormatter;
+class DateFormat;
 
 /**
  * 
@@ -220,6 +222,19 @@ class U_I18N_API MeasureFormat : public Format {
         UnicodeString& appendTo,
         FieldPosition& pos,
         UErrorCode& status) const;
+    UnicodeString &formatNumeric(
+        const Formattable *hms,  // always length 3
+        int32_t bitMap,   // 1=hourset, 2=minuteset, 4=secondset
+        UnicodeString &appendTo,
+        UErrorCode &status) const;
+    UnicodeString &formatNumeric(
+        UDate date,
+        const DateFormat &dateFmt,
+        UDateFormatField smallestField,
+        const Formattable &smallestAmount,
+        UnicodeString &appendTo,
+        UErrorCode &status) const;
+
 };
 
 U_NAMESPACE_END

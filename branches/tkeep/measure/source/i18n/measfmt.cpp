@@ -28,6 +28,7 @@
 #include "unicode/listformatter.h"
 #include "charstr.h"
 #include "unicode/putil.h"
+#include "unicode/smpdtfmt.h"
 
 #include "sharedptr.h"
 
@@ -60,12 +61,36 @@ private:
     UnitFormatters &operator=(const UnitFormatters &other);
 };
 
+class NumericDateFormatters : public UMemory {
+public:
+    SimpleDateFormat hourMinute;
+    SimpleDateFormat minuteSecond;
+    SimpleDateFormat hourMinuteSecond;
+    NumericDateFormatters(
+            const UnicodeString &hm,
+            const UnicodeString &ms,
+            const UnicodeString &hms,
+            UErrorCode &status) : 
+            hourMinute(hm, status),
+            minuteSecond(ms, status), 
+            hourMinuteSecond(hms, status) {
+        const TimeZone *gmt = TimeZone::getGMT();
+        hourMinute.setTimeZone(*gmt);
+        minuteSecond.setTimeZone(*gmt);
+        hourMinuteSecond.setTimeZone(*gmt);
+    }
+private:
+    NumericDateFormatters(const NumericDateFormatters &other);
+    NumericDateFormatters &operator=(const NumericDateFormatters &other);
+};
+
 class MeasureFormatData : public SharedObject {
 public:
     SharedPtr<UnitFormatters> unitFormatters;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
     SharedPtr<NumberFormat> currencyFormats[UMEASFMT_WIDTH_NARROW + 1];
+    SharedPtr<NumericDateFormatters> numericDateFormatters;
     virtual ~MeasureFormatData();
 private:
     MeasureFormatData &operator=(const MeasureFormatData& other);
@@ -184,6 +209,49 @@ static UBool load(
     return U_SUCCESS(status);
 }
 
+static UnicodeString loadNumericDateFormatterPattern(
+        const UResourceBundle *resource,
+        const char *pattern,
+        UErrorCode &status) {
+    UnicodeString result;
+    if (U_FAILURE(status)) {
+        return result;
+    }
+    CharString chs;
+    chs.append("durationUnits", status)
+            .append("/", status).append(pattern, status);
+    LocalUResourceBundlePointer patternBundle(
+            ures_getByKeyWithFallback(
+                resource,
+                chs.data(),
+                NULL,
+                &status));
+    if (U_FAILURE(status)) {
+        return result;
+    }
+    getString(patternBundle.getAlias(), result, status);
+    // TODO: Make this more efficient.
+    return result.findAndReplace(UnicodeString("h"), UnicodeString("H"));
+}
+
+static NumericDateFormatters *loadNumericDateFormatters(
+        const UResourceBundle *resource,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    NumericDateFormatters *result = new NumericDateFormatters(
+        loadNumericDateFormatterPattern(resource, "hm", status),
+        loadNumericDateFormatterPattern(resource, "ms", status),
+        loadNumericDateFormatterPattern(resource, "hms", status),
+        status);
+    if (U_FAILURE(status)) {
+        delete result;
+        return NULL;
+    }
+    return result;
+}
+
 static SharedObject *U_CALLCONV createData(
         const char *localeId, UErrorCode &status) {
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
@@ -210,6 +278,16 @@ static SharedObject *U_CALLCONV createData(
         return NULL;
     }
 
+    LocalPointer<NumericDateFormatters> ndf(
+            loadNumericDateFormatters(topLevel.getAlias(), status));
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    if (!result->numericDateFormatters.reset(ndf.orphan())) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+
     LocalPointer<PluralRules> pr(PluralRules::forLocale(localeId, status));
     if (U_FAILURE(status)) {
         return NULL;
@@ -218,6 +296,7 @@ static SharedObject *U_CALLCONV createData(
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
+
     LocalPointer<NumberFormat> nf(
             NumberFormat::createInstance(localeId, status));
     if (U_FAILURE(status)) {
@@ -227,6 +306,7 @@ static SharedObject *U_CALLCONV createData(
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
+
     for (int32_t i = 0; i <= UMEASFMT_WIDTH_NARROW; ++i) {
         LocalPointer<NumberFormat> cf(
                 NumberFormat::createInstance(
@@ -264,6 +344,54 @@ static void getFromCache(
     }
     Mutex lock(&gCacheMutex);
     gCache->get(locale, ptr, status);
+}
+
+static int32_t toHMS(
+        const Measure *measures,
+        int32_t measureCount,
+        Formattable *hms,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return 0;
+    }
+    int32_t result = 0;
+    LocalPointer<MeasureUnit> hourUnit(MeasureUnit::createHour(status));
+    LocalPointer<MeasureUnit> minuteUnit(MeasureUnit::createMinute(status));
+    LocalPointer<MeasureUnit> secondUnit(MeasureUnit::createSecond(status));
+    if (U_FAILURE(status)) {
+        return 0;
+    }
+    int32_t count = 0;
+    for (int32_t i = 0; i < measureCount; ++i) {
+        if (measures[i].getUnit() == *hourUnit) {
+            if ((result & 1) == 0) {
+                ++count;
+            } else {
+                return 0;
+            }
+            hms[0] = measures[i].getNumber();
+            result |= 1;
+        } else if (measures[i].getUnit() == *minuteUnit) {
+            if ((result & 2) == 0) {
+                ++count;
+            } else {
+                return 0;
+            }
+            hms[1] = measures[i].getNumber();
+            result |= 2;
+        } else if (measures[i].getUnit() == *secondUnit) {
+            if ((result & 4) == 0) {
+                ++count;
+            } else {
+                return 0;
+            }
+            hms[2] = measures[i].getNumber();
+            result |= 4;
+        } else {
+            return 0;
+        }
+    }
+    return result;
 }
 
 
@@ -375,7 +503,13 @@ UnicodeString &MeasureFormat::formatMeasures(
     if (measureCount == 1) {
         return formatMeasure(measures[0], appendTo, pos, status);
     }
-    //TODO: Numeric
+    if (width == UMEASFMT_WIDTH_NUMERIC) {
+        Formattable hms[3];
+        int32_t bitMap = toHMS(measures, measureCount, hms, status);
+        if (bitMap > 0) {
+            return formatNumeric(hms, bitMap, appendTo, status);
+        }
+    }
     LocalPointer<ListFormatter> lf(
             ListFormatter::createInstance(
                     getLocale(ULOC_VALID_LOCALE, status),
@@ -431,6 +565,86 @@ UnicodeString &MeasureFormat::formatMeasure(
             *ptr->pluralRules, appendTo,
             pos,
             status);
+}
+
+UnicodeString &MeasureFormat::formatNumeric(
+        const Formattable *hms,  // always length 3
+        int32_t bitMap,   // 1=hourset, 2=minuteset, 4=secondset
+        UnicodeString &appendTo,
+        UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    UDate millis = 
+        (UDate) (((hms[0].getDouble(status) * 60.0
+             + hms[1].getDouble(status)) * 60.0
+                  + hms[2].getDouble(status)) * 1000.0);
+    switch (bitMap) {
+    case 5: // hs
+    case 7: // hms
+        return formatNumeric(
+                millis,
+                ptr->numericDateFormatters->hourMinuteSecond,
+                UDAT_SECOND_FIELD,
+                hms[2],
+                appendTo,
+                status);
+        break;
+    case 6: // ms
+        return formatNumeric(
+                millis,
+                ptr->numericDateFormatters->minuteSecond,
+                UDAT_SECOND_FIELD,
+                hms[2],
+                appendTo,
+                status);
+        break;
+    case 3: // hm
+        return formatNumeric(
+                millis,
+                ptr->numericDateFormatters->hourMinute,
+                UDAT_MINUTE_FIELD,
+                hms[1],
+                appendTo,
+                status);
+        break;
+    default:
+        status = U_INTERNAL_PROGRAM_ERROR;
+        return appendTo;
+        break;
+    }
+    return appendTo;
+}
+
+UnicodeString &MeasureFormat::formatNumeric(
+        UDate date,
+        const DateFormat &dateFmt,
+        UDateFormatField smallestField,
+        const Formattable &smallestAmount,
+        UnicodeString &appendTo,
+        UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    UnicodeString smallestAmountFormatted;
+    FieldPosition dontCare(FieldPosition::DONT_CARE);
+    ptr->numberFormat->format(
+            smallestAmount, smallestAmountFormatted, dontCare, status);
+    FieldPosition smallestFieldPosition(smallestField);
+    UnicodeString draft;
+    dateFmt.format(date, draft, smallestFieldPosition, status);
+    if (smallestFieldPosition.getBeginIndex() != 0 ||
+        smallestFieldPosition.getEndIndex() != 0) {
+        appendTo.append(draft, 0, smallestFieldPosition.getBeginIndex());
+        appendTo.append(smallestAmountFormatted);
+        appendTo.append(
+                draft,
+                smallestFieldPosition.getEndIndex(),
+                draft.length());
+    } else {
+        appendTo.append(draft);
+    }
+    return appendTo;
 }
 
 const QuantityFormatter *MeasureFormat::getQuantityFormatter(
