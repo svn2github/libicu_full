@@ -682,7 +682,7 @@ StringEnumeration* MeasureUnit::getAvailableTypes(UErrorCode &errorCode) {
     return result;
 }
 
-int32_t MeasureUnit::getMaxIndex() {
+int32_t MeasureUnit::getIndexCount() {
     return gIndexes[LENGTHOF(gIndexes) - 1];
 }
 

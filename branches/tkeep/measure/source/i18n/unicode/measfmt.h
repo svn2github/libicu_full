@@ -204,14 +204,57 @@ class U_I18N_API MeasureFormat : public Format {
      */
     MeasureFormat();
 
+#ifndef U_HIDE_INTERNAL_API 
+
+    /**
+     * ICU use only.
+     * Initialize MeasureFormat class from base class.
+     * @internal.
+     */
     void initMeasureFormat(const Locale &locale, UMeasureFormatWidth width, UErrorCode &status);
 
+    /**
+     * ICU use only.
+     * Allows subclass to change locale. Note that this method also changes
+     * the NumberFormat object. Returns TRUE if locale changed; FALSE if no
+     * change was made.
+     * @internal.
+     */
     UBool setMeasureFormatLocale(const Locale &locale, UErrorCode &status);
+
+    /**
+     * ICU use only.
+     * Let subclass change NumberFormat.
+     * @internal.
+     */
     void adoptNumberFormat(NumberFormat *nfToAdopt, UErrorCode &status);
+
+    /**
+     * ICU use only.
+     * @internal.
+     */
     const NumberFormat &getNumberFormat() const;
+
+    /**
+     * ICU use only.
+     * @internal.
+     */
     const PluralRules &getPluralRules() const;
+
+    /**
+     * ICU use only.
+     * @internal.
+     */
     Locale getLocale(UErrorCode &status) const;
+
+    /**
+     * ICU use only.
+     * @internal.
+     */
     const char *getLocaleID(UErrorCode &status) const;
+
+#endif /* U_HIDE_INTERNAL_API */
+
  private:
     const MeasureFormatData *ptr;
     UMeasureFormatWidth width;    
@@ -220,11 +263,13 @@ class U_I18N_API MeasureFormat : public Format {
             int32_t index,
             int32_t widthIndex,
             UErrorCode &status) const;
+
     UnicodeString &formatMeasure(
         const Measure &measure,
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const;
+
     UnicodeString &formatMeasuresSlowTrack(
         const Measure *measures,
         int32_t measureCount,
@@ -232,11 +277,13 @@ class U_I18N_API MeasureFormat : public Format {
         UnicodeString& appendTo,
         FieldPosition& pos,
         UErrorCode& status) const;
+
     UnicodeString &formatNumeric(
         const Formattable *hms,  // always length 3
         int32_t bitMap,   // 1=hourset, 2=minuteset, 4=secondset
         UnicodeString &appendTo,
         UErrorCode &status) const;
+
     UnicodeString &formatNumeric(
         UDate date,
         const DateFormat &dateFmt,
@@ -244,7 +291,6 @@ class U_I18N_API MeasureFormat : public Format {
         const Formattable &smallestAmount,
         UnicodeString &appendTo,
         UErrorCode &status) const;
-
 };
 
 U_NAMESPACE_END

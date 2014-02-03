@@ -95,12 +95,6 @@ class U_I18N_API MeasureUnit: public UObject {
     const char *getSubtype() const;
 
     /**
-     * Internal. ICU use only.
-     * @draft ICU 53
-     */
-    int32_t getIndex() const;
-
-    /**
      * getAvailable gets all of the available units.
      * If there are too many units to fit into destCapacity then the
      * error code is set to U_BUFFER_OVERFLOW_ERROR.
@@ -144,11 +138,26 @@ class U_I18N_API MeasureUnit: public UObject {
      */
     static StringEnumeration* getAvailableTypes(UErrorCode &errorCode);
 
+#ifndef U_HIDE_INTERNAL_API
+
     /**
-     * Internal. ICU use only.
-     * @draft ICU 53
+     * ICU use only.
+     * Returns associated array index for this measure unit. Only valid for
+     * non-currency measure units.
+     * @internal
      */
-    static int32_t getMaxIndex();
+    int32_t getIndex() const;
+
+    /**
+     * ICU use only.
+     * Returns maximum value from getIndex plus 1.
+     * @internal
+     */
+    static int32_t getIndexCount();
+
+#endif /* U_HIDE_INTERNAL_API */
+
+// Start generated createXXX methods
 
     /** Constant for unit of acceleration: g-force */
     static MeasureUnit *createGForce(UErrorCode &status);
@@ -290,17 +299,21 @@ class U_I18N_API MeasureUnit: public UObject {
 
  protected:
 
+#ifndef U_HIDE_INTERNAL_API
     /**
      * For ICU use only.
-     * @internal ICU 53
+     * @internal
      */
     void initTime(const char *timeId);
 
     /**
      * For ICU use only.
-     * @internal ICU 53
+     * @internal
      */
     void initCurrency(const char *isoCurrency);
+
+#endif
+
 private:
     int32_t fTypeId;
     int32_t fSubTypeId;
