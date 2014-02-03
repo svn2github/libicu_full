@@ -55,11 +55,6 @@ class CurrencyFormat : public MeasureFormat {
     /**
      * Override Format API.
      */
-    virtual UBool operator==(const Format& other) const;
-
-    /**
-     * Override Format API.
-     */
     virtual Format* clone() const;
 
 

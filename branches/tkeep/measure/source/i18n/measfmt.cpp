@@ -398,9 +398,7 @@ static int32_t toHMS(
 MeasureFormat::MeasureFormat(
         const Locale &locale, UMeasureFormatWidth w, UErrorCode &status)
         : ptr(NULL), width(w) {
-    const char *name = locale.getName();
-    setLocaleIDs(name, name);
-    getFromCache(name, ptr, status);
+    initMeasureFormat(locale, w, status);
 }
 
 MeasureFormat::MeasureFormat(
@@ -409,21 +407,8 @@ MeasureFormat::MeasureFormat(
         NumberFormat *nfToAdopt,
         UErrorCode &status) 
         : ptr(NULL), width(w) {
-    const char *name = locale.getName();
-    setLocaleIDs(name, name);
-    getFromCache(name, ptr, status);
-    if (U_FAILURE(status)) {
-        return;
-    }
-    MeasureFormatData* wptr = SharedObject::copyOnWrite(ptr);
-    if (wptr == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    if (!wptr->numberFormat.reset(nfToAdopt)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
+    initMeasureFormat(locale, w, status);
+    adoptNumberFormat(nfToAdopt, status);
 }
 
 MeasureFormat::MeasureFormat(const MeasureFormat &other)
@@ -470,8 +455,8 @@ UBool MeasureFormat::operator==(const Format &other) const {
     // Width same, but differing shred data. Depends on locale
     // and number format objects being the same.
     UErrorCode status = U_ZERO_ERROR;
-    const char *localeId = getLocaleID(ULOC_VALID_LOCALE, status);
-    const char *rhsLocaleId = rhs->getLocaleID(ULOC_VALID_LOCALE, status);
+    const char *localeId = getLocaleID(status);
+    const char *rhsLocaleId = rhs->getLocaleID(status);
     if (U_FAILURE(status)) {
         // On failure, assume not equal
         return FALSE;
@@ -533,7 +518,7 @@ UnicodeString &MeasureFormat::formatMeasures(
     }
     LocalPointer<ListFormatter> lf(
             ListFormatter::createInstance(
-                    getLocale(ULOC_VALID_LOCALE, status),
+                    getLocale(status),
                     listStyles[widthToIndex(width)],
                     status));
     if (U_FAILURE(status)) {
@@ -554,6 +539,56 @@ UnicodeString &MeasureFormat::formatMeasures(
     lf->format(results, measureCount, appendTo, status);
     delete [] results; 
     return appendTo;
+}
+
+void MeasureFormat::initMeasureFormat(
+        const Locale &locale, UMeasureFormatWidth w, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    const char *name = locale.getName();
+    setLocaleIDs(name, name);
+    width = w;
+    getFromCache(name, ptr, status);
+}
+
+void MeasureFormat::adoptNumberFormat(NumberFormat *nfToAdopt, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    MeasureFormatData* wptr = SharedObject::copyOnWrite(ptr);
+    if (wptr == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    if (!wptr->numberFormat.reset(nfToAdopt)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+}
+
+UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &status) {
+    if (U_FAILURE(status) || locale == getLocale(status)) {
+        return FALSE;
+    }
+    initMeasureFormat(locale, width, status);
+    return U_SUCCESS(status);
+} 
+
+const NumberFormat &MeasureFormat::getNumberFormat() const {
+    return *ptr->numberFormat;
+}
+
+const PluralRules &MeasureFormat::getPluralRules() const {
+    return *ptr->pluralRules;
+}
+
+Locale MeasureFormat::getLocale(UErrorCode &status) const {
+    return Format::getLocale(ULOC_VALID_LOCALE, status);
+}
+
+const char *MeasureFormat::getLocaleID(UErrorCode &status) const {
+    return Format::getLocaleID(ULOC_VALID_LOCALE, status);
 }
 
 UnicodeString &MeasureFormat::formatMeasure(

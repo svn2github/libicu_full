@@ -71,6 +71,7 @@ typedef enum UMeasureFormatWidth UMeasureFormatWidth;
 U_NAMESPACE_BEGIN
 
 class NumberFormat;
+class PluralRules;
 class MeasureFormatData;
 class QuantityFormatter;
 class ListFormatter;
@@ -202,6 +203,15 @@ class U_I18N_API MeasureFormat : public Format {
      * @stable ICU 3.0
      */
     MeasureFormat();
+
+    void initMeasureFormat(const Locale &locale, UMeasureFormatWidth width, UErrorCode &status);
+
+    UBool setMeasureFormatLocale(const Locale &locale, UErrorCode &status);
+    void adoptNumberFormat(NumberFormat *nfToAdopt, UErrorCode &status);
+    const NumberFormat &getNumberFormat() const;
+    const PluralRules &getPluralRules() const;
+    Locale getLocale(UErrorCode &status) const;
+    const char *getLocaleID(UErrorCode &status) const;
  private:
     const MeasureFormatData *ptr;
     UMeasureFormatWidth width;    

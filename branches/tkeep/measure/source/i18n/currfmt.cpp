@@ -21,7 +21,7 @@
 U_NAMESPACE_BEGIN
 
 CurrencyFormat::CurrencyFormat(const Locale& locale, UErrorCode& ec) :
-    fmt(NULL)
+    MeasureFormat(locale, UMEASFMT_WIDTH_WIDE, ec), fmt(NULL)
 {
     fmt = NumberFormat::createCurrencyInstance(locale, ec);
 }
@@ -34,17 +34,6 @@ CurrencyFormat::CurrencyFormat(const CurrencyFormat& other) :
 
 CurrencyFormat::~CurrencyFormat() {
     delete fmt;
-}
-
-UBool CurrencyFormat::operator==(const Format& other) const {
-    if (this == &other) {
-        return TRUE;
-    }
-    if (typeid(*this) != typeid(other)) {
-        return FALSE;
-    }
-    const CurrencyFormat* c = (const CurrencyFormat*) &other;
-    return *fmt == *c->fmt;
 }
 
 Format* CurrencyFormat::clone() const {
