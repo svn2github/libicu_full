@@ -409,7 +409,7 @@ void MeasureFormatTest::TestFormatPeriodEn() {
     }
     // exercise clone
     {
-        MeasureFormat *mf3 = mf.clone();
+        MeasureFormat *mf3 = (MeasureFormat *) mf.clone();
         verifyFormat("en WIDE copy", *mf3, fullData, LENGTHOF(fullData));
         delete mf3;
     }
