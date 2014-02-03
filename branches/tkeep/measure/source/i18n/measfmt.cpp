@@ -230,8 +230,16 @@ static UnicodeString loadNumericDateFormatterPattern(
         return result;
     }
     getString(patternBundle.getAlias(), result, status);
-    // TODO: Make this more efficient.
-    return result.findAndReplace(UnicodeString("h"), UnicodeString("H"));
+    // Replace 'h' with 'H'
+    int32_t len = result.length();
+    UChar *buffer = result.getBuffer(len);
+    for (int32_t i = 0; i < len; ++i) {
+        if (buffer[i] == 0x68) { // 'h'
+            buffer[i] = 0x48; // 'H'
+        }
+    }
+    result.releaseBuffer(len);
+    return result;
 }
 
 static NumericDateFormatters *loadNumericDateFormatters(
