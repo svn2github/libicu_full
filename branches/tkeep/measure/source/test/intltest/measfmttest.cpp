@@ -51,6 +51,7 @@ private:
     void TestFieldPosition();
     void TestFieldPositionMultiple();
     void TestBadArg();
+    void TestEquality();
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -104,6 +105,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestFieldPosition);
     TESTCASE_AUTO(TestFieldPositionMultiple);
     TESTCASE_AUTO(TestBadArg);
+    TESTCASE_AUTO(TestEquality);
     TESTCASE_AUTO_END;
 }
 
@@ -399,6 +401,18 @@ void MeasureFormatTest::TestFormatPeriodEn() {
         return;
     }
     verifyFormat("en WIDE", mf, fullData, LENGTHOF(fullData));
+
+    // exercise copy constructor
+    {
+        MeasureFormat mf2(mf);
+        verifyFormat("en WIDE copy", mf2, fullData, LENGTHOF(fullData));
+    }
+    // exercise clone
+    {
+        MeasureFormat *mf3 = mf.clone();
+        verifyFormat("en WIDE copy", *mf3, fullData, LENGTHOF(fullData));
+        delete mf3;
+    }
     mf = MeasureFormat(en, UMEASFMT_WIDTH_SHORT, (NumberFormat *) nf->clone(), status);
     if (!assertSuccess("Error creating measure format en SHORT", status)) {
         return;
@@ -789,6 +803,25 @@ void MeasureFormatTest::TestBadArg() {
     }
 }
 
+void MeasureFormatTest::TestEquality() {
+    UErrorCode status = U_ZERO_ERROR;
+    NumberFormat* nfeq = NumberFormat::createInstance("en", status);
+    NumberFormat* nfne = NumberFormat::createInstance("fr", status);
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    MeasureFormat fmtEq(fmt);
+    MeasureFormat fmtEq2("en", UMEASFMT_WIDTH_SHORT, nfeq, status);
+    MeasureFormat fmtne1("en", UMEASFMT_WIDTH_WIDE, status);
+    MeasureFormat fmtne2("fr", UMEASFMT_WIDTH_SHORT, status);
+    MeasureFormat fmtne3("en", UMEASFMT_WIDTH_SHORT, nfne, status);
+    assertSuccess("Error creating MeasureFormats", status);
+    assertTrue("Equal", fmt == fmtEq);
+    assertTrue("Equal2", fmt == fmtEq2);
+    assertFalse("Equal Neg", fmt != fmtEq);
+    assertTrue("Not Equal 1", fmt != fmtne1);
+    assertFalse("Not Equal Neg 1", fmt == fmtne1);
+    assertTrue("Not Equal 2", fmt != fmtne2);
+    assertTrue("Not Equal 3", fmt != fmtne3);
+}
 
 void MeasureFormatTest::verifyFieldPosition(
         const char *description,

@@ -450,13 +450,34 @@ MeasureFormat::~MeasureFormat() {
     }
 }
 
-// TODO
 UBool MeasureFormat::operator==(const Format &other) const {
     const MeasureFormat *rhs = dynamic_cast<const MeasureFormat *>(&other);
     if (rhs == NULL) {
         return FALSE;
     }
-    return TRUE;
+    // Same objects are equivalent
+    if (this == rhs) {
+        return TRUE;
+    }
+    // differing widths aren't equivalent
+    if (width != rhs->width) {
+        return FALSE;
+    }
+    // Width the same, same shared data -> equivlanet
+    if (ptr == rhs->ptr) {
+        return TRUE;
+    }
+    // Width same, but differing shred data. Depends on locale
+    // and number format objects being the same.
+    UErrorCode status = U_ZERO_ERROR;
+    const char *localeId = getLocaleID(ULOC_VALID_LOCALE, status);
+    const char *rhsLocaleId = rhs->getLocaleID(ULOC_VALID_LOCALE, status);
+    if (U_FAILURE(status)) {
+        // On failure, assume not equal
+        return FALSE;
+    }
+    return (uprv_strcmp(localeId, rhsLocaleId) == 0
+            && *ptr->numberFormat == *rhs->ptr->numberFormat);
 }
 
 Format *MeasureFormat::clone() const {
@@ -627,9 +648,8 @@ UnicodeString &MeasureFormat::formatNumeric(
         return appendTo;
     }
     UnicodeString smallestAmountFormatted;
-    FieldPosition dontCare(FieldPosition::DONT_CARE);
     ptr->numberFormat->format(
-            smallestAmount, smallestAmountFormatted, dontCare, status);
+            smallestAmount, smallestAmountFormatted, status);
     FieldPosition smallestFieldPosition(smallestField);
     UnicodeString draft;
     dateFmt.format(date, draft, smallestFieldPosition, status);
