@@ -51,6 +51,7 @@
 #include "mutex.h"
 #include "digitlst.h"
 #include <float.h>
+#include "shared_numfmt.h"
 
 //#define FMT_DEBUG
 
@@ -758,6 +759,15 @@ NumberFormat* U_EXPORT2
 NumberFormat::createInstance(const Locale& inLocale, UErrorCode& status)
 {
     return createInstance(inLocale, UNUM_DECIMAL, status);
+}
+
+const SharedNumberFormat* U_EXPORT2
+NumberFormat::createSharedInstance(const Locale& inLocale, UErrorCode& status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    status = U_UNSUPPORTED_ERROR;
+    return NULL;
 }
 
 // -------------------------------------
