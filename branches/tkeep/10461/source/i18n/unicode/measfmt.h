@@ -211,7 +211,11 @@ class U_I18N_API MeasureFormat : public Format {
      * Initialize MeasureFormat class from base class.
      * @internal.
      */
-    void initMeasureFormat(const Locale &locale, UMeasureFormatWidth width, UErrorCode &status);
+    void initMeasureFormat(
+            const Locale &locale,
+            UMeasureFormatWidth width,
+            NumberFormat *nfToAdopt,
+            UErrorCode &status);
 
     /**
      * ICU use only.

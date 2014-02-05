@@ -277,52 +277,30 @@ static SharedObject *U_CALLCONV createData(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    LocalPointer<MeasureFormatData> result(new MeasureFormatData());
-    MeasureFormatCacheData *wcache = new MeasureFormatCacheData();
-    if (result.getAlias() == NULL
-            || wcache == NULL) {
+    LocalPointer<MeasureFormatCacheData> result(new MeasureFormatCacheData());
+    if (result.getAlias() == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    SharedObjectPtr<MeasureFormatCacheData> cache(wcache);
     if (!load(
             topLevel.getAlias(),
-            *wcache,
+            *result,
             status)) {
         return NULL;
     }
-    wcache->numericDateFormatters = loadNumericDateFormatters(
+    result->numericDateFormatters = loadNumericDateFormatters(
             topLevel.getAlias(), status);
     if (U_FAILURE(status)) {
         return NULL;
     }
-    LocalPointer<PluralRules> pr(PluralRules::forLocale(localeId, status));
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    if (!result->pluralRules.reset(pr.orphan())) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-
-    LocalPointer<NumberFormat> nf(
-            NumberFormat::createInstance(localeId, status));
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    if (!result->numberFormat.reset(nf.orphan())) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
 
     for (int32_t i = 0; i <= UMEASFMT_WIDTH_NARROW; ++i) {
-        wcache->currencyFormats[i] = NumberFormat::createInstance(
+        result->currencyFormats[i] = NumberFormat::createInstance(
                 localeId, currencyStyles[i], status);
         if (U_FAILURE(status)) {
             return NULL;
         }
     }
-    result->cache = cache;
     return result.orphan();
 }
 
@@ -339,7 +317,7 @@ static void U_CALLCONV cacheInit(UErrorCode &status) {
 
 static void getFromCache(
         const char *locale,
-        const MeasureFormatData *&ptr,
+        const MeasureFormatCacheData *&ptr,
         UErrorCode &status) {
     umtx_initOnce(gCacheInitOnce, &cacheInit, status);
     if (U_FAILURE(status)) {
@@ -401,7 +379,7 @@ static int32_t toHMS(
 MeasureFormat::MeasureFormat(
         const Locale &locale, UMeasureFormatWidth w, UErrorCode &status)
         : ptr(NULL), width(w) {
-    initMeasureFormat(locale, w, status);
+    initMeasureFormat(locale, w, NULL, status);
 }
 
 MeasureFormat::MeasureFormat(
@@ -410,8 +388,7 @@ MeasureFormat::MeasureFormat(
         NumberFormat *nfToAdopt,
         UErrorCode &status) 
         : ptr(NULL), width(w) {
-    initMeasureFormat(locale, w, status);
-    adoptNumberFormat(nfToAdopt, status);
+    initMeasureFormat(locale, w, nfToAdopt, status);
 }
 
 MeasureFormat::MeasureFormat(const MeasureFormat &other)
@@ -545,14 +522,51 @@ UnicodeString &MeasureFormat::formatMeasures(
 }
 
 void MeasureFormat::initMeasureFormat(
-        const Locale &locale, UMeasureFormatWidth w, UErrorCode &status) {
+        const Locale &locale,
+        UMeasureFormatWidth w,
+        NumberFormat *nfToAdopt,
+        UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
     const char *name = locale.getName();
     setLocaleIDs(name, name);
     width = w;
-    getFromCache(name, ptr, status);
+
+    LocalPointer<MeasureFormatData> measureFormatData(new MeasureFormatData());
+    if (measureFormatData.getAlias() == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+
+    const MeasureFormatCacheData *cacheDataPtr = NULL;
+    getFromCache(name, cacheDataPtr, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    measureFormatData->cache.reset(cacheDataPtr);
+    cacheDataPtr->removeRef();
+
+    LocalPointer<PluralRules> pr(PluralRules::forLocale(name, status));
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if (!measureFormatData->pluralRules.reset(pr.orphan())) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    
+    if (nfToAdopt == NULL) {
+        nfToAdopt = NumberFormat::createInstance(name, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+    }
+    if (!measureFormatData->numberFormat.reset(nfToAdopt)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    SharedObject::copyPtr(measureFormatData.orphan(), ptr);
 }
 
 void MeasureFormat::adoptNumberFormat(NumberFormat *nfToAdopt, UErrorCode &status) {
@@ -574,7 +588,7 @@ UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &st
     if (U_FAILURE(status) || locale == getLocale(status)) {
         return FALSE;
     }
-    initMeasureFormat(locale, width, status);
+    initMeasureFormat(locale, width, NULL, status);
     return U_SUCCESS(status);
 } 
 
