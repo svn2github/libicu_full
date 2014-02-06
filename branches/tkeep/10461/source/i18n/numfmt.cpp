@@ -244,6 +244,10 @@ NumberFormat::~NumberFormat()
 {
 }
 
+SharedNumberFormat::~SharedNumberFormat()
+{
+}
+
 // -------------------------------------
 // copy constructor
 

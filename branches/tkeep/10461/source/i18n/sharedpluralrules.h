@@ -19,8 +19,9 @@ class PluralRules;
 
 class U_I18N_API SharedPluralRules : public SharedObject {
 public:
-SharedPtr<PluralRules> ptr;
 SharedPluralRules() : ptr(NULL) { }
+virtual ~SharedPluralRules();
+SharedPtr<PluralRules> ptr;
 private:
 SharedPluralRules(const SharedPluralRules &);
 SharedPluralRules &operator=(const SharedPluralRules &);

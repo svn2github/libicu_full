@@ -90,6 +90,9 @@ PluralRules::~PluralRules() {
     delete mRules;
 }
 
+SharedPluralRules::~SharedPluralRules() {
+}
+
 PluralRules*
 PluralRules::clone() const {
     return new PluralRules(*this);

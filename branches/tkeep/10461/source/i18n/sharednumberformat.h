@@ -19,8 +19,9 @@ class NumberFormat;
 
 class U_I18N_API SharedNumberFormat : public SharedObject {
 public:
-SharedPtr<NumberFormat> ptr;
 SharedNumberFormat() : ptr(NULL) { }
+virtual ~SharedNumberFormat();
+SharedPtr<NumberFormat> ptr;
 private:
 SharedNumberFormat(const SharedNumberFormat &);
 SharedNumberFormat &operator=(const SharedNumberFormat &);
