@@ -51,7 +51,7 @@
 #include "mutex.h"
 #include "digitlst.h"
 #include <float.h>
-#include "shared_numfmt.h"
+#include "sharednumberformat.h"
 #include "lrucache.h"
 
 //#define FMT_DEBUG

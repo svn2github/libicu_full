@@ -3,11 +3,11 @@
 * Copyright (C) 2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 ******************************************************************************
-* shared_numfmt.h
+* sharednumberformat.h
 */
 
-#ifndef __SHARED_NUMFMT_H__
-#define __SHARED_NUMFMT_H__
+#ifndef __SHARED_NUMBERFORMAT_H__
+#define __SHARED_NUMBERFORMAT_H__
 
 #include "unicode/utypes.h"
 #include "sharedobject.h"
