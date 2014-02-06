@@ -315,16 +315,17 @@ static void U_CALLCONV cacheInit(UErrorCode &status) {
     }
 }
 
-static void getFromCache(
+static UBool getFromCache(
         const char *locale,
         const MeasureFormatCacheData *&ptr,
         UErrorCode &status) {
     umtx_initOnce(gCacheInitOnce, &cacheInit, status);
     if (U_FAILURE(status)) {
-        return;
+        return FALSE;
     }
     Mutex lock(&gCacheMutex);
     gCache->get(locale, ptr, status);
+    return U_SUCCESS(status);
 }
 
 static int32_t toHMS(
@@ -540,8 +541,7 @@ void MeasureFormat::initMeasureFormat(
     }
 
     const MeasureFormatCacheData *cacheDataPtr = NULL;
-    getFromCache(name, cacheDataPtr, status);
-    if (U_FAILURE(status)) {
+    if (!getFromCache(name, cacheDataPtr, status)) {
         return;
     }
     measureFormatData->cache.reset(cacheDataPtr);

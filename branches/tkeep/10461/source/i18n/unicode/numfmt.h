@@ -708,6 +708,24 @@ public:
                                                   UNumberFormatStyle style,
                                                   UErrorCode& errorCode);
 
+#ifndef U_HIDE_INTERNAL_API
+
+    static NumberFormat* internalCreateInstance(
+            const Locale& desiredLocale,
+            UNumberFormatStyle style,
+            UErrorCode& errorCode);
+
+    /**
+     * ICU use only.
+     * Returns handle to the shared, cached NumberFormat instance for given
+     * locale
+     * @internal
+     */
+    static const SharedNumberFormat* U_EXPORT2 createSharedInstance(
+            const Locale& inLocale, UNumberFormatStyle style, UErrorCode& status);
+
+#endif
+
     /**
      * Returns a currency format for the current default locale.
      * @stable ICU 2.0
@@ -721,19 +739,6 @@ public:
      */
     static NumberFormat* U_EXPORT2 createCurrencyInstance(const Locale& inLocale,
                                                 UErrorCode&);
-
-#ifndef U_HIDE_INTERNAL_API
-
-    /**
-     * ICU use only.
-     * Returns handle to the shared, cached NumberFormat instance for given
-     * locale
-     * @internal
-     */
-    static const SharedNumberFormat* U_EXPORT2 createSharedInstance(
-            const Locale& inLocale, UErrorCode& status);
-
-#endif
 
     /**
      * Returns a percentage format for the current default locale.
