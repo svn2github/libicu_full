@@ -36,6 +36,7 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 #define MEAS_UNIT_COUNT 46
+#define WIDTH_INDEX_COUNT (UMEASFMT_WIDTH_NARROW + 1)
 
 static icu::LRUCache *gCache = NULL;
 static UMutex gCacheMutex = U_MUTEX_INITIALIZER;
@@ -79,15 +80,36 @@ private:
 
 class MeasureFormatCacheData : public SharedObject {
 public:
-    QuantityFormatter formatters[MEAS_UNIT_COUNT][UMEASFMT_WIDTH_NARROW + 1];
-    const NumberFormat *currencyFormats[UMEASFMT_WIDTH_NARROW + 1];
-    const NumericDateFormatters *numericDateFormatters;
-    MeasureFormatCacheData() { }
+    QuantityFormatter formatters[MEAS_UNIT_COUNT][WIDTH_INDEX_COUNT];
+    MeasureFormatCacheData();
+    void adoptCurrencyFormat(int32_t widthIndex, NumberFormat *nfToAdopt) {
+        delete currencyFormats[widthIndex];
+        currencyFormats[widthIndex] = nfToAdopt;
+    }
+    const NumberFormat *getCurrencyFormat(int32_t widthIndex) const {
+        return currencyFormats[widthIndex];
+    }
+    void adoptNumericDateFormatters(NumericDateFormatters *formattersToAdopt) {
+        delete numericDateFormatters;
+        numericDateFormatters = formattersToAdopt;
+    }
+    const NumericDateFormatters *getNumericDateFormatters() const {
+        return numericDateFormatters;
+    }
     virtual ~MeasureFormatCacheData();
 private:
+    NumberFormat *currencyFormats[WIDTH_INDEX_COUNT];
+    NumericDateFormatters *numericDateFormatters;
     MeasureFormatCacheData(const MeasureFormatCacheData &other);
     MeasureFormatCacheData &operator=(const MeasureFormatCacheData &other);
 };
+
+MeasureFormatCacheData::MeasureFormatCacheData() {
+    for (int32_t i = 0; i < LENGTHOF(currencyFormats); ++i) {
+        currencyFormats[i] = NULL;
+    }
+    numericDateFormatters = NULL;
+}
 
 MeasureFormatCacheData::~MeasureFormatCacheData() {
     for (int32_t i = 0; i < LENGTHOF(currencyFormats); ++i) {
@@ -110,8 +132,8 @@ MeasureFormatData::~MeasureFormatData() {
 }
 
 static int32_t widthToIndex(UMeasureFormatWidth width) {
-    if (width > UMEASFMT_WIDTH_NARROW) {
-        return UMEASFMT_WIDTH_NARROW;
+    if (width >= WIDTH_INDEX_COUNT) {
+        return WIDTH_INDEX_COUNT - 1;
     }
     return width;
 }
@@ -154,7 +176,7 @@ static UBool load(
         }
         unitCount = MeasureUnit::getAvailable(units, unitCount, status);
     }
-    for (int32_t currentWidth = 0; currentWidth <= UMEASFMT_WIDTH_NARROW; ++currentWidth) {
+    for (int32_t currentWidth = 0; currentWidth < WIDTH_INDEX_COUNT; ++currentWidth) {
         // Be sure status is clear since next resource bundle lookup may fail.
         if (U_FAILURE(status)) {
             delete [] units;
@@ -289,15 +311,15 @@ static SharedObject *U_CALLCONV createData(
             status)) {
         return NULL;
     }
-    result->numericDateFormatters = loadNumericDateFormatters(
-            topLevel.getAlias(), status);
+    result->adoptNumericDateFormatters(loadNumericDateFormatters(
+            topLevel.getAlias(), status));
     if (U_FAILURE(status)) {
         return NULL;
     }
 
-    for (int32_t i = 0; i <= UMEASFMT_WIDTH_NARROW; ++i) {
-        result->currencyFormats[i] = NumberFormat::createInstance(
-                localeId, currencyStyles[i], status);
+    for (int32_t i = 0; i < WIDTH_INDEX_COUNT; ++i) {
+        result->adoptCurrencyFormat(i, NumberFormat::createInstance(
+                localeId, currencyStyles[i], status));
         if (U_FAILURE(status)) {
             return NULL;
         }
@@ -624,7 +646,7 @@ UnicodeString &MeasureFormat::formatMeasure(
     if (isCurrency(amtUnit)) {
         UChar isoCode[4];
         u_charsToUChars(amtUnit.getSubtype(), isoCode, 4);
-        return ptr->cache->currencyFormats[widthToIndex(width)]->format(
+        return ptr->cache->getCurrencyFormat(widthToIndex(width))->format(
                 new CurrencyAmount(amtNumber, isoCode, status),
                 appendTo,
                 pos,
@@ -660,7 +682,7 @@ UnicodeString &MeasureFormat::formatNumeric(
     case 7: // hms
         return formatNumeric(
                 millis,
-                ptr->cache->numericDateFormatters->hourMinuteSecond,
+                ptr->cache->getNumericDateFormatters()->hourMinuteSecond,
                 UDAT_SECOND_FIELD,
                 hms[2],
                 appendTo,
@@ -669,7 +691,7 @@ UnicodeString &MeasureFormat::formatNumeric(
     case 6: // ms
         return formatNumeric(
                 millis,
-                ptr->cache->numericDateFormatters->minuteSecond,
+                ptr->cache->getNumericDateFormatters()->minuteSecond,
                 UDAT_SECOND_FIELD,
                 hms[2],
                 appendTo,
@@ -678,7 +700,7 @@ UnicodeString &MeasureFormat::formatNumeric(
     case 3: // hm
         return formatNumeric(
                 millis,
-                ptr->cache->numericDateFormatters->hourMinute,
+                ptr->cache->getNumericDateFormatters()->hourMinute,
                 UDAT_MINUTE_FIELD,
                 hms[1],
                 appendTo,
