@@ -710,6 +710,11 @@ public:
 
 #ifndef U_HIDE_INTERNAL_API
 
+    /**
+     * ICU use only.
+     * Creates NumberFormat instance without using the cache.
+     * @internal
+     */
     static NumberFormat* internalCreateInstance(
             const Locale& desiredLocale,
             UNumberFormatStyle style,

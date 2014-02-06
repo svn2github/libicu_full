@@ -43,6 +43,7 @@ class RuleChain;
 class PluralRuleParser;
 class PluralKeywordEnumeration;
 class AndConstraint;
+class SharedPluralRules;
 
 /**
  * Defines rules for mapping non-negative numeric values onto a small set of
@@ -297,6 +298,23 @@ public:
      * @internal
      */
     static UBool hasOverride(const Locale &locale);
+
+    /**
+     * For ICU use only.
+     * creates a  SharedPluralRules object 
+     * @internal
+     */
+    static PluralRules* U_EXPORT2 internalForLocale(const Locale& locale, UPluralType type, UErrorCode& status);
+
+    /**
+     * For ICU use only.
+     * Returns handle to the shared, cached PluralRules isntance.
+     * @internal
+     */
+    static const SharedPluralRules* U_EXPORT2 createSharedInstance(
+            const Locale& locale, UPluralType type, UErrorCode& status);
+
+    
 #endif  /* U_HIDE_INTERNAL_API */
 
     /**

@@ -1236,12 +1236,12 @@ static SharedObject *U_CALLCONV createSharedNumberFormat(
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    LocalPointer<NumberFormat> nf(
-            NumberFormat::internalCreateInstance(localeId, UNUM_DECIMAL, status));
+    NumberFormat *nf = NumberFormat::internalCreateInstance(
+            localeId, UNUM_DECIMAL, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
-    if (!result->ptr.reset(nf.orphan())) {
+    if (!result->ptr.reset(nf)) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
