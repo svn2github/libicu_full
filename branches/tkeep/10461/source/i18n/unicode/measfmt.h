@@ -262,6 +262,7 @@ class U_I18N_API MeasureFormat : public Format {
  private:
     const MeasureFormatData *ptr;
     UMeasureFormatWidth width;    
+    ListFormatter *listFormatter;
 
     const QuantityFormatter *getQuantityFormatter(
             int32_t index,

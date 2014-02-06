@@ -123,34 +123,12 @@ public:
     SharedObjectPtr<MeasureFormatCacheData> cache;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
-    MeasureFormatData() : listFormatter(NULL) { }
-    MeasureFormatData(const MeasureFormatData &other);
     virtual ~MeasureFormatData();
-    void adoptListFormatter(ListFormatter *lfToAdopt) {
-        delete listFormatter;
-        listFormatter = lfToAdopt;
-    }
-    const ListFormatter *getListFormatter() const {
-        return listFormatter;
-    }
 private:
-    // Getting a ListFormatter is efficient enough, so we don't need any
-    // shared, cached object.
-    ListFormatter *listFormatter;
     MeasureFormatData &operator=(const MeasureFormatData& other);
 };
 
-MeasureFormatData::MeasureFormatData(const MeasureFormatData &other)
-        : SharedObject(other), listFormatter(NULL) {
-    if (other.listFormatter != NULL) {
-        listFormatter = new ListFormatter(*other.listFormatter);
-    }
-}
-    
-
-MeasureFormatData::~MeasureFormatData() {
-    delete listFormatter;
-}
+MeasureFormatData::~MeasureFormatData() { }
 
 static int32_t widthToIndex(UMeasureFormatWidth width) {
     if (width >= WIDTH_INDEX_COUNT) {
@@ -423,7 +401,7 @@ static int32_t toHMS(
 
 MeasureFormat::MeasureFormat(
         const Locale &locale, UMeasureFormatWidth w, UErrorCode &status)
-        : ptr(NULL), width(w) {
+        : ptr(NULL), width(w), listFormatter(NULL) {
     initMeasureFormat(locale, w, NULL, status);
 }
 
@@ -432,13 +410,16 @@ MeasureFormat::MeasureFormat(
         UMeasureFormatWidth w,
         NumberFormat *nfToAdopt,
         UErrorCode &status) 
-        : ptr(NULL), width(w) {
+        : ptr(NULL), width(w) , listFormatter(NULL) {
     initMeasureFormat(locale, w, nfToAdopt, status);
 }
 
 MeasureFormat::MeasureFormat(const MeasureFormat &other)
-        : Format(other), ptr(other.ptr), width(other.width) {
+        : Format(other), ptr(other.ptr), width(other.width), listFormatter(NULL) {
     ptr->addRef();
+    if (other.listFormatter != NULL) {
+        listFormatter = new ListFormatter(*other.listFormatter);
+    }
 }
 
 MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
@@ -448,16 +429,19 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
     Format::operator=(other);
     SharedObject::copyPtr(other.ptr, ptr);
     width = other.width;
+    delete listFormatter;
+    listFormatter = new ListFormatter(*other.listFormatter);
     return *this;
 }
 
-MeasureFormat::MeasureFormat() : ptr(NULL), width(UMEASFMT_WIDTH_WIDE) {
+MeasureFormat::MeasureFormat() : ptr(NULL), width(UMEASFMT_WIDTH_WIDE), listFormatter(NULL) {
 }
 
 MeasureFormat::~MeasureFormat() {
     if (ptr != NULL) {
         ptr->removeRef();
     }
+    delete listFormatter;
 }
 
 UBool MeasureFormat::operator==(const Format &other) const {
@@ -552,7 +536,7 @@ UnicodeString &MeasureFormat::formatMeasures(
     for (int32_t i = 0; i < measureCount; ++i) {
         formatMeasure(measures[i], results[i], pos, status);
     }
-    ptr->getListFormatter()->format(results, measureCount, appendTo, status);
+    listFormatter->format(results, measureCount, appendTo, status);
     delete [] results; 
     return appendTo;
 }
@@ -604,15 +588,15 @@ void MeasureFormat::initMeasureFormat(
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    measureFormatData->adoptListFormatter(
-            ListFormatter::createInstance(
-                    locale,
-                    listStyles[widthToIndex(width)],
-                    status));
+    SharedObject::copyPtr(measureFormatData.orphan(), ptr);
+    delete listFormatter;
+    listFormatter = ListFormatter::createInstance(
+            locale,
+            listStyles[widthToIndex(width)],
+            status);
     if (U_FAILURE(status)) {
         return;
     }
-    SharedObject::copyPtr(measureFormatData.orphan(), ptr);
 }
 
 void MeasureFormat::adoptNumberFormat(NumberFormat *nfToAdopt, UErrorCode &status) {
@@ -815,7 +799,7 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
         }
     }
     int32_t offset;
-    ptr->getListFormatter()->format(
+    listFormatter->format(
             results,
             measureCount,
             appendTo,

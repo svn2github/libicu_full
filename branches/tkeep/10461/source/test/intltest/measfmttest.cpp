@@ -52,6 +52,7 @@ private:
     void TestFieldPositionMultiple();
     void TestBadArg();
     void TestEquality();
+    void TestBenchmark();
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -106,6 +107,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestFieldPositionMultiple);
     TESTCASE_AUTO(TestBadArg);
     TESTCASE_AUTO(TestEquality);
+    TESTCASE_AUTO(TestBenchmark);
     TESTCASE_AUTO_END;
 }
 
@@ -821,6 +823,22 @@ void MeasureFormatTest::TestEquality() {
     assertFalse("Not Equal Neg 1", fmt == fmtne1);
     assertTrue("Not Equal 2", fmt != fmtne2);
     assertTrue("Not Equal 3", fmt != fmtne3);
+}
+
+void MeasureFormatTest::TestBenchmark() {
+/*
+    clock_t t;
+    UErrorCode status = U_ZERO_ERROR;
+    Locale en("en");
+    t = clock();
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    for (int32_t i = 0; i < 1000000; ++i) {
+        Locale fr("fr");
+        MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
+    }
+    t = clock() - t;
+    errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
+*/
 }
 
 void MeasureFormatTest::verifyFieldPosition(
