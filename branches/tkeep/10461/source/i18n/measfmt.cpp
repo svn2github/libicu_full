@@ -30,9 +30,9 @@
 #include "unicode/putil.h"
 #include "unicode/smpdtfmt.h"
 
-#include "sharedptr.h"
 #include "sharedobjectptr.h"
 #include "sharednumberformat.h"
+#include "sharedpluralrules.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 #define MEAS_UNIT_COUNT 46
@@ -548,15 +548,15 @@ void MeasureFormat::initMeasureFormat(
     measureFormatData->cache.reset(cacheDataPtr);
     cacheDataPtr->removeRef();
 
-    LocalPointer<PluralRules> pr(PluralRules::forLocale(name, status));
+    const SharedPluralRules *sharedPluralRules =
+            PluralRules::createSharedInstance(
+                    name, UPLURAL_TYPE_CARDINAL, status);
     if (U_FAILURE(status)) {
         return;
     }
-    if (!measureFormatData->pluralRules.reset(pr.orphan())) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-    
+    measureFormatData->pluralRules = sharedPluralRules->ptr;
+    sharedPluralRules->removeRef();
+
     if (nfToAdopt == NULL) {
         const SharedNumberFormat *shared = NumberFormat::createSharedInstance(
                 name, UNUM_DECIMAL, status);
