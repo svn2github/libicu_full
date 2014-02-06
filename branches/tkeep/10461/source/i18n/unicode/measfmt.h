@@ -277,7 +277,6 @@ class U_I18N_API MeasureFormat : public Format {
     UnicodeString &formatMeasuresSlowTrack(
         const Measure *measures,
         int32_t measureCount,
-        const ListFormatter& lf,
         UnicodeString& appendTo,
         FieldPosition& pos,
         UErrorCode& status) const;

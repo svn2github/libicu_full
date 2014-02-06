@@ -123,12 +123,33 @@ public:
     SharedObjectPtr<MeasureFormatCacheData> cache;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
+    MeasureFormatData() : listFormatter(NULL) { }
+    MeasureFormatData(const MeasureFormatData &other);
     virtual ~MeasureFormatData();
+    void adoptListFormatter(ListFormatter *lfToAdopt) {
+        delete listFormatter;
+        listFormatter = lfToAdopt;
+    }
+    const ListFormatter *getListFormatter() const {
+        return listFormatter;
+    }
 private:
+    // Getting a ListFormatter is efficient enough, so we don't need any
+    // shared, cached object.
+    ListFormatter *listFormatter;
     MeasureFormatData &operator=(const MeasureFormatData& other);
 };
 
+MeasureFormatData::MeasureFormatData(const MeasureFormatData &other)
+        : SharedObject(other), listFormatter(NULL) {
+    if (other.listFormatter != NULL) {
+        listFormatter = new ListFormatter(*other.listFormatter);
+    }
+}
+    
+
 MeasureFormatData::~MeasureFormatData() {
+    delete listFormatter;
 }
 
 static int32_t widthToIndex(UMeasureFormatWidth width) {
@@ -503,7 +524,6 @@ UnicodeString &MeasureFormat::formatMeasures(
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const {
-    static const char *listStyles[] = {"unit", "unit-short", "unit-narrow"};
     if (U_FAILURE(status)) {
         return appendTo;
     }
@@ -520,17 +540,9 @@ UnicodeString &MeasureFormat::formatMeasures(
             return formatNumeric(hms, bitMap, appendTo, status);
         }
     }
-    LocalPointer<ListFormatter> lf(
-            ListFormatter::createInstance(
-                    getLocale(status),
-                    listStyles[widthToIndex(width)],
-                    status));
-    if (U_FAILURE(status)) {
-        return appendTo;
-    }
     if (pos.getField() != FieldPosition::DONT_CARE) {
         return formatMeasuresSlowTrack(
-                measures, measureCount, *lf, appendTo, pos, status);
+                measures, measureCount, appendTo, pos, status);
     }
     UnicodeString *results = new UnicodeString[measureCount];
     if (results == NULL) {
@@ -540,7 +552,7 @@ UnicodeString &MeasureFormat::formatMeasures(
     for (int32_t i = 0; i < measureCount; ++i) {
         formatMeasure(measures[i], results[i], pos, status);
     }
-    lf->format(results, measureCount, appendTo, status);
+    ptr->getListFormatter()->format(results, measureCount, appendTo, status);
     delete [] results; 
     return appendTo;
 }
@@ -550,6 +562,7 @@ void MeasureFormat::initMeasureFormat(
         UMeasureFormatWidth w,
         NumberFormat *nfToAdopt,
         UErrorCode &status) {
+    static const char *listStyles[] = {"unit", "unit-short", "unit-narrow"};
     if (U_FAILURE(status)) {
         return;
     }
@@ -589,6 +602,14 @@ void MeasureFormat::initMeasureFormat(
         shared->removeRef();
     } else if (!measureFormatData->numberFormat.reset(nfToAdopt)) {
         status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    measureFormatData->adoptListFormatter(
+            ListFormatter::createInstance(
+                    locale,
+                    listStyles[widthToIndex(width)],
+                    status));
+    if (U_FAILURE(status)) {
         return;
     }
     SharedObject::copyPtr(measureFormatData.orphan(), ptr);
@@ -769,7 +790,6 @@ const QuantityFormatter *MeasureFormat::getQuantityFormatter(
 UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
         const Measure *measures,
         int32_t measureCount,
-        const ListFormatter& lf,
         UnicodeString& appendTo,
         FieldPosition& pos,
         UErrorCode& status) const {
@@ -795,7 +815,7 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
         }
     }
     int32_t offset;
-    lf.format(
+    ptr->getListFormatter()->format(
             results,
             measureCount,
             appendTo,
