@@ -32,6 +32,7 @@
 
 #include "sharedptr.h"
 #include "sharedobjectptr.h"
+#include "sharednumberformat.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 #define MEAS_UNIT_COUNT 46
@@ -557,12 +558,14 @@ void MeasureFormat::initMeasureFormat(
     }
     
     if (nfToAdopt == NULL) {
-        nfToAdopt = NumberFormat::createInstance(name, status);
+        const SharedNumberFormat *shared = NumberFormat::createSharedInstance(
+                name, UNUM_DECIMAL, status);
         if (U_FAILURE(status)) {
             return;
         }
-    }
-    if (!measureFormatData->numberFormat.reset(nfToAdopt)) {
+        measureFormatData->numberFormat = shared->ptr;
+        shared->removeRef();
+    } else if (!measureFormatData->numberFormat.reset(nfToAdopt)) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
