@@ -417,9 +417,7 @@ MeasureFormat::MeasureFormat(
 MeasureFormat::MeasureFormat(const MeasureFormat &other)
         : Format(other), ptr(other.ptr), width(other.width), listFormatter(NULL) {
     ptr->addRef();
-    if (other.listFormatter != NULL) {
-        listFormatter = new ListFormatter(*other.listFormatter);
-    }
+    listFormatter = new ListFormatter(*other.listFormatter);
 }
 
 MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
@@ -569,7 +567,7 @@ void MeasureFormat::initMeasureFormat(
 
     const SharedPluralRules *sharedPluralRules =
             PluralRules::createSharedInstance(
-                    name, UPLURAL_TYPE_CARDINAL, status);
+                    locale, UPLURAL_TYPE_CARDINAL, status);
     if (U_FAILURE(status)) {
         return;
     }
@@ -578,7 +576,7 @@ void MeasureFormat::initMeasureFormat(
 
     if (nfToAdopt == NULL) {
         const SharedNumberFormat *shared = NumberFormat::createSharedInstance(
-                name, UNUM_DECIMAL, status);
+                locale, UNUM_DECIMAL, status);
         if (U_FAILURE(status)) {
             return;
         }
