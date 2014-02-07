@@ -826,17 +826,26 @@ void MeasureFormatTest::TestEquality() {
 }
 
 void MeasureFormatTest::TestBenchmark() {
+/*
     clock_t t;
     UErrorCode status = U_ZERO_ERROR;
     Locale en("en");
+    MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
+    MeasureFormat fmt2 = fmt;
+    Measure ms[] = {
+            Measure(70, MeasureUnit::createYear(status), status),
+            Measure(5, MeasureUnit::createMonth(status), status),
+            Measure(23, MeasureUnit::createDay(status), status),
+            Measure(15, MeasureUnit::createHour(status), status),
+            Measure(58, MeasureUnit::createMinute(status), status)};
+    FieldPosition pos(FieldPosition::DONT_CARE);
     t = clock();
-    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
     for (int32_t i = 0; i < 1000000; ++i) {
-        Locale fr("fr");
-        MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
+        fmt2 = fmt;
     }
     t = clock() - t;
     errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
+*/
 }
 
 void MeasureFormatTest::verifyFieldPosition(
