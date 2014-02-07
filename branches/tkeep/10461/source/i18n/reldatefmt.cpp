@@ -27,7 +27,6 @@
 #include "charstr.h"
 
 #include "sharedptr.h"
-#include "sharedobjectptr.h"
 #include "sharedpluralrules.h"
 #include "sharednumberformat.h"
 
@@ -82,10 +81,9 @@ RelativeDateTimeCacheData::~RelativeDateTimeCacheData() {
     delete combinedDateAndTime;
 }
 
-
+// Shared data for RelativeDateTimeFormatters
 class RelativeDateTimeSharedData : public SharedObject {
 public:
-    SharedObjectPtr<RelativeDateTimeCacheData> cache;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
     virtual ~RelativeDateTimeSharedData();
@@ -539,35 +537,40 @@ static UBool getFromCache(
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status)
-        : shared(NULL) {
+        : cache(NULL), shared(NULL) {
     init(Locale::getDefault(), NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
-        const Locale& locale, UErrorCode& status) : shared(NULL) {
+        const Locale& locale, UErrorCode& status) : cache(NULL), shared(NULL) {
     init(locale, NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status)
-        : shared(NULL) {
+        : cache(NULL), shared(NULL) {
     init(locale, nfToAdopt, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const RelativeDateTimeFormatter& other) : shared(other.shared) {
+    cache->addRef();
     shared->addRef();
 }
 
 RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(
         const RelativeDateTimeFormatter& other) {
     if (this != &other) {
+        SharedObject::copyPtr(other.cache, cache);
         SharedObject::copyPtr(other.shared, shared);
     }
     return *this;
 }
 
 RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
+    if (cache != NULL) {
+        cache->removeRef();
+    }
     if (shared != NULL) {
         shared->removeRef();
     }
@@ -589,7 +592,7 @@ UnicodeString& RelativeDateTimeFormatter::format(
     }
     int32_t bFuture = direction == UDAT_DIRECTION_NEXT ? 1 : 0;
     FieldPosition pos(FieldPosition::DONT_CARE);
-    return shared->cache->relativeUnits[unit][bFuture].format(
+    return cache->relativeUnits[unit][bFuture].format(
             quantity,
             *shared->numberFormat,
             *shared->pluralRules,
@@ -608,7 +611,7 @@ UnicodeString& RelativeDateTimeFormatter::format(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
-    return appendTo.append(shared->cache->absoluteUnits[unit][direction]);
+    return appendTo.append(cache->absoluteUnits[unit][direction]);
 }
 
 UnicodeString& RelativeDateTimeFormatter::combineDateAndTime(
@@ -616,13 +619,13 @@ UnicodeString& RelativeDateTimeFormatter::combineDateAndTime(
     UnicodeString& appendTo, UErrorCode& status) const {
     Formattable args[2] = {timeString, relativeDateString};
     FieldPosition fpos(0);
-    return shared->cache->getCombinedDateAndTime()->format(
+    return cache->getCombinedDateAndTime()->format(
             args, 2, appendTo, fpos, status);
 }
 
 void RelativeDateTimeFormatter::init(
         const Locale &locale, NumberFormat *nfToAdopt, UErrorCode &status) {
-    if (U_FAILURE(status)) {
+    if (!getFromCache(locale.getName(), cache, status)) {
         return;
     }
     LocalPointer<RelativeDateTimeSharedData> sharedData(
@@ -631,12 +634,6 @@ void RelativeDateTimeFormatter::init(
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-    const RelativeDateTimeCacheData *cacheDataPtr = NULL;
-    if (!getFromCache(locale.getName(), cacheDataPtr, status)) {
-        return;
-    }
-    sharedData->cache.reset(cacheDataPtr);
-    cacheDataPtr->removeRef();
 
     const SharedPluralRules *sharedPluralRules =
             PluralRules::createSharedInstance(

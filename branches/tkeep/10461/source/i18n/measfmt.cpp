@@ -30,7 +30,6 @@
 #include "unicode/putil.h"
 #include "unicode/smpdtfmt.h"
 
-#include "sharedobjectptr.h"
 #include "sharednumberformat.h"
 #include "sharedpluralrules.h"
 
@@ -130,10 +129,9 @@ MeasureFormatCacheData::~MeasureFormatCacheData() {
 }
 
 // Contains shared data for MeasureFormat objects. Data that is expensive
-// to copy out of caches goes in here
+// to copy out of other caches goes in here
 class MeasureFormatSharedData : public SharedObject {
 public:
-    SharedObjectPtr<MeasureFormatCacheData> cache;
     SharedPtr<PluralRules> pluralRules;
     SharedPtr<NumberFormat> numberFormat;
     virtual ~MeasureFormatSharedData();
@@ -415,7 +413,7 @@ static int32_t toHMS(
 
 MeasureFormat::MeasureFormat(
         const Locale &locale, UMeasureFormatWidth w, UErrorCode &status)
-        : shared(NULL), width(w), listFormatter(NULL) {
+        : cache(NULL), shared(NULL), width(w), listFormatter(NULL) {
     initMeasureFormat(locale, w, NULL, status);
 }
 
@@ -424,15 +422,17 @@ MeasureFormat::MeasureFormat(
         UMeasureFormatWidth w,
         NumberFormat *nfToAdopt,
         UErrorCode &status) 
-        : shared(NULL), width(w) , listFormatter(NULL) {
+        : cache(NULL), shared(NULL), width(w) , listFormatter(NULL) {
     initMeasureFormat(locale, w, nfToAdopt, status);
 }
 
 MeasureFormat::MeasureFormat(const MeasureFormat &other) :
         Format(other),
+        cache(other.cache),
         shared(other.shared),
         width(other.width),
         listFormatter(NULL) {
+    cache->addRef();
     shared->addRef();
     listFormatter = new ListFormatter(*other.listFormatter);
 }
@@ -442,6 +442,7 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
         return *this;
     }
     Format::operator=(other);
+    SharedObject::copyPtr(other.cache, cache);
     SharedObject::copyPtr(other.shared, shared);
     width = other.width;
     delete listFormatter;
@@ -450,10 +451,16 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
 }
 
 MeasureFormat::MeasureFormat() :
-        shared(NULL), width(UMEASFMT_WIDTH_WIDE), listFormatter(NULL) {
+        cache(NULL),
+        shared(NULL),
+        width(UMEASFMT_WIDTH_WIDE),
+        listFormatter(NULL) {
 }
 
 MeasureFormat::~MeasureFormat() {
+    if (cache != NULL) {
+        cache->removeRef();
+    }
     if (shared != NULL) {
         shared->removeRef();
     }
@@ -477,21 +484,24 @@ UBool MeasureFormat::operator==(const Format &other) const {
     if (width != rhs->width) {
         return FALSE;
     }
-    // Width the same, same shared data -> equivlanet
-    if (shared == rhs->shared) {
-        return TRUE;
+    // Width the same check locales.
+    // We don't need to check locales if both objects have same cache.
+    if (cache != rhs->cache) {
+        UErrorCode status = U_ZERO_ERROR;
+        const char *localeId = getLocaleID(status);
+        const char *rhsLocaleId = rhs->getLocaleID(status);
+        if (U_FAILURE(status)) {
+            // On failure, assume not equal
+            return FALSE;
+        }
+        if (uprv_strcmp(localeId, rhsLocaleId) != 0) {
+            return FALSE;
+        }
     }
-    // Width same, but differing shred data. Depends on locale
-    // and number format objects being the same.
-    UErrorCode status = U_ZERO_ERROR;
-    const char *localeId = getLocaleID(status);
-    const char *rhsLocaleId = rhs->getLocaleID(status);
-    if (U_FAILURE(status)) {
-        // On failure, assume not equal
-        return FALSE;
-    }
-    return (uprv_strcmp(localeId, rhsLocaleId) == 0
-            && *shared->numberFormat == *rhs->shared->numberFormat);
+    // Locales same, check NumberFormat if shared data differs.
+    return (
+            shared == rhs->shared ||
+            *shared->numberFormat == *rhs->shared->numberFormat);
 }
 
 Format *MeasureFormat::clone() const {
@@ -572,7 +582,10 @@ void MeasureFormat::initMeasureFormat(
     }
     const char *name = locale.getName();
     setLocaleIDs(name, name);
-    width = w;
+
+    if (!getFromCache(name, cache, status)) {
+        return;
+    }
 
     LocalPointer<MeasureFormatSharedData> measureFormatSharedData(
             new MeasureFormatSharedData());
@@ -580,13 +593,6 @@ void MeasureFormat::initMeasureFormat(
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
-
-    const MeasureFormatCacheData *cacheDataPtr = NULL;
-    if (!getFromCache(name, cacheDataPtr, status)) {
-        return;
-    }
-    measureFormatSharedData->cache.reset(cacheDataPtr);
-    cacheDataPtr->removeRef();
 
     const SharedPluralRules *sharedPluralRules =
             PluralRules::createSharedInstance(
@@ -611,6 +617,9 @@ void MeasureFormat::initMeasureFormat(
         return;
     }
     SharedObject::copyPtr(measureFormatSharedData.orphan(), shared);
+
+    width = w;
+
     delete listFormatter;
     listFormatter = ListFormatter::createInstance(
             locale,
@@ -673,7 +682,7 @@ UnicodeString &MeasureFormat::formatMeasure(
     if (isCurrency(amtUnit)) {
         UChar isoCode[4];
         u_charsToUChars(amtUnit.getSubtype(), isoCode, 4);
-        return shared->cache->getCurrencyFormat(widthToIndex(width))->format(
+        return cache->getCurrencyFormat(widthToIndex(width))->format(
                 new CurrencyAmount(amtNumber, isoCode, status),
                 appendTo,
                 pos,
@@ -709,7 +718,7 @@ UnicodeString &MeasureFormat::formatNumeric(
     case 7: // hms
         return formatNumeric(
                 millis,
-                shared->cache->getNumericDateFormatters()->hourMinuteSecond,
+                cache->getNumericDateFormatters()->hourMinuteSecond,
                 UDAT_SECOND_FIELD,
                 hms[2],
                 appendTo,
@@ -718,7 +727,7 @@ UnicodeString &MeasureFormat::formatNumeric(
     case 6: // ms
         return formatNumeric(
                 millis,
-                shared->cache->getNumericDateFormatters()->minuteSecond,
+                cache->getNumericDateFormatters()->minuteSecond,
                 UDAT_SECOND_FIELD,
                 hms[2],
                 appendTo,
@@ -727,7 +736,7 @@ UnicodeString &MeasureFormat::formatNumeric(
     case 3: // hm
         return formatNumeric(
                 millis,
-                shared->cache->getNumericDateFormatters()->hourMinute,
+                cache->getNumericDateFormatters()->hourMinute,
                 UDAT_MINUTE_FIELD,
                 hms[1],
                 appendTo,
@@ -779,7 +788,7 @@ const QuantityFormatter *MeasureFormat::getQuantityFormatter(
         return NULL;
     }
     const QuantityFormatter *formatters =
-            shared->cache->formatters[index];
+            cache->formatters[index];
     if (formatters[widthIndex].isValid()) {
         return &formatters[widthIndex];
     }

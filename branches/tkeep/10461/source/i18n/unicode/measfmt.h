@@ -72,6 +72,7 @@ U_NAMESPACE_BEGIN
 
 class NumberFormat;
 class PluralRules;
+class MeasureFormatCacheData;
 class MeasureFormatSharedData;
 class QuantityFormatter;
 class ListFormatter;
@@ -260,6 +261,7 @@ class U_I18N_API MeasureFormat : public Format {
 #endif /* U_HIDE_INTERNAL_API */
 
  private:
+    const MeasureFormatCacheData *cache;
     const MeasureFormatSharedData *shared;
     UMeasureFormatWidth width;    
 
