@@ -19,10 +19,12 @@ class PluralRules;
 
 class U_I18N_API SharedPluralRules : public SharedObject {
 public:
-SharedPluralRules() : ptr(NULL) { }
+SharedPluralRules(PluralRules *prToAdopt) : ptr(prToAdopt) { }
 virtual ~SharedPluralRules();
-SharedPtr<PluralRules> ptr;
+const PluralRules *operator->() const { return ptr; }
+const PluralRules &operator*() const { return *ptr; }
 private:
+PluralRules *ptr;
 SharedPluralRules(const SharedPluralRules &);
 SharedPluralRules &operator=(const SharedPluralRules &);
 };

@@ -91,6 +91,7 @@ PluralRules::~PluralRules() {
 }
 
 SharedPluralRules::~SharedPluralRules() {
+    delete ptr;
 }
 
 PluralRules*
@@ -159,21 +160,18 @@ static SharedObject *U_CALLCONV createSharedPluralRules(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    LocalPointer<SharedPluralRules> result(new SharedPluralRules());
-    if (result.getAlias() == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
     PluralRules *pr = PluralRules::internalForLocale(
             localeId, UPLURAL_TYPE_CARDINAL, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
-    if (!result->ptr.reset(pr)) {
+    SharedObject *result = new SharedPluralRules(pr);
+    if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
+        delete pr;
         return NULL;
     }
-    return result.orphan();
+    return result;
 }
 
 static void U_CALLCONV pluralRulesCacheInit(UErrorCode &status) {
@@ -234,7 +232,7 @@ PluralRules::forLocale(const Locale& locale, UPluralType type, UErrorCode& statu
     if (U_FAILURE(status)) {
         return NULL;
     }
-    PluralRules *result = shared->ptr->clone();
+    PluralRules *result = (*shared)->clone();
     shared->removeRef();
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;

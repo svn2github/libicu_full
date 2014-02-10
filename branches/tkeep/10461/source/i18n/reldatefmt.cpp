@@ -81,20 +81,6 @@ RelativeDateTimeCacheData::~RelativeDateTimeCacheData() {
     delete combinedDateAndTime;
 }
 
-// Shared data for RelativeDateTimeFormatters
-class RelativeDateTimeSharedData : public SharedObject {
-public:
-    SharedPtr<PluralRules> pluralRules;
-    SharedPtr<NumberFormat> numberFormat;
-    virtual ~RelativeDateTimeSharedData();
-private:
-    RelativeDateTimeSharedData &operator=(
-            const RelativeDateTimeSharedData& other);
-};
-
-RelativeDateTimeSharedData::~RelativeDateTimeSharedData() {
-}
-
 static UBool getStringWithFallback(
         const UResourceBundle *resource, 
         const char *key,
@@ -537,32 +523,38 @@ static UBool getFromCache(
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status)
-        : cache(NULL), shared(NULL) {
+        : cache(NULL), numberFormat(NULL), pluralRules(NULL) {
     init(Locale::getDefault(), NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
-        const Locale& locale, UErrorCode& status) : cache(NULL), shared(NULL) {
+        const Locale& locale, UErrorCode& status)
+        : cache(NULL), numberFormat(NULL), pluralRules(NULL) {
     init(locale, NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status)
-        : cache(NULL), shared(NULL) {
+        : cache(NULL), numberFormat(NULL), pluralRules(NULL) {
     init(locale, nfToAdopt, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
-        const RelativeDateTimeFormatter& other) : shared(other.shared) {
+        const RelativeDateTimeFormatter& other)
+        : cache(other.cache),
+          numberFormat(other.numberFormat),
+          pluralRules(other.pluralRules) {
     cache->addRef();
-    shared->addRef();
+    numberFormat->addRef();
+    pluralRules->addRef();
 }
 
 RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(
         const RelativeDateTimeFormatter& other) {
     if (this != &other) {
         SharedObject::copyPtr(other.cache, cache);
-        SharedObject::copyPtr(other.shared, shared);
+        SharedObject::copyPtr(other.numberFormat, numberFormat);
+        SharedObject::copyPtr(other.pluralRules, pluralRules);
     }
     return *this;
 }
@@ -571,13 +563,16 @@ RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
     if (cache != NULL) {
         cache->removeRef();
     }
-    if (shared != NULL) {
-        shared->removeRef();
+    if (numberFormat != NULL) {
+        numberFormat->removeRef();
+    }
+    if (pluralRules != NULL) {
+        pluralRules->removeRef();
     }
 }
 
 const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
-    return *shared->numberFormat;
+    return **numberFormat;
 }
 
 UnicodeString& RelativeDateTimeFormatter::format(
@@ -594,8 +589,8 @@ UnicodeString& RelativeDateTimeFormatter::format(
     FieldPosition pos(FieldPosition::DONT_CARE);
     return cache->relativeUnits[unit][bFuture].format(
             quantity,
-            *shared->numberFormat,
-            *shared->pluralRules,
+            **numberFormat,
+            **pluralRules,
             appendTo,
             pos,
             status);
@@ -628,36 +623,32 @@ void RelativeDateTimeFormatter::init(
     if (!getFromCache(locale.getName(), cache, status)) {
         return;
     }
-    LocalPointer<RelativeDateTimeSharedData> sharedData(
-            new RelativeDateTimeSharedData());
-    if (sharedData.getAlias() == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-
-    const SharedPluralRules *sharedPluralRules =
+    SharedObject::copyPtr(
             PluralRules::createSharedInstance(
-                    locale, UPLURAL_TYPE_CARDINAL, status);
+                    locale, UPLURAL_TYPE_CARDINAL, status),
+            pluralRules);
     if (U_FAILURE(status)) {
         return;
     }
-    sharedData->pluralRules = sharedPluralRules->ptr;
-    sharedPluralRules->removeRef();
-
+    pluralRules->removeRef();
     if (nfToAdopt == NULL) {
-       const SharedNumberFormat *sharedNumberFormat =
-                NumberFormat::createSharedInstance(
-                        locale, UNUM_DECIMAL, status);
+       SharedObject::copyPtr(
+               NumberFormat::createSharedInstance(
+                       locale, UNUM_DECIMAL, status),
+               numberFormat);
         if (U_FAILURE(status)) {
             return;
         }
-        sharedData->numberFormat = sharedNumberFormat->ptr;
-        sharedNumberFormat->removeRef();
-    } else if (!sharedData->numberFormat.reset(nfToAdopt)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        numberFormat->removeRef();
+    } else {
+        SharedNumberFormat *shared = new SharedNumberFormat(nfToAdopt);
+        if (shared == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            delete nfToAdopt;
+            return;
+        }
+        SharedObject::copyPtr(shared, numberFormat);
     }
-    SharedObject::copyPtr(sharedData.orphan(), shared);
 }
 
 

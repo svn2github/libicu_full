@@ -723,7 +723,8 @@ public:
     /**
      * ICU use only.
      * Returns handle to the shared, cached NumberFormat instance for given
-     * locale
+     * locale. On success, caller must call removeRef() on returned value
+     * once it is done with the shared instance.
      * @internal
      */
     static const SharedNumberFormat* U_EXPORT2 createSharedInstance(

@@ -73,7 +73,8 @@ U_NAMESPACE_BEGIN
 class NumberFormat;
 class PluralRules;
 class MeasureFormatCacheData;
-class MeasureFormatSharedData;
+class SharedNumberFormat;
+class SharedPluralRules;
 class QuantityFormatter;
 class ListFormatter;
 class DateFormat;
@@ -262,7 +263,8 @@ class U_I18N_API MeasureFormat : public Format {
 
  private:
     const MeasureFormatCacheData *cache;
-    const MeasureFormatSharedData *shared;
+    const SharedNumberFormat *numberFormat;
+    const SharedPluralRules *pluralRules;
     UMeasureFormatWidth width;    
 
     // Declared outside of MeasureFormatSharedData because ListFormatter

@@ -294,7 +294,15 @@ void RelativeDateTimeFormatterTest::TestCustomNumberFormat() {
     nf->setMinimumFractionDigits(1);
     nf->setMaximumFractionDigits(1);
     RelativeDateTimeFormatter fmt("en", nf, status);
-    RunTest(fmt, kEnglishDecimal, LENGTHOF(kEnglishDecimal), "en decimal digits");
+
+    // Test copy constructor.
+    RelativeDateTimeFormatter fmt2(fmt);
+    RunTest(fmt2, kEnglishDecimal, LENGTHOF(kEnglishDecimal), "en decimal digits");
+
+    // Test assignment
+    fmt = RelativeDateTimeFormatter("es", status);
+    RunTest(fmt, kSpanishNoQuantity, LENGTHOF(kSpanishNoQuantity), "assignment operator");
+
 }
 
 void RelativeDateTimeFormatterTest::TestCombineDateAndTime() {

@@ -128,19 +128,6 @@ MeasureFormatCacheData::~MeasureFormatCacheData() {
     delete numericDateFormatters;
 }
 
-// Contains shared data for MeasureFormat objects. Data that is expensive
-// to copy out of other caches goes in here
-class MeasureFormatSharedData : public SharedObject {
-public:
-    SharedPtr<PluralRules> pluralRules;
-    SharedPtr<NumberFormat> numberFormat;
-    virtual ~MeasureFormatSharedData();
-private:
-    MeasureFormatSharedData &operator=(const MeasureFormatSharedData& other);
-};
-
-MeasureFormatSharedData::~MeasureFormatSharedData() { }
-
 static int32_t widthToIndex(UMeasureFormatWidth width) {
     if (width >= WIDTH_INDEX_COUNT) {
         return WIDTH_INDEX_COUNT - 1;
@@ -413,7 +400,11 @@ static int32_t toHMS(
 
 MeasureFormat::MeasureFormat(
         const Locale &locale, UMeasureFormatWidth w, UErrorCode &status)
-        : cache(NULL), shared(NULL), width(w), listFormatter(NULL) {
+        : cache(NULL),
+          numberFormat(NULL),
+          pluralRules(NULL),
+          width(w),
+          listFormatter(NULL) {
     initMeasureFormat(locale, w, NULL, status);
 }
 
@@ -422,18 +413,24 @@ MeasureFormat::MeasureFormat(
         UMeasureFormatWidth w,
         NumberFormat *nfToAdopt,
         UErrorCode &status) 
-        : cache(NULL), shared(NULL), width(w) , listFormatter(NULL) {
+        : cache(NULL),
+          numberFormat(NULL),
+          pluralRules(NULL),
+          width(w),
+          listFormatter(NULL) {
     initMeasureFormat(locale, w, nfToAdopt, status);
 }
 
 MeasureFormat::MeasureFormat(const MeasureFormat &other) :
         Format(other),
         cache(other.cache),
-        shared(other.shared),
+        numberFormat(other.numberFormat),
+        pluralRules(other.pluralRules),
         width(other.width),
         listFormatter(NULL) {
     cache->addRef();
-    shared->addRef();
+    numberFormat->addRef();
+    pluralRules->addRef();
     listFormatter = new ListFormatter(*other.listFormatter);
 }
 
@@ -443,7 +440,8 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
     }
     Format::operator=(other);
     SharedObject::copyPtr(other.cache, cache);
-    SharedObject::copyPtr(other.shared, shared);
+    SharedObject::copyPtr(other.numberFormat, numberFormat);
+    SharedObject::copyPtr(other.pluralRules, pluralRules);
     width = other.width;
     delete listFormatter;
     listFormatter = new ListFormatter(*other.listFormatter);
@@ -452,7 +450,8 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
 
 MeasureFormat::MeasureFormat() :
         cache(NULL),
-        shared(NULL),
+        numberFormat(NULL),
+        pluralRules(NULL),
         width(UMEASFMT_WIDTH_WIDE),
         listFormatter(NULL) {
 }
@@ -461,8 +460,11 @@ MeasureFormat::~MeasureFormat() {
     if (cache != NULL) {
         cache->removeRef();
     }
-    if (shared != NULL) {
-        shared->removeRef();
+    if (numberFormat != NULL) {
+        numberFormat->removeRef();
+    }
+    if (pluralRules != NULL) {
+        pluralRules->removeRef();
     }
     delete listFormatter;
 }
@@ -500,8 +502,8 @@ UBool MeasureFormat::operator==(const Format &other) const {
     }
     // Locales same, check NumberFormat if shared data differs.
     return (
-            shared == rhs->shared ||
-            *shared->numberFormat == *rhs->shared->numberFormat);
+            numberFormat == rhs->numberFormat ||
+            **numberFormat == **rhs->numberFormat);
 }
 
 Format *MeasureFormat::clone() const {
@@ -587,62 +589,49 @@ void MeasureFormat::initMeasureFormat(
         return;
     }
 
-    LocalPointer<MeasureFormatSharedData> measureFormatSharedData(
-            new MeasureFormatSharedData());
-    if (measureFormatSharedData.getAlias() == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
-
-    const SharedPluralRules *sharedPluralRules =
+    SharedObject::copyPtr(
             PluralRules::createSharedInstance(
-                    locale, UPLURAL_TYPE_CARDINAL, status);
+                    locale, UPLURAL_TYPE_CARDINAL, status),
+            pluralRules);
     if (U_FAILURE(status)) {
         return;
     }
-    measureFormatSharedData->pluralRules = sharedPluralRules->ptr;
-    sharedPluralRules->removeRef();
-
+    pluralRules->removeRef();
     if (nfToAdopt == NULL) {
-        const SharedNumberFormat *sharedNumberFormat =
+        SharedObject::copyPtr(
                 NumberFormat::createSharedInstance(
-                        locale, UNUM_DECIMAL, status);
+                        locale, UNUM_DECIMAL, status),
+                numberFormat);
         if (U_FAILURE(status)) {
             return;
         }
-        measureFormatSharedData->numberFormat = sharedNumberFormat->ptr;
-        sharedNumberFormat->removeRef();
-    } else if (!measureFormatSharedData->numberFormat.reset(nfToAdopt)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        numberFormat->removeRef();
+    } else {
+        adoptNumberFormat(nfToAdopt, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
     }
-    SharedObject::copyPtr(measureFormatSharedData.orphan(), shared);
-
     width = w;
-
     delete listFormatter;
     listFormatter = ListFormatter::createInstance(
             locale,
             listStyles[widthToIndex(width)],
             status);
-    if (U_FAILURE(status)) {
-        return;
-    }
 }
 
-void MeasureFormat::adoptNumberFormat(NumberFormat *nfToAdopt, UErrorCode &status) {
+void MeasureFormat::adoptNumberFormat(
+        NumberFormat *nfToAdopt, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    MeasureFormatSharedData* wshared = SharedObject::copyOnWrite(shared);
-    if (wshared == NULL) {
+    SharedNumberFormat *shared = new SharedNumberFormat(nfToAdopt);
+    if (shared == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
+        delete nfToAdopt;
         return;
     }
-    if (!wshared->numberFormat.reset(nfToAdopt)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
+    SharedObject::copyPtr(shared, numberFormat);
 }
 
 UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &status) {
@@ -654,11 +643,11 @@ UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &st
 } 
 
 const NumberFormat &MeasureFormat::getNumberFormat() const {
-    return *shared->numberFormat;
+    return **numberFormat;
 }
 
 const PluralRules &MeasureFormat::getPluralRules() const {
-    return *shared->pluralRules;
+    return **pluralRules;
 }
 
 Locale MeasureFormat::getLocale(UErrorCode &status) const {
@@ -695,8 +684,9 @@ UnicodeString &MeasureFormat::formatMeasure(
     }
     return quantityFormatter->format(
             amtNumber,
-            *shared->numberFormat,
-            *shared->pluralRules, appendTo,
+            **numberFormat,
+            **pluralRules,
+            appendTo,
             pos,
             status);
 }
@@ -761,7 +751,7 @@ UnicodeString &MeasureFormat::formatNumeric(
         return appendTo;
     }
     UnicodeString smallestAmountFormatted;
-    shared->numberFormat->format(
+    (*numberFormat)->format(
             smallestAmount, smallestAmountFormatted, status);
     FieldPosition smallestFieldPosition(smallestField);
     UnicodeString draft;

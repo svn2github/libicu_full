@@ -19,10 +19,12 @@ class NumberFormat;
 
 class U_I18N_API SharedNumberFormat : public SharedObject {
 public:
-SharedNumberFormat() : ptr(NULL) { }
+SharedNumberFormat(NumberFormat *nfToAdopt) : ptr(nfToAdopt) { }
 virtual ~SharedNumberFormat();
-SharedPtr<NumberFormat> ptr;
+const NumberFormat *operator->() const { return ptr; }
+const NumberFormat &operator*() const { return *ptr; }
 private:
+NumberFormat *ptr;
 SharedNumberFormat(const SharedNumberFormat &);
 SharedNumberFormat &operator=(const SharedNumberFormat &);
 };

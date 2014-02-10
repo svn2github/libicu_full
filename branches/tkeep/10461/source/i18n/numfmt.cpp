@@ -244,8 +244,8 @@ NumberFormat::~NumberFormat()
 {
 }
 
-SharedNumberFormat::~SharedNumberFormat()
-{
+SharedNumberFormat::~SharedNumberFormat() {
+    delete ptr;
 }
 
 // -------------------------------------
@@ -1035,7 +1035,7 @@ NumberFormat::createInstance(const Locale& loc, UNumberFormatStyle kind, UErrorC
     if (U_FAILURE(status)) {
         return NULL;
     }
-    NumberFormat *result = (NumberFormat *) shared->ptr->clone();
+    NumberFormat *result = (NumberFormat *) (*shared)->clone();
     shared->removeRef();
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -1235,21 +1235,18 @@ static SharedObject *U_CALLCONV createSharedNumberFormat(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    LocalPointer<SharedNumberFormat> result(new SharedNumberFormat());
-    if (result.getAlias() == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
     NumberFormat *nf = NumberFormat::internalCreateInstance(
             localeId, UNUM_DECIMAL, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
-    if (!result->ptr.reset(nf)) {
+    SharedObject *result = new SharedNumberFormat(nf);
+    if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
+        delete nf;
         return NULL;
     }
-    return result.orphan();
+    return result;
 }
 
 static void U_CALLCONV numberFormatCacheInit(UErrorCode &status) {

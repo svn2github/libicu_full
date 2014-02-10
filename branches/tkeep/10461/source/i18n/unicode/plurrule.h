@@ -309,6 +309,8 @@ public:
     /**
      * For ICU use only.
      * Returns handle to the shared, cached PluralRules isntance.
+     * Caller must call removeRef() on returned value once it is done with
+     * the shared instance.
      * @internal
      */
     static const SharedPluralRules* U_EXPORT2 createSharedInstance(
