@@ -675,7 +675,7 @@ void IntlTestSpoof::testRestrictionLevel() {
     } tests[] = {
         {"\\u0061\\u03B3\\u2665", USPOOF_UNRESTRICTIVE},
         {"a",                     USPOOF_ASCII},
-        {"\\u03B3",               USPOOF_HIGHLY_RESTRICTIVE},
+        {"\\u03B3",               USPOOF_SINGLE_SCRIPT_RESTRICTIVE},
         {"\\u0061\\u30A2\\u30FC", USPOOF_HIGHLY_RESTRICTIVE},
         {"\\u0061\\u0904",        USPOOF_MODERATELY_RESTRICTIVE},
         {"\\u0061\\u03B3",        USPOOF_MINIMALLY_RESTRICTIVE}
