@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationruleparser.cpp
@@ -305,12 +305,10 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
     for(;;) {
         while(j < raw.length()) {
             UChar32 c = raw.char32At(j);
-#if 0  // TODO: reenable: http://unicode.org/cldr/trac/ticket/6738
             if(!nfd.isInert(c)) {
                 setParseError("starred-relation string is not all NFD-inert", errorCode);
                 return;
             }
-#endif
             sink->addRelation(strength, empty, UnicodeString(c), empty, errorReason, errorCode);
             if(U_FAILURE(errorCode)) {
                 setErrorContext();
@@ -340,12 +338,10 @@ CollationRuleParser::parseStarredCharacters(int32_t strength, int32_t i, UErrorC
         // range prev-c
         UnicodeString s;
         while(++prev <= c) {
-#if 0  // TODO: reenable: http://unicode.org/cldr/trac/ticket/6738
             if(!nfd.isInert(prev)) {
                 setParseError("starred-relation string range is not all NFD-inert", errorCode);
                 return;
             }
-#endif
             if(U_IS_SURROGATE(prev)) {
                 setParseError("starred-relation string range contains a surrogate", errorCode);
                 return;
@@ -602,11 +598,9 @@ CollationRuleParser::parseSetting(UErrorCode &errorCode) {
         } else if(raw == UNICODE_STRING_SIMPLE("hiraganaQ")) {
             UColAttributeValue value = getOnOffValue(v);
             if(value != UCOL_DEFAULT) {
-#if 0  // TODO: remove [hiraganaQ on] from ja.txt and re-enable this check
                 if(value == UCOL_ON) {
                     setParseError("[hiraganaQ on] is not supported", errorCode);
                 }
-#endif
                 ruleIndex = j;
                 return;
             }
