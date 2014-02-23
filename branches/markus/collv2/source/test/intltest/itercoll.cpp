@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2013, International Business Machines Corporation and
+ * Copyright (c) 1997-2014, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -214,11 +214,66 @@ void CollationIteratorTest::TestOffset(/* char* par */)
         assertEqual(*iter, *pristine);
     }
 
-    // TODO: try iterating halfway through a messy string.
-
     delete pristine;
     delete[] orders;
     delete iter;
+
+    // setting offset in the middle of a contraction
+    UnicodeString contraction = "change";
+    status = U_ZERO_ERROR;
+    RuleBasedCollator tailored("& a < ch", status);
+    if (U_FAILURE(status)) {
+        errln("Error: in creation of Spanish collator - %s", u_errorName(status));
+        return;
+    }
+    iter = tailored.createCollationElementIterator(contraction);
+    Order *order = getOrders(*iter, orderLength);
+    iter->setOffset(1, status); // sets offset in the middle of ch
+    int32_t order2Length = 0;
+    Order *order2 = getOrders(*iter, order2Length);
+    if (orderLength != order2Length || uprv_memcmp(order, order2, orderLength * sizeof(Order)) != 0) {
+        errln("Error: setting offset in the middle of a contraction should be the same as setting it to the start of the contraction");
+    }
+    delete[] order;
+    delete[] order2;
+    delete iter;
+    contraction = "peache";
+    iter = tailored.createCollationElementIterator(contraction);
+    iter->setOffset(3, status);
+    order = getOrders(*iter, orderLength);
+    iter->setOffset(4, status); // sets offset in the middle of ch
+    order2 = getOrders(*iter, order2Length);
+    if (orderLength != order2Length || uprv_memcmp(order, order2, orderLength * sizeof(Order)) != 0) {
+        errln("Error: setting offset in the middle of a contraction should be the same as setting it to the start of the contraction");
+    }
+    delete[] order;
+    delete[] order2;
+    delete iter;
+    // setting offset in the middle of a surrogate pair
+    UnicodeString surrogate = UNICODE_STRING_SIMPLE("\\ud800\\udc00str").unescape();
+    iter = tailored.createCollationElementIterator(surrogate);
+    order = getOrders(*iter, orderLength);
+    iter->setOffset(1, status); // sets offset in the middle of surrogate
+    order2 = getOrders(*iter, order2Length);
+    if (orderLength != order2Length || uprv_memcmp(order, order2, orderLength * sizeof(Order)) != 0) {
+        errln("Error: setting offset in the middle of a surrogate pair should be the same as setting it to the start of the surrogate pair");
+    }
+    delete[] order;
+    delete[] order2;
+    delete iter;
+    surrogate = UNICODE_STRING_SIMPLE("simple\\ud800\\udc00str").unescape();
+    iter = tailored.createCollationElementIterator(surrogate);
+    iter->setOffset(6, status);
+    order = getOrders(*iter, orderLength);
+    iter->setOffset(7, status); // sets offset in the middle of surrogate
+    order2 = getOrders(*iter, order2Length);
+    if (orderLength != order2Length || uprv_memcmp(order, order2, orderLength * sizeof(Order)) != 0) {
+        errln("Error: setting offset in the middle of a surrogate pair should be the same as setting it to the start of the surrogate pair");
+    }
+    delete[] order;
+    delete[] order2;
+    delete iter;
+    // TODO: try iterating halfway through a messy string.
 }
 
 /**

@@ -833,6 +833,15 @@ private:
         return (UBool)((explicitlySetAttributes & ((uint32_t)1 << attribute)) != 0);
     }
 
+    /**
+     * Tests whether a character is "unsafe" for use as a collation starting point.
+     *
+     * @param c code point or code unit
+     * @return TRUE if c is unsafe
+     * @see CollationElementIterator#setOffset(int)
+     */
+    UBool isUnsafe(UChar32 c) const;
+
     static void computeMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode);
     UBool initMaxExpansions(UErrorCode &errorCode) const;
 

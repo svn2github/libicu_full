@@ -228,6 +228,37 @@ void CollationElementIterator::setOffset(int32_t newOffset,
                                          UErrorCode& status)
 {
     if (U_FAILURE(status)) { return; }
+    if (0 < newOffset && newOffset < string_.length()) {
+        int32_t offset = newOffset;
+        do {
+            UChar c = string_.charAt(offset);
+            if (!rbc_->isUnsafe(c) ||
+                    (U16_IS_LEAD(c) && !rbc_->isUnsafe(string_.char32At(offset)))) {
+                break;
+            }
+            // Back up to before this unsafe character.
+            --offset;
+        } while (offset > 0);
+        if (offset < newOffset) {
+            // We might have backed up more than necessary.
+            // For example, contractions "ch" and "cu" make both 'h' and 'u' unsafe,
+            // but for text "chu" setOffset(2) should remain at 2
+            // although we initially back up to offset 0.
+            // Find the last safe offset no greater than newOffset by iterating forward.
+            int32_t lastSafeOffset = offset;
+            do {
+                iter_->resetToOffset(lastSafeOffset);
+                do {
+                    iter_->nextCE(status);
+                    if (U_FAILURE(status)) { return; }
+                } while ((offset = iter_->getOffset()) == lastSafeOffset);
+                if (offset <= newOffset) {
+                    lastSafeOffset = offset;
+                }
+            } while (offset < newOffset);
+            newOffset = lastSafeOffset;
+        }
+    }
     iter_->resetToOffset(newOffset);
     otherHalf_ = 0;
     dir_ = 1;

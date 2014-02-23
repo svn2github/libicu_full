@@ -1606,6 +1606,11 @@ RuleBasedCollator::internalGetShortDefinitionString(const char *locale,
     return u_terminateChars(buffer, capacity, result.length(), &errorCode);
 }
 
+UBool
+RuleBasedCollator::isUnsafe(UChar32 c) const {
+    return data->isUnsafeBackward(c, settings->isNumeric());
+}
+
 void
 RuleBasedCollator::computeMaxExpansions(const CollationTailoring *t, UErrorCode &errorCode) {
     t->maxExpansions = CollationElementIterator::computeMaxExpansions(t->data, errorCode);
