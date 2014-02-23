@@ -216,7 +216,7 @@ CollationBuilder::CollationBuilder(const CollationTailoring *b, UErrorCode &erro
           baseData(b->data),
           rootElements(b->data->rootElements, b->data->rootElementsLength),
           variableTop(0),
-          dataBuilder(new CollationDataBuilder(errorCode)), fastLatinEnabled(FALSE),
+          dataBuilder(new CollationDataBuilder(errorCode)), fastLatinEnabled(TRUE),
           errorReason(NULL),
           cesLength(0),
           rootPrimaryIndexes(errorCode), nodes(errorCode) {

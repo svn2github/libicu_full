@@ -1,7 +1,7 @@
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1998-2013, International Business Machines
+*   Copyright (C) 1998-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
@@ -986,8 +986,8 @@ addCollation(ParseState* state, struct SResource  *result, const char *collation
         return NULL;  // TODO: use LocalUResourceBundlePointer for result
     }
     icu::CollationBuilder builder(base, intStatus);
-    if(uprv_strncmp(collationType, "search", 6) != 0) {
-        builder.enableFastLatin();  // build fast-Latin table unless search collator
+    if(uprv_strncmp(collationType, "search", 6) == 0) {
+        builder.disableFastLatin();  // build fast-Latin table unless search collator
     }
     LocalPointer<icu::CollationTailoring> t(
             builder.parseAndBuild(rules, version, &importer, &parseError, intStatus));

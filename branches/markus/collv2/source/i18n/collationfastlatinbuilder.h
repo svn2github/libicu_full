@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationfastlatinbuilder.h
@@ -48,7 +48,6 @@ private:
                          UErrorCode &errorCode);
     UBool getCEsFromContractionCE32(const CollationData &data, uint32_t ce32,
                                     UErrorCode &errorCode);
-    static int32_t getSuffixFirstCharIndex(const UnicodeString &suffix);
     void addContractionEntry(int32_t x, int64_t cce0, int64_t cce1, UErrorCode &errorCode);
     void addUniqueCE(int64_t ce, UErrorCode &errorCode);
     uint32_t getMiniCE(int64_t ce) const;

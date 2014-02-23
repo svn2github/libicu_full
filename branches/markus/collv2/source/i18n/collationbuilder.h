@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationbuilder.h
@@ -40,7 +40,7 @@ public:
     CollationBuilder(const CollationTailoring *base, UErrorCode &errorCode);
     virtual ~CollationBuilder();
 
-    void enableFastLatin() { fastLatinEnabled = TRUE; }
+    void disableFastLatin() { fastLatinEnabled = FALSE; }
 
     CollationTailoring *parseAndBuild(const UnicodeString &ruleString,
                                       const UVersionInfo rulesVersion,

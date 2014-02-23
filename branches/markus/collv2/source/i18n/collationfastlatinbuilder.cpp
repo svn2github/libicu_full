@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationfastlatinbuilder.cpp
@@ -377,7 +377,7 @@ CollationFastLatinBuilder::getCEsFromContractionCE32(const CollationData &data, 
     UCharsTrie::Iterator suffixes(p + 2, 0, errorCode);
     while(suffixes.next(errorCode)) {
         const UnicodeString &suffix = suffixes.getString();
-        int32_t x = getSuffixFirstCharIndex(suffix);
+        int32_t x = CollationFastLatin::getCharIndex(suffix.charAt(0));
         if(x < 0) { continue; }  // ignore anything but fast Latin text
         if(x == prevX) {
             if(addContraction) {
@@ -411,21 +411,6 @@ CollationFastLatinBuilder::getCEsFromContractionCE32(const CollationData &data, 
     ce0 = ((int64_t)Collation::NO_CE_PRIMARY << 32) | CONTRACTION_FLAG | contractionIndex;
     ce1 = 0;
     return TRUE;
-}
-
-int32_t
-CollationFastLatinBuilder::getSuffixFirstCharIndex(const UnicodeString &suffix) {
-    int32_t x = CollationFastLatin::getCharIndex(suffix.charAt(0));
-    int32_t length = suffix.length();
-    if(x >= 0 && length > 0) {
-        // Ignore the contraction if it contains non-fast-Latin characters.
-        for(int32_t i = 1; i < length; ++i) {
-            if(CollationFastLatin::getCharIndex(suffix.charAt(i)) < 0) {
-                return -1;
-            }
-        }
-    }
-    return x;
 }
 
 void
