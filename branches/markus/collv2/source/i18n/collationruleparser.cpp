@@ -69,16 +69,11 @@ CollationRuleParser::~CollationRuleParser() {
 
 void
 CollationRuleParser::parse(const UnicodeString &ruleString,
-                           CollationTailoring &outTailoring,
+                           CollationSettings &outSettings,
                            UParseError *outParseError,
                            UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return; }
-    tailoring = &outTailoring;
-    settings = SharedObject::copyOnWrite(outTailoring.settings);
-    if(settings == NULL) {
-        errorCode = U_MEMORY_ALLOCATION_ERROR;
-        return;
-    }
+    settings = &outSettings;
     parseError = outParseError;
     if(parseError != NULL) {
         parseError->line = 0;

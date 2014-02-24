@@ -1375,7 +1375,7 @@ RuleBasedCollator::writeIdenticalLevel(const UChar *s, const UChar *limit,
         destLengthEstimate = -1;
     }
     UnicodeString nfd;
-    data->nfcImpl.decompose(nfdQCYesLimit, limit, nfd, -1, errorCode);
+    data->nfcImpl.decompose(nfdQCYesLimit, limit, nfd, destLengthEstimate, errorCode);
     u_writeIdenticalLevelRun(prev, nfd.getBuffer(), nfd.length(), sink);
 }
 

@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationsets.cpp
@@ -81,17 +81,17 @@ void
 TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
     if(Collation::isPrefixCE32(ce32)) {
         const UChar *p = data->contexts + Collation::indexFromCE32(ce32);
-        ce32 = data->getFinalCE32(((uint32_t)p[0] << 16) | p[1]);
+        ce32 = data->getFinalCE32(CollationData::readCE32(p));
         if(Collation::isPrefixCE32(baseCE32)) {
             const UChar *q = baseData->contexts + Collation::indexFromCE32(baseCE32);
-            baseCE32 = baseData->getFinalCE32(((uint32_t)q[0] << 16) | q[1]);
+            baseCE32 = baseData->getFinalCE32(CollationData::readCE32(q));
             comparePrefixes(c, p + 2, q + 2);
         } else {
             addPrefixes(data, c, p + 2);
         }
     } else if(Collation::isPrefixCE32(baseCE32)) {
         const UChar *q = baseData->contexts + Collation::indexFromCE32(baseCE32);
-        baseCE32 = baseData->getFinalCE32(((uint32_t)q[0] << 16) | q[1]);
+        baseCE32 = baseData->getFinalCE32(CollationData::readCE32(q));
         addPrefixes(baseData, c, q + 2);
     }
 
@@ -100,14 +100,14 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
         if((ce32 & Collation::CONTRACT_SINGLE_CP_NO_MATCH) != 0) {
             ce32 = Collation::NO_CE32;
         } else {
-            ce32 = data->getFinalCE32(((uint32_t)p[0] << 16) | p[1]);
+            ce32 = data->getFinalCE32(CollationData::readCE32(p));
         }
         if(Collation::isContractionCE32(baseCE32)) {
             const UChar *q = baseData->contexts + Collation::indexFromCE32(baseCE32);
             if((baseCE32 & Collation::CONTRACT_SINGLE_CP_NO_MATCH) != 0) {
                 baseCE32 = Collation::NO_CE32;
             } else {
-                baseCE32 = baseData->getFinalCE32(((uint32_t)q[0] << 16) | q[1]);
+                baseCE32 = baseData->getFinalCE32(CollationData::readCE32(q));
             }
             compareContractions(c, p + 2, q + 2);
         } else {
@@ -115,7 +115,7 @@ TailoredSet::compare(UChar32 c, uint32_t ce32, uint32_t baseCE32) {
         }
     } else if(Collation::isContractionCE32(baseCE32)) {
         const UChar *q = baseData->contexts + Collation::indexFromCE32(baseCE32);
-        baseCE32 = baseData->getFinalCE32(((uint32_t)q[0] << 16) | q[1]);
+        baseCE32 = baseData->getFinalCE32(CollationData::readCE32(q));
         addContractions(c, q + 2);
     }
 
@@ -403,7 +403,6 @@ ContractionsAndExpansions::forData(const CollationData *d, UErrorCode &ec) {
     // Add all from the base data but only for un-tailored code points.
     tailored.freeze();
     checkTailored = 1;
-    tailoring = d;
     data = d->base;
     utrie2_enum(data->trie, NULL, enumCnERange, this);
     ec = errorCode;
@@ -540,7 +539,7 @@ void
 ContractionsAndExpansions::handlePrefixes(
         UChar32 start, UChar32 end, uint32_t ce32) {
     const UChar *p = data->contexts + Collation::indexFromCE32(ce32);
-    ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no prefix match.
+    ce32 = CollationData::readCE32(p);  // Default if no prefix match.
     handleCE32(start, end, ce32);
     if(!addPrefixes) { return; }
     UCharsTrie::Iterator prefixes(p + 2, 0, errorCode);
@@ -565,7 +564,7 @@ ContractionsAndExpansions::handleContractions(
         // a fallback to the mappings for a shorter prefix.
         U_ASSERT(!unreversedPrefix.isEmpty());
     } else {
-        ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+        ce32 = CollationData::readCE32(p);  // Default if no suffix match.
         U_ASSERT(!Collation::isContractionCE32(ce32));
         handleCE32(start, end, ce32);
     }

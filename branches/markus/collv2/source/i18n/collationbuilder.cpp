@@ -266,7 +266,8 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     variableTop = base->settings->variableTop;
     parser.setSink(this);
     parser.setImporter(importer);
-    parser.parse(ruleString, *tailoring, outParseError, errorCode);
+    parser.parse(ruleString, *SharedObject::copyOnWrite(tailoring->settings),
+                 outParseError, errorCode);
     errorReason = parser.getErrorReason();
     if(U_FAILURE(errorCode)) { return NULL; }
     if(dataBuilder->hasMappings()) {
@@ -637,7 +638,7 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
         for(;;) {
             int32_t nextIndex = nextIndexFromNode(node);
             if(nextIndex == 0) { break; }
-            int32_t nextNode = nodes.elementAti(nextIndex);
+            int64_t nextNode = nodes.elementAti(nextIndex);
             if(strengthFromNode(nextNode) < strength) { break; }
             index = nextIndex;
             node = nextNode;

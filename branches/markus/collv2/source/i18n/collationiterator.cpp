@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2013, International Business Machines
+* Copyright (C) 2010-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationiterator.cpp
@@ -272,7 +272,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             int32_t length = Collation::lengthFromCE32(ce32);
             if(ceBuffer.ensureAppendCapacity(length, errorCode)) {
                 do {
-                    ceBuffer.set(ceBuffer.length++, Collation::ceFromCE32(*ce32s++));
+                    ceBuffer.appendUnsafe(Collation::ceFromCE32(*ce32s++));
                 } while(--length > 0);
             }
             return;
@@ -282,7 +282,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             int32_t length = Collation::lengthFromCE32(ce32);
             if(ceBuffer.ensureAppendCapacity(length, errorCode)) {
                 do {
-                    ceBuffer.set(ceBuffer.length++, *ces++);
+                    ceBuffer.appendUnsafe(*ces++);
                 } while(--length > 0);
             }
             return;
@@ -302,7 +302,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
             break;
         case Collation::CONTRACTION_TAG: {
             const UChar *p = d->contexts + Collation::indexFromCE32(ce32);
-            uint32_t defaultCE32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+            uint32_t defaultCE32 = CollationData::readCE32(p);  // Default if no suffix match.
             if(!forward) {
                 // Backward contractions are handled by previousCEUnsafe().
                 // c has contractions but they were not found.
@@ -384,7 +384,7 @@ CollationIterator::appendCEsFromCE32(const CollationData *d, UChar32 c, uint32_t
                     ceBuffer.set(ceBuffer.length + 1, Collation::ceFromCE32(jamoCE32s[19 + v]));
                     ceBuffer.length += 2;
                     if(t != 0) {
-                        ceBuffer.set(ceBuffer.length++, Collation::ceFromCE32(jamoCE32s[39 + t]));
+                        ceBuffer.appendUnsafe(Collation::ceFromCE32(jamoCE32s[39 + t]));
                     }
                 }
                 return;
@@ -446,7 +446,7 @@ uint32_t
 CollationIterator::getCE32FromPrefix(const CollationData *d, uint32_t ce32,
                                      UErrorCode &errorCode) {
     const UChar *p = d->contexts + Collation::indexFromCE32(ce32);
-    ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no prefix match.
+    ce32 = CollationData::readCE32(p);  // Default if no prefix match.
     p += 2;
     // Number of code points read before the original code point.
     int32_t lookBehind = 0;
@@ -657,7 +657,7 @@ CollationIterator::nextCE32FromDiscontiguousContraction(
         // and we are not in a recursive discontiguous contraction.
         // Append CEs from the contraction ce32
         // and then from the combining marks that we skipped before the match.
-        UChar32 c = U_SENTINEL;
+        c = U_SENTINEL;
         for(;;) {
             appendCEsFromCE32(d, c, ce32, TRUE, errorCode);
             // Fetch CE32s for skipped combining marks from the normal data, with fallback,

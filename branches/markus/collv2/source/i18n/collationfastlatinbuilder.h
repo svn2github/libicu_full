@@ -53,7 +53,6 @@ private:
     uint32_t getMiniCE(int64_t ce) const;
     UBool encodeUniqueCEs(UErrorCode &errorCode);
     UBool encodeCharCEs(UErrorCode &errorCode);
-    UBool encodeExpansions(UErrorCode &errorCode);
     UBool encodeContractions(UErrorCode &errorCode);
     uint32_t encodeTwoCEs(int64_t first, int64_t second) const;
 

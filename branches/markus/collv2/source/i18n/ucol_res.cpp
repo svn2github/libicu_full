@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2013, International Business Machines
+*   Copyright (C) 1996-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  ucol_res.cpp
@@ -128,11 +128,15 @@ CollationLoader::loadTailoring(const Locale &locale, Locale &validLocale, UError
     const CollationTailoring *root = CollationRoot::getRoot(errorCode);
     if(U_FAILURE(errorCode)) { return NULL; }
     const char *name = locale.getName();
-    if(*name == 0 || uprv_strcmp(name, "root") == 0) { return root; }
+    if(*name == 0 || uprv_strcmp(name, "root") == 0) {
+        validLocale = Locale::getRoot();
+        return root;
+    }
 
     LocalUResourceBundlePointer bundle(ures_open(U_ICUDATA_COLL, name, &errorCode));
     if(errorCode == U_MISSING_RESOURCE_ERROR) {
         errorCode = U_USING_DEFAULT_WARNING;
+        validLocale = Locale::getRoot();
         return root;
     }
     const char *vLocale = ures_getLocaleByType(bundle.getAlias(), ULOC_ACTUAL_LOCALE, &errorCode);

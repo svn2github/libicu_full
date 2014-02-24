@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationruleparser.h
@@ -123,7 +123,7 @@ public:
     }
 
     void parse(const UnicodeString &ruleString,
-               CollationTailoring &outTailoring,
+               CollationSettings &outSettings,
                UParseError *outParseError,
                UErrorCode &errorCode);
 
@@ -179,7 +179,6 @@ private:
 
     const UnicodeString *rules;
     const CollationData *const baseData;
-    CollationTailoring *tailoring;
     CollationSettings *settings;
     UParseError *parseError;
     const char *errorReason;

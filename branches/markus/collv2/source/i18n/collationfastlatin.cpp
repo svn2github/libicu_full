@@ -98,7 +98,7 @@ CollationFastLatin::compareUTF16(const uint16_t *table, const uint16_t *primarie
 
     U_ASSERT((table[0] >> 8) == VERSION);
     table += (table[0] & 0xff);  // skip the header
-    uint32_t variableTop = (uint32_t)options >> 16;  // see RuleBasedCollator::getFastLatinOptions()
+    uint32_t variableTop = (uint32_t)options >> 16;  // see getOptions()
     options &= 0xffff;  // needed for CollationSettings::getStrength() to work
 
     // Check for supported characters, fetch mini CEs, and compare primaries.

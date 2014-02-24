@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2013, International Business Machines
+* Copyright (C) 2010-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationdata.h
@@ -72,6 +72,14 @@ struct U_I18N_API CollationData : public UMemory {
     }
 
     /**
+     * Returns the CE32 from two contexts words.
+     * Access to the defaultCE32 for contraction and prefix matching.
+     */
+    static uint32_t readCE32(const UChar *p) {
+        return ((uint32_t)p[0] << 16) | p[1];
+    }
+
+    /**
      * Returns the CE32 for an indirect special CE32 (e.g., with DIGIT_TAG).
      * Requires that ce32 is special.
      */
@@ -82,6 +90,9 @@ struct U_I18N_API CollationData : public UMemory {
      */
     uint32_t getFinalCE32(uint32_t ce32) const;
 
+    /**
+     * Computes a CE from c's ce32 which has the OFFSET_TAG.
+     */
     int64_t getCEFromOffsetCE32(UChar32 c, uint32_t ce32) const {
         int64_t dataCE = ces[Collation::indexFromCE32(ce32)];
         return Collation::makeCE(Collation::getThreeBytePrimaryForOffsetData(c, dataCE));

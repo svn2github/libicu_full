@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012-2013, International Business Machines
+* Copyright (C) 2012-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * uitercollationiterator.cpp
@@ -382,7 +382,7 @@ FCDUIterCollationIterator::switchToBackward() {
 
 UBool
 FCDUIterCollationIterator::previousSegment(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return U_SENTINEL; }
+    if(U_FAILURE(errorCode)) { return FALSE; }
     U_ASSERT(state == ITER_CHECK_BWD);
     // The input text [(iter index)..limit[ passes the FCD check.
     pos = iter.getIndex(&iter, UITER_CURRENT);

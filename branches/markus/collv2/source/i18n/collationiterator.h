@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2013, International Business Machines
+* Copyright (C) 2010-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationiterator.h
@@ -263,11 +263,6 @@ protected:
 private:
     int64_t nextCEFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
                            UErrorCode &errorCode);
-
-    /**
-     * Computes a CE from c's ce32 which has the OFFSET_TAG.
-     */
-    static int64_t getCEFromOffsetCE32(const CollationData *d, UChar32 c, uint32_t ce32);
 
     uint32_t getCE32FromPrefix(const CollationData *d, uint32_t ce32,
                                UErrorCode &errorCode);

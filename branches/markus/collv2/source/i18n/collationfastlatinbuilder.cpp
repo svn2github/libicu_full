@@ -359,7 +359,7 @@ CollationFastLatinBuilder::getCEsFromContractionCE32(const CollationData &data, 
                                                      UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return FALSE; }
     const UChar *p = data.contexts + Collation::indexFromCE32(ce32);
-    ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+    ce32 = CollationData::readCE32(p);  // Default if no suffix match.
     // Since the original ce32 is not a prefix mapping,
     // the default ce32 must not be another contraction.
     U_ASSERT(!Collation::isContractionCE32(ce32));

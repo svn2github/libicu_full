@@ -1,7 +1,7 @@
 
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 2001-2013, International Business Machines Corporation and
+ * Copyright (c) 2001-2014, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /*******************************************************************************
@@ -2407,11 +2407,11 @@ static void TestRuleOptions(void) {
      */
     { "&[before 3][first secondary ignorable]<<<a",
         { "\\u0000", "a"}, 2
-    }, /* you cannot go before first secondary ignorable */
+    },
 
     { "&[before 3][last secondary ignorable]<<<a",
         { "\\u0000", "a"}, 2
-    }, /* you cannot go before first secondary ignorable */
+    },
 
     /* 'normal' befores */
 

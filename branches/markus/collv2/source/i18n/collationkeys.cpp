@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012-2013, International Business Machines
+* Copyright (C) 2012-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationkeys.cpp
@@ -344,6 +344,8 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
         }
 
         uint32_t lower32 = (uint32_t)ce;
+        if(lower32 == 0) { continue; }  // completely ignorable, no secondary/case/tertiary/quaternary
+
         if((levels & Collation::SECONDARY_LEVEL_FLAG) != 0) {
             uint32_t s = lower32 >> 16;
             if(s == 0) {
@@ -399,8 +401,6 @@ CollationKeys::writeSortKeyUpToQuaternary(CollationIterator &iter,
                 prevSecondary = s;
             }
         }
-
-        if(lower32 == 0) { continue; }  // completely ignorable, no case/tertiary/quaternary
 
         if((levels & Collation::CASE_LEVEL_FLAG) != 0) {
             if((CollationSettings::getStrength(options) == UCOL_PRIMARY) ?

@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-*   Copyright (C) 1996-2013, International Business Machines
+*   Copyright (C) 1996-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ******************************************************************************
 */
@@ -114,7 +114,7 @@ class CollationKey;
 * </pre>
 * \htmlonly</blockquote>\endhtmlonly
 * <p>
-* You can set a <code>Collator</code>'s <em>strength</em> property to
+* You can set a <code>Collator</code>'s <em>strength</em> attribute to
 * determine the level of difference considered significant in comparisons.
 * Five strengths are provided: <code>PRIMARY</code>, <code>SECONDARY</code>,
 * <code>TERTIARY</code>, <code>QUATERNARY</code> and <code>IDENTICAL</code>.
@@ -1087,7 +1087,7 @@ protected:
 public:
     /** Get the short definition string for a collator. This internal API harvests the collator's
      *  locale and the attribute set and produces a string that can be used for opening 
-     *  a collator with the same properties using the ucol_openFromShortString API.
+     *  a collator with the same attributes using the ucol_openFromShortString API.
      *  This string will be normalized.
      *  The structure and the syntax of the string is defined in the "Naming collators"
      *  section of the users guide: 

@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012-2013, International Business Machines
+* Copyright (C) 2012-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationdatabuilder.cpp
@@ -58,18 +58,6 @@ struct ConditionalCE32 : public UMemory {
 
     inline UBool hasContext() const { return context.length() > 1; }
     inline int32_t prefixLength() const { return context.charAt(0); }
-
-    UBool hasSamePrefixAs(const ConditionalCE32 &other) const {
-        int32_t length = prefixLength();
-        return length == other.prefixLength() &&
-            (length == 0 || context.compare(1, length, other.context, 1, length) == 0);
-    }
-
-    UBool prefixMatchesBefore(const UnicodeString &s, int32_t i) const {
-        int32_t length = prefixLength();
-        return length <= i &&
-            (length == 0 || s.compare(i - length, length, context, 1, length) == 0);
-    }
 
     /**
      * "\0" for the first entry for any code point, with its default CE32.
@@ -802,7 +790,7 @@ CollationDataBuilder::copyFromBaseCE32(UChar32 c, uint32_t ce32, UBool withConte
         // Flatten prefixes and nested suffixes (contractions)
         // into a linear list of ConditionalCE32.
         const UChar *p = base->contexts + Collation::indexFromCE32(ce32);
-        ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no prefix match.
+        ce32 = CollationData::readCE32(p);  // Default if no prefix match.
         if(!withContext) {
             return copyFromBaseCE32(c, ce32, FALSE, errorCode);
         }
@@ -839,7 +827,7 @@ CollationDataBuilder::copyFromBaseCE32(UChar32 c, uint32_t ce32, UBool withConte
     case Collation::CONTRACTION_TAG: {
         if(!withContext) {
             const UChar *p = base->contexts + Collation::indexFromCE32(ce32);
-            ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+            ce32 = CollationData::readCE32(p);  // Default if no suffix match.
             return copyFromBaseCE32(c, ce32, FALSE, errorCode);
         }
         ConditionalCE32 head(UnicodeString(), 0);
@@ -878,7 +866,7 @@ CollationDataBuilder::copyContractionsFromBaseCE32(UnicodeString &context, UChar
         U_ASSERT(context.length() > 1);
         index = -1;
     } else {
-        ce32 = ((uint32_t)p[0] << 16) | p[1];  // Default if no suffix match.
+        ce32 = CollationData::readCE32(p);  // Default if no suffix match.
         U_ASSERT(!Collation::isContractionCE32(ce32));
         ce32 = copyFromBaseCE32(c, ce32, TRUE, errorCode);
         cond->next = index = addConditionalCE32(context, ce32, errorCode);

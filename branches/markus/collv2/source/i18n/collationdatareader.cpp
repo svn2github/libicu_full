@@ -317,7 +317,7 @@ CollationDataReader::read(const CollationTailoring *base, const uint8_t *inBytes
             index = IX_FAST_LATIN_TABLE_OFFSET;
             offset = getIndex(inIndexes, indexesLength, index);
             length = getIndex(inIndexes, indexesLength, index + 1) - offset;
-            if(length > 0) {
+            if(length >= 2) {
                 data->fastLatinTable = reinterpret_cast<const uint16_t *>(inBytes + offset);
                 data->fastLatinTableLength = length / 2;
                 if((*data->fastLatinTable >> 8) != CollationFastLatin::VERSION) {

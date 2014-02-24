@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2012-2013, International Business Machines
+* Copyright (C) 2012-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * utf8collationiterator.cpp
@@ -462,7 +462,7 @@ FCDUTF8CollationIterator::switchToBackward() {
 
 UBool
 FCDUTF8CollationIterator::previousSegment(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return U_SENTINEL; }
+    if(U_FAILURE(errorCode)) { return FALSE; }
     U_ASSERT(state == CHECK_BWD && pos != 0);
     // The input text [pos..limit[ passes the FCD check.
     int32_t segmentLimit = pos;

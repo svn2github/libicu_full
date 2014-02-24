@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2013, International Business Machines
+* Copyright (C) 2013-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * collationsets.h
@@ -92,7 +92,7 @@ public:
     };
 
     ContractionsAndExpansions(UnicodeSet *con, UnicodeSet *exp, CESink *s, UBool prefixes)
-            : data(NULL), tailoring(NULL),
+            : data(NULL),
               contractions(con), expansions(exp),
               sink(s),
               addPrefixes(prefixes),
@@ -123,7 +123,6 @@ public:
     }
 
     const CollationData *data;
-    const CollationData *tailoring;
     UnicodeSet *contractions;
     UnicodeSet *expansions;
     CESink *sink;

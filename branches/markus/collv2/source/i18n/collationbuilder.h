@@ -270,16 +270,16 @@ private:
         return (int32_t)node & 3;
     }
 
-    static inline int32_t nodeHasBefore2(int64_t node) {
+    static inline UBool nodeHasBefore2(int64_t node) {
         return (node & HAS_BEFORE2) != 0;
     }
-    static inline int32_t nodeHasBefore3(int64_t node) {
+    static inline UBool nodeHasBefore3(int64_t node) {
         return (node & HAS_BEFORE3) != 0;
     }
-    static inline int32_t nodeHasAnyBefore(int64_t node) {
+    static inline UBool nodeHasAnyBefore(int64_t node) {
         return (node & (HAS_BEFORE2 | HAS_BEFORE3)) != 0;
     }
-    static inline int32_t isTailoredNode(int64_t node) {
+    static inline UBool isTailoredNode(int64_t node) {
         return (node & IS_TAILORED) != 0;
     }
 

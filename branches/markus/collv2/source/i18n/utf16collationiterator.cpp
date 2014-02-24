@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2010-2013, International Business Machines
+* Copyright (C) 2010-2014, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * utf16collationiterator.cpp
@@ -434,7 +434,7 @@ FCDUTF16CollationIterator::switchToBackward() {
 
 UBool
 FCDUTF16CollationIterator::previousSegment(UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return U_SENTINEL; }
+    if(U_FAILURE(errorCode)) { return FALSE; }
     U_ASSERT(checkDir < 0 && pos != start);
     // The input text [pos..segmentLimit[ passes the FCD check.
     const UChar *p = pos;
