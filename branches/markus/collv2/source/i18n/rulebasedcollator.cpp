@@ -281,13 +281,12 @@ RuleBasedCollator::setLocales(const Locale &requested, const Locale &valid,
                               const Locale &actual) {
     if(actual == tailoring->actualLocale) {
         actualLocaleIsSameAsValid = FALSE;
-    } else if(tailoring->actualLocale.isBogus()) {
-        tailoring->actualLocale = actual;
-        actualLocaleIsSameAsValid = FALSE;
     } else {
         U_ASSERT(actual == valid);
         actualLocaleIsSameAsValid = TRUE;
     }
+    // Do not modify tailoring.actualLocale:
+    // We cannot be sure that that would be thread-safe.
     validLocale = valid;
     (void)requested;  // Ignore, see also ticket #10477.
 }
