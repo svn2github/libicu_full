@@ -1,6 +1,6 @@
 /*
  *******************************************************************************
- * Copyright (C) 2003-2013, International Business Machines Corporation and    *
+ * Copyright (C) 2003-2014, International Business Machines Corporation and    *
  * others. All Rights Reserved.                                                *
  *******************************************************************************
  */
@@ -48,25 +48,20 @@ void CollationServiceTest::TestRegister()
     }
 
     { // try override en_US collator
+        Collator *clone = frcol->clone();
         URegistryKey key = Collator::registerInstance(frcol, US, status);
+        // frcol has been adopted. We must not use it any more, nor rely on its attributes.
+        frcol = NULL;
 
         Collator* ncol = Collator::createInstance(US_FOO, status);
-        if (*frcol != *ncol) {
+        if (*clone != *ncol) {
             errln("register of french collator for en_US failed on request for en_US_FOO");
         }
-        // ensure original collator's params not touched
-        Locale loc = frcol->getLocale(ULOC_REQUESTED_LOCALE, status);
-        if (loc != FR) {
-          errln(UnicodeString("fr collator's requested locale changed to ") + loc.getName());
-        }
-        loc = frcol->getLocale(ULOC_VALID_LOCALE, status);
-        if (loc != FR) {
-          errln(UnicodeString("fr collator's valid locale changed to ") + loc.getName());
-        }
+        delete clone;
 
         // The requested locale may be the same as the valid locale,
         // or may not be supported at all. See ticket #10477.
-        loc = ncol->getLocale(ULOC_REQUESTED_LOCALE, status);
+        Locale loc = ncol->getLocale(ULOC_REQUESTED_LOCALE, status);
         if (loc != US_FOO && loc != US) {
             errln(UnicodeString("requested locale for en_US_FOO is not en_US_FOO nor en_US but ") + loc.getName());
         }
@@ -83,7 +78,6 @@ void CollationServiceTest::TestRegister()
         if (!Collator::unregister(key, status)) {
             errln("failed to unregister french collator");
         }
-        // !!! frcol pointer is now invalid !!!
 
         ncol = Collator::createInstance(US, status);
         if (*uscol != *ncol) {
@@ -102,11 +96,14 @@ void CollationServiceTest::TestRegister()
         Locale fu_FU("fu", "FU", "");
 
         Collator* fucol = Collator::createInstance(fu_FU, status);
+        Collator *clone = frcol->clone();
         URegistryKey key = Collator::registerInstance(frcol, fu_FU, status);
+        frcol = NULL;  // frcol has been adopted.
         Collator* ncol = Collator::createInstance(fu_FU_FOO, status);
-        if (*frcol != *ncol) {
+        if (*clone != *ncol) {
             errln("register of fr collator for fu_FU failed");
         }
+        delete clone;
 
         UnicodeString locName = fu_FU.getName();
         StringEnumeration* localeEnum = Collator::getAvailableLocales();
@@ -229,6 +226,7 @@ CollatorInfo::CollatorInfo(const Locale& _locale, Collator* _collator, Hashtable
   , collator(_collator)
   , displayNames(_displayNames)
 {
+  collator->setLocales(locale, locale, locale);
 }
 
 CollatorInfo::~CollatorInfo() {

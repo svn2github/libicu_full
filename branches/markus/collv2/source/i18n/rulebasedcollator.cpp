@@ -179,11 +179,11 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
     adoptTailoring(t.orphan());
 }
 
-RuleBasedCollator::RuleBasedCollator(const CollationTailoring *t)
+RuleBasedCollator::RuleBasedCollator(const CollationTailoring *t, const Locale &vl)
         : data(t->data),
           settings(t->settings),
           tailoring(t),
-          validLocale(t->actualLocale),
+          validLocale(vl),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
     settings->addRef();

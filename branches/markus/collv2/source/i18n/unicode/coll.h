@@ -1072,9 +1072,7 @@ protected:
     */
     Collator(const Collator& other);
 
-    // Collator protected methods -----------------------------------------
-
-
+public:
    /**
     * Used internally by registration to define the requested and valid locales.
     * @param requestedLocale the requested locale
@@ -1084,7 +1082,6 @@ protected:
     */
     virtual void setLocales(const Locale& requestedLocale, const Locale& validLocale, const Locale& actualLocale);
 
-public:
     /** Get the short definition string for a collator. This internal API harvests the collator's
      *  locale and the attribute set and produces a string that can be used for opening 
      *  a collator with the same attributes using the ucol_openFromShortString API.

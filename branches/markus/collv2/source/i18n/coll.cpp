@@ -180,22 +180,7 @@ public:
         if (actualReturn == NULL) {
             actualReturn = &ar;
         }
-        Collator* result = (Collator*)ICULocaleService::getKey(key, actualReturn, status);
-        // Ugly Hack Alert! If the actualReturn length is zero, this
-        // means we got a default object, not a "real" service-created
-        // object.  We don't call setLocales() on a default object,
-        // because that will overwrite its correct built-in locale
-        // metadata (valid & actual) with our incorrect data (all we
-        // have is the requested locale). (TODO remove in 3.0) [aliu]
-        if (result && actualReturn->length() > 0) {
-            const LocaleKey& lkey = (const LocaleKey&)key;
-            Locale canonicalLocale("");
-            Locale currentLocale("");
-            
-            LocaleUtility::initLocaleFromName(*actualReturn, currentLocale);
-            result->setLocales(lkey.canonicalLocale(canonicalLocale), currentLocale, currentLocale);
-        }
-        return result;
+        return (Collator*)ICULocaleService::getKey(key, actualReturn, status);
     }
 
     virtual UBool isDefault() const {
@@ -285,19 +270,7 @@ Collator* U_EXPORT2 Collator::createInstance(const Locale& desiredLocale,
 #if !UCONFIG_NO_SERVICE
     if (hasService()) {
         Locale actualLoc;
-        Collator *result =
-            (Collator*)gService->get(desiredLocale, &actualLoc, status);
-
-        // Ugly Hack Alert! If the returned locale is empty (not root,
-        // but empty -- getName() == "") then that means the service
-        // returned a default object, not a "real" service object.  In
-        // that case, the locale metadata (valid & actual) is setup
-        // correctly already, and we don't want to overwrite it. (TODO
-        // remove in 3.0) [aliu]
-        if (*actualLoc.getName() != 0) {
-            result->setLocales(desiredLocale, actualLoc, actualLoc);
-        }
-        return result;
+        return (Collator*)gService->get(desiredLocale, &actualLoc, status);
     }
 #endif
     return makeInstance(desiredLocale, status);
@@ -311,9 +284,8 @@ Collator* Collator::makeInstance(const Locale&  desiredLocale,
     const CollationTailoring *t =
         CollationLoader::loadTailoring(desiredLocale, validLocale, status);
     if (U_SUCCESS(status)) {
-        Collator *result = new RuleBasedCollator(t);
+        Collator *result = new RuleBasedCollator(t, validLocale);
         if (result != NULL) {
-            result->setLocales(desiredLocale, validLocale, t->actualLocale);
             return result;
         }
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -520,6 +492,10 @@ URegistryKey U_EXPORT2
 Collator::registerInstance(Collator* toAdopt, const Locale& locale, UErrorCode& status) 
 {
     if (U_SUCCESS(status)) {
+        // Set the collator locales while registering so that createInstance()
+        // need not guess whether the collator's locales are already set properly
+        // (as they are by the data loader).
+        toAdopt->setLocales(locale, locale, locale);
         return getService()->registerInstance(toAdopt, locale, status);
     }
     return NULL;

@@ -792,7 +792,7 @@ private:
     friend class CollationElementIterator;
     friend class Collator;
 
-    RuleBasedCollator(const CollationTailoring *t);
+    RuleBasedCollator(const CollationTailoring *t, const Locale &vl);
 
     /**
      * Enumeration of attributes that are relevant for short definition strings
