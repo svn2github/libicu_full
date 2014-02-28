@@ -18,6 +18,7 @@ class SimplePatternFormatter;
 class UnicodeString;
 class PluralRules;
 class NumberFormat;
+class NumberFormatter;
 class Formattable;
 class FieldPosition;
 
@@ -100,6 +101,14 @@ public:
             FieldPosition &pos,
             UErrorCode &status) const;
 
+    // TODO add comments
+    UnicodeString &format(
+            const Formattable &quantity,
+            const NumberFormatter &fmt,
+            const PluralRules &rules,
+            UnicodeString &appendTo,
+            FieldPosition &pos,
+            UErrorCode &status) const;
 private:
     SimplePatternFormatter *formatters[6];
 };

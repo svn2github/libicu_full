@@ -78,6 +78,8 @@ class SharedPluralRules;
 class QuantityFormatter;
 class ListFormatter;
 class DateFormat;
+class IntFormatter;
+class NumberFormatter;
 
 /**
  * 
@@ -277,6 +279,11 @@ class U_I18N_API MeasureFormat : public Format {
     // shared across instances.
     ListFormatter *listFormatter;
 
+    // This field is borrowed from MeasureFormatCacheData and is only
+    // populated if numberformat is a default and an intFormatter can be used
+    // in its place to format ints.
+    const IntFormatter *borrowedIntFormatter;
+
     const QuantityFormatter *getQuantityFormatter(
             int32_t index,
             int32_t widthIndex,
@@ -284,7 +291,7 @@ class U_I18N_API MeasureFormat : public Format {
 
     UnicodeString &formatMeasure(
         const Measure &measure,
-        const NumberFormat &nf,
+        const NumberFormatter &nf,
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const;
@@ -310,6 +317,7 @@ class U_I18N_API MeasureFormat : public Format {
         const Formattable &smallestAmount,
         UnicodeString &appendTo,
         UErrorCode &status) const;
+    void setToFullNumberFormat(NumberFormatter &nf) const;
 };
 
 U_NAMESPACE_END

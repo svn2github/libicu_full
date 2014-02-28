@@ -16,6 +16,7 @@
 #include "charstr.h"
 #include "unicode/fmtable.h"
 #include "unicode/fieldpos.h"
+#include "numberformatter.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
 
@@ -119,29 +120,27 @@ UnicodeString &QuantityFormatter::format(
             UnicodeString &appendTo,
             FieldPosition &pos,
             UErrorCode &status) const {
+    return format(
+            quantity,
+            NumberFormatter(fmt),
+            rules,
+            appendTo,
+            pos,
+            status);
+}
+
+UnicodeString &QuantityFormatter::format(
+            const Formattable& quantity,
+            const NumberFormatter &fmt,
+            const PluralRules &rules,
+            UnicodeString &appendTo,
+            FieldPosition &pos,
+            UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return appendTo;
     }
     UnicodeString count;
-    const DecimalFormat *decFmt = dynamic_cast<const DecimalFormat *>(&fmt);
-    if (decFmt != NULL) {
-        FixedDecimal fd = decFmt->getFixedDecimal(quantity, status);
-        if (U_FAILURE(status)) {
-            return appendTo;
-        }
-        count = rules.select(fd);
-    } else {
-        if (quantity.getType() == Formattable::kDouble) {
-            count = rules.select(quantity.getDouble());
-        } else if (quantity.getType() == Formattable::kLong) {
-            count = rules.select(quantity.getLong());
-        } else if (quantity.getType() == Formattable::kInt64) {
-            count = rules.select((double) quantity.getInt64());
-        } else {
-            status = U_ILLEGAL_ARGUMENT_ERROR;
-            return appendTo;
-        }
-    }
+    fmt.select(quantity, rules, count, status);
     CharString buffer;
     buffer.appendInvariantChars(count, status);
     if (U_FAILURE(status)) {
