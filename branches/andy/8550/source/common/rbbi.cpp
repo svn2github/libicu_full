@@ -1578,6 +1578,7 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
         return (reverse ? startPos : endPos);
     }
     
+#if 0
     // Bug 5532.  The dictionary code will crash if the input text is UTF-8
     //      because native indexes are different from UTF-16 indexes.
     //      Temporary hack: skip dictionary lookup for UTF-8 encoded text.
@@ -1601,6 +1602,7 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
     if (fText->pFuncs == utext_utf8Funcs) {
         return (reverse ? startPos : endPos);
     }
+#endif
 
     // Starting from the starting point, scan towards the proposed result,
     // looking for the first dictionary character (which may be the one

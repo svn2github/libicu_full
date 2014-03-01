@@ -63,8 +63,20 @@ DictionaryBreakEngine::findBreaks( UText *text,
             c = utext_previous32(text);
             isDict = fSet.contains(c);
         }
-        rangeStart = (current < startPos) ? startPos : current+(isDict ? 0 : 1);
-        rangeEnd = start + 1;
+        //rangeStart = (current < startPos) ? startPos : current+(isDict ? 0 : 1);
+        if (current < startPos) {
+            rangeStart = startPos;
+        } else {
+            rangeStart = current;
+            if (!isDict) {
+                utext_next32(text);
+                rangeStart = utext_getNativeIndex(text);
+            }
+        }
+        // rangeEnd = start + 1;
+        utext_setNativeIndex(text, start);
+        utext_next32(text);
+        rangeEnd = utext_getNativeIndex(text);
     }
     else {
         while((current = (int32_t)utext_getNativeIndex(text)) < endPos && fSet.contains(c)) {

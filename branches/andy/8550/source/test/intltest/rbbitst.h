@@ -57,7 +57,7 @@ public:
 
     void TestExtended();
     UChar *ReadAndConvertFile(const char *fileName, int &ulen, const char *encoding, UErrorCode &status);
-    void executeTest(TestParams *);
+    void executeTest(TestParams *, UErrorCode &status);
 
     void TestWordBreaks();
     void TestWordBoundary();
