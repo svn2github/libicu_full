@@ -358,7 +358,9 @@ static SharedObject *U_CALLCONV createData(
         }
         intFormatter->like(*df, status);
         numberFormatter->adoptIntFormatter(intFormatter);
-    } else {
+    }
+    if (df == NULL || U_FAILURE(status)) {
+        status = U_ZERO_ERROR;
         NumberFormat *nf = (NumberFormat *) (*shared)->clone();
         if (nf == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;

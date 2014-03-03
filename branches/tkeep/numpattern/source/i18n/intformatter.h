@@ -38,6 +38,7 @@ private:
     UnicodeString fNegPrefix;
     UnicodeString fPosSuffix;
     UnicodeString fNegSuffix;
+    UChar fDigits[10];
     IntFormatter(const IntFormatter &other);
     IntFormatter &operator=(const IntFormatter &other);
 };

@@ -10,17 +10,31 @@
 
 #include "intformatter.h"
 #include "unicode/decimfmt.h"
+#include "cmemory.h"
 
 #if !UCONFIG_NO_FORMATTING
 
 U_NAMESPACE_BEGIN
 
 static UChar gNegPrefix[] = {0x2D, 0x0};
+static UChar gDigits[] = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39};
+
+static UChar asUChar(const UnicodeString &str, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return 0x0;
+    }
+    if (str.length() > 1) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return 0x0;
+    }
+    return str[0];
+}
 
 IntFormatter::IntFormatter() :
         fGroupingSize(0), fGroupingSize2(0), fGroupingSeparator(),
         fPosPrefix(), fNegPrefix(TRUE, gNegPrefix, -1), fPosSuffix(),
         fNegSuffix() {
+    uprv_memcpy(fDigits, gDigits, 10 * sizeof(UChar));
 }
 
 IntFormatter::~IntFormatter() { }
@@ -29,18 +43,44 @@ void IntFormatter::like(const DecimalFormat &df, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
-    fGroupingSize = 0;
-    fGroupingSize2 = 0;
+    fGroupingSize = INT32_MAX;
+    fGroupingSize2 = INT32_MAX;
     if (df.isGroupingUsed()) {
         fGroupingSize = df.getGroupingSize();
-        fGroupingSize2 = df.getSecondaryGroupingSize();
-        fGroupingSeparator =
-                df.getDecimalFormatSymbols()->getSymbol(
-                        DecimalFormatSymbols::kGroupingSeparatorSymbol);
-        df.getPositivePrefix(fPosPrefix);
-        df.getNegativePrefix(fNegPrefix);
-        df.getPositiveSuffix(fPosSuffix);
-        df.getNegativeSuffix(fNegSuffix);
+        int32_t groupingSize2 = df.getSecondaryGroupingSize();
+        fGroupingSize2 = groupingSize2 <= 0 ? fGroupingSize : groupingSize2;
+    }
+    df.getPositivePrefix(fPosPrefix);
+    df.getNegativePrefix(fNegPrefix);
+    df.getPositiveSuffix(fPosSuffix);
+    df.getNegativeSuffix(fNegSuffix);
+
+    const DecimalFormatSymbols *symbols = df.getDecimalFormatSymbols();
+    if (symbols != NULL) {
+        fGroupingSeparator = symbols->getSymbol(
+                DecimalFormatSymbols::kGroupingSeparatorSymbol);
+        fDigits[0] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kZeroDigitSymbol), status);
+        fDigits[1] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kOneDigitSymbol), status);
+        fDigits[2] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kTwoDigitSymbol), status);
+        fDigits[3] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kThreeDigitSymbol), status);
+        fDigits[4] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kFourDigitSymbol), status);
+        fDigits[5] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kFiveDigitSymbol), status);
+        fDigits[6] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kSixDigitSymbol), status);
+        fDigits[7] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kSevenDigitSymbol), status);
+        fDigits[8] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kEightDigitSymbol), status);
+        fDigits[9] = asUChar(symbols->getSymbol(
+                DecimalFormatSymbols::kNineDigitSymbol), status);
+    } else {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
     }
 }
 
@@ -80,8 +120,6 @@ UnicodeString &IntFormatter::format(
     if (U_FAILURE(status)) {
         return appendTo;
     }
-    int32_t groupingSize = fGroupingSize <= 0 ? INT32_MAX : fGroupingSize;
-    int32_t groupingSize2 = fGroupingSize2 <= 0 ? groupingSize : fGroupingSize2;
     SimpleAnnotator annotator(pos.getField());
     UBool isNeg = (value < 0);
     annotator.markStart(NumberFormat::kSignField, appendTo.length());
@@ -92,31 +130,38 @@ UnicodeString &IntFormatter::format(
         appendTo.append(fPosPrefix);
     }
     annotator.markEnd(NumberFormat::kSignField, appendTo.length());
-    // Have to allow for one separator per digit
-    // TODO support grouping
-    UChar buffer[20];
-    UChar *endBuffer = &buffer[20];
-    UChar *ptr = endBuffer;
-    int32_t groupCounter = groupingSize;
+    UChar buffer[10];
+    int32_t idx = 10;
     while (value) {
-        if (!groupCounter) {
-            annotator.markStart(
-                    NumberFormat::kGroupingSeparatorField, appendTo.length());
-            appendTo.append(fGroupingSeparator);
-            annotator.markEnd(
-                    NumberFormat::kGroupingSeparatorField, appendTo.length());
-            groupCounter = groupingSize2;
-        }
-        *--ptr = (UChar) ((value % 10) + 0x30);
+        buffer[--idx] = fDigits[value % 10];
         value /= 10;
-        --groupCounter;
     }
+    int32_t digitsLeft = 10 - idx;
     annotator.markStart(
             NumberFormat::kIntegerField, appendTo.length());
-    if (ptr == endBuffer) {
-         appendTo.append(0x30);
+    if (digitsLeft == 0) {
+         appendTo.append(fDigits[0]);
     } else {
-        appendTo.append(ptr, 0, endBuffer - ptr);
+        if (digitsLeft - fGroupingSize > 0) {
+            int32_t leadCount = (digitsLeft - fGroupingSize) % fGroupingSize2;
+            if (leadCount > 0) {
+                appendTo.append(buffer, idx, leadCount);
+                idx += leadCount;
+                digitsLeft -= leadCount;
+                annotator.markStart(NumberFormat::kGroupingSeparatorField, appendTo.length());
+                appendTo.append(fGroupingSeparator);
+                annotator.markEnd(NumberFormat::kGroupingSeparatorField, appendTo.length());
+            }
+            while (digitsLeft - fGroupingSize > 0) {
+                appendTo.append(buffer, idx, fGroupingSize2);
+                idx += fGroupingSize2;
+                digitsLeft -= fGroupingSize2;
+                annotator.markStart(NumberFormat::kGroupingSeparatorField, appendTo.length());
+                appendTo.append(fGroupingSeparator);
+                annotator.markEnd(NumberFormat::kGroupingSeparatorField, appendTo.length());
+            }
+        }
+        appendTo.append(buffer, idx, digitsLeft);
     }
     annotator.markEnd(
             NumberFormat::kIntegerField, appendTo.length());
