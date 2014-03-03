@@ -89,6 +89,18 @@ NumberFormatter &NumberFormatter::adoptNumberIntFormatter(
     return *this;
 }
 
+const IntFormatter *NumberFormatter::getIntFormatter() const {
+    return fDelegateType == kIntFormatter ? fDelegate.intFormatter : NULL;
+}
+
+const NumberFormat *NumberFormatter::getNumberFormat() const {
+    return fDelegateType == kNumberFormat ? fDelegate.numberFormat : NULL;
+}
+
+const NumberIntFormatter *NumberFormatter::getNumberIntFormatter() const {
+    return fDelegateType == kNumberIntFormatter ? fDelegate.numberIntFormatter : NULL;
+}
+
 UnicodeString &NumberFormatter::select(
         const Formattable &quantity, 
         const PluralRules &rules,

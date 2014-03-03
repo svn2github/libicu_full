@@ -102,11 +102,11 @@ public:
     const NumberFormat *getCurrencyFormat(int32_t widthIndex) const {
         return currencyFormats[widthIndex];
     }
-    void adoptIntegerFormat(IntFormatter *ifToAdopt) {
+    void adoptIntegerFormat(NumberFormatter *nfToAdopt) {
         delete integerFormat;
-        integerFormat = ifToAdopt;
+        integerFormat = nfToAdopt;
     }
-    const IntFormatter *getIntegerFormat() const {
+    const NumberFormatter *getIntegerFormat() const {
         return integerFormat;
     }
     void adoptNumericDateFormatters(NumericDateFormatters *formattersToAdopt) {
@@ -119,7 +119,7 @@ public:
     virtual ~MeasureFormatCacheData();
 private:
     NumberFormat *currencyFormats[WIDTH_INDEX_COUNT];
-    IntFormatter *integerFormat;
+    NumberFormatter *integerFormat;
     NumericDateFormatters *numericDateFormatters;
 
     // Copy-on-write must not be allowed as MeasureFormat class
@@ -338,8 +338,8 @@ static SharedObject *U_CALLCONV createData(
             return NULL;
         }
     }
-    LocalPointer<IntFormatter> intFormatter(new IntFormatter());
-    if (intFormatter.getAlias() == NULL) {
+    LocalPointer<NumberFormatter> numberFormatter(new NumberFormatter());
+    if (numberFormatter.getAlias() == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
@@ -350,13 +350,29 @@ static SharedObject *U_CALLCONV createData(
     }
     const DecimalFormat *df = dynamic_cast<const DecimalFormat *>(shared->get());
     if (df != NULL) {
+        IntFormatter *intFormatter = new IntFormatter();
+        if (intFormatter == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            shared->removeRef();
+            return NULL;
+        }
         intFormatter->like(*df, status);
+        numberFormatter->adoptIntFormatter(intFormatter);
+    } else {
+        NumberFormat *nf = (NumberFormat *) (*shared)->clone();
+        if (nf == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            shared->removeRef();
+            return NULL;
+        }
+        nf->setMaximumFractionDigits(0);
+        numberFormatter->adoptNumberFormat(nf);
     }
     shared->removeRef();
     if (U_FAILURE(status)) {
         return NULL;
     }
-    result->adoptIntegerFormat(intFormatter.orphan());
+    result->adoptIntegerFormat(numberFormatter.orphan());
     return result.orphan();
 }
 
@@ -617,13 +633,15 @@ UnicodeString &MeasureFormat::formatMeasures(
         return appendTo;
     }
     for (int32_t i = 0; i < measureCount; ++i) {
-        NumberFormatter nf(*cache->getIntegerFormat());
+        NumberFormatter nf;
+        const NumberFormatter *nfPtr = cache->getIntegerFormat();
         if (i == measureCount - 1) {
+            nfPtr = &nf;
             setToFullNumberFormat(nf, status);
         }
         formatMeasure(
                 measures[i],
-                nf,
+                *nfPtr,
                 results[i],
                 pos,
                 status);
@@ -650,6 +668,7 @@ void MeasureFormat::initMeasureFormat(
         return;
     }
     // Since we updated cache, we must invalidate borrowedIntFormatter.
+    // because borrowedIntFormatter points into the cache
     borrowedIntFormatter = NULL;
 
     SharedObject::copyPtr(
@@ -670,7 +689,7 @@ void MeasureFormat::initMeasureFormat(
             return;
         }
         numberFormat->removeRef();
-        borrowedIntFormatter = cache->getIntegerFormat();
+        borrowedIntFormatter = cache->getIntegerFormat()->getIntFormatter();
     } else {
         adoptNumberFormat(nf.orphan(), status);
         if (U_FAILURE(status)) {
@@ -925,12 +944,14 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     UnicodeString *results = new UnicodeString[measureCount];
     int32_t fieldPositionFoundIndex = -1;
     for (int32_t i = 0; i < measureCount; ++i) {
-        NumberFormatter nf(*cache->getIntegerFormat());
+        NumberFormatter nf;
+        const NumberFormatter *nfPtr = cache->getIntegerFormat();
         if (i == measureCount - 1) {
+            nfPtr = &nf;
             setToFullNumberFormat(nf, status);
         }
         if (fieldPositionFoundIndex == -1) {
-            formatMeasure(measures[i], nf, results[i], fpos, status);
+            formatMeasure(measures[i], *nfPtr, results[i], fpos, status);
             if (U_FAILURE(status)) {
                 delete [] results;
                 return appendTo;
@@ -939,7 +960,7 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
                 fieldPositionFoundIndex = i;
             }
         } else {
-            formatMeasure(measures[i], nf, results[i], dontCare, status);
+            formatMeasure(measures[i], *nfPtr, results[i], dontCare, status);
         }
     }
     int32_t offset;

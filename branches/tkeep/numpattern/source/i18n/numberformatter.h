@@ -50,6 +50,24 @@ public:
     NumberFormatter &adoptNumberIntFormatter(NumberIntFormatter *nfToAdopt);
 
     /**
+      * Returns the enclosed IntFormatter or NULL if this instance does not
+      * wrap an IntFormatter.
+      */
+    const IntFormatter *getIntFormatter() const;
+
+    /**
+      * Returns the enclosed NumberFormat or NULL if this instance does not
+      * wrap an IntFormatter.
+      */
+    const NumberFormat *getNumberFormat() const;
+
+    /**
+      * Returns the enclosed NumberIntFormatter or NULL if this instance does
+      * not wrap a NumberIntFormatter.
+      */
+    const NumberIntFormatter *getNumberIntFormatter() const;
+
+    /**
      * Selects the plural form.
      */
     UnicodeString &select(
