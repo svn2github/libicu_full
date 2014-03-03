@@ -317,7 +317,7 @@ class U_I18N_API MeasureFormat : public Format {
         const Formattable &smallestAmount,
         UnicodeString &appendTo,
         UErrorCode &status) const;
-    void setToFullNumberFormat(NumberFormatter &nf) const;
+    void setToFullNumberFormat(NumberFormatter &nf, UErrorCode &status) const;
 };
 
 U_NAMESPACE_END

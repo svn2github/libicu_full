@@ -34,6 +34,7 @@
 #include "sharedpluralrules.h"
 #include "intformatter.h"
 #include "numberformatter.h"
+#include "numberintformatter.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 #define MEAS_UNIT_COUNT 46
@@ -595,8 +596,8 @@ UnicodeString &MeasureFormat::formatMeasures(
         return appendTo;
     }
     if (measureCount == 1) {
-        NumberFormatter nf(*cache->getIntegerFormat());
-        setToFullNumberFormat(nf);
+        NumberFormatter nf;
+        setToFullNumberFormat(nf, status);
         return formatMeasure(measures[0], nf, appendTo, pos, status);
     }
     if (width == UMEASFMT_WIDTH_NUMERIC) {
@@ -618,7 +619,7 @@ UnicodeString &MeasureFormat::formatMeasures(
     for (int32_t i = 0; i < measureCount; ++i) {
         NumberFormatter nf(*cache->getIntegerFormat());
         if (i == measureCount - 1) {
-            setToFullNumberFormat(nf);
+            setToFullNumberFormat(nf, status);
         }
         formatMeasure(
                 measures[i],
@@ -648,6 +649,8 @@ void MeasureFormat::initMeasureFormat(
     if (!getFromCache(name, cache, status)) {
         return;
     }
+    // Since we updated cache, we must invalidate borrowedIntFormatter.
+    borrowedIntFormatter = NULL;
 
     SharedObject::copyPtr(
             PluralRules::createSharedInstance(
@@ -657,6 +660,7 @@ void MeasureFormat::initMeasureFormat(
         return;
     }
     pluralRules->removeRef();
+
     if (nf.getAlias() == NULL) {
         SharedObject::copyPtr(
                 NumberFormat::createSharedInstance(
@@ -694,6 +698,9 @@ void MeasureFormat::adoptNumberFormat(
     }
     nf.orphan();
     SharedObject::copyPtr(shared, numberFormat);
+
+    // Since this is a customer NumberFormat, we can no longer use the
+    // IntFormatter to format ints.
     borrowedIntFormatter = NULL;
 }
 
@@ -920,7 +927,7 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     for (int32_t i = 0; i < measureCount; ++i) {
         NumberFormatter nf(*cache->getIntegerFormat());
         if (i == measureCount - 1) {
-            setToFullNumberFormat(nf);
+            setToFullNumberFormat(nf, status);
         }
         if (fieldPositionFoundIndex == -1) {
             formatMeasure(measures[i], nf, results[i], fpos, status);
@@ -955,11 +962,22 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     return appendTo;
 }
 
-void MeasureFormat::setToFullNumberFormat(NumberFormatter &nf) const {
+void MeasureFormat::setToFullNumberFormat(
+        NumberFormatter &nf, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
     if (borrowedIntFormatter == NULL) {
-        nf.useNumberFormat(**numberFormat);
+        nf.borrowNumberFormat(**numberFormat);
     } else {
-        nf.useNumberFormatIntFormatter(**numberFormat, *borrowedIntFormatter);
+        NumberIntFormatter *nif = new NumberIntFormatter(
+                **numberFormat, *borrowedIntFormatter);
+        if (nif == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            nf.borrowNumberFormat(**numberFormat);
+            return;
+        }
+        nf.adoptNumberIntFormatter(nif);
     }
 }
 

@@ -11,41 +11,82 @@
 #include "numberformatter.h"
 #include "intformatter.h"
 #include "unicode/decimfmt.h"
-#include "unicode/plurrule.h"
-#include "plurrule_impl.h"
-#include "unicode/decimfmt.h"
+#include "numberintformatter.h"
+#include "pluralutils.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 U_NAMESPACE_BEGIN
 
-NumberFormatter::NumberFormatter(const NumberFormat &nf) {
-    useNumberFormat(nf);
+NumberFormatter::NumberFormatter() : fDelegateType(kUndefined), fDelegateOwned(FALSE) { };
+
+NumberFormatter::NumberFormatter(const NumberFormat &nf)
+        : fDelegateOwned(FALSE) {
+    borrowNumberFormat(nf);
 }
 
-NumberFormatter::NumberFormatter(const IntFormatter &nf) {
-    useIntFormatter(nf);
+NumberFormatter::NumberFormatter(const IntFormatter &nf)
+        : fDelegateOwned(FALSE) {
+    borrowIntFormatter(nf);
 }
 
-NumberFormatter::NumberFormatter(
-        const NumberFormat &nf, const IntFormatter &intFormatter) {
-    useNumberFormatIntFormatter(nf, intFormatter);
+NumberFormatter::NumberFormatter(const NumberIntFormatter &nf)
+        : fDelegateOwned(FALSE) {
+    borrowNumberIntFormatter(nf);
 }
 
-void NumberFormatter::useNumberFormat(const NumberFormat &n) {
-    nf = &n;
-    intFormatter = NULL;
+NumberFormatter::~NumberFormatter() {
+    clear();
 }
 
-void NumberFormatter::useIntFormatter(const IntFormatter &n) {
-    nf = NULL;
-    intFormatter = &n;
+NumberFormatter &NumberFormatter::borrowNumberFormat(const NumberFormat &nf) {
+    clear();
+    fDelegate.numberFormat = &nf;
+    fDelegateType = kNumberFormat;
+    fDelegateOwned = FALSE;
+    return *this;
 }
 
-void NumberFormatter::useNumberFormatIntFormatter(
-        const NumberFormat &n, const IntFormatter &i) {
-    nf = &n;
-    intFormatter = &i;
+NumberFormatter &NumberFormatter::borrowIntFormatter(const IntFormatter &nf) {
+    clear();
+    fDelegate.intFormatter = &nf;
+    fDelegateType = kIntFormatter;
+    fDelegateOwned = FALSE;
+    return *this;
+}
+
+NumberFormatter &NumberFormatter::borrowNumberIntFormatter(
+        const NumberIntFormatter &nf) {
+    clear();
+    fDelegate.numberIntFormatter = &nf;
+    fDelegateType = kNumberIntFormatter;
+    fDelegateOwned = FALSE;
+    return *this;
+}
+
+NumberFormatter &NumberFormatter::adoptNumberFormat(NumberFormat *nf) {
+    clear();
+    fDelegate.numberFormat = nf;
+    fDelegateType = kNumberFormat;
+    fDelegateOwned = TRUE;
+    return *this;
+}
+
+NumberFormatter &NumberFormatter::adoptIntFormatter(IntFormatter *nf) {
+    clear();
+    fDelegate.intFormatter = nf;
+    fDelegateType = kIntFormatter;
+    fDelegateOwned = TRUE;
+    return *this;
+}
+
+NumberFormatter &NumberFormatter::adoptNumberIntFormatter(
+        NumberIntFormatter *nf) {
+    clear();
+    fDelegate.numberIntFormatter = nf;
+    fDelegateType = kNumberIntFormatter;
+    fDelegateOwned = TRUE;
+    return *this;
 }
 
 UnicodeString &NumberFormatter::select(
@@ -56,26 +97,18 @@ UnicodeString &NumberFormatter::select(
     if (U_FAILURE(status)) {
         return result;
     }
+    if (fDelegateType == kNumberIntFormatter) {
+            return fDelegate.numberIntFormatter->select(
+                    quantity, rules, result, status);
+    }
     const DecimalFormat *decFmt = NULL;
-    if (shouldUseNumberFormat(quantity)) {
-        decFmt = dynamic_cast<const DecimalFormat *>(nf);
+    if (fDelegateType == kNumberFormat) {
+        decFmt = dynamic_cast<const DecimalFormat *>(fDelegate.numberFormat);
     }
     if (decFmt != NULL) {
-        FixedDecimal fd = decFmt->getFixedDecimal(quantity, status);
-        if (U_FAILURE(status)) {
-            return result;
-        }
-        result = rules.select(fd);
-    } else if (quantity.getType() == Formattable::kDouble) {
-        result = rules.select(quantity.getDouble());
-    } else if (quantity.getType() == Formattable::kLong) {
-        result = rules.select(quantity.getLong());
-    } else if (quantity.getType() == Formattable::kInt64) {
-        result = rules.select((double) quantity.getInt64());
-    } else {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return pluralutils_fd_select(quantity, *decFmt, rules, result, status);
     }
-    return result;
+    return pluralutils_select(quantity, rules, result, status);
 }
 
 UnicodeString &NumberFormatter::format(
@@ -83,28 +116,46 @@ UnicodeString &NumberFormatter::format(
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const {
-    if (shouldUseNumberFormat(quantity)) {
-        nf->format(quantity, appendTo, pos, status);
+    if (U_FAILURE(status)) {
         return appendTo;
     }
-    intFormatter->format(quantity, appendTo, pos, status);
+    switch (fDelegateType) {
+        case kNumberFormat:
+            return fDelegate.numberFormat->format(
+                    quantity, appendTo, pos, status);
+        case kIntFormatter:
+            return fDelegate.intFormatter->format(
+                    quantity, appendTo, pos, status);
+        case kNumberIntFormatter:
+            return fDelegate.numberIntFormatter->format(
+                    quantity, appendTo, pos, status);
+        default:
+            status = U_INTERNAL_PROGRAM_ERROR;
+            break;
+    }
     return appendTo;
 }
 
-UBool NumberFormatter::shouldUseNumberFormat(
-        const Formattable &quantity) const {
-    if (nf == NULL) {
-        return FALSE;
+void NumberFormatter::clear() {
+    if (!fDelegateOwned) {
+        return;
     }
-    if (intFormatter == NULL) {
-        return TRUE;
+    switch (fDelegateType) {
+        case kNumberFormat:
+            delete fDelegate.numberFormat;
+            break;
+        case kIntFormatter:
+            delete fDelegate.intFormatter;
+            break;
+        case kNumberIntFormatter:
+            delete fDelegate.numberIntFormatter;
+            break;
+        default:
+            break;
     }
-    if (quantity.getType() == Formattable::kLong) {
-        return FALSE;
-    }
-    return TRUE;
 }
 
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
