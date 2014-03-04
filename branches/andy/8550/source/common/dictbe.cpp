@@ -1004,7 +1004,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         UnicodeString textStr(FLASE, 
                               text->chunkContents + rangeStart - text->chunkNativeStart,
                               rangeEnd - rangeStart);
-        if (isNormalized(textStr, status)) {
+        if (nfkcNorm2.isNormalized(textStr, status)) {
             fastPath = TRUE;
             text = inText;
             rangeStart = inRangeStart;
@@ -1024,13 +1024,45 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         if (U_FAILURE(status)) {
             return 0;
         }
+        // Copy the text from the original inText (UText) adjustedInput (UnicodeString).
+
         while (utext_getNativeIndex(inText) < limit) {
             nativePosition = utext_getNativeIndex(inText);
             UChar32 c = utext_next32(inText);
             U_ASSERT(c != U_SENTINEL);
             adjustedInput.append(utext_next32(inText);
+            while (inputMap.size() < adjustedInput.length()) {
+                inputMap.addElement(nativePosition, status);
+            }
         }
-        
+        inputMap.addElement(limit, status);
+
+        // Normalized already?
+
+        if (!nfkcNorm2.isNormalized(adjustedInput, status)) {
+            UnicodeString normalizedInput;
+            UVector32 normalizedMap;   //  normalizedInput position -> original UText position.
+            
+            UnicodeString fragment;
+            int32_t srcI = 0;
+            for (;;) {                 // Once per normalization chunk
+            
+                fragment.reset();
+                int32_t fragmentStartI = srcI;
+                UChar32 c = adjustedInput.char32At(srcI);
+                for (;;) {
+                    fragment.append(c);
+                    srcI = adjustedInput.moveIndex32(srcI, 1);
+                    c = adjustedInput.char32At(srcI);
+                    if (nfkcNorm2.hasBoundaryBefore(c) {
+                        break;
+                    }
+                }
+                    
+
+
+        }
+    }
 
 
 
