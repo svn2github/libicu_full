@@ -48,6 +48,22 @@ UnicodeString &pluralutils_fd_select(
     return result;
 }
 
+UnicodeString &pluralutils_nf_select(
+        const Formattable &quantity, 
+        const NumberFormat &nf,
+        const PluralRules &rules,
+        UnicodeString &result,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return result;
+    }
+    const DecimalFormat *decFmt =
+            dynamic_cast<const DecimalFormat *>(&nf);
+    if (decFmt != NULL) {
+        return pluralutils_fd_select(quantity, *decFmt, rules, result, status);
+    }
+    return pluralutils_select(quantity, rules, result, status);
+}
 
 U_NAMESPACE_END
 

@@ -11,8 +11,11 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/uobject.h"
-#include "unicode/unistr.h"
+class Formattable;
+class PluralRules;
+class UnicodeString;
+class DecimalFormat;
+class NumberFormat;
 
 U_NAMESPACE_BEGIN
 
@@ -42,6 +45,22 @@ UnicodeString &pluralutils_select(
 UnicodeString &pluralutils_fd_select(
     const Formattable &quantity,
     const DecimalFormat &format,
+    const PluralRules &rules,
+    UnicodeString &result,
+    UErrorCode &status);
+
+/**
+ * Determines plural form for NumberFormat.
+ *
+ * @param quantity the quantity
+ * @param format what will format quantity.
+ * @param rules computes the form
+ * @param result the computed form stored here
+ * @return result
+ */
+UnicodeString &pluralutils_nf_select(
+    const Formattable &quantity,
+    const NumberFormat &format,
     const PluralRules &rules,
     UnicodeString &result,
     UErrorCode &status);

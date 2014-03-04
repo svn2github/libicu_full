@@ -25,14 +25,22 @@ UnicodeString &NumberIntFormatter::select(
     if (U_FAILURE(status)) {
         return result;
     }
-    const DecimalFormat *decFmt = NULL;
-    if (quantity.getType() != Formattable::kLong) {
-        decFmt = dynamic_cast<const DecimalFormat *>(&numberFormat);
+
+    // If we don't prefer integers and we aren't handed an integer,
+    // find plural form using regular number format
+    if (!preferInt && quantity.getType() != Formattable::kLong) {
+        return pluralutils_nf_select(
+                quantity, numberFormat, rules, result, status);
     }
-    if (decFmt != NULL) {
-        return pluralutils_fd_select(quantity, *decFmt, rules, result, status);
+
+    // If this call fails, fall back to number format.
+    intFormatter.select(quantity, rules, result, status);
+    if (U_SUCCESS(status)) {
+        return result;
     }
-    return pluralutils_select(quantity, rules, result, status);
+    status = U_ZERO_ERROR;
+    return pluralutils_nf_select(
+            quantity, numberFormat, rules, result, status);
 }
 
 UnicodeString &NumberIntFormatter::format(

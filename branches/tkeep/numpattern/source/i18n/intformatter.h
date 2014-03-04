@@ -19,12 +19,18 @@ U_NAMESPACE_BEGIN
 class Formattable;
 class FieldPosition;
 class DecimalFormat;
+class PluralRules;
 
 class U_I18N_API IntFormatter : public UMemory {
 public:
     IntFormatter();
     ~IntFormatter();
     UBool like(const DecimalFormat &df);
+    UnicodeString &select(
+            const Formattable &quantity,
+            const PluralRules &rules,
+            UnicodeString &result,
+            UErrorCode &status) const;
     UnicodeString &format(
             const Formattable &number,
             UnicodeString &appendTo,

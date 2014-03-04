@@ -11,6 +11,7 @@
 #include "intformatter.h"
 #include "unicode/decimfmt.h"
 #include "cmemory.h"
+#include "unicode/plurrule.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -107,6 +108,23 @@ private:
     int32_t start;
     int32_t end;
 };
+
+UnicodeString &IntFormatter::select(
+            const Formattable &quantity,
+            const PluralRules &rules,
+            UnicodeString &result,
+            UErrorCode &status) const {
+    int32_t value = quantity.getLong(status);
+    if (U_FAILURE(status)) {
+        return result;
+    }
+    if (value == -2147483648) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return result;
+    }
+    result = rules.select(value);
+    return result;
+}
 
 UnicodeString &IntFormatter::format(
         const Formattable &number,

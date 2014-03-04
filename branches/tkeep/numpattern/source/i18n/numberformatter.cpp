@@ -109,18 +109,21 @@ UnicodeString &NumberFormatter::select(
     if (U_FAILURE(status)) {
         return result;
     }
-    if (fDelegateType == kNumberIntFormatter) {
+    switch (fDelegateType) {
+        case kNumberFormat:
+            return pluralutils_nf_select(
+                    quantity, *fDelegate.numberFormat, rules, result, status);
+        case kIntFormatter:
+            return fDelegate.intFormatter->select(
+                    quantity, rules, result, status);
+        case kNumberIntFormatter:
             return fDelegate.numberIntFormatter->select(
                     quantity, rules, result, status);
+        default:
+            status = U_INTERNAL_PROGRAM_ERROR;
+            break;
     }
-    const DecimalFormat *decFmt = NULL;
-    if (fDelegateType == kNumberFormat) {
-        decFmt = dynamic_cast<const DecimalFormat *>(fDelegate.numberFormat);
-    }
-    if (decFmt != NULL) {
-        return pluralutils_fd_select(quantity, *decFmt, rules, result, status);
-    }
-    return pluralutils_select(quantity, rules, result, status);
+    return result;
 }
 
 UnicodeString &NumberFormatter::format(
