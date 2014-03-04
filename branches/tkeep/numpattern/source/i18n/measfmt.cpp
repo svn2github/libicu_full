@@ -129,9 +129,6 @@ private:
     IntFormatter *integerFormat;
     NumberFormat *fallbackIntegerFormat;
     NumericDateFormatters *numericDateFormatters;
-
-    // Copy-on-write must not be allowed as MeasureFormat class
-    // borrows pointers from instances of this class.
     MeasureFormatCacheData(const MeasureFormatCacheData &other);
     MeasureFormatCacheData &operator=(const MeasureFormatCacheData &other);
 };
