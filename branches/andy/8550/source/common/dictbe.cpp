@@ -874,6 +874,7 @@ CjkBreakEngine::CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType 
     fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
     fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\uff9e\\uff9f]"), status);
     fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
+    nfkcNorm2 = Normalizer2::getNFKCInstance(status);
 
     if (U_SUCCESS(status)) {
         // handle Korean and Japanese/Chinese using different dictionaries
@@ -959,6 +960,13 @@ private:
 };
 
 
+// Function for accessing internal utext flags.
+//   Replicates an internal UText function.
+
+static inline int32_t utext_i32_flag(int32_t bitIndex) {
+    return (int32_t)1 << bitIndex;
+}
+
 /*
  * @param text A UText representing the text
  * @param rangeStart The start of the range of dictionary characters
@@ -967,13 +975,64 @@ private:
  * @return The number of breaks found
  */
 int32_t 
-CjkBreakEngine::divideUpDictionaryRange( UText *text,
-        int32_t rangeStart,
-        int32_t rangeEnd,
+CjkBreakEngine::divideUpDictionaryRange( UText *inText,
+        int32_t inRangeStart,
+        int32_t inRangeEnd,
         UStack &foundBreaks ) const {
     if (rangeStart >= rangeEnd) {
         return 0;
     }
+
+    UText   *text       = NULL;
+    int32_t rangeStart  = 0;
+    int32_t rangeEnd    = 0;
+    UVector32 *inputMap = NULL;
+
+    // Check for fast path case:
+    //   - UText is a UTF-16 format with the requested range within a single chunk.
+    //   - The text is already normalized (NFKC).
+    //   When these conditions are met, the dictionary implementation can work directly
+    //   with the orignal input UText.
+
+    UBool fastPath = FALSE;
+    if ((text->providerProperties & utext_i32_flag(UTEXT_PROVIDER_STABLE_CHUNKS)) &&
+         text->chunkNativeStart <= rangeStart &&
+         text->chunkNativeLimit >= rangeEnd   &&
+         text->nativeIndexingLimit >= rangeEnd - chunkNativeStart) {
+         
+        // Read-only aliasing UnicodeString constructor
+        UnicodeString textStr(FLASE, 
+                              text->chunkContents + rangeStart - text->chunkNativeStart,
+                              rangeEnd - rangeStart);
+        if (isNormalized(textStr, status)) {
+            fastPath = TRUE;
+            text = inText;
+            rangeStart = inRangeStart;
+            rangeEnd   = inRangeEnd;
+        }
+    }
+
+    UnicodeString adjustedInput;
+    if (!fastPath) {
+        utext_setNativeIndex(inText, inRangeStart);
+        int32_t limit = rangeEnd;
+        U_ASSERT(limit <= utext_nativeLength(inText));
+        if (limit > utext_nativeLength(inText)) {
+            limit = utext_nativeLength(inText);
+        }
+        inputMap = new UVector32(status);
+        if (U_FAILURE(status)) {
+            return 0;
+        }
+        while (utext_getNativeIndex(inText) < limit) {
+            nativePosition = utext_getNativeIndex(inText);
+            UChar32 c = utext_next32(inText);
+            U_ASSERT(c != U_SENTINEL);
+            adjustedInput.append(utext_next32(inText);
+        }
+        
+
+
 
     const size_t defaultInputLength = 80;
     size_t inputLength = rangeEnd - rangeStart;

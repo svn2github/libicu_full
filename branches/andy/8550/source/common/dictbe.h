@@ -326,7 +326,8 @@ class CjkBreakEngine : public DictionaryBreakEngine {
   UnicodeSet                fKatakanaWordSet;
   UnicodeSet                fHiraganaWordSet;
 
-  DictionaryMatcher  *fDictionary;
+  DictionaryMatcher        *fDictionary;
+  Normalizer2               *nfkcNorm2;
 
  public:
 
