@@ -577,8 +577,29 @@ const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
 }
 
 UnicodeString& RelativeDateTimeFormatter::format(
-        double quantity, UDateDirection direction, UDateRelativeUnit unit,
-        UnicodeString& appendTo, UErrorCode& status) const {
+        double quantity,
+        UDateDirection direction,
+        UDateRelativeUnit unit,
+        UnicodeString& appendTo,
+        UErrorCode& status) const {
+    return format(Formattable(quantity), direction, unit, appendTo, status);
+}
+
+UnicodeString& RelativeDateTimeFormatter::format(
+        int32_t quantity,
+        UDateDirection direction,
+        UDateRelativeUnit unit,
+        UnicodeString& appendTo,
+        UErrorCode& status) const {
+    return format(Formattable(quantity), direction, unit, appendTo, status);
+}
+
+UnicodeString& RelativeDateTimeFormatter::format(
+        const Formattable &quantity,
+        UDateDirection direction,
+        UDateRelativeUnit unit,
+        UnicodeString& appendTo,
+        UErrorCode& status) const {
     if (U_FAILURE(status)) {
         return appendTo;
     }

@@ -187,6 +187,7 @@ private:
     void TestFormatWithoutQuantityIllegalArgument();
     void TestCustomNumberFormat();
     void TestCombineDateAndTime();
+    void TestBenchmark();
     void RunTest(
             const Locale& locale,
             const WithQuantityExpected* expectedResults,
@@ -237,6 +238,7 @@ void RelativeDateTimeFormatterTest::runIndexedTest(
     TESTCASE_AUTO(TestFormatWithoutQuantityIllegalArgument);
     TESTCASE_AUTO(TestCustomNumberFormat);
     TESTCASE_AUTO(TestCombineDateAndTime);
+    TESTCASE_AUTO(TestBenchmark);
     TESTCASE_AUTO_END;
 }
 
@@ -324,6 +326,21 @@ void RelativeDateTimeFormatterTest::TestCombineDateAndTime() {
     }
 }
     
+void RelativeDateTimeFormatterTest::TestBenchmark() {
+/*
+    clock_t t;
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt("en", status);
+    t = clock();
+    for (int32_t i = 0; i < 1000000; ++i) {
+        UnicodeString appendTo;
+        fmt.format(1376, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_DAYS, appendTo, status);
+    }
+    t = clock() - t;
+    errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
+*/
+}
+    
 
 void RelativeDateTimeFormatterTest::RunTest(
         const Locale& locale,
@@ -337,6 +354,7 @@ void RelativeDateTimeFormatterTest::RunTest(
    }
     RunTest(fmt, expectedResults, expectedResultLength, locale.getName());
 }
+
 
 void RelativeDateTimeFormatterTest::RunTest(
         const Locale& locale,

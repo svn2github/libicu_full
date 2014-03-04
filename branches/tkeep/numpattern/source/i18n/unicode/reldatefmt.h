@@ -225,6 +225,7 @@ class RelativeDateTimeCacheData;
 class SharedNumberFormat;
 class SharedPluralRules;
 class NumberFormat;
+class Formattable;
 
 /**
  * Formats simple relative dates. There are two types of relative dates that
@@ -366,6 +367,28 @@ public:
             UErrorCode& status) const;
 
     /**
+     * Formats a relative date with a quantity such as "in 5 days" or
+     * "3 months ago"
+     * @param quantity The numerical amount e.g 5. This value is formatted
+     * according to this object's NumberFormat object.
+     * @param direction NEXT means a future relative date; LAST means a past
+     * relative date. If direction is anything else, this method sets
+     * status to U_ILLEGAL_ARGUMENT_ERROR.
+     * @param unit the unit e.g day? month? year?
+     * @param appendTo The string to which the formatted result will be
+     *  appended
+     * @param status ICU error code returned here.
+     * @return appendTo
+     * @draft ICU 53
+     */
+    UnicodeString& format(
+            int32_t quantity,
+            UDateDirection direction,
+            UDateRelativeUnit unit,
+            UnicodeString& appendTo,
+            UErrorCode& status) const;
+
+    /**
      * Formats a relative date without a quantity.
      * @param direction NEXT, LAST, THIS, etc.
      * @param unit e.g SATURDAY, DAY, MONTH
@@ -413,6 +436,13 @@ private:
     const SharedNumberFormat *numberFormat;
     const SharedPluralRules *pluralRules;
     void init(const Locale &, NumberFormat *nfToAdopt, UErrorCode &status);
+    UnicodeString &format(
+            const Formattable &quantity,
+            UDateDirection direction,
+            UDateRelativeUnit unit,
+            UnicodeString& appendTo,
+            UErrorCode& status) const;
+            
 };
 
 U_NAMESPACE_END
