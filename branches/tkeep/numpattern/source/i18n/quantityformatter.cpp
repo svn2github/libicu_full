@@ -115,22 +115,6 @@ UBool QuantityFormatter::isValid() const {
 
 UnicodeString &QuantityFormatter::format(
             const Formattable& quantity,
-            const NumberFormat &fmt,
-            const PluralRules &rules,
-            UnicodeString &appendTo,
-            FieldPosition &pos,
-            UErrorCode &status) const {
-    return format(
-            quantity,
-            NumberFormatter(fmt),
-            rules,
-            appendTo,
-            pos,
-            status);
-}
-
-UnicodeString &QuantityFormatter::format(
-            const Formattable& quantity,
             const NumberFormatter &fmt,
             const PluralRules &rules,
             UnicodeString &appendTo,

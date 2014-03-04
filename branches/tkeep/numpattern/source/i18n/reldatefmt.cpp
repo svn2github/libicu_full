@@ -29,6 +29,7 @@
 #include "sharedptr.h"
 #include "sharedpluralrules.h"
 #include "sharednumberformat.h"
+#include "numberformatter.h"
 
 // Copied from uscript_props.cpp
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -589,7 +590,7 @@ UnicodeString& RelativeDateTimeFormatter::format(
     FieldPosition pos(FieldPosition::DONT_CARE);
     return cache->relativeUnits[unit][bFuture].format(
             quantity,
-            **numberFormat,
+            numberFormat,
             **pluralRules,
             appendTo,
             pos,
