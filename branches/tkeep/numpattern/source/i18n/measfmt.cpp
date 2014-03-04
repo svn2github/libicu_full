@@ -451,8 +451,7 @@ MeasureFormat::MeasureFormat(
           numberFormat(NULL),
           pluralRules(NULL),
           width(w),
-          listFormatter(NULL),
-          isDefaultNumberFormat(FALSE) {
+          listFormatter(NULL) {
     initMeasureFormat(locale, w, NULL, status);
 }
 
@@ -465,8 +464,7 @@ MeasureFormat::MeasureFormat(
           numberFormat(NULL),
           pluralRules(NULL),
           width(w),
-          listFormatter(NULL),
-          isDefaultNumberFormat(FALSE) {
+          listFormatter(NULL) {
     initMeasureFormat(locale, w, nfToAdopt, status);
 }
 
@@ -476,8 +474,7 @@ MeasureFormat::MeasureFormat(const MeasureFormat &other) :
         numberFormat(other.numberFormat),
         pluralRules(other.pluralRules),
         width(other.width),
-        listFormatter(NULL),
-        isDefaultNumberFormat(other.isDefaultNumberFormat) {
+        listFormatter(NULL) {
     cache->addRef();
     numberFormat->addRef();
     pluralRules->addRef();
@@ -495,7 +492,6 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
     width = other.width;
     delete listFormatter;
     listFormatter = new ListFormatter(*other.listFormatter);
-    isDefaultNumberFormat = other.isDefaultNumberFormat;
     return *this;
 }
 
@@ -504,8 +500,7 @@ MeasureFormat::MeasureFormat() :
         numberFormat(NULL),
         pluralRules(NULL),
         width(UMEASFMT_WIDTH_WIDE),
-        listFormatter(NULL),
-        isDefaultNumberFormat(FALSE) {
+        listFormatter(NULL) {
 }
 
 MeasureFormat::~MeasureFormat() {
@@ -603,9 +598,7 @@ UnicodeString &MeasureFormat::formatMeasures(
         return appendTo;
     }
     if (measureCount == 1) {
-        NumberFormatter nf;
-        setToFullNumberFormat(nf, status);
-        return formatMeasure(measures[0], nf, appendTo, pos, status);
+        return formatMeasure(measures[0], numberFormat, appendTo, pos, status);
     }
     if (width == UMEASFMT_WIDTH_NUMERIC) {
         Formattable hms[3];
@@ -626,7 +619,7 @@ UnicodeString &MeasureFormat::formatMeasures(
     for (int32_t i = 0; i < measureCount; ++i) {
         NumberFormatter nf;
         if (i == measureCount - 1) {
-            setToFullNumberFormat(nf, status);
+            nf.borrowSharedNumberFormat(numberFormat);
         } else {
             setToIntNumberFormat(nf, status);
         }
@@ -677,7 +670,6 @@ void MeasureFormat::initMeasureFormat(
             return;
         }
         numberFormat->removeRef();
-        isDefaultNumberFormat = TRUE;
     } else {
         adoptNumberFormat(nf.orphan(), status);
         if (U_FAILURE(status)) {
@@ -705,7 +697,6 @@ void MeasureFormat::adoptNumberFormat(
     }
     nf.orphan();
     SharedObject::copyPtr(shared, numberFormat);
-    isDefaultNumberFormat = FALSE;
 }
 
 UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &status) {
@@ -931,7 +922,7 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     for (int32_t i = 0; i < measureCount; ++i) {
         NumberFormatter nf;
         if (i == measureCount - 1) {
-            setToFullNumberFormat(nf, status);
+            nf.borrowSharedNumberFormat(numberFormat);
         } else {
             setToIntNumberFormat(nf, status);
         }
@@ -966,24 +957,6 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     }
     delete [] results;
     return appendTo;
-}
-
-NumberFormatter &MeasureFormat::setToFullNumberFormat(
-        NumberFormatter &nf, UErrorCode &status) const {
-    if (U_FAILURE(status)) {
-        return nf;
-    }
-    const IntFormatter *intFormatter = cache->getIntegerFormat();
-    if (!isDefaultNumberFormat || intFormatter == NULL) {
-        return nf.borrowNumberFormat(**numberFormat);
-    }
-    NumberIntFormatter *nif = new NumberIntFormatter(
-            **numberFormat, *intFormatter);
-    if (nif == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return nf.borrowNumberFormat(**numberFormat);
-    }
-    return nf.adoptNumberIntFormatter(nif);
 }
 
 NumberFormatter &MeasureFormat::setToIntNumberFormat(

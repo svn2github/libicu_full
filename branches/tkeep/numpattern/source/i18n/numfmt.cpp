@@ -53,6 +53,7 @@
 #include <float.h>
 #include "sharednumberformat.h"
 #include "lrucache.h"
+#include "intformatter.h"
 
 //#define FMT_DEBUG
 
@@ -251,6 +252,7 @@ NumberFormat::~NumberFormat()
 
 SharedNumberFormat::~SharedNumberFormat() {
     delete ptr;
+    delete intFormatter;
 }
 
 // -------------------------------------
@@ -1246,17 +1248,35 @@ static SharedObject *U_CALLCONV createSharedNumberFormat(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    NumberFormat *nf = NumberFormat::internalCreateInstance(
-            localeId, UNUM_DECIMAL, status);
+    LocalPointer<NumberFormat> nf(NumberFormat::internalCreateInstance(
+            localeId, UNUM_DECIMAL, status));
     if (U_FAILURE(status)) {
         return NULL;
     }
-    SharedObject *result = new SharedNumberFormat(nf);
+    LocalPointer<IntFormatter> inf;
+    const DecimalFormat *decfmt = dynamic_cast<DecimalFormat *>(nf.getAlias());
+    if (decfmt != NULL) {
+        inf.adoptInstead(new IntFormatter());
+        if (inf.getAlias() == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return NULL;
+        }
+        if (!inf->like(*decfmt)) {
+            inf.adoptInstead(NULL);
+        }
+    }
+    SharedObject *result = NULL;
+    if (inf.getAlias() == NULL) {
+        result = new SharedNumberFormat(nf.getAlias());
+    } else {
+        result = new SharedNumberFormat(nf.getAlias(), inf.getAlias());
+    }
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        delete nf;
         return NULL;
     }
+    nf.orphan();
+    inf.orphan();
     return result;
 }
 

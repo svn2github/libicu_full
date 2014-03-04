@@ -278,7 +278,6 @@ class U_I18N_API MeasureFormat : public Format {
     // objects are relatively cheap to copy; therefore, they don't need to be
     // shared across instances.
     ListFormatter *listFormatter;
-    UBool isDefaultNumberFormat;
 
     const QuantityFormatter *getQuantityFormatter(
             int32_t index,
@@ -313,8 +312,6 @@ class U_I18N_API MeasureFormat : public Format {
         const Formattable &smallestAmount,
         UnicodeString &appendTo,
         UErrorCode &status) const;
-    NumberFormatter &setToFullNumberFormat(
-            NumberFormatter &nf, UErrorCode &status) const;
     NumberFormatter &setToIntNumberFormat(
             NumberFormatter &nf, UErrorCode &status) const;
 };

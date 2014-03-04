@@ -13,6 +13,7 @@
 #include "unicode/decimfmt.h"
 #include "numberintformatter.h"
 #include "pluralutils.h"
+#include "sharednumberformat.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -33,6 +34,11 @@ NumberFormatter::NumberFormatter(const IntFormatter &nf)
 NumberFormatter::NumberFormatter(const NumberIntFormatter &nf)
         : fDelegateOwned(FALSE) {
     borrowNumberIntFormatter(nf);
+}
+
+NumberFormatter::NumberFormatter(const SharedNumberFormat *borrowed)
+        : fDelegateOwned(FALSE) {
+    borrowSharedNumberFormat(borrowed);
 }
 
 NumberFormatter::~NumberFormatter() {
@@ -62,6 +68,19 @@ NumberFormatter &NumberFormatter::borrowNumberIntFormatter(
     fDelegateType = kNumberIntFormatter;
     fDelegateOwned = FALSE;
     return *this;
+}
+
+NumberFormatter &NumberFormatter::borrowSharedNumberFormat(
+        const SharedNumberFormat *borrowed) {
+    if (borrowed->getIntFormatter() == NULL) {
+        return borrowNumberFormat(**borrowed);
+    }
+    NumberIntFormatter *nif = new NumberIntFormatter(
+            **borrowed, *borrowed->getIntFormatter());
+    if (nif == NULL) {
+        return borrowNumberFormat(**borrowed);
+    }
+    return adoptNumberIntFormatter(nif);
 }
 
 NumberFormatter &NumberFormatter::adoptNumberFormat(NumberFormat *nf) {

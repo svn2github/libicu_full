@@ -22,6 +22,7 @@ class NumberIntFormatter;
 class Formattable;
 class PluralRules;
 class FieldPosition;
+class SharedNumberFormat;
 
 /**
  * NumberFormatter provides a common interface for delegates of various types
@@ -40,11 +41,14 @@ public:
     NumberFormatter(const NumberFormat &nfToBorrow);
     NumberFormatter(const IntFormatter &nfToBorrow);
     NumberFormatter(const NumberIntFormatter &nfToBorrow);
+    NumberFormatter(const SharedNumberFormat *borrowed);
     ~NumberFormatter();
     NumberFormatter &borrowNumberFormat(const NumberFormat &nfToBorrow);
     NumberFormatter &borrowIntFormatter(const IntFormatter &nfToBorrow);
     NumberFormatter &borrowNumberIntFormatter(
             const NumberIntFormatter &nfToBorrow);
+    NumberFormatter &borrowSharedNumberFormat(
+            const SharedNumberFormat *borrowed);
     NumberFormatter &adoptNumberFormat(NumberFormat *nfToAdopt);
     NumberFormatter &adoptIntFormatter(IntFormatter *nfToAdopt);
     NumberFormatter &adoptNumberIntFormatter(NumberIntFormatter *nfToAdopt);

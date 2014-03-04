@@ -16,16 +16,22 @@
 U_NAMESPACE_BEGIN
 
 class NumberFormat;
+class IntFormatter;
 
 class U_I18N_API SharedNumberFormat : public SharedObject {
 public:
-SharedNumberFormat(NumberFormat *nfToAdopt) : ptr(nfToAdopt) { }
+SharedNumberFormat(NumberFormat *nfToAdopt)
+        : ptr(nfToAdopt), intFormatter(NULL) { }
+SharedNumberFormat(NumberFormat *nfToAdopt, IntFormatter *ifToAdopt)
+        : ptr(nfToAdopt), intFormatter(ifToAdopt) { }
 virtual ~SharedNumberFormat();
 const NumberFormat *get() const { return ptr; }
 const NumberFormat *operator->() const { return ptr; }
 const NumberFormat &operator*() const { return *ptr; }
+const IntFormatter *getIntFormatter() const { return intFormatter; }
 private:
 NumberFormat *ptr;
+IntFormatter *intFormatter;
 SharedNumberFormat(const SharedNumberFormat &);
 SharedNumberFormat &operator=(const SharedNumberFormat &);
 };
