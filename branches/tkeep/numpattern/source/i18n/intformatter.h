@@ -24,7 +24,7 @@ class U_I18N_API IntFormatter : public UMemory {
 public:
     IntFormatter();
     ~IntFormatter();
-    void like(const DecimalFormat &df, UErrorCode &status);
+    UBool like(const DecimalFormat &df);
     UnicodeString &format(
             const Formattable &number,
             UnicodeString &appendTo,

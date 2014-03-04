@@ -102,12 +102,19 @@ public:
     const NumberFormat *getCurrencyFormat(int32_t widthIndex) const {
         return currencyFormats[widthIndex];
     }
-    void adoptIntegerFormat(NumberFormatter *nfToAdopt) {
+    void adoptIntegerFormat(IntFormatter *nfToAdopt) {
         delete integerFormat;
         integerFormat = nfToAdopt;
     }
-    const NumberFormatter *getIntegerFormat() const {
+    const IntFormatter *getIntegerFormat() const {
         return integerFormat;
+    }
+    void adoptFallbackIntegerFormat(NumberFormat *nfToAdopt) {
+        delete fallbackIntegerFormat;
+        fallbackIntegerFormat = nfToAdopt;
+    }
+    const NumberFormat *getFallbackIntegerFormat() const {
+        return fallbackIntegerFormat;
     }
     void adoptNumericDateFormatters(NumericDateFormatters *formattersToAdopt) {
         delete numericDateFormatters;
@@ -119,7 +126,8 @@ public:
     virtual ~MeasureFormatCacheData();
 private:
     NumberFormat *currencyFormats[WIDTH_INDEX_COUNT];
-    NumberFormatter *integerFormat;
+    IntFormatter *integerFormat;
+    NumberFormat *fallbackIntegerFormat;
     NumericDateFormatters *numericDateFormatters;
 
     // Copy-on-write must not be allowed as MeasureFormat class
@@ -133,6 +141,7 @@ MeasureFormatCacheData::MeasureFormatCacheData() {
         currencyFormats[i] = NULL;
     }
     integerFormat = NULL;
+    fallbackIntegerFormat = NULL;
     numericDateFormatters = NULL;
 }
 
@@ -141,6 +150,7 @@ MeasureFormatCacheData::~MeasureFormatCacheData() {
         delete currencyFormats[i];
     }
     delete integerFormat;
+    delete fallbackIntegerFormat;
     delete numericDateFormatters;
 }
 
@@ -338,43 +348,25 @@ static SharedObject *U_CALLCONV createData(
             return NULL;
         }
     }
-    LocalPointer<NumberFormatter> numberFormatter(new NumberFormatter());
-    if (numberFormatter.getAlias() == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-    const SharedNumberFormat *shared = NumberFormat::createSharedInstance(
+    NumberFormat *inf = NumberFormat::createInstance(
             localeId, UNUM_DECIMAL, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
-    const DecimalFormat *df = dynamic_cast<const DecimalFormat *>(shared->get());
-    if (df != NULL) {
-        IntFormatter *intFormatter = new IntFormatter();
-        if (intFormatter == NULL) {
+    result->adoptFallbackIntegerFormat(inf);
+    inf->setMaximumFractionDigits(0);
+    DecimalFormat *decfmt = dynamic_cast<DecimalFormat *>(inf);
+    if (decfmt != NULL) {
+        decfmt->setRoundingMode(DecimalFormat::kRoundDown);
+        LocalPointer<IntFormatter> intFormatter(new IntFormatter());
+        if (intFormatter.getAlias() == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
-            shared->removeRef();
             return NULL;
         }
-        intFormatter->like(*df, status);
-        numberFormatter->adoptIntFormatter(intFormatter);
-    }
-    if (df == NULL || U_FAILURE(status)) {
-        status = U_ZERO_ERROR;
-        NumberFormat *nf = (NumberFormat *) (*shared)->clone();
-        if (nf == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            shared->removeRef();
-            return NULL;
+        if (intFormatter->like(*decfmt)) {
+            result->adoptIntegerFormat(intFormatter.orphan());
         }
-        nf->setMaximumFractionDigits(0);
-        numberFormatter->adoptNumberFormat(nf);
     }
-    shared->removeRef();
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    result->adoptIntegerFormat(numberFormatter.orphan());
     return result.orphan();
 }
 
@@ -463,7 +455,7 @@ MeasureFormat::MeasureFormat(
           pluralRules(NULL),
           width(w),
           listFormatter(NULL),
-          borrowedIntFormatter(NULL) {
+          isDefaultNumberFormat(FALSE) {
     initMeasureFormat(locale, w, NULL, status);
 }
 
@@ -477,7 +469,7 @@ MeasureFormat::MeasureFormat(
           pluralRules(NULL),
           width(w),
           listFormatter(NULL),
-          borrowedIntFormatter(NULL) {
+          isDefaultNumberFormat(FALSE) {
     initMeasureFormat(locale, w, nfToAdopt, status);
 }
 
@@ -488,7 +480,7 @@ MeasureFormat::MeasureFormat(const MeasureFormat &other) :
         pluralRules(other.pluralRules),
         width(other.width),
         listFormatter(NULL),
-        borrowedIntFormatter(other.borrowedIntFormatter) {
+        isDefaultNumberFormat(other.isDefaultNumberFormat) {
     cache->addRef();
     numberFormat->addRef();
     pluralRules->addRef();
@@ -506,7 +498,7 @@ MeasureFormat &MeasureFormat::operator=(const MeasureFormat &other) {
     width = other.width;
     delete listFormatter;
     listFormatter = new ListFormatter(*other.listFormatter);
-    borrowedIntFormatter = other.borrowedIntFormatter;
+    isDefaultNumberFormat = other.isDefaultNumberFormat;
     return *this;
 }
 
@@ -516,7 +508,7 @@ MeasureFormat::MeasureFormat() :
         pluralRules(NULL),
         width(UMEASFMT_WIDTH_WIDE),
         listFormatter(NULL),
-        borrowedIntFormatter(NULL) {
+        isDefaultNumberFormat(FALSE) {
 }
 
 MeasureFormat::~MeasureFormat() {
@@ -636,14 +628,14 @@ UnicodeString &MeasureFormat::formatMeasures(
     }
     for (int32_t i = 0; i < measureCount; ++i) {
         NumberFormatter nf;
-        const NumberFormatter *nfPtr = cache->getIntegerFormat();
         if (i == measureCount - 1) {
-            nfPtr = &nf;
             setToFullNumberFormat(nf, status);
+        } else {
+            setToIntNumberFormat(nf, status);
         }
         formatMeasure(
                 measures[i],
-                *nfPtr,
+                nf,
                 results[i],
                 pos,
                 status);
@@ -669,9 +661,6 @@ void MeasureFormat::initMeasureFormat(
     if (!getFromCache(name, cache, status)) {
         return;
     }
-    // Since we updated cache, we must invalidate borrowedIntFormatter.
-    // because borrowedIntFormatter points into the cache
-    borrowedIntFormatter = NULL;
 
     SharedObject::copyPtr(
             PluralRules::createSharedInstance(
@@ -691,7 +680,7 @@ void MeasureFormat::initMeasureFormat(
             return;
         }
         numberFormat->removeRef();
-        borrowedIntFormatter = cache->getIntegerFormat()->getIntFormatter();
+        isDefaultNumberFormat = TRUE;
     } else {
         adoptNumberFormat(nf.orphan(), status);
         if (U_FAILURE(status)) {
@@ -719,10 +708,7 @@ void MeasureFormat::adoptNumberFormat(
     }
     nf.orphan();
     SharedObject::copyPtr(shared, numberFormat);
-
-    // Since this is a customer NumberFormat, we can no longer use the
-    // IntFormatter to format ints.
-    borrowedIntFormatter = NULL;
+    isDefaultNumberFormat = FALSE;
 }
 
 UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &status) {
@@ -947,13 +933,13 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     int32_t fieldPositionFoundIndex = -1;
     for (int32_t i = 0; i < measureCount; ++i) {
         NumberFormatter nf;
-        const NumberFormatter *nfPtr = cache->getIntegerFormat();
         if (i == measureCount - 1) {
-            nfPtr = &nf;
             setToFullNumberFormat(nf, status);
+        } else {
+            setToIntNumberFormat(nf, status);
         }
         if (fieldPositionFoundIndex == -1) {
-            formatMeasure(measures[i], *nfPtr, results[i], fpos, status);
+            formatMeasure(measures[i], nf, results[i], fpos, status);
             if (U_FAILURE(status)) {
                 delete [] results;
                 return appendTo;
@@ -962,7 +948,7 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
                 fieldPositionFoundIndex = i;
             }
         } else {
-            formatMeasure(measures[i], *nfPtr, results[i], dontCare, status);
+            formatMeasure(measures[i], nf, results[i], dontCare, status);
         }
     }
     int32_t offset;
@@ -985,23 +971,40 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     return appendTo;
 }
 
-void MeasureFormat::setToFullNumberFormat(
+NumberFormatter &MeasureFormat::setToFullNumberFormat(
         NumberFormatter &nf, UErrorCode &status) const {
     if (U_FAILURE(status)) {
-        return;
+        return nf;
     }
-    if (borrowedIntFormatter == NULL) {
-        nf.borrowNumberFormat(**numberFormat);
-    } else {
-        NumberIntFormatter *nif = new NumberIntFormatter(
-                **numberFormat, *borrowedIntFormatter);
-        if (nif == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            nf.borrowNumberFormat(**numberFormat);
-            return;
-        }
-        nf.adoptNumberIntFormatter(nif);
+    const IntFormatter *intFormatter = cache->getIntegerFormat();
+    if (!isDefaultNumberFormat || intFormatter == NULL) {
+        return nf.borrowNumberFormat(**numberFormat);
     }
+    NumberIntFormatter *nif = new NumberIntFormatter(
+            **numberFormat, *intFormatter);
+    if (nif == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return nf.borrowNumberFormat(**numberFormat);
+    }
+    return nf.adoptNumberIntFormatter(nif);
+}
+
+NumberFormatter &MeasureFormat::setToIntNumberFormat(
+        NumberFormatter &nf, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return nf;
+    }
+    const IntFormatter *intFormatter = cache->getIntegerFormat();
+    if (intFormatter == NULL) {
+        return nf.borrowNumberFormat(*cache->getFallbackIntegerFormat());
+    }
+    NumberIntFormatter *nif = new NumberIntFormatter(
+            *intFormatter, **numberFormat);
+    if (nif == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return nf.borrowNumberFormat(*cache->getFallbackIntegerFormat());
+    }
+    return nf.adoptNumberIntFormatter(nif);
 }
 
 MeasureFormat* U_EXPORT2 MeasureFormat::createCurrencyFormat(const Locale& locale,

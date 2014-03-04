@@ -40,10 +40,23 @@ UnicodeString &NumberIntFormatter::format(
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const {
-    if (quantity.getType() != Formattable::kLong) {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+
+    // If we don't prefer integers and we aren't formatting one,
+    // format using regular number format.
+    if (!preferInt && quantity.getType() != Formattable::kLong) {
         return numberFormat.format(quantity, appendTo, pos, status);
     }
-    return intFormatter.format(quantity, appendTo, pos, status);
+
+    // If this call fails, fall back to number format.
+    intFormatter.format(quantity, appendTo, pos, status);
+    if (U_SUCCESS(status)) {
+        return appendTo;
+    }
+    status = U_ZERO_ERROR;
+    return numberFormat.format(quantity, appendTo, pos, status);
 }
 
 U_NAMESPACE_END

@@ -872,18 +872,19 @@ void MeasureFormatTest::TestGroupingSeparator() {
     }
     assertEquals(
             "grouping separator",
-            "-2147483647 years, -2147483648 months, 123456789 days, 1,362 hrs, 987 mins",
+            "-2,147,483,647 yrs, -2,147,483,648 mths, 123,456,789 days, 1,362 hrs, 987 mins",
             appendTo);
 }
 
 void MeasureFormatTest::TestBenchmark() {
+/*
     clock_t t;
     UErrorCode status = U_ZERO_ERROR;
     Locale en("en");
     MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
     MeasureFormat fmt2 = fmt;
     Measure ms[] = {
-            Measure(-2147483648, MeasureUnit::createYear(status), status),
+            Measure(-2147483647, MeasureUnit::createYear(status), status),
             Measure(5, MeasureUnit::createMonth(status), status),
             Measure(23, MeasureUnit::createDay(status), status), 
             Measure(15, MeasureUnit::createHour(status), status),
@@ -896,6 +897,7 @@ void MeasureFormatTest::TestBenchmark() {
     }
     t = clock() - t;
     errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
+*/
 /*
     clock_t t;
     UErrorCode status = U_ZERO_ERROR;

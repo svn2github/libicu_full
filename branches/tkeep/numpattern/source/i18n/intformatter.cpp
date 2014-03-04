@@ -39,10 +39,7 @@ IntFormatter::IntFormatter() :
 
 IntFormatter::~IntFormatter() { }
 
-void IntFormatter::like(const DecimalFormat &df, UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return;
-    }
+UBool IntFormatter::like(const DecimalFormat &df) {
     fGroupingSize = INT32_MAX;
     fGroupingSize2 = INT32_MAX;
     if (df.isGroupingUsed()) {
@@ -56,32 +53,33 @@ void IntFormatter::like(const DecimalFormat &df, UErrorCode &status) {
     df.getNegativeSuffix(fNegSuffix);
 
     const DecimalFormatSymbols *symbols = df.getDecimalFormatSymbols();
-    if (symbols != NULL) {
-        fGroupingSeparator = symbols->getSymbol(
-                DecimalFormatSymbols::kGroupingSeparatorSymbol);
-        fDigits[0] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kZeroDigitSymbol), status);
-        fDigits[1] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kOneDigitSymbol), status);
-        fDigits[2] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kTwoDigitSymbol), status);
-        fDigits[3] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kThreeDigitSymbol), status);
-        fDigits[4] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kFourDigitSymbol), status);
-        fDigits[5] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kFiveDigitSymbol), status);
-        fDigits[6] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kSixDigitSymbol), status);
-        fDigits[7] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kSevenDigitSymbol), status);
-        fDigits[8] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kEightDigitSymbol), status);
-        fDigits[9] = asUChar(symbols->getSymbol(
-                DecimalFormatSymbols::kNineDigitSymbol), status);
-    } else {
-        status = U_ILLEGAL_ARGUMENT_ERROR;
+    if (symbols == NULL) {
+        return FALSE;
     }
+    fGroupingSeparator = symbols->getSymbol(
+            DecimalFormatSymbols::kGroupingSeparatorSymbol);
+    UErrorCode status = U_ZERO_ERROR;
+    fDigits[0] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kZeroDigitSymbol), status);
+    fDigits[1] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kOneDigitSymbol), status);
+    fDigits[2] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kTwoDigitSymbol), status);
+    fDigits[3] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kThreeDigitSymbol), status);
+    fDigits[4] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kFourDigitSymbol), status);
+    fDigits[5] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kFiveDigitSymbol), status);
+    fDigits[6] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kSixDigitSymbol), status);
+    fDigits[7] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kSevenDigitSymbol), status);
+    fDigits[8] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kEightDigitSymbol), status);
+    fDigits[9] = asUChar(symbols->getSymbol(
+            DecimalFormatSymbols::kNineDigitSymbol), status);
+    return U_SUCCESS(status);
 }
 
 class SimpleAnnotator {
@@ -109,7 +107,6 @@ private:
     int32_t start;
     int32_t end;
 };
-    
 
 UnicodeString &IntFormatter::format(
         const Formattable &number,
@@ -118,6 +115,10 @@ UnicodeString &IntFormatter::format(
         UErrorCode &status) const {
     int32_t value = number.getLong(status);
     if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    if (value == -2147483648) {
+        status = U_INVALID_FORMAT_ERROR;
         return appendTo;
     }
     SimpleAnnotator annotator(pos.getField());

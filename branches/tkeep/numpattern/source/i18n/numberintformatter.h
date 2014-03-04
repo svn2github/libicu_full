@@ -31,8 +31,15 @@ class UnicodeString;
 class U_I18N_API NumberIntFormatter : public UMemory {
 public:
     NumberIntFormatter(
-            const NumberFormat &nfToBorrow, const IntFormatter &intFToBorrow) :
-            numberFormat(nfToBorrow), intFormatter(intFToBorrow) { }
+            const NumberFormat &nfToBorrow, const IntFormatter &intFToBorrow)
+            : numberFormat(nfToBorrow),
+              intFormatter(intFToBorrow),
+              preferInt(FALSE) { }
+    NumberIntFormatter(
+            const IntFormatter &intFToBorrow, const NumberFormat &nfToBorrow)
+            : numberFormat(nfToBorrow),
+              intFormatter(intFToBorrow),
+              preferInt(TRUE) { }
 
     /**
      * Selects the plural rule. 
@@ -54,6 +61,7 @@ public:
 private:
     const NumberFormat &numberFormat;
     const IntFormatter &intFormatter;
+    UBool preferInt;
     NumberIntFormatter(const NumberIntFormatter &other);
     NumberIntFormatter &operator=(const NumberIntFormatter &other);
 };
