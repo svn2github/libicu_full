@@ -52,6 +52,7 @@ private:
     void TestFieldPositionMultiple();
     void TestBadArg();
     void TestEquality();
+    void TestGroupingSeparator();
     void TestBenchmark();
     void TestDoubleZero();
     void verifyFormat(
@@ -108,6 +109,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestFieldPositionMultiple);
     TESTCASE_AUTO(TestBadArg);
     TESTCASE_AUTO(TestEquality);
+    TESTCASE_AUTO(TestGroupingSeparator);
     TESTCASE_AUTO(TestBenchmark);
     TESTCASE_AUTO(TestDoubleZero);
     TESTCASE_AUTO_END;
@@ -849,13 +851,38 @@ void MeasureFormatTest::TestEquality() {
     assertTrue("Not Equal 3", fmt != fmtne3);
 }
 
+void MeasureFormatTest::TestGroupingSeparator() {
+    UErrorCode status = U_ZERO_ERROR;
+    Locale en("en");
+    MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    Measure ms[] = {
+            Measure(-2147483647, MeasureUnit::createYear(status), status),
+            Measure(-2147483648, MeasureUnit::createMonth(status), status),
+            Measure(123456789, MeasureUnit::createDay(status), status),
+            Measure(1362, MeasureUnit::createHour(status), status),
+            Measure(987, MeasureUnit::createMinute(status), status)};
+    FieldPosition pos(NumberFormat::kGroupingSeparatorField);
+    UnicodeString appendTo;
+    fmt.formatMeasures(ms, 5, appendTo, pos, status);
+    if (!assertSuccess("Error formatting", status)) {
+        return;
+    }
+    assertEquals(
+            "grouping separator",
+            "-2,147,483,647 yrs, -2,147,483,648 mths, 123,456,789 days, 1,362 hrs, 987 mins",
+            appendTo);
+    assertEquals("begin index", 10, pos.getBeginIndex());
+    assertEquals("end index", 11, pos.getEndIndex());
+}
+
 void MeasureFormatTest::TestBenchmark() {
-/*
     clock_t t;
     UErrorCode status = U_ZERO_ERROR;
     Locale en("en");
     MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
-    MeasureFormat fmt2 = fmt;
     Measure ms[] = {
             Measure(70, MeasureUnit::createYear(status), status),
             Measure(5, MeasureUnit::createMonth(status), status),
@@ -865,11 +892,11 @@ void MeasureFormatTest::TestBenchmark() {
     FieldPosition pos(FieldPosition::DONT_CARE);
     t = clock();
     for (int32_t i = 0; i < 1000000; ++i) {
-        fmt2 = fmt;
+        UnicodeString s;
+        fmt.formatMeasures(ms, 5, s, pos, status);
     }
     t = clock() - t;
     errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
-*/
 }
 
 void MeasureFormatTest::TestDoubleZero() {

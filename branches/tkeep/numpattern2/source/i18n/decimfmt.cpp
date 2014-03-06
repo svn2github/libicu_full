@@ -1308,13 +1308,8 @@ void DecimalFormat::handleChanged() {
     debug("parse fastpath: YES");
   }
   
-  if (fGroupingSize!=0 && isGroupingUsed()) {
-    debug("No format fastpath: fGroupingSize!=0 and grouping is used");
-#ifdef FMT_DEBUG
-    printf("groupingsize=%d\n", fGroupingSize);
-#endif
-  } else if(fGroupingSize2!=0 && isGroupingUsed()) {
-    debug("No format fastpath: fGroupingSize2!=0");
+  if (isGroupingUsed() && 0x002C != getConstSymbol(DecimalFormatSymbols::kGroupingSeparatorSymbol).char32At(0)) {
+    debug("Grouping separator is not a comma");
   } else if(fUseExponentialNotation) {
     debug("No format fastpath: fUseExponentialNotation");
   } else if(fFormatWidth!=0) {
@@ -1401,60 +1396,72 @@ DecimalFormat::_format(int64_t number,
   if( data.fFastFormatStatus==kFastpathYES) {
 
 #define kZero 0x0030
-    const int32_t MAX_IDX = MAX_DIGITS+2;
+    const int32_t MAX_IDX = MAX_DIGITS+1;
     UChar outputStr[MAX_IDX];
     int32_t destIdx = MAX_IDX;
-    outputStr[--destIdx] = 0;  // term
+    int32_t groupingSize = INT32_MAX;
+    int32_t groupingSize2 = INT32_MAX;
+    if (isGroupingUsed()) {
+        groupingSize = fGroupingSize;
+        groupingSize2 = fGroupingSize2 <= 0 ? groupingSize : fGroupingSize2;
+    }
 
     int64_t  n = number;
     if (number < 1) {
-      // Negative numbers are slightly larger than positive
-      // output the first digit (or the leading zero)
-      outputStr[--destIdx] = (-(n % 10) + kZero);
-      n /= -10;
+        // Negative numbers are slightly larger than positive
+        // output the first digit (or the leading zero)
+        outputStr[--destIdx] = (-(n % 10) + kZero);
+        n /= -10;
     }
     // get any remaining digits
     while (n > 0) {
-      outputStr[--destIdx] = (n % 10) + kZero;
-      n /= 10;
+        outputStr[--destIdx] = (n % 10) + kZero;
+        n /= 10;
     }
-    
-
-        // Slide the number to the start of the output str
     U_ASSERT(destIdx >= 0);
-    int32_t length = MAX_IDX - destIdx -1;
-    /*int32_t prefixLen = */ appendAffix(appendTo, number, handler, number<0, TRUE);
+    int32_t destLength = MAX_IDX - destIdx;
+    appendAffix(appendTo, number, handler, number<0, TRUE);
     int32_t maxIntDig = getMaximumIntegerDigits();
-    int32_t destlength = length<=maxIntDig?length:maxIntDig; // dest length pinned to max int digits
+    if (destLength > maxIntDig) {
+        if (fBoolFlags.contains(UNUM_FORMAT_FAIL_IF_MORE_THAN_MAX_DIGITS)) {
+          status = U_ILLEGAL_ARGUMENT_ERROR;
+        }
+        destLength = maxIntDig;
+    }
+    int32_t startIdx = MAX_IDX - destLength;
 
-    if(length>maxIntDig && fBoolFlags.contains(UNUM_FORMAT_FAIL_IF_MORE_THAN_MAX_DIGITS)) {
-      status = U_ILLEGAL_ARGUMENT_ERROR;
+    int32_t minIntDig = getMinimumIntegerDigits();
+    if (destLength < minIntDig) {
+        destLength = minIntDig;
     }
 
-    int32_t prependZero = getMinimumIntegerDigits() - destlength;
-
-#ifdef FMT_DEBUG
-    printf("prependZero=%d, length=%d, minintdig=%d maxintdig=%d destlength=%d skip=%d\n", prependZero, length, getMinimumIntegerDigits(), maxIntDig, destlength, length-destlength);
-#endif    
     int32_t intBegin = appendTo.length();
 
-    while((prependZero--)>0) {
-      appendTo.append((UChar)0x0030); // '0'
+    int32_t groupIdx = destLength - groupingSize;
+    destIdx = MAX_IDX - destLength;
+    while (destIdx < MAX_IDX) {
+        if (destIdx < startIdx) {
+            appendTo.append((UChar)0x0030);
+        } else {
+            appendTo.append(outputStr[destIdx]);
+        }
+        --groupIdx;
+        ++destIdx;
+        if (groupIdx >= 0 && groupIdx % groupingSize2 == 0) {
+            int32_t separatorOffset = appendTo.length();
+            appendTo.append((UChar)0x002C);
+            handler.addAttribute(
+                    kGroupingSeparatorField,
+                    separatorOffset,
+                    separatorOffset + 1);
+        }
     }
-
-    appendTo.append(outputStr+destIdx+
-                    (length-destlength), // skip any leading digits
-                    destlength);
     handler.addAttribute(kIntegerField, intBegin, appendTo.length());
 
-    /*int32_t suffixLen =*/ appendAffix(appendTo, number, handler, number<0, FALSE);
+    appendAffix(appendTo, number, handler, number<0, FALSE);
 
     //outputStr[length]=0;
     
-#ifdef FMT_DEBUG
-        printf("Writing [%s] length [%d] max %d for [%d]\n", outputStr+destIdx, length, MAX_IDX, number);
-#endif
-
 #undef kZero
 
     return appendTo;
