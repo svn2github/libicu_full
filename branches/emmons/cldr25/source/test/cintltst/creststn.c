@@ -2622,8 +2622,8 @@ static void TestGetFunctionalEquivalent(void) {
         "f",    "zh_Hant_TW@collation=stroke",    "zh@collation=stroke",
         "f",    "sv_CN@collation=pinyin",         "sv",
         "t",    "zh@collation=pinyin",            "zh",
-        "f",    "zh_CN@collation=pinyin",         "zh@collation=pinyin", /* alias of zh_Hans_CN */
-        "f",    "zh_Hans_CN@collation=pinyin",    "zh@collation=pinyin",
+        "f",    "zh_CN@collation=pinyin",         "zh", /* alias of zh_Hans_CN */
+        "f",    "zh_Hans_CN@collation=pinyin",    "zh",
         "f",    "zh_HK@collation=pinyin",         "zh", /* alias of zh_Hant_HK */
         "f",    "zh_Hant_HK@collation=pinyin",    "zh",
         "f",    "zh_HK@collation=stroke",         "zh@collation=stroke", /* alias of zh_Hant_HK */

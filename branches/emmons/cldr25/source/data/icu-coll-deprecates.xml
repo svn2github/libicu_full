@@ -32,4 +32,8 @@
 	<alias from="zh_TW" to="zh_Hant_TW" />
 	<emptyLocale locale="de_" />
 	<emptyLocale locale="es_" />
+	<emptyLocale locale="pa_Guru" />
+	<emptyLocale locale="sr_Cyrl" />
+	<emptyLocale locale="ug_Arab" />
+	<emptyLocale locale="zh_Hans" />
 </deprecates>
