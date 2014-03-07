@@ -1675,19 +1675,6 @@ root {
             }
         }
 
-        ug-Latin {
-            file {
-                resource:process(transliterator) {"ug_Latin.txt"}
-                direction {"FORWARD"}
-            }
-        }
-        Latin-ug {
-            file {
-                resource:process(transliterator) {"ug_Latin.txt"}
-                direction {"REVERSE"}
-            }
-        }
-
         uz_Cyrl-uz_Latn {
             file {
                 resource:process(transliterator) {"uz_Cyrl_uz_Latn.txt"}
