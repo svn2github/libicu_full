@@ -8374,11 +8374,6 @@ supplementalData:table(nofallback){
                 "10",
             }
             {
-                "zh_HK",
-                "zh_TW",
-                "10",
-            }
-            {
                 "zu",
                 "en",
                 "10",
