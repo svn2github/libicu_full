@@ -949,7 +949,6 @@ public:
      */
     const UChar* getCurrency() const;
 
-    /* Cannot use #ifndef U_HIDE_DRAFT_API for the following draft method since it is virtual */
     /**
      * Set a particular UDisplayContext value in the formatter, such as
      * UDISPCTX_CAPITALIZATION_FOR_STANDALONE.
@@ -961,7 +960,6 @@ public:
      */
     virtual void setContext(UDisplayContext value, UErrorCode& status);
 
-    /* Cannot use #ifndef U_HIDE_DRAFT_API for the following draft method since it is virtual */
     /**
      * Get the formatter's UDisplayContext value for the specified UDisplayContextType,
      * such as UDISPCTX_TYPE_CAPITALIZATION.

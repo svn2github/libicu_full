@@ -41,6 +41,7 @@ class U_I18N_API MeasureUnit: public UObject {
         fCurrency[0] = 0;
     }
     
+#ifndef U_HIDE_DRAFT_API
     /**
      * Copy constructor.
      * @draft ICU 53
@@ -52,6 +53,7 @@ class U_I18N_API MeasureUnit: public UObject {
      * @draft ICU 53.
      */
     MeasureUnit &operator=(const MeasureUnit &other);
+#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Returns a polymorphic clone of this object.  The result will
@@ -73,6 +75,7 @@ class U_I18N_API MeasureUnit: public UObject {
      */
     virtual UBool operator==(const UObject& other) const;
 
+#ifndef U_HIDE_DRAFT_API
     /**
      * Inequality operator.  Return true if this object is not equal
      * to the given object.
@@ -137,6 +140,7 @@ class U_I18N_API MeasureUnit: public UObject {
      * @draft ICU 53
      */
     static StringEnumeration* getAvailableTypes(UErrorCode &errorCode);
+#endif /* U_HIDE_DRAFT_API */
 
 #ifndef U_HIDE_INTERNAL_API
 
