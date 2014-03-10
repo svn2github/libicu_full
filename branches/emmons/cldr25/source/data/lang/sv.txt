@@ -912,7 +912,7 @@ sv{
         VALLADER{"vallader-dialekt"}
         WADEGILE{"Wade-Giles"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.0.99.20"}
     codePatterns{
         language{"språk: {0}"}
         script{"skrift: {0}"}
