@@ -35,14 +35,14 @@
  * @deprecated ICU 53 Use MeasureFormat and UMeasureFormatWidth instead.
  */
 enum UTimeUnitFormatStyle {
-    /** @stable ICU 4.8 */
+    /** @deprecated ICU 53 */
     UTMUTFMT_FULL_STYLE,
-    /** @stable ICU 4.8 */
+    /** @deprecated ICU 53 */
     UTMUTFMT_ABBREVIATED_STYLE,
-    /** @stable ICU 4.8 */
+    /** @deprecated ICU 53 */
     UTMUTFMT_FORMAT_STYLE_COUNT
 };
-typedef enum UTimeUnitFormatStyle UTimeUnitFormatStyle; /**@deprecated ICU 53 */
+typedef enum UTimeUnitFormatStyle UTimeUnitFormatStyle; /**< @deprecated ICU 53 */
 
 #endif
 
