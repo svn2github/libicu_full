@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2001-2013 International Business Machines
+﻿# Copyright (c) 2001-2014 International Business Machines
 # Corporation and others. All Rights Reserved.
 #
 # RBBI Test Data
@@ -593,7 +593,9 @@ What is the proper use of the abbreviation pp.? •Yes, I am definatelly 12" tal
 <data>•123  •Start •with •a •number.•</data>
 
 <data>•'•start •with •a •case-•ignorable •cha'r'a'cter•</data>
-
+<data>•'  '' •start •with •case-•ignorable & •case-•insensitive •cha'r'a'cter•</data>
+<data>•  ''•aaa' •bbb '•ccc' '•ddd''' '''•eee   '''•fff'''   •ggg  ''•</data>
+# Note: apostrophe is case-ignorable. space is not cased.
 
 ##########################################################################################
 #
@@ -694,6 +696,14 @@ Bangkok)•</data>
 # Test for #10593
 <line>
 <data>•เล่น•ผ่าน•ทาง•บลูทูธ•บน•อุปกรณ์•</data>
+
+# Test for city names #10691
+<line>
+<data>•ไป•ที่•ซานฟรานซิสโก•</data>
+
+# Test for #10630, #10631
+<line>
+<data>•แท็ก•แอปพลิเคชัน•เป็น•พิเศษ•</data>
 
 ##########################################################################################
 #

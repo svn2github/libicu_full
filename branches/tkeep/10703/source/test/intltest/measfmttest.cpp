@@ -19,7 +19,7 @@
 #include "unicode/measfmt.h"
 #include "unicode/measure.h"
 #include "unicode/measunit.h"
-#include "unicode/tmutamt.h"
+#include "unicode/tmunit.h"
 #include "charstr.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
@@ -52,7 +52,7 @@ private:
     void TestFieldPositionMultiple();
     void TestBadArg();
     void TestEquality();
-    void TestBenchmark();
+    void TestDoubleZero();
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -107,7 +107,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestFieldPositionMultiple);
     TESTCASE_AUTO(TestBadArg);
     TESTCASE_AUTO(TestEquality);
-    TESTCASE_AUTO(TestBenchmark);
+    TESTCASE_AUTO(TestDoubleZero);
     TESTCASE_AUTO_END;
 }
 
@@ -294,9 +294,21 @@ void MeasureFormatTest::TestFormatPeriodEn() {
             Measure(23.5, MeasureUnit::createMinute(status), status)
     };
     Measure t_1h_0m_23s[] = {
-            Measure(1.0, MeasureUnit::createHour(status), status),
-            Measure(0.0, MeasureUnit::createMinute(status), status),
-            Measure(23, MeasureUnit::createSecond(status), status)
+            Measure(
+                    1.0,
+                    TimeUnit::createInstance(
+                            TimeUnit::UTIMEUNIT_HOUR, status),
+                    status),
+            Measure(
+                    0.0,
+                    TimeUnit::createInstance(
+                            TimeUnit::UTIMEUNIT_MINUTE, status),
+                     status),
+            Measure(
+                    23,
+                    TimeUnit::createInstance(
+                            TimeUnit::UTIMEUNIT_SECOND, status),
+                    status)
     };
     Measure t_2y_5M_3w_4d[] = {
             Measure(2.0, MeasureUnit::createYear(status), status),
@@ -312,9 +324,18 @@ void MeasureFormatTest::TestFormatPeriodEn() {
             Measure(5.0, MeasureUnit::createHour(status), status),
             Measure(17.0, MeasureUnit::createMinute(status), status)
     };
+    Measure t_neg5h_17m[] = {
+            Measure(-5.0, MeasureUnit::createHour(status), status),
+            Measure(17.0, MeasureUnit::createMinute(status), status)
+    };
     Measure t_19m_28s[] = {
             Measure(19.0, MeasureUnit::createMinute(status), status),
             Measure(28.0, MeasureUnit::createSecond(status), status)
+    };
+    Measure t_0h_0m_9s[] = {
+            Measure(0.0, MeasureUnit::createHour(status), status),
+            Measure(0.0, MeasureUnit::createMinute(status), status),
+            Measure(9.0, MeasureUnit::createSecond(status), status)
     };
     Measure t_0h_0m_17s[] = {
             Measure(0.0, MeasureUnit::createHour(status), status),
@@ -325,6 +346,16 @@ void MeasureFormatTest::TestFormatPeriodEn() {
             Measure(6.0, MeasureUnit::createHour(status), status),
             Measure(56.92, MeasureUnit::createMinute(status), status)
     };
+    Measure t_3h_4s_5m[] = {
+            Measure(3.0, MeasureUnit::createHour(status), status),
+            Measure(4.0, MeasureUnit::createSecond(status), status),
+            Measure(5.0, MeasureUnit::createMinute(status), status)
+    };
+    Measure t_6_7h_56_92m[] = {
+            Measure(6.7, MeasureUnit::createHour(status), status),
+            Measure(56.92, MeasureUnit::createMinute(status), status)
+    };
+
     Measure t_3h_5h[] = {
             Measure(3.0, MeasureUnit::createHour(status), status),
             Measure(5.0, MeasureUnit::createHour(status), status)
@@ -365,10 +396,13 @@ void MeasureFormatTest::TestFormatPeriodEn() {
             {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1:23.5"},
             {t_1h_0m_23s, LENGTHOF(t_1h_0m_23s), "1:00:23"},
             {t_5h_17m, LENGTHOF(t_5h_17m), "5:17"},
+            {t_neg5h_17m, LENGTHOF(t_neg5h_17m), "-5h 17m"},
             {t_19m_28s, LENGTHOF(t_19m_28s), "19:28"},
             {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2y 5m 3w 4d"},
-            {t_0h_0m_17s, LENGTHOF(t_0h_0m_17s), "0:00:17"},
+            {t_0h_0m_9s, LENGTHOF(t_0h_0m_9s), "0:00:09"},
             {t_6h_56_92m, LENGTHOF(t_6h_56_92m), "6:56.92"},
+            {t_6_7h_56_92m, LENGTHOF(t_6_7h_56_92m), "6:56.92"},
+            {t_3h_4s_5m, LENGTHOF(t_3h_4s_5m), "3h 4s 5m"},
             {t_3h_5h, LENGTHOF(t_3h_5h), "3h 5h"}};
 
     ExpectedResult fullDataDe[] = {
@@ -618,8 +652,8 @@ void MeasureFormatTest::TestMultiples() {
     helperTestMultiples(en, UMEASFMT_WIDTH_SHORT, "2 mi, 1 ft, 2.3 in");
     helperTestMultiples(en, UMEASFMT_WIDTH_NARROW, "2mi 1\\u2032 2.3\\u2033");
     helperTestMultiples(ru, UMEASFMT_WIDTH_WIDE, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442 \\u0438 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
-    helperTestMultiples(ru, UMEASFMT_WIDTH_SHORT, "2 \\u043C\\u0438\\u043B\\u0438 1 \\u0444\\u0443\\u0442 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
-    helperTestMultiples(ru, UMEASFMT_WIDTH_NARROW, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442, 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
+    helperTestMultiples(ru, UMEASFMT_WIDTH_SHORT, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442, 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
+    helperTestMultiples(ru, UMEASFMT_WIDTH_NARROW, "2 \\u043C\\u0438\\u043B\\u044C 1 \\u0444\\u0443\\u0442 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
 }
 
 void MeasureFormatTest::helperTestMultiples(
@@ -825,27 +859,37 @@ void MeasureFormatTest::TestEquality() {
     assertTrue("Not Equal 3", fmt != fmtne3);
 }
 
-void MeasureFormatTest::TestBenchmark() {
-/*
-    clock_t t;
+void MeasureFormatTest::TestDoubleZero() {
     UErrorCode status = U_ZERO_ERROR;
+    Measure measures[] = {
+        Measure(4.7, MeasureUnit::createHour(status), status),
+        Measure(23, MeasureUnit::createMinute(status), status),
+        Measure(16, MeasureUnit::createSecond(status), status)};
     Locale en("en");
-    MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
-    MeasureFormat fmt2 = fmt;
-    Measure ms[] = {
-            Measure(70, MeasureUnit::createYear(status), status),
-            Measure(5, MeasureUnit::createMonth(status), status),
-            Measure(23, MeasureUnit::createDay(status), status),
-            Measure(15, MeasureUnit::createHour(status), status),
-            Measure(58, MeasureUnit::createMinute(status), status)};
+    NumberFormat *nf = NumberFormat::createInstance(en, status);
+    nf->setMinimumFractionDigits(2);
+    nf->setMaximumFractionDigits(2);
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_WIDE, nf, status);
+    UnicodeString appendTo;
     FieldPosition pos(FieldPosition::DONT_CARE);
-    t = clock();
-    for (int32_t i = 0; i < 1000000; ++i) {
-        fmt2 = fmt;
+    fmt.formatMeasures(measures, LENGTHOF(measures), appendTo, pos, status);
+    if (!assertSuccess("Error creating formatter and formatting", status)) {
+        return;
     }
-    t = clock() - t;
-    errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
-*/
+    assertEquals(
+            "TestDoubleZero",
+            UnicodeString("4 hours, 23 minutes, 16.00 seconds"),
+            appendTo);
+    measures[0] = Measure(-4.7, MeasureUnit::createHour(status), status);
+    appendTo.remove();
+    fmt.formatMeasures(measures, LENGTHOF(measures), appendTo, pos, status);
+    if (!assertSuccess("Error formatting", status)) {
+        return;
+    }
+    assertEquals(
+            "TestDoubleZero",
+            UnicodeString("-4 hours, 23 minutes, 16.00 seconds"),
+            appendTo);
 }
 
 void MeasureFormatTest::verifyFieldPosition(

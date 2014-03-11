@@ -1,6 +1,6 @@
 /************************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2013, International Business Machines Corporation
+ * Copyright (c) 1997-2014, International Business Machines Corporation
  * and others. All Rights Reserved.
  ************************************************************************/
 
@@ -178,6 +178,9 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void Test10419RoundingWith0FractionDigits();
     void Test10468ApplyPattern();
     void TestRoundingScientific10542();
+    void TestZeroScientific10547();
+    void TestAccountingCurrency();
+    void TestEquality();
 
  private:
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
@@ -221,11 +224,21 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     }
 
     void expect(NumberFormat* fmt, const Formattable& n,
-                const UnicodeString& exp, UErrorCode);
+                const UnicodeString& exp, UBool rt, UErrorCode errorCode);
+
+    void expect(NumberFormat* fmt, const Formattable& n,
+                const char *exp, UBool rt, UErrorCode errorCode) {
+        expect(fmt, n, UnicodeString(exp, ""), rt, errorCode);
+    }
+
+    void expect(NumberFormat* fmt, const Formattable& n,
+                const UnicodeString& exp, UErrorCode errorCode) {
+        expect(fmt, n, exp, TRUE, errorCode);
+    }
 
     void expect(NumberFormat* fmt, const Formattable& n,
                 const char *exp, UErrorCode errorCode) {
-        expect(fmt, n, UnicodeString(exp, ""), errorCode);
+        expect(fmt, n, UnicodeString(exp, ""), TRUE, errorCode);
     }
 
     void expectCurrency(NumberFormat& nf, const Locale& locale,

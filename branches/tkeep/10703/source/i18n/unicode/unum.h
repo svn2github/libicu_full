@@ -198,6 +198,12 @@ typedef enum UNumberFormatStyle {
      */
     UNUM_CURRENCY_PLURAL,
     /**
+     * Currency format for accounting, e.g., "($3.00)" for
+     * negative currency amount instead of "-$3.00" ({@link #UNUM_CURRENCY}).
+     * @draft ICU 53
+     */
+    UNUM_CURRENCY_ACCOUNTING,
+    /**
      * One more than the highest number format style constant.
      * @stable ICU 4.8
      */
@@ -820,7 +826,7 @@ typedef enum UNumberFormatAttributeValue {
   UNUM_YES = 1,
   /** @internal */
   UNUM_MAYBE = 2
-#endif /* U_HIDE_INTERNAL_API */
+#endif /* U_HIDE_INTERNAL_API */
 } UNumberFormatAttributeValue;
 #endif
 

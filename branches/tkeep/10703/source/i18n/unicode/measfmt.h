@@ -161,8 +161,13 @@ class U_I18N_API MeasureFormat : public Format {
             ParsePosition &pos) const;
 
     /**
-     * Formats measure objects to produce a string.
-     * @param measures measure objects.
+     * Formats measure objects to produce a string. An example of such a
+     * formatted string is 3 meters, 3.5 centimeters. Measure objects appear
+     * in the formatted string in the same order they appear in the "measures"
+     * array. The NumberFormat of this object is used only to format the amount
+     * of the very last measure. The other amounts are formatted with zero
+     * decimal places while rounding toward zero.
+     * @param measures array of measure objects.
      * @param measureCount the number of measure objects.
      * @param appendTo formatted string appended here.
      * @param pos the field position.
@@ -198,6 +203,32 @@ class U_I18N_API MeasureFormat : public Format {
      * @stable ICU 3.0
      */
     static MeasureFormat* U_EXPORT2 createCurrencyFormat(UErrorCode& ec);
+
+    /**
+     * Return the class ID for this class. This is useful only for comparing to
+     * a return value from getDynamicClassID(). For example:
+     * <pre>
+     * .   Base* polymorphic_pointer = createPolymorphicObject();
+     * .   if (polymorphic_pointer->getDynamicClassID() ==
+     * .       erived::getStaticClassID()) ...
+     * </pre>
+     * @return          The class ID for all objects of this class.
+     * @draft ICU 53
+     */
+    static UClassID U_EXPORT2 getStaticClassID(void);
+
+    /**
+     * Returns a unique class ID POLYMORPHICALLY. Pure virtual override. This
+     * method is to implement a simple version of RTTI, since not all C++
+     * compilers support genuine RTTI. Polymorphic operator==() and clone()
+     * methods call this method.
+     *
+     * @return          The class ID for this object. All objects of a
+     *                  given class have the same class ID.  Objects of
+     *                  other classes have different class IDs.
+     * @draft ICU 53
+     */
+    virtual UClassID getDynamicClassID(void) const;
 
  protected:
     /**
@@ -279,6 +310,7 @@ class U_I18N_API MeasureFormat : public Format {
 
     UnicodeString &formatMeasure(
         const Measure &measure,
+        const NumberFormat &nf,
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const;

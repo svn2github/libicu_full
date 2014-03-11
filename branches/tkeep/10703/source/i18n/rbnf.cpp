@@ -1519,6 +1519,10 @@ RuleBasedNumberFormat::setContext(UDisplayContext value, UErrorCode& status)
                 (value==UDISPCTX_CAPITALIZATION_FOR_STANDALONE && capitalizationForStandAlone)) ) {
             UErrorCode status = U_ZERO_ERROR;
             capitalizationBrkIter = BreakIterator::createSentenceInstance(locale, status);
+            if (U_FAILURE(status)) {
+                delete capitalizationBrkIter;
+                capitalizationBrkIter = NULL;
+            }
         }
 #endif
     }
@@ -1532,9 +1536,7 @@ RuleBasedNumberFormat::initCapitalizationContextInfo(const Locale& thelocale)
     UErrorCode status = U_ZERO_ERROR;
     UResourceBundle *rb = ures_open(NULL, localeID, &status);
     rb = ures_getByKeyWithFallback(rb, "contextTransforms", rb, &status);
-    // Have't got a good contextTransforms type for RBNF number spellout,
-    // fix that with CLDR #6857. In the meantime use "symbol".
-    rb = ures_getByKeyWithFallback(rb, "symbol", rb, &status);
+    rb = ures_getByKeyWithFallback(rb, "number-spellout", rb, &status);
     if (U_SUCCESS(status) && rb != NULL) {
         int32_t len = 0;
         const int32_t * intVector = ures_getIntVector(rb, &len, &status);
@@ -1631,7 +1633,7 @@ RuleBasedNumberFormat::dispose()
  * @return The collator to use for lenient parsing, or null if lenient parsing
  * is turned off.
 */
-Collator*
+const RuleBasedCollator*
 RuleBasedNumberFormat::getCollator() const
 {
 #if !UCONFIG_NO_COLLATION
@@ -1639,7 +1641,7 @@ RuleBasedNumberFormat::getCollator() const
         return NULL;
     }
 
-    // lazy-evaulate the collator
+    // lazy-evaluate the collator
     if (collator == NULL && lenient) {
         // create a default collator based on the formatter's locale,
         // then pull out that collator's rules, append any additional
@@ -1658,7 +1660,7 @@ RuleBasedNumberFormat::getCollator() const
                 newCollator = new RuleBasedCollator(rules, status);
                 // Exit if newCollator could not be created.
                 if (newCollator == NULL) {
-                	return NULL;
+                    return NULL;
                 }
             } else {
                 temp = NULL;

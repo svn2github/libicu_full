@@ -189,7 +189,7 @@ typedef enum UDateFormatStyle {
 #ifndef U_HIDE_INTERNAL_API
     /** @internal alias to UDAT_PATTERN */
     UDAT_IGNORE = UDAT_PATTERN
-#endif /* U_HIDE_INTERNAL_API */
+#endif /* U_HIDE_INTERNAL_API */
 } UDateFormatStyle;
 
 /* Skeletons for dates. */
@@ -756,14 +756,23 @@ typedef enum UDateFormatField {
 
     /**
      * FieldPosition selector for 'x' field alignment,
-     * corresponding to the UCAL_ZONE_OFFSET and UCAL_DST_OFFSETfields.
+     * corresponding to the UCAL_ZONE_OFFSET and UCAL_DST_OFFSET fields.
      * This displays the ISO 8601 local time offset format.
      * @draft ICU 51
      */
     UDAT_TIMEZONE_ISO_LOCAL_FIELD = 33,
 #endif  /* U_HIDE_DRAFT_API */
 
+#ifndef U_HIDE_INTERNAL_API
     /**
+     * FieldPosition and UFieldPosition selector for 'r' field alignment,
+     * no directly corresponding UCAL_ field.
+     * @internal ICU 53
+     */
+    UDAT_RELATED_YEAR_FIELD = 34,
+#endif /* U_HIDE_INTERNAL_API */
+
+   /**
      * Number of FieldPosition and UFieldPosition selectors for
      * DateFormat and UDateFormat.
      * Valid selectors range from 0 to UDAT_FIELD_COUNT-1.
@@ -771,7 +780,7 @@ typedef enum UDateFormatField {
      * in the future.
      * @stable ICU 3.0
      */
-    UDAT_FIELD_COUNT = 34
+    UDAT_FIELD_COUNT = 35
 
 } UDateFormatField;
 
@@ -862,12 +871,18 @@ typedef enum UDateFormatBooleanAttribute {
      * @draft ICU 53
      */
     UDAT_PARSE_PARTIAL_MATCH = 2,
+    /**  
+     * indicates tolerance of pattern mismatch between input data and specified format pattern. 
+     * e.g. accepting "September" for a month pattern of MMM ("Sep")   
+     * @draft ICU 53
+     */ 
+    UDAT_PARSE_MULTIPLE_PATTERNS_FOR_MATCH = 3,
 #endif /* U_HIDE_DRAFT_API */
     /**
      * count boolean date format constants
      * @draft ICU 53
      */
-    UDAT_BOOLEAN_ATTRIBUTE_COUNT = 3
+    UDAT_BOOLEAN_ATTRIBUTE_COUNT = 4
 } UDateFormatBooleanAttribute;
 
 #ifndef U_HIDE_DRAFT_API

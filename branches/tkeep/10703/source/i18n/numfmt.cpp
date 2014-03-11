@@ -70,24 +70,27 @@ static inline void debugout(UnicodeString s) {
 #endif
 
 // If no number pattern can be located for a locale, this is the last
-// resort.
+// resort. The patterns are same as the ones in root locale.
 static const UChar gLastResortDecimalPat[] = {
-    0x23, 0x30, 0x2E, 0x23, 0x23, 0x23, 0x3B, 0x2D, 0x23, 0x30, 0x2E, 0x23, 0x23, 0x23, 0 /* "#0.###;-#0.###" */
+    0x23, 0x2C, 0x23, 0x23, 0x30, 0x2E, 0x23, 0x23, 0x23, 0 /* "#,##0.###" */
 };
 static const UChar gLastResortCurrencyPat[] = {
-    0x24, 0x23, 0x30, 0x2E, 0x30, 0x30, 0x3B, 0x28, 0x24, 0x23, 0x30, 0x2E, 0x30, 0x30, 0x29, 0 /* "$#0.00;($#0.00)" */
+    0xA4, 0xA0, 0x23, 0x2C, 0x23, 0x23, 0x30, 0x2E, 0x30, 0x30, 0 /* "\u00A4\u00A0#,##0.00" */
 };
 static const UChar gLastResortPercentPat[] = {
-    0x23, 0x30, 0x25, 0 /* "#0%" */
+    0x23, 0x2C, 0x23, 0x23, 0x30, 0x25, 0 /* "#,##0%" */
 };
 static const UChar gLastResortScientificPat[] = {
     0x23, 0x45, 0x30, 0 /* "#E0" */
 };
 static const UChar gLastResortIsoCurrencyPat[] = {
-    0xA4, 0xA4, 0x23, 0x30, 0x2E, 0x30, 0x30, 0x3B, 0x28, 0xA4, 0xA4, 0x23, 0x30, 0x2E, 0x30, 0x30, 0x29, 0 /* "\u00A4\u00A4#0.00;(\u00A4\u00A4#0.00)" */
+    0xA4, 0xA4, 0xA0, 0x23, 0x2C, 0x23, 0x23, 0x30, 0x2E, 0x30, 0x30, 0  /* "\u00A4\u00A4\u00A0#,##0.00" */
 };
 static const UChar gLastResortPluralCurrencyPat[] = {
-    0x23, 0x30, 0x2E, 0x30, 0x30, 0xA0, 0xA4, 0xA4, 0xA4, 0 /* "#0.00\u00A0\u00A4\u00A4\u00A4*/
+    0x23, 0x2C, 0x23, 0x23, 0x30, 0x2E, 0x23, 0x23, 0x23, 0x20, 0xA4, 0xA4, 0xA4, 0 /* "#,##0.### \u00A4\u00A4\u00A4*/
+};
+static const UChar gLastResortAccountingCurrencyPat[] =  {
+    0xA4, 0xA0, 0x23, 0x2C, 0x23, 0x23, 0x30, 0x2E, 0x30, 0x30, 0 /* "\u00A4\u00A0#,##0.00" */
 };
 
 static const UChar gSingleCurrencySign[] = {0xA4, 0};
@@ -114,7 +117,8 @@ static const UChar * const gLastResortNumberPatterns[UNUM_FORMAT_STYLE_COUNT] = 
     NULL,  // UNUM_NUMBERING_SYSTEM
     NULL,  // UNUM_PATTERN_RULEBASED
     gLastResortIsoCurrencyPat,  // UNUM_CURRENCY_ISO
-    gLastResortPluralCurrencyPat  // UNUM_CURRENCY_PLURAL
+    gLastResortPluralCurrencyPat,  // UNUM_CURRENCY_PLURAL
+    gLastResortAccountingCurrencyPat // UNUM_CURRENCY_ACCOUNTING
 };
 
 // Keys used for accessing resource bundles
@@ -138,7 +142,8 @@ static const char *gFormatKeys[UNUM_FORMAT_STYLE_COUNT] = {
     // except for replacing the single currency sign with
     // double currency sign or triple currency sign.
     "currencyFormat",  // UNUM_CURRENCY_ISO
-    "currencyFormat"  // UNUM_CURRENCY_PLURAL
+    "currencyFormat",  // UNUM_CURRENCY_PLURAL
+    "accountingFormat"  // UNUM_CURRENCY_ACCOUNTING
 };
 
 static icu::LRUCache *gNumberFormatCache = NULL;
@@ -1344,6 +1349,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
             case UNUM_CURRENCY:
             case UNUM_CURRENCY_ISO: // do not support plural formatting here
             case UNUM_CURRENCY_PLURAL:
+            case UNUM_CURRENCY_ACCOUNTING:
                 f = new Win32NumberFormat(desiredLocale, curr, status);
 
                 if (U_SUCCESS(status)) {
@@ -1438,7 +1444,7 @@ NumberFormat::makeInstance(const Locale& desiredLocale,
     if (U_FAILURE(status)) {
         return NULL;
     }
-    if(style==UNUM_CURRENCY || style == UNUM_CURRENCY_ISO){
+    if(style==UNUM_CURRENCY || style == UNUM_CURRENCY_ISO || style == UNUM_CURRENCY_ACCOUNTING){
         const UChar* currPattern = symbolsToAdopt->getCurrencyPattern();
         if(currPattern!=NULL){
             pattern.setTo(currPattern, u_strlen(currPattern));

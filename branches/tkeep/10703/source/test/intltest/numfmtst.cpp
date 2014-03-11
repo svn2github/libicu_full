@@ -131,6 +131,9 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
   TESTCASE_AUTO(Test10419RoundingWith0FractionDigits);
   TESTCASE_AUTO(Test10468ApplyPattern);
   TESTCASE_AUTO(TestRoundingScientific10542);
+  TESTCASE_AUTO(TestZeroScientific10547);
+  TESTCASE_AUTO(TestAccountingCurrency);
+  TESTCASE_AUTO(TestEquality);
   TESTCASE_AUTO_END;
 }
 
@@ -2548,12 +2551,12 @@ void NumberFormatTest::expect(NumberFormat& fmt, const Formattable& n,
 }
 
 void NumberFormatTest::expect(NumberFormat* fmt, const Formattable& n,
-                              const UnicodeString& exp,
+                              const UnicodeString& exp, UBool rt,
                               UErrorCode status) {
     if (fmt == NULL || U_FAILURE(status)) {
         dataerrln("FAIL: NumberFormat constructor");
     } else {
-        expect(*fmt, n, exp);
+        expect(*fmt, n, exp, rt);
     }
     delete fmt;
 }
@@ -7539,6 +7542,17 @@ void NumberFormatTest::TestRoundingScientific10542() {
     }
 }
 
+void NumberFormatTest::TestZeroScientific10547() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormat fmt("0.00E0", status);
+    if (!assertSuccess("Formt creation", status)) {
+        return;
+    }
+    UnicodeString out;
+    fmt.format(-0.0, out);
+    assertEquals("format", "-0.00E0", out);
+}
+
 void NumberFormatTest::verifyRounding(
         DecimalFormat& format,
         const double *values,
@@ -7565,6 +7579,51 @@ void NumberFormatTest::verifyRounding(
             }
         }
     }
+}
+
+void NumberFormatTest::TestAccountingCurrency() {
+    UErrorCode status = U_ZERO_ERROR;
+    UNumberFormatStyle style = UNUM_CURRENCY_ACCOUNTING;
+
+    expect(NumberFormat::createInstance("en_US", style, status),
+        (Formattable)1234.5, "$1,234.50", TRUE, status);
+    expect(NumberFormat::createInstance("en_US", style, status),
+        (Formattable)-1234.5, "($1,234.50)", TRUE, status);
+    expect(NumberFormat::createInstance("en_US", style, status),
+        (Formattable)0, "$0.00", TRUE, status);
+    expect(NumberFormat::createInstance("en_US", style, status),
+        (Formattable)-0.2, "($0.20)", TRUE, status);
+    expect(NumberFormat::createInstance("ja_JP", style, status),
+        (Formattable)10000, UnicodeString("\\uFFE510,000").unescape(), TRUE, status);
+    expect(NumberFormat::createInstance("ja_JP", style, status),
+        (Formattable)-1000.5, UnicodeString("(\\uFFE51,000)").unescape(), FALSE, status);
+    expect(NumberFormat::createInstance("de_DE", style, status),
+        (Formattable)-23456.7, UnicodeString("-23.456,70\\u00A0\\u20AC").unescape(), TRUE, status);
+}
+
+// for #5186
+void NumberFormatTest::TestEquality() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols* symbols = new DecimalFormatSymbols(Locale("root"), status);
+    if (U_FAILURE(status)) {
+    	dataerrln("Fail: can't create DecimalFormatSymbols for root");
+    	return;
+    }
+    UnicodeString pattern("#,##0.###");
+    DecimalFormat* fmtBase = new DecimalFormat(pattern, symbols, status);
+    if (U_FAILURE(status)) {
+    	dataerrln("Fail: can't create DecimalFormat using root symbols");
+    	return;
+    }
+
+    DecimalFormat* fmtClone = (DecimalFormat*)fmtBase->clone();
+    fmtClone->setFormatWidth(fmtBase->getFormatWidth() + 32);
+    if (*fmtClone == *fmtBase) {
+        errln("Error: DecimalFormat == does not distinguish objects that differ only in FormatWidth");
+    }
+    delete fmtClone;
+
+    delete fmtBase;
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

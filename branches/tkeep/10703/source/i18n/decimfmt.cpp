@@ -814,7 +814,7 @@ DecimalFormat::operator=(const DecimalFormat& rhs)
         fUseSignificantDigits = rhs.fUseSignificantDigits;
         fFormatPattern = rhs.fFormatPattern;
         fStyle = rhs.fStyle;
-        fCurrencySignCount = rhs.fCurrencySignCount;
+        //fCurrencySignCount = rhs.fCurrencySignCount; // duplicates line above 
         _clone_ptr(&fCurrencyPluralInfo, rhs.fCurrencyPluralInfo);
         deleteHashForAffixPattern();
         if (rhs.fAffixPatternsForCurrency) {
@@ -835,10 +835,12 @@ DecimalFormat::operator=(const DecimalFormat& rhs)
             fPluralAffixesForCurrency = initHashForAffixPattern(status);
             copyHashForAffix(rhs.fPluralAffixesForCurrency, fPluralAffixesForCurrency, status);
         }
-    }
 #if UCONFIG_FORMAT_FASTPATHS_49
-    handleChanged();
+        DecimalFormatInternal &data    = internalData(fReserved);
+        const DecimalFormatInternal &rhsData = internalData(rhs.fReserved);
+        data = rhsData;
 #endif
+    }
     return *this;
 }
 
@@ -926,6 +928,10 @@ DecimalFormat::operator==(const Format& that) const
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
         debug("Rounding Increment !=");
               }
+    if (fRoundingMode != other->fRoundingMode) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        printf("Rounding Mode %d != %d", (int)fRoundingMode, (int)other->fRoundingMode);
+    }
     if (getMultiplier() != other->getMultiplier()) {
         if (first) { printf("[ "); first = FALSE; }
         printf("Multiplier %ld != %ld", getMultiplier(), other->getMultiplier());
@@ -940,16 +946,25 @@ DecimalFormat::operator==(const Format& that) const
     }
     if (fDecimalSeparatorAlwaysShown != other->fDecimalSeparatorAlwaysShown) {
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
-        printf("Dec Sep Always %d != %d", fDecimalSeparatorAlwaysShown, other->fDecimalSeparatorAlwaysShown);
+        printf("fDecimalSeparatorAlwaysShown %d != %d", fDecimalSeparatorAlwaysShown, other->fDecimalSeparatorAlwaysShown);
     }
     if (fUseExponentialNotation != other->fUseExponentialNotation) {
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
-        debug("Use Exp !=");
+        debug("fUseExponentialNotation !=");
     }
-    if (!(!fUseExponentialNotation ||
-          fMinExponentDigits != other->fMinExponentDigits)) {
+    if (fUseExponentialNotation &&
+        fMinExponentDigits != other->fMinExponentDigits) {
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
-        debug("Exp Digits !=");
+        debug("fMinExponentDigits !=");
+    }
+    if (fUseExponentialNotation &&
+        fExponentSignAlwaysShown != other->fExponentSignAlwaysShown) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        debug("fExponentSignAlwaysShown !=");
+    }
+    if (fBoolFlags.getAll() != other->fBoolFlags.getAll()) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        debug("fBoolFlags !=");
     }
     if (*fSymbols != *(other->fSymbols)) {
         if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
@@ -957,15 +972,40 @@ DecimalFormat::operator==(const Format& that) const
     }
     // TODO Add debug stuff for significant digits here
     if (fUseSignificantDigits != other->fUseSignificantDigits) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
         debug("fUseSignificantDigits !=");
     }
     if (fUseSignificantDigits &&
         fMinSignificantDigits != other->fMinSignificantDigits) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
         debug("fMinSignificantDigits !=");
     }
     if (fUseSignificantDigits &&
         fMaxSignificantDigits != other->fMaxSignificantDigits) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
         debug("fMaxSignificantDigits !=");
+    }
+    if (fFormatWidth != other->fFormatWidth) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        debug("fFormatWidth !=");
+    }
+    if (fPad != other->fPad) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        debug("fPad !=");
+    }
+    if (fPadPosition != other->fPadPosition) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        debug("fPadPosition !=");
+    }
+    if (fStyle == UNUM_CURRENCY_PLURAL &&
+        fStyle != other->fStyle)
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        debug("fStyle !=");
+    }
+    if (fStyle == UNUM_CURRENCY_PLURAL &&
+        fFormatPattern != other->fFormatPattern) {
+        if (first) { printf("[ "); first = FALSE; } else { printf(", "); }
+        debug("fFormatPattern !=");
     }
 
     if (!first) { printf(" ]"); }
@@ -1015,23 +1055,32 @@ DecimalFormat::operator==(const Format& that) const
              || (fRoundingIncrement != NULL &&
                  other->fRoundingIncrement != NULL &&
                  *fRoundingIncrement == *other->fRoundingIncrement)) &&
+        fRoundingMode == other->fRoundingMode &&
         getMultiplier() == other->getMultiplier() &&
         fGroupingSize == other->fGroupingSize &&
         fGroupingSize2 == other->fGroupingSize2 &&
         fDecimalSeparatorAlwaysShown == other->fDecimalSeparatorAlwaysShown &&
         fUseExponentialNotation == other->fUseExponentialNotation &&
         (!fUseExponentialNotation ||
-         fMinExponentDigits == other->fMinExponentDigits) &&
+            (fMinExponentDigits == other->fMinExponentDigits && fExponentSignAlwaysShown == other->fExponentSignAlwaysShown)) &&
+        fBoolFlags.getAll() == other->fBoolFlags.getAll() &&
         *fSymbols == *(other->fSymbols) &&
         fUseSignificantDigits == other->fUseSignificantDigits &&
         (!fUseSignificantDigits ||
-         (fMinSignificantDigits == other->fMinSignificantDigits &&
-          fMaxSignificantDigits == other->fMaxSignificantDigits)) &&
+            (fMinSignificantDigits == other->fMinSignificantDigits && fMaxSignificantDigits == other->fMaxSignificantDigits)) &&
+        fFormatWidth == other->fFormatWidth &&
+        fPad == other->fPad &&
+        fPadPosition == other->fPadPosition &&
+        (fStyle != UNUM_CURRENCY_PLURAL ||
+            (fStyle == other->fStyle && fFormatPattern == other->fFormatPattern)) &&
         fCurrencySignCount == other->fCurrencySignCount &&
         ((fCurrencyPluralInfo == other->fCurrencyPluralInfo &&
           fCurrencyPluralInfo == NULL) ||
          (fCurrencyPluralInfo != NULL && other->fCurrencyPluralInfo != NULL &&
          *fCurrencyPluralInfo == *(other->fCurrencyPluralInfo))));
+        // depending on other settings we may also need to compare
+        // fCurrencyChoice (mostly deprecated?),
+        // fAffixesForCurrency & fPluralAffixesForCurrency (only relevant in some cases)
 }
 
 //------------------------------------------------------------------------------
@@ -1643,6 +1692,13 @@ DecimalFormat::_round(const DigitList &number, DigitList &adjustedNum, UBool& is
         int32_t sigDigits = precision();
         if (sigDigits > 0) {
             adjustedNum.round(sigDigits);
+            // Travis Keep (21/2/2014): Calling round on a digitList does not necessarily
+            // preserve the sign of that digit list. Preserving the sign is especially
+            // important when formatting -0.0 for instance. Not preserving the sign seems
+            // like a bug because I cannot think of any case where the sign would actually
+            // have to change when rounding. For now, we preserve the sign by setting the
+            // positive attribute directly.
+            adjustedNum.setPositive(!isNegative);
         }
     } else {
         // Fixed point format.  Round to a set number of fraction digits.
@@ -3068,12 +3124,12 @@ UnicodeString& DecimalFormat::trimMarksFromAffix(const UnicodeString& affix, Uni
     for (affixPos = 0; affixPos < affixLen; affixPos++) {
         UChar c = affix.charAt(affixPos);
         if (!IS_BIDI_MARK(c)) {
-        	if (trimLen < TRIM_BUFLEN) {
-        		trimBuf[trimLen++] = c;
-        	} else {
-        		trimLen = 0;
-        		break;
-        	}
+            if (trimLen < TRIM_BUFLEN) {
+                trimBuf[trimLen++] = c;
+            } else {
+                trimLen = 0;
+                break;
+            }
         }
     }
     return (trimLen > 0)? trimmedAffix.setTo(trimBuf, trimLen): trimmedAffix.setTo(affix);
@@ -3366,8 +3422,8 @@ int32_t DecimalFormat::compareComplexAffix(const UnicodeString& affixPat,
                         UChar effectiveCurr[4];
                         getEffectiveCurrency(effectiveCurr, ec);
                         if ( U_FAILURE(ec) || u_strncmp(curr,effectiveCurr,4) != 0 ) {
-                        	pos = -1;
-                        	continue;
+                            pos = -1;
+                            continue;
                         }
                     }
                     pos = ppos.getIndex();
@@ -5256,6 +5312,29 @@ DecimalFormat::copyHashForAffixPattern(const Hashtable* source,
         }
     }
 }
+
+// this is only overridden to call handleChanged() for fastpath purposes.
+void
+DecimalFormat::setGroupingUsed(UBool newValue) {
+  NumberFormat::setGroupingUsed(newValue);
+  handleChanged();
+}
+
+// this is only overridden to call handleChanged() for fastpath purposes.
+void
+DecimalFormat::setParseIntegerOnly(UBool newValue) {
+  NumberFormat::setParseIntegerOnly(newValue);
+  handleChanged();
+}
+
+// this is only overridden to call handleChanged() for fastpath purposes.
+// setContext doesn't affect the fastPath right now, but this is called for completeness
+void
+DecimalFormat::setContext(UDisplayContext value, UErrorCode& status) {
+  NumberFormat::setContext(value, status);
+  handleChanged();
+}
+
 
 DecimalFormat& DecimalFormat::setAttribute( UNumberFormatAttribute attr,
                                             int32_t newValue,

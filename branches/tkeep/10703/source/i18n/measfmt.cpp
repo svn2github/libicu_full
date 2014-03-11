@@ -8,6 +8,7 @@
 * Since: ICU 3.0
 **********************************************************************
 */
+#include "utypeinfo.h"  // for 'typeid' to work
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_FORMATTING
@@ -54,6 +55,8 @@ U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(MeasureFormat)
+
 // Used to format durations like 5:47 or 21:35:42.
 class NumericDateFormatters : public UMemory {
 public:
@@ -99,6 +102,13 @@ public:
     const NumberFormat *getCurrencyFormat(int32_t widthIndex) const {
         return currencyFormats[widthIndex];
     }
+    void adoptIntegerFormat(NumberFormat *nfToAdopt) {
+        delete integerFormat;
+        integerFormat = nfToAdopt;
+    }
+    const NumberFormat *getIntegerFormat() const {
+        return integerFormat;
+    }
     void adoptNumericDateFormatters(NumericDateFormatters *formattersToAdopt) {
         delete numericDateFormatters;
         numericDateFormatters = formattersToAdopt;
@@ -109,6 +119,7 @@ public:
     virtual ~MeasureFormatCacheData();
 private:
     NumberFormat *currencyFormats[WIDTH_INDEX_COUNT];
+    NumberFormat *integerFormat;
     NumericDateFormatters *numericDateFormatters;
     MeasureFormatCacheData(const MeasureFormatCacheData &other);
     MeasureFormatCacheData &operator=(const MeasureFormatCacheData &other);
@@ -118,6 +129,7 @@ MeasureFormatCacheData::MeasureFormatCacheData() {
     for (int32_t i = 0; i < LENGTHOF(currencyFormats); ++i) {
         currencyFormats[i] = NULL;
     }
+    integerFormat = NULL;
     numericDateFormatters = NULL;
 }
 
@@ -125,6 +137,7 @@ MeasureFormatCacheData::~MeasureFormatCacheData() {
     for (int32_t i = 0; i < LENGTHOF(currencyFormats); ++i) {
         delete currencyFormats[i];
     }
+    delete integerFormat;
     delete numericDateFormatters;
 }
 
@@ -299,7 +312,7 @@ static SharedObject *U_CALLCONV createData(
         return NULL;
     }
     LocalPointer<MeasureFormatCacheData> result(new MeasureFormatCacheData());
-    if (result.getAlias() == NULL) {
+    if (result.isNull()) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
@@ -322,6 +335,17 @@ static SharedObject *U_CALLCONV createData(
             return NULL;
         }
     }
+    NumberFormat *inf = NumberFormat::createInstance(
+            localeId, UNUM_DECIMAL, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    inf->setMaximumFractionDigits(0);
+    DecimalFormat *decfmt = dynamic_cast<DecimalFormat *>(inf);
+    if (decfmt != NULL) {
+        decfmt->setRoundingMode(DecimalFormat::kRoundDown);
+    }
+    result->adoptIntegerFormat(inf);
     return result.orphan();
 }
 
@@ -364,31 +388,39 @@ static int32_t toHMS(
     if (U_FAILURE(status)) {
         return 0;
     }
-    int32_t count = 0;
+    // We use copy constructor to ensure that both sides of equality operator
+    // are instances of MeasureUnit base class and not a subclass. Otherwise,
+    // operator== will immediately return false.
     for (int32_t i = 0; i < measureCount; ++i) {
-        if (measures[i].getUnit() == *hourUnit) {
-            if ((result & 1) == 0) {
-                ++count;
-            } else {
+        if (MeasureUnit(measures[i].getUnit()) == *hourUnit) {
+            // hour must come first
+            if (result >= 1) {
                 return 0;
             }
             hms[0] = measures[i].getNumber();
+            if (hms[0].getDouble() < 0.0) {
+                return 0;
+            }
             result |= 1;
-        } else if (measures[i].getUnit() == *minuteUnit) {
-            if ((result & 2) == 0) {
-                ++count;
-            } else {
+        } else if (MeasureUnit(measures[i].getUnit()) == *minuteUnit) {
+            // minute must come after hour
+            if (result >= 2) {
                 return 0;
             }
             hms[1] = measures[i].getNumber();
+            if (hms[1].getDouble() < 0.0) {
+                return 0;
+            }
             result |= 2;
-        } else if (measures[i].getUnit() == *secondUnit) {
-            if ((result & 4) == 0) {
-                ++count;
-            } else {
+        } else if (MeasureUnit(measures[i].getUnit()) == *secondUnit) {
+            // second must come after hour and minute
+            if (result >= 4) {
                 return 0;
             }
             hms[2] = measures[i].getNumber();
+            if (hms[2].getDouble() < 0.0) {
+                return 0;
+            }
             result |= 4;
         } else {
             return 0;
@@ -470,28 +502,27 @@ MeasureFormat::~MeasureFormat() {
 }
 
 UBool MeasureFormat::operator==(const Format &other) const {
-    const MeasureFormat *rhs = dynamic_cast<const MeasureFormat *>(&other);
-    if (rhs == NULL) {
+    if (this == &other) { // Same object, equal
+        return TRUE;
+    }
+    if (!Format::operator==(other)) {
         return FALSE;
     }
+    const MeasureFormat &rhs = static_cast<const MeasureFormat &>(other);
 
     // Note: Since the ListFormatter depends only on Locale and width, we
     // don't have to check it here.
 
-    // Same objects are equivalent
-    if (this == rhs) {
-        return TRUE;
-    }
     // differing widths aren't equivalent
-    if (width != rhs->width) {
+    if (width != rhs.width) {
         return FALSE;
     }
     // Width the same check locales.
     // We don't need to check locales if both objects have same cache.
-    if (cache != rhs->cache) {
+    if (cache != rhs.cache) {
         UErrorCode status = U_ZERO_ERROR;
         const char *localeId = getLocaleID(status);
-        const char *rhsLocaleId = rhs->getLocaleID(status);
+        const char *rhsLocaleId = rhs.getLocaleID(status);
         if (U_FAILURE(status)) {
             // On failure, assume not equal
             return FALSE;
@@ -502,8 +533,8 @@ UBool MeasureFormat::operator==(const Format &other) const {
     }
     // Locales same, check NumberFormat if shared data differs.
     return (
-            numberFormat == rhs->numberFormat ||
-            **numberFormat == **rhs->numberFormat);
+            numberFormat == rhs.numberFormat ||
+            **numberFormat == **rhs.numberFormat);
 }
 
 Format *MeasureFormat::clone() const {
@@ -520,7 +551,8 @@ UnicodeString &MeasureFormat::format(
         const UObject* formatObj = obj.getObject();
         const Measure* amount = dynamic_cast<const Measure*>(formatObj);
         if (amount != NULL) {
-            return formatMeasure(*amount, appendTo, pos, status);
+            return formatMeasure(
+                    *amount, **numberFormat, appendTo, pos, status);
         }
     }
     status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -547,7 +579,7 @@ UnicodeString &MeasureFormat::formatMeasures(
         return appendTo;
     }
     if (measureCount == 1) {
-        return formatMeasure(measures[0], appendTo, pos, status);
+        return formatMeasure(measures[0], **numberFormat, appendTo, pos, status);
     }
     if (width == UMEASFMT_WIDTH_NUMERIC) {
         Formattable hms[3];
@@ -566,7 +598,16 @@ UnicodeString &MeasureFormat::formatMeasures(
         return appendTo;
     }
     for (int32_t i = 0; i < measureCount; ++i) {
-        formatMeasure(measures[i], results[i], pos, status);
+        const NumberFormat *nf = cache->getIntegerFormat();
+        if (i == measureCount - 1) {
+            nf = numberFormat->get();
+        }
+        formatMeasure(
+                measures[i],
+                *nf,
+                results[i],
+                pos,
+                status);
     }
     listFormatter->format(results, measureCount, appendTo, status);
     delete [] results; 
@@ -598,7 +639,7 @@ void MeasureFormat::initMeasureFormat(
         return;
     }
     pluralRules->removeRef();
-    if (nf.getAlias() == NULL) {
+    if (nf.isNull()) {
         SharedObject::copyPtr(
                 NumberFormat::createSharedInstance(
                         locale, UNUM_DECIMAL, status),
@@ -662,6 +703,7 @@ const char *MeasureFormat::getLocaleID(UErrorCode &status) const {
 
 UnicodeString &MeasureFormat::formatMeasure(
         const Measure &measure,
+        const NumberFormat &nf,
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const {
@@ -686,7 +728,7 @@ UnicodeString &MeasureFormat::formatMeasure(
     }
     return quantityFormatter->format(
             amtNumber,
-            **numberFormat,
+            nf,
             **pluralRules,
             appendTo,
             pos,
@@ -702,9 +744,9 @@ UnicodeString &MeasureFormat::formatNumeric(
         return appendTo;
     }
     UDate millis = 
-        (UDate) (((hms[0].getDouble(status) * 60.0
-             + hms[1].getDouble(status)) * 60.0
-                  + hms[2].getDouble(status)) * 1000.0);
+        (UDate) (((uprv_trunc(hms[0].getDouble(status)) * 60.0
+             + uprv_trunc(hms[1].getDouble(status))) * 60.0
+                  + uprv_trunc(hms[2].getDouble(status))) * 1000.0);
     switch (bitMap) {
     case 5: // hs
     case 7: // hms
@@ -742,9 +784,24 @@ UnicodeString &MeasureFormat::formatNumeric(
     return appendTo;
 }
 
+static void appendRange(
+        const UnicodeString &src,
+        int32_t start,
+        int32_t end,
+        UnicodeString &dest) {
+    dest.append(src, start, end - start);
+}
+
+static void appendRange(
+        const UnicodeString &src,
+        int32_t end,
+        UnicodeString &dest) {
+    dest.append(src, end, src.length() - end);
+}
+
 UnicodeString &MeasureFormat::formatNumeric(
-        UDate date,
-        const DateFormat &dateFmt,
+        UDate date, // Time since epoch 1:30:00 would be 5400000
+        const DateFormat &dateFmt, // h:mm, m:ss, or h:mm:ss
         UDateFormatField smallestField,
         const Formattable &smallestAmount,
         UnicodeString &appendTo,
@@ -752,20 +809,53 @@ UnicodeString &MeasureFormat::formatNumeric(
     if (U_FAILURE(status)) {
         return appendTo;
     }
+    // Format the smallest amount with this object's NumberFormat
     UnicodeString smallestAmountFormatted;
+
+    // We keep track of the integer part of smallest amount so that
+    // we can replace it later so that we get '0:00:09.3' instead of
+    // '0:00:9.3'
+    FieldPosition intFieldPosition(UNUM_INTEGER_FIELD);
     (*numberFormat)->format(
-            smallestAmount, smallestAmountFormatted, status);
+            smallestAmount, smallestAmountFormatted, intFieldPosition, status);
+    if (
+            intFieldPosition.getBeginIndex() == 0 &&
+            intFieldPosition.getEndIndex() == 0) {
+        status = U_INTERNAL_PROGRAM_ERROR;
+        return appendTo;
+    }
+
+    // Format time. draft becomes something like '5:30:45'
     FieldPosition smallestFieldPosition(smallestField);
     UnicodeString draft;
     dateFmt.format(date, draft, smallestFieldPosition, status);
+
+    // If we find field for smallest amount replace it with the formatted
+    // smallest amount from above taking care to replace the integer part
+    // with what is in original time. For example, If smallest amount
+    // is 9.35s and the formatted time is 0:00:09 then 9.35 becomes 09.35
+    // and replacing yields 0:00:09.35
     if (smallestFieldPosition.getBeginIndex() != 0 ||
-        smallestFieldPosition.getEndIndex() != 0) {
-        appendTo.append(draft, 0, smallestFieldPosition.getBeginIndex());
-        appendTo.append(smallestAmountFormatted);
-        appendTo.append(
+            smallestFieldPosition.getEndIndex() != 0) {
+        appendRange(draft, 0, smallestFieldPosition.getBeginIndex(), appendTo);
+        appendRange(
+                smallestAmountFormatted,
+                0,
+                intFieldPosition.getBeginIndex(),
+                appendTo);
+        appendRange(
+                draft,
+                smallestFieldPosition.getBeginIndex(),
+                smallestFieldPosition.getEndIndex(),
+                appendTo);
+        appendRange(
+                smallestAmountFormatted,
+                intFieldPosition.getEndIndex(),
+                appendTo);
+        appendRange(
                 draft,
                 smallestFieldPosition.getEndIndex(),
-                draft.length());
+                appendTo);
     } else {
         appendTo.append(draft);
     }
@@ -808,8 +898,12 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
     UnicodeString *results = new UnicodeString[measureCount];
     int32_t fieldPositionFoundIndex = -1;
     for (int32_t i = 0; i < measureCount; ++i) {
+        const NumberFormat *nf = cache->getIntegerFormat();
+        if (i == measureCount - 1) {
+            nf = numberFormat->get();
+        }
         if (fieldPositionFoundIndex == -1) {
-            formatMeasure(measures[i], results[i], fpos, status);
+            formatMeasure(measures[i], *nf, results[i], fpos, status);
             if (U_FAILURE(status)) {
                 delete [] results;
                 return appendTo;
@@ -818,7 +912,7 @@ UnicodeString &MeasureFormat::formatMeasuresSlowTrack(
                 fieldPositionFoundIndex = i;
             }
         } else {
-            formatMeasure(measures[i], results[i], dontCare, status);
+            formatMeasure(measures[i], *nf, results[i], dontCare, status);
         }
     }
     int32_t offset;
