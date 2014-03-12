@@ -373,6 +373,18 @@ static UBool getFromCache(
     return U_SUCCESS(status);
 }
 
+static UBool isTimeUnit(const MeasureUnit &mu, const char *tu) {
+  return uprv_strcmp(mu.getType(), "duration") == 0 &&
+          uprv_strcmp(mu.getSubtype(), tu) == 0;
+}
+
+// Converts a composite measure into hours-minutes-seconds and stores at hms
+// array. [0] is hours; [1] is minutes; [2] is seconds. Returns a bit map of
+// units found: 1=hours, 2=minutes, 4=seconds. For example, if measures
+// contains hours-minutes, this function would return 3.
+//
+// If measures cannot be converted into hours, minutes, seconds or if amounts
+// are negative, or if hours, minutes, seconds are out of order, returns 0.
 static int32_t toHMS(
         const Measure *measures,
         int32_t measureCount,
@@ -382,17 +394,17 @@ static int32_t toHMS(
         return 0;
     }
     int32_t result = 0;
-    LocalPointer<MeasureUnit> hourUnit(MeasureUnit::createHour(status));
-    LocalPointer<MeasureUnit> minuteUnit(MeasureUnit::createMinute(status));
-    LocalPointer<MeasureUnit> secondUnit(MeasureUnit::createSecond(status));
     if (U_FAILURE(status)) {
         return 0;
     }
     // We use copy constructor to ensure that both sides of equality operator
     // are instances of MeasureUnit base class and not a subclass. Otherwise,
     // operator== will immediately return false.
+    // TODO(Travis Keep): Propose
+    // UBool isUnitSame(const MeasureUnit &other) const to address performance
+    // issues around copy constructor.
     for (int32_t i = 0; i < measureCount; ++i) {
-        if (MeasureUnit(measures[i].getUnit()) == *hourUnit) {
+        if (isTimeUnit(measures[i].getUnit(), "hour")) {
             // hour must come first
             if (result >= 1) {
                 return 0;
@@ -402,7 +414,7 @@ static int32_t toHMS(
                 return 0;
             }
             result |= 1;
-        } else if (MeasureUnit(measures[i].getUnit()) == *minuteUnit) {
+        } else if (isTimeUnit(measures[i].getUnit(), "minute")) {
             // minute must come after hour
             if (result >= 2) {
                 return 0;
@@ -412,7 +424,7 @@ static int32_t toHMS(
                 return 0;
             }
             result |= 2;
-        } else if (MeasureUnit(measures[i].getUnit()) == *secondUnit) {
+        } else if (isTimeUnit(measures[i].getUnit(), "second")) {
             // second must come after hour and minute
             if (result >= 4) {
                 return 0;
@@ -735,6 +747,7 @@ UnicodeString &MeasureFormat::formatMeasure(
             status);
 }
 
+// Formats hours-minutes-seconds as 5:37:23 or similar.
 UnicodeString &MeasureFormat::formatNumeric(
         const Formattable *hms,  // always length 3
         int32_t bitMap,   // 1=hourset, 2=minuteset, 4=secondset
@@ -799,11 +812,12 @@ static void appendRange(
     dest.append(src, end, src.length() - end);
 }
 
+// Formats time like 5:37:23
 UnicodeString &MeasureFormat::formatNumeric(
         UDate date, // Time since epoch 1:30:00 would be 5400000
         const DateFormat &dateFmt, // h:mm, m:ss, or h:mm:ss
-        UDateFormatField smallestField,
-        const Formattable &smallestAmount,
+        UDateFormatField smallestField, // seconds in 5:37:23.5
+        const Formattable &smallestAmount, // 23.5 for 5:37:23.5
         UnicodeString &appendTo,
         UErrorCode &status) const {
     if (U_FAILURE(status)) {
