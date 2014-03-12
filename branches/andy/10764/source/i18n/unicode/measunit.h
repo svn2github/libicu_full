@@ -165,322 +165,322 @@ class U_I18N_API MeasureUnit: public UObject {
 
     /**
      * Creates a unit of acceleration: g-force
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createGForce(UErrorCode &status);
 
     /**
      * Creates a unit of angle: arc-minute
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createArcMinute(UErrorCode &status);
 
     /**
      * Creates a unit of angle: arc-second
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createArcSecond(UErrorCode &status);
 
     /**
      * Creates a unit of angle: degree
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createDegree(UErrorCode &status);
 
     /**
      * Creates a unit of area: acre
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createAcre(UErrorCode &status);
 
     /**
      * Creates a unit of area: hectare
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createHectare(UErrorCode &status);
 
     /**
      * Creates a unit of area: square-foot
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createSquareFoot(UErrorCode &status);
 
     /**
      * Creates a unit of area: square-kilometer
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createSquareKilometer(UErrorCode &status);
 
     /**
      * Creates a unit of area: square-meter
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createSquareMeter(UErrorCode &status);
 
     /**
      * Creates a unit of area: square-mile
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createSquareMile(UErrorCode &status);
 
     /**
      * Creates a unit of duration: day
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createDay(UErrorCode &status);
 
     /**
      * Creates a unit of duration: hour
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createHour(UErrorCode &status);
 
     /**
      * Creates a unit of duration: millisecond
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMillisecond(UErrorCode &status);
 
     /**
      * Creates a unit of duration: minute
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMinute(UErrorCode &status);
 
     /**
      * Creates a unit of duration: month
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMonth(UErrorCode &status);
 
     /**
      * Creates a unit of duration: second
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createSecond(UErrorCode &status);
 
     /**
      * Creates a unit of duration: week
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createWeek(UErrorCode &status);
 
     /**
      * Creates a unit of duration: year
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createYear(UErrorCode &status);
 
     /**
      * Creates a unit of length: centimeter
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createCentimeter(UErrorCode &status);
 
     /**
      * Creates a unit of length: foot
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createFoot(UErrorCode &status);
 
     /**
      * Creates a unit of length: inch
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createInch(UErrorCode &status);
 
     /**
      * Creates a unit of length: kilometer
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createKilometer(UErrorCode &status);
 
     /**
      * Creates a unit of length: light-year
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createLightYear(UErrorCode &status);
 
     /**
      * Creates a unit of length: meter
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMeter(UErrorCode &status);
 
     /**
      * Creates a unit of length: mile
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMile(UErrorCode &status);
 
     /**
      * Creates a unit of length: millimeter
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMillimeter(UErrorCode &status);
 
     /**
      * Creates a unit of length: picometer
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createPicometer(UErrorCode &status);
 
     /**
      * Creates a unit of length: yard
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createYard(UErrorCode &status);
 
     /**
      * Creates a unit of mass: gram
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createGram(UErrorCode &status);
 
     /**
      * Creates a unit of mass: kilogram
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createKilogram(UErrorCode &status);
 
     /**
      * Creates a unit of mass: ounce
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createOunce(UErrorCode &status);
 
     /**
      * Creates a unit of mass: pound
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createPound(UErrorCode &status);
 
     /**
      * Creates a unit of power: horsepower
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createHorsepower(UErrorCode &status);
 
     /**
      * Creates a unit of power: kilowatt
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createKilowatt(UErrorCode &status);
 
     /**
      * Creates a unit of power: watt
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createWatt(UErrorCode &status);
 
     /**
      * Creates a unit of pressure: hectopascal
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createHectopascal(UErrorCode &status);
 
     /**
      * Creates a unit of pressure: inch-hg
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createInchHg(UErrorCode &status);
 
     /**
      * Creates a unit of pressure: millibar
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMillibar(UErrorCode &status);
 
     /**
      * Creates a unit of speed: kilometer-per-hour
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createKilometerPerHour(UErrorCode &status);
 
     /**
      * Creates a unit of speed: meter-per-second
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMeterPerSecond(UErrorCode &status);
 
     /**
      * Creates a unit of speed: mile-per-hour
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createMilePerHour(UErrorCode &status);
 
     /**
      * Creates a unit of temperature: celsius
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createCelsius(UErrorCode &status);
 
     /**
      * Creates a unit of temperature: fahrenheit
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createFahrenheit(UErrorCode &status);
 
     /**
      * Creates a unit of volume: cubic-kilometer
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createCubicKilometer(UErrorCode &status);
 
     /**
      * Creates a unit of volume: cubic-mile
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createCubicMile(UErrorCode &status);
 
     /**
      * Creates a unit of volume: liter
-     * @param errorCode ICU error code.
+     * @param status ICU error code.
      * @draft ICU 53
      */
     static MeasureUnit *createLiter(UErrorCode &status);
