@@ -97,14 +97,14 @@ class U_I18N_API MeasureFormat : public Format {
     #ifndef U_HIDE_DRAFT_API
     /**
      * Constructor.
-     * @draft ICU 53.
+     * @draft ICU 53
      */
     MeasureFormat(
             const Locale &locale, UMeasureFormatWidth width, UErrorCode &status);
 
     /**
      * Constructor.
-     * @draft ICU 53.
+     * @draft ICU 53
      */
     MeasureFormat(
             const Locale &locale,
@@ -114,13 +114,13 @@ class U_I18N_API MeasureFormat : public Format {
 
     /**
      * Copy constructor.
-     * @draft ICU 53.
+     * @draft ICU 53
      */
     MeasureFormat(const MeasureFormat &other);
 
     /**
      * Assignment operator.
-     * @draft ICU 53.
+     * @draft ICU 53
      */
     MeasureFormat &operator=(const MeasureFormat &rhs);
 

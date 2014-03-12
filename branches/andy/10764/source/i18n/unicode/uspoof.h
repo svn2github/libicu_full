@@ -971,7 +971,7 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 UErrorCode *status);
 #endif   /* U_SHOW_CPLUSPLUS_API */
 
-
+#ifndef U_HIDE_DRAFT_API
 /**
   * Get the set of Candidate Characters for Inclusion in Identifiers, as defined
   * in Unicode UAX #31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
@@ -981,9 +981,9 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @stable ICU 51
+  * @draft ICU 51
   */
-U_STABLE const USet * U_EXPORT2
+U_DRAFT const USet * U_EXPORT2
 uspoof_getInclusionSet(UErrorCode *status);
 
 /**
@@ -995,9 +995,9 @@ uspoof_getInclusionSet(UErrorCode *status);
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @stable ICU 51
+  * @draft ICU 51
   */
-U_STABLE const USet * U_EXPORT2
+U_DRAFT const USet * U_EXPORT2
 uspoof_getRecommendedSet(UErrorCode *status);
 
 #if U_SHOW_CPLUSPLUS_API
@@ -1011,9 +1011,9 @@ uspoof_getRecommendedSet(UErrorCode *status);
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @stable ICU 51
+  * @draft ICU 51
   */
-U_STABLE const icu::UnicodeSet * U_EXPORT2
+U_DRAFT const icu::UnicodeSet * U_EXPORT2
 uspoof_getInclusionUnicodeSet(UErrorCode *status);
 
 /**
@@ -1025,10 +1025,11 @@ uspoof_getInclusionUnicodeSet(UErrorCode *status);
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @stable ICU 51
+  * @draft ICU 51
   */
-U_STABLE const icu::UnicodeSet * U_EXPORT2
+U_DRAFT const icu::UnicodeSet * U_EXPORT2
 uspoof_getRecommendedUnicodeSet(UErrorCode *status);
+#endif  /* U_HIDE_DRAFT_API */
 
 #endif /* U_SHOW_CPLUSPLUS_API */
 

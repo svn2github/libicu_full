@@ -50,7 +50,7 @@ class U_I18N_API MeasureUnit: public UObject {
         
     /**
      * Assignment operator.
-     * @draft ICU 53.
+     * @draft ICU 53
      */
     MeasureUnit &operator=(const MeasureUnit &other);
 #endif /* U_HIDE_DRAFT_API */
