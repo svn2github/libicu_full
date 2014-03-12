@@ -148,6 +148,9 @@ class U_COMMON_API ListFormatter : public UObject{
      * @internal constructor made public for testing.
      */
     ListFormatter(const ListFormatData &data);
+    /**
+     * @internal constructor made public for testing.
+     */
     ListFormatter(const ListFormatInternal* listFormatterInternal);
 #endif  /* U_HIDE_INTERNAL_API */
 
