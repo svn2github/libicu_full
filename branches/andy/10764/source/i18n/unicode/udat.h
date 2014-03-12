@@ -898,7 +898,7 @@ udat_getBooleanAttribute(const UDateFormat* fmt, UDateFormatBooleanAttribute att
  * @draft ICU 53
  */
 U_DRAFT void U_EXPORT2
-udat_setBooleanAttribute(UDateFormat *fmt, UDateFormatBooleanAttribute attr, UBool, UErrorCode* status);
+udat_setBooleanAttribute(UDateFormat *fmt, UDateFormatBooleanAttribute attr, UBool newValue, UErrorCode* status);
 
 #endif /* U_HIDE_DRAFT_API */
 
