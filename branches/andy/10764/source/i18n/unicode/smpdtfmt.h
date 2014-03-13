@@ -1109,6 +1109,7 @@ public:
      */
     virtual const TimeZoneFormat* getTimeZoneFormat(void) const;
 
+/* Cannot use #ifndef U_HIDE_DRAFT_API for the following draft method since it is virtual */
     /**
      * Set a particular UDisplayContext value in the formatter, such as
      * UDISPCTX_CAPITALIZATION_FOR_STANDALONE. Note: For getContext, see
@@ -1117,7 +1118,7 @@ public:
      * @param status Input/output status. If at entry this indicates a failure
      *               status, the function will do nothing; otherwise this will be
      *               updated with any new status from the function. 
-     * @stable ICU 51
+     * @draft ICU 53
      */
     virtual void setContext(UDisplayContext value, UErrorCode& status);
 
