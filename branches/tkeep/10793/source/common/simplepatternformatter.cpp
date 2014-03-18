@@ -177,6 +177,13 @@ UBool SimplePatternFormatter::compile(
     return TRUE;
 }
 
+UBool SimplePatternFormatter::startsWithPlaceholder(int32_t id) const {
+    if (placeholderSize == 0) {
+        return FALSE;
+    }
+    return (placeholders[0].offset == 0 && placeholders[0].id == id);
+}
+
 UnicodeString& SimplePatternFormatter::format(
         const UnicodeString &arg0,
         UnicodeString &appendTo,
@@ -261,17 +268,26 @@ UnicodeString& SimplePatternFormatter::format(
         appendTo.append(noPlaceholders);
         return appendTo;
     }
-    appendRange(
-            noPlaceholders,
-            0,
-            placeholders[0].offset,
-            appendTo);
-    updatePlaceholderOffset(
-            placeholders[0].id,
-            appendTo.length(),
-            offsetArray,
-            offsetArrayLength);
-    appendTo.append(*placeholderValues[placeholders[0].id]);
+    if (placeholders[0].offset > 0 ||
+            placeholderValues[placeholders[0].id] != &appendTo) {
+        appendRange(
+                noPlaceholders,
+                0,
+                placeholders[0].offset,
+                appendTo);
+        updatePlaceholderOffset(
+                placeholders[0].id,
+                appendTo.length(),
+                offsetArray,
+                offsetArrayLength);
+        appendTo.append(*placeholderValues[placeholders[0].id]);
+    } else {
+        updatePlaceholderOffset(
+                placeholders[0].id,
+                0,
+                offsetArray,
+                offsetArrayLength);
+    }
     for (int32_t i = 1; i < placeholderSize; ++i) {
         appendRange(
                 noPlaceholders,

@@ -91,6 +91,12 @@ public:
     }
 
     /**
+     * Returns true if the pattern this object represents starts with
+     * placeholder id; otherwise, returns false.
+     */
+    UBool startsWithPlaceholder(int32_t id) const;
+
+    /**
      * Formats given value.
      */
     UnicodeString &format(
@@ -126,7 +132,12 @@ public:
      * @param placeholderValueCount the number of placeholder values
      *  must be at least large enough to provide values for all placeholders
      *  in this object. Otherwise status set to U_ILLEGAL_ARGUMENT_ERROR.
-     * @param appendTo resulting string appended here.
+     * @param appendTo resulting string appended here. Optimization: If
+     *   the pattern this object represents starts with a placeholder AND
+     *   appendTo references the value of that same placeholder, then that
+     *   placeholder value is not copied to appendTo (Its already there).
+     *   If the value of the starting placeholder is a very large string,
+     *   this optimization can offer huge savings.
      * @param offsetArray The offset of each placeholder value in appendTo
      *  stored here. The first value gets the offset of the value for {0};
      *  the 2nd for {1}; the 3rd for {2} etc. -1 means that the corresponding
