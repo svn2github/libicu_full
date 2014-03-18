@@ -90,6 +90,8 @@ void SimplePatternFormatterTest::TestManyPlaceholders() {
     SimplePatternFormatter fmt;
     fmt.compile(
             "Templates {2}{1}{5} and {4} are out of order.", status);
+    assertSuccess("Status", status);
+    assertFalse("startsWithPlaceholder", fmt.startsWithPlaceholder(2));
     assertEquals("PlaceholderCount", 6, fmt.getPlaceholderCount());
     UnicodeString values[] = {
             "freddy", "tommy", "frog", "billy", "leg", "{0}"};
@@ -193,6 +195,9 @@ void SimplePatternFormatterTest::TestOptimization() {
     UErrorCode status = U_ZERO_ERROR;
     SimplePatternFormatter fmt;
     fmt.compile("{2}, {0}, {1} and {3}", status);
+    assertSuccess("Status", status);
+    assertTrue("startsWithPlaceholder", fmt.startsWithPlaceholder(2));
+    assertFalse("startsWithPlaceholder", fmt.startsWithPlaceholder(0));
     UnicodeString values[] = {
             "freddy", "frog", "leg", "by"};
     UnicodeString *params[] = {

@@ -867,6 +867,7 @@ void MeasureFormatTest::TestEquality() {
 }
 
 void MeasureFormatTest::TestBenchmark() {
+/*
     clock_t t;
     UErrorCode status = U_ZERO_ERROR;
     Locale en("en");
@@ -885,6 +886,7 @@ void MeasureFormatTest::TestBenchmark() {
     }
     t = clock() - t;
     errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
+*/
 }
 
 void MeasureFormatTest::TestDoubleZero() {
