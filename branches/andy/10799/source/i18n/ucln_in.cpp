@@ -5,7 +5,7 @@
 *                Corporation and others. All Rights Reserved.                *
 *                                                                            *
 ******************************************************************************
-*   file name:  ucln_in.c
+*   file name:  ucln_in.cpp
 *   encoding:   US-ASCII
 *   tab size:   8 (not used)
 *   indentation:4
