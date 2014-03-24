@@ -29,7 +29,7 @@ static cleanupFunc *gCleanupFunctions[UCLN_I18N_COUNT];
 
 static UBool i18n_cleanup(void)
 {
-    ECleanupI18NType libType = UCLN_I18N_START;
+    int32_t libType = UCLN_I18N_START;
     (void)copyright;   /* Suppress unused variable warning with clang. */
 
     while (++libType<UCLN_I18N_COUNT) {

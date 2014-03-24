@@ -34,7 +34,7 @@ static cleanupFunc *gCleanupFunctions[UCLN_IO_COUNT];
 
 static UBool io_cleanup(void)
 {
-    ECleanupIOType libType = UCLN_IO_START;
+    int32_t libType = UCLN_IO_START;
 
     (void)copyright;  // Suppress unused variable warning.
     while (++libType<UCLN_IO_COUNT) {
