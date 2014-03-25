@@ -17,6 +17,7 @@
 U_NAMESPACE_BEGIN
 
 class DictionaryMatcher;
+class Normalizer2;
 
 /*******************************************************************
  * DictionaryBreakEngine
@@ -327,7 +328,7 @@ class CjkBreakEngine : public DictionaryBreakEngine {
   UnicodeSet                fHiraganaWordSet;
 
   DictionaryMatcher        *fDictionary;
-  Normalizer2               *nfkcNorm2;
+  const Normalizer2        *nfkcNorm2;
 
  public:
 

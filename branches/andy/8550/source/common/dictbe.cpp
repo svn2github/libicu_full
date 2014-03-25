@@ -14,6 +14,7 @@
 #include "unicode/uniset.h"
 #include "unicode/chariter.h"
 #include "unicode/ubrk.h"
+#include "uvectr32.h"
 #include "uvector.h"
 #include "uassert.h"
 #include "unicode/normlzr.h"
@@ -979,14 +980,15 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         int32_t inRangeStart,
         int32_t inRangeEnd,
         UStack &foundBreaks ) const {
-    if (rangeStart >= rangeEnd) {
+    if (inRangeStart >= inRangeEnd) {
         return 0;
     }
 
-    UText   *text       = NULL;
-    int32_t rangeStart  = 0;
-    int32_t rangeEnd    = 0;
-    UVector32 *inputMap = NULL;
+    UText     *text        = NULL;
+    int32_t    rangeStart  = 0;
+    int32_t    rangeEnd    = 0;
+    UVector32 *inputMap    = NULL;
+    UErrorCode status      = U_ZERO_ERROR;
 
     // Check for fast path case:
     //   - UText is a UTF-16 format with the requested range within a single chunk.
@@ -998,13 +1000,13 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     if ((text->providerProperties & utext_i32_flag(UTEXT_PROVIDER_STABLE_CHUNKS)) &&
          text->chunkNativeStart <= rangeStart &&
          text->chunkNativeLimit >= rangeEnd   &&
-         text->nativeIndexingLimit >= rangeEnd - chunkNativeStart) {
+         text->nativeIndexingLimit >= rangeEnd - text->chunkNativeStart) {
          
         // Read-only aliasing UnicodeString constructor
-        UnicodeString textStr(FLASE, 
+        UnicodeString textStr(FALSE, 
                               text->chunkContents + rangeStart - text->chunkNativeStart,
                               rangeEnd - rangeStart);
-        if (nfkcNorm2.isNormalized(textStr, status)) {
+        if (nfkcNorm2->isNormalized(textStr, status)) {
             fastPath = TRUE;
             text = inText;
             rangeStart = inRangeStart;
@@ -1024,43 +1026,61 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         if (U_FAILURE(status)) {
             return 0;
         }
-        // Copy the text from the original inText (UText) adjustedInput (UnicodeString).
 
+        // Copy the text from the original inText (UText) adjustedInput (UnicodeString).
         while (utext_getNativeIndex(inText) < limit) {
-            nativePosition = utext_getNativeIndex(inText);
+            int32_t nativePosition = utext_getNativeIndex(inText);
             UChar32 c = utext_next32(inText);
             U_ASSERT(c != U_SENTINEL);
-            adjustedInput.append(utext_next32(inText);
-            while (inputMap.size() < adjustedInput.length()) {
-                inputMap.addElement(nativePosition, status);
+            adjustedInput.append(utext_next32(inText));
+            while (inputMap->size() < adjustedInput.length()) {
+                inputMap->addElement(nativePosition, status);
             }
         }
-        inputMap.addElement(limit, status);
+        inputMap->addElement(limit, status);
 
         // Normalized already?
-
-        if (!nfkcNorm2.isNormalized(adjustedInput, status)) {
-            UnicodeString normalizedInput;
-            UVector32 normalizedMap;   //  normalizedInput position -> original UText position.
+        if (!nfkcNorm2->isNormalized(adjustedInput, status)) {
+            UnicodeString normalizedInput;   
+            //  normalizedMap[normalizedInput position] ==  original UText position.
+            UVector32 *normalizedMap = new UVector32(status);
+            if (U_FAILURE(status)) {
+                return 0;
+            }
             
             UnicodeString fragment;
             int32_t srcI = 0;
             for (;;) {                 // Once per normalization chunk
             
-                fragment.reset();
+                fragment.remove();
                 int32_t fragmentStartI = srcI;
+                int32_t fragmentLimitI = fragmentStartI;
                 UChar32 c = adjustedInput.char32At(srcI);
                 for (;;) {
                     fragment.append(c);
                     srcI = adjustedInput.moveIndex32(srcI, 1);
                     c = adjustedInput.char32At(srcI);
-                    if (nfkcNorm2.hasBoundaryBefore(c) {
+                    if (c == U_SENTINEL || nfkcNorm2.hasBoundaryBefore(c)) {
+                        fragmentLimitI = srcI;
                         break;
                     }
                 }
-                    
 
+                // Do the normalization.
+                // Append the chunk to normalizedInput
 
+                // Map every position in the normalized chunk to the start of the chunk
+                //   in the original input.
+                int32_t fragmentOriginalStart = inputMap[fragmentStartI];
+                while (normalizedMap.size() < fragmentLimitI) {
+                    normalizedMap.addElement(fragmentOriginalStart, status);
+                    if (U_FAILURE(status)) {
+                        break;
+                    }
+                }
+            }
+            delete inputMap;
+            inputMap = normalizedMap;
         }
     }
 
