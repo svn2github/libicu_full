@@ -977,42 +977,38 @@ static inline int32_t utext_i32_flag(int32_t bitIndex) {
  */
 int32_t 
 CjkBreakEngine::divideUpDictionaryRange( UText *inText,
-        int32_t inRangeStart,
-        int32_t inRangeEnd,
+        int32_t rangeStart,
+        int32_t rangeEnd,
         UStack &foundBreaks ) const {
-    if (inRangeStart >= inRangeEnd) {
+    if (rangeStart >= rangeEnd) {
         return 0;
     }
 
-    UText         *text        = NULL;
-    int32_t        rangeStart  = 0;
-    int32_t        rangeEnd    = 0;
+    // UnicodeString version of input UText, NFKC normalized in necessary.
     UnicodeString *inString;
+
+    // inputMap[inStringIndex] = corresponding native index from UText inText.
+    // If NULL then mapping is 1:1
     UVector32     *inputMap    = NULL;
+
     UErrorCode     status      = U_ZERO_ERROR;
 
-    // Check for fast path case:
-    //   - UText is a UTF-16 format with the requested range within a single chunk.
-    //   - The text is already normalized (NFKC).
-    //   When these conditions are met, the dictionary implementation can work directly
-    //   with the orignal input UText.
 
-    if ((text->providerProperties & utext_i32_flag(UTEXT_PROVIDER_STABLE_CHUNKS)) &&
-         text->chunkNativeStart <= rangeStart &&
-         text->chunkNativeLimit >= rangeEnd   &&
-         text->nativeIndexingLimit >= rangeEnd - text->chunkNativeStart) {
+    // if UText has the input string as one contiguous UTF-16 chunk
+    if ((inText->providerProperties & utext_i32_flag(UTEXT_PROVIDER_STABLE_CHUNKS)) &&
+         inText->chunkNativeStart <= rangeStart &&
+         inText->chunkNativeLimit >= rangeEnd   &&
+         inText->nativeIndexingLimit >= rangeEnd - inText->chunkNativeStart) {
          
         // Input UTtxt is in one contiguous UTF-16 chunk.
-        // Read-only aliasing UnicodeString constructor for it.
+        // Use Read-only aliasing UnicodeString constructor on it.
         inString = new UnicodeString(FALSE, 
-                              text->chunkContents + rangeStart - text->chunkNativeStart,
+                              inText->chunkContents + rangeStart - inText->chunkNativeStart,
                               rangeEnd - rangeStart);
-        rangeStart = inRangeStart;
-        rangeEnd   = inRangeEnd;
     } else {
         // Copy the text from the original inText (UText) to inString (UnicodeString).
-        utext_setNativeIndex(inText, inRangeStart);
-        int32_t limit = inRangeEnd;
+        utext_setNativeIndex(inText, rangeStart);
+        int32_t limit = rangeEnd;
         U_ASSERT(limit <= utext_nativeLength(inText));
         if (limit > utext_nativeLength(inText)) {
             limit = utext_nativeLength(inText);
@@ -1033,7 +1029,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
 
 
     if (!nfkcNorm2->isNormalized(*inString, status)) {
-        UnicodeString *normalizedInput;   
+        UnicodeString *normalizedInput = new UnicodeString();   
         //  normalizedMap[normalizedInput position] ==  original UText position.
         UVector32 *normalizedMap = new UVector32(status);
         if (U_FAILURE(status)) {
@@ -1077,44 +1073,78 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         inString = normalizedInput;
     }
 
-    int32_t numChars = inString->countChar32();
-
-    // From this point on, all the indices refer to the indices of
-    // the normalized input string.
-
+    int32_t numCodePts = inString->countChar32();
+    if (numCodePts != inString->length()) {
+        // There are supplementary characters in the input.
+        // The dictionary will produce boundary positions in terms of code point indexes,
+        //   not in terms of code unit string indexes.
+        // Use the inputMap mechanism to take care of this in addition to indexing differences
+        //    from normalization and/or UTF-8 input.
+        UBool hadExistingMap = (inputMap != NULL);
+        if (!hadExistingMap) {
+            inputMap = new UVector32(status);
+        }
+        int32_t cpIdx = 0;
+        for (int32_t cuIdx = 0; ; cuIdx = inString->moveIndex32(cuIdx, 1)) {
+            U_ASSERT(cuIdx >= cpIdx);
+            if (hadExistingMap) {
+                inputMap->setElementAt(inputMap->elementAti(cuIdx), cpIdx);
+            } else {
+                inputMap->addElement(cuIdx, status);
+            }
+            cpIdx++;
+            if (cuIdx == inString->length()) {
+               break;
+            }
+        }
+    }
+                
     // bestSnlp[i] is the snlp of the best segmentation of the first i
-    // characters in the range to be matched.
-    UVector32 bestSnlp(numChars + 1, status);
+    // code points in the range to be matched.
+    UVector32 bestSnlp(numCodePts + 1, status);
     bestSnlp.addElement(0, status);
-    for(int i = 1; i <= numChars; i++) {
+    for(int i = 1; i <= numCodePts; i++) {
         bestSnlp.addElement(kuint32max, status);
     }
 
 
-    // prev[i] is the index of the last CJK character in the previous word in 
+    // prev[i] is the index of the last CJK code point in the previous word in 
     // the best segmentation of the first i characters.
-    UVector32 prev(numChars + 1, status);
-    for(int32_t i = 0; i <= numChars; i++){
+    UVector32 prev(numCodePts + 1, status);
+    for(int32_t i = 0; i <= numCodePts; i++){
         prev.addElement(-1, status);
     }
 
-    const size_t maxWordSize = 20;
-    UVector32 values(numChars, status);
-    values.setSize(numChars);
-    UVector32 lengths(numChars, status);
-    lengths.setSize(numChars);
+    const int32_t maxWordSize = 20;
+    UVector32 values(numCodePts, status);
+    values.setSize(numCodePts);
+    UVector32 lengths(numCodePts, status);
+    lengths.setSize(numCodePts);
+
+    // TODO: dump this UText, switch dictionary->matches() to work on UnicodeString.
+    UText fu = UTEXT_INITIALIZER;
+    utext_openUnicodeString(&fu, inString, &status);
 
     // Dynamic programming to find the best segmentation.
-    for (int32_t i = 0; i < numChars; ++i) {
-        if ((uint32_t)bestSnlp.elementAti(i) == kuint32max)
+
+    // In outer loop, i  is the code point index,
+    //                ix is the corresponding string (code unit) index.
+    //    They differ when the string contains supplementary characters.
+    int32_t ix = 0;
+    for (int32_t i = 0;  i < numCodePts;  ++i, ix = inString->moveIndex32(ix, 1)) {
+        if ((uint32_t)bestSnlp.elementAti(i) == kuint32max) {
             continue;
+        }
 
         int32_t count;
         // limit maximum word length matched to size of current substring
-        int32_t maxSearchLength = (i + maxWordSize < (size_t) numChars)? maxWordSize : (numChars - i);
+        int32_t maxSearchLength = (i + maxWordSize < numCodePts) ? maxWordSize : (numCodePts - i);
 
-        // TODO: utext vs. UnicodeString
-        fDictionary->matches(&normalizedText, maxSearchLength, lengths.elems(), count, maxSearchLength, values.elems());
+        // TODO: utext vs. UnicodeString. Change matches() function.
+        //       pass lengths and values as UVector32. Eliminates count, limit.
+        utext_setNativeIndex(&fu, ix);
+
+        fDictionary->matches(&fu, maxSearchLength, lengths.getBuffer(), count, maxSearchLength, values.getBuffer());
 
         // if there are no single character matches found in the dictionary 
         // starting with this charcter, treat character as a 1-character word 
@@ -1122,7 +1152,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         // Exclude Korean characters from this treatment, as they should be left
         // together by default.
         if ((count == 0 || lengths.elementAti(0) != 1) &&
-                !fHangulWordSet.contains(inString->char32At(i))) {
+                !fHangulWordSet.contains(inString->char32At(ix))) {
             values.setElementAt(maxSnlp, count);   // 255
             lengths.setElementAt(1, count++);
         }
@@ -1143,58 +1173,65 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         // specified in the katakanaCost table according to its length.
 
         bool is_prev_katakana = false;
-        bool is_katakana = isKatakana(inString->char32At(i));
+        bool is_katakana = isKatakana(inString->char32At(ix));
+        int32_t katakanaRunLength = 1;
         if (!is_prev_katakana && is_katakana) {
-            int32_t j = inString->moveIndex32(i, 1);
+            int32_t j = inString->moveIndex32(ix, 1);
             // Find the end of the continuous run of Katakana characters
-            while (j < numChars && (j - i) < kMaxKatakanaGroupLength &&
+            while (j < inString->length() && katakanaRunLength < kMaxKatakanaGroupLength &&
                     isKatakana(inString->char32At(j))) {
                 j = inString->moveIndex32(j, 1);
+                katakanaRunLength++;
             }
-            if ((j - i) < kMaxKatakanaGroupLength) {
-                uint32_t newSnlp = bestSnlp.elementAti(i) + getKatakanaCost(j - i);
+            if (katakanaRunLength < kMaxKatakanaGroupLength) {
+                uint32_t newSnlp = bestSnlp.elementAti(i) + getKatakanaCost(katakanaRunLength);
                 if (newSnlp < (uint32_t)bestSnlp.elementAti(j)) {
                     bestSnlp.setElementAt(newSnlp, j);
-                    prev.setElementAt(i, j);  // prev[j] = i;
+                    prev.setElementAt(i, i+katakanaRunLength);  // prev[j] = i;
                 }
             }
         }
         is_prev_katakana = is_katakana;
     }
+    utext_close(&fu);   // TODO: dump this.
 
     // Start pushing the optimal offset index into t_boundary (t for tentative).
-    // prev[numChars] is guaranteed to be meaningful.
+    // prev[numCodePts] is guaranteed to be meaningful.
     // We'll first push in the reverse order, i.e.,
-    // t_boundary[0] = numChars, and afterwards do a swap.
-    // TODO: Replace by UVector32.
-    AutoBuffer<int, maxWordSize> t_boundary(numChars + 1);
+    // t_boundary[0] = numCodePts, and afterwards do a swap.
+    UVector32 t_boundary(numCodePts+1, status);
 
     int numBreaks = 0;
     // No segmentation found, set boundary to end of range
-    if ((uint32_t)bestSnlp.elementAti(numChars) == kuint32max) {
-        t_boundary[numBreaks++] = numChars;
+    if ((uint32_t)bestSnlp.elementAti(numCodePts) == kuint32max) {
+        t_boundary.addElement(numCodePts, status);
+        numBreaks++;
     } else {
-        for (int32_t i = numChars; i > 0; i = prev.elementAti(i)) {
-            t_boundary[numBreaks++] = i;
+        for (int32_t i = numCodePts; i > 0; i = prev.elementAti(i)) {
+            t_boundary.addElement(i, status);
+            numBreaks++;
         }
-        U_ASSERT(prev[t_boundary[numBreaks - 1]] == 0);
+        U_ASSERT(prev.elementAti(t_boundary.elementAti(numBreaks - 1)) == 0);
     }
 
-    // Reverse offset index in t_boundary.
-    // Don't add a break for the start of the dictionary range if there is one
+    // Add a break for the start of the dictionary range if there is not one
     // there already.
     if (foundBreaks.size() == 0 || foundBreaks.peeki() < rangeStart) {
-        t_boundary[numBreaks++] = 0;
+        t_boundary.addElement(rangeStart, status);
+        numBreaks++;
     }
 
-    // Now that we're done, convert positions in t_bdry[] (indices in 
-    // the normalized input string) back to indices in the raw input string
-    // while reversing t_bdry and pushing values to foundBreaks.
+    // Now that we're done, convert positions in t_boundary[] (indices in 
+    // the normalized input string) back to indices in the original input UText
+    // while reversing t_boundary and pushing values to foundBreaks.
     for (int i = numBreaks-1; i >= 0; i--) {
-        foundBreaks.push(charPositions[t_boundary[i]] + rangeStart, status);
+        int32_t cpPos = t_boundary.elementAti(i);
+        int32_t utextPos = inputMap->elementAti(cpPos) + rangeStart;
+        foundBreaks.push(utextPos, status);
     }
 
-    utext_close(&normalizedText);
+    delete inString;
+    delete inputMap;
     return numBreaks;
 }
 #endif
