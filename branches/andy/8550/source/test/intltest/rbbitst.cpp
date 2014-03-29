@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1999-2013, International Business Machines Corporation and
+ * Copyright (c) 1999-2014, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 /************************************************************************
@@ -396,9 +396,10 @@ static void printStringBreaks(UText *tstr, int expected[], int expectedCount) {
 static void printStringBreaks(const UnicodeString &ustr, int expected[], int expectedCount) {
    UErrorCode status = U_ZERO_ERROR;
    UText *tstr = NULL;
-   utext_openConstUnicodeString(tstr, &ustr, &status);
+   tstr = utext_openConstUnicodeString(NULL, &ustr, &status);
    if (U_FAILURE(status)) {
        printf("printStringBreaks, utext_openConstUnicodeString() returns %s\n", u_errorName(status));
+       return;
     }
    printStringBreaks(tstr, expected, expectedCount);
    utext_close(tstr);

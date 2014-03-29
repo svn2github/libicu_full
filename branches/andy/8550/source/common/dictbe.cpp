@@ -1038,19 +1038,18 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         
         UnicodeString fragment;
         UnicodeString normalizedFragment;
-        int32_t srcI = 0;
-        for (;;) {                 // Once per normalization chunk
-        
+        for (int32_t srcI = 0; srcI < inString->length();) {                 // Once per normalization chunk
             fragment.remove();
             int32_t fragmentStartI = srcI;
-            int32_t fragmentLimitI = fragmentStartI;
             UChar32 c = inString->char32At(srcI);
             for (;;) {
                 fragment.append(c);
                 srcI = inString->moveIndex32(srcI, 1);
+                if (srcI == inString->length()) {
+                    break;
+                }
                 c = inString->char32At(srcI);
-                if (c == U_SENTINEL || nfkcNorm2->hasBoundaryBefore(c)) {
-                    fragmentLimitI = srcI;
+                if (nfkcNorm2->hasBoundaryBefore(c)) {
                     break;
                 }
             }
@@ -1226,7 +1225,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     // while reversing t_boundary and pushing values to foundBreaks.
     for (int i = numBreaks-1; i >= 0; i--) {
         int32_t cpPos = t_boundary.elementAti(i);
-        int32_t utextPos = inputMap->elementAti(cpPos) + rangeStart;
+        int32_t utextPos = rangeStart + (inputMap ? inputMap->elementAti(cpPos) : cpPos);
         foundBreaks.push(utextPos, status);
     }
 
