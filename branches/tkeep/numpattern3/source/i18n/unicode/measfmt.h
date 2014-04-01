@@ -111,6 +111,7 @@ class U_I18N_API MeasureFormat : public Format {
             UMeasureFormatWidth width,
             NumberFormat *nfToAdopt,
             UErrorCode &status);
+#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Copy constructor.
@@ -124,8 +125,6 @@ class U_I18N_API MeasureFormat : public Format {
      */
     MeasureFormat &operator=(const MeasureFormat &rhs);
 
-#endif /* U_HIDE_DRAFT_API */
-    
     /**
      * Destructor.
      * @stable ICU 3.0
@@ -246,6 +245,7 @@ class U_I18N_API MeasureFormat : public Format {
 
 #ifndef U_HIDE_INTERNAL_API 
 
+#ifndef U_HIDE_DRAFT_API
     /**
      * ICU use only.
      * Initialize or change MeasureFormat class from subclass.
@@ -256,7 +256,7 @@ class U_I18N_API MeasureFormat : public Format {
             UMeasureFormatWidth width,
             NumberFormat *nfToAdopt,
             UErrorCode &status);
-
+#endif
     /**
      * ICU use only.
      * Allows subclass to change locale. Note that this method also changes
@@ -303,7 +303,9 @@ class U_I18N_API MeasureFormat : public Format {
     const MeasureFormatCacheData *cache;
     const SharedNumberFormat *numberFormat;
     const SharedPluralRules *pluralRules;
+#ifndef U_HIDE_DRAFT_API
     UMeasureFormatWidth width;    
+#endif
 
     // Declared outside of MeasureFormatSharedData because ListFormatter
     // objects are relatively cheap to copy; therefore, they don't need to be
