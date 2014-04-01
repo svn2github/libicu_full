@@ -25,6 +25,8 @@
 
 U_NAMESPACE_BEGIN
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 /*
  ******************************************************************
  */
@@ -162,7 +164,8 @@ PossibleWord::candidates( UText *text, DictionaryMatcher *dict, int32_t rangeEnd
     int32_t start = (int32_t)utext_getNativeIndex(text);
     if (start != offset) {
         offset = start;
-        prefix = dict->matches(text, rangeEnd-start, lengths, count, sizeof(lengths)/sizeof(lengths[0]));
+        // TODO: 2nd parameter is supposed to be a count of code points, the value supplied is wrong.
+        prefix = dict->matches(text, rangeEnd-start, NULL, lengths, count, LENGTHOF(lengths));
         // Dictionary leaves text after longest prefix, not longest word. Back up.
         if (count <= 0) {
             utext_setNativeIndex(text, start);
@@ -1162,9 +1165,16 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         //       pass lengths and values as UVector32. Eliminates count, limit.
         utext_setNativeIndex(&fu, ix);
 
-        fDictionary->matches(&fu, maxSearchLength, lengths.getBuffer(), count, maxSearchLength, values.getBuffer());
+        fDictionary->matches(&fu, 
+                             maxSearchLength,      // Maximum code points to consider
+                             lengths.getBuffer(),  // Lengths in code points of words beginning here. Output Array.
+                             NULL,                 // Lengths in UText code units. Output param. We don't need this.
+                             count,                // Number of words. Output Param.
+                             maxSearchLength,      // Capacity of output arrays.
+                             values.getBuffer()    // Trie Values (output array)
+                            );
 
-        // if there are no single character matches found in the dictionary 
+        // If there are no single character matches found in the dictionary 
         // starting with this charcter, treat character as a 1-character word 
         // with the highest value possible, i.e. the least likely to occur.
         // Exclude Korean characters from this treatment, as they should be left

@@ -40,8 +40,11 @@ int32_t UCharsDictionaryMatcher::getType() const {
     return DictionaryData::TRIE_TYPE_UCHARS;
 }
 
-int32_t UCharsDictionaryMatcher::matches(UText *text, int32_t maxLength, int32_t *lengths, int32_t &count, int32_t limit, int32_t *values) const {
+int32_t UCharsDictionaryMatcher::matches(UText *text, int32_t maxLength, 
+                                         int32_t *lengths, int32_t *textLengths, int32_t &count, 
+                                         int32_t limit, int32_t *values) const {
     UCharsTrie uct(characters);
+    int64_t startTextIndex = utext_getNativeIndex(text);
     UChar32 c = utext_next32(text);
     if (c < 0) {
         return 0;
@@ -55,7 +58,12 @@ int32_t UCharsDictionaryMatcher::matches(UText *text, int32_t maxLength, int32_t
                 if (values != NULL) {
                     values[count] = uct.getValue();
                 }
-                lengths[count++] = numChars;
+                if (textLengths != NULL) {
+                    textLengths[count]= static_cast<int32_t>(utext_getNativeIndex(text) - startTextIndex);
+                }
+                if (lengths != NULL) {
+                    lengths[count++] = numChars;
+                }
             }
             if (result == USTRINGTRIE_FINAL_VALUE) {
                 break;
@@ -104,8 +112,11 @@ int32_t BytesDictionaryMatcher::getType() const {
     return DictionaryData::TRIE_TYPE_BYTES;
 }
 
-int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength, int32_t *lengths, int32_t &count, int32_t limit, int32_t *values) const {
+int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength,
+                                         int32_t *lengths, int32_t *textLengths, int32_t &count, 
+                                         int32_t limit, int32_t *values) const {
     BytesTrie bt(characters);
+    int64_t startTextIndex = utext_getNativeIndex(text);
     UChar32 c = utext_next32(text);
     if (c < 0) {
         return 0;
@@ -119,7 +130,12 @@ int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength, int32_t 
                 if (values != NULL) {
                     values[count] = bt.getValue();
                 }
-                lengths[count++] = numChars;
+                if (textLengths != NULL) {
+                    textLengths[count]= static_cast<int32_t>(utext_getNativeIndex(text) - startTextIndex);
+                }
+                if (lengths != NULL) {
+                    lengths[count++] = numChars;
+                }
             }
             if (result == USTRINGTRIE_FINAL_VALUE) {
                 break;
@@ -129,7 +145,6 @@ int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength, int32_t 
             break;
         }
 
-        // TODO: why do we have a text limit if the UText knows its length?
         if (numChars >= maxLength) {
             break;
         }

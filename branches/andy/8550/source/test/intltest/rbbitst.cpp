@@ -1311,11 +1311,11 @@ void RBBITest::TestExtended() {
                 charIdx += 6;
 
                 // RUN THE TEST!
-                //tp.setUTF16(status);    // TODO: Re-enable. debugging.
-                //executeTest(&tp, status);
-
-                tp.setUTF8(status);
+                tp.setUTF16(status);    // TODO: Re-enable. debugging.
                 executeTest(&tp, status);
+
+                //tp.setUTF8(status);
+                //executeTest(&tp, status);
                 break;
             }
 
