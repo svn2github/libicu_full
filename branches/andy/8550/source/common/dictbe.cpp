@@ -21,6 +21,8 @@
 #include "cmemory.h"
 #include "dictionarydata.h"
 
+#include <stdio.h>
+
 U_NAMESPACE_BEGIN
 
 /*
@@ -968,6 +970,16 @@ static inline int32_t utext_i32_flag(int32_t bitIndex) {
     return (int32_t)1 << bitIndex;
 }
 
+static void PVector(const UVector32 *v) {
+   printf ("Vector@%p: {", v);
+   if (v) {
+       for (int i=0; i<v->size(); i++) {
+           printf("%d ", v->elementAti(i));
+       }
+   }
+   printf("}\n");
+}
+       
 /*
  * @param text A UText representing the text
  * @param rangeStart The start of the range of dictionary characters
@@ -1007,6 +1019,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
                               rangeEnd - rangeStart);
     } else {
         // Copy the text from the original inText (UText) to inString (UnicodeString).
+        // Create a map from UnicodeString indices -> UText offsets.
         utext_setNativeIndex(inText, rangeStart);
         int32_t limit = rangeEnd;
         U_ASSERT(limit <= utext_nativeLength(inText));
@@ -1019,7 +1032,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
             int32_t nativePosition = utext_getNativeIndex(inText);
             UChar32 c = utext_next32(inText);
             U_ASSERT(c != U_SENTINEL);
-            inString->append(utext_next32(inText));
+            inString->append(c);
             while (inputMap->size() < inString->length()) {
                 inputMap->addElement(nativePosition, status);
             }
@@ -1058,7 +1071,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
 
             // Map every position in the normalized chunk to the start of the chunk
             //   in the original input.
-            int32_t fragmentOriginalStart = inputMap? inputMap->elementAti(fragmentStartI) : fragmentStartI;
+            int32_t fragmentOriginalStart = inputMap? inputMap->elementAti(fragmentStartI) : fragmentStartI+rangeStart;
             while (normalizedMap->size() < normalizedInput->length()) {
                 normalizedMap->addElement(fragmentOriginalStart, status);
                 if (U_FAILURE(status)) {
@@ -1066,11 +1079,17 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
                 }
             }
         }
+        U_ASSERT(normalizedMap->size() == normalizedInput->length());
+        int32_t nativeEnd = inputMap? inputMap->elementAti(inString->length()) : inString->length()+rangeStart;
+        normalizedMap->addElement(nativeEnd, status);
+
         delete inputMap;
         inputMap = normalizedMap;
         delete inString;
         inString = normalizedInput;
     }
+
+    PVector(inputMap);    // TODO:  debug, remove.
 
     int32_t numCodePts = inString->countChar32();
     if (numCodePts != inString->length()) {
@@ -1089,7 +1108,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
             if (hadExistingMap) {
                 inputMap->setElementAt(inputMap->elementAti(cuIdx), cpIdx);
             } else {
-                inputMap->addElement(cuIdx, status);
+                inputMap->addElement(cuIdx+rangeStart, status);
             }
             cpIdx++;
             if (cuIdx == inString->length()) {
@@ -1216,7 +1235,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     // Add a break for the start of the dictionary range if there is not one
     // there already.
     if (foundBreaks.size() == 0 || foundBreaks.peeki() < rangeStart) {
-        t_boundary.addElement(rangeStart, status);
+        t_boundary.addElement(0, status);
         numBreaks++;
     }
 
@@ -1225,7 +1244,9 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     // while reversing t_boundary and pushing values to foundBreaks.
     for (int i = numBreaks-1; i >= 0; i--) {
         int32_t cpPos = t_boundary.elementAti(i);
-        int32_t utextPos = rangeStart + (inputMap ? inputMap->elementAti(cpPos) : cpPos);
+        int32_t utextPos =  inputMap ? inputMap->elementAti(cpPos) : cpPos + rangeStart;
+        // Boundaries are added to foundBreaks output in ascending order.
+        U_ASSERT(foundBreaks.size() == 0 ||foundBreaks.peeki() < utextPos);
         foundBreaks.push(utextPos, status);
     }
 
