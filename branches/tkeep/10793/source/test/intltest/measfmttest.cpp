@@ -52,7 +52,7 @@ private:
     void TestFieldPositionMultiple();
     void TestBadArg();
     void TestEquality();
-    void TestBenchmark();
+    void TestGroupingSeparator();
     void TestDoubleZero();
     void verifyFormat(
         const char *description,
@@ -108,7 +108,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestFieldPositionMultiple);
     TESTCASE_AUTO(TestBadArg);
     TESTCASE_AUTO(TestEquality);
-    TESTCASE_AUTO(TestBenchmark);
+    TESTCASE_AUTO(TestGroupingSeparator);
     TESTCASE_AUTO(TestDoubleZero);
     TESTCASE_AUTO_END;
 }
@@ -866,29 +866,34 @@ void MeasureFormatTest::TestEquality() {
     assertTrue("Not Equal 3", fmt != fmtne3);
 }
 
-void MeasureFormatTest::TestBenchmark() {
-/*
-    clock_t t;
+void MeasureFormatTest::TestGroupingSeparator() {
     UErrorCode status = U_ZERO_ERROR;
     Locale en("en");
     MeasureFormat fmt(en, UMEASFMT_WIDTH_SHORT, status);
-    Measure ms[] = {
-            Measure(70, MeasureUnit::createYear(status), status),
-            Measure(5, MeasureUnit::createMonth(status), status),
-            Measure(23, MeasureUnit::createDay(status), status),
-            Measure(15, MeasureUnit::createHour(status), status),
-            Measure(58, MeasureUnit::createMinute(status), status)};
-    FieldPosition pos(FieldPosition::DONT_CARE);
-    t = clock();
-    for (int32_t i = 0; i < 1000000; ++i) {
-        UnicodeString s;
-        fmt.formatMeasures(ms, 5, s, pos, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
     }
-    t = clock() - t;
-    errln("It took %f seconds.", ((float)t)/CLOCKS_PER_SEC);
-*/
+    Measure ms[] = {
+            Measure(INT32_MAX, MeasureUnit::createYear(status), status),
+            Measure(INT32_MIN, MeasureUnit::createMonth(status), status),
+            Measure(-987, MeasureUnit::createDay(status), status),
+            Measure(1362, MeasureUnit::createHour(status), status),
+            Measure(987, MeasureUnit::createMinute(status), status)};
+    FieldPosition pos(NumberFormat::kGroupingSeparatorField);
+    UnicodeString appendTo;
+    fmt.formatMeasures(ms, 5, appendTo, pos, status);
+    if (!assertSuccess("Error formatting", status)) {
+        return;
+    }
+    assertEquals(
+            "grouping separator",
+            "2,147,483,647 yrs, -2,147,483,648 mths, -987 days, 1,362 hrs, 987 mins",
+            appendTo);
+    assertEquals("begin index", 9, pos.getBeginIndex());
+    assertEquals("end index", 10, pos.getEndIndex());
 }
 
+>>>>>>> .merge-right.r35577
 void MeasureFormatTest::TestDoubleZero() {
     UErrorCode status = U_ZERO_ERROR;
     Measure measures[] = {
