@@ -34,37 +34,41 @@ SciFormatHelper::SciFormatHelper(
 }
 
 UnicodeString &SciFormatHelper::insetMarkup(
-        UnicodeString &s,
+        const UnicodeString &s,
         FieldPositionIterator &fpi,
         const UnicodeString &beginMarkup,
         const UnicodeString &endMarkup,
+        UnicodeString &result,
         UErrorCode &status) const {
     FieldPosition fp;
-    int32_t adjustment = 0;
+    int32_t copyFromOffset = 0;
     while (fpi.next(fp)) {
         switch (fp.getField()) {
         case UNUM_EXPONENT_SYMBOL_FIELD:
-            s.replace(
-                    fp.getBeginIndex(),
-                    fp.getEndIndex() - fp.getBeginIndex(),
-                    fPreExponent + beginMarkup);
-            adjustment += (fPreExponent.length() + beginMarkup.length() - (fp.getEndIndex() - fp.getBeginIndex()));
+            result.append(s, copyFromOffset, fp.getBeginIndex() - copyFromOffset);
+            copyFromOffset = fp.getEndIndex();
+            result.append(fPreExponent);
+            result.append(beginMarkup);
             break;
         case UNUM_EXPONENT_FIELD:
-            s.insert(fp.getEndIndex() + adjustment, endMarkup);
-            adjustment += endMarkup.length();
+            result.append(s, copyFromOffset, fp.getEndIndex() - copyFromOffset);
+            copyFromOffset = fp.getEndIndex();
+            result.append(endMarkup);
             break;
         default:
             break;
         }
     }
-    return s;
+    result.append(s, copyFromOffset, s.length() - copyFromOffset);
+    return result;
 }
 
-static void makeSuperscript(UnicodeString &s, int32_t beginIndex, int32_t endIndex) {
+static void copyAsSuperscript(const UnicodeString &s, int32_t beginIndex, int32_t endIndex, UnicodeString &result) {
     for (int32_t i = beginIndex; i < endIndex; ++i) {
         if (s[i] >= 0x30 && s[i] <= 0x39) {
-            s.setCharAt(i, kExponentDigits[s[i] - 0x30]);
+            result.append(kExponentDigits[s[i] - 0x30]);
+        } else {
+            result.append(s[i]);
         }
     }
 }
@@ -74,41 +78,44 @@ static UBool isMinusSign(UChar ch) {
     return (ch == 0x2D);
 }
 
-static void makeSignSuperscript(UnicodeString &s, int32_t beginIndex, int32_t endIndex) {
-    if (endIndex - beginIndex != 1) {
-        return;
-    }
-    if (isMinusSign(s[beginIndex])) {
-        s.setCharAt(beginIndex, 0x207B);
-    }
-}
-
 UnicodeString &SciFormatHelper::toSuperscriptExponentDigits(
-        UnicodeString &s,
+        const UnicodeString &s,
         FieldPositionIterator &fpi,
+        UnicodeString &result,
         UErrorCode &status) const {
     FieldPosition fp;
-    int32_t adjustment = 0;
+    int32_t copyFromOffset = 0;
     while (fpi.next(fp)) {
         switch (fp.getField()) {
         case UNUM_EXPONENT_SYMBOL_FIELD:
-            s.replace(
-                    fp.getBeginIndex(),
-                    fp.getEndIndex() - fp.getBeginIndex(),
-                    fPreExponent);
-            adjustment += (fPreExponent.length() - (fp.getEndIndex() - fp.getBeginIndex()));
+            result.append(s, copyFromOffset, fp.getBeginIndex() - copyFromOffset);
+            copyFromOffset = fp.getEndIndex();
+            result.append(fPreExponent);
             break;
         case UNUM_EXPONENT_SIGN_FIELD:
-            makeSignSuperscript(s, fp.getBeginIndex() + adjustment, fp.getEndIndex() + adjustment);
+            {
+                int32_t beginIndex = fp.getBeginIndex();
+                int32_t endIndex = fp.getEndIndex();
+                if (endIndex - beginIndex == 1 && isMinusSign(s[beginIndex])) {
+                    result.append(s, copyFromOffset, beginIndex - copyFromOffset);
+                    result.append(0x207B);
+                } else {
+                    result.append(s, copyFromOffset, endIndex - copyFromOffset);
+                }
+                copyFromOffset = endIndex;
+            }
             break;
         case UNUM_EXPONENT_FIELD:
-            makeSuperscript(s, fp.getBeginIndex() + adjustment, fp.getEndIndex() + adjustment);
+            result.append(s, copyFromOffset, fp.getBeginIndex() - copyFromOffset);
+            copyAsSuperscript(s, fp.getBeginIndex(), fp.getEndIndex(), result);
+            copyFromOffset = fp.getEndIndex();
             break;
         default:
             break;
         }
     }
-    return s;
+    result.append(s, copyFromOffset, s.length() - copyFromOffset);
+    return result;
 }
 
 

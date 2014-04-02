@@ -32,14 +32,16 @@ class U_I18N_API SciFormatHelper : public UMemory {
  public:
     SciFormatHelper(const DecimalFormatSymbols &symbols, UErrorCode& status);
     UnicodeString &insetMarkup(
-        UnicodeString &s,
+        const UnicodeString &s,
         FieldPositionIterator &fpi,
         const UnicodeString &beginMarkup,
         const UnicodeString &endMarkup,
+        UnicodeString &result,
         UErrorCode &status) const;
     UnicodeString &toSuperscriptExponentDigits(
-        UnicodeString &s,
+        const UnicodeString &s,
         FieldPositionIterator &fpi,
+        UnicodeString &result,
         UErrorCode &status) const;
  private:
     UnicodeString fPreExponent;

@@ -50,8 +50,10 @@ void SciFormatHelperTest::TestBasic() {
     UnicodeString appendTo2(appendTo);
     FieldPositionIterator fpositer2(fpositer);
     SciFormatHelper helper(*decfmt->getDecimalFormatSymbols(), status);
-    errln(helper.insetMarkup(appendTo, fpositer, "<sup>", "</sup>", status));
-    errln(helper.toSuperscriptExponentDigits(appendTo2, fpositer2, status));
+    UnicodeString result;
+    errln(helper.insetMarkup(appendTo, fpositer, "<sup>", "</sup>", result, status));
+    result.remove();
+    errln(helper.toSuperscriptExponentDigits(appendTo2, fpositer2, result, status));
 }
 
 extern IntlTest *createSciFormatHelperTest() {
