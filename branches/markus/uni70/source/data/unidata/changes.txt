@@ -23,8 +23,8 @@ http://www.unicode.org/reports/tr44/tr44-13.html
 * Issues:
 - PVA.txt lists @missing before alias mappings, has gc=Unassigned but want gc=Cn
   + current workaround: changed to gc=Cn in PVA.txt
-- mark ppucd.txt as UTF-8 because of non-ASCII comments? or modify comments?
-  + need to change test code?
+  + book 20140403 "UCD 7.0 issues" Nr. 2
+  + unicore 20140404 "UCD @missing lines in PVA.txt"
 
 *** ICU Trac
 
@@ -69,6 +69,11 @@ http://www.unicode.org/reports/tr44/tr44-13.html
     from _scripts_only_in_iso15924
   -> fix expectedLong names in cucdapi.c/TestUScriptCodeAPI()
       and in com.ibm.icu.dev.test.lang.TestUScript.java
+- NamesList.txt now has a heading with a non-ASCII character
+  + keep ppucd.txt in platform charset, rather than changing tool/test parsers
+  + escape non-ASCII characters in heading comments
+- gets Unicode copyright line from PropertyAliases.txt which is currently still at 2013
+  + get the copyright from the first file whose copyright line contains the current year
 
 * PropertyValueAliases.txt changes
 - 32 new Block (blk) values:
@@ -219,9 +224,18 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 ~/svn.icutools/trunk/dbg/unicode/c$ cmake ../../../src/unicode/c
 ~/svn.icutools/trunk/dbg/unicode/c$ make
 
+* genprops work
+- new code point range for Joining_Group values: 10AC0..10AFF Manichaean
+  + add second array of Joining_Group values for at most 10800..10FFF
+    icutools: unicode/c/genprops/bidipropsbuilder.cpp
+    icu: source/common/ubidi_props.h/.c/_data.h
+    icu4j: main/classes/core/src/com/ibm/icu/impl/UBiDiProps.java
+
 * generate core properties data files
 - ~/svn.icutools/trunk/dbg/unicode/c$ genprops/genprops ~/svn.icu/uni70/src
-- ~/svn.icutools/trunk/dbg/unicode/c$ genuca/genuca -i ~/svn.icu/uni70/dbg/data/out/build/icudt52l ~/svn.icu/uni70/src
+- ~/svn.icutools/trunk/dbg/unicode/c$ genuca/genuca ~/svn.icu/uni70/src
+
+~/svn.icu/uni70/src
 - rebuild ICU (make install) & tools
 - run genuca again (see step above) so that it picks up the new case mappings and nfc.nrm
 - rebuild ICU (make install) & tools
@@ -266,6 +280,9 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 
 * refresh Java test .txt files
 - copy new .txt files into ICU4J's main/tests/core/src/com/ibm/icu/dev/data/unicode
+
+* API additions
+- send notice to icu-design about new born-@stable API (enum constants etc.)
 
 * UCA
 
