@@ -332,7 +332,7 @@ void TestUScriptCodeAPI(){
             /* new in ICU 52 */
             "Caucasian_Albanian", "Mahajani",
             /* new in ICU 54 */
-            "Ahom", "Hatr", "Mult"
+            "Ahom", "Hatr", "Modi", "Mult", "Pau_Cin_Hau", "Siddham"
         };
         static const char* expectedShort[] = {
             "Bali", "Batk", "Blis", "Brah", "Cham", "Cirt", "Cyrs", "Egyd", "Egyh", "Egyp",
@@ -358,7 +358,7 @@ void TestUScriptCodeAPI(){
             /* new in ICU 52 */
             "Aghb", "Mahj",
             /* new in ICU 54 */
-            "Ahom", "Hatr", "Mult"
+            "Ahom", "Hatr", "Modi", "Mult", "Pauc", "Sidd"
         };
         int32_t j = 0;
         if(LENGTHOF(expectedLong)!=(USCRIPT_CODE_LIMIT-USCRIPT_BALINESE)) {
