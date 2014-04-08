@@ -35,6 +35,7 @@ extern IntlTest *createUCharsTrieTest();
 static IntlTest *createEnumSetTest();
 extern IntlTest *createLRUCacheTest();
 extern IntlTest *createSimplePatternFormatterTest();
+extern IntlTest *createLRUCacheStorageTest();
 
 #define CASE(id, test) case id:                               \
                           name = #test;                       \
@@ -110,6 +111,14 @@ void IntlTestUtilities::runIndexedTest( int32_t index, UBool exec, const char* &
             if (exec) {
                 logln("TestSuite SimplePatternFormatterTest---"); logln();
                 LocalPointer<IntlTest> test(createSimplePatternFormatterTest());
+                callTest(*test, par);
+            }
+            break;
+        case 22:
+            name = "LRUCacheStorageTest";
+            if (exec) {
+                logln("TestSuite LRUCacheStorageTest---"); logln();
+                LocalPointer<IntlTest> test(createLRUCacheStorageTest());
                 callTest(*test, par);
             }
             break;
