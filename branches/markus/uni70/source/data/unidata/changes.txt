@@ -13,6 +13,33 @@
 
 ---------------------------------------------------------------------------- ***
 
+Unicode 8.0 update for ICU ??
+
+* UCA issue from 7.0
+
+- U+1DE9 COMBINING LATIN SMALL LETTER BETA
+  sorts with Greek Beta, should sort with Latin B?
+  + Ken says:
+    No, it was deliberate:
+
+    03B2;GREEK SMALL LETTER BETA;Ll;;;;0392;;0392
+    1D5D;MODIFIER LETTER SMALL BETA;Lm;<super> 03B2;;;;;
+    1DE9;COMBINING LATIN SMALL LETTER BETA;Mn;<sort> 03B2;;;;;
+    1D66;GREEK SUBSCRIPT SMALL LETTER BETA;Ll;<sub> 03B2;;;;;
+
+    Note the relationship to U+1D5D.
+
+    When the disunified *Latin* beta base letter shows up in Unicode 8.0:
+
+    U+A7B4 LATIN CAPITAL LETTER BETA
+    U+A7B5 LATIN SMALL LETTER BETA
+
+    we could re-evaluate what U+1DE9 equates to, for collation,
+    but currently there isn’t any Latin beta to serve that function
+    in Unicode 7.0.
+
+---------------------------------------------------------------------------- ***
+
 Unicode 7.0 update for ICU 54
 
 http://www.unicode.org/review/pri271/  -- beta review
@@ -26,6 +53,20 @@ http://www.unicode.org/reports/tr44/tr44-13.html
   + book 20140403 "UCD 7.0 issues" Nr. 2
   + unicore 20140404 "UCD @missing lines in PVA.txt"
 
+- allkeys_CLDR.txt sets U+FFFE sec & ter common but FractionalUCA.txt sets low weights
+
+- discuss script order, or possibly splitting the reordering group, of
+    "the stuff towards the high end of the table";
+    grouping from Ken:
+  + Bopo Yiii Lisu Plrd Wara Pauc Hmng
+    East Asian stuff
+  + Lyci Cari Lydi Ital Goth Dsrt Shaw Dupl Osma Elba Aghb Sora Mroo
+    Ancient alphabets, plus various conscripts
+  + Linb Lina Cprt Sarb Narb Avst Palm Nbat Armi Prti Phli Phlp Mani
+    Ancient Middle East, including Cypriot stuff and Aramaic-derived stuff
+  + Ugar Xpeo Xsux Egyp Merc Mero
+    Cuneiform, hieroglyphics
+
 *** ICU Trac
 
 - ticket 10821: Unicode 7.0, UCA 7.0
@@ -35,6 +76,8 @@ http://www.unicode.org/reports/tr44/tr44-13.html
 *** CLDR Trac
 
 - ticket 7195: UCA 7.0 CLDR root collation
+- branches/markus/uni70 at r10062 from trunk at r10061
+
 - ticket 6762: script metadata for Unicode 7.0 new scripts
 
 *** Unicode version numbers
@@ -50,7 +93,7 @@ http://www.unicode.org/reports/tr44/tr44-13.html
 
 * file preparation
 
-- download UCD, UCA & IDNA files
+- download UCD & IDNA files
 - make sure that the Unicode data folder passed into preparseucd.py
   includes a copy of the latest IdnaMappingTable.txt (can be in some subfolder)
 - only for manual diffs: remove version suffixes from the file names
@@ -234,8 +277,6 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 * generate core properties data files
 - ~/svn.icutools/trunk/dbg/unicode/c$ genprops/genprops ~/svn.icu/uni70/src
 - ~/svn.icutools/trunk/dbg/unicode/c$ genuca/genuca ~/svn.icu/uni70/src
-
-~/svn.icu/uni70/src
 - rebuild ICU (make install) & tools
 - run genuca again (see step above) so that it picks up the new nfc.nrm
 - rebuild ICU (make install) & tools
@@ -260,8 +301,7 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 | ***     FAILING TEST SUMMARY FOR:              cintltst  
 /tsutil/cucdtst/TestAdditionalProperties
 /tsutil/cucdtst/TestUScriptCodeAPI
-/tscoll/capitst/TestProperty
-/tscoll/cmsccoll/TestComposeDecompose
+/tscoll/cmsccoll/TestEquivalentReorderingScripts
 | *** END FAILING TEST SUMMARY FOR:              cintltst
 -------------
 | ***     FAILING TEST SUMMARY FOR:              letest  
@@ -275,30 +315,31 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 - ~/svn.icu/uni70/dbg$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
   output:
     ...
-    Unicode .icu files built to ./out/build/icudt52l
-    mkdir -p ./out/icu4j/com/ibm/icu/impl/data/icudt52b
-    mkdir -p ./out/icu4j/tzdata/com/ibm/icu/impl/data/icudt52b
+    Unicode .icu files built to ./out/build/icudt53l
+    echo timestamp > uni-core-data
+    mkdir -p ./out/icu4j/com/ibm/icu/impl/data/icudt53b
+    mkdir -p ./out/icu4j/tzdata/com/ibm/icu/impl/data/icudt53b
     echo pnames.icu ubidi.icu ucase.icu uprops.icu > ./out/icu4j/add.txt
-    LD_LIBRARY_PATH=../lib:../stubdata:../tools/ctestfw:$LD_LIBRARY_PATH  ../bin/icupkg ./out/tmp/icudt52l.dat ./out/icu4j/icudt52b.dat -a ./out/icu4j/add.txt -s ./out/build/icudt52l -x '*' -tb -d ./out/icu4j/com/ibm/icu/impl/data/icudt52b
-    mv ./out/icu4j/"com/ibm/icu/impl/data/icudt52b/zoneinfo64.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt52b/metaZones.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt52b/timezoneTypes.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt52b/windowsZones.res" "./out/icu4j/tzdata/com/ibm/icu/impl/data/icudt52b"
-    jar cf ./out/icu4j/icudata.jar -C ./out/icu4j com/ibm/icu/impl/data/icudt52b/
+    LD_LIBRARY_PATH=../lib:../stubdata:../tools/ctestfw:$LD_LIBRARY_PATH  ../bin/icupkg ./out/tmp/icudt53l.dat ./out/icu4j/icudt53b.dat -a ./out/icu4j/add.txt -s ./out/build/icudt53l -x '*' -tb -d ./out/icu4j/com/ibm/icu/impl/data/icudt53b
+    mv ./out/icu4j/"com/ibm/icu/impl/data/icudt53b/zoneinfo64.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt53b/metaZones.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt53b/timezoneTypes.res" ./out/icu4j/"com/ibm/icu/impl/data/icudt53b/windowsZones.res" "./out/icu4j/tzdata/com/ibm/icu/impl/data/icudt53b"
+    jar cf ./out/icu4j/icudata.jar -C ./out/icu4j com/ibm/icu/impl/data/icudt53b/
     mkdir -p /tmp/icu4j/main/shared/data
     cp ./out/icu4j/icudata.jar /tmp/icu4j/main/shared/data
-    jar cf ./out/icu4j/icutzdata.jar -C ./out/icu4j/tzdata com/ibm/icu/impl/data/icudt52b/
+    jar cf ./out/icu4j/icutzdata.jar -C ./out/icu4j/tzdata com/ibm/icu/impl/data/icudt53b/
     mkdir -p /tmp/icu4j/main/shared/data
     cp ./out/icu4j/icutzdata.jar /tmp/icu4j/main/shared/data
     make[1]: Leaving directory `/home/mscherer/svn.icu/uni70/dbg/data'
 - copy the big-endian Unicode data files to another location,
   separate from the other data files
-    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt52b/coll
-    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt52b/brkitr
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt52b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt52b
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ rm /tmp/icu4j/com/ibm/icu/impl/data/icudt52b/cnvalias.icu
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt52b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt52b
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt52b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt52b/coll
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt52b/brkitr/* /tmp/icu4j/com/ibm/icu/impl/data/icudt52b/brkitr
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/coll
+    mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/brkitr
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt53b
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ rm /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/cnvalias.icu
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt53b
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/coll
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/brkitr/* /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/brkitr
 - refresh ICU4J
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt52b
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt53b
 
 * refresh Java test .txt files
 - copy new .txt files into ICU4J's main/tests/core/src/com/ibm/icu/dev/data/unicode
@@ -310,29 +351,40 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 
 * UCA
 
-- get output from Mark's tools; look in http://www.unicode.org/Public/UCA/<beta version>/
-- CLDR root files for ICU are in CollationAuxiliary.zip; unpack that
+- download UCA files (mostly allkeys.txt) from http://www.unicode.org/Public/UCA/<beta version>/
+- run desuffixucd.py (see https://sites.google.com/site/unicodetools/inputdata)
+- run Mark's UCA Main: https://sites.google.com/site/unicodetools/home#TOC-UCA
+- output files are in ~/svn.unitools/Generated/uca/7.0.0/
+- review data; compare files, use blankweights.sed or similar
+  ~/svn.unitools$ sed -r -f blankweights.sed Generated/uca/7.0.0/CollationAuxiliary/FractionalUCA.txt > frac-7.0.txt
+- cd ~/svn.unitools/Generated/uca/7.0.0/
 - update source/data/unidata/FractionalUCA.txt with FractionalUCA_SHORT.txt
+  cp CollationAuxiliary/FractionalUCA_SHORT.txt ~/svn.icu/uni70/src/source/data/unidata/FractionalUCA.txt
 - update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt
-  (note removing the underscore before "Rules")
+    (note removing the underscore before "Rules")
+  cp CollationAuxiliary/UCA_Rules_SHORT.txt ~/svn.icu/uni70/src/source/data/unidata/UCARules.txt
 - update (ICU4C)/source/test/testdata/CollationTest_*.txt
   and (ICU4J)/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_*.txt
   with output from Mark's Unicode tools (..._CLDR_..._SHORT.txt)
-- check test file diffs for previously commented-out, known-failing data lines;
-  probably need to keep those commented out
-- check FractionalUCA.txt for manual changes of lead bytes from IMPLICIT to Hani
+  cp CollationAuxiliary/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt ~/svn.icu/uni70/src/source/test/testdata/CollationTest_NON_IGNORABLE_SHORT.txt
+  cp CollationAuxiliary/CollationTest_CLDR_SHIFTED_SHORT.txt ~/svn.icu/uni70/src/source/test/testdata/CollationTest_SHIFTED_SHORT.txt
+  cp CollationAuxiliary/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt ~/svn.icu4j/trunk/src/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_NON_IGNORABLE_SHORT.txt
+  cp CollationAuxiliary/CollationTest_CLDR_SHIFTED_SHORT.txt ~/svn.icu4j/trunk/src/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_SHIFTED_SHORT.txt
 - run genuca, see command line above
 - rebuild ICU4C
 - refresh ICU4J collation data:
   (subset of instructions above for properties data refresh, except copies all coll/*)
     ~/svn.icu/uni70/dbg$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
-    ~/svn.icu/uni70/dbg$ mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt52b/coll
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt52b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt52b/coll
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt52b
+    ~/svn.icu/uni70/dbg$ mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/coll
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/coll/* /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/coll
+    ~/svn.icu/uni70/dbg/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt53b
 - run all tests with the *_SHORT.txt or the full files (the full ones have comments, useful for debugging)
 - note on intltest: if collate/UCAConformanceTest fails, then
   utility/MultithreadTest/TestCollators will fail as well;
   fix the conformance test before looking into the multi-thread test
+- copy all output from Mark's UCA tool to unicode.org for review & staging by Ken & editors
+- copy most of ~/svn.unitools/Generated/uca/7.0.0/CollationAuxiliary/* to CLDR branch
+  ~/svn.unitools$ cp Generated/uca/7.0.0/CollationAuxiliary/* ~/svn.cldr/trunk/common/uca/
 
 * test ICU, fix test code where necessary
 
