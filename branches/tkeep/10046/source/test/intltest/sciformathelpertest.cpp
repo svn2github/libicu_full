@@ -47,13 +47,16 @@ void SciFormatHelperTest::TestBasic() {
     UnicodeString appendTo("String: ");
     FieldPositionIterator fpositer;
     decfmt->format(1.23456e-78, appendTo, &fpositer, status);
-    UnicodeString appendTo2(appendTo);
     FieldPositionIterator fpositer2(fpositer);
+    FieldPositionIterator fpositer3(fpositer);
     SciFormatHelper helper(*decfmt->getDecimalFormatSymbols(), status);
     UnicodeString result;
     errln(helper.insetMarkup(appendTo, fpositer, "<sup>", "</sup>", result, status));
     result.remove();
-    errln(helper.toSuperscriptExponentDigits(appendTo2, fpositer2, result, status));
+    errln(helper.toSuperscriptExponentDigits(appendTo, fpositer2, result, status));
+    result.remove();
+    errln(helper.toSuperscriptExponentDigits("String: 1.23456e-7a", fpositer3, result, status));
+    assertSuccess("Last", status);
 }
 
 extern IntlTest *createSciFormatHelperTest() {

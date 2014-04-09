@@ -33,6 +33,21 @@ SciFormatHelper::SciFormatHelper(
     fPreExponent.append(dfs.getSymbol(DecimalFormatSymbols::kZeroDigitSymbol));
 }
 
+SciFormatHelper::SciFormatHelper(
+        const SciFormatHelper &other) : fPreExponent(other.fPreExponent) {
+}
+
+SciFormatHelper &SciFormatHelper::operator=(const SciFormatHelper &other) {
+    if (this == &other) {
+        return *this;
+    }
+    fPreExponent = other.fPreExponent;
+    return *this;
+}
+
+SciFormatHelper::~SciFormatHelper() {
+}
+
 UnicodeString &SciFormatHelper::insetMarkup(
         const UnicodeString &s,
         FieldPositionIterator &fpi,
@@ -63,14 +78,24 @@ UnicodeString &SciFormatHelper::insetMarkup(
     return result;
 }
 
-static void copyAsSuperscript(const UnicodeString &s, int32_t beginIndex, int32_t endIndex, UnicodeString &result) {
+static UBool copyAsSuperscript(
+        const UnicodeString &s,
+        int32_t beginIndex,
+        int32_t endIndex,
+        UnicodeString &result,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
     for (int32_t i = beginIndex; i < endIndex; ++i) {
         if (s[i] >= 0x30 && s[i] <= 0x39) {
             result.append(kExponentDigits[s[i] - 0x30]);
         } else {
-            result.append(s[i]);
+            status = U_INVALID_CHAR_FOUND;
+            return FALSE;
         }
     }
+    return TRUE;
 }
 
 static UBool isMinusSign(UChar ch) {
@@ -100,14 +125,18 @@ UnicodeString &SciFormatHelper::toSuperscriptExponentDigits(
                     result.append(s, copyFromOffset, beginIndex - copyFromOffset);
                     result.append(0x207B);
                 } else {
-                    result.append(s, copyFromOffset, endIndex - copyFromOffset);
+                    status = U_INVALID_CHAR_FOUND;
+                    return result;
                 }
                 copyFromOffset = endIndex;
             }
             break;
         case UNUM_EXPONENT_FIELD:
             result.append(s, copyFromOffset, fp.getBeginIndex() - copyFromOffset);
-            copyAsSuperscript(s, fp.getBeginIndex(), fp.getEndIndex(), result);
+            if (!copyAsSuperscript(
+                    s, fp.getBeginIndex(), fp.getEndIndex(), result, status)) {
+              return result;
+            }
             copyFromOffset = fp.getEndIndex();
             break;
         default:
@@ -117,7 +146,5 @@ UnicodeString &SciFormatHelper::toSuperscriptExponentDigits(
     result.append(s, copyFromOffset, s.length() - copyFromOffset);
     return result;
 }
-
-
 
 U_NAMESPACE_END
