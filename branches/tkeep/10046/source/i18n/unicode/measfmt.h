@@ -12,7 +12,6 @@
 #define MEASUREFORMAT_H
 
 #include "unicode/utypes.h"
-#include "unicode/measure.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -72,6 +71,7 @@ typedef enum UMeasureFormatWidth UMeasureFormatWidth;
 
 U_NAMESPACE_BEGIN
 
+class Measure;
 class NumberFormat;
 class PluralRules;
 class MeasureFormatCacheData;
