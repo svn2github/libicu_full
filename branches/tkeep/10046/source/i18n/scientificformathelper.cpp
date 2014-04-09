@@ -8,7 +8,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/sciformathelper.h"
+#include "unicode/scientificformathelper.h"
 #include "unicode/dcfmtsym.h"
 #include "unicode/fpositer.h"
 #include "unicode/utf16.h"
@@ -58,7 +58,7 @@ UnicodeString &ScientificFormatHelper::insetMarkup(
         const UnicodeString &beginMarkup,
         const UnicodeString &endMarkup,
         UnicodeString &result,
-        UErrorCode &status) const {
+        UErrorCode & /* status */) const {
     FieldPosition fp;
     int32_t copyFromOffset = 0;
     while (fpi.next(fp)) {

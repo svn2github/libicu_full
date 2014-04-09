@@ -15,7 +15,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/sciformathelper.h"
+#include "unicode/scientificformathelper.h"
 #include "unicode/numfmt.h"
 #include "unicode/decimfmt.h"
 
