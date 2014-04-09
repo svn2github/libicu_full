@@ -8,10 +8,12 @@
 #define SCIFORMATHELPER_H
 
 #include "unicode/utypes.h"
-#include "unicode/unistr.h"
 
-// TODO: Add U_DRAFT_API directives.
-// TODO: Add U_FORMATTING directives
+#if !UCONFIG_NO_FORMATTING
+
+#ifndef U_HIDE_DRAFT_API
+
+#include "unicode/unistr.h"
 
 /**
  * \file 
@@ -24,7 +26,7 @@ class DecimalFormatSymbols;
 class FieldPositionIterator;
 
 /**
- * A helper class for formatting in pretty scientific notation.
+ * A helper class for formatting in user-friendly scientific notation.
  *
  * Sample code:
  * <pre>
@@ -34,7 +36,7 @@ class FieldPositionIterator;
  * UnicodeString appendTo;
  * FieldPositionIterator fpositer;
  * decfmt->format(1.23456e-78, appendTo, &fpositer, status);
- * SciFormatHelper helper(*decfmt->getDecimalFormatSymbols(), status);
+ * ScientificFormatHelper helper(*decfmt->getDecimalFormatSymbols(), status);
  * UnicodeString result;
  *
  * // result = "1.23456×10<sup>-78</sup>"
@@ -44,7 +46,7 @@ class FieldPositionIterator;
  * @see NumberFormat
  * @draft ICU 54
  */
-class U_I18N_API SciFormatHelper : public UMemory {
+class U_I18N_API ScientificFormatHelper : public UObject {
  public:
     /**
      * Constructor.
@@ -53,34 +55,36 @@ class U_I18N_API SciFormatHelper : public UMemory {
      * @param status any error reported here.
      * @draft ICU 54
      */
-    SciFormatHelper(const DecimalFormatSymbols &symbols, UErrorCode& status);
+    ScientificFormatHelper(const DecimalFormatSymbols &symbols, UErrorCode& status);
 
     /**
      * Copy constructor.
      * @draft ICU 54
      */
-    SciFormatHelper(const SciFormatHelper &other);
+    ScientificFormatHelper(const ScientificFormatHelper &other);
 
     /**
      * Assignment operator.
      * @draft ICU 54
      */
-    SciFormatHelper &operator=(const SciFormatHelper &other);
+    ScientificFormatHelper &operator=(const ScientificFormatHelper &other);
 
     /**
      * Destructor.
      * @draft ICU 54
      */
-    ~SciFormatHelper();
+    virtual ~ScientificFormatHelper();
 
     /**
-     * Makes scientific notation pretty by surrounding exponent with
+     * Makes scientific notation user-friendly by surrounding exponent with
      * html to make it superscript.
      * @param s the original formatted scientific notation e.g "6.02e23"
+     *  s is output from NumberFormat::createScientificInstance()->format().
      * @param fpi the FieldPositionIterator from the format call.
+     *  fpi is output from NumberFormat::createScientificInstance()->format().
      * @param beginMarkup the start html for the exponent e.g "<sup>"
      * @param endMarkup the end html for the exponent e.g "</sup>"
-     * @param result pretty scientific notation stored here.
+     * @param result user-friendly scientific notation stored here.
      * @param status any error returned here. When status is set to a non-zero
      * error, the value of result is unspecified, and client should fallback
      * to using s for scientific notation.
@@ -96,16 +100,14 @@ class U_I18N_API SciFormatHelper : public UMemory {
         UErrorCode &status) const;
 
     /**
-     * Makes scientific notation pretty by using specific code points
+     * Makes scientific notation user-friendly by using specific code points
      * for superscript 0..9 and - in the exponent rather than by using
-     * html. It is the caller's responsibility to ensure that original
-     * formatted scientific notation has 0..9 or - in the exponent.
-     * Any other characters will result in U_INVALID_CHAR_FOUND error
-     * because most characters do not have a superscript equivalent
-     * in unicode.
+     * html.
      * @param s the original formatted scientific notation e.g "6.02e23"
+     *  s is output from NumberFormat::createScientificInstance()->format().
      * @param fpi the corresponding FieldPositionIterator from the format call.
-     * @param result pretty scientific notation stored here.
+     *  fpi is output from NumberFormat::createScientificInstance()->format().
+     * @param result user-friendly scientific notation stored here.
      * @param status any error returned here. When status is set to a non-zero
      * error, the value of result is unspecified, and client should fallback
      * to using s for scientific notation.
@@ -123,4 +125,7 @@ class U_I18N_API SciFormatHelper : public UMemory {
 
 U_NAMESPACE_END
 
-#endif // #ifndef SCIFORMATHELPER_H
+#endif /* U_HIDE_DRAFT_API */
+
+#endif /* !UCONFIG_NO_FORMATTING */
+#endif 

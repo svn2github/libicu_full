@@ -13,7 +13,7 @@
 
 #include "intltest.h"
 
-// TODO: U_CONFIG_NO_FORMATTING
+#if !UCONFIG_NO_FORMATTING
 
 #include "unicode/sciformathelper.h"
 #include "unicode/numfmt.h"
@@ -21,9 +21,9 @@
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
 
-class SciFormatHelperTest : public IntlTest {
+class ScientificFormatHelperTest : public IntlTest {
 public:
-    SciFormatHelperTest() {
+    ScientificFormatHelperTest() {
     }
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
@@ -31,35 +31,47 @@ private:
     void TestBasic();
 };
 
-void SciFormatHelperTest::runIndexedTest(
+void ScientificFormatHelperTest::runIndexedTest(
         int32_t index, UBool exec, const char *&name, char *) {
     if (exec) {
-        logln("TestSuite SciFormatHelperTest: ");
+        logln("TestSuite ScientificFormatHelperTest: ");
     }
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(TestBasic);
     TESTCASE_AUTO_END;
 }
 
-void SciFormatHelperTest::TestBasic() {
+void ScientificFormatHelperTest::TestBasic() {
     UErrorCode status = U_ZERO_ERROR;
-    DecimalFormat *decfmt = (DecimalFormat *) NumberFormat::createScientificInstance("en", status);
+    LocalPointer<DecimalFormat> decfmt((DecimalFormat *) NumberFormat::createScientificInstance("en", status));
     UnicodeString appendTo("String: ");
     FieldPositionIterator fpositer;
     decfmt->format(1.23456e-78, appendTo, &fpositer, status);
     FieldPositionIterator fpositer2(fpositer);
     FieldPositionIterator fpositer3(fpositer);
-    SciFormatHelper helper(*decfmt->getDecimalFormatSymbols(), status);
+    ScientificFormatHelper helper(*decfmt->getDecimalFormatSymbols(), status);
     UnicodeString result;
-    errln(helper.insetMarkup(appendTo, fpositer, "<sup>", "</sup>", result, status));
+    assertEquals(
+            "insetMarkup",
+            "String: 1.23456×10<sup>-78</sup>",
+            helper.insetMarkup(appendTo, fpositer, "<sup>", "</sup>", result, status));
     result.remove();
-    errln(helper.toSuperscriptExponentDigits(appendTo, fpositer2, result, status));
+    assertEquals(
+            "toSuperscriptExponentDigits",
+            "String: 1.23456×10⁻⁷⁸",
+            helper.toSuperscriptExponentDigits(appendTo, fpositer2, result, status));
+    assertSuccess("", status);
     result.remove();
-    errln(helper.toSuperscriptExponentDigits("String: 1.23456e-7a", fpositer3, result, status));
-    assertSuccess("Last", status);
+
+    // The 'a' is an invalid exponent character.
+    helper.toSuperscriptExponentDigits("String: 1.23456e-7a", fpositer3, result, status);
+    if (status != U_INVALID_CHAR_FOUND) {
+        errln("Expected U_INVALID_CHAR_FOUND");
+    }
 }
 
-extern IntlTest *createSciFormatHelperTest() {
-    return new SciFormatHelperTest();
+extern IntlTest *createScientificFormatHelperTest() {
+    return new ScientificFormatHelperTest();
 }
 
+#endif /* !UCONFIG_NO_FORMATTING */

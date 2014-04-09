@@ -5,9 +5,13 @@
 **********************************************************************
 */
 #include "unicode/utypes.h"
+
+#if !UCONFIG_NO_FORMATTING
+
 #include "unicode/sciformathelper.h"
 #include "unicode/dcfmtsym.h"
 #include "unicode/fpositer.h"
+#include "unicode/utf16.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -23,7 +27,7 @@ static UnicodeString getMultiplicationSymbol(const DecimalFormatSymbols &dfs) {
     return UnicodeString(FALSE, &multSign, 1);
 }
 
-SciFormatHelper::SciFormatHelper(
+ScientificFormatHelper::ScientificFormatHelper(
         const DecimalFormatSymbols &dfs, UErrorCode &status) : fPreExponent() {
     if (U_FAILURE(status)) {
         return;
@@ -33,11 +37,11 @@ SciFormatHelper::SciFormatHelper(
     fPreExponent.append(dfs.getSymbol(DecimalFormatSymbols::kZeroDigitSymbol));
 }
 
-SciFormatHelper::SciFormatHelper(
-        const SciFormatHelper &other) : fPreExponent(other.fPreExponent) {
+ScientificFormatHelper::ScientificFormatHelper(
+        const ScientificFormatHelper &other) : fPreExponent(other.fPreExponent) {
 }
 
-SciFormatHelper &SciFormatHelper::operator=(const SciFormatHelper &other) {
+ScientificFormatHelper &ScientificFormatHelper::operator=(const ScientificFormatHelper &other) {
     if (this == &other) {
         return *this;
     }
@@ -45,10 +49,10 @@ SciFormatHelper &SciFormatHelper::operator=(const SciFormatHelper &other) {
     return *this;
 }
 
-SciFormatHelper::~SciFormatHelper() {
+ScientificFormatHelper::~ScientificFormatHelper() {
 }
 
-UnicodeString &SciFormatHelper::insetMarkup(
+UnicodeString &ScientificFormatHelper::insetMarkup(
         const UnicodeString &s,
         FieldPositionIterator &fpi,
         const UnicodeString &beginMarkup,
@@ -87,13 +91,15 @@ static UBool copyAsSuperscript(
     if (U_FAILURE(status)) {
         return FALSE;
     }
-    for (int32_t i = beginIndex; i < endIndex; ++i) {
-        if (s[i] >= 0x30 && s[i] <= 0x39) {
-            result.append(kExponentDigits[s[i] - 0x30]);
-        } else {
+    for (int32_t i = beginIndex; i < endIndex;) {
+        UChar32 c = s.char32At(i);
+        int32_t digit = u_charDigitValue(c);
+        if (digit < 0) {
             status = U_INVALID_CHAR_FOUND;
             return FALSE;
         }
+        result.append(kExponentDigits[digit]);
+        i += U16_LENGTH(c);
     }
     return TRUE;
 }
@@ -103,7 +109,7 @@ static UBool isMinusSign(UChar ch) {
     return (ch == 0x2D);
 }
 
-UnicodeString &SciFormatHelper::toSuperscriptExponentDigits(
+UnicodeString &ScientificFormatHelper::toSuperscriptExponentDigits(
         const UnicodeString &s,
         FieldPositionIterator &fpi,
         UnicodeString &result,
@@ -148,3 +154,5 @@ UnicodeString &SciFormatHelper::toSuperscriptExponentDigits(
 }
 
 U_NAMESPACE_END
+
+#endif /* !UCONFIG_NO_FORMATTING */
