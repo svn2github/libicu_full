@@ -48,10 +48,6 @@ http://www.unicode.org/versions/beta-7.0.0.html#notable_issues
 http://www.unicode.org/reports/tr44/tr44-13.html
 
 * Issues:
-- PVA.txt lists @missing before alias mappings, has gc=Unassigned but want gc=Cn
-  + current workaround: changed to gc=Cn in PVA.txt
-  + book 20140403 "UCD 7.0 issues" Nr. 2
-  + unicore 20140404 "UCD @missing lines in PVA.txt"
 
 - allkeys_CLDR.txt sets U+FFFE sec & ter common but FractionalUCA.txt sets low weights
 
@@ -102,6 +98,8 @@ http://www.unicode.org/reports/tr44/tr44-13.html
 - only for manual diffs: extract Unihan.zip to "here" (.../ucd/Unihan/*.txt), delete Unihan.zip
 - ~/svn.icutools/trunk/src/unicode$ py/preparseucd.py ~/unidata/uni70/20140403 ~/svn.icu/uni70/src ~/svn.icutools/trunk/src
 - This writes files (especially ppucd.txt) to the ICU4C unidata and testdata subfolders.
+- Restore TODO diffs in source/data/unidata/UCARules.txt
+    ~/svn.icu/uni70/src$ meld ../../trunk/src/source/data/unidata/UCARules.txt source/data/unidata/UCARules.txt
 - Restore ICU patches for ticket #10176 in source/test/testdata/LineBreakTest.txt
 
 * initial preparseucd.py changes
@@ -290,24 +288,6 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 
 * run & fix ICU4C tests
 
-| ***     FAILING TEST SUMMARY FOR:              intltest  
-         TestPropertySet
-      UnicodeSetTest
-   utility
-         TestUnicodeFiles
-      RBBITest
-   rbbi
-| *** END FAILING TEST SUMMARY FOR:              intltest
--------------
-| ***     FAILING TEST SUMMARY FOR:              cintltst  
-/tsutil/cucdtst/TestAdditionalProperties
-/tsutil/cucdtst/TestUScriptCodeAPI
-| *** END FAILING TEST SUMMARY FOR:              cintltst
--------------
-| ***     FAILING TEST SUMMARY FOR:              letest  
-/api/ScriptTest
-| *** END FAILING TEST SUMMARY FOR:              letest
-
 * update Java data files
 - refresh just the UCD-related files, just to be safe
 - see (ICU4C)/source/data/icu4j-readme.txt
@@ -333,38 +313,28 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
   separate from the other data files
     mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/coll
     mkdir -p /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/brkitr
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt53b
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ rm /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/cnvalias.icu
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt53b
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/coll
-    ~/svn.icu/uni70/dbg/data/out/icu4j$ cp com/ibm/icu/impl/data/icudt53b/brkitr/* /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/brkitr
+    cd ~/svn.icu/uni70/dbg/data/out/icu4j
+    cp com/ibm/icu/impl/data/icudt53b/confusables.cfu /tmp/icu4j/com/ibm/icu/impl/data/icudt53b
+    cp com/ibm/icu/impl/data/icudt53b/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt53b
+    rm /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/cnvalias.icu
+    cp com/ibm/icu/impl/data/icudt53b/*.nrm /tmp/icu4j/com/ibm/icu/impl/data/icudt53b
+    cp com/ibm/icu/impl/data/icudt53b/coll/*.icu /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/coll
+    cp com/ibm/icu/impl/data/icudt53b/brkitr/* /tmp/icu4j/com/ibm/icu/impl/data/icudt53b/brkitr
 - refresh ICU4J
     ~/svn.icu/uni70/dbg/data/out/icu4j$ jar uf ~/svn.icu4j/trunk/src/main/shared/data/icudata.jar -C /tmp/icu4j com/ibm/icu/impl/data/icudt53b
 
+* update CollationFCD.java
+  + copy & paste the initializers of lcccIndex[] etc. from
+    ICU4C/source/i18n/collationfcd.cpp to
+    ICU4J/main/classes/collate/src/com/ibm/icu/impl/coll/CollationFCD.java
+
 * refresh Java test .txt files
 - copy new .txt files into ICU4J's main/tests/core/src/com/ibm/icu/dev/data/unicode
-
-* run & fix ICU4J tests
-
-Error summary:
-ICU/Collate/Collator/CollationIteratorTest/TestNormalizedUnicodeChar
-ICU/Collate/Collator/CollationMiscTest/TestEquivalentReorderingScripts
-ICU/Collate/Collator/CollationMiscTest/TestUCARules
-ICU/Collate/Collator/CollationTest/TestShortFCDData
-ICU/Collate/Collator/UCAConformanceTest/TestTableNonIgnorable
-ICU/Collate/Collator/UCAConformanceTest/TestTableShifted
-ICU/Core/Property/TestCharacter/UCharacterTest/TestAdditionalProperties
-ICU/Core/Property/TestCharacter/UCharacterTest/TestUnicodeData
-ICU/Core/Property/TestUScript/TestNewCode
-ICU/Core/Property/UnicodeSetTest/TestPropertySet
-ICU/Core/Property/UnicodeSetTest/TestToPattern
-ICU/Core/SpoofChecker/SpoofCheckerTest/TestOpenFromSourceRules
-
-
-<< 425 TEST(S) FAILED >>
-
-* API additions
-- send notice to icu-design about new born-@stable API (enum constants etc.)
+    ~/svn.icu/uni70/src$ cd source/data/unidata
+    cp confusables.txt confusablesWholeScript.txt NormalizationCorrections.txt NormalizationTest.txt SpecialCasing.txt UnicodeData.txt ~/svn.icu4j/trunk/src/main/tests/core/src/com/ibm/icu/dev/data/unicode
+    cd ../../test/testdata
+    cp BidiCharacterTest.txt BidiTest.txt ~/svn.icu4j/trunk/src/main/tests/core/src/com/ibm/icu/dev/data/unicode
+    cp ~/unidata/uni70/20140409/ucd/CompositionExclusions.txt ~/svn.icu4j/trunk/src/main/tests/core/src/com/ibm/icu/dev/data/unicode
 
 * UCA
 
@@ -379,14 +349,13 @@ ICU/Core/SpoofChecker/SpoofCheckerTest/TestOpenFromSourceRules
   cp CollationAuxiliary/FractionalUCA_SHORT.txt ~/svn.icu/uni70/src/source/data/unidata/FractionalUCA.txt
 - update source/data/unidata/UCARules.txt with UCA_Rules_SHORT.txt
     (note removing the underscore before "Rules")
-  cp CollationAuxiliary/UCA_Rules_SHORT.txt ~/svn.icu/uni70/src/source/data/unidata/UCARules.txt
+    cp CollationAuxiliary/UCA_Rules_SHORT.txt ~/svn.icu/uni70/src/source/data/unidata/UCARules.txt
 - update (ICU4C)/source/test/testdata/CollationTest_*.txt
   and (ICU4J)/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_*.txt
   with output from Mark's Unicode tools (..._CLDR_..._SHORT.txt)
-  cp CollationAuxiliary/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt ~/svn.icu/uni70/src/source/test/testdata/CollationTest_NON_IGNORABLE_SHORT.txt
-  cp CollationAuxiliary/CollationTest_CLDR_SHIFTED_SHORT.txt ~/svn.icu/uni70/src/source/test/testdata/CollationTest_SHIFTED_SHORT.txt
-  cp CollationAuxiliary/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt ~/svn.icu4j/trunk/src/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_NON_IGNORABLE_SHORT.txt
-  cp CollationAuxiliary/CollationTest_CLDR_SHIFTED_SHORT.txt ~/svn.icu4j/trunk/src/main/tests/collate/src/com/ibm/icu/dev/data/CollationTest_SHIFTED_SHORT.txt
+    cp CollationAuxiliary/CollationTest_CLDR_NON_IGNORABLE_SHORT.txt ~/svn.icu/uni70/src/source/test/testdata/CollationTest_NON_IGNORABLE_SHORT.txt
+    cp CollationAuxiliary/CollationTest_CLDR_SHIFTED_SHORT.txt ~/svn.icu/uni70/src/source/test/testdata/CollationTest_SHIFTED_SHORT.txt
+    cp ~/svn.icu/uni70/src/source/test/testdata/CollationTest_*.txt ~/svn.icu4j/trunk/src/main/tests/collate/src/com/ibm/icu/dev/data
 - run genuca, see command line above
 - rebuild ICU4C
 - refresh ICU4J collation data:
@@ -403,13 +372,13 @@ ICU/Core/SpoofChecker/SpoofCheckerTest/TestOpenFromSourceRules
 - copy most of ~/svn.unitools/Generated/uca/7.0.0/CollationAuxiliary/* to CLDR branch
   ~/svn.unitools$ cp Generated/uca/7.0.0/CollationAuxiliary/* ~/svn.cldr/trunk/common/uca/
 
-* test ICU, fix test code where necessary
-
 * When refreshing all of ICU4J data from ICU4C
 - ~/svn.icu/uni70/dbg$ make ICU4J_ROOT=/tmp/icu4j icu4j-data-install
 - cp /tmp/icu4j/main/shared/data/icudata.jar ~/svn.icu4j/trunk/src/main/shared/data
 or
 - ~/svn.icu/uni70/dbg$ make ICU4J_ROOT=~/svn.icu4j/trunk/src icu4j-data-install
+
+* run & fix ICU4J tests
 
 *** LayoutEngine script information
 
@@ -433,6 +402,9 @@ or
 - if you just copy the above files, then
   fix mixed line endings, review the diffs as above and restore changes to API tags etc.;
   manually re-add the "Indic script xyz v.2" tags in ScriptAndLanguageTags.h
+
+*** API additions
+- send notice to icu-design about new born-@stable API (enum constants etc.)
 
 *** merge the Unicode update branches back onto the trunk
 - do not merge the icudata.jar and testdata.jar,

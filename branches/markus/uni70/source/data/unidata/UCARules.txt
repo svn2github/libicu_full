@@ -1201,8 +1201,9 @@
   <<	 ⃨
   <<	 ⃩
   <<	 𐇽
-& [last regular]
- <	 '\uFFFE'
+# TODO: There are several problems with this file. See http://unicode.org/cldr/trac/ticket/6745
+&'\u202F'  # TODO: reset to the last space, not [last regular]
+# TODO: do not tailor this: <	 '\uFFFE'
  <	 '\u0009'
  <	 '\u000A'
  <	 '\u000B'
@@ -1226,6 +1227,7 @@
    <<<	 ' '
     =	 ' '
     =	 ' '
+&[last variable]  # TODO: insert this reset so that variables work
  <	 ‾
    <<<	 ﹉
     =	 ﹊
@@ -2058,7 +2060,8 @@
  <	 𖬻
  <	 𖭄
  <	 ‎𐩿‎
- <	 [variable top]
+# TODO: do not try to set this: <	 [variable top]
+&\u30FD  # TODO: instead, reset to the last symbol so that maxVariable=symbol works
  <	 '`'
    <<<	 ｀
  <	 ´
@@ -7108,6 +7111,7 @@
  <	 ー
    <<<	 ｰ
  <	 ヽ
+&\uFDFC  # TODO: reset to the last currency symbol
  <	 ¤
  <	 ¢
    <<<	 ￠
@@ -7160,6 +7164,7 @@
  <	 ₽
  <	 ₨
  <	 ‎﷼‎
+&[last regular]  # TODO: digits & letters from here
  <	 ৴
  <	 ৵
  <	 ৶
@@ -25680,9 +25685,9 @@
     =	 﨨
 & 﨩
     =	 﨩
-& [last trailing]
- <	 �
- <	 '\uFFFF'
+# TODO: do not tailor to this: & [last trailing]
+# TODO: do not tailor U+FFFD <	 �
+# TODO: do not tailor U+FFFF <	 '\uFFFF'
 & กเ = เก
 & กแ = แก
 & กโ = โก

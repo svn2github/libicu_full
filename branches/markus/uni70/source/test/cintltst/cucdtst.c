@@ -2646,6 +2646,15 @@ TestAdditionalProperties() {
         { 0xFF5B, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_OPEN },
         { 0xFF5D, UCHAR_BIDI_PAIRED_BRACKET_TYPE, U_BPT_CLOSE },
 
+        { -1, 0x700, 0 }, /* version break for Unicode 7.0 */
+
+        /* new character range with Joining_Group values */
+        { 0x10ABF, UCHAR_JOINING_GROUP, U_JG_NO_JOINING_GROUP },
+        { 0x10AC0, UCHAR_JOINING_GROUP, U_JG_MANICHAEAN_ALEPH },
+        { 0x10AC1, UCHAR_JOINING_GROUP, U_JG_MANICHAEAN_BETH },
+        { 0x10AEF, UCHAR_JOINING_GROUP, U_JG_MANICHAEAN_HUNDRED },
+        { 0x10AF0, UCHAR_JOINING_GROUP, U_JG_NO_JOINING_GROUP },
+
         /* undefined UProperty values */
         { 0x61, 0x4a7, 0 },
         { 0x234bc, 0x15ed, 0 }
