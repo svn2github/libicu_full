@@ -353,7 +353,7 @@ static void U_CALLCONV cacheInit(UErrorCode &status) {
     U_ASSERT(gCache == NULL);
     U_ASSERT(MeasureUnit::getIndexCount() == MEAS_UNIT_COUNT);
     ucln_i18n_registerCleanup(UCLN_I18N_MEASFMT, measfmt_cleanup);
-    gCache = new SimpleLRUCache(100, &createData, status);
+    gCache = new SimpleLRUCache(U_LRU_CACHE_SIZE, &createData, status);
     if (U_FAILURE(status)) {
         delete gCache;
         gCache = NULL;

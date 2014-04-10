@@ -177,7 +177,7 @@ static SharedObject *U_CALLCONV createSharedPluralRules(
 static void U_CALLCONV pluralRulesCacheInit(UErrorCode &status) {
     U_ASSERT(gPluralRulesCache == NULL);
     ucln_i18n_registerCleanup(UCLN_I18N_PLURAL_RULE, plurrules_cleanup);
-    gPluralRulesCache = new SimpleLRUCache(100, &createSharedPluralRules, status);
+    gPluralRulesCache = new SimpleLRUCache(U_LRU_CACHE_SIZE, &createSharedPluralRules, status);
     if (U_FAILURE(status)) {
         delete gPluralRulesCache;
         gPluralRulesCache = NULL;

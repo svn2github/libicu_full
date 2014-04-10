@@ -420,4 +420,31 @@
 #   define UCONFIG_NO_FILTERED_BREAK_ITERATION 1
 #endif
 
+/**
+ * @draft ICU 54
+ * @system
+ */
+#define U_USAGE_PROFILE_SERVER 1
+#define U_USAGE_PROFILE_MINIMAL 2
+#define U_USAGE_PROFILE_DEFAULT 0
+
+/**
+ * \def U_USAGE_PROFILE - controls the type of expected ICU Usage
+ * @draft ICU 54
+ * @system
+ */
+#ifndef U_USAGE_PROFILE
+#define U_USAGE_PROFILE U_USAGE_PROFILE_DEFAULT
+#endif
+
+#if U_USAGE_PROFILE == U_USAGE_PROFILE_SERVER
+#define U_LRU_CACHE_SIZE 500
+#elif U_USAGE_PROFILE == U_USAGE_PROFILE_DEFAULT
+#define U_LRU_CACHE_SIZE 100
+#elif U_USAGE_PROFILE == U_USAGE_PROFILE_MINIMAL
+#define U_LRU_CACHE_SIZE 5
+#else
+#error U_USAGE_PROFILE not set
+#endif
+
 #endif

@@ -1263,7 +1263,7 @@ static SharedObject *U_CALLCONV createSharedNumberFormat(
 static void U_CALLCONV numberFormatCacheInit(UErrorCode &status) {
     U_ASSERT(gNumberFormatCache == NULL);
     ucln_i18n_registerCleanup(UCLN_I18N_NUMFMT, numfmt_cleanup);
-    gNumberFormatCache = new SimpleLRUCache(100, &createSharedNumberFormat, status);
+    gNumberFormatCache = new SimpleLRUCache(U_LRU_CACHE_SIZE, &createSharedNumberFormat, status);
     if (U_FAILURE(status)) {
         delete gNumberFormatCache;
         gNumberFormatCache = NULL;
