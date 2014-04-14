@@ -47,22 +47,6 @@ http://www.unicode.org/reports/uax-proposed-updates.html
 http://www.unicode.org/versions/beta-7.0.0.html#notable_issues
 http://www.unicode.org/reports/tr44/tr44-13.html
 
-* Issues:
-
-- allkeys_CLDR.txt sets U+FFFE sec & ter common but FractionalUCA.txt sets low weights
-
-- discuss script order, or possibly splitting the reordering group, of
-    "the stuff towards the high end of the table";
-    grouping from Ken:
-  + Bopo Yiii Lisu Plrd Wara Pauc Hmng
-    East Asian stuff
-  + Lyci Cari Lydi Ital Goth Dsrt Shaw Dupl Osma Elba Aghb Sora Mroo
-    Ancient alphabets, plus various conscripts
-  + Linb Lina Cprt Sarb Narb Avst Palm Nbat Armi Prti Phli Phlp Mani
-    Ancient Middle East, including Cypriot stuff and Aramaic-derived stuff
-  + Ugar Xpeo Xsux Egyp Merc Mero
-    Cuneiform, hieroglyphics
-
 *** ICU Trac
 
 - ticket 10821: Unicode 7.0, UCA 7.0
@@ -340,6 +324,7 @@ set(ICU_SRC_DIR /home/mscherer/svn.icu/uni70/src)
 
 - download UCA files (mostly allkeys.txt) from http://www.unicode.org/Public/UCA/<beta version>/
 - run desuffixucd.py (see https://sites.google.com/site/unicodetools/inputdata)
+- update the input files for Mark's UCA tools, in ~/svn.unitools/trunk/data/uca/7.0.0/
 - run Mark's UCA Main: https://sites.google.com/site/unicodetools/home#TOC-UCA
 - output files are in ~/svn.unitools/Generated/uca/7.0.0/
 - review data; compare files, use blankweights.sed or similar
