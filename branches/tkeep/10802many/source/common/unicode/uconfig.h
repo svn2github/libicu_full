@@ -421,17 +421,26 @@
 #endif
 
 /**
- * @draft ICU 54
- * @system
+ * \def U_USAGE_PROFILE_SERVER Server usage.
+ * @internal
  */
 #define U_USAGE_PROFILE_SERVER 1
+
+/**
+ * \def U_USAGE_PROFILE_MINIMAL Usage on small devices.
+ * @internal
+ */
 #define U_USAGE_PROFILE_MINIMAL 2
+
+/**
+ * \def U_USAGE_PROFILE_MINIMAL Default usage.
+ * @internal
+ */
 #define U_USAGE_PROFILE_DEFAULT 0
 
 /**
  * \def U_USAGE_PROFILE - controls the type of expected ICU Usage
- * @draft ICU 54
- * @system
+ * @internal
  */
 #ifndef U_USAGE_PROFILE
 #define U_USAGE_PROFILE U_USAGE_PROFILE_DEFAULT
