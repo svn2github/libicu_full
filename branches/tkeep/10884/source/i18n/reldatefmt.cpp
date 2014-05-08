@@ -540,6 +540,16 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
+        const Locale& locale,
+        NumberFormat *nfToAdopt,
+        UDateFormatStyle style,
+        UDisplayContext capitalizationContext,
+        UErrorCode& status)
+        : cache(NULL), numberFormat(NULL), pluralRules(NULL) {
+  init(locale, nfToAdopt, status);
+}
+
+RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const RelativeDateTimeFormatter& other)
         : cache(other.cache),
           numberFormat(other.numberFormat),
@@ -573,6 +583,14 @@ RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
 
 const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
     return **numberFormat;
+}
+
+UDisplayContext RelativeDateTimeFormatter::getCapitalizationContext() const {
+    return (UDisplayContext) 0;
+}
+
+UDateFormatStyle RelativeDateTimeFormatter::getFormatStyle() const {
+    return (UDateFormatStyle) 0;
 }
 
 UnicodeString& RelativeDateTimeFormatter::format(
