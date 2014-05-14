@@ -23,9 +23,9 @@
 
 #include <stdio.h>
 
-U_NAMESPACE_BEGIN
-
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
+U_NAMESPACE_BEGIN
 
 /*
  ******************************************************************
@@ -116,24 +116,26 @@ DictionaryBreakEngine::setCharacters( const UnicodeSet &set ) {
 
 // List size, limited by the maximum number of words in the dictionary
 // that form a nested sequence.
-#define POSSIBLE_WORD_LIST_MAX 20
+static const int32_t POSSIBLE_WORD_LIST_MAX = 20;
 
 class PossibleWord {
 private:
     // list of word candidate lengths, in increasing length order
-    int32_t   lengths[POSSIBLE_WORD_LIST_MAX];
+    // TODO: bytes would be sufficient for word lengths.
     int32_t   count;      // Count of candidates
     int32_t   prefix;     // The longest match with a dictionary word
     int32_t   offset;     // Offset in the text of these candidates
-    int       mark;       // The preferred candidate's offset
-    int       current;    // The candidate we're currently looking at
+    int32_t   mark;       // The preferred candidate's offset
+    int32_t   current;    // The candidate we're currently looking at
+    int32_t   cuLengths[POSSIBLE_WORD_LIST_MAX];   // Word Lengths, in code units.
+    int32_t   cpLengths[POSSIBLE_WORD_LIST_MAX];   // Word Lengths, in code points.
 
 public:
-    PossibleWord();
-    ~PossibleWord();
+    PossibleWord() : count(0), prefix(0), offset(-1), mark(0), current(0) {};
+    ~PossibleWord() {};
   
     // Fill the list of candidates if needed, select the longest, and return the number found
-    int       candidates( UText *text, DictionaryMatcher *dict, int32_t rangeEnd );
+    int32_t   candidates( UText *text, DictionaryMatcher *dict, int32_t rangeEnd );
   
     // Select the currently marked candidate, point after it in the text, and invalidate self
     int32_t   acceptMarked( UText *text );
@@ -143,65 +145,50 @@ public:
     UBool     backUp( UText *text );
   
     // Return the longest prefix this candidate location shares with a dictionary word
-    int32_t   longestPrefix();
+    // Return value is in code points.
+    int32_t   longestPrefix() { return prefix; };
   
     // Mark the current candidate as the one we like
-    void      markCurrent();
+    void      markCurrent() { mark = current; };
+    
+    // Get length in code points of the marked word.
+    int32_t   markedCPLength() { return cpLengths[mark]; };
 };
 
-inline
-PossibleWord::PossibleWord() {
-    offset = -1;
-}
 
-inline
-PossibleWord::~PossibleWord() {
-}
-
-inline int
-PossibleWord::candidates( UText *text, DictionaryMatcher *dict, int32_t rangeEnd ) {
+int32_t PossibleWord::candidates( UText *text, DictionaryMatcher *dict, int32_t rangeEnd ) {
     // TODO: If getIndex is too slow, use offset < 0 and add discardAll()
     int32_t start = (int32_t)utext_getNativeIndex(text);
     if (start != offset) {
         offset = start;
-        // TODO: 2nd parameter is supposed to be a count of code points, the value supplied is wrong.
-        prefix = dict->matches(text, rangeEnd-start, NULL, lengths, count, LENGTHOF(lengths));
+        count = dict->matches(text, rangeEnd-start, LENGTHOF(cuLengths), cuLengths, cpLengths, NULL, &prefix);
         // Dictionary leaves text after longest prefix, not longest word. Back up.
         if (count <= 0) {
             utext_setNativeIndex(text, start);
         }
     }
     if (count > 0) {
-        utext_setNativeIndex(text, start+lengths[count-1]);
+        utext_setNativeIndex(text, start+cuLengths[count-1]);
     }
     current = count-1;
     mark = current;
     return count;
 }
 
-inline int32_t
+int32_t
 PossibleWord::acceptMarked( UText *text ) {
-    utext_setNativeIndex(text, offset + lengths[mark]);
-    return lengths[mark];
+    utext_setNativeIndex(text, offset + cuLengths[mark]);
+    return cuLengths[mark];
 }
 
-inline UBool
+
+UBool
 PossibleWord::backUp( UText *text ) {
     if (current > 0) {
-        utext_setNativeIndex(text, offset + lengths[--current]);
+        utext_setNativeIndex(text, offset + cuLengths[--current]);
         return TRUE;
     }
     return FALSE;
-}
-
-inline int32_t
-PossibleWord::longestPrefix() {
-    return prefix;
-}
-
-inline void
-PossibleWord::markCurrent() {
-    mark = current;
 }
 
 /*
@@ -210,26 +197,26 @@ PossibleWord::markCurrent() {
  */
 
 // How many words in a row are "good enough"?
-#define THAI_LOOKAHEAD 3
+static const int32_t THAI_LOOKAHEAD = 3;
 
 // Will not combine a non-word with a preceding dictionary word longer than this
-#define THAI_ROOT_COMBINE_THRESHOLD 3
+static const int32_t THAI_ROOT_COMBINE_THRESHOLD = 3;
 
 // Will not combine a non-word that shares at least this much prefix with a
 // dictionary word, with a preceding word
-#define THAI_PREFIX_COMBINE_THRESHOLD 3
+static const int32_t THAI_PREFIX_COMBINE_THRESHOLD = 3;
 
 // Ellision character
-#define THAI_PAIYANNOI 0x0E2F
+static const int32_t THAI_PAIYANNOI = 0x0E2F;
 
 // Repeat character
-#define THAI_MAIYAMOK 0x0E46
+static const int32_t THAI_MAIYAMOK = 0x0E46;
 
 // Minimum word size
-#define THAI_MIN_WORD 2
+static const int32_t THAI_MIN_WORD = 2;
 
 // Minimum number of characters for two words
-#define THAI_MIN_WORD_SPAN (THAI_MIN_WORD * 2)
+static const int32_t THAI_MIN_WORD_SPAN = THAI_MIN_WORD * 2;
 
 ThaiBreakEngine::ThaiBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status)
     : DictionaryBreakEngine((1<<UBRK_WORD) | (1<<UBRK_LINE)),
@@ -265,28 +252,34 @@ ThaiBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
                                                 UStack &foundBreaks ) const {
-    if ((rangeEnd - rangeStart) < THAI_MIN_WORD_SPAN) {
+    utext_setNativeIndex(text, rangeStart);
+    utext_moveIndex32(text, THAI_MIN_WORD_SPAN);
+    if (utext_getNativeIndex(text) >= rangeEnd) {
         return 0;       // Not enough characters for two words
     }
+    utext_setNativeIndex(text, rangeStart);
+
 
     uint32_t wordsFound = 0;
-    int32_t wordLength;
+    int32_t cpWordLength = 0;    // Word Length in Code Points.
+    int32_t cuWordLength = 0;    // Word length in code units (UText native indexing)
     int32_t current;
     UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[THAI_LOOKAHEAD];
-    UChar32 uc;
     
     utext_setNativeIndex(text, rangeStart);
     
     while (U_SUCCESS(status) && (current = (int32_t)utext_getNativeIndex(text)) < rangeEnd) {
-        wordLength = 0;
+        cpWordLength = 0;
+        cuWordLength = 0;
 
         // Look for candidate words at the current position
-        int candidates = words[wordsFound%THAI_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
+        int32_t candidates = words[wordsFound%THAI_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
         
         // If we found exactly one, use that
         if (candidates == 1) {
-            wordLength = words[wordsFound % THAI_LOOKAHEAD].acceptMarked(text);
+            cuWordLength = words[wordsFound % THAI_LOOKAHEAD].acceptMarked(text);
+            cpWordLength = words[wordsFound % THAI_LOOKAHEAD].markedCPLength();
             wordsFound += 1;
         }
         // If there was more than one, see which one can take us forward the most words
@@ -296,7 +289,7 @@ ThaiBreakEngine::divideUpDictionaryRange( UText *text,
                 goto foundBest;
             }
             do {
-                int wordsMatched = 1;
+                int32_t wordsMatched = 1;
                 if (words[(wordsFound + 1) % THAI_LOOKAHEAD].candidates(text, fDictionary, rangeEnd) > 0) {
                     if (wordsMatched < 2) {
                         // Followed by another dictionary word; mark first word as a good candidate
@@ -322,62 +315,65 @@ ThaiBreakEngine::divideUpDictionaryRange( UText *text,
             }
             while (words[wordsFound % THAI_LOOKAHEAD].backUp(text));
 foundBest:
-            wordLength = words[wordsFound % THAI_LOOKAHEAD].acceptMarked(text);
+            // Set UText position to after the accepted word.
+            cuWordLength = words[wordsFound % THAI_LOOKAHEAD].acceptMarked(text);
+            cpWordLength = words[wordsFound % THAI_LOOKAHEAD].markedCPLength();
             wordsFound += 1;
         }
         
         // We come here after having either found a word or not. We look ahead to the
-        // next word. If it's not a dictionary word, we will combine it withe the word we
+        // next word. If it's not a dictionary word, we will combine it with the word we
         // just found (if there is one), but only if the preceding word does not exceed
         // the threshold.
         // The text iterator should now be positioned at the end of the word we found.
-        if ((int32_t)utext_getNativeIndex(text) < rangeEnd && wordLength < THAI_ROOT_COMBINE_THRESHOLD) {
+        
+        UChar32 uc = 0;
+        if ((int32_t)utext_getNativeIndex(text) < rangeEnd &&  cpWordLength < THAI_ROOT_COMBINE_THRESHOLD) {
             // if it is a dictionary word, do nothing. If it isn't, then if there is
             // no preceding word, or the non-word shares less than the minimum threshold
             // of characters with a dictionary word, then scan to resynchronize
             if (words[wordsFound % THAI_LOOKAHEAD].candidates(text, fDictionary, rangeEnd) <= 0
-                  && (wordLength == 0
+                  && (cuWordLength == 0
                       || words[wordsFound%THAI_LOOKAHEAD].longestPrefix() < THAI_PREFIX_COMBINE_THRESHOLD)) {
                 // Look for a plausible word boundary
-                //TODO: This section will need a rework for UText.
-                int32_t remaining = rangeEnd - (current+wordLength);
-                UChar32 pc = utext_current32(text);
+                int32_t remaining = rangeEnd - (current+cuWordLength);
+                UChar32 pc;
                 int32_t chars = 0;
                 for (;;) {
-                    utext_next32(text);
-                    uc = utext_current32(text);
-                    // TODO: Here we're counting on the fact that the SA languages are all
-                    // in the BMP. This should get fixed with the UText rework.
-                    chars += 1;
-                    if (--remaining <= 0) {
+                    int32_t pcIndex = utext_getNativeIndex(text);
+                    pc = utext_next32(text);
+                    int32_t pcSize = utext_getNativeIndex(text) - pcIndex;
+                    chars += pcSize;
+                    remaining -= pcSize;
+                    if (remaining <= 0) {
                         break;
                     }
+                    uc = utext_current32(text);
                     if (fEndWordSet.contains(pc) && fBeginWordSet.contains(uc)) {
                         // Maybe. See if it's in the dictionary.
                         // NOTE: In the original Apple code, checked that the next
                         // two characters after uc were not 0x0E4C THANTHAKHAT before
                         // checking the dictionary. That is just a performance filter,
                         // but it's not clear it's faster than checking the trie.
-                        int candidates = words[(wordsFound + 1) % THAI_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
-                        utext_setNativeIndex(text, current + wordLength + chars);
+                        int32_t candidates = words[(wordsFound + 1) % THAI_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
+                        utext_setNativeIndex(text, current + cuWordLength + chars);
                         if (candidates > 0) {
                             break;
                         }
                     }
-                    pc = uc;
                 }
                 
                 // Bump the word count if there wasn't already one
-                if (wordLength <= 0) {
+                if (cuWordLength <= 0) {
                     wordsFound += 1;
                 }
                 
                 // Update the length with the passed-over characters
-                wordLength += chars;
+                cuWordLength += chars;
             }
             else {
                 // Back up to where we were for next iteration
-                utext_setNativeIndex(text, current+wordLength);
+                utext_setNativeIndex(text, current+cuWordLength);
             }
         }
         
@@ -385,22 +381,23 @@ foundBest:
         int32_t currPos;
         while ((currPos = (int32_t)utext_getNativeIndex(text)) < rangeEnd && fMarkSet.contains(utext_current32(text))) {
             utext_next32(text);
-            wordLength += (int32_t)utext_getNativeIndex(text) - currPos;
+            cuWordLength += (int32_t)utext_getNativeIndex(text) - currPos;
         }
         
         // Look ahead for possible suffixes if a dictionary word does not follow.
         // We do this in code rather than using a rule so that the heuristic
         // resynch continues to function. For example, one of the suffix characters
         // could be a typo in the middle of a word.
-        if ((int32_t)utext_getNativeIndex(text) < rangeEnd && wordLength > 0) {
+        if ((int32_t)utext_getNativeIndex(text) < rangeEnd && cuWordLength > 0) {
             if (words[wordsFound%THAI_LOOKAHEAD].candidates(text, fDictionary, rangeEnd) <= 0
                 && fSuffixSet.contains(uc = utext_current32(text))) {
                 if (uc == THAI_PAIYANNOI) {
                     if (!fSuffixSet.contains(utext_previous32(text))) {
                         // Skip over previous end and PAIYANNOI
                         utext_next32(text);
+                        int32_t paiyannoiIndex = utext_getNativeIndex(text);
                         utext_next32(text);
-                        wordLength += 1;            // Add PAIYANNOI to word
+                        cuWordLength += utext_getNativeIndex(text) - paiyannoiIndex;    // Add PAIYANNOI to word
                         uc = utext_current32(text);     // Fetch next character
                     }
                     else {
@@ -412,8 +409,9 @@ foundBest:
                     if (utext_previous32(text) != THAI_MAIYAMOK) {
                         // Skip over previous end and MAIYAMOK
                         utext_next32(text);
+                        int32_t maiyamokIndex = utext_getNativeIndex(text);
                         utext_next32(text);
-                        wordLength += 1;            // Add MAIYAMOK to word
+                        cuWordLength += utext_getNativeIndex(text) - maiyamokIndex;    // Add MAIYAMOK to word
                     }
                     else {
                         // Restore prior position
@@ -422,13 +420,13 @@ foundBest:
                 }
             }
             else {
-                utext_setNativeIndex(text, current+wordLength);
+                utext_setNativeIndex(text, current+cuWordLength);
             }
         }
 
         // Did we find a word on this iteration? If so, push it on the break stack
-        if (wordLength > 0) {
-            foundBreaks.push((current+wordLength), status);
+        if (cuWordLength > 0) {
+            foundBreaks.push((current+cuWordLength), status);
         }
     }
 
@@ -447,20 +445,20 @@ foundBest:
  */
 
 // How many words in a row are "good enough"?
-#define LAO_LOOKAHEAD 3
+static const int32_t LAO_LOOKAHEAD = 3;
 
 // Will not combine a non-word with a preceding dictionary word longer than this
-#define LAO_ROOT_COMBINE_THRESHOLD 3
+static const int32_t LAO_ROOT_COMBINE_THRESHOLD = 3;
 
 // Will not combine a non-word that shares at least this much prefix with a
 // dictionary word, with a preceding word
-#define LAO_PREFIX_COMBINE_THRESHOLD 3
+static const int32_t LAO_PREFIX_COMBINE_THRESHOLD = 3;
 
 // Minimum word size
-#define LAO_MIN_WORD 2
+static const int32_t LAO_MIN_WORD = 2;
 
 // Minimum number of characters for two words
-#define LAO_MIN_WORD_SPAN (LAO_MIN_WORD * 2)
+static const int32_t LAO_MIN_WORD_SPAN = LAO_MIN_WORD * 2;
 
 LaoBreakEngine::LaoBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status)
     : DictionaryBreakEngine((1<<UBRK_WORD) | (1<<UBRK_LINE)),
@@ -498,33 +496,35 @@ LaoBreakEngine::divideUpDictionaryRange( UText *text,
     }
 
     uint32_t wordsFound = 0;
-    int32_t wordLength;
+    int32_t cpWordLength = 0;
+    int32_t cuWordLength = 0;
     int32_t current;
     UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[LAO_LOOKAHEAD];
-    UChar32 uc;
     
     utext_setNativeIndex(text, rangeStart);
     
     while (U_SUCCESS(status) && (current = (int32_t)utext_getNativeIndex(text)) < rangeEnd) {
-        wordLength = 0;
+        cuWordLength = 0;
+        cpWordLength = 0;
 
         // Look for candidate words at the current position
-        int candidates = words[wordsFound%LAO_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
+        int32_t candidates = words[wordsFound%LAO_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
         
         // If we found exactly one, use that
         if (candidates == 1) {
-            wordLength = words[wordsFound % LAO_LOOKAHEAD].acceptMarked(text);
+            cuWordLength = words[wordsFound % LAO_LOOKAHEAD].acceptMarked(text);
+            cpWordLength = words[wordsFound % LAO_LOOKAHEAD].markedCPLength();
             wordsFound += 1;
         }
         // If there was more than one, see which one can take us forward the most words
         else if (candidates > 1) {
             // If we're already at the end of the range, we're done
-            if ((int32_t)utext_getNativeIndex(text) >= rangeEnd) {
+            if (utext_getNativeIndex(text) >= rangeEnd) {
                 goto foundBest;
             }
             do {
-                int wordsMatched = 1;
+                int32_t wordsMatched = 1;
                 if (words[(wordsFound + 1) % LAO_LOOKAHEAD].candidates(text, fDictionary, rangeEnd) > 0) {
                     if (wordsMatched < 2) {
                         // Followed by another dictionary word; mark first word as a good candidate
@@ -550,7 +550,8 @@ LaoBreakEngine::divideUpDictionaryRange( UText *text,
             }
             while (words[wordsFound % LAO_LOOKAHEAD].backUp(text));
 foundBest:
-            wordLength = words[wordsFound % LAO_LOOKAHEAD].acceptMarked(text);
+            cuWordLength = words[wordsFound % LAO_LOOKAHEAD].acceptMarked(text);
+            cpWordLength = words[wordsFound % LAO_LOOKAHEAD].markedCPLength();
             wordsFound += 1;
         }
         
@@ -559,49 +560,50 @@ foundBest:
         // just found (if there is one), but only if the preceding word does not exceed
         // the threshold.
         // The text iterator should now be positioned at the end of the word we found.
-        if ((int32_t)utext_getNativeIndex(text) < rangeEnd && wordLength < LAO_ROOT_COMBINE_THRESHOLD) {
+        if ((int32_t)utext_getNativeIndex(text) < rangeEnd && cpWordLength < LAO_ROOT_COMBINE_THRESHOLD) {
             // if it is a dictionary word, do nothing. If it isn't, then if there is
             // no preceding word, or the non-word shares less than the minimum threshold
             // of characters with a dictionary word, then scan to resynchronize
             if (words[wordsFound % LAO_LOOKAHEAD].candidates(text, fDictionary, rangeEnd) <= 0
-                  && (wordLength == 0
+                  && (cuWordLength == 0
                       || words[wordsFound%LAO_LOOKAHEAD].longestPrefix() < LAO_PREFIX_COMBINE_THRESHOLD)) {
                 // Look for a plausible word boundary
-                //TODO: This section will need a rework for UText.
-                int32_t remaining = rangeEnd - (current+wordLength);
-                UChar32 pc = utext_current32(text);
+                int32_t remaining = rangeEnd - (current + cuWordLength);
+                UChar32 pc;
+                UChar32 uc;
                 int32_t chars = 0;
                 for (;;) {
-                    utext_next32(text);
-                    uc = utext_current32(text);
-                    // TODO: Here we're counting on the fact that the SA languages are all
-                    // in the BMP. This should get fixed with the UText rework.
-                    chars += 1;
-                    if (--remaining <= 0) {
+                    int32_t pcIndex = utext_getNativeIndex(text);
+                    pc = utext_next32(text);
+                    int32_t pcSize = utext_getNativeIndex(text) - pcIndex;
+                    chars += pcSize;
+                    remaining -= pcSize;
+                    if (remaining <= 0) {
                         break;
                     }
+                    uc = utext_current32(text);
                     if (fEndWordSet.contains(pc) && fBeginWordSet.contains(uc)) {
                         // Maybe. See if it's in the dictionary.
-                        int candidates = words[(wordsFound + 1) % LAO_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
-                        utext_setNativeIndex(text, current + wordLength + chars);
+                        // TODO: this looks iffy; compare with old code.
+                        int32_t candidates = words[(wordsFound + 1) % LAO_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
+                        utext_setNativeIndex(text, current + cuWordLength + chars);
                         if (candidates > 0) {
                             break;
                         }
                     }
-                    pc = uc;
                 }
                 
                 // Bump the word count if there wasn't already one
-                if (wordLength <= 0) {
+                if (cuWordLength <= 0) {
                     wordsFound += 1;
                 }
                 
                 // Update the length with the passed-over characters
-                wordLength += chars;
+                cuWordLength += chars;
             }
             else {
                 // Back up to where we were for next iteration
-                utext_setNativeIndex(text, current+wordLength);
+                utext_setNativeIndex(text, current + cuWordLength);
             }
         }
         
@@ -609,7 +611,7 @@ foundBest:
         int32_t currPos;
         while ((currPos = (int32_t)utext_getNativeIndex(text)) < rangeEnd && fMarkSet.contains(utext_current32(text))) {
             utext_next32(text);
-            wordLength += (int32_t)utext_getNativeIndex(text) - currPos;
+            cuWordLength += (int32_t)utext_getNativeIndex(text) - currPos;
         }
         
         // Look ahead for possible suffixes if a dictionary word does not follow.
@@ -619,8 +621,8 @@ foundBest:
         // NOT CURRENTLY APPLICABLE TO LAO
 
         // Did we find a word on this iteration? If so, push it on the break stack
-        if (wordLength > 0) {
-            foundBreaks.push((current+wordLength), status);
+        if (cuWordLength > 0) {
+            foundBreaks.push((current+cuWordLength), status);
         }
     }
 
@@ -639,20 +641,20 @@ foundBest:
  */
 
 // How many words in a row are "good enough"?
-#define KHMER_LOOKAHEAD 3
+static const int32_t KHMER_LOOKAHEAD = 3;
 
 // Will not combine a non-word with a preceding dictionary word longer than this
-#define KHMER_ROOT_COMBINE_THRESHOLD 3
+static const int32_t KHMER_ROOT_COMBINE_THRESHOLD = 3;
 
 // Will not combine a non-word that shares at least this much prefix with a
 // dictionary word, with a preceding word
-#define KHMER_PREFIX_COMBINE_THRESHOLD 3
+static const int32_t KHMER_PREFIX_COMBINE_THRESHOLD = 3;
 
 // Minimum word size
-#define KHMER_MIN_WORD 2
+static const int32_t KHMER_MIN_WORD = 2;
 
 // Minimum number of characters for two words
-#define KHMER_MIN_WORD_SPAN (KHMER_MIN_WORD * 2)
+static const int32_t KHMER_MIN_WORD_SPAN = KHMER_MIN_WORD * 2;
 
 KhmerBreakEngine::KhmerBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status)
     : DictionaryBreakEngine((1 << UBRK_WORD) | (1 << UBRK_LINE)),
@@ -699,23 +701,25 @@ KhmerBreakEngine::divideUpDictionaryRange( UText *text,
     }
 
     uint32_t wordsFound = 0;
-    int32_t wordLength;
+    int32_t cpWordLength = 0;
+    int32_t cuWordLength = 0;
     int32_t current;
     UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[KHMER_LOOKAHEAD];
-    UChar32 uc;
 
     utext_setNativeIndex(text, rangeStart);
 
     while (U_SUCCESS(status) && (current = (int32_t)utext_getNativeIndex(text)) < rangeEnd) {
-        wordLength = 0;
+        cuWordLength = 0;
+        cpWordLength = 0;
 
         // Look for candidate words at the current position
-        int candidates = words[wordsFound%KHMER_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
+        int32_t candidates = words[wordsFound%KHMER_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
 
         // If we found exactly one, use that
         if (candidates == 1) {
-            wordLength = words[wordsFound%KHMER_LOOKAHEAD].acceptMarked(text);
+            cuWordLength = words[wordsFound % KHMER_LOOKAHEAD].acceptMarked(text);
+            cpWordLength = words[wordsFound % KHMER_LOOKAHEAD].markedCPLength();
             wordsFound += 1;
         }
 
@@ -726,7 +730,7 @@ KhmerBreakEngine::divideUpDictionaryRange( UText *text,
                 goto foundBest;
             }
             do {
-                int wordsMatched = 1;
+                int32_t wordsMatched = 1;
                 if (words[(wordsFound + 1) % KHMER_LOOKAHEAD].candidates(text, fDictionary, rangeEnd) > 0) {
                     if (wordsMatched < 2) {
                         // Followed by another dictionary word; mark first word as a good candidate
@@ -752,7 +756,8 @@ KhmerBreakEngine::divideUpDictionaryRange( UText *text,
             }
             while (words[wordsFound % KHMER_LOOKAHEAD].backUp(text));
 foundBest:
-            wordLength = words[wordsFound % KHMER_LOOKAHEAD].acceptMarked(text);
+            cuWordLength = words[wordsFound % KHMER_LOOKAHEAD].acceptMarked(text);
+            cpWordLength = words[wordsFound % KHMER_LOOKAHEAD].markedCPLength();
             wordsFound += 1;
         }
 
@@ -761,49 +766,49 @@ foundBest:
         // just found (if there is one), but only if the preceding word does not exceed
         // the threshold.
         // The text iterator should now be positioned at the end of the word we found.
-        if ((int32_t)utext_getNativeIndex(text) < rangeEnd && wordLength < KHMER_ROOT_COMBINE_THRESHOLD) {
+        if ((int32_t)utext_getNativeIndex(text) < rangeEnd && cpWordLength < KHMER_ROOT_COMBINE_THRESHOLD) {
             // if it is a dictionary word, do nothing. If it isn't, then if there is
             // no preceding word, or the non-word shares less than the minimum threshold
             // of characters with a dictionary word, then scan to resynchronize
             if (words[wordsFound % KHMER_LOOKAHEAD].candidates(text, fDictionary, rangeEnd) <= 0
-                  && (wordLength == 0
+                  && (cuWordLength == 0
                       || words[wordsFound % KHMER_LOOKAHEAD].longestPrefix() < KHMER_PREFIX_COMBINE_THRESHOLD)) {
                 // Look for a plausible word boundary
-                //TODO: This section will need a rework for UText.
-                int32_t remaining = rangeEnd - (current+wordLength);
-                UChar32 pc = utext_current32(text);
+                int32_t remaining = rangeEnd - (current+cuWordLength);
+                UChar32 pc;
+                UChar32 uc;
                 int32_t chars = 0;
                 for (;;) {
-                    utext_next32(text);
-                    uc = utext_current32(text);
-                    // TODO: Here we're counting on the fact that the SA languages are all
-                    // in the BMP. This should get fixed with the UText rework.
-                    chars += 1;
-                    if (--remaining <= 0) {
+                    int32_t pcIndex = utext_getNativeIndex(text);
+                    pc = utext_next32(text);
+                    int32_t pcSize = utext_getNativeIndex(text) - pcIndex;
+                    chars += pcSize;
+                    remaining -= pcSize;
+                    if (remaining <= 0) {
                         break;
                     }
+                    uc = utext_current32(text);
                     if (fEndWordSet.contains(pc) && fBeginWordSet.contains(uc)) {
                         // Maybe. See if it's in the dictionary.
-                        int candidates = words[(wordsFound + 1) % KHMER_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
-                        utext_setNativeIndex(text, current+wordLength+chars);
+                        int32_t candidates = words[(wordsFound + 1) % KHMER_LOOKAHEAD].candidates(text, fDictionary, rangeEnd);
+                        utext_setNativeIndex(text, current+cuWordLength+chars);
                         if (candidates > 0) {
                             break;
                         }
                     }
-                    pc = uc;
                 }
 
                 // Bump the word count if there wasn't already one
-                if (wordLength <= 0) {
+                if (cuWordLength <= 0) {
                     wordsFound += 1;
                 }
 
                 // Update the length with the passed-over characters
-                wordLength += chars;
+                cuWordLength += chars;
             }
             else {
                 // Back up to where we were for next iteration
-                utext_setNativeIndex(text, current+wordLength);
+                utext_setNativeIndex(text, current+cuWordLength);
             }
         }
 
@@ -811,7 +816,7 @@ foundBest:
         int32_t currPos;
         while ((currPos = (int32_t)utext_getNativeIndex(text)) < rangeEnd && fMarkSet.contains(utext_current32(text))) {
             utext_next32(text);
-            wordLength += (int32_t)utext_getNativeIndex(text) - currPos;
+            cuWordLength += (int32_t)utext_getNativeIndex(text) - currPos;
         }
 
         // Look ahead for possible suffixes if a dictionary word does not follow.
@@ -853,8 +858,8 @@ foundBest:
 //        }
 
         // Did we find a word on this iteration? If so, push it on the break stack
-        if (wordLength > 0) {
-            foundBreaks.push((current+wordLength), status);
+        if (cuWordLength > 0) {
+            foundBreaks.push((current+cuWordLength), status);
         }
     }
     
@@ -904,11 +909,11 @@ CjkBreakEngine::~CjkBreakEngine(){
 
 // The katakanaCost values below are based on the length frequencies of all
 // katakana phrases in the dictionary
-static const int kMaxKatakanaLength = 8;
-static const int kMaxKatakanaGroupLength = 20;
+static const int32_t kMaxKatakanaLength = 8;
+static const int32_t kMaxKatakanaGroupLength = 20;
 static const uint32_t maxSnlp = 255;
 
-static inline uint32_t getKatakanaCost(int wordLength){
+static inline uint32_t getKatakanaCost(int32_t wordLength){
     //TODO: fill array with actual values from dictionary!
     static const uint32_t katakanaCost[kMaxKatakanaLength + 1]
                                        = {8192, 984, 408, 240, 204, 252, 300, 372, 480};
@@ -920,51 +925,6 @@ static inline bool isKatakana(uint16_t value) {
             (value >= 0xFF66u && value <= 0xFF9fu);
 }
 
-// A very simple helper class to streamline the buffer handling in
-// divideUpDictionaryRange. 
-template<class T, size_t N>
-class AutoBuffer {
-public:
-    AutoBuffer(size_t size) : buffer(stackBuffer), capacity(N) {
-        if (size > N) {
-            buffer = reinterpret_cast<T*>(uprv_malloc(sizeof(T)*size));
-            capacity = size;
-        }
-    }
-    ~AutoBuffer() {
-        if (buffer != stackBuffer)
-            uprv_free(buffer);
-    }
-
-    T* elems() {
-        return buffer;
-    }
-
-    const T& operator[] (size_t i) const {
-        return buffer[i];
-    }
-
-    T& operator[] (size_t i) {
-        return buffer[i];
-    }
-
-    // resize without copy
-    void resize(size_t size) {
-        if (size <= capacity)
-            return;
-        if (buffer != stackBuffer)
-            uprv_free(buffer);
-        buffer = reinterpret_cast<T*>(uprv_malloc(sizeof(T)*size));
-        capacity = size;
-    }
-
-private:
-    T stackBuffer[N];
-    T* buffer;
-    AutoBuffer();
-    size_t capacity;
-};
-
 
 // Function for accessing internal utext flags.
 //   Replicates an internal UText function.
@@ -973,15 +933,6 @@ static inline int32_t utext_i32_flag(int32_t bitIndex) {
     return (int32_t)1 << bitIndex;
 }
 
-static void PVector(const UVector32 *v) {
-   printf ("Vector@%p: {", v);
-   if (v) {
-       for (int i=0; i<v->size(); i++) {
-           printf("%d ", v->elementAti(i));
-       }
-   }
-   printf("}\n");
-}
        
 /*
  * @param text A UText representing the text
@@ -1092,8 +1043,6 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         inString = normalizedInput;
     }
 
-    PVector(inputMap);    // TODO:  debug, remove.
-
     int32_t numCodePts = inString->countChar32();
     if (numCodePts != inString->length()) {
         // There are supplementary characters in the input.
@@ -1124,7 +1073,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     // code points in the range to be matched.
     UVector32 bestSnlp(numCodePts + 1, status);
     bestSnlp.addElement(0, status);
-    for(int i = 1; i <= numCodePts; i++) {
+    for(int32_t i = 1; i <= numCodePts; i++) {
         bestSnlp.addElement(kuint32max, status);
     }
 
@@ -1142,7 +1091,6 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     UVector32 lengths(numCodePts, status);
     lengths.setSize(numCodePts);
 
-    // TODO: dump this UText, switch dictionary->matches() to work on UnicodeString.
     UText fu = UTEXT_INITIALIZER;
     utext_openUnicodeString(&fu, inString, &status);
 
@@ -1158,23 +1106,13 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         }
 
         int32_t count;
-        // limit maximum word length matched to size of current substring
-        int32_t maxSearchLength = (i + maxWordSize < numCodePts) ? maxWordSize : (numCodePts - i);
-
-        // TODO: utext vs. UnicodeString. Change matches() function.
-        //       pass lengths and values as UVector32. Eliminates count, limit.
         utext_setNativeIndex(&fu, ix);
+        count = fDictionary->matches(&fu, maxWordSize, numCodePts,
+                             NULL, lengths.getBuffer(), values.getBuffer(), NULL);
+                             // Note: lengths is filled with code point lengths
+                             //       The NULL parameter is the ignored code unit lengths.
 
-        fDictionary->matches(&fu, 
-                             maxSearchLength,      // Maximum code points to consider
-                             lengths.getBuffer(),  // Lengths in code points of words beginning here. Output Array.
-                             NULL,                 // Lengths in UText code units. Output param. We don't need this.
-                             count,                // Number of words. Output Param.
-                             maxSearchLength,      // Capacity of output arrays.
-                             values.getBuffer()    // Trie Values (output array)
-                            );
-
-        // If there are no single character matches found in the dictionary 
+        // if there are no single character matches found in the dictionary 
         // starting with this charcter, treat character as a 1-character word 
         // with the highest value possible, i.e. the least likely to occur.
         // Exclude Korean characters from this treatment, as they should be left
@@ -1221,7 +1159,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         }
         is_prev_katakana = is_katakana;
     }
-    utext_close(&fu);   // TODO: dump this.
+    utext_close(&fu);
 
     // Start pushing the optimal offset index into t_boundary (t for tentative).
     // prev[numCodePts] is guaranteed to be meaningful.
@@ -1229,7 +1167,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     // t_boundary[0] = numCodePts, and afterwards do a swap.
     UVector32 t_boundary(numCodePts+1, status);
 
-    int numBreaks = 0;
+    int32_t numBreaks = 0;
     // No segmentation found, set boundary to end of range
     if ((uint32_t)bestSnlp.elementAti(numCodePts) == kuint32max) {
         t_boundary.addElement(numCodePts, status);
@@ -1252,7 +1190,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     // Now that we're done, convert positions in t_boundary[] (indices in 
     // the normalized input string) back to indices in the original input UText
     // while reversing t_boundary and pushing values to foundBreaks.
-    for (int i = numBreaks-1; i >= 0; i--) {
+    for (int32_t i = numBreaks-1; i >= 0; i--) {
         int32_t cpPos = t_boundary.elementAti(i);
         int32_t utextPos =  inputMap ? inputMap->elementAti(cpPos) : cpPos + rangeStart;
         // Boundaries are added to foundBreaks output in ascending order.

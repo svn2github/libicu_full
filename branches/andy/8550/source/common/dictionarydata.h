@@ -1,6 +1,6 @@
 /*
 *******************************************************************************
-* Copyright (C) 2014, International Business Machines
+* Copyright (C) 2013, International Business Machines
 * Corporation and others.  All Rights Reserved.
 *******************************************************************************
 * dictionarydata.h
@@ -66,25 +66,37 @@ public:
  */
 class U_COMMON_API DictionaryMatcher : public UMemory {
 public:
+    DictionaryMatcher() : fLengthsInCodePoints(TRUE) {};
     virtual ~DictionaryMatcher();
-    // Find any dictionary words that match the input text beginning at the UText current position.
-    // May find multiple words of varying lengths, or none at all.
-    // There are three parallel output arrays, for the length of matching word in Code Points,
-    //    the word lengths in native units of the UText (could be UTF-8 or UTF-16, or somethine else entirely)
-    //    and the Trie dictionary values for the words.
-    // Any of the output arrays may be NULL.
-    // They all must have the same capacity, if non-NULL.
     // this should emulate CompactTrieDictionary::matches()
-    virtual int32_t matches(UText  *text,           // UText input text.
-                            int32_t maxLength,     // Maximum number of code points from input text to examine.
-                            int32_t *lengths,      // Output array, lengths of matching words, in Code Points.
-                            int32_t *textLengths,  // Output array, lengths of matching words, in UText native units.
-                            int32_t &count,        // Number of matching words found. All begin at input text curr. position.
-                            int32_t limit,         // Output array capacities.
-                            int32_t *values = NULL // Output array of values from Trie for each word.
-                            ) const = 0;
+    /*  @param text      The text in which to look for matching words. Matching begins
+     *                   at the current position of the UText.
+     *  @param maxLength The max length of match to consider. Units are the native indexing
+     *                   units of the UText.
+     *  @param limit     Capacity of output arrays, which is also the maximum number of
+     *                   matching words to be found.
+     *  @param lengths   output array, filled with the lengths of the matches, in order,
+     *                   from shortest to longest. Lengths are in native indexing units
+     *                   of the UText. May be NULL.
+     *  @param cpLengths output array, filled with the lengths of the matches, in order,
+     *                   from shortest to longest. Lengths are the number of Unicode code points.
+     *                   May be NULL.
+     *  @param values    Output array, filled with the values associated with the words found.
+     *                   May be NULL.
+     *  @param prefix    Output parameter, the code point length of the prefix match, even if that
+     *                   prefix didn't lead to a complete word. Will always be >= the cpLength
+     *                   of the longest complete word matched. May be NULL.
+     *  @return          Number of matching words found.
+     */
+    virtual int32_t matches(UText *text, int32_t maxLength, int32_t limit,
+                            int32_t *lengths, int32_t *cpLengths, int32_t *values,
+                            int32_t *prefix) const = 0;
+
     /** @return DictionaryData::TRIE_TYPE_XYZ */
     virtual int32_t getType() const = 0;
+
+  protected:
+    UBool   fLengthsInCodePoints;
 };
 
 // Implementation of the DictionaryMatcher interface for a UCharsTrie dictionary
@@ -94,8 +106,9 @@ public:
     // The UDataMemory * will be closed on this object's destruction.
     UCharsDictionaryMatcher(const UChar *c, UDataMemory *f) : characters(c), file(f) { }
     virtual ~UCharsDictionaryMatcher();
-    virtual int32_t matches(UText *text, int32_t maxLength, int32_t *lengths, int32_t *textLengths,
-                            int32_t &count, int32_t limit, int32_t *values = NULL) const;
+    virtual int32_t matches(UText *text, int32_t maxLength, int32_t limit,
+                            int32_t *lengths, int32_t *cpLengths, int32_t *values,
+                            int32_t *prefix) const;
     virtual int32_t getType() const;
 private:
     const UChar *characters;
@@ -111,8 +124,9 @@ public:
     BytesDictionaryMatcher(const char *c, int32_t t, UDataMemory *f)
             : characters(c), transformConstant(t), file(f) { }
     virtual ~BytesDictionaryMatcher();
-    virtual int32_t matches(UText *text, int32_t maxLength, int32_t *lengths, int32_t *textLengths,
-                            int32_t &count, int32_t limit, int32_t *values = NULL) const;
+    virtual int32_t matches(UText *text, int32_t maxLength, int32_t limit,
+                            int32_t *lengths, int32_t *cpLengths, int32_t *values,
+                            int32_t *prefix) const;
     virtual int32_t getType() const;
 private:
     UChar32 transform(UChar32 c) const;

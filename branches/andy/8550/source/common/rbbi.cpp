@@ -701,6 +701,22 @@ int32_t RuleBasedBreakIterator::previous(void) {
  * @return The position of the first break after the current position.
  */
 int32_t RuleBasedBreakIterator::following(int32_t offset) {
+    // if the offset passed in is already past the end of the text,
+    // just return DONE; if it's before the beginning, return the
+    // text's starting offset
+    if (fText == NULL || offset >= utext_nativeLength(fText)) {
+        last();
+        return next();
+    }
+    else if (offset < 0) {
+        return first();
+    }
+
+    // Move requested offset to a code point start. It might be on a trail surrogate,
+    // or on a trail byte if the input is UTF-8.
+    utext_setNativeIndex(fText, offset);
+    offset = utext_getNativeIndex(fText);
+
     // if we have cached break positions and offset is in the range
     // covered by them, use them
     // TODO: could use binary search
@@ -722,20 +738,7 @@ int32_t RuleBasedBreakIterator::following(int32_t offset) {
         }
     }
 
-    // if the offset passed in is already past the end of the text,
-    // just return DONE; if it's before the beginning, return the
-    // text's starting offset
-    fLastRuleStatusIndex  = 0;
-    fLastStatusIndexValid = TRUE;
-    if (fText == NULL || offset >= utext_nativeLength(fText)) {
-        last();
-        return next();
-    }
-    else if (offset < 0) {
-        return first();
-    }
-
-    // otherwise, set our internal iteration position (temporarily)
+    // Set our internal iteration position (temporarily)
     // to the position passed in.  If this is the _beginning_ position,
     // then we can just use next() to get our return value
 
@@ -747,6 +750,7 @@ int32_t RuleBasedBreakIterator::following(int32_t offset) {
         // move forward one codepoint to prepare for moving back to a
         // safe point.
         // this handles offset being between a supplementary character
+        // TODO: is this still needed, with move to code point boundary handled above?
         (void)UTEXT_NEXT32(fText);
         // handlePrevious will move most of the time to < 1 boundary away
         handlePrevious(fData->fSafeRevTable);
@@ -809,6 +813,21 @@ int32_t RuleBasedBreakIterator::following(int32_t offset) {
  * @return The position of the last boundary before the starting position.
  */
 int32_t RuleBasedBreakIterator::preceding(int32_t offset) {
+    // if the offset passed in is already past the end of the text,
+    // just return DONE; if it's before the beginning, return the
+    // text's starting offset
+    if (fText == NULL || offset > utext_nativeLength(fText)) {
+        return last();
+    }
+    else if (offset < 0) {
+        return first();
+    }
+
+    // Move requested offset to a code point start. It might be on a trail surrogate,
+    // or on a trail byte if the input is UTF-8.
+    utext_setNativeIndex(fText, offset);
+    offset = utext_getNativeIndex(fText);
+
     // if we have cached break positions and offset is in the range
     // covered by them, use them
     if (fCachedBreakPositions != NULL) {
@@ -832,17 +851,6 @@ int32_t RuleBasedBreakIterator::preceding(int32_t offset) {
         else {
             reset();
         }
-    }
-
-    // if the offset passed in is already past the end of the text,
-    // just return DONE; if it's before the beginning, return the
-    // text's starting offset
-    if (fText == NULL || offset > utext_nativeLength(fText)) {
-        // return BreakIterator::DONE;
-        return last();
-    }
-    else if (offset < 0) {
-        return first();
     }
 
     // if we start by updating the current iteration position to the

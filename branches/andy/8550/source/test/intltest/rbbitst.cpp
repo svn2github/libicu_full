@@ -1115,7 +1115,14 @@ void RBBITest::executeTest(TestParams *t, UErrorCode &status) {
         int32_t actualBreak = t->bi->preceding(i);
         int32_t expectedBreak = BreakIterator::DONE;
 
-        for (int32_t j=i-1; j >= 0; j--) {
+        // For UTF-8 & UTF-16 supplementals, all code units of a character are equivalent.
+        // preceding(trailing byte) will return the index of some preceding code point,
+        // not the lead byte of the current code point, even though that has a smaller index.
+        // Therefore, start looking at the expected break data not at i-1, but at
+        // the start of code point index - 1.
+        utext_setNativeIndex(t->textToBreak, i);
+        int32_t j = utext_getNativeIndex(t->textToBreak) - 1;
+        for (; j >= 0; j--) {
             if (t->getExpectedBreak(j) != 0) {
                 expectedBreak = j;
                 break;
@@ -1311,11 +1318,12 @@ void RBBITest::TestExtended() {
                 charIdx += 6;
 
                 // RUN THE TEST!
-                tp.setUTF16(status);    // TODO: Re-enable. debugging.
+                tp.setUTF16(status);
                 executeTest(&tp, status);
 
-                //tp.setUTF8(status);
-                //executeTest(&tp, status);
+                // Run again, this time with UTF-8 text wrapped in a UText.
+                tp.setUTF8(status);
+                executeTest(&tp, status);
                 break;
             }
 

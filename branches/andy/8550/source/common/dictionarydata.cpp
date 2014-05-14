@@ -40,30 +40,31 @@ int32_t UCharsDictionaryMatcher::getType() const {
     return DictionaryData::TRIE_TYPE_UCHARS;
 }
 
-int32_t UCharsDictionaryMatcher::matches(UText *text, int32_t maxLength, 
-                                         int32_t *lengths, int32_t *textLengths, int32_t &count, 
-                                         int32_t limit, int32_t *values) const {
+int32_t UCharsDictionaryMatcher::matches(UText *text, int32_t maxLength, int32_t limit,
+                            int32_t *lengths, int32_t *cpLengths, int32_t *values,
+                            int32_t *prefix) const {
+
     UCharsTrie uct(characters);
-    int64_t startTextIndex = utext_getNativeIndex(text);
-    UChar32 c = utext_next32(text);
-    if (c < 0) {
-        return 0;
-    }
-    UStringTrieResult result = uct.first(c);
-    int32_t numChars = 1;
-    count = 0;
-    for (;;) {
+    int32_t startingTextIndex = utext_getNativeIndex(text);
+    int32_t wordCount = 0;
+    int32_t codePointsMatched = 0;
+
+    for (UChar32 c = utext_next32(text); c >= 0; c=utext_next32(text)) {
+        UStringTrieResult result = (codePointsMatched == 0) ? uct.first(c) : uct.next(c);
+        int32_t lengthMatched = utext_getNativeIndex(text) - startingTextIndex;
+        codePointsMatched += 1;
         if (USTRINGTRIE_HAS_VALUE(result)) {
-            if (count < limit) {
+            if (wordCount < limit) {
                 if (values != NULL) {
-                    values[count] = uct.getValue();
-                }
-                if (textLengths != NULL) {
-                    textLengths[count]= static_cast<int32_t>(utext_getNativeIndex(text) - startTextIndex);
+                    values[wordCount] = uct.getValue();
                 }
                 if (lengths != NULL) {
-                    lengths[count++] = numChars;
+                    lengths[wordCount] = lengthMatched;
                 }
+                if (cpLengths != NULL) {
+                    cpLengths[wordCount] = codePointsMatched;
+                }
+                ++wordCount;
             }
             if (result == USTRINGTRIE_FINAL_VALUE) {
                 break;
@@ -72,20 +73,15 @@ int32_t UCharsDictionaryMatcher::matches(UText *text, int32_t maxLength,
         else if (result == USTRINGTRIE_NO_MATCH) {
             break;
         }
-
-        // TODO: why do we have a text limit if the UText knows its length?
-        if (numChars >= maxLength) {
+        if (lengthMatched >= maxLength) {
             break;
         }
-
-        c = utext_next32(text);
-        if (c < 0) {
-            break;
-        }
-        ++numChars;
-        result = uct.next(c);
     }
-    return numChars;
+
+    if (prefix != NULL) {
+        *prefix = codePointsMatched;
+    }
+    return wordCount;
 }
 
 BytesDictionaryMatcher::~BytesDictionaryMatcher() {
@@ -112,30 +108,30 @@ int32_t BytesDictionaryMatcher::getType() const {
     return DictionaryData::TRIE_TYPE_BYTES;
 }
 
-int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength,
-                                         int32_t *lengths, int32_t *textLengths, int32_t &count, 
-                                         int32_t limit, int32_t *values) const {
+int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength, int32_t limit,
+                            int32_t *lengths, int32_t *cpLengths, int32_t *values,
+                            int32_t *prefix) const {
     BytesTrie bt(characters);
-    int64_t startTextIndex = utext_getNativeIndex(text);
-    UChar32 c = utext_next32(text);
-    if (c < 0) {
-        return 0;
-    }
-    UStringTrieResult result = bt.first(transform(c));
-    int32_t numChars = 1;
-    count = 0;
-    for (;;) {
+    int32_t startingTextIndex = utext_getNativeIndex(text);
+    int32_t wordCount = 0;
+    int32_t codePointsMatched = 0;
+
+    for (UChar32 c = utext_next32(text); c >= 0; c=utext_next32(text)) {
+        UStringTrieResult result = (codePointsMatched == 0) ? bt.first(transform(c)) : bt.next(transform(c));
+        int32_t lengthMatched = utext_getNativeIndex(text) - startingTextIndex;
+        codePointsMatched += 1;
         if (USTRINGTRIE_HAS_VALUE(result)) {
-            if (count < limit) {
+            if (wordCount < limit) {
                 if (values != NULL) {
-                    values[count] = bt.getValue();
-                }
-                if (textLengths != NULL) {
-                    textLengths[count]= static_cast<int32_t>(utext_getNativeIndex(text) - startTextIndex);
+                    values[wordCount] = bt.getValue();
                 }
                 if (lengths != NULL) {
-                    lengths[count++] = numChars;
+                    lengths[wordCount] = lengthMatched;
                 }
+                if (cpLengths != NULL) {
+                    cpLengths[wordCount] = codePointsMatched;
+                }
+                ++wordCount;
             }
             if (result == USTRINGTRIE_FINAL_VALUE) {
                 break;
@@ -144,19 +140,15 @@ int32_t BytesDictionaryMatcher::matches(UText *text, int32_t maxLength,
         else if (result == USTRINGTRIE_NO_MATCH) {
             break;
         }
-
-        if (numChars >= maxLength) {
+        if (lengthMatched >= maxLength) {
             break;
         }
-
-        c = utext_next32(text);
-        if (c < 0) {
-            break;
-        }
-        ++numChars;
-        result = bt.next(transform(c));
     }
-    return numChars;
+
+    if (prefix != NULL) {
+        *prefix = codePointsMatched;
+    }
+    return wordCount;
 }
 
 
