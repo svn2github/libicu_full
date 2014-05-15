@@ -449,6 +449,7 @@ private:
     const RelativeDateTimeCacheData* cache;
     const SharedNumberFormat *numberFormat;
     const SharedPluralRules *pluralRules;
+    UDateFormatStyle style;
     void init(const Locale &, NumberFormat *nfToAdopt, UErrorCode &status);
 };
 
