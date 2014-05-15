@@ -532,6 +532,7 @@ private:
     void TestEnglishShort();
     void TestEnglishNarrow();
     void TestSerbian();
+    void TestSerbianFallback();
     void TestEnglishNoQuantity();
     void TestEnglishNoQuantityCaps();
     void TestEnglishNoQuantityShort();
@@ -609,6 +610,7 @@ void RelativeDateTimeFormatterTest::runIndexedTest(
     TESTCASE_AUTO(TestEnglishShort);
     TESTCASE_AUTO(TestEnglishNarrow);
     TESTCASE_AUTO(TestSerbian);
+    TESTCASE_AUTO(TestSerbianFallback);
     TESTCASE_AUTO(TestEnglishNoQuantity);
     TESTCASE_AUTO(TestEnglishNoQuantityCaps);
     TESTCASE_AUTO(TestEnglishNoQuantityShort);
@@ -644,6 +646,10 @@ void RelativeDateTimeFormatterTest::TestEnglishNarrow() {
 
 void RelativeDateTimeFormatterTest::TestSerbian() {
     RunTest("sr", kSerbian, LENGTHOF(kSerbian));
+}
+
+void RelativeDateTimeFormatterTest::TestSerbianFallback() {
+    RunTest("sr", UDAT_SHORT, kSerbian, LENGTHOF(kSerbian));
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishNoQuantity() {
