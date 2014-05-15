@@ -30,6 +30,11 @@
 #include "sharedpluralrules.h"
 #include "sharednumberformat.h"
 
+#define RELDATE_STYLE_FULL 0
+#define RELDATE_STYLE_SHORT 1
+#define RELDATE_STYLE_NARROW 2
+#define RELDATE_STYLE_COUNT 3 
+
 // Copied from uscript_props.cpp
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
@@ -57,11 +62,11 @@ public:
     virtual ~RelativeDateTimeCacheData();
 
     // no numbers: e.g Next Tuesday; Yesterday; etc.
-    UnicodeString absoluteUnits[UDAT_ABSOLUTE_UNIT_COUNT][UDAT_DIRECTION_COUNT];
+    UnicodeString absoluteUnits[RELDATE_STYLE_COUNT][UDAT_ABSOLUTE_UNIT_COUNT][UDAT_DIRECTION_COUNT];
 
     // has numbers: e.g Next Tuesday; Yesterday; etc. For second index, 0
     // means past e.g 5 days ago; 1 means future e.g in 5 days.
-    QuantityFormatter relativeUnits[UDAT_RELATIVE_UNIT_COUNT][2];
+    QuantityFormatter relativeUnits[RELDATE_STYLE_COUNT][UDAT_RELATIVE_UNIT_COUNT][2];
 
     void adoptCombinedDateAndTime(MessageFormat *mfToAdopt) {
         delete combinedDateAndTime;
@@ -337,46 +342,46 @@ static UBool loadUnitData(
     addTimeUnit(
             resource,
             "fields/day",
-            cacheData.relativeUnits[UDAT_RELATIVE_DAYS],
-            cacheData.absoluteUnits[UDAT_ABSOLUTE_DAY],
+            cacheData.relativeUnits[0][UDAT_RELATIVE_DAYS],
+            cacheData.absoluteUnits[0][UDAT_ABSOLUTE_DAY],
             status);
     addTimeUnit(
             resource,
             "fields/week",
-            cacheData.relativeUnits[UDAT_RELATIVE_WEEKS],
-            cacheData.absoluteUnits[UDAT_ABSOLUTE_WEEK],
+            cacheData.relativeUnits[0][UDAT_RELATIVE_WEEKS],
+            cacheData.absoluteUnits[0][UDAT_ABSOLUTE_WEEK],
             status);
     addTimeUnit(
             resource,
             "fields/month",
-            cacheData.relativeUnits[UDAT_RELATIVE_MONTHS],
-            cacheData.absoluteUnits[UDAT_ABSOLUTE_MONTH],
+            cacheData.relativeUnits[0][UDAT_RELATIVE_MONTHS],
+            cacheData.absoluteUnits[0][UDAT_ABSOLUTE_MONTH],
             status);
     addTimeUnit(
             resource,
             "fields/year",
-            cacheData.relativeUnits[UDAT_RELATIVE_YEARS],
-            cacheData.absoluteUnits[UDAT_ABSOLUTE_YEAR],
+            cacheData.relativeUnits[0][UDAT_RELATIVE_YEARS],
+            cacheData.absoluteUnits[0][UDAT_ABSOLUTE_YEAR],
             status);
     initRelativeUnit(
             resource,
             "fields/second",
-            cacheData.relativeUnits[UDAT_RELATIVE_SECONDS],
+            cacheData.relativeUnits[0][UDAT_RELATIVE_SECONDS],
             status);
     initRelativeUnit(
             resource,
             "fields/minute",
-            cacheData.relativeUnits[UDAT_RELATIVE_MINUTES],
+            cacheData.relativeUnits[0][UDAT_RELATIVE_MINUTES],
             status);
     initRelativeUnit(
             resource,
             "fields/hour",
-            cacheData.relativeUnits[UDAT_RELATIVE_HOURS],
+            cacheData.relativeUnits[0][UDAT_RELATIVE_HOURS],
             status);
     getStringWithFallback(
             resource,
             "fields/second/relative/0",
-            cacheData.absoluteUnits[UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
+            cacheData.absoluteUnits[0][UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
             status);
     UnicodeString daysOfWeek[7];
     readDaysOfWeek(
@@ -389,49 +394,49 @@ static UBool loadUnitData(
             "fields/mon/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_MONDAY,
-            cacheData.absoluteUnits,
+            cacheData.absoluteUnits[0],
             status);
     addWeekDay(
             resource,
             "fields/tue/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_TUESDAY,
-            cacheData.absoluteUnits,
+            cacheData.absoluteUnits[0],
             status);
     addWeekDay(
             resource,
             "fields/wed/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_WEDNESDAY,
-            cacheData.absoluteUnits,
+            cacheData.absoluteUnits[0],
             status);
     addWeekDay(
             resource,
             "fields/thu/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_THURSDAY,
-            cacheData.absoluteUnits,
+            cacheData.absoluteUnits[0],
             status);
     addWeekDay(
             resource,
             "fields/fri/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_FRIDAY,
-            cacheData.absoluteUnits,
+            cacheData.absoluteUnits[0],
             status);
     addWeekDay(
             resource,
             "fields/sat/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_SATURDAY,
-            cacheData.absoluteUnits,
+            cacheData.absoluteUnits[0],
             status);
     addWeekDay(
             resource,
             "fields/sun/relative",
             daysOfWeek,
             UDAT_ABSOLUTE_SUNDAY,
-            cacheData.absoluteUnits,
+            cacheData.absoluteUnits[0],
             status);
     return U_SUCCESS(status);
 }
@@ -605,7 +610,8 @@ UnicodeString& RelativeDateTimeFormatter::format(
     }
     int32_t bFuture = direction == UDAT_DIRECTION_NEXT ? 1 : 0;
     FieldPosition pos(FieldPosition::DONT_CARE);
-    return cache->relativeUnits[unit][bFuture].format(
+    // TODO
+    return cache->relativeUnits[0][unit][bFuture].format(
             quantity,
             **numberFormat,
             **pluralRules,
@@ -624,7 +630,8 @@ UnicodeString& RelativeDateTimeFormatter::format(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
-    return appendTo.append(cache->absoluteUnits[unit][direction]);
+    // TODO
+    return appendTo.append(cache->absoluteUnits[0][unit][direction]);
 }
 
 UnicodeString& RelativeDateTimeFormatter::combineDateAndTime(
