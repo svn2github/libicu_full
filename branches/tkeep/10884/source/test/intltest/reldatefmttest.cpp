@@ -541,6 +541,7 @@ private:
     void TestFormatWithQuantityIllegalArgument();
     void TestFormatWithoutQuantityIllegalArgument();
     void TestCustomNumberFormat();
+    void TestGetters();
     void TestCombineDateAndTime();
     void TestBadDisplayContext();
     void RunTest(
@@ -619,6 +620,7 @@ void RelativeDateTimeFormatterTest::runIndexedTest(
     TESTCASE_AUTO(TestFormatWithQuantityIllegalArgument);
     TESTCASE_AUTO(TestFormatWithoutQuantityIllegalArgument);
     TESTCASE_AUTO(TestCustomNumberFormat);
+    TESTCASE_AUTO(TestGetters);
     TESTCASE_AUTO(TestCombineDateAndTime);
     TESTCASE_AUTO(TestBadDisplayContext);
     TESTCASE_AUTO_END;
@@ -731,6 +733,27 @@ void RelativeDateTimeFormatterTest::TestCustomNumberFormat() {
     fmt = RelativeDateTimeFormatter("es", status);
     RunTest(fmt, kSpanishNoQuantity, LENGTHOF(kSpanishNoQuantity), "assignment operator");
 
+}
+
+void RelativeDateTimeFormatterTest::TestGetters() {
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt(
+            "en",
+            NULL,
+            UDAT_SHORT,
+            UDISPCTX_CAPITALIZATION_FOR_MIDDLE_OF_SENTENCE,
+            status);
+    RelativeDateTimeFormatter fmt3(status);
+
+    // copy and assignment.
+    RelativeDateTimeFormatter fmt2(fmt);
+    fmt3 = fmt2;
+    assertEquals("style", UDAT_SHORT, fmt3.getFormatStyle());
+    assertEquals(
+            "context",
+            UDISPCTX_CAPITALIZATION_FOR_MIDDLE_OF_SENTENCE,
+            fmt3.getCapitalizationContext());
+    assertSuccess("", status);
 }
 
 void RelativeDateTimeFormatterTest::TestCombineDateAndTime() {

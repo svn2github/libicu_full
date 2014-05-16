@@ -450,6 +450,7 @@ private:
     const SharedNumberFormat *numberFormat;
     const SharedPluralRules *pluralRules;
     UDateFormatStyle style;
+    UDisplayContext context;
     void init(const Locale &, NumberFormat *nfToAdopt, UErrorCode &status);
 };
 

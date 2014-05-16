@@ -662,20 +662,32 @@ static UBool getFromCache(
     return U_SUCCESS(status);
 }
 
-RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status)
-        : cache(NULL), numberFormat(NULL), pluralRules(NULL), style(UDAT_FULL) {
+RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) :
+        cache(NULL),
+        numberFormat(NULL),
+        pluralRules(NULL),
+        style(UDAT_FULL),
+        context(UDISPCTX_CAPITALIZATION_NONE) {
     init(Locale::getDefault(), NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
-        const Locale& locale, UErrorCode& status)
-        : cache(NULL), numberFormat(NULL), pluralRules(NULL), style(UDAT_FULL) {
+        const Locale& locale, UErrorCode& status) :
+        cache(NULL),
+        numberFormat(NULL),
+        pluralRules(NULL),
+        style(UDAT_FULL),
+        context(UDISPCTX_CAPITALIZATION_NONE) {
     init(locale, NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
-        const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status)
-        : cache(NULL), numberFormat(NULL), pluralRules(NULL), style(UDAT_FULL) {
+        const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status) :
+        cache(NULL),
+        numberFormat(NULL),
+        pluralRules(NULL),
+        style(UDAT_FULL),
+        context(UDISPCTX_CAPITALIZATION_NONE) {
     init(locale, nfToAdopt, status);
 }
 
@@ -684,9 +696,20 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         NumberFormat *nfToAdopt,
         UDateFormatStyle styl,
         UDisplayContext capitalizationContext,
-        UErrorCode& status)
-        : cache(NULL), numberFormat(NULL), pluralRules(NULL), style(styl) {
-  init(locale, nfToAdopt, status);
+        UErrorCode& status) :
+        cache(NULL),
+        numberFormat(NULL),
+        pluralRules(NULL),
+        style(styl),
+        context(capitalizationContext) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if ((capitalizationContext >> 8) != UDISPCTX_TYPE_CAPITALIZATION) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    init(locale, nfToAdopt, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
@@ -694,7 +717,8 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         : cache(other.cache),
           numberFormat(other.numberFormat),
           pluralRules(other.pluralRules),
-          style(other.style) {
+          style(other.style),
+          context(other.context) {
     cache->addRef();
     numberFormat->addRef();
     pluralRules->addRef();
@@ -707,6 +731,7 @@ RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(
         SharedObject::copyPtr(other.numberFormat, numberFormat);
         SharedObject::copyPtr(other.pluralRules, pluralRules);
         style = other.style;
+        context = other.context;
     }
     return *this;
 }
@@ -728,10 +753,9 @@ const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
 }
 
 UDisplayContext RelativeDateTimeFormatter::getCapitalizationContext() const {
-    return (UDisplayContext) 0;
+    return context;
 }
 
-// TODO: add test.
 UDateFormatStyle RelativeDateTimeFormatter::getFormatStyle() const {
     return style;
 }
