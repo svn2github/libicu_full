@@ -1218,8 +1218,8 @@ en{
                     other{"+{0} s"}
                 }
                 past{
-                    one{"-{0} s ago"}
-                    other{"-{0} s ago"}
+                    one{"-{0} s"}
+                    other{"-{0} s"}
                 }
             }
         }
