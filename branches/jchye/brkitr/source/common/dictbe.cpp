@@ -871,59 +871,21 @@ foundBest:
     return wordsFound;
 }
 
-#if !UCONFIG_NO_NORMALIZATION
+static const uint32_t maxSnlp = 255;
+static const uint32_t kuint32max = 0xFFFFFFFF;
 /*
  ******************************************************************
- * CjkBreakEngine
+ * FrequencyBreakEngine
  */
-static const uint32_t kuint32max = 0xFFFFFFFF;
-CjkBreakEngine::CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType type, UErrorCode &status)
-: DictionaryBreakEngine(1 << UBRK_WORD), fDictionary(adoptDictionary) {
-    // Korean dictionary only includes Hangul syllables
-    fHangulWordSet.applyPattern(UNICODE_STRING_SIMPLE("[\\uac00-\\ud7a3]"), status);
-    fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
-    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\uff9e\\uff9f]"), status);
-    fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
+FrequencyBreakEngine::FrequencyBreakEngine(DictionaryMatcher *adoptDictionary,
+		uint32_t breakTypes, UErrorCode &status)
+: DictionaryBreakEngine(breakTypes), fDictionary(adoptDictionary) {
     nfkcNorm2 = Normalizer2::getNFKCInstance(status);
-
-    if (U_SUCCESS(status)) {
-        // handle Korean and Japanese/Chinese using different dictionaries
-        if (type == kKorean) {
-            setCharacters(fHangulWordSet);
-        } else { //Chinese and Japanese
-            UnicodeSet cjSet;
-            cjSet.addAll(fHanWordSet);
-            cjSet.addAll(fKatakanaWordSet);
-            cjSet.addAll(fHiraganaWordSet);
-            cjSet.add(0xFF70); // HALFWIDTH KATAKANA-HIRAGANA PROLONGED SOUND MARK
-            cjSet.add(0x30FC); // KATAKANA-HIRAGANA PROLONGED SOUND MARK
-            setCharacters(cjSet);
-        }
-    }
 }
 
-CjkBreakEngine::~CjkBreakEngine(){
+FrequencyBreakEngine::~FrequencyBreakEngine(){
     delete fDictionary;
 }
-
-// The katakanaCost values below are based on the length frequencies of all
-// katakana phrases in the dictionary
-static const int32_t kMaxKatakanaLength = 8;
-static const int32_t kMaxKatakanaGroupLength = 20;
-static const uint32_t maxSnlp = 255;
-
-static inline uint32_t getKatakanaCost(int32_t wordLength){
-    //TODO: fill array with actual values from dictionary!
-    static const uint32_t katakanaCost[kMaxKatakanaLength + 1]
-                                       = {8192, 984, 408, 240, 204, 252, 300, 372, 480};
-    return (wordLength > kMaxKatakanaLength) ? 8192 : katakanaCost[wordLength];
-}
-
-static inline bool isKatakana(uint16_t value) {
-    return (value >= 0x30A1u && value <= 0x30FEu && value != 0x30FBu) ||
-            (value >= 0xFF66u && value <= 0xFF9fu);
-}
-
 
 // Function for accessing internal utext flags.
 //   Replicates an internal UText function.
@@ -941,7 +903,7 @@ static inline int32_t utext_i32_flag(int32_t bitIndex) {
  * @return The number of breaks found
  */
 int32_t 
-CjkBreakEngine::divideUpDictionaryRange( UText *inText,
+FrequencyBreakEngine::divideUpDictionaryRange( UText *inText,
         int32_t rangeStart,
         int32_t rangeEnd,
         UStack &foundBreaks ) const {
@@ -1084,81 +1046,8 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         prev.addElement(-1, status);
     }
 
-    const int32_t maxWordSize = 20;
-    UVector32 values(numCodePts, status);
-    values.setSize(numCodePts);
-    UVector32 lengths(numCodePts, status);
-    lengths.setSize(numCodePts);
-
-    UText fu = UTEXT_INITIALIZER;
-    utext_openUnicodeString(&fu, inString, &status);
-
-    // Dynamic programming to find the best segmentation.
-
-    // In outer loop, i  is the code point index,
-    //                ix is the corresponding string (code unit) index.
-    //    They differ when the string contains supplementary characters.
-    int32_t ix = 0;
-    for (int32_t i = 0;  i < numCodePts;  ++i, ix = inString->moveIndex32(ix, 1)) {
-        if ((uint32_t)bestSnlp.elementAti(i) == kuint32max) {
-            continue;
-        }
-
-        int32_t count;
-        utext_setNativeIndex(&fu, ix);
-        count = fDictionary->matches(&fu, maxWordSize, numCodePts,
-                             NULL, lengths.getBuffer(), values.getBuffer(), NULL);
-                             // Note: lengths is filled with code point lengths
-                             //       The NULL parameter is the ignored code unit lengths.
-
-        // if there are no single character matches found in the dictionary 
-        // starting with this charcter, treat character as a 1-character word 
-        // with the highest value possible, i.e. the least likely to occur.
-        // Exclude Korean characters from this treatment, as they should be left
-        // together by default.
-        if ((count == 0 || lengths.elementAti(0) != 1) &&
-                !fHangulWordSet.contains(inString->char32At(ix))) {
-            values.setElementAt(maxSnlp, count);   // 255
-            lengths.setElementAt(1, count++);
-        }
-
-        for (int32_t j = 0; j < count; j++) {
-            uint32_t newSnlp = (uint32_t)bestSnlp.elementAti(i) + (uint32_t)values.elementAti(j);
-            int32_t ln_j_i = lengths.elementAti(j) + i;
-            if (newSnlp < (uint32_t)bestSnlp.elementAti(ln_j_i)) {
-                bestSnlp.setElementAt(newSnlp, ln_j_i);
-                prev.setElementAt(i, ln_j_i);
-            }
-        }
-
-        // In Japanese,
-        // Katakana word in single character is pretty rare. So we apply
-        // the following heuristic to Katakana: any continuous run of Katakana
-        // characters is considered a candidate word with a default cost
-        // specified in the katakanaCost table according to its length.
-
-        bool is_prev_katakana = false;
-        bool is_katakana = isKatakana(inString->char32At(ix));
-        int32_t katakanaRunLength = 1;
-        if (!is_prev_katakana && is_katakana) {
-            int32_t j = inString->moveIndex32(ix, 1);
-            // Find the end of the continuous run of Katakana characters
-            while (j < inString->length() && katakanaRunLength < kMaxKatakanaGroupLength &&
-                    isKatakana(inString->char32At(j))) {
-                j = inString->moveIndex32(j, 1);
-                katakanaRunLength++;
-            }
-            if (katakanaRunLength < kMaxKatakanaGroupLength) {
-                uint32_t newSnlp = bestSnlp.elementAti(i) + getKatakanaCost(katakanaRunLength);
-                if (newSnlp < (uint32_t)bestSnlp.elementAti(j)) {
-                    bestSnlp.setElementAt(newSnlp, j);
-                    prev.setElementAt(i, i+katakanaRunLength);  // prev[j] = i;
-                }
-            }
-        }
-        is_prev_katakana = is_katakana;
-    }
-    utext_close(&fu);
+    // Perform actual segmentation.
+    findBoundaries(inString, numCodePts, &bestSnlp, &prev, status);
 
     // Start pushing the optimal offset index into t_boundary (t for tentative).
     // prev[numCodePts] is guaranteed to be meaningful.
@@ -1186,7 +1075,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         numBreaks++;
     }
 
-    // Now that we're done, convert positions in t_boundary[] (indices in 
+    // Now that we're done, convert positions in t_boundary[] (indices in
     // the normalized input string) back to indices in the original input UText
     // while reversing t_boundary and pushing values to foundBreaks.
     for (int32_t i = numBreaks-1; i >= 0; i--) {
@@ -1200,6 +1089,181 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     delete inString;
     delete inputMap;
     return numBreaks;
+}
+
+void
+FrequencyBreakEngine::findBoundaries(UnicodeString *inString,
+		uint32_t numCodePts,
+		UVector32 *bestSnlp,
+		UVector32 *prev,
+		UErrorCode &status) const {
+    const int32_t maxWordSize = 20;
+    UVector32 values(numCodePts, status);
+    values.setSize(numCodePts);
+    UVector32 lengths(numCodePts, status);
+    lengths.setSize(numCodePts);
+
+    UText fu = UTEXT_INITIALIZER;
+    utext_openUnicodeString(&fu, inString, &status);
+
+    // Dynamic programming to find the best segmentation.
+
+    // In outer loop, i  is the code point index,
+    //                ix is the corresponding string (code unit) index.
+    //    They differ when the string contains supplementary characters.
+    int32_t ix = 0;
+    for (uint32_t i = 0;  i < numCodePts;  ++i, ix = inString->moveIndex32(ix, 1)) {
+        if ((uint32_t)bestSnlp->elementAti(i) == kuint32max) {
+            continue;
+        }
+
+        int32_t count;
+        utext_setNativeIndex(&fu, ix);
+        count = fDictionary->matches(&fu, maxWordSize, numCodePts,
+                             NULL, lengths.getBuffer(), values.getBuffer(), NULL);
+                             // Note: lengths is filled with code point lengths
+                             //       The NULL parameter is the ignored code unit lengths.
+
+        // if there are no single character matches found in the dictionary 
+        // starting with this charcter, treat character as a 1-character word 
+        // with the highest value possible, i.e. the least likely to occur.
+        if (count == 0 || lengths.elementAti(0) != 1) {
+            values.setElementAt(maxSnlp, count);   // 255
+            lengths.setElementAt(1, count++);
+        }
+
+        for (int32_t j = 0; j < count; j++) {
+            uint32_t newSnlp = (uint32_t)bestSnlp->elementAti(i) + (uint32_t)values.elementAti(j);
+            int32_t ln_j_i = lengths.elementAti(j) + i;
+            if (newSnlp < (uint32_t)bestSnlp->elementAti(ln_j_i)) {
+                bestSnlp->setElementAt(newSnlp, ln_j_i);
+                prev->setElementAt(i, ln_j_i);
+            }
+        }
+    }
+    utext_close(&fu);
+}
+
+/*
+ ******************************************************************
+ * ThaiFrequencyBreakEngine
+ */
+ThaiFrequencyBreakEngine::ThaiFrequencyBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status)
+    : FrequencyBreakEngine(adoptDictionary, (1<<UBRK_WORD) | (1<<UBRK_LINE), status)
+{
+    fThaiWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Thai:]&[:LineBreak=SA:]]"), status);
+    if (U_SUCCESS(status)) {
+        setCharacters(fThaiWordSet);
+    }
+}
+
+ThaiFrequencyBreakEngine::~ThaiFrequencyBreakEngine() {
+}
+
+#if !UCONFIG_NO_NORMALIZATION
+/*
+ ******************************************************************
+ * CjkBreakEngine
+ */
+CjkBreakEngine::CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType type, UErrorCode &status)
+: FrequencyBreakEngine(adoptDictionary, 1 << UBRK_WORD, status) {
+    // Korean dictionary only includes Hangul syllables
+    fHangulWordSet.applyPattern(UNICODE_STRING_SIMPLE("[\\uac00-\\ud7a3]"), status);
+    fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
+    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\uff9e\\uff9f]"), status);
+    fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
+
+    if (U_SUCCESS(status)) {
+        // handle Korean and Japanese/Chinese using different dictionaries
+        if (type == kKorean) {
+            setCharacters(fHangulWordSet);
+        } else { //Chinese and Japanese
+            UnicodeSet cjSet;
+            cjSet.addAll(fHanWordSet);
+            cjSet.addAll(fKatakanaWordSet);
+            cjSet.addAll(fHiraganaWordSet);
+            cjSet.add(0xFF70); // HALFWIDTH KATAKANA-HIRAGANA PROLONGED SOUND MARK
+            cjSet.add(0x30FC); // KATAKANA-HIRAGANA PROLONGED SOUND MARK
+            setCharacters(cjSet);
+        }
+    }
+}
+
+CjkBreakEngine::~CjkBreakEngine(){
+}
+
+// The katakanaCost values below are based on the length frequencies of all
+// katakana phrases in the dictionary
+static const int32_t kMaxKatakanaLength = 8;
+static const int32_t kMaxKatakanaGroupLength = 20;
+
+static inline uint32_t getKatakanaCost(int32_t wordLength){
+    //TODO: fill array with actual values from dictionary!
+    static const uint32_t katakanaCost[kMaxKatakanaLength + 1]
+                                       = {8192, 984, 408, 240, 204, 252, 300, 372, 480};
+    return (wordLength > kMaxKatakanaLength) ? 8192 : katakanaCost[wordLength];
+}
+
+static inline bool isKatakana(uint16_t value) {
+    return (value >= 0x30A1u && value <= 0x30FEu && value != 0x30FBu) ||
+            (value >= 0xFF66u && value <= 0xFF9fu);
+}
+
+
+/*
+ * @param inText A UText representing the text
+ * @param bestSnlp
+ * @param prev
+ * @return The number of breaks found
+ */
+void
+CjkBreakEngine::findBoundaries(UnicodeString *inString,
+		uint32_t numCodePts,
+		UVector32 *bestSnlp,
+		UVector32 *prev,
+		UErrorCode &status) const {
+    FrequencyBreakEngine::findBoundaries(inString, numCodePts, bestSnlp, prev, status);
+
+    UText fu = UTEXT_INITIALIZER;
+    utext_openUnicodeString(&fu, inString, &status);
+
+    // In outer loop, i  is the code point index,
+    //                ix is the corresponding string (code unit) index.
+    //    They differ when the string contains supplementary characters.
+    int32_t ix = 0;
+    for (uint32_t i = 0;  i < numCodePts;  ++i, ix = inString->moveIndex32(ix, 1)) {
+        if ((uint32_t)bestSnlp->elementAti(i) == kuint32max) {
+            continue;
+        }
+
+        // In Japanese,
+        // Katakana word in single character is pretty rare. So we apply
+        // the following heuristic to Katakana: any continuous run of Katakana
+        // characters is considered a candidate word with a default cost
+        // specified in the katakanaCost table according to its length.
+
+        bool is_prev_katakana = false;
+        bool is_katakana = isKatakana(inString->char32At(ix));
+        int32_t katakanaRunLength = 1;
+        if (!is_prev_katakana && is_katakana) {
+            int32_t j = inString->moveIndex32(ix, 1);
+            // Find the end of the continuous run of Katakana characters
+            while (j < inString->length() && katakanaRunLength < kMaxKatakanaGroupLength &&
+                    isKatakana(inString->char32At(j))) {
+                j = inString->moveIndex32(j, 1);
+                katakanaRunLength++;
+            }
+            if (katakanaRunLength < kMaxKatakanaGroupLength) {
+                uint32_t newSnlp = bestSnlp->elementAti(i) + getKatakanaCost(katakanaRunLength);
+                if (newSnlp < (uint32_t)bestSnlp->elementAti(j)) {
+                    bestSnlp->setElementAt(newSnlp, j);
+                    prev->setElementAt(i, i+katakanaRunLength);  // prev[j] = i;
+                }
+            }
+        }
+        is_prev_katakana = is_katakana;
+    }
+    utext_close(&fu);
 }
 #endif
 

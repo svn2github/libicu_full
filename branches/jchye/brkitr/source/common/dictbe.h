@@ -18,6 +18,7 @@ U_NAMESPACE_BEGIN
 
 class DictionaryMatcher;
 class Normalizer2;
+class UVector32;
 
 /*******************************************************************
  * DictionaryBreakEngine
@@ -299,6 +300,90 @@ class KhmerBreakEngine : public DictionaryBreakEngine {
  
 }; 
  
+/*******************************************************************
+ * FrequencyBreakEngine
+ */
+
+/**
+ * <p>FrequencyBreakEngine is a kind of DictionaryBreakEngine that uses a
+ * dictionary with costs associated with each word and
+ * Viterbi decoding to determine breaks.</p>
+ */
+class FrequencyBreakEngine : public DictionaryBreakEngine {
+ protected:
+  DictionaryMatcher        *fDictionary;
+  const Normalizer2        *nfkcNorm2;
+
+ public:
+
+    /**
+     * <p>Default constructor.</p>
+     *
+     * @param adoptDictionary A DictionaryMatcher to adopt. Deleted when the
+     * engine is deleted. The DictionaryMatcher must contain costs for each word
+     * in order for the dictionary to work properly.
+     */
+  FrequencyBreakEngine(DictionaryMatcher *adoptDictionary, uint32_t breakTypes, UErrorCode &status);
+
+    /**
+     * <p>Virtual destructor.</p>
+     */
+  virtual ~FrequencyBreakEngine();
+
+ protected:
+    /**
+     * <p>Divide up a range of known dictionary characters handled by this break engine.</p>
+     *
+     * @param text A UText representing the text
+     * @param rangeStart The start of the range of dictionary characters
+     * @param rangeEnd The end of the range of dictionary characters
+     * @param foundBreaks Output of C array of int32_t break positions, or 0
+     * @return The number of breaks found
+     */
+  virtual int32_t divideUpDictionaryRange( UText *text,
+          int32_t rangeStart,
+          int32_t rangeEnd,
+          UStack &foundBreaks ) const;
+
+  virtual void findBoundaries(UnicodeString *inString,
+		  uint32_t numCodePts,
+		  UVector32 *bestSnlp,
+		  UVector32 *prev,
+		  UErrorCode &status) const;
+};
+
+/*******************************************************************
+ * ThaiFrequencyBreakEngine
+ */
+
+/**
+ * <p>ThaiFrequencyBreakEngine is a kind of FrequencyBreakEngine that uses a
+ * weighted dictionary to determine Thai-specific breaks.</p>
+ */
+class ThaiFrequencyBreakEngine : public FrequencyBreakEngine {
+ private:
+    /**
+     * The set of characters handled by this engine
+     * @internal
+     */
+  UnicodeSet                fThaiWordSet;
+
+ public:
+
+  /**
+   * <p>Default constructor.</p>
+   *
+   * @param adoptDictionary A DictionaryMatcher to adopt. Deleted when the
+   * engine is deleted.
+   */
+  ThaiFrequencyBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status);
+
+  /**
+   * <p>Virtual destructor.</p>
+   */
+  virtual ~ThaiFrequencyBreakEngine();
+};
+
 #if !UCONFIG_NO_NORMALIZATION
 
 /*******************************************************************
@@ -311,12 +396,13 @@ enum LanguageType {
     kChineseJapanese
 };
 
+
 /**
  * <p>CjkBreakEngine is a kind of DictionaryBreakEngine that uses a
  * dictionary with costs associated with each word and
  * Viterbi decoding to determine CJK-specific breaks.</p>
  */
-class CjkBreakEngine : public DictionaryBreakEngine {
+class CjkBreakEngine : public FrequencyBreakEngine {
  protected:
     /**
      * The set of characters handled by this engine
@@ -326,9 +412,6 @@ class CjkBreakEngine : public DictionaryBreakEngine {
   UnicodeSet                fHanWordSet;
   UnicodeSet                fKatakanaWordSet;
   UnicodeSet                fHiraganaWordSet;
-
-  DictionaryMatcher        *fDictionary;
-  const Normalizer2        *nfkcNorm2;
 
  public:
 
@@ -347,22 +430,12 @@ class CjkBreakEngine : public DictionaryBreakEngine {
   virtual ~CjkBreakEngine();
 
  protected:
-    /**
-     * <p>Divide up a range of known dictionary characters handled by this break engine.</p>
-     *
-     * @param text A UText representing the text
-     * @param rangeStart The start of the range of dictionary characters
-     * @param rangeEnd The end of the range of dictionary characters
-     * @param foundBreaks Output of C array of int32_t break positions, or 0
-     * @return The number of breaks found
-     */
-  virtual int32_t divideUpDictionaryRange( UText *text,
-          int32_t rangeStart,
-          int32_t rangeEnd,
-          UStack &foundBreaks ) const;
-
+  virtual void findBoundaries(UnicodeString *inString,
+		  uint32_t numCodePts,
+		  UVector32 *bestSnlp,
+		  UVector32 *prev,
+		  UErrorCode &status) const;
 };
-
 #endif
 
 U_NAMESPACE_END

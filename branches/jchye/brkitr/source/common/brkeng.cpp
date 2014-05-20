@@ -227,7 +227,8 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
             const LanguageBreakEngine *engine = NULL;
             switch(code) {
             case USCRIPT_THAI:
-                engine = new ThaiBreakEngine(m, status);
+                engine = new ThaiFrequencyBreakEngine(m, status);
+                //engine = new ThaiBreakEngine(m, status);
                 break;
             case USCRIPT_LAO:
                 engine = new LaoBreakEngine(m, status);
