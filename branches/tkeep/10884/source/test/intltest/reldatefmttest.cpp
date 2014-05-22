@@ -555,21 +555,11 @@ private:
             int32_t expectedResultLength);
     void RunTest(
             const Locale& locale,
-            UDisplayContext context,
-            const WithQuantityExpected* expectedResults,
-            int32_t expectedResultLength);
-    void RunTest(
-            const Locale& locale,
             const WithoutQuantityExpected* expectedResults,
             int32_t expectedResultLength);
     void RunTest(
             const Locale& locale,
             UDateFormatStyle style,
-            const WithoutQuantityExpected* expectedResults,
-            int32_t expectedResultLength);
-    void RunTest(
-            const Locale& locale,
-            UDisplayContext context,
             const WithoutQuantityExpected* expectedResults,
             int32_t expectedResultLength);
     void RunTest(
@@ -644,7 +634,7 @@ void RelativeDateTimeFormatterTest::TestEnglishCaps() {
     RelativeDateTimeFormatter fmt2(fmt);
     fmt3 = fmt2;
     assertSuccess("", status);
-    RunTest(fmt3, kEnglishCaps, LENGTHOF(kEnglishCaps), "en decimal digits");
+    RunTest(fmt3, kEnglishCaps, LENGTHOF(kEnglishCaps), "en caps");
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishShort() {
@@ -668,11 +658,19 @@ void RelativeDateTimeFormatterTest::TestEnglishNoQuantity() {
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishNoQuantityCaps() {
-    RunTest(
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt(
             "en",
+            NULL,
+            UDAT_FULL,
             UDISPCTX_CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE,
+            status);
+    assertSuccess("", status);
+    RunTest(
+            fmt,
             kEnglishNoQuantityCaps,
-            LENGTHOF(kEnglishNoQuantityCaps));
+            LENGTHOF(kEnglishNoQuantityCaps),
+            "en caps no quantity");
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishNoQuantityShort() {
@@ -825,21 +823,6 @@ void RelativeDateTimeFormatterTest::RunTest(
 
 void RelativeDateTimeFormatterTest::RunTest(
         const Locale& locale,
-        UDisplayContext context,
-        const WithQuantityExpected* expectedResults,
-        int32_t expectedResultLength) {
-    UErrorCode status = U_ZERO_ERROR;
-    RelativeDateTimeFormatter fmt(
-            locale, NULL, UDAT_FULL, context, status);
-    if (U_FAILURE(status)) {
-        dataerrln("Unable to create format object - %s", u_errorName(status));
-        return;
-    }
-    RunTest(fmt, expectedResults, expectedResultLength, locale.getName());
-}
-
-void RelativeDateTimeFormatterTest::RunTest(
-        const Locale& locale,
         const WithoutQuantityExpected* expectedResults,
         int32_t expectedResultLength) {
     UErrorCode status = U_ZERO_ERROR;
@@ -859,21 +842,6 @@ void RelativeDateTimeFormatterTest::RunTest(
     UErrorCode status = U_ZERO_ERROR;
     RelativeDateTimeFormatter fmt(
             locale, NULL, style, UDISPCTX_CAPITALIZATION_NONE, status);
-    if (U_FAILURE(status)) {
-        dataerrln("Unable to create format object - %s", u_errorName(status));
-        return;
-    }
-    RunTest(fmt, expectedResults, expectedResultLength, locale.getName());
-}
-
-void RelativeDateTimeFormatterTest::RunTest(
-        const Locale& locale,
-        UDisplayContext context,
-        const WithoutQuantityExpected* expectedResults,
-        int32_t expectedResultLength) {
-    UErrorCode status = U_ZERO_ERROR;
-    RelativeDateTimeFormatter fmt(
-            locale, NULL, UDAT_FULL, context, status);
     if (U_FAILURE(status)) {
         dataerrln("Unable to create format object - %s", u_errorName(status));
         return;
