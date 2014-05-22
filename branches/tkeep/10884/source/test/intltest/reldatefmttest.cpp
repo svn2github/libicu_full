@@ -631,11 +631,20 @@ void RelativeDateTimeFormatterTest::TestEnglish() {
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishCaps() {
-    RunTest(
+    UErrorCode status = U_ZERO_ERROR;
+    RelativeDateTimeFormatter fmt(
             "en",
+            NULL,
+            UDAT_FULL,
             UDISPCTX_CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE,
-            kEnglishCaps,
-            LENGTHOF(kEnglishCaps));
+            status);
+    RelativeDateTimeFormatter fmt3(status);
+
+    // Test assignment and copy constructor with capitalization on.
+    RelativeDateTimeFormatter fmt2(fmt);
+    fmt3 = fmt2;
+    assertSuccess("", status);
+    RunTest(fmt3, kEnglishCaps, LENGTHOF(kEnglishCaps), "en decimal digits");
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishShort() {

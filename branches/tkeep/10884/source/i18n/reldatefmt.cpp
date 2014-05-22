@@ -18,6 +18,7 @@
 #include "unicode/msgfmt.h"
 #include "unicode/decimfmt.h"
 #include "unicode/numfmt.h"
+#include "unicode/brkiter.h"
 #include "lrucache.h"
 #include "uresimp.h"
 #include "unicode/ures.h"
@@ -27,6 +28,7 @@
 #include "charstr.h"
 
 #include "sharedptr.h"
+#include "sharedbreakiterator.h"
 #include "sharedpluralrules.h"
 #include "sharednumberformat.h"
 
@@ -40,6 +42,7 @@
 
 static icu::LRUCache *gCache = NULL;
 static UMutex gCacheMutex = U_MUTEX_INITIALIZER;
+static UMutex gBrkIterMutex = U_MUTEX_INITIALIZER;
 static icu::UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
 
 U_CDECL_BEGIN
@@ -663,32 +666,37 @@ static UBool getFromCache(
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) :
-        cache(NULL),
-        numberFormat(NULL),
-        pluralRules(NULL),
-        style(UDAT_FULL),
-        context(UDISPCTX_CAPITALIZATION_NONE) {
-    init(Locale::getDefault(), NULL, status);
+        fCache(NULL),
+        fNumberFormat(NULL),
+        fPluralRules(NULL),
+        fStyle(UDAT_FULL),
+        fContext(UDISPCTX_CAPITALIZATION_NONE),
+        fOptBreakIterator(NULL) {
+    init(NULL, NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const Locale& locale, UErrorCode& status) :
-        cache(NULL),
-        numberFormat(NULL),
-        pluralRules(NULL),
-        style(UDAT_FULL),
-        context(UDISPCTX_CAPITALIZATION_NONE) {
-    init(locale, NULL, status);
+        fCache(NULL),
+        fNumberFormat(NULL),
+        fPluralRules(NULL),
+        fStyle(UDAT_FULL),
+        fContext(UDISPCTX_CAPITALIZATION_NONE),
+        fOptBreakIterator(NULL),
+        fLocale(locale) {
+    init(NULL, NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const Locale& locale, NumberFormat *nfToAdopt, UErrorCode& status) :
-        cache(NULL),
-        numberFormat(NULL),
-        pluralRules(NULL),
-        style(UDAT_FULL),
-        context(UDISPCTX_CAPITALIZATION_NONE) {
-    init(locale, nfToAdopt, status);
+        fCache(NULL),
+        fNumberFormat(NULL),
+        fPluralRules(NULL),
+        fStyle(UDAT_FULL),
+        fContext(UDISPCTX_CAPITALIZATION_NONE),
+        fOptBreakIterator(NULL),
+        fLocale(locale) {
+    init(nfToAdopt, NULL, status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
@@ -697,11 +705,13 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         UDateFormatStyle styl,
         UDisplayContext capitalizationContext,
         UErrorCode& status) :
-        cache(NULL),
-        numberFormat(NULL),
-        pluralRules(NULL),
-        style(styl),
-        context(capitalizationContext) {
+        fCache(NULL),
+        fNumberFormat(NULL),
+        fPluralRules(NULL),
+        fStyle(styl),
+        fContext(capitalizationContext),
+        fOptBreakIterator(NULL),
+        fLocale(locale) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -709,55 +719,73 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
-    init(locale, nfToAdopt, status);
+    if (capitalizationContext == UDISPCTX_CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE) {
+        BreakIterator *bi = BreakIterator::createSentenceInstance(locale, status);
+        if (U_FAILURE(status)) {
+            return;
+        }
+        init(nfToAdopt, bi, status);
+    } else {
+        init(nfToAdopt, NULL, status);
+    }
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const RelativeDateTimeFormatter& other)
-        : cache(other.cache),
-          numberFormat(other.numberFormat),
-          pluralRules(other.pluralRules),
-          style(other.style),
-          context(other.context) {
-    cache->addRef();
-    numberFormat->addRef();
-    pluralRules->addRef();
+        : fCache(other.fCache),
+          fNumberFormat(other.fNumberFormat),
+          fPluralRules(other.fPluralRules),
+          fStyle(other.fStyle),
+          fContext(other.fContext),
+          fOptBreakIterator(other.fOptBreakIterator),
+          fLocale(other.fLocale) {
+    fCache->addRef();
+    fNumberFormat->addRef();
+    fPluralRules->addRef();
+    if (fOptBreakIterator != NULL) {
+      fOptBreakIterator->addRef();
+    }
 }
 
 RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(
         const RelativeDateTimeFormatter& other) {
     if (this != &other) {
-        SharedObject::copyPtr(other.cache, cache);
-        SharedObject::copyPtr(other.numberFormat, numberFormat);
-        SharedObject::copyPtr(other.pluralRules, pluralRules);
-        style = other.style;
-        context = other.context;
+        SharedObject::copyPtr(other.fCache, fCache);
+        SharedObject::copyPtr(other.fNumberFormat, fNumberFormat);
+        SharedObject::copyPtr(other.fPluralRules, fPluralRules);
+        SharedObject::copyPtr(other.fOptBreakIterator, fOptBreakIterator);
+        fStyle = other.fStyle;
+        fContext = other.fContext;
+        fLocale = other.fLocale;
     }
     return *this;
 }
 
 RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
-    if (cache != NULL) {
-        cache->removeRef();
+    if (fCache != NULL) {
+        fCache->removeRef();
     }
-    if (numberFormat != NULL) {
-        numberFormat->removeRef();
+    if (fNumberFormat != NULL) {
+        fNumberFormat->removeRef();
     }
-    if (pluralRules != NULL) {
-        pluralRules->removeRef();
+    if (fPluralRules != NULL) {
+        fPluralRules->removeRef();
+    }
+    if (fOptBreakIterator != NULL) {
+        fOptBreakIterator->removeRef();
     }
 }
 
 const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
-    return **numberFormat;
+    return **fNumberFormat;
 }
 
 UDisplayContext RelativeDateTimeFormatter::getCapitalizationContext() const {
-    return context;
+    return fContext;
 }
 
 UDateFormatStyle RelativeDateTimeFormatter::getFormatStyle() const {
-    return style;
+    return fStyle;
 }
 
 UnicodeString& RelativeDateTimeFormatter::format(
@@ -772,13 +800,25 @@ UnicodeString& RelativeDateTimeFormatter::format(
     }
     int32_t bFuture = direction == UDAT_DIRECTION_NEXT ? 1 : 0;
     FieldPosition pos(FieldPosition::DONT_CARE);
-    return cache->relativeUnits[getStyleIndex(style)][unit][bFuture].format(
+    if (fOptBreakIterator == NULL) {
+        return fCache->relativeUnits[getStyleIndex(fStyle)][unit][bFuture].format(
             quantity,
-            **numberFormat,
-            **pluralRules,
+            **fNumberFormat,
+            **fPluralRules,
             appendTo,
             pos,
             status);
+    }
+    UnicodeString result;
+    fCache->relativeUnits[getStyleIndex(fStyle)][unit][bFuture].format(
+            quantity,
+            **fNumberFormat,
+            **fPluralRules,
+            result,
+            pos,
+            status);
+    adjustForContext(result);
+    return appendTo.append(result);
 }
 
 UnicodeString& RelativeDateTimeFormatter::format(
@@ -791,7 +831,12 @@ UnicodeString& RelativeDateTimeFormatter::format(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
-    return appendTo.append(cache->absoluteUnits[getStyleIndex(style)][unit][direction]);
+    if (fOptBreakIterator == NULL) {
+      return appendTo.append(fCache->absoluteUnits[getStyleIndex(fStyle)][unit][direction]);
+    }
+    UnicodeString result(fCache->absoluteUnits[getStyleIndex(fStyle)][unit][direction]);
+    adjustForContext(result);
+    return appendTo.append(result);
 }
 
 UnicodeString& RelativeDateTimeFormatter::combineDateAndTime(
@@ -799,33 +844,49 @@ UnicodeString& RelativeDateTimeFormatter::combineDateAndTime(
     UnicodeString& appendTo, UErrorCode& status) const {
     Formattable args[2] = {timeString, relativeDateString};
     FieldPosition fpos(0);
-    return cache->getCombinedDateAndTime()->format(
+    return fCache->getCombinedDateAndTime()->format(
             args, 2, appendTo, fpos, status);
 }
 
-void RelativeDateTimeFormatter::init(
-        const Locale &locale, NumberFormat *nfToAdopt, UErrorCode &status) {
-    LocalPointer<NumberFormat> nf(nfToAdopt);
-    if (!getFromCache(locale.getName(), cache, status)) {
+void RelativeDateTimeFormatter::adjustForContext(UnicodeString &str) const {
+    if (fOptBreakIterator == NULL
+        || str.length() == 0 || !u_islower(str.char32At(0))) {
         return;
     }
-    SharedObject::copyPtr(
-            PluralRules::createSharedInstance(
-                    locale, UPLURAL_TYPE_CARDINAL, status),
-            pluralRules);
+
+    // Must guarantee that one thread at a time accesses the shared break
+    // iterator.
+    Mutex lock(&gBrkIterMutex);
+    str.toTitle(
+            fOptBreakIterator->get(),
+            fLocale,
+            U_TITLECASE_NO_LOWERCASE | U_TITLECASE_NO_BREAK_ADJUSTMENT);
+}
+
+void RelativeDateTimeFormatter::init(
+        NumberFormat *nfToAdopt,
+        BreakIterator *biToAdopt,
+        UErrorCode &status) {
+    LocalPointer<NumberFormat> nf(nfToAdopt);
+    LocalPointer<BreakIterator> bi(biToAdopt);
+    if (!getFromCache(fLocale.getName(), fCache, status)) {
+        return;
+    }
+    const SharedPluralRules *pr = PluralRules::createSharedInstance(
+            fLocale, UPLURAL_TYPE_CARDINAL, status);
     if (U_FAILURE(status)) {
         return;
     }
-    pluralRules->removeRef();
+    SharedObject::copyPtr(pr, fPluralRules);
+    pr->removeRef();
     if (nf.isNull()) {
-       SharedObject::copyPtr(
-               NumberFormat::createSharedInstance(
-                       locale, UNUM_DECIMAL, status),
-               numberFormat);
+       const SharedNumberFormat *shared = NumberFormat::createSharedInstance(
+               fLocale, UNUM_DECIMAL, status);
         if (U_FAILURE(status)) {
             return;
         }
-        numberFormat->removeRef();
+        SharedObject::copyPtr(shared, fNumberFormat);
+        shared->removeRef();
     } else {
         SharedNumberFormat *shared = new SharedNumberFormat(nf.getAlias());
         if (shared == NULL) {
@@ -833,7 +894,18 @@ void RelativeDateTimeFormatter::init(
             return;
         }
         nf.orphan();
-        SharedObject::copyPtr(shared, numberFormat);
+        SharedObject::copyPtr(shared, fNumberFormat);
+    }
+    if (bi.isNull()) {
+        SharedObject::clearPtr(fOptBreakIterator);
+    } else {
+        SharedBreakIterator *shared = new SharedBreakIterator(bi.getAlias());
+        if (shared == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        bi.orphan();
+        SharedObject::copyPtr(shared, fOptBreakIterator);
     }
 }
 

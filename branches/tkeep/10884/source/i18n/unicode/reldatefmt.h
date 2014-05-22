@@ -16,6 +16,7 @@
 #include "unicode/uobject.h"
 #include "unicode/udisplaycontext.h"
 #include "unicode/udat.h"
+#include "unicode/locid.h"
 
 /**
  * \file
@@ -222,10 +223,10 @@ typedef enum UDateDirection {
 
 U_NAMESPACE_BEGIN
 
-class Locale;
 class RelativeDateTimeCacheData;
 class SharedNumberFormat;
 class SharedPluralRules;
+class SharedBreakIterator;
 class NumberFormat;
 class UnicodeString;
 
@@ -446,12 +447,18 @@ public:
      */
     UDateFormatStyle getFormatStyle() const;
 private:
-    const RelativeDateTimeCacheData* cache;
-    const SharedNumberFormat *numberFormat;
-    const SharedPluralRules *pluralRules;
-    UDateFormatStyle style;
-    UDisplayContext context;
-    void init(const Locale &, NumberFormat *nfToAdopt, UErrorCode &status);
+    const RelativeDateTimeCacheData* fCache;
+    const SharedNumberFormat *fNumberFormat;
+    const SharedPluralRules *fPluralRules;
+    UDateFormatStyle fStyle;
+    UDisplayContext fContext;
+    const SharedBreakIterator *fOptBreakIterator;
+    Locale fLocale;
+    void init(
+            NumberFormat *nfToAdopt,
+            BreakIterator *brkIter,
+            UErrorCode &status);
+    void adjustForContext(UnicodeString &) const;
 };
 
 U_NAMESPACE_END
