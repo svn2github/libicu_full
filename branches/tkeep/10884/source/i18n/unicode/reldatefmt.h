@@ -334,7 +334,7 @@ public:
      * @param nfToAdopt Constructed object takes ownership of this pointer.
      *   It is an error for caller to delete this pointer or change its
      *   contents after calling this constructor. Caller may pass NULL for
-     *   this argument if they wish to keep the default NumberFormat object.
+     *   this argument if they want default number format behavior.
      * @param style the format style. The UDAT_RELATIVE bit field has no effect.
      * @param capitalizationContext The capitalization context must start with
      *  U_DISPCTX_CAPITALIZATION_. Otherwise status is set to
