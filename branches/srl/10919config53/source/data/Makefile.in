@@ -306,12 +306,18 @@ endif
 ifndef LANG_SOURCE
 -include $(LANGSRCDIR)/resfiles.mk
 endif
+ifndef REGION_SOURCE
 -include $(REGIONSRCDIR)/resfiles.mk
+endif
 ifndef ZONE_SOURCE
 -include $(ZONESRCDIR)/resfiles.mk
 endif
+ifndef COLLATION_SOURCE
 -include $(COLSRCDIR)/colfiles.mk
+endif
+ifndef NO_RBNF
 -include $(RBNFSRCDIR)/rbnffiles.mk
+endif
 -include $(TRANSLITSRCDIR)/trnsfiles.mk
 ifndef GENRB_SOURCE
 -include $(LOCSRCDIR)/reslocal.mk
@@ -322,13 +328,19 @@ endif
 ifndef LANG_SOURCE
 -include $(LANGSRCDIR)/reslocal.mk
 endif
+ifndef REGION_SOURCE
 -include $(REGIONSRCDIR)/reslocal.mk
+endif
 ifndef ZONE_SOURCE
 -include $(ZONESRCDIR)/reslocal.mk
 endif
+ifndef COLLATION_SOURCE
 -include $(COLSRCDIR)/collocal.mk
+endif
 -include $(BRKSRCDIR)/brslocal.mk
+ifndef NO_RBNF
 -include $(RBNFSRCDIR)/rbnflocal.mk
+endif
 -include $(TRANSLITSRCDIR)/trnslocal.mk
 ifdef GENRB_SOURCE
 RES_SRC= root.txt $(GENRB_SOURCE) $(GENRB_ALIAS_SOURCE) $(GENRB_SOURCE_LOCAL) $(GENRB_ALIAS_SOURCE_LOCAL)
@@ -427,12 +439,14 @@ BRK_RES_INDEX_RES_SHORT=$(BREAK_TREE)/$(INDEX_NAME).res
 BRK_RES_FILES = $(BRS_SRC:%.txt=$(BRKBLDDIR)/%.res) $(BRK_RES_INDEX_RES)
 BRK_RES_FILES_SHORT = $(BRS_SRC:%.txt=$(BREAK_TREE)/%.res)
 
+ifndef NO_RBNF
 RBNF_TREE=rbnf
 RBNF_INDEX_FILE=$(OUTTMPDIR)/$(RBNF_TREE)/$(INDEX_NAME).txt
 RBNF_INDEX_RES=$(RBNFBLDDIR)/$(INDEX_NAME).res
 RBNF_INDEX_RES_SHORT=$(RBNF_TREE)/$(INDEX_NAME).res
 RBNF_FILES = $(RBNF_SRC:%.txt=$(RBNFBLDDIR)/%.res) $(RBNF_INDEX_RES)
 RBNF_FILES_SHORT = $(RBNF_SRC:%.txt=$(RBNF_TREE)/%.res)
+endif
 
 TRANSLIT_TREE=translit
 #TRANSLIT_INDEX_FILE=$(OUTTMPDIR)/$(TRANSLIT_TREE)/$(INDEX_NAME).txt
@@ -731,6 +745,7 @@ $(BRK_RES_INDEX_FILE): $(SRCLISTDEPS)
 	echo "}" >> $@;
 
 ### RBNF res
+ifndef NO_RBNF
 $(RBNFBLDDIR)/%.res: $(RBNFSRCDIR)/%.txt  $(TOOLBINDIR)/genrb$(TOOLEXEEXT) $(DAT_FILES)
 	$(INVOKE) $(TOOLBINDIR)/genrb $(GENRBOPTS) -i $(BUILDDIR) -s $(RBNFSRCDIR) -d $(RBNFBLDDIR) $(<F)
 
@@ -748,6 +763,7 @@ $(RBNF_INDEX_FILE): $(SRCLISTDEPS)
 	done; \
 	echo "    }" >> $@; \
 	echo "}" >> $@;
+endif
 
 ### TRANSLIT res
 $(TRANSLITBLDDIR)/%.res: $(TRANSLITSRCDIR)/%.txt  $(TOOLBINDIR)/genrb$(TOOLEXEEXT) $(DAT_FILES)
