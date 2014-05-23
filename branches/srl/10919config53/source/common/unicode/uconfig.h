@@ -420,4 +420,17 @@
 #   define UCONFIG_NO_FILTERED_BREAK_ITERATION 1
 #endif
 
+/**
+ * experimental. Using 'SRL' so that it doesn't show up in the wild.
+ *
+ * @internal
+ */
+#ifdef UCONFIG_NO_TEST_API
+#error  Hey, UCONFIG_NO_TEST_API is experimental! If you want to play with it, please define UCONFIG_SRL_NO_TEST_API instead.
+#endif
+#ifndef UCONFIG_SRL_NO_TEST_API
+#   define UCONFIG_SRL_NO_TEST_API 1
+#endif
+#define  UCONFIG_NO_TEST_API UCONFIG_SRL_NO_TEST_API
+
 #endif

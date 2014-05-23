@@ -435,7 +435,7 @@ public:
      * @stable ICU 4.0
      */
     UnicodeString getKeywordOther() const;
-
+#if !UCONFIG_NO_TEST_API
 #ifndef U_HIDE_INTERNAL_API
     /**
      *
@@ -443,6 +443,7 @@ public:
      */
      UnicodeString getRules() const;
 #endif  /* U_HIDE_INTERNAL_API */
+#endif
 
     /**
      * Compares the equality of two PluralRules objects.

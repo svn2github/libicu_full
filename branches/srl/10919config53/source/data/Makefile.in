@@ -248,11 +248,15 @@ DAT_FILES=$(DAT_FILES_SHORT:%=$(BUILDDIR)/%)
 
 ## BRK files
 BREAK_TREE=brkitr
+ifndef NO_BRK
+ifndef ALL_BRK_SOURCE
 -include $(BRKSRCDIR)/brkfiles.mk
 -include $(BRKSRCDIR)/brklocal.mk
 ALL_BRK_SOURCE= $(BRK_SOURCE) $(BRK_SOURCE_LOCAL)
+endif
 BRK_FILES_SHORT=$(ALL_BRK_SOURCE:%.txt=$(BREAK_TREE)/%.brk)
 BRK_FILES=$(ALL_BRK_SOURCE:%.txt=$(BRKBLDDIR)/%.brk)
+endif
 ifdef BRK_DICT_SOURCE
 ALL_DICT_SOURCE=$(BRK_DICT_SOURCE) $(BRK_DICT_SOURCE_LOCAL)
 DICT_FILES_SHORT=$(ALL_DICT_SOURCE:%.txt=$(BREAK_TREE)/%.dict)
@@ -265,16 +269,22 @@ INSTALLED_BRS_FILES = $(BRK_RES_SOURCE:%.txt=%)  $(BRK_RES_SOURCE_LOCAL:%.txt=%)
 endif
 
 ## Confusables (Spoofing) files
+ifndef NO_CFU
 ALL_CFU_SOURCE=$(UNICODEDATADIR)/confusables.txt $(UNICODEDATADIR)/confusablesWholeScript.txt
 CFU_FILES_SHORT=confusables.cfu
 CFU_FILES=$(BUILDDIR)/$(CFU_FILES_SHORT)
+endif
 
 ## UCM files
+ifndef NO_UCM
+ifndef ALL_UCM_SOURCE
 -include $(UCMSRCDIR)/ucmcore.mk
 -include $(UCMSRCDIR)/ucmfiles.mk
 -include $(UCMSRCDIR)/ucmebcdic.mk
 -include $(UCMSRCDIR)/ucmlocal.mk
 ALL_UCM_SOURCE=ibm-37_P100-1995.ucm ibm-1047_P100-1995.ucm $(UCM_SOURCE_CORE) $(UCM_SOURCE_FILES) $(UCM_SOURCE_EBCDIC) $(UCM_SOURCE_LOCAL)
+endif
+endif
 UCM_FILES = $(ALL_UCM_SOURCE:%=$(SRCDATADIR)/%)
 CNV_FILES = $(ALL_UCM_SOURCE:%.ucm=$(BUILDDIR)/%.cnv)
 CNV_FILES_SHORT = $(ALL_UCM_SOURCE:%.ucm=%.cnv)
@@ -284,19 +294,38 @@ CNV_FILES_SPECIAL=$(UCM_SOURCE_SPECIAL:%.ucm=$(BUILDDIR)/%.cnv)
 CNV_FILES_SHORT_SPECIAL=$(UCM_SOURCE_SPECIAL:%.ucm=%.cnv) 
 
 ## RES files
+# allow Makefile.local or command line to override the following:
+#  GENRB_SOURCE - resfiles / reslocal
+
+ifndef GENRB_SOURCE
 -include $(LOCSRCDIR)/resfiles.mk
+endif
+ifndef CURR_SOURCE
 -include $(CURRSRCDIR)/resfiles.mk
+endif
+ifndef LANG_SOURCE
 -include $(LANGSRCDIR)/resfiles.mk
+endif
 -include $(REGIONSRCDIR)/resfiles.mk
+ifndef ZONE_SOURCE
 -include $(ZONESRCDIR)/resfiles.mk
+endif
 -include $(COLSRCDIR)/colfiles.mk
 -include $(RBNFSRCDIR)/rbnffiles.mk
 -include $(TRANSLITSRCDIR)/trnsfiles.mk
+ifndef GENRB_SOURCE
 -include $(LOCSRCDIR)/reslocal.mk
+endif
+ifndef CURR_SOURCE
 -include $(CURRSRCDIR)/reslocal.mk
+endif
+ifndef LANG_SOURCE
 -include $(LANGSRCDIR)/reslocal.mk
+endif
 -include $(REGIONSRCDIR)/reslocal.mk
+ifndef ZONE_SOURCE
 -include $(ZONESRCDIR)/reslocal.mk
+endif
 -include $(COLSRCDIR)/collocal.mk
 -include $(BRKSRCDIR)/brslocal.mk
 -include $(RBNFSRCDIR)/rbnflocal.mk

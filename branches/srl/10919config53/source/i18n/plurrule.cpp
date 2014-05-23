@@ -735,7 +735,7 @@ PluralRules::getRuleFromResource(const Locale& locale, UPluralType type, UErrorC
     return result;
 }
 
-
+#if !UCONFIG_NO_TEST_API
 UnicodeString
 PluralRules::getRules() const {
     UnicodeString rules;
@@ -744,7 +744,7 @@ PluralRules::getRules() const {
     }
     return rules;
 }
-
+#endif
 
 AndConstraint::AndConstraint() {
     op = AndConstraint::NONE;
@@ -948,7 +948,7 @@ static UnicodeString tokenString(tokenType tok) {
     }
     return s;
 }
-
+#if !UCONFIG_NO_TEST_API
 void
 RuleChain::dumpRules(UnicodeString& result) {
     UChar digitString[16];
@@ -1037,7 +1037,7 @@ RuleChain::dumpRules(UnicodeString& result) {
         fNext->dumpRules(result);
     }
 }
-
+#endif
 
 UErrorCode
 RuleChain::getKeywords(int32_t capacityOfKeywords, UnicodeString* keywords, int32_t& arraySize) const {

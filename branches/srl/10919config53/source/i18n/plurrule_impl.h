@@ -264,7 +264,9 @@ public:
     virtual ~RuleChain();
 
     UnicodeString select(const FixedDecimal &number) const;
+#if !UCONFIG_NO_TEST_API
     void          dumpRules(UnicodeString& result);
+#endif
     UErrorCode    getKeywords(int32_t maxArraySize, UnicodeString *keywords, int32_t& arraySize) const;
     UBool         isKeyword(const UnicodeString& keyword) const;
 };
