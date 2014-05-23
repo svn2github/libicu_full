@@ -1571,6 +1571,12 @@ BreakIterator *  RuleBasedBreakIterator::createBufferClone(void * /*stackBuffer*
 //                        the "dictionary" set. It will determine the appropriate
 //                        course of action, and possibly set up a cache in the
 //                        process.
+//    @param startPos  starting index of the range identified by the rule engine as containing
+//                     dictionary characters.
+//    @param endPos    Limit index of input range, exclusive.
+//
+//    @param reverse   True if called from previous(), return the last break in the range.
+//                     False if called from next(), return the first break in the range.
 //
 //-------------------------------------------------------------------------------
 int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
@@ -1660,6 +1666,7 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
         UTRIE_GET16(&fData->fTrie, c, category);
     }
     while(U_SUCCESS(status)) {
+        // Skip over any non-dict chars.
         while((current = (int32_t)UTEXT_GETNATIVEINDEX(fText)) < rangeEnd && (category & 0x4000) == 0) {
             utext_next32(fText);           // TODO:  tweak for post-increment operation
             c = utext_current32(fText);
@@ -1668,6 +1675,7 @@ int32_t RuleBasedBreakIterator::checkDictionary(int32_t startPos,
         if (current >= rangeEnd) {
             break;
         }
+        // TODO: we have calculated current, but do nothing with it!
         
         // We now have a dictionary character. Get the appropriate language object
         // to deal with it.

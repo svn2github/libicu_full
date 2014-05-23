@@ -935,6 +935,7 @@ FrequencyBreakEngine::divideUpDictionaryRange( UText *inText,
     } else {
         // Copy the text from the original inText (UText) to inString (UnicodeString).
         // Create a map from UnicodeString indices -> UText offsets.
+        // TODO: don't need a map if indexing remains 1:1
         utext_setNativeIndex(inText, rangeStart);
         int32_t limit = rangeEnd;
         U_ASSERT(limit <= utext_nativeLength(inText));
@@ -1082,8 +1083,19 @@ FrequencyBreakEngine::divideUpDictionaryRange( UText *inText,
         int32_t cpPos = t_boundary.elementAti(i);
         int32_t utextPos =  inputMap ? inputMap->elementAti(cpPos) : cpPos + rangeStart;
         // Boundaries are added to foundBreaks output in ascending order.
-        U_ASSERT(foundBreaks.size() == 0 ||foundBreaks.peeki() < utextPos);
-        foundBreaks.push(utextPos, status);
+        U_ASSERT(foundBreaks.size() == 0 || foundBreaks.peeki() <= utextPos);
+        if (foundBreaks.size() == 0 || foundBreaks.peeki() < utextPos) {
+            foundBreaks.push(utextPos, status);
+        } else {
+            // Edge case: if normalization of the input text decomposed something,
+            //            and that something is not part of any dictionary word,
+            //            there can be multiple breaks in the decomposed sequence
+            //            that map to the same original UText position, to the
+            //            original composed character. Discard the duplicate boundary.
+            --numBreaks;
+            U_ASSERT(utextPos == foundBreaks.peeki());
+            U_ASSERT(inputMap != NULL);
+        }
     }
 
     delete inString;
