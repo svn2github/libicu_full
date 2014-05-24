@@ -66,8 +66,9 @@ might have to #include some other header
 
 /* If you are excruciatingly bored turn this on .. */
 /* #define UDATA_DEBUG 1 */
+/* #define UDATA_DEBUG_MIN 1 */
 
-#if defined(UDATA_DEBUG)
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
 #   include <stdio.h>
 #endif
 
@@ -216,7 +217,7 @@ findBasename(const char *path) {
     }
 }
 
-#ifdef UDATA_DEBUG
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
 static const char *
 packageNameFromPath(const char *path)
 {
@@ -305,8 +306,8 @@ static UDataMemory *udata_findCachedData(const char *path)
     if (el != NULL) {
         retVal = el->item;
     }
-#ifdef UDATA_DEBUG
-    fprintf(stderr, "Cache: [%s] -> %p\n", baseName, retVal);
+#if defined(UDATA_DEBUG)
+    fprintf(stderr, "UData: Cache: %s -> %p\n", baseName, retVal);
 #endif
     return retVal;
 }
@@ -479,7 +480,7 @@ UDataPathIterator::UDataPathIterator(const char *inPath, const char *pkg,
 
 #ifdef UDATA_DEBUG
     fprintf(stderr, "%p: init %s -> [path=%s], [base=%s], [suff=%s], [itempath=%s], [nextpath=%s], [checklast4=%s]\n",
-            iter,
+            0, // iter,
             item,
             path,
             basename,
@@ -658,12 +659,12 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
 
     UDataMemory_init(&tData);
 
-    /* ??????? TODO revisit this */ 
     if (commonDataIndex >= 0) {
         /* "mini-cache" for common ICU data */
         if(commonDataIndex >= LENGTHOF(gCommonICUDataArray)) {
             return NULL;
         }
+#if !defined (UDATA_SRL_DISK_FIRST)
         if(gCommonICUDataArray[commonDataIndex] == NULL) {
             int32_t i;
             for(i = 0; i < commonDataIndex; ++i) {
@@ -672,7 +673,6 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
                     return NULL;
                 }
             }
-
             /* Add the linked-in data to the list. */
             /*
              * This is where we would check and call weakly linked partial-data-library
@@ -689,6 +689,12 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
             setCommonICUDataPointer(&U_ICUDATA_ENTRY_POINT, FALSE, pErrorCode);
         }
         return gCommonICUDataArray[commonDataIndex];
+#else
+        // return it from the cache, but don't set the cache here.
+        if(gCommonICUDataArray[commonDataIndex]!=NULL) {
+          return gCommonICUDataArray[commonDataIndex];
+        }
+#endif
     }
 
 
@@ -729,11 +735,11 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
 
     while((UDataMemory_isLoaded(&tData)==FALSE) && (pathBuffer = iter.next(pErrorCode)) != NULL)
     {
-#ifdef UDATA_DEBUG
-        fprintf(stderr, "ocd: trying path %s - ", pathBuffer);
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
+        fprintf(stderr, "UData: openCommonData: path: %s ", pathBuffer);
 #endif
         uprv_mapFile(&tData, pathBuffer);
-#ifdef UDATA_DEBUG
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
         fprintf(stderr, "%s\n", UDataMemory_isLoaded(&tData)?"LOADED":"not loaded");
 #endif
     }
@@ -746,6 +752,16 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
         ourPathBuffer[1019]=0;
         uprv_strcat(ourPathBuffer, ".dat");
         uprv_mapFile(&tData, ourPathBuffer);
+    }
+#endif
+
+#if defined(UDATA_SRL_DISK_FIRST)
+    if (!UDataMemory_isLoaded(&tData)) {
+      // DISK_FIRST is set, so reload from entrypoint.
+      setCommonICUDataPointer(&U_ICUDATA_ENTRY_POINT, FALSE, pErrorCode);
+      if(gCommonICUDataArray[commonDataIndex]!=NULL) {
+        return gCommonICUDataArray[commonDataIndex];
+      }
     }
 #endif
 
@@ -860,6 +876,9 @@ udata_setCommonData(const void *data, UErrorCode *pErrorCode) {
     UDataMemory_init(&dataMemory);
     UDataMemory_setData(&dataMemory, data);
     udata_checkCommonData(&dataMemory, pErrorCode);
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
+    fprintf(stderr,"UData: setCommonData %p: %s\n", data, u_errorName(*pErrorCode));
+#endif
     if (U_FAILURE(*pErrorCode)) {return;}
 
     /* we have good data */
@@ -937,6 +956,9 @@ checkDataItem
         /*    cleared out.                                              */
         *nonFatalErr=U_INVALID_FORMAT_ERROR;
     }
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
+    fprintf(stderr, "UData: Check %s.%s: %s\n", name, type, u_errorName(*nonFatalErr));
+#endif
     return rDataMem;
 }
 
@@ -1226,8 +1248,8 @@ doOpenChoice(const char *path, const char *type, const char *name,
     }
 
     /************************ Begin loop looking for ind. files ***************/
-#ifdef UDATA_DEBUG
-    fprintf(stderr, "IND: inBasename = %s, pkg=%s\n", "(n/a)", packageNameFromPath(path));
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
+    fprintf(stderr, "UData doOpenChoice: path=%s, Pkg=%s (%s) Tree=%s %s.%s\n", path, pkgName.data(), packageNameFromPath(path), treeName.data(), name, type);
 #endif
 
     /* End of dealing with a null basename */
@@ -1312,7 +1334,7 @@ doOpenChoice(const char *path, const char *type, const char *name,
 U_CAPI UDataMemory * U_EXPORT2
 udata_open(const char *path, const char *type, const char *name,
            UErrorCode *pErrorCode) {
-#ifdef UDATA_DEBUG
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
   fprintf(stderr, "udata_open(): Opening: %s : %s . %s\n", (path?path:"NULL"), name, type);
     fflush(stderr);
 #endif
@@ -1333,7 +1355,7 @@ U_CAPI UDataMemory * U_EXPORT2
 udata_openChoice(const char *path, const char *type, const char *name,
                  UDataMemoryIsAcceptable *isAcceptable, void *context,
                  UErrorCode *pErrorCode) {
-#ifdef UDATA_DEBUG
+#if defined(UDATA_DEBUG) || defined(UDATA_DEBUG_MIN)
   fprintf(stderr, "udata_openChoice(): Opening: %s : %s . %s\n", (path?path:"NULL"), name, type);
 #endif
 
