@@ -10,6 +10,8 @@
 
 #include "unicode/utypes.h"
 
+extern void format34(double d, UChar *buffer, const UChar digits[]);
+
 #if !UCONFIG_NO_FORMATTING
 
 #include "numfmtst.h"
@@ -32,6 +34,8 @@
 #include "cstring.h"
 #include "unicode/numsys.h"
 #include "fmtableimp.h"
+#include <time.h>
+#include "digitlst.h"
 
 //#define NUMFMTST_CACHE_DEBUG 1
 #include "stdio.h" /* for sprintf */
@@ -7603,27 +7607,24 @@ void NumberFormatTest::TestAccountingCurrency() {
 
 // for #5186
 void NumberFormatTest::TestEquality() {
-    UErrorCode status = U_ZERO_ERROR;
-    DecimalFormatSymbols* symbols = new DecimalFormatSymbols(Locale("root"), status);
-    if (U_FAILURE(status)) {
-    	dataerrln("Fail: can't create DecimalFormatSymbols for root");
-    	return;
-    }
-    UnicodeString pattern("#,##0.###");
-    DecimalFormat* fmtBase = new DecimalFormat(pattern, symbols, status);
-    if (U_FAILURE(status)) {
-    	dataerrln("Fail: can't create DecimalFormat using root symbols");
-    	return;
-    }
-
-    DecimalFormat* fmtClone = (DecimalFormat*)fmtBase->clone();
-    fmtClone->setFormatWidth(fmtBase->getFormatWidth() + 32);
-    if (*fmtClone == *fmtBase) {
-        errln("Error: DecimalFormat == does not distinguish objects that differ only in FormatWidth");
-    }
-    delete fmtClone;
-
-    delete fmtBase;
+  UChar digits[] = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39};
+  UChar buffer[20];
+  UErrorCode status = U_ZERO_ERROR;
+  DecimalFormat fmt("#.########", status);
+  UnicodeString buffer2;
+  DigitList dl;
+  clock_t start = clock();
+/*
+  format34(281474976710657.1875, buffer, digits);
+  errln(UnicodeString(buffer));
+  format34(281474976710657.3125, buffer, digits);
+  errln(UnicodeString(buffer));
+*/
+  for (int32_t i = 0; i < 1000000; ++i) {
+    format34(3972.84, buffer, digits);
+//    dl.set(3972.84);
+  }
+  errln("Time: %.2f", (double) ((clock() - start)) / CLOCKS_PER_SEC); 
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
