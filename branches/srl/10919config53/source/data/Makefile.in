@@ -148,8 +148,12 @@ clean-local: cleanpackage cleanfiles clean-map
 cleanfiles:
 	test -z "$(CLEANFILES)" || $(RMV) $(CLEANFILES)
 
-cleanpackage:
+cleanpackage: cleanout cleanlib
+
+cleanout:
 	$(RMV) $(OUTDIR)
+
+cleanlib:
 	$(RMV) $(LIBDIR)/$(LIB_ICUDATA_NAME)*.$(SO)* $(LIBDIR)/$(LIB_STATIC_ICUDATA_NAME).$(A)
 
 check-local:
