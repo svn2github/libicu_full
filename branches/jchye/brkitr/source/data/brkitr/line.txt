@@ -97,21 +97,19 @@ $WJ = [:LineBreak =  Word_Joiner:];
 $XX = [:LineBreak =  Unknown:];
 $ZW = [:LineBreak =  ZWSpace:];
 
-#   Dictionary character set, for triggering language-based break engines. Currently
-#   limited to LineBreak=Complex_Context. Note that this set only works in Unicode
-#   5.0 or later as the definition of Complex_Context was corrected to include all
-#   characters requiring dictionary break.
-
-$dictionary = [:LineBreak = Complex_Context:];
+$dictionaryThai = [[:LineBreak = Complex_Context:] & [:Script = Thai:]];
+$dictionaryLao  = [[:LineBreak = Complex_Context:] & [:Script = Lao:]];
+$dictionaryKhmer = [[:LineBreak = Complex_Context:] & [:Script = Khmer:]];
+$dictionary = [$dictionaryThai $dictionaryLao $dictionaryKhmer];
 
 #
 #  Rule LB1.  By default, treat AI  (characters with ambiguous east Asian width),
-#                               SA  (South East Asian: Thai, Lao, Khmer)
+#                               SA  (South East Asian, excluding those we support in dictionaries.)
 #                               SG  (Unpaired Surrogates)
 #                               XX  (Unknown, unassigned)
 #                         as $AL  (Alphabetic)
 #
-$ALPlus = [$AL $AI $SA $SG $XX];
+$ALPlus = [[$AL $AI $SA $SG $XX] - $dictionary];
 
 #
 #  Combining Marks.   X $CM*  behaves as if it were X.  Rule LB6.
@@ -151,6 +149,7 @@ $WJcm = $WJ $CM*;
 #
 #  Each class of character can stand by itself as an unbroken token, with trailing combining stuff
 #
+$dictionary CM+;
 $ALPlus $CM+;
 $BA $CM+;
 $BB $CM+;
@@ -178,6 +177,14 @@ $QU $CM+;
 $RI $CM+;
 $SY $CM+;
 $WJ $CM+;
+
+
+# Dictionary characters from each supported script clump together, for subsequent
+# splitting into words.
+
+$dictionaryThai  $dictionaryThai;
+$dictionaryLao   $dictionaryLao;
+$dictionaryKhmer $dictionaryKhmer;
 
 #
 # CAN_CM  is the set of characters that may combine with CM combining chars.
@@ -409,6 +416,7 @@ $RIcm $RIcm;
 
 !!reverse;
 
+$CM+ $dictionary;
 $CM+ $ALPlus;
 $CM+ $BA;
 $CM+ $BB;
@@ -438,6 +446,12 @@ $CM+ $SY;
 $CM+ $WJ;
 $CM+;
 
+# Dictionary characters from each supported script clump together, for subsequent
+# splitting into words.
+
+$dictionaryThai  $dictionaryThai;
+$dictionaryLao   $dictionaryLao;
+$dictionaryKhmer $dictionaryKhmer;
 
 #
 #  Sequences of the form  (shown forwards)

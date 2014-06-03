@@ -45,54 +45,29 @@ DictionaryBreakEngine::handles(UChar32 c, int32_t breakType) const {
 }
 
 int32_t
-DictionaryBreakEngine::findBreaks( UText *text,
-                                 int32_t startPos,
-                                 int32_t endPos,
-                                 UBool reverse,
-                                 int32_t breakType,
-                                 UStack &foundBreaks ) const {
+DictionaryBreakEngine::findBreaks(UText *text,
+                                  int32_t endPos,
+                                  int32_t breakType,
+                                  UVector32 &foundBreaks ) const {
     int32_t result = 0;
 
     // Find the span of characters included in the set.
     //   The span to break begins at the current position in the text, and
-    //   extends towards the start or end of the text, depending on 'reverse'.
+    //   extends towards endPos.
 
-    int32_t start = (int32_t)utext_getNativeIndex(text);
-    int32_t current;
-    int32_t rangeStart;
-    int32_t rangeEnd;
-    UChar32 c = utext_current32(text);
-    if (reverse) {
-        UBool   isDict = fSet.contains(c);
-        while((current = (int32_t)utext_getNativeIndex(text)) > startPos && isDict) {
-            c = utext_previous32(text);
-            isDict = fSet.contains(c);
+    int32_t rangeStart = (int32_t)utext_getNativeIndex(text);
+    int32_t rangeEnd = rangeStart;
+    while (rangeEnd < endPos) {
+        UChar32 c = utext_next32(text);
+        if (!fSet.contains(c)) {
+            break;
         }
-        if (current < startPos) {
-            rangeStart = startPos;
-        } else {
-            rangeStart = current;
-            if (!isDict) {
-                utext_next32(text);
-                rangeStart = utext_getNativeIndex(text);
-            }
-        }
-        // rangeEnd = start + 1;
-        utext_setNativeIndex(text, start);
-        utext_next32(text);
         rangeEnd = utext_getNativeIndex(text);
     }
-    else {
-        while((current = (int32_t)utext_getNativeIndex(text)) < endPos && fSet.contains(c)) {
-            utext_next32(text);         // TODO:  recast loop for postincrement
-            c = utext_current32(text);
-        }
-        rangeStart = start;
-        rangeEnd = current;
-    }
+
     if (breakType >= 0 && breakType < 32 && (((uint32_t)1 << breakType) & fTypes)) {
         result = divideUpDictionaryRange(text, rangeStart, rangeEnd, foundBreaks);
-        utext_setNativeIndex(text, current);
+        utext_setNativeIndex(text, rangeEnd);
     }
     
     return result;
@@ -250,7 +225,7 @@ int32_t
 ThaiBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
-                                                UStack &foundBreaks ) const {
+                                                UVector32 &foundBreaks ) const {
     utext_setNativeIndex(text, rangeStart);
     utext_moveIndex32(text, THAI_MIN_WORD_SPAN);
     if (utext_getNativeIndex(text) >= rangeEnd) {
@@ -489,7 +464,7 @@ int32_t
 LaoBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
-                                                UStack &foundBreaks ) const {
+                                                UVector32 &foundBreaks ) const {
     if ((rangeEnd - rangeStart) < LAO_MIN_WORD_SPAN) {
         return 0;       // Not enough characters for two words
     }
@@ -694,7 +669,7 @@ int32_t
 KhmerBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
-                                                UStack &foundBreaks ) const {
+                                                UVector32 &foundBreaks ) const {
     if ((rangeEnd - rangeStart) < KHMER_MIN_WORD_SPAN) {
         return 0;       // Not enough characters for two words
     }
@@ -899,14 +874,15 @@ static inline int32_t utext_i32_flag(int32_t bitIndex) {
  * @param text A UText representing the text
  * @param rangeStart The start of the range of dictionary characters
  * @param rangeEnd The end of the range of dictionary characters
- * @param foundBreaks Output of C array of int32_t break positions, or 0
+ * @param foundBreaks Fill-in vector of int32_t break positions, ordered from start to end.
+ *                    Append new breaks to any existing contents.
  * @return The number of breaks found
  */
 int32_t 
-FrequencyBreakEngine::divideUpDictionaryRange( UText *inText,
-        int32_t rangeStart,
-        int32_t rangeEnd,
-        UStack &foundBreaks ) const {
+FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
+                                              int32_t rangeStart,
+                                              int32_t rangeEnd,
+                                              UVector32 &foundBreaks ) const {
     if (rangeStart >= rangeEnd) {
         return 0;
     }
@@ -1071,7 +1047,7 @@ FrequencyBreakEngine::divideUpDictionaryRange( UText *inText,
 
     // Add a break for the start of the dictionary range if there is not one
     // there already.
-    if (foundBreaks.size() == 0 || foundBreaks.peeki() < rangeStart) {
+    if (foundBreaks.size() == 0 || foundBreaks.lastElementi() < rangeStart) {
         t_boundary.addElement(0, status);
         numBreaks++;
     }
@@ -1083,9 +1059,9 @@ FrequencyBreakEngine::divideUpDictionaryRange( UText *inText,
         int32_t cpPos = t_boundary.elementAti(i);
         int32_t utextPos =  inputMap ? inputMap->elementAti(cpPos) : cpPos + rangeStart;
         // Boundaries are added to foundBreaks output in ascending order.
-        U_ASSERT(foundBreaks.size() == 0 || foundBreaks.peeki() <= utextPos);
-        if (foundBreaks.size() == 0 || foundBreaks.peeki() < utextPos) {
-            foundBreaks.push(utextPos, status);
+        U_ASSERT(foundBreaks.size() == 0 || foundBreaks.lastElementi() <= utextPos);
+        if (foundBreaks.size() == 0 || foundBreaks.lastElementi() < utextPos) {
+            foundBreaks.addElement(utextPos, status);
         } else {
             // Edge case: if normalization of the input text decomposed something,
             //            and that something is not part of any dictionary word,

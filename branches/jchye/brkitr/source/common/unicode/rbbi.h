@@ -42,6 +42,7 @@ class  RBBIDataWrapper;
 class  UStack;
 class  LanguageBreakEngine;
 class  UnhandledEngine;
+class  UVector32;
 struct RBBIStateTable;
 
 
@@ -122,24 +123,20 @@ protected:
      * When a range of characters is divided up using the dictionary, the break
      * positions that are discovered are stored here, preventing us from having
      * to use either the dictionary or the state table again until the iterator
-     * leaves this range of text. Has the most impact for line breaking.
+     * leaves this range of text.
      * @internal
      */
-    int32_t*            fCachedBreakPositions;
+    UVector32           *fCachedBreakPositions;
 
     /**
-     * The number of elements in fCachedBreakPositions
-     * @internal
-     */
-    int32_t             fNumCachedBreakPositions;
-
-    /**
-     * if fCachedBreakPositions is not null, this indicates which item in the
-     * cache the current iteration position refers to
+     * Indicates which item in the cache the current iteration position refers to.
+     * -2 if the cache position is not valid.
      * @internal
      */
     int32_t             fPositionInCache;
-    
+
+    // TODO: cache rule status values also.
+
     /**
      *
      * If present, UStack of LanguageBreakEngine objects that might handle
