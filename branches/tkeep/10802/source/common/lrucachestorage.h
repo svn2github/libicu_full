@@ -17,103 +17,118 @@
 
 struct UHashtable;
 
+
 U_NAMESPACE_BEGIN
 
+class UnifiedCache;
+class Alias;
+
 /**
- * A function that creates a shared object. id is the key; data is extra
- * data for creating SharedObject, may be NULL; memory footprint of
- * created object is returned at size; any error is stored in status.
+ * A function that creates a new shared object for a particular cache view.
+ * called on cache miss. 
+ * @param id the key which is unique for the cache view;
+ * @param cache points to the unified cache instance primarily used for
+ * getting aliases.
+ * @param data extra data for creating SharedObject and may be NULL; 
+ * @param alias instead of creating a new SharedObject, this function may
+ * specify an alias by returning NULL and storing the alias here. function
+ * can get the alias using the provided cache pointer.
+ * @param status any error returned here.
+ * @return the newly created SharedObject or NULL to create an alias or
+ * report an error.
  */
 typedef SharedObject * (*SharedObjectCreater)(
         const UnicodeString &id,
+        UnifiedCache *cache,
         void *data,
-        int64_t &size,
+        const Alias **alias,
         UErrorCode &status);
 
 /**
- * Specifies a particular cache.
+ * Specifies a particular cache view.
  */
-struct CacheSpec {
+struct CacheView {
     /**
-     * Unique id for this cache
+     * Unique id for this cache view
      */
-    const UChar *cacheId;
+    const UChar *cacheViewId;
 
     /**
-     *  Creates objects for this cache.
+     *  Creates objects for this cache view.
      */
     SharedObjectCreater creater;
 
     /**
-     * Arbitrary data for creating objects for this cache.
+     * Arbitrary data for creating objects for this cache view. It is
+     * passed as-is to creater.
      */
-    void *data;
+    void *viewData;
 
     /**
-     * Creates a shared object for this cache.
-     * id is the key; memory footprint ofcreated object is returned at size;
-     * any error is stored in status.
+     * Creates a shared object for this cache view.
+     * id is the key unique for this cache view; any error is stored in status.
      */
     inline SharedObject *create(
-            const UnicodeString &id, int64_t &size, UErrorCode &status) const {
-        return creater(id, data, size, status);
+            const UnicodeString &id,
+            UnifiedCache *cache,
+            const Alias **alias,
+            UErrorCode &status) const {
+        return creater(id, cache, viewData, alias, status);
     }
 
     /**
-     * Creates a full key that includes cache type based on given key.
-     * Caller owns returned key.
-     * id is the original key; any error returned at status.
+     * Creates a full key that unique across all cache views.
+     * id is the original key unique for this cache view.
      */
     UnicodeString &createKey(
             const UnicodeString &id, UnicodeString &result) const;
 };
 
 /**
- * Storage for caches of SharedObjects keyed by an arbitrary ID.
- *
- * LRUCacheStorage has one main method, get(), which fetches a SharedObject
- * for a particular cache. If no such SharedObject exists in the particular
- * cache, get() creates and stores the new SharedObject for that cache.
- *
- * In addition to ID, get() accepts a CacheSpec which describes the particular
- * cache. CacheSpec consists of a cache ID, and a function pointer that
- * LRUCacheStorage uses to create the new object on cache miss.
- *
- * LRUCacheStorage has a maximum size in bytes. Whenever adding a new item to
- * the cache would exceed this maximum size, LRUCacheStorage evicts the
- * SharedObjects that were least recently fetched via the get() method.
+ * UnifiedCache is the ICU unified cache.
  */
-class U_COMMON_API LRUCacheStorage : public UMemory {
+class U_COMMON_API UnifiedCache : public UMemory {
 public:
     /**
      * Constructor.
-     * @param maxSize the maximum size of the LRUCacheStorage in bytes
      * @param status any error is set here.
      */
-    LRUCacheStorage(int64_t maxSize, UErrorCode &status);
+    UnifiedCache(UErrorCode &status);
 
     /**
-     * Fetches a SharedObject by locale ID. On success, get() makes ptr point
-     * to the fetched SharedObject while automatically updating reference
-     * counts; on failure, get() leaves ptr unchanged and sets status.
-     * When get() is called, ptr must either be NULL or be included in the
-     * reference count of what it points to. After get() returns successfully,
-     * caller must eventually call removeRef() on ptr to avoid memory leaks.
+     * get() Fetches a SharedObject by cache view and cache view ID.
+     * On success, get() makes ptr point to the fetched SharedObject while
+     * automatically updating reference counts; on failure, get() leaves ptr
+     * unchanged and sets status. When get() is called, ptr must either be
+     * NULL or be included in the reference count of what it points to.
+     * After get() returns successfully, caller must eventually call
+     * removeRef() on ptr to avoid memory leaks.
      *
      * T must be a subclass of SharedObject.
      */ 
     template<typename T>
     void get(
             const UnicodeString &id,
-            const CacheSpec &spec,
+            const CacheView &view,
             const T *&ptr,
             UErrorCode &status) {
-        const T *value = (const T *) _get(id, spec, status);
+        const T *value = (const T *) _get(id, view, status);
         if (U_FAILURE(status)) {
             return;
         }
         SharedObject::copyPtr(value, ptr);
     }
+
+    /**
+     * getAlias returns an alias to a SharedObject by cache view and id. 
+     * If the this results in a cache miss, getAlias creates the SharedObject
+     * in the usual way before returning an alias to it. Returned alias is
+     * owned by this cache, client must not attempt to free it.
+     */
+    const Alias *getAlias(
+            const UnicodeString &id,
+            const CacheView &view,
+            UErrorCode &status);
 
     /**
      * Returns TRUE if a SharedObject for given ID is cached. Used
@@ -122,19 +137,12 @@ public:
     UBool contains(const UnicodeString &id, const CacheSpec &spec) const;
 
     /**
-     * Returns current footprint of cache in bytes. Used primarily for
-     * testing purposes.
+     * Flush removes all objects from this cache that are not currently in
+     * use.
      */
-    int64_t size() const { return currentSize; }
+    void flush(UErrorCode &stats);
 
-    /**
-     * Returns the size in bytes of an empty cache entry. Used for testing
-     * only.
-     */
-    static int64_t sizeOfEmptyEntry() {
-        return sizeof(CacheEntry);
-    }
-    virtual ~LRUCacheStorage();
+    virtual ~UnifiedCache();
 protected:
 private:
     class CacheEntry : public UMemory {
