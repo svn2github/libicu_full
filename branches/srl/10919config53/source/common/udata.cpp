@@ -664,7 +664,6 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
         if(commonDataIndex >= LENGTHOF(gCommonICUDataArray)) {
             return NULL;
         }
-#if !defined (UDATA_SRL_DISK_FIRST)
         if(gCommonICUDataArray[commonDataIndex] == NULL) {
             int32_t i;
             for(i = 0; i < commonDataIndex; ++i) {
@@ -673,6 +672,7 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
                     return NULL;
                 }
             }
+
             /* Add the linked-in data to the list. */
             /*
              * This is where we would check and call weakly linked partial-data-library
@@ -689,12 +689,6 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
             setCommonICUDataPointer(&U_ICUDATA_ENTRY_POINT, FALSE, pErrorCode);
         }
         return gCommonICUDataArray[commonDataIndex];
-#else
-        // return it from the cache, but don't set the cache here.
-        if(gCommonICUDataArray[commonDataIndex]!=NULL) {
-          return gCommonICUDataArray[commonDataIndex];
-        }
-#endif
     }
 
 
@@ -752,16 +746,6 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
         ourPathBuffer[1019]=0;
         uprv_strcat(ourPathBuffer, ".dat");
         uprv_mapFile(&tData, ourPathBuffer);
-    }
-#endif
-
-#if defined(UDATA_SRL_DISK_FIRST)
-    if (!UDataMemory_isLoaded(&tData)) {
-      // DISK_FIRST is set, so reload from entrypoint.
-      setCommonICUDataPointer(&U_ICUDATA_ENTRY_POINT, FALSE, pErrorCode);
-      if(gCommonICUDataArray[commonDataIndex]!=NULL) {
-        return gCommonICUDataArray[commonDataIndex];
-      }
     }
 #endif
 
