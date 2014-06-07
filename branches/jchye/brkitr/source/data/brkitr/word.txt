@@ -65,11 +65,12 @@ $dictionary       = [$dictionaryThai $dictionaryLao $dictionaryKhmer $dictionary
 # Keep runs of dictionary characters together, but don't mix those 
 # that need to be dispatched to different dictionaries, or those with
 # different rule status values (CJ).
-$dictionaryCJ+ {400};
-$dictionaryHangul+ {200};
-$dictionaryThai+ {200};
-$dictionaryLao+ {200};
-$dictionaryKhmer+ {200};
+
+($dictionaryCJ     ($Extend | $Format)*)+ {400};
+($dictionaryHangul ($Extend | $Format)*)+ {200};
+($dictionaryThai   ($Extend | $Format)*)+ {200};
+($dictionaryLao    ($Extend | $Format)*)+ {200};
+($dictionaryKhmer  ($Extend | $Format)*)+ {200};
 
 
 # leave CJK scripts out of ALetterPlus
@@ -178,11 +179,11 @@ $BackMidLetterEx          = ($Format | $Extend)* $MidLetter;
 $BackExtendNumLetEx       = ($Format | $Extend)* $ExtendNumLet;
 $BackRegional_IndicatorEx = ($Format | $Extend)* $Regional_Indicator;
 
-$dictionaryCJ     $dictionaryCJ;
-$dictionaryHangul $dictionaryHangul;
-$dictionaryThai   $dictionaryThai;
-$dictionaryLao    $dictionaryLao;
-$dictionaryKhmer  $dictionaryKhmer;
+(($Format | $Extend)* $dictionaryCJ)+;
+(($Format | $Extend)* $dictionaryHangul)+;
+(($Format | $Extend)* $dictionaryThai)+;
+(($Format | $Extend)* $dictionaryLao)+;
+(($Format | $Extend)* $dictionaryKhmer)+;
 
 # rule 3
 $LF $CR;

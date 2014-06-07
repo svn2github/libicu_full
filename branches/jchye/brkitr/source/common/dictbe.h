@@ -125,6 +125,7 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
   virtual int32_t divideUpDictionaryRange( UText *text,
                                            int32_t rangeStart,
                                            int32_t rangeEnd,
+                                           int32_t breakType,
                                            UVector32 &foundBreaks ) const = 0;
 
 };
@@ -182,6 +183,7 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
   virtual int32_t divideUpDictionaryRange( UText *text,
                                            int32_t rangeStart,
                                            int32_t rangeEnd,
+                                           int32_t breakType,
                                            UVector32 &foundBreaks ) const;
 
 };
@@ -238,6 +240,7 @@ class LaoBreakEngine : public DictionaryBreakEngine {
   virtual int32_t divideUpDictionaryRange( UText *text,
                                            int32_t rangeStart,
                                            int32_t rangeEnd,
+                                           int32_t breakType,
                                            UVector32 &foundBreaks ) const;
 
 };
@@ -294,6 +297,7 @@ class KhmerBreakEngine : public DictionaryBreakEngine {
   virtual int32_t divideUpDictionaryRange( UText *text, 
                                            int32_t rangeStart, 
                                            int32_t rangeEnd, 
+                                           int32_t breakType,
                                            UVector32 &foundBreaks ) const; 
  
 }; 
@@ -341,6 +345,7 @@ class FrequencyBreakEngine : public DictionaryBreakEngine {
   virtual int32_t divideUpDictionaryRange( UText *text,
           int32_t rangeStart,
           int32_t rangeEnd,
+          int32_t breakType,
           UVector32 &foundBreaks ) const;
 
   virtual void findBoundaries(UnicodeString *inString,
@@ -348,6 +353,13 @@ class FrequencyBreakEngine : public DictionaryBreakEngine {
 		  UVector32 *bestSnlp,
 		  UVector32 *prev,
 		  UErrorCode &status) const;
+
+  /**
+    * Filter function for boundaries produced by the dictionary.
+    * Function is called for each candidate boundary.
+    *  Return TRUE if the boundary is OK, FALSE if it should be suppressed.
+    */
+  virtual UBool acceptBoundary(int32_t boundary, const UnicodeString *text, int32_t breakType) const;
 };
 
 /*******************************************************************

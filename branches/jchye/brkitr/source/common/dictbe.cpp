@@ -14,6 +14,7 @@
 #include "unicode/uniset.h"
 #include "unicode/chariter.h"
 #include "unicode/ubrk.h"
+#include "unicode/uchar.h"
 #include "uvectr32.h"
 #include "uvector.h"
 #include "uassert.h"
@@ -66,7 +67,7 @@ DictionaryBreakEngine::findBreaks(UText *text,
     }
 
     if (breakType >= 0 && breakType < 32 && (((uint32_t)1 << breakType) & fTypes)) {
-        result = divideUpDictionaryRange(text, rangeStart, rangeEnd, foundBreaks);
+        result = divideUpDictionaryRange(text, rangeStart, rangeEnd, breakType, foundBreaks);
         utext_setNativeIndex(text, rangeEnd);
     }
     
@@ -225,6 +226,7 @@ int32_t
 ThaiBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
+                                                int32_t /*breakType*/,
                                                 UVector32 &foundBreaks ) const {
     utext_setNativeIndex(text, rangeStart);
     utext_moveIndex32(text, THAI_MIN_WORD_SPAN);
@@ -464,6 +466,7 @@ int32_t
 LaoBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
+                                                int32_t /*breakType*/,
                                                 UVector32 &foundBreaks ) const {
     if ((rangeEnd - rangeStart) < LAO_MIN_WORD_SPAN) {
         return 0;       // Not enough characters for two words
@@ -669,6 +672,7 @@ int32_t
 KhmerBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
+                                                int32_t /*breakType*/,
                                                 UVector32 &foundBreaks ) const {
     if ((rangeEnd - rangeStart) < KHMER_MIN_WORD_SPAN) {
         return 0;       // Not enough characters for two words
@@ -869,7 +873,60 @@ static inline int32_t utext_i32_flag(int32_t bitIndex) {
     return (int32_t)1 << bitIndex;
 }
 
-       
+// Filter function for candidate boundaries.
+//    Return TRUE to accept, or FALSE to reject, a boundary.
+
+UBool FrequencyBreakEngine::acceptBoundary(int32_t pos, const UnicodeString *text, int32_t breakType) const {
+    U_ASSERT(pos >= 0);
+    U_ASSERT(pos <= text->length());
+    if (pos == 0 || pos == text->length()) {
+        return TRUE;
+    }
+    UChar32 charPreceding = text->char32At(pos-1);
+    UChar32 charFollowing = text->char32At(pos);
+
+    // Suppress any boundaries occuring before a character with
+    //   word break property == Extend.  (Typically combing marks) 
+    if (u_getIntPropertyValue(charFollowing, UCHAR_WORD_BREAK) == U_WB_EXTEND) {
+        return FALSE;
+    }
+
+    //  \u0e2f-- the Thai paiyannoi character-- isn't a letter.  It's a symbol that
+    //  represents elided letters at the end of a long word.  It should be bound to
+    //  the end of the word and not treated as an independent punctuation mark.
+    //  Description originally from intltest RBBITest::TestThaiLineBreak()
+
+    // The one time where the paiyannoi occurs somewhere other than at the end
+    // of a word is in the Thai abbrevation for "etc.", which both begins and
+    // ends with a paiyannoi
+
+    if (charFollowing == 0x0e2f &&
+            !(text->char32At(pos+1)==0xe25 && text->char32At(pos+2)==0x0e2f)) {
+            // note that char32At() returns 0xffff for index out of bounds. 
+            // No need for additional check here.
+        return FALSE;
+    }
+
+    // THAI MAIYAMOK
+    if (charFollowing == 0x0E46 && charPreceding != 0x0e46) {
+        return FALSE;
+    }
+
+    // For Line Breaking, reject any boundary that does not have characters with LB
+    // property = SA on both sides. Line Break rules will produce chunks that may be
+    // preceded or followed by non-word chars - punctuation, or hard breaks, for example.
+    // The dictionary will find word boundaries, but these are not line break boundaries.
+    if (breakType == UBRK_LINE && 
+            (u_getIntPropertyValue(charFollowing, UCHAR_LINE_BREAK) != U_LB_COMPLEX_CONTEXT ||
+             u_getIntPropertyValue(charPreceding, UCHAR_LINE_BREAK) != U_LB_COMPLEX_CONTEXT)) {
+        return FALSE;
+    }
+
+
+    // Default
+    return TRUE;
+}
+
 /*
  * @param text A UText representing the text
  * @param rangeStart The start of the range of dictionary characters
@@ -882,6 +939,7 @@ int32_t
 FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
                                               int32_t rangeStart,
                                               int32_t rangeEnd,
+                                              int32_t breakType,
                                               UVector32 &foundBreaks ) const {
     if (rangeStart >= rangeEnd) {
         return 0;
@@ -1039,10 +1097,11 @@ FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
         numBreaks++;
     } else {
         for (int32_t i = numCodePts; i > 0; i = prev.elementAti(i)) {
-            t_boundary.addElement(i, status);
-            numBreaks++;
+            if (acceptBoundary(i, inString, breakType)) {
+                t_boundary.addElement(i, status);
+                numBreaks++;
+            }
         }
-        U_ASSERT(prev.elementAti(t_boundary.elementAti(numBreaks - 1)) == 0);
     }
 
     // Add a break for the start of the dictionary range if there is not one
