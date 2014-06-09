@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1997-2013, International Business Machines
+*   Copyright (C) 1997-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -27,6 +27,7 @@
 // Forward Declarations. UMutex is not in the ICU namespace (yet) because
 //                       there are some remaining references from plain C.
 struct UMutex;
+struct UCondition;
 
 U_NAMESPACE_BEGIN
 struct UInitOnce;
@@ -345,6 +346,11 @@ struct UMutex {
 typedef struct UMutex UMutex;
 #define U_MUTEX_INITIALIZER  {PTHREAD_MUTEX_INITIALIZER}
 
+struct UCondition {
+    pthread_cond_t   fCondition;
+};
+#define U_CONDITION_INITIALIZER {PTHREAD_COND_INITIALIZER}
+
 #else
 
 /*
@@ -378,6 +384,23 @@ U_INTERNAL void U_EXPORT2 umtx_lock(UMutex* mutex);
  *              the global ICU mutex.
  */
 U_INTERNAL void U_EXPORT2 umtx_unlock (UMutex* mutex);
+
+/*
+ * Wait on a condition variable.
+ * The calling thread will unlock the mutex and wait on the condition variable.
+ * The mutex must be locked by the calling thread when invoking this function.
+ *
+ * @param cond the condition variable to wait on.
+ * @param mutex the associated mutex.
+ */
+
+U_INTERNAL void U_EXPORT2 umtx_condWait(UCondition *cond, UMutex *mutex);
+
+
+U_INTERNAL void U_EXPORT2 umtx_condBroadcast(UCondition *cond);
+
+// No umtx_condSignal(). There's no immediate need within ICU,
+//      and the implementation for Windows XP would be extra work.
 
 #endif /* UMUTEX_H */
 /*eof*/

@@ -168,6 +168,25 @@ umtx_unlock(UMutex* mutex)
     U_ASSERT(sysErr == 0);
 }
 
+
+U_CAPI void U_EXPORT2
+umtx_condWait(UCondition *cond, UMutex *mutex) {
+    if (mutex == NULL) {
+        mutex = &globalMutex;
+    }
+    int sysErr = pthread_cond_wait(&cond->fCondition, &mutex->fMutex);
+    (void)sysErr;
+    U_ASSERT(sysErr == 0);
+}
+
+U_CAPI void U_EXPORT2
+umtx_condBroadcast(UCondition *cond) {
+    int sysErr = pthread_cond_broadcast(&cond->fCondition);
+    (void)sysErr;
+    U_ASSERT(sysErr == 0);
+}
+
+
 U_NAMESPACE_BEGIN
 
 static pthread_mutex_t initMutex = PTHREAD_MUTEX_INITIALIZER;
