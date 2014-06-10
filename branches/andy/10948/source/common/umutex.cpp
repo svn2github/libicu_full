@@ -132,6 +132,54 @@ umtx_unlock(UMutex* mutex)
     LeaveCriticalSection(&mutex->fCS);
 }
 
+
+U_CAPI void U_EXPORT2
+umtx_condBroadcast(UCondition *condition) {
+    // We require that the associated mutex be held by the caller,
+    //  so access to fWaitCount is protected and safe.
+    if (condition->fWaitCount == 0) {
+        return;
+    }
+    ResetEvent(condition->fExitGate);
+    SetEvent(condition->fEntryGate);
+}
+
+U_CAPI void U_EXPORT2
+umtx_condWait(UCondition *condition, UMutex *mutex) {
+    if (condition->fEntryGate == NULL) {
+        // Note: because the associated mutex must be locked when calling
+        //       wait, we know that there can not be multiple threads
+        //       running here with the same condition variable.
+        //       Meaning that lazy initialization is safe.
+        U_ASSERT(condition->fExitGate == NULL);
+        condition->fEntryGate = CreateEvent(NULL,   // Security Attributes
+                                            TRUE,   // Manual Reset
+                                            FALSE,  // Initially reset
+                                            NULL);  // Name.
+        U_ASSERT(condition->fEntryGate != NULL);
+        condition->fExitGate = CreateEvent(NULL, TRUE, TRUE, NULL);
+        U_ASSERT(condition->fExitGate != NULL);
+    }
+    // Broadcast can poll fWaitCount without holding the associated
+    // mutex, so use safe increment.
+    condition->fWaitCount++;
+    umtx_unlock(mutex);
+    WaitForSingleObject(condition->fEntryGate, INFINITE); 
+    umtx_lock(mutex);
+    condition->fWaitCount--;
+    if (condition->fWaitCount == 0) {
+        // All threads that were waiting at the entry gate have woken up
+        // and moved through. Shut the entry gate and open the exit gate.
+        ResetEvent(condition->fEntryGate);
+        SetEvent(condition->fExitGate);
+    } else {
+        umtx_unlock(mutex);
+        WaitForSingleObject(condition->fExitGate, INFINITE);
+        umtx_lock(mutex);
+    }
+}
+
+
 #elif U_PLATFORM_IMPLEMENTS_POSIX
 
 //-------------------------------------------------------------------------------------------

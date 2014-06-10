@@ -330,6 +330,14 @@ typedef struct UMutex {
  */
 #define U_MUTEX_INITIALIZER {U_INITONCE_INITIALIZER}
 
+struct UCondition {
+    HANDLE           fEntryGate;
+    HANDLE           fExitGate;
+    u_atomic_int32_t fWaitCount;
+};
+
+#define U_CONDITION_INITIALIZER {NULL, NULL, 0}
+    
 
 
 #elif U_PLATFORM_IMPLEMENTS_POSIX
