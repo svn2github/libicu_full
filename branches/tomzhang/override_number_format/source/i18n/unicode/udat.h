@@ -1085,36 +1085,36 @@ U_STABLE const UNumberFormat* U_EXPORT2
 udat_getNumberFormat(const UDateFormat* fmt);
 
 /**
-* Set the UNumberFormat for specific field associated with an UDateFormat.
+* Get the UNumberFormat for specific field associated with an UDateFormat.
 * For example: 'y' for year and 'M' for month
-* @param field the field to set
-* @param fmt The formatter to set.
-* @param numberFormatToSet A pointer to the UNumberFormat to be used by fmt to format numbers.
-* @param status error code passed around
-* @see udat_getNumberFormatForField
+* @param fmt The formatter to query.
+* @param field the field to query
+* @return A pointer to the UNumberFormat used by fmt to format field numbers.
+* @see udat_setNumberFormatForField
 * @draft ICU 54
 */
 U_DRAFT const UNumberFormat* U_EXPORT2 
-udat_getNumberFormatForField(UChar field, const UDateFormat* fmt);
+udat_getNumberFormatForField(const UDateFormat* fmt, UChar field);
 
 /**
-* Get the UNumberFormat for specific field associated with an UDateFormat.
+* Set the UNumberFormat for specific field associated with an UDateFormat.
 * It can be a single field like: "y"(year) or "M"(month)
 * It can be several field combined together: "yM"(year and month)
 * Note: 
 * 1 symbol field is enough for multiple symbol field (so "y" will override "yy", "yyy")
 * If the field is not numeric, then override has no effect (like "MMM" will use abbreviation, not numerical field)
 *
-* @param field the field to query
-* @param fmt The formatter to query.
-* @return A pointer to the UNumberFormat used by fmt to format numbers.
-* @see udat_setNumberFormatForField
+* @param fields the fields to set
+* @param fmt The formatter to set.
+* @param numberFormatToSet A pointer to the UNumberFormat to be used by fmt to format numbers.
+* @param status error code passed around (memory allocation or invalid fields)
+* @see udat_getNumberFormatForField
 * @draft ICU 54
 */
 U_DRAFT void U_EXPORT2 
-udat_setNumberFormatForField(  UChar* fields,
-                               UDateFormat* fmt,
-                       const   UNumberFormat*  numberFormatToSet,
+udat_setNumberFormatForField(  UDateFormat* fmt,
+                               UChar* fields,
+                               UNumberFormat*  numberFormatToSet,
                                UErrorCode* status);
 
 /**
@@ -1131,7 +1131,7 @@ udat_setNumberFormatForField(  UChar* fields,
 */
 U_STABLE void U_EXPORT2 
 udat_setNumberFormat(           UDateFormat*    fmt,
-                        const   UNumberFormat*  numberFormatToSet);
+                                UNumberFormat*  numberFormatToSet);
 
 /**
 * Get a locale for which date/time formatting patterns are available.

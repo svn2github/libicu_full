@@ -1125,11 +1125,11 @@ public:
     /**
      * Overrides base class method and
      * This method clears per field NumberFormat instances 
-     * previously set by {@see adoptNumberFormat(UChar, NumberFormat*, UErrorCode} 
-     * @param overrideNF the NumbeferFormat used
+     * previously set by {@see adoptNumberFormat(UChar, NumberFormat*, UErrorCode)} 
+     * @param adoptNF the NumbeferFormat used
      * @draft ICU 54
      */
-    void adoptNumberFormat(NumberFormat* overrideNF);
+    void adoptNumberFormat(NumberFormat* adoptNF);
 
     /**
      * allow the user to set the NumberFormat for several fields
@@ -1140,18 +1140,18 @@ public:
      * If the field is not numeric, then override has no effect (like "MMM" will use abbreviation, not numerical field)
      *
      * @param field the field to override(like y)
-     * @param overrideNF the NumbeferFormat used
+     * @param adoptNF the NumbeferFormat used
      * @param status error code if run out of memory to store overrideNF
      * @draft ICU 54
      */
-    void adoptNumberFormat(UnicodeString& fields, NumberFormat* overrideNF, UErrorCode &status);
+    void adoptNumberFormat(const UnicodeString& fields, NumberFormat* adoptNF, UErrorCode &status);
 
     /**
      * Get the numbering system to be used for a particular field.
-     * @param index The UDateFormatField to get
+     * @param field The UDateFormatField to get
      * @draft ICU 54
      */
-    const NumberFormat * getNumberFormatForField(UChar field) const;
+    NumberFormat * getNumberFormatForField(UChar field) const;
 
 #ifndef U_HIDE_INTERNAL_API
     /**

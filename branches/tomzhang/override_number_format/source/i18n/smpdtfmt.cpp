@@ -1648,13 +1648,13 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 
 //----------------------------------------------------------------------
 
-void SimpleDateFormat::adoptNumberFormat(NumberFormat* overrideNF) {
-    fNumberFormat = overrideNF;
-    overrideNF->setParseIntegerOnly(TRUE);
+void SimpleDateFormat::adoptNumberFormat(NumberFormat* adoptNF) {
+    adoptNF->setParseIntegerOnly(TRUE);
+    fNumberFormat = adoptNF;
 
     if (fNumberFormatters) {
         for (int32_t i = 0; i < UDAT_FIELD_COUNT; i++) {
-            if (fNumberFormatters[i] == overrideNF) {
+            if (fNumberFormatters[i] == adoptNF) {
                 fNumberFormatters[i] = NULL;
             }
         }
@@ -1665,14 +1665,14 @@ void SimpleDateFormat::adoptNumberFormat(NumberFormat* overrideNF) {
     while (fOverrideList) {
         NSOverride *cur = fOverrideList;
         fOverrideList = cur->next;
-        if (cur->nf != overrideNF) { // only delete those not duplicate
+        if (cur->nf != adoptNF) { // only delete those not duplicate
             delete cur->nf;
             uprv_free(cur);
         }
     }
 }
 
-void SimpleDateFormat::adoptNumberFormat(UnicodeString& fields, NumberFormat* overrideNF, UErrorCode &status){
+void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberFormat* adoptNF, UErrorCode &status){
     // if it has not been initialized yet, initialize
     umtx_lock(&LOCK);
     if (fNumberFormatters == NULL) {
@@ -1692,7 +1692,7 @@ void SimpleDateFormat::adoptNumberFormat(UnicodeString& fields, NumberFormat* ov
     NSOverride *cur = fOverrideList;
     UBool found = FALSE;
     while (cur && !found) {
-        if ( cur->nf == overrideNF ) {
+        if ( cur->nf == adoptNF ) {
             found = TRUE;
         }
         cur = cur->next;
@@ -1704,15 +1704,15 @@ void SimpleDateFormat::adoptNumberFormat(UnicodeString& fields, NumberFormat* ov
             // no matter what the locale's default number format looked like, we want
             // to modify it so that it doesn't use thousands separators, doesn't always
             // show the decimal point, and recognizes integers only when parsing
-            overrideNF->setGroupingUsed(FALSE);
-            DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(overrideNF);
+            adoptNF->setGroupingUsed(FALSE);
+            DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(adoptNF);
             if (decfmt != NULL) {
                 decfmt->setDecimalSeparatorAlwaysShown(FALSE);
             }
-            overrideNF->setParseIntegerOnly(TRUE);
-            overrideNF->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
+            adoptNF->setParseIntegerOnly(TRUE);
+            adoptNF->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
 
-            cur->nf = overrideNF;
+            cur->nf = adoptNF;
             cur->hash = -1; // set duplicate here (before we set it with NumberSystem Hash, here we cannot get nor use it)
             cur->next = fOverrideList;
             fOverrideList = cur;
@@ -1732,11 +1732,11 @@ void SimpleDateFormat::adoptNumberFormat(UnicodeString& fields, NumberFormat* ov
         }
 
         // Set the number formatter in the table
-        fNumberFormatters[patternCharIndex] = overrideNF;
+        fNumberFormatters[patternCharIndex] = adoptNF;
     }
 }
 
-const NumberFormat *
+NumberFormat *
 SimpleDateFormat::getNumberFormatForField(UChar field) const {
     UDateFormatField index = DateFormatSymbols::getPatternCharIndex(field);
     return getNumberFormatByIndex(index);

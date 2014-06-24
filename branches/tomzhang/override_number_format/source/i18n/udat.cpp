@@ -344,7 +344,7 @@ udat_setCalendar(UDateFormat*    fmt,
 }
 
 U_DRAFT const UNumberFormat* U_EXPORT2 
-udat_getNumberFormatForField(UChar field, const UDateFormat* fmt)
+udat_getNumberFormatForField(const UDateFormat* fmt, UChar field)
 {
     UErrorCode status = U_ZERO_ERROR;
     verifyIsSimpleDateFormat(fmt, &status);
@@ -359,9 +359,9 @@ udat_getNumberFormat(const UDateFormat* fmt)
 }
 
 U_DRAFT void U_EXPORT2 
-udat_setNumberFormatForField(           UChar*          fields,
-                                        UDateFormat*    fmt,
-                                const   UNumberFormat*  numberFormatToSet,
+udat_setNumberFormatForField(           UDateFormat*    fmt,
+                                        UChar*          fields,
+                                        UNumberFormat*  numberFormatToSet,
                                         UErrorCode*     status)
 {
     verifyIsSimpleDateFormat(fmt, status);
@@ -375,7 +375,7 @@ udat_setNumberFormatForField(           UChar*          fields,
 
 U_CAPI void U_EXPORT2
 udat_setNumberFormat(        UDateFormat*    fmt,
-                     const   UNumberFormat*  numberFormatToSet)
+                             UNumberFormat*  numberFormatToSet)
 {
     UErrorCode status = U_ZERO_ERROR;
     verifyIsSimpleDateFormat(fmt, &status);
