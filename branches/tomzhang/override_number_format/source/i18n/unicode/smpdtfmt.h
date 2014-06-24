@@ -1121,38 +1121,37 @@ public:
      * @draft ICU 54
      */
     virtual void setContext(UDisplayContext value, UErrorCode& status);
-	
-    /**
-     * set the numbering system to be used for a particular field.
-	 * @param overrideNF the NumbeferFormat used
-	 * @param status error error code
-	 * @draft ICU 54
-     */
-    void setNumberFormat(NumberFormat* overrideNF, UErrorCode &status);
 
     /**
-     * set the numbering system to be used for a particular field.
-	 * @param field the field to override(like y)
-	 * @param overrideNF the NumbeferFormat used
-	 * @param status error error code
-	 * @draft ICU 54
+     * Overrides base class method and
+     * This method clears per field NumberFormat instances 
+     * previously set by {@see adoptNumberFormat(UChar, NumberFormat*, UErrorCode} 
+     * @param overrideNF the NumbeferFormat used
+     * @draft ICU 54
      */
-    void setNumberFormat(UChar field, NumberFormat* overrideNF, UErrorCode &status);
-	 
+    void adoptNumberFormat(NumberFormat* overrideNF);
+
     /**
-     * Gets the number formatter which this date/time formatter uses to format
-     * and parse the numeric portions of the pattern.
-     * @return the number formatter which this date/time formatter uses.
-     * @stable ICU 2.0
+     * allow the user to set the NumberFormat for several fields
+     * It can be a single field like: "y"(year) or "M"(month)
+     * It can be several field combined together: "yM"(year and month)
+     * Note: 
+     * 1 symbol field is enough for multiple symbol field (so "y" will override "yy", "yyy")
+     * If the field is not numeric, then override has no effect (like "MMM" will use abbreviation, not numerical field)
+     *
+     * @param field the field to override(like y)
+     * @param overrideNF the NumbeferFormat used
+     * @param status error code if run out of memory to store overrideNF
+     * @draft ICU 54
      */
-    const NumberFormat* getNumberFormat(void) const;
+    void adoptNumberFormat(UnicodeString& fields, NumberFormat* overrideNF, UErrorCode &status);
 
     /**
      * Get the numbering system to be used for a particular field.
-	 * @param index The UDateFormatField to get
-	 * @draft ICU 54
+     * @param index The UDateFormatField to get
+     * @draft ICU 54
      */
-    const NumberFormat * getNumberFormat(UChar field) const;
+    const NumberFormat * getNumberFormatForField(UChar field) const;
 
 #ifndef U_HIDE_INTERNAL_API
     /**

@@ -346,10 +346,10 @@ udat_setCalendar(UDateFormat*    fmt,
 U_DRAFT const UNumberFormat* U_EXPORT2 
 udat_getNumberFormatForField(UChar field, const UDateFormat* fmt)
 {
-	UErrorCode status = U_ZERO_ERROR;
-	verifyIsSimpleDateFormat(fmt, &status);
-    if(U_FAILURE(status)) return (const UNumberFormat*) ((DateFormat*)fmt)->getNumberFormat();
-    return (const UNumberFormat*) ((SimpleDateFormat*)fmt)->getNumberFormat(field);
+    UErrorCode status = U_ZERO_ERROR;
+    verifyIsSimpleDateFormat(fmt, &status);
+    if (U_FAILURE(status)) return (const UNumberFormat*) ((DateFormat*)fmt)->getNumberFormat();
+    return (const UNumberFormat*) ((SimpleDateFormat*)fmt)->getNumberFormatForField(field);
 }
 
 U_CAPI const UNumberFormat* U_EXPORT2
@@ -359,24 +359,28 @@ udat_getNumberFormat(const UDateFormat* fmt)
 }
 
 U_DRAFT void U_EXPORT2 
-udat_setNumberFormatForField(           UChar			field,
-										UDateFormat*    fmt,
-							    const   UNumberFormat*  numberFormatToSet,
-										UErrorCode*		status)
+udat_setNumberFormatForField(           UChar*          fields,
+                                        UDateFormat*    fmt,
+                                const   UNumberFormat*  numberFormatToSet,
+                                        UErrorCode*     status)
 {
-	verifyIsSimpleDateFormat(fmt, status);
-    if(U_FAILURE(*status))  return;
-    ((SimpleDateFormat*)fmt)->setNumberFormat(field, (NumberFormat*)numberFormatToSet, *status);
+    verifyIsSimpleDateFormat(fmt, status);
+    if (U_FAILURE(*status)) return;
+    
+    if (fields!=NULL) {
+        UnicodeString overrideFields(fields);
+        ((SimpleDateFormat*)fmt)->adoptNumberFormat(overrideFields, (NumberFormat*)numberFormatToSet, *status);
+    }
 }
 
 U_CAPI void U_EXPORT2
-udat_setNumberFormat(UDateFormat*    fmt,
+udat_setNumberFormat(        UDateFormat*    fmt,
                      const   UNumberFormat*  numberFormatToSet)
 {
-	UErrorCode status = U_ZERO_ERROR;
-	verifyIsSimpleDateFormat(fmt, &status);
-    if(U_FAILURE(status)) ((DateFormat*)fmt)->setNumberFormat(*((NumberFormat*)numberFormatToSet));
-    ((SimpleDateFormat*)fmt)->setNumberFormat((NumberFormat*)numberFormatToSet, status);
+    UErrorCode status = U_ZERO_ERROR;
+    verifyIsSimpleDateFormat(fmt, &status);
+    if (U_FAILURE(status)) ((DateFormat*)fmt)->setNumberFormat(*((NumberFormat*)numberFormatToSet));
+    ((SimpleDateFormat*)fmt)->adoptNumberFormat((NumberFormat*)numberFormatToSet);
 }
 
 U_CAPI const char* U_EXPORT2

@@ -1085,16 +1085,52 @@ U_STABLE const UNumberFormat* U_EXPORT2
 udat_getNumberFormat(const UDateFormat* fmt);
 
 /**
+* Set the UNumberFormat for specific field associated with an UDateFormat.
+* For example: 'y' for year and 'M' for month
+* @param field the field to set
+* @param fmt The formatter to set.
+* @param numberFormatToSet A pointer to the UNumberFormat to be used by fmt to format numbers.
+* @param status error code passed around
+* @see udat_getNumberFormatForField
+* @draft ICU 54
+*/
+U_DRAFT const UNumberFormat* U_EXPORT2 
+udat_getNumberFormatForField(UChar field, const UDateFormat* fmt);
+
+/**
+* Get the UNumberFormat for specific field associated with an UDateFormat.
+* It can be a single field like: "y"(year) or "M"(month)
+* It can be several field combined together: "yM"(year and month)
+* Note: 
+* 1 symbol field is enough for multiple symbol field (so "y" will override "yy", "yyy")
+* If the field is not numeric, then override has no effect (like "MMM" will use abbreviation, not numerical field)
+*
+* @param field the field to query
+* @param fmt The formatter to query.
+* @return A pointer to the UNumberFormat used by fmt to format numbers.
+* @see udat_setNumberFormatForField
+* @draft ICU 54
+*/
+U_DRAFT void U_EXPORT2 
+udat_setNumberFormatForField(  UChar* fields,
+                               UDateFormat* fmt,
+                       const   UNumberFormat*  numberFormatToSet,
+                               UErrorCode* status);
+
+/**
 * Set the UNumberFormat associated with an UDateFormat.
 * A UDateFormat uses a UNumberFormat to format numbers within a date,
 * for example the day number.
+* This method also clears per field NumberFormat instances previously 
+* set by {@see udat_setNumberFormatForField} 
 * @param fmt The formatter to set.
 * @param numberFormatToSet A pointer to the UNumberFormat to be used by fmt to format numbers.
 * @see udat_getNumberFormat
+* @see udat_setNumberFormatForField
 * @stable ICU 2.0
 */
 U_STABLE void U_EXPORT2 
-udat_setNumberFormat(            UDateFormat*    fmt,
+udat_setNumberFormat(           UDateFormat*    fmt,
                         const   UNumberFormat*  numberFormatToSet);
 
 /**
