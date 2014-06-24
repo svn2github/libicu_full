@@ -1118,7 +1118,7 @@ public:
      * @param status Input/output status. If at entry this indicates a failure
      *               status, the function will do nothing; otherwise this will be
      *               updated with any new status from the function. 
-     * @draft ICU 54
+     * @draft ICU 53
      */
     virtual void setContext(UDisplayContext value, UErrorCode& status);
 

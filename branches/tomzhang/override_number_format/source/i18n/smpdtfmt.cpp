@@ -231,14 +231,14 @@ SimpleDateFormat::~SimpleDateFormat()
     if (fTimeZoneFormat) {
         delete fTimeZoneFormat;
     }
-    
+
     while (fOverrideList) {
         NSOverride *cur = fOverrideList;
         fOverrideList = cur->next;
         delete cur->nf;
         uprv_free(cur);
     }
-    
+
 #if !UCONFIG_NO_BREAK_ITERATION
     delete fCapitalizationBrkIter;
 #endif

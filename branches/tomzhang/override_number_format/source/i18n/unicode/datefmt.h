@@ -759,7 +759,6 @@ public:
      * @draft ICU 53
      */
     virtual UBool U_EXPORT2 getBooleanAttribute(UDateFormatBooleanAttribute attr, UErrorCode &status) const;
-	
 
 protected:
     /**
@@ -797,7 +796,8 @@ protected:
      * @stable ICU 2.4
      */
     NumberFormat* fNumberFormat;
-	
+
+
 private:
     /**
      * Gets the date/time formatter with the given formatting styles for the
