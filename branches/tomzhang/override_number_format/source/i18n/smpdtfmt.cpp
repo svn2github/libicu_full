@@ -1736,7 +1736,7 @@ void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberForm
     }
 }
 
-NumberFormat *
+const NumberFormat *
 SimpleDateFormat::getNumberFormatForField(UChar field) const {
     UDateFormatField index = DateFormatSymbols::getPatternCharIndex(field);
     return getNumberFormatByIndex(index);

@@ -359,10 +359,10 @@ udat_getNumberFormat(const UDateFormat* fmt)
 }
 
 U_DRAFT void U_EXPORT2 
-udat_setNumberFormatForField(           UDateFormat*    fmt,
-                                        UChar*          fields,
-                                        UNumberFormat*  numberFormatToSet,
-                                        UErrorCode*     status)
+udat_adoptNumberFormatForFields(           UDateFormat*    fmt,
+                                    const  UChar*          fields,
+                                           UNumberFormat*  numberFormatToSet,
+                                           UErrorCode*     status)
 {
     verifyIsSimpleDateFormat(fmt, status);
     if (U_FAILURE(*status)) return;
@@ -377,10 +377,7 @@ U_CAPI void U_EXPORT2
 udat_setNumberFormat(        UDateFormat*    fmt,
                              UNumberFormat*  numberFormatToSet)
 {
-    UErrorCode status = U_ZERO_ERROR;
-    verifyIsSimpleDateFormat(fmt, &status);
-    if (U_FAILURE(status)) ((DateFormat*)fmt)->setNumberFormat(*((NumberFormat*)numberFormatToSet));
-    ((SimpleDateFormat*)fmt)->adoptNumberFormat((NumberFormat*)numberFormatToSet);
+    ((DateFormat*)fmt)->setNumberFormat(*((NumberFormat*)numberFormatToSet));
 }
 
 U_CAPI const char* U_EXPORT2

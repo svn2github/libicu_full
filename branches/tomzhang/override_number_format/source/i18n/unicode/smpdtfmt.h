@@ -1151,7 +1151,7 @@ public:
      * @param field The UDateFormatField to get
      * @draft ICU 54
      */
-    NumberFormat * getNumberFormatForField(UChar field) const;
+    const NumberFormat * getNumberFormatForField(UChar field) const;
 
 #ifndef U_HIDE_INTERNAL_API
     /**

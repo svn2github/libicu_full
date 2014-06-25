@@ -1112,10 +1112,10 @@ udat_getNumberFormatForField(const UDateFormat* fmt, UChar field);
 * @draft ICU 54
 */
 U_DRAFT void U_EXPORT2 
-udat_setNumberFormatForField(  UDateFormat* fmt,
-                               UChar* fields,
-                               UNumberFormat*  numberFormatToSet,
-                               UErrorCode* status);
+udat_adoptNumberFormatForFields(  UDateFormat* fmt,
+                            const UChar* fields,
+                                  UNumberFormat*  numberFormatToSet,
+                                  UErrorCode* status);
 
 /**
 * Set the UNumberFormat associated with an UDateFormat.

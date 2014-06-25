@@ -1569,7 +1569,7 @@ static void TestOverrideNumberForamt(void) {
 
     // loop 50 times to check getter/setter
     for (i = 0; i < 50; i++){
-        udat_setNumberFormatForField(fmt, fields, overrideFmt, &status);
+        udat_adoptNumberFormatForFields(fmt, fields, overrideFmt, &status);
         assertSuccess("udat_setNumberFormatForField()", &status);
 
         getter_result = udat_getNumberFormatForField(fmt, 'd');
@@ -1603,12 +1603,12 @@ static void TestOverrideNumberForamt(void) {
             singleOverrideFmt = unum_open(UNUM_DEFAULT, NULL, 0, singleLocale, NULL, &status);
             assertSuccess("unum_open() in mixed", &status);
 
-            udat_setNumberFormatForField(fmt, fields, singleOverrideFmt, &status);
+            udat_adoptNumberFormatForFields(fmt, fields, singleOverrideFmt, &status);
             assertSuccess("udat_setNumberFormatForField() in mixed", &status);
 
             udat_setNumberFormat(fmt, overrideFmt);
         } else {
-            udat_setNumberFormatForField(fmt, fields, overrideFmt, &status);
+            udat_adoptNumberFormatForFields(fmt, fields, overrideFmt, &status);
             assertSuccess("udat_setNumberFormatForField() in loop", &status);
         }
 
