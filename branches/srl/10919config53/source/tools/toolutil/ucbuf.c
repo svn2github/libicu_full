@@ -294,7 +294,7 @@ ucbuf_fillucbuf( UCHARBUF* buf,UErrorCode* error){
         outputWritten = (int32_t)(target - pTarget);
 
 
-#if DEBUG
+#if UCBUF_DEBUG
         {
             int i;
             target = pTarget;
