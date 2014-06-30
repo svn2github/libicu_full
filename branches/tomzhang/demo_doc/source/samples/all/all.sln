@@ -10,10 +10,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "date", "..\date\date.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "datefmt", "..\datefmt\datefmt.vcxproj", "{6D592DB7-B9C8-4B1B-A1C1-F9A9EB4FD4E4}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "layout", "..\layout\layout.vcxproj", "{497500ED-DE1D-4B20-B529-F41B5A0FBEEB}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "legacy", "..\legacy\legacy.vcxproj", "{57F56795-1802-4605-88A0-013AAE9998F6}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "msgfmt", "..\msgfmt\msgfmt.vcxproj", "{5FF1D1A2-1630-446C-B6EA-93EFD4F975C3}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "numfmt", "..\numfmt\numfmt.vcxproj", "{721FBD47-E458-4C35-90DA-FF192907D5E2}"

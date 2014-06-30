@@ -1,4 +1,4 @@
-## Copyright (c) 2002-2010, International Business Machines Corporation 
+## Copyright (c) 2002-2014, International Business Machines Corporation 
 ## and others. All Rights Reserved.
 
 This directory contains sample code
@@ -16,9 +16,9 @@ date     - prints out the current date, localized.
 
 datefmt  - an exercise using the date formatting API
 
-layout   - demonstrates the ICU LayoutEngine
+layout   - DEPRECATED, used to demonstrate the ICU LayoutEngine
 
-legacy   - demonstrates using two versions of ICU in one application
+legacy   - DEPRECATED, used to demonstrate using two versions of ICU in one application
 
 msgfmt   - demonstrates the use of the Message Format
 
@@ -44,6 +44,15 @@ uresb    - demonstrates building and loading resource bundles
 
 ustring  - demonstrates ICU string manipulation functions
 
+## the followings are just sample codes for specific platforms:
+
+datecal  - demonstrates the use of Gregorian Calendar on Unix
+
+dtitvfmtsample - demonstrate the use of Date Interval Format on Windows
+
+dtptngsample - demonstrates the use of Date Time Pattern Generator on Windows
+
+plurfmtsample - demonstrates the use of Plural Format on Windows
 
 ==
 * Where can I find more sample code?
@@ -57,15 +66,16 @@ ustring  - demonstrates ICU string manipulation functions
    or through WebCVS at http://dev.icu-project.org/cgi-bin/viewcvs.cgi/icuapps/
 
 ==
-* How do I build the samples?
+* How do I build the samples(other than those for specific platforms)?
 
  - See the Readme in each subdirectory
+ - suggest the following "build all" options, as it is easy and up-to-date. Some of subdirectories may be written in a old MSVC
 
  To build all samples at once:
 
     Windows MSVC:   
             - build ICU
-	    - open 'all' project file in 'all' subdirectory
+	    - open 'all.sln' project file in 'all' subdirectory
             - build project
             - sample executables will be located in /x86/Debug folders of each sample subdirectory
 

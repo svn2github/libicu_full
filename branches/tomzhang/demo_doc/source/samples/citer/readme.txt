@@ -1,4 +1,4 @@
-Copyright (c) 2003-2010, International Business Machines Corporation and others. All Rights Reserved.
+Copyright (c) 2003-2014, International Business Machines Corporation and others. All Rights Reserved.
 citer: Character Iteration
 
 This sample demonstrates
@@ -21,8 +21,8 @@ To Run on Windows
     2.  Add ICU's bin directory to the path, e.g.
             set PATH=c:\icu\bin;%PATH%
         (Use the path to where ever ICU is on your system.)
-    3.  cd into the citer directory, e.g.
-            cd c:\icu\source\samples\citer\debug
+    3.  cd into the citer debug/release(which you chose at step 3 build) directory, e.g.
+            cd c:\icu\source\samples\citer\x86\debug
             (note that it may be in a different relative directory than most of the other samples).
     4.  Run it
             citer

@@ -1,4 +1,4 @@
-Copyright (c) 2001-2010 International Business Machines
+Copyright (c) 2001-2014 International Business Machines
 Corporation and others. All Rights Reserved.
 uresb: Resource Bundle
 
@@ -29,11 +29,11 @@ To Run on Windows
     2.  Add ICU's bin directory to the path, e.g.
             set PATH=c:\icu\bin;%PATH%
         (Use the path to where ever ICU is on your system.)
-    3.  cd into the uresb directory, e.g.
-            cd c:\icu\source\samples\uresb\debug
+    3.  cd into the uresb debug/release(which you chose at step 3 build) directory, e.g.
+            cd c:\icu\source\samples\uresb\x86\debug
     4.  Run it  (with a locale name, ex. english)
             uresb  en
-    WARNING: The .txt files must be in the same directory as the executable, which is not the case by default on some systems.
+    WARNING: The .txt & .res files must be in the same directory as the executable, which is not the case by default on some systems.
 
 To Build on Unixes
     1.  Build ICU.  

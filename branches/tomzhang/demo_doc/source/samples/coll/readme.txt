@@ -1,4 +1,4 @@
-Copyright (c) 2002-2005, International Business Machines Corporation and others. All Rights Reserved.
+Copyright (c) 2002-2014, International Business Machines Corporation and others. All Rights Reserved.
 coll: a sample program which compares 2 strings with a user-defined collator.
 
 This sample demonstrates
@@ -21,8 +21,8 @@ To Run on Windows
     2.  Add ICU's bin directory to the path, e.g.
             set PATH=c:\icu\bin;%PATH%
         (Use the path to where ever ICU is on your system.)
-    3.  cd into the coll directory, e.g.
-            cd c:\icu\source\samples\coll\debug
+    3.  cd into the coll debug/release(which you chose at step 3 build) directory, e.g.
+            cd c:\icu\source\samples\coll\x86\debug
     4.  Run it
             coll [options*] -source source_string -target target_string
 

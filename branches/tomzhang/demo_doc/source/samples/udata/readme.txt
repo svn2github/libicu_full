@@ -1,4 +1,4 @@
-Copyright (c) 2002-2010, International Business Machines Corporation and others. All Rights Reserved.
+Copyright (c) 2002-2014, International Business Machines Corporation and others. All Rights Reserved.
 udata: Low level ICU data
 
 This sample demonstrates
@@ -22,12 +22,12 @@ To Run on Windows
     2.  Add ICU's bin directory to the path, e.g.
             set PATH=c:\icu\bin;%PATH%
         (Use the path to where ever ICU is on your system.)
-    3.  cd into the udata directory, e.g.
-            cd c:\icu\source\samples\udata\debug
+    3.  cd into the udata debug/release(which you chose at step 3 build) directory, e.g.
+            cd c:\icu\source\samples\udata\x86\debug
     4.  Run it
             writer
             reader
-    IMPORTANT: On some systems, the reader and writer executables may not be in the same directory.  If this is the case, this will likely cause a problem with reader looking for the .dat file in the wrong directory).
+    IMPORTANT: On some systems, the reader and writer executables may not be in the same directory.  If this is the case, this will likely cause a problem with reader looking for the .dat file in the wrong directory). One work around is copying everything from reader to writer(or vice versa) to check whether it works or not.
 
 To Build on Unixes
     1.  Build ICU.  
