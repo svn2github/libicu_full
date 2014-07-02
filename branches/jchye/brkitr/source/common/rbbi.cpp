@@ -588,6 +588,24 @@ int32_t RuleBasedBreakIterator::next(int32_t n) {
  * @return The position of the first boundary after this one.
  */
 int32_t RuleBasedBreakIterator::next(void) {
+    int32_t startPos = current();
+    int32_t result = fBreakCache->following(startPos);
+    if (result != BreakIterator::DONE) {
+        utext_setNativeIndex(fText, result);
+        return result;
+    }
+
+    fDictionaryCharCount = 0;
+    result = handleNext(fData->fForwardTable);
+    if (fDictionaryCharCount > 0) {
+        fBreakCache->populate(startPos, result);
+        result = fBreakCache->following(startPos);
+    }
+    utext_setNativeIndex(fText, result);
+    return result;
+}
+
+#if 0
     // if we have cached break positions and we're still in the range
     // covered by them, just move one step forward in the cache
     if (fPositionInCache >= -1) {
@@ -610,6 +628,7 @@ int32_t RuleBasedBreakIterator::next(void) {
     }
     return result;
 }
+#endif
 
 /**
  * Advances the iterator backwards, to the last boundary preceding this one.
@@ -1891,6 +1910,82 @@ void RuleBasedBreakIterator::setBreakType(int32_t type) {
     fBreakType = type;
     reset();
 }
+
+
+/*
+ *  Break Cache Implementation
+ */
+
+RuleBasedBreakIterator::BreakCache::BreakCache(RuleBasedBreakIterator *This, UErrorCode &status) {
+    fThis = This;
+    fBreaks = new UVector32(status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if (fBreaks == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    reset();
+}
+
+void RuleBasedBreakIterator::BreakCache::reset() {
+    fBreaks->removeAllElements();
+    fStatusIndex = 0;
+    fLastIndex = 0;
+}
+
+
+int32_t RuleBasedBreakIterator::BreakCache::following(int32_t position) {
+    if (fBreaks->size() == 0 ||
+            position < fBreaks->elementAti(0) ||
+            fBreaks->lastElementi() <= position) {
+        return UBRK_DONE;
+    }
+
+    if (position == fBreaks->elementAti(fLastIndex)) {
+        ++fLastIndex;
+        U_ASSERT(fLastIndex < fBreaks->size());
+        return fBreaks->elementAti(fLastIndex);
+    }
+
+    if (position == fBreaks->elementAti(0)) {
+        fLastIndex = 1;
+        return fBreaks->elementAti(fLastIndex);
+    }
+
+    for (fLastIndex = 1; fBreaks->elementAti(fLastIndex) <= position; ++fLastIndex) {
+        U_ASSERT(fLastIndex < fBreaks->size());
+    };
+    return fBreaks->elementAti(fLastIndex);
+}
+
+
+int32_t RuleBasedBreakIterator::BreakCache::preceding(int32_t position) {
+    if (fBreaks->size() == 0 ||
+            position <= fBreaks->elementAti(0) ||
+            fBreaks->lastElementi() < position) {
+        return UBRK_DONE;
+    }
+
+    if (position == fBreaks->elementAti(fLastIndex)) {
+        --fLastIndex;
+        U_ASSERT(fLastIndex >= 0);
+        return fBreaks->elementAti(fLastIndex);
+    }
+
+    if (position == fBreaks->lastElementi()) {
+        fLastIndex = fBreaks->size() - 2;
+        U_ASSERT(fLastIndex >= 0);
+        return fBreaks->elementAti(fLastIndex);
+    }
+
+    for (fLastIndex = fBreaks->size() - 2; fBreaks->elementAti(fLastIndex) >= position; --fLastIndex) {
+        U_ASSERT(fLastIndex >= 0);
+    }
+    return fBreaks->elementAti(fLastIndex);
+}
+
 
 U_NAMESPACE_END
 

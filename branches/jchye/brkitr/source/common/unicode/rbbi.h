@@ -1,6 +1,6 @@
 /*
 ***************************************************************************
-*   Copyright (C) 1999-2013 International Business Machines Corporation   *
+*   Copyright (C) 1999-2014 International Business Machines Corporation   *
 *   and others. All rights reserved.                                      *
 ***************************************************************************
 
@@ -65,6 +65,27 @@ struct RBBIStateTable;
  */
 class U_COMMON_API RuleBasedBreakIterator : public BreakIterator {
 
+private:
+
+    // Cache of dictionary based boundaries.
+    class BreakCache: public UMemory {
+      public:
+        BreakCache(RuleBasedBreakIterator *This, UErrorCode &status);
+
+        // Return DONE if out of range.
+        int32_t following(int32_t position);
+        int32_t preceding(int32_t position);
+
+        void reset();
+        void populate(int32_t start, int32_t limit);
+
+        RuleBasedBreakIterator *fThis;
+      private:
+        UVector32  *fBreaks;
+        int32_t     fStatusIndex;
+        int32_t     fLastIndex;
+    };
+
 protected:
     /**
      * The UText through which this BreakIterator accesses the text
@@ -127,6 +148,7 @@ protected:
      * @internal
      */
     UVector32           *fCachedBreakPositions;
+    BreakCache          *fBreakCache;
 
     /**
      * Indicates which item in the cache the current iteration position refers to.
@@ -671,16 +693,6 @@ protected:
 
 #if 0
     /**
-      * Return true if the category lookup for this char
-      * indicates that it is in the set of dictionary lookup chars.
-      * This function is intended for use by dictionary based break iterators.
-      * @return true if the category lookup for this char
-      * indicates that it is in the set of dictionary lookup chars.
-      * @internal
-      */
-    virtual UBool isDictionaryChar(UChar32);
-
-    /**
       * Get the type of the break iterator.
       * @internal
       */
@@ -704,22 +716,19 @@ protected:
 private:
 
     /**
-     * This method backs the iterator back up to a "safe position" in the text.
-     * This is a position that we know, without any context, must be a break position.
-     * The various calling methods then iterate forward from this safe position to
-     * the appropriate position to return.  (For more information, see the description
-     * of buildBackwardsStateTable() in RuleBasedBreakIterator.Builder.)
+     * Move the iterator backwards according to the rules of the supplied state table.
+     * Used directly by previous() when exact reverse rules are available.
+     * Also used with safe rules in preceding() and following().
+     *
      * @param statetable state table used of moving backwards
      * @internal
      */
     int32_t handlePrevious(const RBBIStateTable *statetable);
 
     /**
-     * This method is the actual implementation of the next() method.  All iteration
-     * vectors through here.  This method initializes the state machine to state 1
-     * and advances through the text character by character until we reach the end
-     * of the text or the state machine transitions to state 0.  We update our return
-     * value every time the state machine passes through a possible end state.
+     * Move the iterator forwards according to the rules of the supplied state table.
+     * Used directly by the implementation of next().
+     * Also used with safe rules in preceding() and following().
      * @param statetable state table used of moving forwards
      * @internal
      */
