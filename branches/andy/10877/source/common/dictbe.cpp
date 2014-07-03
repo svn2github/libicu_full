@@ -14,6 +14,7 @@
 #include "unicode/uniset.h"
 #include "unicode/chariter.h"
 #include "unicode/ubrk.h"
+#include "unicode/uchar.h"
 #include "uvectr32.h"
 #include "uvector.h"
 #include "uassert.h"
@@ -43,54 +44,29 @@ DictionaryBreakEngine::handles(UChar32 c, int32_t breakType) const {
 }
 
 int32_t
-DictionaryBreakEngine::findBreaks( UText *text,
-                                 int32_t startPos,
-                                 int32_t endPos,
-                                 UBool reverse,
-                                 int32_t breakType,
-                                 UStack &foundBreaks ) const {
+DictionaryBreakEngine::findBreaks(UText *text,
+                                  int32_t endPos,
+                                  int32_t breakType,
+                                  UVector32 &foundBreaks ) const {
     int32_t result = 0;
 
     // Find the span of characters included in the set.
     //   The span to break begins at the current position in the text, and
-    //   extends towards the start or end of the text, depending on 'reverse'.
+    //   extends towards endPos.
 
-    int32_t start = (int32_t)utext_getNativeIndex(text);
-    int32_t current;
-    int32_t rangeStart;
-    int32_t rangeEnd;
-    UChar32 c = utext_current32(text);
-    if (reverse) {
-        UBool   isDict = fSet.contains(c);
-        while((current = (int32_t)utext_getNativeIndex(text)) > startPos && isDict) {
-            c = utext_previous32(text);
-            isDict = fSet.contains(c);
+    int32_t rangeStart = (int32_t)utext_getNativeIndex(text);
+    int32_t rangeEnd = rangeStart;
+    while (rangeEnd < endPos) {
+        UChar32 c = utext_next32(text);
+        if (!fSet.contains(c)) {
+            break;
         }
-        if (current < startPos) {
-            rangeStart = startPos;
-        } else {
-            rangeStart = current;
-            if (!isDict) {
-                utext_next32(text);
-                rangeStart = utext_getNativeIndex(text);
-            }
-        }
-        // rangeEnd = start + 1;
-        utext_setNativeIndex(text, start);
-        utext_next32(text);
         rangeEnd = utext_getNativeIndex(text);
     }
-    else {
-        while((current = (int32_t)utext_getNativeIndex(text)) < endPos && fSet.contains(c)) {
-            utext_next32(text);         // TODO:  recast loop for postincrement
-            c = utext_current32(text);
-        }
-        rangeStart = start;
-        rangeEnd = current;
-    }
+
     if (breakType >= 0 && breakType < 32 && (((uint32_t)1 << breakType) & fTypes)) {
-        result = divideUpDictionaryRange(text, rangeStart, rangeEnd, foundBreaks);
-        utext_setNativeIndex(text, current);
+        result = divideUpDictionaryRange(text, rangeStart, rangeEnd, breakType, foundBreaks);
+        utext_setNativeIndex(text, rangeEnd);
     }
     
     return result;
@@ -248,7 +224,8 @@ int32_t
 ThaiBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
-                                                UStack &foundBreaks ) const {
+                                                int32_t /*breakType*/,
+                                                UVector32 &foundBreaks ) const {
     utext_setNativeIndex(text, rangeStart);
     utext_moveIndex32(text, THAI_MIN_WORD_SPAN);
     if (utext_getNativeIndex(text) >= rangeEnd) {
@@ -487,7 +464,8 @@ int32_t
 LaoBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
-                                                UStack &foundBreaks ) const {
+                                                int32_t /*breakType*/,
+                                                UVector32 &foundBreaks ) const {
     if ((rangeEnd - rangeStart) < LAO_MIN_WORD_SPAN) {
         return 0;       // Not enough characters for two words
     }
@@ -692,7 +670,8 @@ int32_t
 KhmerBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
-                                                UStack &foundBreaks ) const {
+                                                int32_t /*breakType*/,
+                                                UVector32 &foundBreaks ) const {
     if ((rangeEnd - rangeStart) < KHMER_MIN_WORD_SPAN) {
         return 0;       // Not enough characters for two words
     }
@@ -869,59 +848,21 @@ foundBest:
     return wordsFound;
 }
 
-#if !UCONFIG_NO_NORMALIZATION
+static const uint32_t maxSnlp = 255;
+static const uint32_t kuint32max = 0xFFFFFFFF;
 /*
  ******************************************************************
- * CjkBreakEngine
+ * FrequencyBreakEngine
  */
-static const uint32_t kuint32max = 0xFFFFFFFF;
-CjkBreakEngine::CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType type, UErrorCode &status)
-: DictionaryBreakEngine(1 << UBRK_WORD), fDictionary(adoptDictionary) {
-    // Korean dictionary only includes Hangul syllables
-    fHangulWordSet.applyPattern(UNICODE_STRING_SIMPLE("[\\uac00-\\ud7a3]"), status);
-    fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
-    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\uff9e\\uff9f]"), status);
-    fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
+FrequencyBreakEngine::FrequencyBreakEngine(DictionaryMatcher *adoptDictionary,
+		uint32_t breakTypes, UErrorCode &status)
+: DictionaryBreakEngine(breakTypes), fDictionary(adoptDictionary) {
     nfkcNorm2 = Normalizer2::getNFKCInstance(status);
-
-    if (U_SUCCESS(status)) {
-        // handle Korean and Japanese/Chinese using different dictionaries
-        if (type == kKorean) {
-            setCharacters(fHangulWordSet);
-        } else { //Chinese and Japanese
-            UnicodeSet cjSet;
-            cjSet.addAll(fHanWordSet);
-            cjSet.addAll(fKatakanaWordSet);
-            cjSet.addAll(fHiraganaWordSet);
-            cjSet.add(0xFF70); // HALFWIDTH KATAKANA-HIRAGANA PROLONGED SOUND MARK
-            cjSet.add(0x30FC); // KATAKANA-HIRAGANA PROLONGED SOUND MARK
-            setCharacters(cjSet);
-        }
-    }
 }
 
-CjkBreakEngine::~CjkBreakEngine(){
+FrequencyBreakEngine::~FrequencyBreakEngine(){
     delete fDictionary;
 }
-
-// The katakanaCost values below are based on the length frequencies of all
-// katakana phrases in the dictionary
-static const int32_t kMaxKatakanaLength = 8;
-static const int32_t kMaxKatakanaGroupLength = 20;
-static const uint32_t maxSnlp = 255;
-
-static inline uint32_t getKatakanaCost(int32_t wordLength){
-    //TODO: fill array with actual values from dictionary!
-    static const uint32_t katakanaCost[kMaxKatakanaLength + 1]
-                                       = {8192, 984, 408, 240, 204, 252, 300, 372, 480};
-    return (wordLength > kMaxKatakanaLength) ? 8192 : katakanaCost[wordLength];
-}
-
-static inline bool isKatakana(uint16_t value) {
-    return (value >= 0x30A1u && value <= 0x30FEu && value != 0x30FBu) ||
-            (value >= 0xFF66u && value <= 0xFF9fu);
-}
-
 
 // Function for accessing internal utext flags.
 //   Replicates an internal UText function.
@@ -930,19 +871,74 @@ static inline int32_t utext_i32_flag(int32_t bitIndex) {
     return (int32_t)1 << bitIndex;
 }
 
-       
+// Filter function for candidate boundaries.
+//    Return TRUE to accept, or FALSE to reject, a boundary.
+
+UBool FrequencyBreakEngine::acceptBoundary(int32_t pos, const UnicodeString *text, int32_t breakType) const {
+    U_ASSERT(pos >= 0);
+    U_ASSERT(pos <= text->length());
+    if (pos == 0 || pos == text->length()) {
+        return TRUE;
+    }
+    UChar32 charPreceding = text->char32At(pos-1);
+    UChar32 charFollowing = text->char32At(pos);
+
+    // Suppress any boundaries occuring before a character with
+    //   word break property == Extend.  (Typically combing marks) 
+    if (u_getIntPropertyValue(charFollowing, UCHAR_WORD_BREAK) == U_WB_EXTEND) {
+        return FALSE;
+    }
+
+    //  \u0e2f-- the Thai paiyannoi character-- isn't a letter.  It's a symbol that
+    //  represents elided letters at the end of a long word.  It should be bound to
+    //  the end of the word and not treated as an independent punctuation mark.
+    //  Description originally from intltest RBBITest::TestThaiLineBreak()
+
+    // The one time where the paiyannoi occurs somewhere other than at the end
+    // of a word is in the Thai abbrevation for "etc.", which both begins and
+    // ends with a paiyannoi
+
+    if (charFollowing == 0x0e2f &&
+            !(text->char32At(pos+1)==0xe25 && text->char32At(pos+2)==0x0e2f)) {
+            // note that char32At() returns 0xffff for index out of bounds. 
+            // No need for additional check here.
+        return FALSE;
+    }
+
+    // THAI MAIYAMOK
+    if (charFollowing == 0x0E46 && charPreceding != 0x0e46) {
+        return FALSE;
+    }
+
+    // For Line Breaking, reject any boundary that does not have characters with LB
+    // property = SA on both sides. Line Break rules will produce chunks that may be
+    // preceded or followed by non-word chars - punctuation, or hard breaks, for example.
+    // The dictionary will find word boundaries, but these are not line break boundaries.
+    if (breakType == UBRK_LINE && 
+            (u_getIntPropertyValue(charFollowing, UCHAR_LINE_BREAK) != U_LB_COMPLEX_CONTEXT ||
+             u_getIntPropertyValue(charPreceding, UCHAR_LINE_BREAK) != U_LB_COMPLEX_CONTEXT)) {
+        return FALSE;
+    }
+
+
+    // Default
+    return TRUE;
+}
+
 /*
  * @param text A UText representing the text
  * @param rangeStart The start of the range of dictionary characters
  * @param rangeEnd The end of the range of dictionary characters
- * @param foundBreaks Output of C array of int32_t break positions, or 0
+ * @param foundBreaks Fill-in vector of int32_t break positions, ordered from start to end.
+ *                    Append new breaks to any existing contents.
  * @return The number of breaks found
  */
 int32_t 
-CjkBreakEngine::divideUpDictionaryRange( UText *inText,
-        int32_t rangeStart,
-        int32_t rangeEnd,
-        UStack &foundBreaks ) const {
+FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
+                                              int32_t rangeStart,
+                                              int32_t rangeEnd,
+                                              int32_t breakType,
+                                              UVector32 &foundBreaks ) const {
     if (rangeStart >= rangeEnd) {
         return 0;
     }
@@ -971,6 +967,7 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     } else {
         // Copy the text from the original inText (UText) to inString (UnicodeString).
         // Create a map from UnicodeString indices -> UText offsets.
+        // TODO: don't need a map if indexing remains 1:1
         utext_setNativeIndex(inText, rangeStart);
         int32_t limit = rangeEnd;
         U_ASSERT(limit <= utext_nativeLength(inText));
@@ -1082,6 +1079,69 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         prev.addElement(-1, status);
     }
 
+    // Perform actual segmentation.
+    findBoundaries(inString, numCodePts, &bestSnlp, &prev, status);
+
+    // Start pushing the optimal offset index into t_boundary (t for tentative).
+    // prev[numCodePts] is guaranteed to be meaningful.
+    // We'll first push in the reverse order, i.e.,
+    // t_boundary[0] = numCodePts, and afterwards do a swap.
+    UVector32 t_boundary(numCodePts+1, status);
+
+    int32_t numBreaks = 0;
+    // No segmentation found, set boundary to end of range
+    if ((uint32_t)bestSnlp.elementAti(numCodePts) == kuint32max) {
+        t_boundary.addElement(numCodePts, status);
+        numBreaks++;
+    } else {
+        for (int32_t i = numCodePts; i > 0; i = prev.elementAti(i)) {
+            if (acceptBoundary(i, inString, breakType)) {
+                t_boundary.addElement(i, status);
+                numBreaks++;
+            }
+        }
+    }
+
+    // Add a break for the start of the dictionary range if there is not one
+    // there already.
+    if (foundBreaks.size() == 0 || foundBreaks.lastElementi() < rangeStart) {
+        t_boundary.addElement(0, status);
+        numBreaks++;
+    }
+
+    // Now that we're done, convert positions in t_boundary[] (indices in
+    // the normalized input string) back to indices in the original input UText
+    // while reversing t_boundary and pushing values to foundBreaks.
+    for (int32_t i = numBreaks-1; i >= 0; i--) {
+        int32_t cpPos = t_boundary.elementAti(i);
+        int32_t utextPos =  inputMap ? inputMap->elementAti(cpPos) : cpPos + rangeStart;
+        // Boundaries are added to foundBreaks output in ascending order.
+        U_ASSERT(foundBreaks.size() == 0 || foundBreaks.lastElementi() <= utextPos);
+        if (foundBreaks.size() == 0 || foundBreaks.lastElementi() < utextPos) {
+            foundBreaks.addElement(utextPos, status);
+        } else {
+            // Edge case: if normalization of the input text decomposed something,
+            //            and that something is not part of any dictionary word,
+            //            there can be multiple breaks in the decomposed sequence
+            //            that map to the same original UText position, to the
+            //            original composed character. Discard the duplicate boundary.
+            --numBreaks;
+            U_ASSERT(utextPos == foundBreaks.peeki());
+            U_ASSERT(inputMap != NULL);
+        }
+    }
+
+    delete inString;
+    delete inputMap;
+    return numBreaks;
+}
+
+void
+FrequencyBreakEngine::findBoundaries(UnicodeString *inString,
+		uint32_t numCodePts,
+		UVector32 *bestSnlp,
+		UVector32 *prev,
+		UErrorCode &status) const {
     const int32_t maxWordSize = 20;
     UVector32 values(numCodePts, status);
     values.setSize(numCodePts);
@@ -1097,8 +1157,8 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
     //                ix is the corresponding string (code unit) index.
     //    They differ when the string contains supplementary characters.
     int32_t ix = 0;
-    for (int32_t i = 0;  i < numCodePts;  ++i, ix = inString->moveIndex32(ix, 1)) {
-        if ((uint32_t)bestSnlp.elementAti(i) == kuint32max) {
+    for (uint32_t i = 0;  i < numCodePts;  ++i, ix = inString->moveIndex32(ix, 1)) {
+        if ((uint32_t)bestSnlp->elementAti(i) == kuint32max) {
             continue;
         }
 
@@ -1112,21 +1172,113 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
         // if there are no single character matches found in the dictionary 
         // starting with this charcter, treat character as a 1-character word 
         // with the highest value possible, i.e. the least likely to occur.
-        // Exclude Korean characters from this treatment, as they should be left
-        // together by default.
-        if ((count == 0 || lengths.elementAti(0) != 1) &&
-                !fHangulWordSet.contains(inString->char32At(ix))) {
+        if (count == 0 || lengths.elementAti(0) != 1) {
             values.setElementAt(maxSnlp, count);   // 255
             lengths.setElementAt(1, count++);
         }
 
         for (int32_t j = 0; j < count; j++) {
-            uint32_t newSnlp = (uint32_t)bestSnlp.elementAti(i) + (uint32_t)values.elementAti(j);
+            uint32_t newSnlp = (uint32_t)bestSnlp->elementAti(i) + (uint32_t)values.elementAti(j);
             int32_t ln_j_i = lengths.elementAti(j) + i;
-            if (newSnlp < (uint32_t)bestSnlp.elementAti(ln_j_i)) {
-                bestSnlp.setElementAt(newSnlp, ln_j_i);
-                prev.setElementAt(i, ln_j_i);
+            if (newSnlp < (uint32_t)bestSnlp->elementAti(ln_j_i)) {
+                bestSnlp->setElementAt(newSnlp, ln_j_i);
+                prev->setElementAt(i, ln_j_i);
             }
+        }
+    }
+    utext_close(&fu);
+}
+
+/*
+ ******************************************************************
+ * ThaiFrequencyBreakEngine
+ */
+ThaiFrequencyBreakEngine::ThaiFrequencyBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status)
+    : FrequencyBreakEngine(adoptDictionary, (1<<UBRK_WORD) | (1<<UBRK_LINE), status)
+{
+    fThaiWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Thai:]&[:LineBreak=SA:]]"), status);
+    if (U_SUCCESS(status)) {
+        setCharacters(fThaiWordSet);
+    }
+}
+
+ThaiFrequencyBreakEngine::~ThaiFrequencyBreakEngine() {
+}
+
+#if !UCONFIG_NO_NORMALIZATION
+/*
+ ******************************************************************
+ * CjkBreakEngine
+ */
+CjkBreakEngine::CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType type, UErrorCode &status)
+: FrequencyBreakEngine(adoptDictionary, 1 << UBRK_WORD, status) {
+    // Korean dictionary only includes Hangul syllables
+    fHangulWordSet.applyPattern(UNICODE_STRING_SIMPLE("[\\uac00-\\ud7a3]"), status);
+    fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
+    fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\uff9e\\uff9f]"), status);
+    fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
+
+    if (U_SUCCESS(status)) {
+        // handle Korean and Japanese/Chinese using different dictionaries
+        if (type == kKorean) {
+            setCharacters(fHangulWordSet);
+        } else { //Chinese and Japanese
+            UnicodeSet cjSet;
+            cjSet.addAll(fHanWordSet);
+            cjSet.addAll(fKatakanaWordSet);
+            cjSet.addAll(fHiraganaWordSet);
+            cjSet.add(0xFF70); // HALFWIDTH KATAKANA-HIRAGANA PROLONGED SOUND MARK
+            cjSet.add(0x30FC); // KATAKANA-HIRAGANA PROLONGED SOUND MARK
+            setCharacters(cjSet);
+        }
+    }
+}
+
+CjkBreakEngine::~CjkBreakEngine(){
+}
+
+// The katakanaCost values below are based on the length frequencies of all
+// katakana phrases in the dictionary
+static const int32_t kMaxKatakanaLength = 8;
+static const int32_t kMaxKatakanaGroupLength = 20;
+
+static inline uint32_t getKatakanaCost(int32_t wordLength){
+    //TODO: fill array with actual values from dictionary!
+    static const uint32_t katakanaCost[kMaxKatakanaLength + 1]
+                                       = {8192, 984, 408, 240, 204, 252, 300, 372, 480};
+    return (wordLength > kMaxKatakanaLength) ? 8192 : katakanaCost[wordLength];
+}
+
+static inline bool isKatakana(uint16_t value) {
+    return (value >= 0x30A1u && value <= 0x30FEu && value != 0x30FBu) ||
+            (value >= 0xFF66u && value <= 0xFF9fu);
+}
+
+
+/*
+ * @param inText A UText representing the text
+ * @param bestSnlp
+ * @param prev
+ * @return The number of breaks found
+ */
+void
+CjkBreakEngine::findBoundaries(UnicodeString *inString,
+		uint32_t numCodePts,
+		UVector32 *bestSnlp,
+		UVector32 *prev,
+		UErrorCode &status) const {
+    FrequencyBreakEngine::findBoundaries(inString, numCodePts, bestSnlp, prev, status);
+
+    UText fu = UTEXT_INITIALIZER;
+    utext_openUnicodeString(&fu, inString, &status);
+
+    // In outer loop, i  is the code point index,
+    //                ix is the corresponding string (code unit) index.
+    //    They differ when the string contains supplementary characters.
+    int32_t ix = 0;
+    for (uint32_t i = 0;  i < numCodePts;  ++i, ix = inString->moveIndex32(ix, 1)) {
+        if ((uint32_t)bestSnlp->elementAti(i) == kuint32max) {
+            continue;
         }
 
         // In Japanese,
@@ -1147,57 +1299,16 @@ CjkBreakEngine::divideUpDictionaryRange( UText *inText,
                 katakanaRunLength++;
             }
             if (katakanaRunLength < kMaxKatakanaGroupLength) {
-                uint32_t newSnlp = bestSnlp.elementAti(i) + getKatakanaCost(katakanaRunLength);
-                if (newSnlp < (uint32_t)bestSnlp.elementAti(j)) {
-                    bestSnlp.setElementAt(newSnlp, j);
-                    prev.setElementAt(i, i+katakanaRunLength);  // prev[j] = i;
+                uint32_t newSnlp = bestSnlp->elementAti(i) + getKatakanaCost(katakanaRunLength);
+                if (newSnlp < (uint32_t)bestSnlp->elementAti(j)) {
+                    bestSnlp->setElementAt(newSnlp, j);
+                    prev->setElementAt(i, i+katakanaRunLength);  // prev[j] = i;
                 }
             }
         }
         is_prev_katakana = is_katakana;
     }
     utext_close(&fu);
-
-    // Start pushing the optimal offset index into t_boundary (t for tentative).
-    // prev[numCodePts] is guaranteed to be meaningful.
-    // We'll first push in the reverse order, i.e.,
-    // t_boundary[0] = numCodePts, and afterwards do a swap.
-    UVector32 t_boundary(numCodePts+1, status);
-
-    int32_t numBreaks = 0;
-    // No segmentation found, set boundary to end of range
-    if ((uint32_t)bestSnlp.elementAti(numCodePts) == kuint32max) {
-        t_boundary.addElement(numCodePts, status);
-        numBreaks++;
-    } else {
-        for (int32_t i = numCodePts; i > 0; i = prev.elementAti(i)) {
-            t_boundary.addElement(i, status);
-            numBreaks++;
-        }
-        U_ASSERT(prev.elementAti(t_boundary.elementAti(numBreaks - 1)) == 0);
-    }
-
-    // Add a break for the start of the dictionary range if there is not one
-    // there already.
-    if (foundBreaks.size() == 0 || foundBreaks.peeki() < rangeStart) {
-        t_boundary.addElement(0, status);
-        numBreaks++;
-    }
-
-    // Now that we're done, convert positions in t_boundary[] (indices in 
-    // the normalized input string) back to indices in the original input UText
-    // while reversing t_boundary and pushing values to foundBreaks.
-    for (int32_t i = numBreaks-1; i >= 0; i--) {
-        int32_t cpPos = t_boundary.elementAti(i);
-        int32_t utextPos =  inputMap ? inputMap->elementAti(cpPos) : cpPos + rangeStart;
-        // Boundaries are added to foundBreaks output in ascending order.
-        U_ASSERT(foundBreaks.size() == 0 ||foundBreaks.peeki() < utextPos);
-        foundBreaks.push(utextPos, status);
-    }
-
-    delete inString;
-    delete inputMap;
-    return numBreaks;
 }
 #endif
 

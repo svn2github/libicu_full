@@ -76,23 +76,14 @@ UnhandledEngine::handles(UChar32 c, int32_t breakType) const {
 
 int32_t
 UnhandledEngine::findBreaks( UText *text,
-                                 int32_t startPos,
-                                 int32_t endPos,
-                                 UBool reverse,
-                                 int32_t breakType,
-                                 UStack &/*foundBreaks*/ ) const {
+                             int32_t endPos,
+                             int32_t breakType,
+                             UVector32 &/*foundBreaks*/ ) const {
     if (breakType >= 0 && breakType < (int32_t)(sizeof(fHandled)/sizeof(fHandled[0]))) {
         UChar32 c = utext_current32(text); 
-        if (reverse) {
-            while((int32_t)utext_getNativeIndex(text) > startPos && fHandled[breakType]->contains(c)) {
-                c = utext_previous32(text);
-            }
-        }
-        else {
-            while((int32_t)utext_getNativeIndex(text) < endPos && fHandled[breakType]->contains(c)) {
-                utext_next32(text);            // TODO:  recast loop to work with post-increment operations.
-                c = utext_current32(text);
-            }
+        while((int32_t)utext_getNativeIndex(text) < endPos && fHandled[breakType]->contains(c)) {
+            utext_next32(text);            // TODO:  recast loop to work with post-increment operations.
+            c = utext_current32(text);
         }
     }
     return 0;
@@ -227,7 +218,8 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
             const LanguageBreakEngine *engine = NULL;
             switch(code) {
             case USCRIPT_THAI:
-                engine = new ThaiBreakEngine(m, status);
+                engine = new ThaiFrequencyBreakEngine(m, status);
+                //engine = new ThaiBreakEngine(m, status);
                 break;
             case USCRIPT_LAO:
                 engine = new LaoBreakEngine(m, status);
