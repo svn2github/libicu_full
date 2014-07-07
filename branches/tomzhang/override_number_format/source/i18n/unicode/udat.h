@@ -1130,8 +1130,8 @@ udat_adoptNumberFormatForFields(  UDateFormat* fmt,
 * @stable ICU 2.0
 */
 U_STABLE void U_EXPORT2 
-udat_setNumberFormat(           UDateFormat*    fmt,
-                                UNumberFormat*  numberFormatToSet);
+udat_setNumberFormat(            UDateFormat*    fmt,
+                         const   UNumberFormat*  numberFormatToSet);
 
 /**
 * Get a locale for which date/time formatting patterns are available.

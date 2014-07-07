@@ -1139,7 +1139,7 @@ public:
      * 1 symbol field is enough for multiple symbol field (so "y" will override "yy", "yyy")
      * If the field is not numeric, then override has no effect (like "MMM" will use abbreviation, not numerical field)
      *
-     * @param field the field to override(like y)
+     * @param fields the fields to override(like y)
      * @param adoptNF the NumbeferFormat used
      * @param status error code if run out of memory to store overrideNF
      * @draft ICU 54
