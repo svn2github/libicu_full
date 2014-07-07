@@ -374,8 +374,8 @@ udat_adoptNumberFormatForFields(           UDateFormat*    fmt,
 }
 
 U_CAPI void U_EXPORT2
-udat_setNumberFormat(        UDateFormat*    fmt,
-                             UNumberFormat*  numberFormatToSet)
+udat_setNumberFormat(UDateFormat*    fmt,
+                     const   UNumberFormat*  numberFormatToSet)
 {
     ((DateFormat*)fmt)->setNumberFormat(*((NumberFormat*)numberFormatToSet));
 }

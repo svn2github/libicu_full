@@ -1131,7 +1131,7 @@ udat_adoptNumberFormatForFields(  UDateFormat* fmt,
 */
 U_STABLE void U_EXPORT2 
 udat_setNumberFormat(            UDateFormat*    fmt,
-                         const   UNumberFormat*  numberFormatToSet);
+                        const   UNumberFormat*  numberFormatToSet);
 
 /**
 * Get a locale for which date/time formatting patterns are available.
