@@ -1648,13 +1648,13 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 
 //----------------------------------------------------------------------
 
-void SimpleDateFormat::adoptNumberFormat(NumberFormat* adoptNF) {
-    adoptNF->setParseIntegerOnly(TRUE);
-    fNumberFormat = adoptNF;
+void SimpleDateFormat::adoptNumberFormat(NumberFormat *formatToAdopt) {
+    formatToAdopt->setParseIntegerOnly(TRUE);
+    fNumberFormat = formatToAdopt;
 
     if (fNumberFormatters) {
         for (int32_t i = 0; i < UDAT_FIELD_COUNT; i++) {
-            if (fNumberFormatters[i] == adoptNF) {
+            if (fNumberFormatters[i] == formatToAdopt) {
                 fNumberFormatters[i] = NULL;
             }
         }
@@ -1665,16 +1665,15 @@ void SimpleDateFormat::adoptNumberFormat(NumberFormat* adoptNF) {
     while (fOverrideList) {
         NSOverride *cur = fOverrideList;
         fOverrideList = cur->next;
-        if (cur->nf != adoptNF) { // only delete those not duplicate
+        if (cur->nf != formatToAdopt) { // only delete those not duplicate
             delete cur->nf;
             uprv_free(cur);
         }
     }
 }
 
-void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberFormat* adoptNF, UErrorCode &status){
+void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberFormat *formatToAdopt, UErrorCode &status){
     // if it has not been initialized yet, initialize
-    umtx_lock(&LOCK);
     if (fNumberFormatters == NULL) {
         fNumberFormatters = (NumberFormat**)uprv_malloc(UDAT_FIELD_COUNT * sizeof(NumberFormat*));
         if (fNumberFormatters) {
@@ -1686,13 +1685,12 @@ void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberForm
             return;
         }
     }
-    umtx_unlock(&LOCK);
     
     // See if the numbering format is in the override list, if not, then add it.
     NSOverride *cur = fOverrideList;
     UBool found = FALSE;
     while (cur && !found) {
-        if ( cur->nf == adoptNF ) {
+        if ( cur->nf == formatToAdopt ) {
             found = TRUE;
         }
         cur = cur->next;
@@ -1704,15 +1702,15 @@ void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberForm
             // no matter what the locale's default number format looked like, we want
             // to modify it so that it doesn't use thousands separators, doesn't always
             // show the decimal point, and recognizes integers only when parsing
-            adoptNF->setGroupingUsed(FALSE);
-            DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(adoptNF);
+            formatToAdopt->setGroupingUsed(FALSE);
+            DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(formatToAdopt);
             if (decfmt != NULL) {
                 decfmt->setDecimalSeparatorAlwaysShown(FALSE);
             }
-            adoptNF->setParseIntegerOnly(TRUE);
-            adoptNF->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
+            formatToAdopt->setParseIntegerOnly(TRUE);
+            formatToAdopt->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
 
-            cur->nf = adoptNF;
+            cur->nf = formatToAdopt;
             cur->hash = -1; // set duplicate here (before we set it with NumberSystem Hash, here we cannot get nor use it)
             cur->next = fOverrideList;
             fOverrideList = cur;
@@ -1732,7 +1730,7 @@ void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberForm
         }
 
         // Set the number formatter in the table
-        fNumberFormatters[patternCharIndex] = adoptNF;
+        fNumberFormatters[patternCharIndex] = formatToAdopt;
     }
 }
 

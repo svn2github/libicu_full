@@ -4468,7 +4468,8 @@ void DateFormatTest::TestNumberFormatOverride() {
     UErrorCode status = U_ZERO_ERROR;
     UnicodeString fields = (UnicodeString) "M";
 
-    SimpleDateFormat* fmt = new SimpleDateFormat((UnicodeString)"MM d", status);
+    LocalPointer<SimpleDateFormat> fmt;
+    fmt.adoptInstead(new SimpleDateFormat((UnicodeString)"MM d", status));
     assertSuccess("SimpleDateFormat with pattern MM d", status);
 
     NumberFormat* check_nf = NumberFormat::createInstance(Locale("en_US"), status);
@@ -4483,22 +4484,23 @@ void DateFormatTest::TestNumberFormatOverride() {
         if (get_nf != check_nf) errln("FAIL: getter and setter do not work");
     }
     fmt->adoptNumberFormat(check_nf); // make sure using the same NF will not crash
-    delete fmt;
 
-   // DATA[i][0] is to tell which field to set, DATA[i][1] is the expected result
-    UnicodeString DATA [][2] = {
-        { UnicodeString(""), UnicodeString("\u521D\u516D \u5341\u4E94")},
-        { UnicodeString("M"), UnicodeString("\u521D\u516D 15")},
-        { UnicodeString("Md"), UnicodeString("\u521D\u516D \u5341\u4E94")},
-        { UnicodeString("mixed"), UnicodeString("\u521D\u516D \u5341\u4E94")}
+    const char * DATA [][2] = {
+        { "", "\\u521D\\u516D \\u5341\\u4E94"},
+        { "M", "\\u521D\\u516D 15"},
+        { "Mo", "\\u521D\\u516D 15"},
+        { "Md", "\\u521D\\u516D \\u5341\\u4E94"},
+        { "MdMMd", "\\u521D\\u516D \\u5341\\u4E94"},
+        { "mixed", "\\u521D\\u516D \\u5341\\u4E94"}
     };
     
     UDate test_date = date(97, 6 - 1, 15);
 
     for(int i=0; i < sizeof(DATA)/sizeof(DATA[0]); i++){
         fields = DATA[i][0];
-
-        SimpleDateFormat* fmt = new SimpleDateFormat((UnicodeString)"MM d", status);
+        
+        LocalPointer<SimpleDateFormat> fmt;
+        fmt.adoptInstead(new SimpleDateFormat((UnicodeString)"MM d", status));
         assertSuccess("SimpleDateFormat with pattern MM d", status);
         NumberFormat* overrideNF = NumberFormat::createInstance(Locale::createFromName("zh@numbers=hanidays"),status);
         assertSuccess("NumberFormat zh@numbers=hanidays", status);
@@ -4514,6 +4516,12 @@ void DateFormatTest::TestNumberFormatOverride() {
             assertSuccess("adoptNumberFormat singleOverrideNF", status);
             
             fmt->adoptNumberFormat(overrideNF);
+        } else if (fields == (UnicodeString) "Mo"){ // o is invlid field
+            fmt->adoptNumberFormat(fields, overrideNF, status);
+            if(status == U_INVALID_FORMAT_ERROR) {
+                status = U_ZERO_ERROR;
+                continue;
+            }
         } else {
             fmt->adoptNumberFormat(fields, overrideNF, status);
             assertSuccess("adoptNumberFormat overrideNF", status);
@@ -4523,11 +4531,10 @@ void DateFormatTest::TestNumberFormatOverride() {
         FieldPosition pos(0);
         fmt->format(test_date,result, pos);
 
-        UnicodeString expected = DATA[i][1];
+        UnicodeString expected = ((UnicodeString)DATA[i][1]).unescape();;
 
         if (result != expected) 
             errln("FAIL: Expected " + expected + " get: " + result);
-        delete fmt;
     }
 }
 #endif /* #if !UCONFIG_NO_FORMATTING */

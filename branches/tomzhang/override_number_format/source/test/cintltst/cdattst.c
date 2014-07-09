@@ -1536,10 +1536,12 @@ static void TestContext(void) {
 // overrideNumberFormat[i][0] is to tell which field to set, 
 // overrideNumberFormat[i][1] is the expected result
 static const char * overrideNumberFormat[][2] = { 
-        {"", "\u521D\u4E03 \u521D\u4E8C"},
-        {"d", "07 \u521D\u4E8C"},
-        {"Md", "\u521D\u4E03 \u521D\u4E8C"},
-        {"mixed", "\u521D\u4E03 \u521D\u4E8C"}
+        {"", "\\u521D\\u4E03 \\u521D\\u4E8C"},
+        {"d", "07 \\u521D\\u4E8C"},
+        {"do", "07 \\u521D\\u4E8C"},
+        {"Md", "\\u521D\\u4E03 \\u521D\\u4E8C"},
+        {"MdMMd", "\\u521D\\u4E03 \\u521D\\u4E8C"},
+        {"mixed", "\\u521D\\u4E03 \\u521D\\u4E8C"}
 };
 
 static void TestOverrideNumberForamt(void) {
@@ -1591,9 +1593,9 @@ static void TestOverrideNumberForamt(void) {
         assertSuccess("unum_open() in loop", &status);
 
         u_uastrcpy(fields, overrideNumberFormat[i][0]);
-        u_uastrcpy(expected, overrideNumberFormat[i][1]);
+        u_unescape(overrideNumberFormat[i][1], expected, 50);
 
-        if (overrideNumberFormat[i][0] == ""){ // use the one w/o field
+        if (overrideNumberFormat[i][0] == "") { // use the one w/o field
             udat_setNumberFormat(fmt, overrideFmt);
         } else if (overrideNumberFormat[i][0] == "mixed") { // set 1 field at first but then full override, both(M & d) should be override
             const char* singleLocale = "en@numbers=hebr";
@@ -1607,6 +1609,12 @@ static void TestOverrideNumberForamt(void) {
             assertSuccess("udat_setNumberFormatForField() in mixed", &status);
 
             udat_setNumberFormat(fmt, overrideFmt);
+        } else if (overrideNumberFormat[i][0] == "do") { // o is an invalid field
+            udat_adoptNumberFormatForFields(fmt, fields, overrideFmt, &status);
+            if(status == U_INVALID_FORMAT_ERROR) {
+                status = U_ZERO_ERROR;
+                continue;
+            }
         } else {
             udat_adoptNumberFormatForFields(fmt, fields, overrideFmt, &status);
             assertSuccess("udat_setNumberFormatForField() in loop", &status);
