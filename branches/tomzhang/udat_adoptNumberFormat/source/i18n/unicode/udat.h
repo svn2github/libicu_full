@@ -1099,18 +1099,17 @@ udat_setNumberFormat(            UDateFormat*    fmt,
                         const   UNumberFormat*  numberFormatToSet);
 
 /**
-* Set the UNumberFormat associated with an UDateFormat.
+* Adopt the UNumberFormat associated with an UDateFormat.
 * A UDateFormat uses a UNumberFormat to format numbers within a date,
 * for example the day number.
-* Note: udat_adoptNumberFormat will not clone the UNumberFormat*
 * @param fmt The formatter to set.
-* @param numberFormatToSet A pointer to the UNumberFormat to be used by fmt to format numbers.
+* @param numberFormatToAdopt A pointer to the UNumberFormat to be used by fmt to format numbers.
 * @see udat_getNumberFormat
 * @draft ICU 54
 */
 U_DRAFT void U_EXPORT2 
 udat_adoptNumberFormat(            UDateFormat*    fmt,
-                                   UNumberFormat*  numberFormatToSet);
+                                   UNumberFormat*  numberFormatToAdopt);
 
 /**
 * Get a locale for which date/time formatting patterns are available.

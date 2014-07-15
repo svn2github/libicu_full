@@ -358,9 +358,9 @@ udat_setNumberFormat(UDateFormat*    fmt,
 
 U_DRAFT void U_EXPORT2
 udat_adoptNumberFormat(      UDateFormat*    fmt,
-                             UNumberFormat*  numberFormatToSet)
+                             UNumberFormat*  numberFormatToAdopt)
 {
-    ((DateFormat*)fmt)->adoptNumberFormat((NumberFormat*)numberFormatToSet);
+    ((DateFormat*)fmt)->adoptNumberFormat((NumberFormat*)numberFormatToAdopt);
 }
 
 U_CAPI const char* U_EXPORT2
