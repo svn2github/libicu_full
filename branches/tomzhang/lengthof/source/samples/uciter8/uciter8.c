@@ -24,8 +24,6 @@
 #include "unicode/uiter.h"
 #include "uit_len8.h"
 
-#define LENGTHOF(array) (sizeof(array)/sizeof((array)[0]))
-
 #define log_err printf
 
 /* UCharIterator test ------------------------------------------------------- */
@@ -320,7 +318,7 @@ TestLenient8Iterator() {
     compareIterators(&iter1, "UTF16Iterator", &iter2, "Lenient8Iterator_1");
 
     /* test get/set state */
-    length=LENGTHOF(text)-1;
+    length=uprv_lengthof(text)-1;
     uiter_setLenient8(&iter1, (const char*)bytes, -1);
     testIteratorState(&iter1, &iter2, "Lenient8IteratorState", length/2);
     testIteratorState(&iter1, &iter2, "Lenient8IteratorStatePlus1", length/2+1);

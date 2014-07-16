@@ -42,8 +42,6 @@ static const int32_t kItemsChunk = 256; /* How much to increase the filesarray b
 
 // general definitions ----------------------------------------------------- ***
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 /* UDataInfo cf. udata.h */
 static const UDataInfo dataInfo={
     (uint16_t)sizeof(UDataInfo),
@@ -594,7 +592,7 @@ Package::readPackage(const char *filename) {
                 exit(U_INVALID_FORMAT_ERROR);
             }
             prefixLength=(int32_t)(prefixLimit-s);
-            if(prefixLength==0 || prefixLength>=LENGTHOF(pkgPrefix)) {
+            if(prefixLength==0 || prefixLength>=uprv_lengthof(pkgPrefix)) {
                 fprintf(stderr,
                         "icupkg: --auto_toc_prefix[_with_type] but "
                         "the prefix of the first entry \"%s\" is empty or too long\n",

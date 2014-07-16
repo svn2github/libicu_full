@@ -20,8 +20,6 @@
 #include "unicode/uperf.h"
 #include "uoptions.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 /* definitions and text buffers */
 
 #define INPUT_CAPACITY (1024*1024)
@@ -67,7 +65,7 @@ static const char *const utfperf_usage =
 class  UtfPerformanceTest : public UPerfTest{
 public:
     UtfPerformanceTest(int32_t argc, const char *argv[], UErrorCode &status)
-            : UPerfTest(argc, argv, options, LENGTHOF(options), utfperf_usage, status) {
+            : UPerfTest(argc, argv, options, uprv_lengthof(options), utfperf_usage, status) {
         if (U_SUCCESS(status)) {
             charset = options[CHARSET].value;
 

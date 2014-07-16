@@ -21,8 +21,6 @@
 #include "unicode/uperf.h"
 #include "uoptions.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 #if 0
 // Left over from when icu/branches/markus/utf8 could use both old UTrie
 // and new UTrie2, switched with #if in unorm.cpp and ubidi_props.c.

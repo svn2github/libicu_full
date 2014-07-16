@@ -47,8 +47,6 @@
 
 U_NAMESPACE_USE
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 // initial storage. Must be >= 0
 // *** same as in uniset.cpp ! ***
 #define START_EXTRA 16

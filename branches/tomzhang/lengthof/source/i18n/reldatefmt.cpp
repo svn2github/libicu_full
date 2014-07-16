@@ -33,7 +33,6 @@
 #include "sharednumberformat.h"
 
 // Copied from uscript_props.cpp
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 static icu::LRUCache *gCache = NULL;
 static UMutex gCacheMutex = U_MUTEX_INITIALIZER;

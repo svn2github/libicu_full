@@ -28,8 +28,6 @@
 #include "cstring.h"
 #include "cmemory.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 typedef enum {
     INVALID = -2,
     DO_SEARCH = -1,

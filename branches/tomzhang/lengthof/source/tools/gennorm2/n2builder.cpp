@@ -40,8 +40,6 @@
 #include "utrie2.h"
 #include "uvectr32.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 #if !UCONFIG_NO_NORMALIZATION
 
 /* UDataInfo cf. udata.h */
@@ -70,7 +68,7 @@ public:
 
     HangulIterator() : rangeIndex(0) {}
     const Range *nextRange() {
-        if(rangeIndex<LENGTHOF(ranges)) {
+        if(rangeIndex<uprv_lengthof(ranges)) {
             return ranges+rangeIndex++;
         } else {
             return NULL;

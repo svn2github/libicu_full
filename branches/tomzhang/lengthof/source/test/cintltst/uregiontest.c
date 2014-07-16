@@ -51,8 +51,6 @@ typedef struct KnownRegion {
   const char *containingContinent;
 } KnownRegion;
 
-#define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
-
 static KnownRegion knownRegions[] = {
     // Code, Num, Parent, Type,             Containing Continent
     { "TP" , 626, "035", URGN_TERRITORY, "142" },

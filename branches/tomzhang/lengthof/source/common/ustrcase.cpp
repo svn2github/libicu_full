@@ -29,8 +29,6 @@
 #include "ucase.h"
 #include "ustr_imp.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_USE
 
 /* string casing ------------------------------------------------------------ */
@@ -399,7 +397,7 @@ ustrcase_map(const UCaseMap *csm,
          (dest>=src && dest<(src+srcLength)))
     ) {
         /* overlap: provide a temporary destination buffer and later copy the result */
-        if(destCapacity<=LENGTHOF(buffer)) {
+        if(destCapacity<=uprv_lengthof(buffer)) {
             /* the stack buffer is large enough */
             temp=buffer;
         } else {

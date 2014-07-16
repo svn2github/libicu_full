@@ -39,6 +39,7 @@
 #define _CG7COLLTST
 
 #include "unicode/utypes.h"
+#include "cmemory.h"
 
 #if !UCONFIG_NO_COLLATION
 

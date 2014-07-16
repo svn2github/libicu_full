@@ -41,8 +41,6 @@
     #include "ascii_a.h"
 #endif
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 /*
   LMBCS
 

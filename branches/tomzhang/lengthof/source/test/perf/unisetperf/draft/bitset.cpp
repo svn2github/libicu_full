@@ -146,7 +146,7 @@ public:
             prevIndex=j;
         }
 
-        if(bitHash->countKeys()>LENGTHOF(shortBits)) {
+        if(bitHash->countKeys()>uprv_lengthof(shortBits)) {
             bits=(int64_t *)uprv_malloc(bitHash->countKeys()*8);
         }
         if(bits!=NULL) {

@@ -37,8 +37,6 @@
 #include "uprops.h"
 #include "ustr_imp.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_USE
 
 /* quick check functions ---------------------------------------------------- */

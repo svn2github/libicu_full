@@ -43,8 +43,6 @@
 
 // general definitions ----------------------------------------------------- ***
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_CDECL_BEGIN
 
 static void U_CALLCONV

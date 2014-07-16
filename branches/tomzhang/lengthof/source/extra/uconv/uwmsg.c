@@ -26,8 +26,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LENGTHOF(array) (sizeof(array)/sizeof((array)[0]))
-
 #define BUF_SIZE 128
 
 /* Print a ustring to the specified FILE* in the default codepage */
@@ -127,7 +125,7 @@ U_CFUNC int u_wmsg(FILE *fp, const char *tag, ... )
     va_list ap;
 #endif
     UChar   result[4096];
-    int32_t resultLength = LENGTHOF(result);
+    int32_t resultLength = uprv_lengthof(result);
 
     if(gBundle == NULL)
     {
@@ -146,7 +144,7 @@ U_CFUNC int u_wmsg(FILE *fp, const char *tag, ... )
 
 #if UCONFIG_NO_FORMATTING
     resultLength = sizeof(gNoFormatting) / U_SIZEOF_UCHAR;
-    if((msgLen + resultLength) <= LENGTHOF(result)) {
+    if((msgLen + resultLength) <= uprv_lengthof(result)) {
         memcpy(result, msg, msgLen * U_SIZEOF_UCHAR);
         memcpy(result + msgLen, gNoFormatting, resultLength);
         resultLength += msgLen;

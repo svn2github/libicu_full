@@ -41,7 +41,6 @@
 
 /* definitions */
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 #define DEFAULT_PADDING_LENGTH 15
 
 static UOption options[]={
@@ -130,7 +129,7 @@ main(int argc, char *argv[]) {
         pname=argv[0];
     }
 
-    argc=u_parseArgs(argc, argv, LENGTHOF(options), options);
+    argc=u_parseArgs(argc, argv, uprv_lengthof(options), options);
     ishelp=options[OPT_HELP_H].doesOccur || options[OPT_HELP_QUESTION_MARK].doesOccur;
     if(ishelp || argc!=3) {
         return printUsage(pname, ishelp);

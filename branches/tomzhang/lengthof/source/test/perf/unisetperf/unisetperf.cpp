@@ -20,8 +20,6 @@
 #include "unicode/unistr.h"
 #include "uoptions.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 // Command-line options specific to unisetperf.
 // Options do not have abbreviations: Force readable command lines.
 // (Using U+0001 for abbreviation characters.)
@@ -46,7 +44,7 @@ static const char *const unisetperf_usage =
 class UnicodeSetPerformanceTest : public UPerfTest {
 public:
     UnicodeSetPerformanceTest(int32_t argc, const char *argv[], UErrorCode &status)
-            : UPerfTest(argc, argv, options, LENGTHOF(options), unisetperf_usage, status),
+            : UPerfTest(argc, argv, options, uprv_lengthof(options), unisetperf_usage, status),
               utf8(NULL), utf8Length(0), countInputCodePoints(0), spanCount(0) {
         if (U_SUCCESS(status)) {
             UnicodeString pattern=UnicodeString(options[SET_PATTERN].value, -1, US_INV).unescape();

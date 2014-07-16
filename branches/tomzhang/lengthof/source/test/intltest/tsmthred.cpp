@@ -38,8 +38,6 @@
 #   undef POSIX
 #endif
 
-
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 /* Needed by z/OS to get usleep */
 #if U_PLATFORM == U_PF_OS390
 #define __DOT1 1
@@ -263,7 +261,7 @@ private:
   IntlTest inteltst =  IntlTest();
  
   status = U_ZERO_ERROR;
-  length = u_shapeArabic(src, -1, dst, LENGTHOF(dst),
+  length = u_shapeArabic(src, -1, dst, uprv_lengthof(dst),
                          U_SHAPE_LETTERS_SHAPE|U_SHAPE_SEEN_TWOCELL_NEAR, &status);
   if(U_FAILURE(status)) {
 	   inteltst.errln("Fail: status %s\n", u_errorName(status)); 
@@ -271,7 +269,7 @@ private:
   } else if(length!=2) {
     inteltst.errln("Fail: len %d expected 3\n", length);
 	return FALSE;
-  } else if(u_strncmp(dst,dst_old,LENGTHOF(dst))) {
+  } else if(u_strncmp(dst,dst_old,uprv_lengthof(dst))) {
     inteltst.errln("Fail: got U+%04X U+%04X expected U+%04X U+%04X\n",
             dst[0],dst[1],dst_old[0],dst_old[1]);
 	return FALSE;
@@ -280,7 +278,7 @@ private:
 
   //"Trying new tail
   status = U_ZERO_ERROR;
-  length = u_shapeArabic(src, -1, dst, LENGTHOF(dst),
+  length = u_shapeArabic(src, -1, dst, uprv_lengthof(dst),
                          U_SHAPE_LETTERS_SHAPE|U_SHAPE_SEEN_TWOCELL_NEAR|U_SHAPE_TAIL_NEW_UNICODE, &status);
   if(U_FAILURE(status)) {
     inteltst.errln("Fail: status %s\n", u_errorName(status)); 
@@ -288,7 +286,7 @@ private:
   } else if(length!=2) {
     inteltst.errln("Fail: len %d expected 3\n", length);
 	return FALSE;
-  } else if(u_strncmp(dst,dst_new,LENGTHOF(dst))) {
+  } else if(u_strncmp(dst,dst_new,uprv_lengthof(dst))) {
     inteltst.errln("Fail: got U+%04X U+%04X expected U+%04X U+%04X\n",
             dst[0],dst[1],dst_new[0],dst_new[1]);
 	return FALSE;
