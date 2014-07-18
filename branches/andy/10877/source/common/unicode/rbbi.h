@@ -35,6 +35,7 @@ struct UTrie;
 U_NAMESPACE_BEGIN
 
 /** @internal */
+class  DictTextRange;
 struct RBBIDataHeader;
 class  RuleBasedBreakIteratorTables;
 class  BreakIterator;
@@ -57,17 +58,14 @@ struct RBBIStateTable;
  *
  * <p>See the ICU User Guide for information on Break Iterator Rules.</p>
  *
- * <p>This class is not intended to be subclassed.  (Class DictionaryBasedBreakIterator
- *    is a subclass, but that relationship is effectively internal to the ICU
- *    implementation.  The subclassing interface to RulesBasedBreakIterator is
- *    not part of the ICU API, and may not remain stable.</p>
- *
+ * <p>This class is not intended to be subclassed.
  */
 class U_COMMON_API RuleBasedBreakIterator : public BreakIterator {
 
 private:
 
     // Cache of dictionary based boundaries.
+    //   TODO: move into impl header.
     class BreakCache: public UMemory {
       public:
         BreakCache(RuleBasedBreakIterator *This, UErrorCode &status);
@@ -77,18 +75,24 @@ private:
         int32_t preceding(int32_t position);
 
         void reset();
-        void populate(int32_t start, int32_t limit);
+        void populate(int32_t start, int32_t limit, UErrorCode &status);
+
+        void addContainedWords(const DictTextRange &range, UErrorCode &status);
 
         RuleBasedBreakIterator *fThis;
       private:
         UVector32  *fBreaks;
+        UVector32  *fRawBreaks;
         int32_t     fStatusIndex;
         int32_t     fLastIndex;
     };
 
+    friend class DictTextRange;
+
 protected:
     /**
-     * The UText through which this BreakIterator accesses the text
+     * The UText through which this BreakIterator accesses the text.
+     * Constraint: fText is never NULL.
      * @internal
      */
     UText  *fText;
@@ -147,17 +151,7 @@ protected:
      * leaves this range of text.
      * @internal
      */
-    UVector32           *fCachedBreakPositions;
     BreakCache          *fBreakCache;
-
-    /**
-     * Indicates which item in the cache the current iteration position refers to.
-     * -2 if the cache position is not valid.
-     * @internal
-     */
-    int32_t             fPositionInCache;
-
-    // TODO: cache rule status values also.
 
     /**
      *
@@ -684,33 +678,28 @@ protected:
     //=======================================================================
     // implementation
     //=======================================================================
-    /**
-     * Dumps caches and performs other actions associated with a complete change
-     * in text or iteration position.
-     * @internal
-     */
-    virtual void reset(void);
 
-#if 0
+#ifndef U_HIDE_INTERNAL_API
     /**
       * Get the type of the break iterator.
       * @internal
       */
     virtual int32_t getBreakType() const;
-#endif
 
     /**
       * Set the type of the break iterator.
+      * TODO: sort out what this really means.
+      *   does not change existing rules. Probably wants to be the hook by which rules
+      *   can set the type.
       * @internal
       */
     virtual void setBreakType(int32_t type);
 
-#ifndef U_HIDE_INTERNAL_API
     /**
       * Common initialization function, used by constructors and bufferClone.
       * @internal
       */
-    void init();
+    void init(UErrorCode &status);
 #endif  /* U_HIDE_INTERNAL_API */
 
 private:
@@ -734,28 +723,6 @@ private:
      */
     int32_t handleNext(const RBBIStateTable *statetable);
 
-protected:
-
-#ifndef U_HIDE_INTERNAL_API
-    /**
-     * This is the function that actually implements dictionary-based
-     * breaking.  Covering at least the range from startPos to endPos,
-     * it checks for dictionary characters, and if it finds them determines
-     * the appropriate object to deal with them. It may cache found breaks in
-     * fCachedBreakPositions as it goes. It may well also look at text outside
-     * the range startPos to endPos.
-     * If going forward, endPos is the normal Unicode break result, and
-     * if goind in reverse, startPos is the normal Unicode break result
-     * @param startPos  The start position of a range of text
-     * @param endPos    The end position of a range of text
-     * @param reverse   The call is for the reverse direction
-     * @internal
-     */
-    int32_t checkDictionary(int32_t startPos, int32_t endPos, UBool reverse);
-#endif  /* U_HIDE_INTERNAL_API */
-
-private:
-
     /**
      * This function returns the appropriate LanguageBreakEngine for a
      * given character c.
@@ -768,6 +735,11 @@ private:
      *  @internal
      */
     void makeRuleStatusValid();
+
+    /*
+     * Test the dictionary bit from the rule data for a character.
+     */
+    UBool isDictionaryChar(UChar32 c);
 
 };
 

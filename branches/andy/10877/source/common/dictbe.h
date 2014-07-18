@@ -81,15 +81,13 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
   /**
    * <p>Find any breaks within a run in the supplied text.</p>
    *
-   * @param text A UText representing the text. The iterator is left at
-   * the end of the run of characters which the engine is capable of handling 
+   * @param text A UText representing the text. Breaking begins at the
+   *             iterators current position.
+   * The iterator is left at the end of the run of characters which the engine is capable of handling 
    * that starts from the first (or last) character in the range.
-   * @param startPos The start of the run within the supplied text.
    * @param endPos The end of the run within the supplied text.
-   * @param reverse Whether the caller is looking for breaks in a reverse
-   * direction.
    * @param breakType The type of break desired, or -1.
-   * @param foundBreaks An allocated C array of the breaks found, if any
+   * @param foundBreaks A vector returning the breaks found, if any
    * @return The number of breaks found.
    */
   virtual int32_t findBreaks( UText *text,

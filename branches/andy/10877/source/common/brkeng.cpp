@@ -28,6 +28,8 @@
 #include "uresimp.h"
 #include "ubrkimpl.h"
 
+#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
 U_NAMESPACE_BEGIN
 
 /*
@@ -55,13 +57,13 @@ LanguageBreakFactory::~LanguageBreakFactory() {
  */
 
 UnhandledEngine::UnhandledEngine(UErrorCode &/*status*/) {
-    for (int32_t i = 0; i < (int32_t)(sizeof(fHandled)/sizeof(fHandled[0])); ++i) {
+    for (int32_t i = 0; i < LENGTHOF(fHandled); ++i) {
         fHandled[i] = 0;
     }
 }
 
 UnhandledEngine::~UnhandledEngine() {
-    for (int32_t i = 0; i < (int32_t)(sizeof(fHandled)/sizeof(fHandled[0])); ++i) {
+    for (int32_t i = 0; i < LENGTHOF(fHandled); ++i) {
         if (fHandled[i] != 0) {
             delete fHandled[i];
         }
@@ -70,7 +72,7 @@ UnhandledEngine::~UnhandledEngine() {
 
 UBool
 UnhandledEngine::handles(UChar32 c, int32_t breakType) const {
-    return (breakType >= 0 && breakType < (int32_t)(sizeof(fHandled)/sizeof(fHandled[0]))
+    return (breakType >= 0 && breakType < LENGTHOF(fHandled)
         && fHandled[breakType] != 0 && fHandled[breakType]->contains(c));
 }
 
@@ -79,7 +81,7 @@ UnhandledEngine::findBreaks( UText *text,
                              int32_t endPos,
                              int32_t breakType,
                              UVector32 &/*foundBreaks*/ ) const {
-    if (breakType >= 0 && breakType < (int32_t)(sizeof(fHandled)/sizeof(fHandled[0]))) {
+    if (breakType >= 0 && breakType < LENGTHOF(fHandled)) {
         UChar32 c = utext_current32(text); 
         while((int32_t)utext_getNativeIndex(text) < endPos && fHandled[breakType]->contains(c)) {
             utext_next32(text);            // TODO:  recast loop to work with post-increment operations.
@@ -91,7 +93,7 @@ UnhandledEngine::findBreaks( UText *text,
 
 void
 UnhandledEngine::handleCharacter(UChar32 c, int32_t breakType) {
-    if (breakType >= 0 && breakType < (int32_t)(sizeof(fHandled)/sizeof(fHandled[0]))) {
+    if (breakType >= 0 && breakType < LENGTHOF(fHandled)) {
         if (fHandled[breakType] == 0) {
             fHandled[breakType] = new UnicodeSet();
             if (fHandled[breakType] == 0) {
