@@ -1853,10 +1853,10 @@ TZDBTimeZoneNames::TZDBTimeZoneNames(const Locale& locale)
         char loc[ULOC_FULLNAME_CAPACITY];
         uloc_addLikelySubtags(fLocale.getName(), loc, sizeof(loc), &status);
         regionLen = uloc_getCountry(loc, fRegion, sizeof(fRegion), &status);
-        if (U_SUCCESS(status) && regionLen < sizeof(fRegion)) {
+        if (U_SUCCESS(status) && regionLen < (int32_t)sizeof(fRegion)) {
             useWorld = FALSE;
         }
-    } else if (regionLen < sizeof(fRegion)) {
+    } else if (regionLen < (int32_t)sizeof(fRegion)) {
         uprv_strcpy(fRegion, region);
         useWorld = FALSE;
     }
@@ -1879,7 +1879,6 @@ TZDBTimeZoneNames::operator==(const TimeZoneNames& other) const {
 
 TimeZoneNames*
 TZDBTimeZoneNames::clone() const {
-    UErrorCode status = U_ZERO_ERROR;
     return new TZDBTimeZoneNames(fLocale);
 }
 
@@ -1925,7 +1924,7 @@ TZDBTimeZoneNames::getMetaZoneDisplayName(const UnicodeString& mzID,
 }
 
 UnicodeString&
-TZDBTimeZoneNames::getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const {
+TZDBTimeZoneNames::getTimeZoneDisplayName(const UnicodeString& /* tzID */, UTimeZoneNameType /* type */, UnicodeString& name) const {
     // No abbreviations associated a zone directly for now.
     name.setToBogus();
     return name;
