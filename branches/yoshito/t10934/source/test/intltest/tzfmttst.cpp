@@ -76,6 +76,7 @@ TimeZoneFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name
         TESTCASE(2, TestParse);
         TESTCASE(3, TestISOFormat);
         TESTCASE(4, TestFormat);
+        TESTCASE(5, TestFormatTZDBNames);
         default: name = ""; break;
     }
 }
@@ -1091,5 +1092,103 @@ TimeZoneFormatTest::TestFormat(void) {
         }
     }
 }
+
+void
+TimeZoneFormatTest::TestFormatTZDBNames(void) {
+    UDate dateJan = 1358208000000.0;    // 2013-01-15T00:00:00Z
+    UDate dateJul = 1373846400000.0;    // 2013-07-15T00:00:00Z
+
+    const FormatTestData DATA[] = {
+        {
+            "en",
+            "America/Chicago", 
+            dateJan,
+            UTZFMT_STYLE_SPECIFIC_SHORT,
+            "CST",
+            UTZFMT_TIME_TYPE_STANDARD
+        },
+        {
+            "en",
+            "Asia/Shanghai", 
+            dateJan,
+            UTZFMT_STYLE_SPECIFIC_SHORT,
+            "CST",
+            UTZFMT_TIME_TYPE_STANDARD
+        },
+        {
+            "zh_Hans",
+            "Asia/Shanghai", 
+            dateJan,
+            UTZFMT_STYLE_SPECIFIC_SHORT,
+            "CST",
+            UTZFMT_TIME_TYPE_STANDARD
+        },
+        {
+            "en",
+            "America/Los_Angeles",
+            dateJul,
+            UTZFMT_STYLE_SPECIFIC_LONG,
+            "GMT-07:00",    // No long display names
+            UTZFMT_TIME_TYPE_DAYLIGHT
+        },
+        {
+            "ja",
+            "America/Los_Angeles",
+            dateJul,
+            UTZFMT_STYLE_SPECIFIC_SHORT,
+            "PDT",
+            UTZFMT_TIME_TYPE_DAYLIGHT
+        },
+        {
+            "en",
+            "Australia/Sydney",
+            dateJan,
+            UTZFMT_STYLE_SPECIFIC_SHORT,
+            "EST",
+            UTZFMT_TIME_TYPE_DAYLIGHT
+        },
+        {
+            "en",
+            "Australia/Sydney",
+            dateJul,
+            UTZFMT_STYLE_SPECIFIC_SHORT,
+            "EST",
+            UTZFMT_TIME_TYPE_STANDARD
+        },
+
+        {0, 0, 0.0, UTZFMT_STYLE_GENERIC_LOCATION, 0, UTZFMT_TIME_TYPE_UNKNOWN}
+    };
+
+    for (int32_t i = 0; DATA[i].locale; i++) {
+        UErrorCode status = U_ZERO_ERROR;
+        Locale loc(DATA[i].locale);
+        LocalPointer<TimeZoneFormat> tzfmt(TimeZoneFormat::createInstance(loc, status));
+        if (U_FAILURE(status)) {
+            dataerrln("Fail TimeZoneFormat::createInstance: %s", u_errorName(status));
+            continue;
+        }
+        TimeZoneNames *tzdbNames = TimeZoneNames::createTZDBInstance(loc, status);
+        if (U_FAILURE(status)) {
+            dataerrln("Fail TimeZoneNames::createTZDBInstance: %s", u_errorName(status));
+            continue;
+        }
+        tzfmt->adoptTimeZoneNames(tzdbNames);
+
+        LocalPointer<TimeZone> tz(TimeZone::createTimeZone(DATA[i].tzid));
+        UnicodeString out;
+        UTimeZoneFormatTimeType timeType;
+
+        tzfmt->format(DATA[i].style, *(tz.getAlias()), DATA[i].date, out, &timeType);
+        UnicodeString expected(DATA[i].expected, -1, US_INV);
+        expected = expected.unescape();
+
+        assertEquals(UnicodeString("Format result for ") + DATA[i].tzid + " (Test Case " + i + ")", expected, out);
+        if (DATA[i].timeType != timeType) {
+            dataerrln(UnicodeString("Formatted time zone type (Test Case ") + i + "), returned="
+                + timeType + ", expected=" + DATA[i].timeType);
+        }
+    }
+}
+
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

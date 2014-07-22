@@ -23,6 +23,7 @@ class TimeZoneFormatTest : public IntlTest {
     void TestParse(void);
     void TestISOFormat(void);
     void TestFormat(void);
+    void TestFormatTZDBNames(void);
 };
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
