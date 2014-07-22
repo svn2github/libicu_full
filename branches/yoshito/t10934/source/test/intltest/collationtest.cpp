@@ -865,12 +865,14 @@ void CollationTest::TestTailoredElements() {
         LocalPointer<StringEnumeration> types(
                 Collator::getKeywordValuesForLocale("collation", locale, FALSE, errorCode));
         errorCode.assertSuccess();
-        const char *type = NULL;  // default type
-        do {
-            Locale localeWithType(locale);
-            if(type != NULL) {
-                localeWithType.setKeywordValue("collation", type, errorCode);
+        const char *type;  // first: default type
+        while((type = types->next(NULL, errorCode)) != NULL) {
+            if(strncmp(type, "private-", 8) == 0) {
+                errln("Collator::getKeywordValuesForLocale(%s) returns private collation keyword: %s",
+                        localeID, type);
             }
+            Locale localeWithType(locale);
+            localeWithType.setKeywordValue("collation", type, errorCode);
             errorCode.assertSuccess();
             LocalPointer<Collator> coll(Collator::createInstance(localeWithType, errorCode));
             if(errorCode.logIfFailureAndReset("Collator::createInstance(%s)",
@@ -914,7 +916,7 @@ void CollationTest::TestTailoredElements() {
                     }
                 }
             }
-        } while((type = types->next(NULL, errorCode)) != NULL);
+        }
     } while((localeID = locales->next(NULL, errorCode)) != NULL);
     uhash_close(prevLocales);
 }
@@ -1171,11 +1173,15 @@ void CollationTest::parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &err
         CharString name;
         name.appendInvariantChars(fileLine.tempSubStringBetween(start, limit), errorCode);
         int32_t code = CollationRuleParser::getReorderCode(name.data());
-        if(code < -1) {
-            errln("invalid reorder code '%s' on line %d", name.data(), (int)fileLineNumber);
-            infoln(fileLine);
-            errorCode.set(U_PARSE_ERROR);
-            return;
+        if(code < 0) {
+            if(uprv_stricmp(name.data(), "default") == 0) {
+                code = UCOL_REORDER_CODE_DEFAULT;  // -1
+            } else {
+                errln("invalid reorder code '%s' on line %d", name.data(), (int)fileLineNumber);
+                infoln(fileLine);
+                errorCode.set(U_PARSE_ERROR);
+                return;
+            }
         }
         reorderCodes.addElement(code, errorCode);
         start = limit;

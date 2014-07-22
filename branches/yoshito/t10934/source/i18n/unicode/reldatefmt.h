@@ -15,7 +15,6 @@
 #include "unicode/utypes.h"
 #include "unicode/uobject.h"
 #include "unicode/udisplaycontext.h"
-#include "unicode/udat.h"
 #include "unicode/locid.h"
 
 /**
@@ -23,9 +22,40 @@
  * \brief C++ API: Formats relative dates such as "1 day ago" or "tomorrow"
  */
 
-#if !UCONFIG_NO_FORMATTING
+#if !UCONFIG_NO_FORMATTING && !UCONFIG_NO_BREAK_ITERATION
 
 #ifndef U_HIDE_DRAFT_API
+
+/**
+ * The formatting style
+ * @draft ICU 54
+ */
+typedef enum UDateRelativeDateTimeFormatterStyle {
+
+  /**
+   * Everything spelled out.
+   * @draft ICU 54
+   */
+  UDAT_STYLE_LONG,
+
+  /**
+   * Abbreviations used when possible.
+   * @draft ICU 54
+   */
+  UDAT_STYLE_SHORT,
+
+  /**
+   * Use the shortest possible form.
+   * @draft ICU 54
+   */
+  UDAT_STYLE_NARROW,
+
+  /**
+   * The number of styles.
+   * @draft ICU 54
+   */
+  UDAT_STYLE_COUNT
+} UDateRelativeDateTimeFormatterStyle; 
 
 /**
  * Represents the unit for formatting a relative date. e.g "in 5 days"
@@ -336,16 +366,15 @@ public:
      *   contents after calling this constructor. Caller may pass NULL for
      *   this argument if they want default number format behavior.
      * @param style the format style. The UDAT_RELATIVE bit field has no effect.
-     * @param capitalizationContext The capitalization context must start with
-     *  U_DISPCTX_CAPITALIZATION_. Otherwise status is set to
-     *  U_ILLEGAL_ARGUMENT_ERROR
+     * @param capitalizationContext A value from UDisplayContext that pertains to
+     * capitalization.
      * @status Any error is returned here. 
-     * @draft ICU 53
+     * @draft ICU 54
      */
     RelativeDateTimeFormatter(
             const Locale& locale,
             NumberFormat *nfToAdopt,
-            UDateFormatStyle style,
+            UDateRelativeDateTimeFormatterStyle style,
             UDisplayContext capitalizationContext,
             UErrorCode& status);
 
@@ -445,12 +474,12 @@ public:
      *
      * @draft ICU 54
      */
-    UDateFormatStyle getFormatStyle() const;
+    UDateRelativeDateTimeFormatterStyle getFormatStyle() const;
 private:
     const RelativeDateTimeCacheData* fCache;
     const SharedNumberFormat *fNumberFormat;
     const SharedPluralRules *fPluralRules;
-    UDateFormatStyle fStyle;
+    UDateRelativeDateTimeFormatterStyle fStyle;
     UDisplayContext fContext;
     const SharedBreakIterator *fOptBreakIterator;
     Locale fLocale;
@@ -465,5 +494,5 @@ U_NAMESPACE_END
 
 #endif /* U_HIDE_DRAFT_API */
 
-#endif /* !UCONFIG_NO_FORMATTING */
+#endif /* !UCONFIG_NO_FORMATTING && !UCONFIG_NO_BREAK_ITERATION*/
 #endif

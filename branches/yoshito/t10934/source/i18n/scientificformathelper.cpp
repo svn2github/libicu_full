@@ -15,14 +15,12 @@
 #include "unicode/uniset.h"
 #include "decfmtst.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_BEGIN
 
-static UChar kSuperscriptDigits[] = {0x2070, 0xB9, 0xB2, 0xB3, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079};
+static const UChar kSuperscriptDigits[] = {0x2070, 0xB9, 0xB2, 0xB3, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079};
 
-static UChar kSuperscriptPlusSign = 0x207A;
-static UChar kSuperscriptMinusSign = 0x207B;
+static const UChar kSuperscriptPlusSign = 0x207A;
+static const UChar kSuperscriptMinusSign = 0x207B;
 
 ScientificFormatHelper::ScientificFormatHelper(
         const DecimalFormatSymbols &dfs, UErrorCode &status)
@@ -39,7 +37,9 @@ ScientificFormatHelper::ScientificFormatHelper(
 
 ScientificFormatHelper::ScientificFormatHelper(
         const ScientificFormatHelper &other)
-        : fPreExponent(other.fPreExponent), fStaticSets(other.fStaticSets) {
+        : UObject(other),
+          fPreExponent(other.fPreExponent),
+          fStaticSets(other.fStaticSets) {
 }
 
 ScientificFormatHelper &ScientificFormatHelper::operator=(const ScientificFormatHelper &other) {
@@ -60,18 +60,25 @@ UnicodeString &ScientificFormatHelper::insertMarkup(
         const UnicodeString &beginMarkup,
         const UnicodeString &endMarkup,
         UnicodeString &result,
-        UErrorCode & /* status */) const {
+        UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return result;
+    }
     FieldPosition fp;
     int32_t copyFromOffset = 0;
+    UBool exponentSymbolFieldPresent = FALSE;
+    UBool exponentFieldPresent = FALSE;
     while (fpi.next(fp)) {
         switch (fp.getField()) {
         case UNUM_EXPONENT_SYMBOL_FIELD:
+            exponentSymbolFieldPresent = TRUE;
             result.append(s, copyFromOffset, fp.getBeginIndex() - copyFromOffset);
             copyFromOffset = fp.getEndIndex();
             result.append(fPreExponent);
             result.append(beginMarkup);
             break;
         case UNUM_EXPONENT_FIELD:
+            exponentFieldPresent = TRUE;
             result.append(s, copyFromOffset, fp.getEndIndex() - copyFromOffset);
             copyFromOffset = fp.getEndIndex();
             result.append(endMarkup);
@@ -79,6 +86,10 @@ UnicodeString &ScientificFormatHelper::insertMarkup(
         default:
             break;
         }
+    }
+    if (!exponentSymbolFieldPresent || !exponentFieldPresent) {
+      status = U_ILLEGAL_ARGUMENT_ERROR;
+      return result;
     }
     result.append(s, copyFromOffset, s.length() - copyFromOffset);
     return result;
@@ -111,11 +122,17 @@ UnicodeString &ScientificFormatHelper::toSuperscriptExponentDigits(
         FieldPositionIterator &fpi,
         UnicodeString &result,
         UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+      return result;
+    }
     FieldPosition fp;
     int32_t copyFromOffset = 0;
+    UBool exponentSymbolFieldPresent = FALSE;
+    UBool exponentFieldPresent = FALSE;
     while (fpi.next(fp)) {
         switch (fp.getField()) {
         case UNUM_EXPONENT_SYMBOL_FIELD:
+            exponentSymbolFieldPresent = TRUE;
             result.append(s, copyFromOffset, fp.getBeginIndex() - copyFromOffset);
             copyFromOffset = fp.getEndIndex();
             result.append(fPreExponent);
@@ -139,6 +156,7 @@ UnicodeString &ScientificFormatHelper::toSuperscriptExponentDigits(
             }
             break;
         case UNUM_EXPONENT_FIELD:
+            exponentFieldPresent = TRUE;
             result.append(s, copyFromOffset, fp.getBeginIndex() - copyFromOffset);
             if (!copyAsSuperscript(
                     s, fp.getBeginIndex(), fp.getEndIndex(), result, status)) {
@@ -149,6 +167,10 @@ UnicodeString &ScientificFormatHelper::toSuperscriptExponentDigits(
         default:
             break;
         }
+    }
+    if (!exponentSymbolFieldPresent || !exponentFieldPresent) {
+      status = U_ILLEGAL_ARGUMENT_ERROR;
+      return result;
     }
     result.append(s, copyFromOffset, s.length() - copyFromOffset);
     return result;

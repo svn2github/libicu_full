@@ -12,6 +12,8 @@
 #include "unicode/utypes.h"
 #include "sharedobject.h"
 
+#if !UCONFIG_NO_BREAK_ITERATION
+
 U_NAMESPACE_BEGIN
 
 class BreakIterator;
@@ -26,7 +28,7 @@ class BreakIterator;
 // these shared break iterators must never be exposed outside of that class.
 class U_I18N_API SharedBreakIterator : public SharedObject {
 public:
-    SharedBreakIterator(BreakIterator *biToAdopt) : ptr(biToAdopt) { }
+    SharedBreakIterator(BreakIterator *biToAdopt);
     virtual ~SharedBreakIterator();
 
     BreakIterator *get() const { return ptr; }
@@ -39,5 +41,7 @@ private:
 };
 
 U_NAMESPACE_END
+
+#endif
 
 #endif

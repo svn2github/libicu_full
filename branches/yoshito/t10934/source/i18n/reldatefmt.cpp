@@ -10,7 +10,7 @@
 
 #include "unicode/reldatefmt.h"
 
-#if !UCONFIG_NO_FORMATTING
+#if !UCONFIG_NO_FORMATTING && !UCONFIG_NO_BREAK_ITERATION
 
 #include "unicode/localpointer.h"
 #include "quantityformatter.h"
@@ -31,11 +31,6 @@
 #include "sharedbreakiterator.h"
 #include "sharedpluralrules.h"
 #include "sharednumberformat.h"
-
-#define RELDATE_STYLE_FULL 0
-#define RELDATE_STYLE_SHORT 1
-#define RELDATE_STYLE_NARROW 2
-#define RELDATE_STYLE_COUNT 3 
 
 // Copied from uscript_props.cpp
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
@@ -58,20 +53,6 @@ U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
-static int32_t getStyleIndex(UDateFormatStyle style) {
-    switch (style) {
-        case UDAT_FULL:
-        case UDAT_LONG:
-            return 0;
-        case UDAT_MEDIUM:
-            return 1;
-        case UDAT_SHORT:
-            return 2;
-        default:
-            return 0;
-    }
-}
-
 // RelativeDateTimeFormatter specific data for a single locale
 class RelativeDateTimeCacheData: public SharedObject {
 public:
@@ -79,11 +60,11 @@ public:
     virtual ~RelativeDateTimeCacheData();
 
     // no numbers: e.g Next Tuesday; Yesterday; etc.
-    UnicodeString absoluteUnits[RELDATE_STYLE_COUNT][UDAT_ABSOLUTE_UNIT_COUNT][UDAT_DIRECTION_COUNT];
+    UnicodeString absoluteUnits[UDAT_STYLE_COUNT][UDAT_ABSOLUTE_UNIT_COUNT][UDAT_DIRECTION_COUNT];
 
     // has numbers: e.g Next Tuesday; Yesterday; etc. For second index, 0
     // means past e.g 5 days ago; 1 means future e.g in 5 days.
-    QuantityFormatter relativeUnits[RELDATE_STYLE_COUNT][UDAT_RELATIVE_UNIT_COUNT][2];
+    QuantityFormatter relativeUnits[UDAT_STYLE_COUNT][UDAT_RELATIVE_UNIT_COUNT][2];
 
     void adoptCombinedDateAndTime(MessageFormat *mfToAdopt) {
         delete combinedDateAndTime;
@@ -362,20 +343,20 @@ static void addTimeUnits(
     addTimeUnit(
         resource,
         path,
-        cacheData.relativeUnits[0][relativeUnit],
-        cacheData.absoluteUnits[0][absoluteUnit],
+        cacheData.relativeUnits[UDAT_STYLE_LONG][relativeUnit],
+        cacheData.absoluteUnits[UDAT_STYLE_LONG][absoluteUnit],
         status);
     addTimeUnit(
         resource,
         pathShort,
-        cacheData.relativeUnits[1][relativeUnit],
-        cacheData.absoluteUnits[1][absoluteUnit],
+        cacheData.relativeUnits[UDAT_STYLE_SHORT][relativeUnit],
+        cacheData.absoluteUnits[UDAT_STYLE_SHORT][absoluteUnit],
         status);
     addTimeUnit(
         resource,
         pathNarrow,
-        cacheData.relativeUnits[2][relativeUnit],
-        cacheData.absoluteUnits[2][absoluteUnit],
+        cacheData.relativeUnits[UDAT_STYLE_NARROW][relativeUnit],
+        cacheData.absoluteUnits[UDAT_STYLE_NARROW][absoluteUnit],
         status);
 }
 
@@ -388,17 +369,17 @@ static void initRelativeUnits(
     initRelativeUnit(
             resource,
             path,
-            relativeUnits[0][relativeUnit],
+            relativeUnits[UDAT_STYLE_LONG][relativeUnit],
             status);
     initRelativeUnit(
             resource,
             pathShort,
-            relativeUnits[1][relativeUnit],
+            relativeUnits[UDAT_STYLE_SHORT][relativeUnit],
             status);
     initRelativeUnit(
             resource,
             pathNarrow,
-            relativeUnits[2][relativeUnit],
+            relativeUnits[UDAT_STYLE_NARROW][relativeUnit],
             status);
 }
 
@@ -412,23 +393,23 @@ static void addWeekDays(
     addWeekDay(
             resource,
             path,
-            daysOfWeek[0],
+            daysOfWeek[UDAT_STYLE_LONG],
             absoluteUnit,
-            absoluteUnits[0],
+            absoluteUnits[UDAT_STYLE_LONG],
             status);
     addWeekDay(
             resource,
             pathShort,
-            daysOfWeek[1],
+            daysOfWeek[UDAT_STYLE_SHORT],
             absoluteUnit,
-            absoluteUnits[1],
+            absoluteUnits[UDAT_STYLE_SHORT],
             status);
     addWeekDay(
             resource,
             pathNarrow,
-            daysOfWeek[2],
+            daysOfWeek[UDAT_STYLE_NARROW],
             absoluteUnit,
-            absoluteUnits[2],
+            absoluteUnits[UDAT_STYLE_NARROW],
             status);
 }
 
@@ -485,33 +466,33 @@ static UBool loadUnitData(
     getStringWithFallback(
             resource,
             "fields/second/relative/0",
-            cacheData.absoluteUnits[0][UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
+            cacheData.absoluteUnits[UDAT_STYLE_LONG][UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
             status);
     getStringWithFallback(
             resource,
             "fields/second-short/relative/0",
-            cacheData.absoluteUnits[1][UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
+            cacheData.absoluteUnits[UDAT_STYLE_SHORT][UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
             status);
     getStringWithFallback(
             resource,
             "fields/second-narrow/relative/0",
-            cacheData.absoluteUnits[2][UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
+            cacheData.absoluteUnits[UDAT_STYLE_NARROW][UDAT_ABSOLUTE_NOW][UDAT_DIRECTION_PLAIN],
             status);
-    UnicodeString daysOfWeek[3][7];
+    UnicodeString daysOfWeek[UDAT_STYLE_COUNT][7];
     readDaysOfWeek(
             resource,
             "calendar/gregorian/dayNames/stand-alone/wide",
-            daysOfWeek[0],
+            daysOfWeek[UDAT_STYLE_LONG],
             status);
     readDaysOfWeek(
             resource,
             "calendar/gregorian/dayNames/stand-alone/short",
-            daysOfWeek[1],
+            daysOfWeek[UDAT_STYLE_SHORT],
             status);
     readDaysOfWeek(
             resource,
             "calendar/gregorian/dayNames/stand-alone/narrow",
-            daysOfWeek[2],
+            daysOfWeek[UDAT_STYLE_NARROW],
             status);
     addWeekDays(
             resource,
@@ -669,7 +650,7 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) :
         fCache(NULL),
         fNumberFormat(NULL),
         fPluralRules(NULL),
-        fStyle(UDAT_FULL),
+        fStyle(UDAT_STYLE_LONG),
         fContext(UDISPCTX_CAPITALIZATION_NONE),
         fOptBreakIterator(NULL) {
     init(NULL, NULL, status);
@@ -680,7 +661,7 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         fCache(NULL),
         fNumberFormat(NULL),
         fPluralRules(NULL),
-        fStyle(UDAT_FULL),
+        fStyle(UDAT_STYLE_LONG),
         fContext(UDISPCTX_CAPITALIZATION_NONE),
         fOptBreakIterator(NULL),
         fLocale(locale) {
@@ -692,7 +673,7 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         fCache(NULL),
         fNumberFormat(NULL),
         fPluralRules(NULL),
-        fStyle(UDAT_FULL),
+        fStyle(UDAT_STYLE_LONG),
         fContext(UDISPCTX_CAPITALIZATION_NONE),
         fOptBreakIterator(NULL),
         fLocale(locale) {
@@ -702,7 +683,7 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const Locale& locale,
         NumberFormat *nfToAdopt,
-        UDateFormatStyle styl,
+        UDateRelativeDateTimeFormatterStyle styl,
         UDisplayContext capitalizationContext,
         UErrorCode& status) :
         fCache(NULL),
@@ -732,7 +713,8 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(
         const RelativeDateTimeFormatter& other)
-        : fCache(other.fCache),
+        : UObject(other),
+          fCache(other.fCache),
           fNumberFormat(other.fNumberFormat),
           fPluralRules(other.fPluralRules),
           fStyle(other.fStyle),
@@ -784,7 +766,7 @@ UDisplayContext RelativeDateTimeFormatter::getCapitalizationContext() const {
     return fContext;
 }
 
-UDateFormatStyle RelativeDateTimeFormatter::getFormatStyle() const {
+UDateRelativeDateTimeFormatterStyle RelativeDateTimeFormatter::getFormatStyle() const {
     return fStyle;
 }
 
@@ -801,7 +783,7 @@ UnicodeString& RelativeDateTimeFormatter::format(
     int32_t bFuture = direction == UDAT_DIRECTION_NEXT ? 1 : 0;
     FieldPosition pos(FieldPosition::DONT_CARE);
     if (fOptBreakIterator == NULL) {
-        return fCache->relativeUnits[getStyleIndex(fStyle)][unit][bFuture].format(
+        return fCache->relativeUnits[fStyle][unit][bFuture].format(
             quantity,
             **fNumberFormat,
             **fPluralRules,
@@ -810,7 +792,7 @@ UnicodeString& RelativeDateTimeFormatter::format(
             status);
     }
     UnicodeString result;
-    fCache->relativeUnits[getStyleIndex(fStyle)][unit][bFuture].format(
+    fCache->relativeUnits[fStyle][unit][bFuture].format(
             quantity,
             **fNumberFormat,
             **fPluralRules,
@@ -832,9 +814,9 @@ UnicodeString& RelativeDateTimeFormatter::format(
         return appendTo;
     }
     if (fOptBreakIterator == NULL) {
-      return appendTo.append(fCache->absoluteUnits[getStyleIndex(fStyle)][unit][direction]);
+      return appendTo.append(fCache->absoluteUnits[fStyle][unit][direction]);
     }
-    UnicodeString result(fCache->absoluteUnits[getStyleIndex(fStyle)][unit][direction]);
+    UnicodeString result(fCache->absoluteUnits[fStyle][unit][direction]);
     adjustForContext(result);
     return appendTo.append(result);
 }

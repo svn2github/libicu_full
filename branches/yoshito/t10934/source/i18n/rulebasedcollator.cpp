@@ -158,7 +158,7 @@ RuleBasedCollator::RuleBasedCollator(const uint8_t *bin, int32_t length,
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
     if(U_FAILURE(errorCode)) { return; }
-    if(bin == NULL || length <= 0 || base == NULL) {
+    if(bin == NULL || length == 0 || base == NULL) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
@@ -645,6 +645,9 @@ RuleBasedCollator::setReorderCodes(const int32_t *reorderCodes, int32_t length,
     if(length < 0 || (reorderCodes == NULL && length > 0)) {
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return;
+    }
+    if(length == 1 && reorderCodes[0] == UCOL_REORDER_CODE_NONE) {
+        length = 0;
     }
     if(length == settings->reorderCodesLength &&
             uprv_memcmp(reorderCodes, settings->reorderCodes, length * 4) == 0) {

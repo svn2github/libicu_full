@@ -2386,6 +2386,14 @@ void CollationAPITest::TestCloneBinary() {
     int32_t bin2Length = rbc2.cloneBinary(bin2, LENGTHOF(bin2), errorCode);
     assertEquals("len(rbc binary)==len(rbc2 binary)", binLength, bin2Length);
     assertTrue("rbc binary==rbc2 binary", binLength == bin2Length && memcmp(bin, bin2, binLength) == 0);
+
+    RuleBasedCollator rbc3(bin, -1, rbRoot, errorCode);
+    if(errorCode.logDataIfFailureAndReset("RuleBasedCollator(rbc binary, length<0)")) {
+        return;
+    }
+    assertEquals("rbc3.strength==primary", UCOL_PRIMARY, rbc3.getAttribute(UCOL_STRENGTH, errorCode));
+    assertEquals("rbc3: u-umlaut==ue", UCOL_EQUAL, rbc3.compare(uUmlaut, ue, errorCode));
+    assertTrue("rbc==rbc3", *rbc == rbc3);
 }
 
 void CollationAPITest::TestIterNumeric() {
@@ -2437,16 +2445,24 @@ void CollationAPITest::TestBadKeywords() {
     errorCode = U_ZERO_ERROR;
     coll.adoptInstead(Collator::createInstance(localeID, errorCode));
     if(errorCode != U_UNSUPPORTED_ERROR) {
-        errln("Collator::createInstance(%s) did not fail as expected - %s",
-              localeID, u_errorName(errorCode));
+        if (errorCode == U_FILE_ACCESS_ERROR) {
+            dataerrln("Collator::createInstance(it@colHiraganaQuaternary=true) : %s", u_errorName(errorCode));
+        } else {
+            errln("Collator::createInstance(%s) did not fail as expected - %s",
+                  localeID, u_errorName(errorCode));
+        }
     }
 
     localeID = "it-u-vt-u24";
     errorCode = U_ZERO_ERROR;
     coll.adoptInstead(Collator::createInstance(localeID, errorCode));
     if(errorCode != U_UNSUPPORTED_ERROR) {
-        errln("Collator::createInstance(%s) did not fail as expected - %s",
-              localeID, u_errorName(errorCode));
+        if (errorCode == U_ILLEGAL_ARGUMENT_ERROR) {
+            dataerrln("Collator::createInstance(it-u-vt-u24) : %s", u_errorName(errorCode));
+        } else {
+            errln("Collator::createInstance(%s) did not fail as expected - %s",
+                  localeID, u_errorName(errorCode));
+        }
     }
 }
 
