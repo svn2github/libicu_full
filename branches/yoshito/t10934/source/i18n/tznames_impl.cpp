@@ -1526,7 +1526,7 @@ TZDBNames::createInstance(UResourceBundle* rb, const char* key) {
                 }
                 // filling regions
                 pRegion = regions;
-                for (int32_t i = 0; i < numRegions; i++) {
+                for (int32_t i = 0; i < numRegions; i++, pRegion++) {
                     status = U_ZERO_ERROR;
                     const UChar *uregion = ures_getStringByIndex(regionsRes, i, &len, &status);
                     if (U_FAILURE(status)) {
@@ -1539,7 +1539,7 @@ TZDBNames::createInstance(UResourceBundle* rb, const char* key) {
                         break;
                     }
                     u_UCharsToChars(uregion, *pRegion, len);
-                    *pRegion[len] = 0;
+                    (*pRegion)[len] = 0;
                 }
             }
         }
@@ -1787,6 +1787,9 @@ static void U_CALLCONV prepareFind(UErrorCode &status) {
     if (U_SUCCESS(status)) {
         while ((mzID = mzIDs->snext(status)) && U_SUCCESS(status)) {
             const TZDBNames *names = TZDBTimeZoneNames::getMetaZoneNames(*mzID, status);
+            if (names == NULL) {
+                continue;
+            }
             const UChar *std = names->getName(UTZNM_SHORT_STANDARD);
             const UChar *dst = names->getName(UTZNM_SHORT_DAYLIGHT);
             if (std == NULL && dst == NULL) {
@@ -1964,7 +1967,7 @@ TZDBTimeZoneNames::getMetaZoneNames(const UnicodeString& mzID, UErrorCode& statu
     {
         void *cacheVal = uhash_get(gTZDBNamesMap, mzIDKey);
         if (cacheVal == NULL) {
-            UResourceBundle *zoneStringsRes = ures_open(U_ICUDATA_ZONE, "tzdbNames", &status);
+            UResourceBundle *zoneStringsRes = ures_openDirect(U_ICUDATA_ZONE, "tzdbNames", &status);
             zoneStringsRes = ures_getByKey(zoneStringsRes, gZoneStrings, zoneStringsRes, &status);
             if (U_SUCCESS(status)) {
                 char key[ZID_KEY_MAX + 1];

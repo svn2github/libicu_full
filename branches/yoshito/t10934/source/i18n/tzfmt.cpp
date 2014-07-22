@@ -1249,7 +1249,7 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
                 return NULL;
             }
 
-            if (parsedPos < startIdx + genMatchLen) {
+            if (genMatchLen > 0 && parsedPos < startIdx + genMatchLen) {
                 parsedPos = startIdx + genMatchLen;
                 parsedID.setTo(tzID);
                 parsedTimeType = tt;
@@ -2664,9 +2664,8 @@ TimeZoneFormat::getTimeType(UTimeZoneNameType nameType) {
         return UTZFMT_TIME_TYPE_DAYLIGHT;
 
     default:
-        U_ASSERT(FALSE);
+        return UTZFMT_TIME_TYPE_UNKNOWN;
     }
-    return UTZFMT_TIME_TYPE_UNKNOWN;
 }
 
 UnicodeString&
