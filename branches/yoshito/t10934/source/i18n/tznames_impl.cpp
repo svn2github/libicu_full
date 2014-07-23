@@ -1834,6 +1834,7 @@ static void U_CALLCONV prepareFind(UErrorCode &status) {
             }
         }
     }
+    delete mzIDs;
 
     if (U_FAILURE(status)) {
         delete gTZDBNamesTrie;
@@ -2000,6 +2001,7 @@ TZDBTimeZoneNames::getMetaZoneNames(const UnicodeString& mzID, UErrorCode& statu
                     }
                 }
             }
+            ures_close(zoneStringsRes);
         } else if (cacheVal != EMPTY) {
             tzdbNames = (TZDBNames *)cacheVal;
         }
