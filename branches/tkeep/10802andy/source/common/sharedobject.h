@@ -26,11 +26,13 @@ U_NAMESPACE_BEGIN
  */
 class U_COMMON_API SharedObject : public UObject {
 public:
-    /** Initializes refCount to 0. */
-    SharedObject() : refCount(0) {}
+    /** Initializes totalRefCount, softRefCount to 0. */
+    SharedObject() : totalRefCount(0), softRefCount(0) {}
 
-    /** Initializes refCount to 0. */
-    SharedObject(const SharedObject &other) : UObject(other), refCount(0) {}
+    /** Initializes totalRefCount, softRefCount to 0. */
+    SharedObject(const SharedObject &other)
+        : UObject(other), totalRefCount(0), softRefCount(0) {}
+
     virtual ~SharedObject();
 
     /**
@@ -39,16 +41,35 @@ public:
     void addRef() const;
 
     /**
-     * Decrements the number of references to this object,
-     * and auto-deletes "this" if the number becomes 0. Thread-safe.
+     * Increments the number of soft references to this object. Thread-safe.
+     */
+    void addSoftRef() const;
+
+    /**
+     * Decrements the number of references to this object. Thread-safe.
      */
     void removeRef() const;
 
     /**
-     * Returns the reference counter. Uses a memory barrier.
+     * Decrements the number of soft references to this object. Thread-safe.
+     */
+    void removeSoftRef() const;
+
+    /**
+     * Returns the reference counter including soft references.
+     * Uses a memory barrier.
      */
     int32_t getRefCount() const;
 
+    /**
+     * If allSoftReferences() == TRUE then this object has only soft
+     * references. The converse is not necessarily true.
+     */
+    UBool allSoftReferences() const;
+
+    /**
+     * Deletes this object if it has no references or soft references.
+     */
     void deleteIfZeroRefCount() const;
 
     /**
@@ -103,7 +124,8 @@ public:
     }
 
 private:
-    mutable u_atomic_int32_t refCount;
+    mutable u_atomic_int32_t totalRefCount;
+    mutable u_atomic_int32_t softRefCount;
 };
 
 U_NAMESPACE_END
