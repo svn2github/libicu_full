@@ -666,6 +666,8 @@ void RBBIAPITest::TestRuleStatus() {
          errcheckln(status, "Fail : in construction - %s", u_errorName(status));
      } else {
          bi->setText(testString1);
+         UBool isb = bi->isBoundary(20);   // TODO: remove, debug only.
+
          // First test that the breaks are in the right spots.
          doBoundaryTest(*bi, testString1, bounds1);
 

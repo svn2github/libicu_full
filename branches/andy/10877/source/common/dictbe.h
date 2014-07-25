@@ -87,13 +87,13 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
    * that starts from the first (or last) character in the range.
    * @param endPos The end of the run within the supplied text.
    * @param breakType The type of break desired, or -1.
-   * @param foundBreaks A vector returning the breaks found, if any
-   * @return The number of breaks found.
+   * @param foundBreaks A vector to which the breaks are appended.
    */
-  virtual int32_t findBreaks( UText *text,
-                              int32_t endPos,
-                              int32_t breakType,
-                              UVector32 &foundBreaks ) const;
+  virtual void findBreaks( UText *text,
+                           int32_t endPos,
+                           int32_t breakType,
+                           UVector32 &foundBreaks,
+                           UErrorCode &status) const;
 
  protected:
 
@@ -117,14 +117,14 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
   * @param text A UText representing the text
   * @param rangeStart The start of the range of dictionary characters
   * @param rangeEnd The end of the range of dictionary characters
-  * @param foundBreaks Output of C array of int32_t break positions, or 0
-  * @return The number of breaks found
+  * @param foundBreaks A vector to which the identified breaks are appended.
   */
-  virtual int32_t divideUpDictionaryRange( UText *text,
+  virtual void divideUpDictionaryRange( UText *text,
                                            int32_t rangeStart,
                                            int32_t rangeEnd,
                                            int32_t breakType,
-                                           UVector32 &foundBreaks ) const = 0;
+                                           UVector32 &foundBreaks,
+                                           UErrorCode &status) const = 0;
 
 };
 
@@ -178,11 +178,12 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
   * @param foundBreaks Output of C array of int32_t break positions, or 0
   * @return The number of breaks found
   */
-  virtual int32_t divideUpDictionaryRange( UText *text,
-                                           int32_t rangeStart,
-                                           int32_t rangeEnd,
-                                           int32_t breakType,
-                                           UVector32 &foundBreaks ) const;
+  virtual void divideUpDictionaryRange( UText *text,
+                                        int32_t rangeStart,
+                                        int32_t rangeEnd,
+                                        int32_t breakType,
+                                        UVector32 &foundBreaks,
+                                        UErrorCode &status) const;
 
 };
 
@@ -235,11 +236,12 @@ class LaoBreakEngine : public DictionaryBreakEngine {
   * @param foundBreaks Output of C array of int32_t break positions, or 0
   * @return The number of breaks found
   */
-  virtual int32_t divideUpDictionaryRange( UText *text,
-                                           int32_t rangeStart,
-                                           int32_t rangeEnd,
-                                           int32_t breakType,
-                                           UVector32 &foundBreaks ) const;
+  virtual void divideUpDictionaryRange( UText *text,
+                                        int32_t rangeStart,
+                                        int32_t rangeEnd,
+                                        int32_t breakType,
+                                        UVector32 &foundBreaks,
+                                        UErrorCode &status) const;
 
 };
 
@@ -292,11 +294,12 @@ class KhmerBreakEngine : public DictionaryBreakEngine {
   * @param foundBreaks Output of C array of int32_t break positions, or 0 
   * @return The number of breaks found 
   */ 
-  virtual int32_t divideUpDictionaryRange( UText *text, 
-                                           int32_t rangeStart, 
-                                           int32_t rangeEnd, 
-                                           int32_t breakType,
-                                           UVector32 &foundBreaks ) const; 
+  virtual void divideUpDictionaryRange( UText *text, 
+                                        int32_t rangeStart, 
+                                        int32_t rangeEnd, 
+                                        int32_t breakType,
+                                        UVector32 &foundBreaks,
+                                        UErrorCode &status) const; 
  
 }; 
  
@@ -340,11 +343,12 @@ class FrequencyBreakEngine : public DictionaryBreakEngine {
      * @param foundBreaks Output of C array of int32_t break positions, or 0
      * @return The number of breaks found
      */
-  virtual int32_t divideUpDictionaryRange( UText *text,
+  virtual void    divideUpDictionaryRange( UText *text,
           int32_t rangeStart,
           int32_t rangeEnd,
           int32_t breakType,
-          UVector32 &foundBreaks ) const;
+          UVector32 &foundBreaks,
+          UErrorCode &status) const;
 
   virtual void findBoundaries(UnicodeString *inString,
 		  uint32_t numCodePts,

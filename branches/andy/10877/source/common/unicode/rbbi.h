@@ -69,6 +69,7 @@ private:
     class BreakCache: public UMemory {
       public:
         BreakCache(RuleBasedBreakIterator *This, UErrorCode &status);
+        ~BreakCache();
 
         // Return DONE if out of range.
         int32_t following(int32_t position);
@@ -136,13 +137,6 @@ protected:
      * @internal
      */
     UBool               fLastStatusIndexValid;
-
-    /**
-     * Counter for the number of characters encountered with the "dictionary"
-     *   flag set.
-     * @internal
-     */
-    uint32_t            fDictionaryCharCount;
 
     /**
      * When a range of characters is divided up using the dictionary, the break
@@ -710,18 +704,22 @@ private:
      * Also used with safe rules in preceding() and following().
      *
      * @param statetable state table used of moving backwards
+     * @param dictionaryCharsSeen Optional output parameter, set TRUE if
+     *                            dicitionary characters are encountered in the segment
      * @internal
      */
-    int32_t handlePrevious(const RBBIStateTable *statetable);
+    int32_t handlePrevious(const RBBIStateTable *statetable, UBool *dictionaryCharsSeen = NULL);
 
     /**
      * Move the iterator forwards according to the rules of the supplied state table.
      * Used directly by the implementation of next().
      * Also used with safe rules in preceding() and following().
      * @param statetable state table used of moving forwards
+     * @param dictionaryCharsSeen Optional output parameter, set TRUE if
+     *                            dicitionary characters are encountered in the segment
      * @internal
      */
-    int32_t handleNext(const RBBIStateTable *statetable);
+    int32_t handleNext(const RBBIStateTable *statetable, UBool *dictionaryCharsSeen = NULL);
 
     /**
      * This function returns the appropriate LanguageBreakEngine for a

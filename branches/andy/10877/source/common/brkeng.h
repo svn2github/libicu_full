@@ -59,7 +59,9 @@ class LanguageBreakEngine : public UMemory {
   virtual UBool handles(UChar32 c, int32_t breakType) const = 0;
 
  /**
-  * <p>Find any breaks within a run in the supplied text.</p>
+  * <p>Find any breaks within a run in the supplied text.
+  *    Begin at the current position of the UText. Continue through endPos.
+  *    Always reports the beginning of the text as a boundary.</p>
   *
   * @param text A UText representing the text. The
   * iterator is left at the end of the run of characters which the engine
@@ -67,13 +69,15 @@ class LanguageBreakEngine : public UMemory {
   * @param endPos The end of the run within the supplied text.
   * direction.
   * @param breakType The type of break desired, or -1.
-  * @param foundBreaks An allocated C array of the breaks found, if any
+  * @param foundBreaks The breaks found are appended to the Vector.
+  * @param status report errors.
   * @return The number of breaks found.
   */
-  virtual int32_t findBreaks( UText *text,
-                              int32_t endPos,
-                              int32_t breakType,
-                              UVector32 &foundBreaks ) const = 0;
+  virtual void findBreaks( UText *text,
+                           int32_t endPos,
+                           int32_t breakType,
+                           UVector32 &foundBreaks,
+                           UErrorCode &status) const = 0;
 
 };
 
@@ -192,10 +196,11 @@ class UnhandledEngine : public LanguageBreakEngine {
   * @param foundBreaks Output vector, breaks found are appended.
   * @return The number of breaks found.
   */
-  virtual int32_t findBreaks( UText *text,
-                              int32_t endPos,
-                              int32_t breakType,
-                              UVector32 &foundBreaks ) const;
+  virtual void findBreaks( UText *text,
+                           int32_t endPos,
+                           int32_t breakType,
+                           UVector32 &foundBreaks,
+                           UErrorCode &status) const;
 
  /**
   * <p>Tell the engine to handle a particular character and break type.</p>

@@ -43,33 +43,23 @@ DictionaryBreakEngine::handles(UChar32 c, int32_t breakType) const {
             && fSet.contains(c));
 }
 
-int32_t
+void
 DictionaryBreakEngine::findBreaks(UText *text,
                                   int32_t endPos,
                                   int32_t breakType,
-                                  UVector32 &foundBreaks ) const {
-    int32_t result = 0;
+                                  UVector32 &foundBreaks,
+                                  UErrorCode &status) const {
 
-    // Find the span of characters included in the set.
-    //   The span to break begins at the current position in the text, and
-    //   extends towards endPos.
+    int32_t startPos = (int32_t)utext_getNativeIndex(text);
+    U_ASSERT(endPos > startPos);
 
-    int32_t rangeStart = (int32_t)utext_getNativeIndex(text);
-    int32_t rangeEnd = rangeStart;
-    while (rangeEnd < endPos) {
-        UChar32 c = utext_next32(text);
-        if (!fSet.contains(c)) {
-            break;
-        }
-        rangeEnd = utext_getNativeIndex(text);
-    }
-
+    // TODO: revisit this type checking logic.
     if (breakType >= 0 && breakType < 32 && (((uint32_t)1 << breakType) & fTypes)) {
-        result = divideUpDictionaryRange(text, rangeStart, rangeEnd, breakType, foundBreaks);
-        utext_setNativeIndex(text, rangeEnd);
+        divideUpDictionaryRange(text, startPos, endPos, breakType, foundBreaks, status);
+    } else {
+        foundBreaks.addElement(startPos, status);
     }
-    
-    return result;
+    utext_setNativeIndex(text, endPos);
 }
 
 void
@@ -220,16 +210,21 @@ ThaiBreakEngine::~ThaiBreakEngine() {
     delete fDictionary;
 }
 
-int32_t
+void
 ThaiBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
                                                 int32_t /*breakType*/,
-                                                UVector32 &foundBreaks ) const {
+                                                UVector32 &foundBreaks,
+                                                UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    foundBreaks.addElement(rangeStart, status);
     utext_setNativeIndex(text, rangeStart);
     utext_moveIndex32(text, THAI_MIN_WORD_SPAN);
     if (utext_getNativeIndex(text) >= rangeEnd) {
-        return 0;       // Not enough characters for two words
+        return;       // Not enough characters for two words
     }
     utext_setNativeIndex(text, rangeStart);
 
@@ -238,7 +233,6 @@ ThaiBreakEngine::divideUpDictionaryRange( UText *text,
     int32_t cpWordLength = 0;    // Word Length in Code Points.
     int32_t cuWordLength = 0;    // Word length in code units (UText native indexing)
     int32_t current;
-    UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[THAI_LOOKAHEAD];
     
     utext_setNativeIndex(text, rangeStart);
@@ -410,7 +404,7 @@ foundBest:
         wordsFound -= 1;
     }
 
-    return wordsFound;
+    return;
 }
 
 /*
@@ -460,21 +454,25 @@ LaoBreakEngine::~LaoBreakEngine() {
     delete fDictionary;
 }
 
-int32_t
+void
 LaoBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
                                                 int32_t /*breakType*/,
-                                                UVector32 &foundBreaks ) const {
+                                                UVector32 &foundBreaks,
+                                                UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    foundBreaks.addElement(rangeStart, status);
     if ((rangeEnd - rangeStart) < LAO_MIN_WORD_SPAN) {
-        return 0;       // Not enough characters for two words
+        return;       // Not enough characters for two words
     }
 
     uint32_t wordsFound = 0;
     int32_t cpWordLength = 0;
     int32_t cuWordLength = 0;
     int32_t current;
-    UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[LAO_LOOKAHEAD];
     
     utext_setNativeIndex(text, rangeStart);
@@ -606,8 +604,6 @@ foundBest:
         (void) foundBreaks.popi();
         wordsFound -= 1;
     }
-
-    return wordsFound;
 }
 
 /*
@@ -666,21 +662,25 @@ KhmerBreakEngine::~KhmerBreakEngine() {
     delete fDictionary;
 }
 
-int32_t
+void
 KhmerBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
                                                 int32_t /*breakType*/,
-                                                UVector32 &foundBreaks ) const {
+                                                UVector32 &foundBreaks,
+                                                UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    foundBreaks.addElement(rangeStart, status);
     if ((rangeEnd - rangeStart) < KHMER_MIN_WORD_SPAN) {
-        return 0;       // Not enough characters for two words
+        return;       // Not enough characters for two words
     }
 
     uint32_t wordsFound = 0;
     int32_t cpWordLength = 0;
     int32_t cuWordLength = 0;
     int32_t current;
-    UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[KHMER_LOOKAHEAD];
 
     utext_setNativeIndex(text, rangeStart);
@@ -845,7 +845,7 @@ foundBest:
         wordsFound -= 1;
     }
 
-    return wordsFound;
+    return;
 }
 
 static const uint32_t maxSnlp = 255;
@@ -931,16 +931,21 @@ UBool FrequencyBreakEngine::acceptBoundary(int32_t pos, const UnicodeString *tex
  * @param rangeEnd The end of the range of dictionary characters
  * @param foundBreaks Fill-in vector of int32_t break positions, ordered from start to end.
  *                    Append new breaks to any existing contents.
- * @return The number of breaks found
  */
-int32_t 
+void 
 FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
                                               int32_t rangeStart,
                                               int32_t rangeEnd,
                                               int32_t breakType,
-                                              UVector32 &foundBreaks ) const {
+                                              UVector32 &foundBreaks,
+                                              UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    foundBreaks.addElement(rangeStart, status);
+    U_ASSERT(rangeStart < rangeEnd);
     if (rangeStart >= rangeEnd) {
-        return 0;
+        return;
     }
 
     // UnicodeString version of input UText, NFKC normalized in necessary.
@@ -949,9 +954,6 @@ FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
     // inputMap[inStringIndex] = corresponding native index from UText inText.
     // If NULL then mapping is 1:1
     UVector32     *inputMap    = NULL;
-
-    UErrorCode     status      = U_ZERO_ERROR;
-
 
     // if UText has the input string as one contiguous UTF-16 chunk
     if ((inText->providerProperties & utext_i32_flag(UTEXT_PROVIDER_STABLE_CHUNKS)) &&
@@ -994,7 +996,11 @@ FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
         //  normalizedMap[normalizedInput position] ==  original UText position.
         UVector32 *normalizedMap = new UVector32(status);
         if (U_FAILURE(status)) {
-            return 0;
+            return;
+        }
+        if (normalizedMap == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
         }
         
         UnicodeString fragment;
@@ -1133,7 +1139,7 @@ FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
 
     delete inString;
     delete inputMap;
-    return numBreaks;
+    return;
 }
 
 void

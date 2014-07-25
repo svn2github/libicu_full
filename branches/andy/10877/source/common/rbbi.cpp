@@ -264,7 +264,6 @@ void RuleBasedBreakIterator::init(UErrorCode &status) {
     fData                 = NULL;
     fLastRuleStatusIndex  = 0;
     fLastStatusIndexValid = TRUE;
-    fDictionaryCharCount  = 0;
     fBreakType            = UBRK_WORD;  // Defaulting BreakType to word gives reasonable
                                         //   dictionary behavior for Break Iterators that are
                                         //   built from rules.  Even better would be the ability to
@@ -577,13 +576,15 @@ int32_t RuleBasedBreakIterator::next(void) {
         return result;
     }
 
-    fDictionaryCharCount = 0;
-    result = handleNext(fData->fForwardTable);
-    if (fDictionaryCharCount > 0) {
+    UBool useDictionary = FALSE;
+    result = handleNext(fData->fForwardTable, &useDictionary);
+    if (useDictionary) {
         fBreakCache->populate(startPos, result, status);
         result = fBreakCache->following(startPos);
     }
-    utext_setNativeIndex(fText, result);
+    if (result != BreakIterator::DONE) {
+        utext_setNativeIndex(fText, result);
+    }
     return result;
 }
 
@@ -613,9 +614,9 @@ int32_t RuleBasedBreakIterator::previous(void) {
     // If we have exact reverse rules, use them.
     UErrorCode status = U_ZERO_ERROR;
     if (fData->fSafeRevTable != NULL || fData->fSafeFwdTable != NULL) {
-        fDictionaryCharCount = 0;
-        result = handlePrevious(fData->fReverseTable);
-        if (fDictionaryCharCount > 0) {
+        UBool useDictionary = FALSE;
+        result = handlePrevious(fData->fReverseTable, &useDictionary);
+        if (useDictionary) {
             fBreakCache->populate(result, startPos, status);
             result = fBreakCache->preceding(startPos);
         }
@@ -647,6 +648,8 @@ int32_t RuleBasedBreakIterator::previous(void) {
         ruleStatusIndexValid = TRUE;
     }
 
+    // Note edge case when result == BreakIterator::DONE, which is -1,
+    //     utext_setNativeIndex() will clip the -1 back to zero, which is what is needed.
     utext_setNativeIndex(fText, result);
     fLastRuleStatusIndex  = ruleStatusIndex;       // for use by getRuleStatus()
     fLastStatusIndexValid = ruleStatusIndexValid;
@@ -682,6 +685,7 @@ int32_t RuleBasedBreakIterator::following(int32_t offset) {
 
     int32_t result = fBreakCache->following(offset);
     if (result != BreakIterator::DONE) {
+        utext_setNativeIndex(fText, result);
         return result;
     }
 
@@ -700,7 +704,7 @@ int32_t RuleBasedBreakIterator::following(int32_t offset) {
         // handlePrevious will move most of the time to < 1 boundary away
         handlePrevious(fData->fSafeRevTable);
         result = next();
-        while (result <= offset) {
+        while (result != BreakIterator::DONE && result <= offset) {
             result = next();
         }
         return result;
@@ -779,6 +783,7 @@ int32_t RuleBasedBreakIterator::preceding(int32_t offset) {
 
     int32_t result = fBreakCache->preceding(offset);
     if (result != BreakIterator::DONE) {
+        utext_setNativeIndex(fText, result);
         return result;
     }
 
@@ -879,7 +884,8 @@ UBool RuleBasedBreakIterator::isBoundary(int32_t offset) {
     // specified
     utext_previous32From(fText, offset);
     int32_t backOne = (int32_t)UTEXT_GETNATIVEINDEX(fText);
-    UBool    result  = following(backOne) == offset;
+    int32_t follow = following(backOne);
+    UBool result = (follow == offset);
     return result;
 }
 
@@ -918,7 +924,7 @@ enum RBBIRunMode {
 //     value every time the state machine passes through an accepting state.
 //
 //-----------------------------------------------------------------------------------
-int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
+int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable, UBool *dictionaryCharsSeen) {
     int32_t             state;
     uint16_t            category        = 0;
     RBBIRunMode         mode;
@@ -933,12 +939,17 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
     UBool               lookAheadHardBreak = (statetable->fFlags & RBBI_LOOKAHEAD_HARD_BREAK) != 0;
     const char         *tableData       = statetable->fTableData;
     uint32_t            tableRowLen     = statetable->fRowLen;
+    int32_t             firstDictionaryPosition = INT32_MAX;
 
     #ifdef RBBI_DEBUG
         if (fTrace) {
             RBBIDebugPuts("Handle Next   pos   char  state category");
         }
     #endif
+
+    if (dictionaryCharsSeen != NULL) {
+        *dictionaryCharsSeen = FALSE;
+    }
 
     // No matter what, handleNext alway correctly sets the break tag value.
     fLastStatusIndexValid = TRUE;
@@ -1009,7 +1020,9 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
             //    in their category values.
             //
             if ((category & 0x4000) != 0)  {
-                fDictionaryCharCount++;
+                if (firstDictionaryPosition == INT32_MAX) {
+                    firstDictionaryPosition = utext_getNativeIndex(fText);
+                }
                 //  And off the dictionary flag bit.
                 category &= ~0x4000;
             }
@@ -1058,6 +1071,7 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable) {
                 // TODO:  make a standalone hard break in a rule work.
                 if (lookAheadHardBreak) {
                     UTEXT_SETNATIVEINDEX(fText, result);
+                    *dictionaryCharsSeen = (firstDictionaryPosition < INT32_MAX);
                     return result;
                 }
                 // Look-ahead completed, but other rules may match further.  Continue on
@@ -1104,6 +1118,10 @@ continueOn:
 
     // The state machine is done.  Check whether it found a match...
 
+    if (dictionaryCharsSeen != NULL && firstDictionaryPosition <= result) {
+        *dictionaryCharsSeen = TRUE;
+    }
+
     // If the iterator failed to advance in the match engine, force it ahead by one.
     //   (This really indicates a defect in the break rules.  They should always match
     //    at least one character.)
@@ -1135,7 +1153,7 @@ continueOn:
 //      The logic of this function is very similar to handleNext(), above.
 //
 //-----------------------------------------------------------------------------------
-int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable) {
+int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable, UBool *dictionaryCharsSeen) {
     int32_t             state;
     uint16_t            category        = 0;
     RBBIRunMode         mode;
@@ -1146,12 +1164,17 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable)
     int32_t             initialPosition = 0;
     int32_t             lookaheadResult = 0;
     UBool               lookAheadHardBreak = (statetable->fFlags & RBBI_LOOKAHEAD_HARD_BREAK) != 0;
+    int32_t             firstDictionaryPosition = -1;
 
     #ifdef RBBI_DEBUG
         if (fTrace) {
             RBBIDebugPuts("Handle Previous   pos   char  state category");
         }
     #endif
+
+    if (dictionaryCharsSeen != NULL) {
+        *dictionaryCharsSeen = FALSE;
+    }
 
     // handlePrevious() never gets the rule status.
     // Flag the status as invalid; if the user ever asks for status, we will need
@@ -1229,7 +1252,9 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable)
             //    in their category values.
             //
             if ((category & 0x4000) != 0)  {
-                fDictionaryCharCount++;
+                if (firstDictionaryPosition == -1) {
+                    firstDictionaryPosition = utext_getNativeIndex(fText);
+                }
                 //  And off the dictionary flag bit.
                 category &= ~0x4000;
             }
@@ -1315,6 +1340,10 @@ continueOn:
 
     // The state machine is done.  Check whether it found a match...
 
+    if (dictionaryCharsSeen != NULL && firstDictionaryPosition > result) {
+        *dictionaryCharsSeen = TRUE;
+    }
+
     // If the iterator failed to advance in the match engine, force it ahead by one.
     //   (This really indicates a defect in the break rules.  They should always match
     //    at least one character.)
@@ -1323,7 +1352,6 @@ continueOn:
         UTEXT_PREVIOUS32(fText);
         result = (int32_t)UTEXT_GETNATIVEINDEX(fText);
     }
-
     // Leave the iterator at our result position.
     UTEXT_SETNATIVEINDEX(fText, result);
     #ifdef RBBI_DEBUG
@@ -1616,17 +1644,24 @@ void RuleBasedBreakIterator::setBreakType(int32_t type) {
  *  Break Cache Implementation
  */
 
-RuleBasedBreakIterator::BreakCache::BreakCache(RuleBasedBreakIterator *This, UErrorCode &status) {
-    fThis = This;
+RuleBasedBreakIterator::BreakCache::BreakCache(RuleBasedBreakIterator *This, UErrorCode &status) :
+        fThis(This), fBreaks(NULL), fRawBreaks(NULL), fStatusIndex(0), fLastIndex(0) {
     fBreaks = new UVector32(status);
+    fRawBreaks = new UVector32(status);
     if (U_FAILURE(status)) {
         return;
     }
-    if (fBreaks == NULL) {
+    if (fBreaks == NULL || fRawBreaks == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
     reset();
+}
+
+
+RuleBasedBreakIterator::BreakCache::~BreakCache() {
+    delete fBreaks;
+    delete fRawBreaks;
 }
 
 void RuleBasedBreakIterator::BreakCache::reset() {
@@ -1689,8 +1724,10 @@ int32_t RuleBasedBreakIterator::BreakCache::preceding(int32_t position) {
 class DictTextRange {
   public:
     RuleBasedBreakIterator *fBreakIterator;
-    int fRangeStart;
-    int fRangeLimit;
+    int fRangeStart;    // Index of 1st char in a range, result of iteration of ranges.
+    int fRangeLimit;    // Limit of range.
+    int fDictStart;     // Index of first dictionary char in range.
+    int fDictLimit;     // Dictionary limit: index following last dictionary char in range.
     int fFinalLimit;
     const LanguageBreakEngine *fLBE;
 
@@ -1740,19 +1777,36 @@ UBool DictTextRange::next() {
     //     being processed, but there may be combining or format chars mixed in.)
     //  TODO: probably need to close dictionary sets over normalization forms.
     fLBE = fBreakIterator->getLanguageBreakEngine(c);
-    for (c=utext_next32(fBreakIterator->fText); c != U_SENTINEL; c=utext_next32(fBreakIterator->fText)) {
+
+    while (utext_getNativeIndex(fBreakIterator->fText) < fFinalLimit) {
+        c = utext_next32(fBreakIterator->fText);
+        if (c == U_SENTINEL) {
+            U_ASSERT(FALSE);  // Should not happen.
+            break;
+        }
         UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
         if ((category & 0x4000) &&   // It's a dictionary character
              !fLBE->handles(c, fBreakIterator->fBreakType)) {
+                 // Hit a dictionary character not belonging to this language break engine.
+                 // Back up one; this character needs to go to a different range.
+                 c = utext_previous32(fBreakIterator->fText);
                  break;
         }
     }
+
     fRangeLimit = utext_getNativeIndex(fBreakIterator->fText);
+    U_ASSERT(fRangeLimit <= fFinalLimit);
     return TRUE;
 }
     
         
-    
+// Note: a region of text identified by break rules may contain both dictionary and non-dictionary chars.
+//       There must be no break between leading non-dictionary chars and the first dictionary word.
+//       There must be no break between trailing non-dicitionary chars and the last dictionary word.
+//       These are things like opening and closing punctuation in line break.
+//       Non-dictionary chars in the interior of a region are handed to the language (dictionary)
+//       breaker, to do with as it will.
+
 void RuleBasedBreakIterator::BreakCache::populate(int32_t start, int32_t limit, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
@@ -1760,6 +1814,8 @@ void RuleBasedBreakIterator::BreakCache::populate(int32_t start, int32_t limit, 
     fBreaks->removeAllElements();
     DictTextRange  range(fThis, start, limit);
     while (range.next()) {
+        // TODO: start and end rules...
+        fBreaks->addElement(start, status);
         addContainedWords(range, status);
     }
     // If the dictionary breaking didn't include a break at the end of the region being segmented,
@@ -1779,24 +1835,25 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
     // Fill fRawBreaks with the word boundaries from the break engine for this range.
     fRawBreaks->removeAllElements();
     utext_setNativeIndex(fThis->fText, range.fRangeStart);
-    range.fLBE->findBreaks(fThis->fText, range.fRangeLimit, fThis->fBreakType, *fRawBreaks);
+    range.fLBE->findBreaks(fThis->fText, range.fRangeLimit, fThis->fBreakType, *fRawBreaks, status);
 
-    // If the dictionary breaking did not identifiy a boundary at the start of the range,
-    //   force one in now. Normally there will already be one there.
-    if (fRawBreaks->size() > 0 && fRawBreaks->elementAti(0) > range.fRangeStart &&
-            ((fBreaks->size() > 0 && fBreaks->lastElementi() < range.fRangeStart) ||
-              (fBreaks->size() == 0))){
-        fBreaks->addElement(range.fRangeStart, status);
-    }
-
+    // Break engine should always show a break at the start of the range.
+    U_ASSERT(fRawBreaks->size() > 0);
+    U_ASSERT(fRawBreaks->elementAti(0) == range.fRangeStart);
+        
     // Append the boundaries for this range to fBreaks.
+    // Within a single range there should be no duplicate boundaries.
+    // There is a possible duplicate between the last boundary of one range and the
+    //  first from the next. When this happens, do not add the duplicate to fBreaks.
 
     for (int32_t i=0; i<fRawBreaks->size(); ++i) {
         int32_t boundary = fRawBreaks->elementAti(i);
-        if (fBreaks->size() > 0) {
+        if (i > 0) {
             U_ASSERT(boundary > fBreaks->lastElementi());
         }
-        fBreaks->addElement(boundary, status);
+        if (fBreaks->size() == 0 || boundary > fBreaks->lastElementi()) {
+            fBreaks->addElement(boundary, status);
+        }
     }
 }
 

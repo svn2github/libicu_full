@@ -24,6 +24,7 @@
 #include "charstr.h"
 #include "dictionarydata.h"
 #include "uvector.h"
+#include "uvectr32.h"
 #include "umutex.h"
 #include "uresimp.h"
 #include "ubrkimpl.h"
@@ -76,19 +77,15 @@ UnhandledEngine::handles(UChar32 c, int32_t breakType) const {
         && fHandled[breakType] != 0 && fHandled[breakType]->contains(c));
 }
 
-int32_t
+void
 UnhandledEngine::findBreaks( UText *text,
                              int32_t endPos,
                              int32_t breakType,
-                             UVector32 &/*foundBreaks*/ ) const {
-    if (breakType >= 0 && breakType < LENGTHOF(fHandled)) {
-        UChar32 c = utext_current32(text); 
-        while((int32_t)utext_getNativeIndex(text) < endPos && fHandled[breakType]->contains(c)) {
-            utext_next32(text);            // TODO:  recast loop to work with post-increment operations.
-            c = utext_current32(text);
-        }
-    }
-    return 0;
+                             UVector32 &foundBreaks,
+                             UErrorCode &status) const {
+    int32_t startPos = utext_getNativeIndex(text);
+    foundBreaks.addElement(startPos, status);
+    return;
 }
 
 void
