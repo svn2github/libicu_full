@@ -58,6 +58,7 @@ DictionaryBreakEngine::findBreaks(UText *text,
         divideUpDictionaryRange(text, startPos, endPos, breakType, foundBreaks, status);
     } else {
         foundBreaks.addElement(startPos, status);
+        foundBreaks.addElement(endPos, status);
     }
     utext_setNativeIndex(text, endPos);
 }
@@ -224,6 +225,7 @@ ThaiBreakEngine::divideUpDictionaryRange( UText *text,
     utext_setNativeIndex(text, rangeStart);
     utext_moveIndex32(text, THAI_MIN_WORD_SPAN);
     if (utext_getNativeIndex(text) >= rangeEnd) {
+        foundBreaks.addElement(rangeEnd, status);
         return;       // Not enough characters for two words
     }
     utext_setNativeIndex(text, rangeStart);
@@ -394,14 +396,12 @@ foundBest:
 
         // Did we find a word on this iteration? If so, push it on the break stack
         if (cuWordLength > 0) {
-            foundBreaks.push((current+cuWordLength), status);
+            foundBreaks.addElement((current+cuWordLength), status);
         }
     }
 
-    // Don't return a break for the end of the dictionary range if there is one there.
-    if (foundBreaks.peeki() >= rangeEnd) {
-        (void) foundBreaks.popi();
-        wordsFound -= 1;
+    if (foundBreaks.lastElementi() < rangeEnd) {
+        foundBreaks.addElement(rangeEnd, status);
     }
 
     return;
@@ -466,6 +466,7 @@ LaoBreakEngine::divideUpDictionaryRange( UText *text,
     }
     foundBreaks.addElement(rangeStart, status);
     if ((rangeEnd - rangeStart) < LAO_MIN_WORD_SPAN) {
+        foundBreaks.addElement(rangeEnd, status);
         return;       // Not enough characters for two words
     }
 
@@ -599,10 +600,8 @@ foundBest:
         }
     }
 
-    // Don't return a break for the end of the dictionary range if there is one there.
-    if (foundBreaks.peeki() >= rangeEnd) {
-        (void) foundBreaks.popi();
-        wordsFound -= 1;
+    if (foundBreaks.lastElementi() < rangeEnd) {
+        foundBreaks.addElement(rangeEnd, status);
     }
 }
 
@@ -674,6 +673,7 @@ KhmerBreakEngine::divideUpDictionaryRange( UText *text,
     }
     foundBreaks.addElement(rangeStart, status);
     if ((rangeEnd - rangeStart) < KHMER_MIN_WORD_SPAN) {
+        foundBreaks.addElement(rangeEnd, status);
         return;       // Not enough characters for two words
     }
 
@@ -839,10 +839,8 @@ foundBest:
         }
     }
     
-    // Don't return a break for the end of the dictionary range if there is one there.
-    if (foundBreaks.peeki() >= rangeEnd) {
-        (void) foundBreaks.popi();
-        wordsFound -= 1;
+    if (foundBreaks.lastElementi() < rangeEnd) {
+        foundBreaks.addElement(rangeEnd, status);
     }
 
     return;
@@ -945,6 +943,7 @@ FrequencyBreakEngine::divideUpDictionaryRange(UText *inText,
     foundBreaks.addElement(rangeStart, status);
     U_ASSERT(rangeStart < rangeEnd);
     if (rangeStart >= rangeEnd) {
+        foundBreaks.addElement(rangeEnd, status);
         return;
     }
 

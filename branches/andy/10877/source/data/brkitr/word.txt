@@ -46,9 +46,9 @@ $Hiragana           = [:Hiragana:];
 
 
 #   Dictionary character set, for triggering language-based break engines. 
-#   There are separate dictionaries for each of Thai, Lao, Khmer & CJK.
-#   Runs of characters for each of these are kept together by these rules,
-#   then subsequently subdivided by dictionary lookup.
+#   There are dictionary support in ICU for Thai, Lao, Khmer, Chinese, Japanese and Korean.
+#   Runs of dictionary characters are kept together by the rules, 
+#   but not mixed with non-dictionary letters.
 
 $Control          = [\p{Grapheme_Cluster_Break = Control}]; 
 $HangulSyllable   = [\uac00-\ud7a3];
@@ -62,16 +62,11 @@ $dictionaryKhmer  = [[:LineBreak = Complex_Context:] & [:Script = Khmer:]];
 
 $dictionary       = [$dictionaryThai $dictionaryLao $dictionaryKhmer $dictionaryCJ $dictionaryHangul];
 
-# Keep runs of dictionary characters together, but don't mix those 
-# that need to be dispatched to different dictionaries, or those with
-# different rule status values (CJ).
+# Keep runs of dictionary characters together.
+# Note different rule status value for Chinese & Japanese.
 
 ($dictionaryCJ     ($Extend | $Format)*)+ {400};
-($dictionaryHangul ($Extend | $Format)*)+ {200};
-($dictionaryThai   ($Extend | $Format)*)+ {200};
-($dictionaryLao    ($Extend | $Format)*)+ {200};
-($dictionaryKhmer  ($Extend | $Format)*)+ {200};
-
+($dictionary       ($Extend | $Format)*)+ {200};
 
 # leave CJK scripts out of ALetterPlus
 $ALetterPlus  = [$ALetter-[$dictionaryCJ $dictionaryHangul] [$ComplexContext-$Extend-$Control]];
@@ -159,6 +154,13 @@ $ExtendNumLetEx  $ALetterEx      {200};    #  (13b)
 $ExtendNumLetEx  $Hebrew_Letter  {200};    #  (13b)
 $ExtendNumLetEx  $NumericEx      {100};    #  (13b)
 
+# Katakana + ExtendNumLet.
+# TODO: Katakana is part of $Dictionary. Allows matching of mixed dict/non dict runs.
+#       Implication needs to be understood.
+
+$Katakana $ExtendNumLetEx    {400};
+$ExtendNumLetEx $Katakana    {400};
+
 # rule 13c
 
 $Regional_IndicatorEx $Regional_IndicatorEx;
@@ -179,11 +181,7 @@ $BackMidLetterEx          = ($Format | $Extend)* $MidLetter;
 $BackExtendNumLetEx       = ($Format | $Extend)* $ExtendNumLet;
 $BackRegional_IndicatorEx = ($Format | $Extend)* $Regional_Indicator;
 
-(($Format | $Extend)* $dictionaryCJ)+;
-(($Format | $Extend)* $dictionaryHangul)+;
-(($Format | $Extend)* $dictionaryThai)+;
-(($Format | $Extend)* $dictionaryLao)+;
-(($Format | $Extend)* $dictionaryKhmer)+;
+(($Format | $Extend)* $dictionary)+;
 
 # rule 3
 $LF $CR;
@@ -226,6 +224,10 @@ $BackNumericEx ($BackMidNumEx | $BackMidNumLetEx | $BackSingle_QuoteEx) $BackNum
 #
 $BackExtendNumLetEx ($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx | $BackExtendNumLetEx);
 ($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx ) $BackExtendNumLetEx; 
+
+#TODO: see comment of corresponding forward rules.
+$BackExtendNumLetEx $Katakana;
+$Katakana $BackExtendNumLetEx;
 
 # rule 13c
 

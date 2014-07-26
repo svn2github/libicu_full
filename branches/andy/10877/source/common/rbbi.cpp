@@ -1751,16 +1751,19 @@ UBool DictTextRange::next() {
     }
 
     // Advance to the first dictionary character. Normally the first char.
+    fDictStart = -1;
     int32_t category = 0;
     UChar32 c;
     utext_setNativeIndex(fBreakIterator->fText, fRangeStart);
-    while (utext_getNativeIndex(fBreakIterator->fText) < fFinalLimit) {
+    int32_t index;
+    while ((index = utext_getNativeIndex(fBreakIterator->fText)) < fFinalLimit) {
         c = utext_next32(fBreakIterator->fText);
         if (c == U_SENTINEL) {
             break;
         }
         UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
         if ((category & 0x4000) != 0) {
+            fDictStart = index;
             break;
         }
     }
@@ -1778,6 +1781,7 @@ UBool DictTextRange::next() {
     //  TODO: probably need to close dictionary sets over normalization forms.
     fLBE = fBreakIterator->getLanguageBreakEngine(c);
 
+    fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
     while (utext_getNativeIndex(fBreakIterator->fText) < fFinalLimit) {
         c = utext_next32(fBreakIterator->fText);
         if (c == U_SENTINEL) {
@@ -1785,12 +1789,15 @@ UBool DictTextRange::next() {
             break;
         }
         UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
-        if ((category & 0x4000) &&   // It's a dictionary character
-             !fLBE->handles(c, fBreakIterator->fBreakType)) {
-                 // Hit a dictionary character not belonging to this language break engine.
-                 // Back up one; this character needs to go to a different range.
-                 c = utext_previous32(fBreakIterator->fText);
-                 break;
+        if ((category & 0x4000)) {   // It's a dictionary character
+            if (fLBE->handles(c, fBreakIterator->fBreakType)) {
+                fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
+            } else {
+                // Hit a dictionary character not belonging to this language break engine.
+                // Back up one; end of this range; this character needs to go to the next range.
+                c = utext_previous32(fBreakIterator->fText);
+                break;
+            }
         }
     }
 
@@ -1812,19 +1819,17 @@ void RuleBasedBreakIterator::BreakCache::populate(int32_t start, int32_t limit, 
         return;
     }
     fBreaks->removeAllElements();
+    fBreaks->addElement(start, status);
+
     DictTextRange  range(fThis, start, limit);
     while (range.next()) {
-        // TODO: start and end rules...
-        fBreaks->addElement(start, status);
+        // Convention: ranges do not add a break at their start.
+        //             They do add a break at their end.
+        //             End of one range will always be the start of the next.
         addContainedWords(range, status);
     }
-    // If the dictionary breaking didn't include a break at the end of the region being segmented,
-    //   Add it now. This commonly occurs with line breaking, where a new line, or closing punctuation
-    //   follows a group of words, but is not handled by the dictionary breaking.
 
-    if (fBreaks->lastElementi() < limit) {
-        fBreaks->addElement(limit, status);
-    }
+    U_ASSERT(fBreaks->lastElementi() == limit);
 }
 
 void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &range, UErrorCode &status) {
@@ -1832,29 +1837,37 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
         return;
     }
 
-    // Fill fRawBreaks with the word boundaries from the break engine for this range.
-    fRawBreaks->removeAllElements();
-    utext_setNativeIndex(fThis->fText, range.fRangeStart);
-    range.fLBE->findBreaks(fThis->fText, range.fRangeLimit, fThis->fBreakType, *fRawBreaks, status);
+    // Fill fRawBreaks with the word boundaries from the break engine 
+    // for the dictionary characters within this range.
 
-    // Break engine should always show a break at the start of the range.
+    fRawBreaks->removeAllElements();
+    utext_setNativeIndex(fThis->fText, range.fDictStart);
+    range.fLBE->findBreaks(fThis->fText, range.fDictLimit, fThis->fBreakType, *fRawBreaks, status);
+
+    // Break engine should always show a break at the start and end
+    // of the region it processed.
     U_ASSERT(fRawBreaks->size() > 0);
-    U_ASSERT(fRawBreaks->elementAti(0) == range.fRangeStart);
+    U_ASSERT(fRawBreaks->elementAti(0) == range.fDictStart);
+    U_ASSERT(fRawBreaks->lastElementi() == range.fDictLimit);
         
     // Append the boundaries for this range to fBreaks.
     // Within a single range there should be no duplicate boundaries.
-    // There is a possible duplicate between the last boundary of one range and the
-    //  first from the next. When this happens, do not add the duplicate to fBreaks.
+    // Omit the first boundary; it is added by the outer range loop in BreakCache::populate().
+    // Omit the last, adding fRangeLimit instead. This has the effect of concatenating any
+    //   trailing non-dictionary characters to the last word; happens with line break where,
+    //   for example, closing punctuation attaches to a word.
+    // 
 
-    for (int32_t i=0; i<fRawBreaks->size(); ++i) {
+    U_ASSERT(fRawBreaks->elementAti(0) == range.fDictStart);
+    for (int32_t i=1; i<fRawBreaks->size()-1; ++i) {
         int32_t boundary = fRawBreaks->elementAti(i);
-        if (i > 0) {
-            U_ASSERT(boundary > fBreaks->lastElementi());
-        }
+        U_ASSERT(boundary > fBreaks->lastElementi());
         if (fBreaks->size() == 0 || boundary > fBreaks->lastElementi()) {
             fBreaks->addElement(boundary, status);
         }
     }
+    U_ASSERT(fBreaks->lastElementi() < range.fRangeLimit);
+    fBreaks->addElement(range.fRangeLimit, status);
 }
 
 

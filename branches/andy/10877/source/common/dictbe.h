@@ -87,7 +87,7 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
    * that starts from the first (or last) character in the range.
    * @param endPos The end of the run within the supplied text.
    * @param breakType The type of break desired, or -1.
-   * @param foundBreaks A vector to which the breaks are appended.
+   * @param foundBreaks A vector to receive the break positions.
    */
   virtual void findBreaks( UText *text,
                            int32_t endPos,
@@ -175,12 +175,13 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
   * @param text A UText representing the text
   * @param rangeStart The start of the range of dictionary characters
   * @param rangeEnd The end of the range of dictionary characters
-  * @param foundBreaks Output of C array of int32_t break positions, or 0
-  * @return The number of breaks found
+  * @param foundBreaks Vector to which the word boundaries are appended.
+  *                    Includes boundaries at the start and end of the range being split.
+  * @internal
   */
   virtual void divideUpDictionaryRange( UText *text,
                                         int32_t rangeStart,
-                                        int32_t rangeEnd,
+                                        int32_t rangeLimit,
                                         int32_t breakType,
                                         UVector32 &foundBreaks,
                                         UErrorCode &status) const;
@@ -233,8 +234,8 @@ class LaoBreakEngine : public DictionaryBreakEngine {
   * @param text A UText representing the text
   * @param rangeStart The start of the range of dictionary characters
   * @param rangeEnd The end of the range of dictionary characters
-  * @param foundBreaks Output of C array of int32_t break positions, or 0
-  * @return The number of breaks found
+  * @param foundBreaks Vector to which the word boundaries are appended.
+  *                    Includes boundaries at the start and end of the range being split.
   */
   virtual void divideUpDictionaryRange( UText *text,
                                         int32_t rangeStart,
@@ -291,8 +292,8 @@ class KhmerBreakEngine : public DictionaryBreakEngine {
   * @param text A UText representing the text 
   * @param rangeStart The start of the range of dictionary characters 
   * @param rangeEnd The end of the range of dictionary characters 
-  * @param foundBreaks Output of C array of int32_t break positions, or 0 
-  * @return The number of breaks found 
+  * @param foundBreaks Vector to which the word boundaries are appended.
+  *                    Includes boundaries at the start and end of the range being split.
   */ 
   virtual void divideUpDictionaryRange( UText *text, 
                                         int32_t rangeStart, 
@@ -340,8 +341,8 @@ class FrequencyBreakEngine : public DictionaryBreakEngine {
      * @param text A UText representing the text
      * @param rangeStart The start of the range of dictionary characters
      * @param rangeEnd The end of the range of dictionary characters
-     * @param foundBreaks Output of C array of int32_t break positions, or 0
-     * @return The number of breaks found
+     * @param foundBreaks Vector to which the word boundaries are appended.
+     *                    Includes boundaries at the start and end of the range being split.
      */
   virtual void    divideUpDictionaryRange( UText *text,
           int32_t rangeStart,

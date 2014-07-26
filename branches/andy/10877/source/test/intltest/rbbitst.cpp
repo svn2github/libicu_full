@@ -351,6 +351,16 @@ void RBBITest::TestStatusReturn() {
          }
      }
      delete bi;
+
+     // Temp, debugging, remove this.
+     LocalPointer<BreakIterator> bw(BreakIterator::createWordInstance(Locale::getEnglish(), status));
+     UnicodeString ttext = UnicodeString("\\u3031\\u005f").unescape();
+     bw->setText(ttext);
+     bw->first();
+     int32_t nextb = bw->next();
+     if (nextb != 2) {
+         errln("file %s, line %d, error!", __FILE__, __LINE__);
+    }
 }
 
 

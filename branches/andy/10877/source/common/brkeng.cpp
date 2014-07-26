@@ -80,11 +80,12 @@ UnhandledEngine::handles(UChar32 c, int32_t breakType) const {
 void
 UnhandledEngine::findBreaks( UText *text,
                              int32_t endPos,
-                             int32_t breakType,
+                             int32_t /* breakType */,
                              UVector32 &foundBreaks,
                              UErrorCode &status) const {
     int32_t startPos = utext_getNativeIndex(text);
     foundBreaks.addElement(startPos, status);
+    foundBreaks.addElement(endPos, status);
     return;
 }
 
