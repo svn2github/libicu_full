@@ -49,22 +49,24 @@ void UnifiedCacheTest::runIndexedTest(int32_t index, UBool exec, const char* &na
 
 void UnifiedCacheTest::TestBasic() {
     UErrorCode status = U_ZERO_ERROR;
-    UnifiedCache cache(status);
+    const UnifiedCache *cache = UnifiedCache::getInstance(status);
+    assertSuccess("", status);
     const UCTItem *enGb = NULL;
     const UCTItem *enUs = NULL;
     const UCTItem *fr = NULL;
     const UCTItem *frFr = NULL;
     LocaleCacheKey<UCTItem> foo("en_US");
-    cache.get(LocaleCacheKey<UCTItem>("en_US"), enUs, status);
-    cache.get(LocaleCacheKey<UCTItem>("en_GB"), enGb, status);
-    cache.get(LocaleCacheKey<UCTItem>("fr_FR"), frFr, status);
-    cache.get(LocaleCacheKey<UCTItem>("fr"), fr, status);
+    cache->get(LocaleCacheKey<UCTItem>("en_US"), enUs, status);
+    cache->get(LocaleCacheKey<UCTItem>("en_GB"), enGb, status);
+    cache->get(LocaleCacheKey<UCTItem>("fr_FR"), frFr, status);
+    cache->get(LocaleCacheKey<UCTItem>("fr"), fr, status);
     if (enGb != enUs) {
         errln("Expected en_GB and en_US to resolve to same object.");
     } 
     if (fr != frFr) {
         errln("Expected fr and fr_FR to resolve to same object.");
     } 
+    assertSuccess("", status);
     SharedObject::clearPtr(enGb);
     SharedObject::clearPtr(enUs);
     SharedObject::clearPtr(fr);

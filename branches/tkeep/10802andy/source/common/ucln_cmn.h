@@ -51,6 +51,7 @@ typedef enum ECleanupCommonType {
     UCLN_COMMON_PUTIL,
     UCLN_COMMON_LIST_FORMATTER,
     UCLN_COMMON_UINIT,
+    UCLN_COMMON_UNIFIED_CACHE,
     UCLN_COMMON_COUNT /* This must be last */
 } ECleanupCommonType;
 

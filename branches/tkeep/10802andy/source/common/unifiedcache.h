@@ -82,26 +82,35 @@ class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
 
 class U_COMMON_API UnifiedCache : public UObject {
  public:
+   /**
+    * @internal
+    */
    UnifiedCache(UErrorCode &status);
+   static const UnifiedCache *getInstance(UErrorCode &status);
    template<typename T>
-   void get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) {
+   void get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
        const T *value = (const T *) _get(key, status);
        if (U_FAILURE(status)) {
             return;
        }
        SharedObject::copyPtr(value, ptr);
+       // We have to manually remove the reference that _get adds.
+       value->removeRef();
    }
    UBool contains(const CacheKeyBase& key) const;
-   void flush(UErrorCode &status);
+   void flush(UErrorCode &status) const;
    virtual ~UnifiedCache();
  private:
    UHashtable *fHashtable;
-   void _flush(UBool all, UErrorCode &status);
+   UnifiedCache(const UnifiedCache &other);
+   UnifiedCache &operator=(const UnifiedCache &other);
+   void _flush(UBool all, UErrorCode &status) const;
    void _addToCache(
        const CacheKeyBase &key,
        const SharedObject *adoptedValue,
-       UErrorCode &status);
-   const SharedObject *_get(const CacheKeyBase &key, UErrorCode &status);
+       UBool notifyCreation,
+       UErrorCode &status) const;
+   const SharedObject *_get(const CacheKeyBase &key, UErrorCode &status) const;
 };
 
 U_NAMESPACE_END
