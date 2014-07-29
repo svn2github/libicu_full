@@ -1627,7 +1627,7 @@ class CondThread: public SimpleThread {
 };
 
 static UMutex gCTMutex = U_MUTEX_INITIALIZER;
-static UCondition gCTCondition = U_CONDITION_INITIALIZER;
+static UConditionVar gCTConditionVar = U_CONDITION_INITIALIZER;
 int gConditionTestOne = 1;   // Value one. Non-const, extern linkage to inhibit
                              //   compiler assuming a known value.
 int gStartedThreads;         
@@ -1641,22 +1641,22 @@ static MultithreadTest *gThisTest = NULL; // Make test frame work functions avai
 void CondThread::run() {
     umtx_lock(&gCTMutex); 
     gStartedThreads += gConditionTestOne;
-    umtx_condBroadcast(&gCTCondition);
+    umtx_condBroadcast(&gCTConditionVar);
     
     while (gStartedThreads < NUMTHREADS) {
         if (gFinishedThreads != 0) {
             gThisTest->errln("File %s, Line %d: Error, gStartedThreads = %d, gFinishedThreads = %d", 
                              __FILE__, __LINE__, gStartedThreads, gFinishedThreads);
         }
-        umtx_condWait(&gCTCondition, &gCTMutex);
+        umtx_condWait(&gCTConditionVar, &gCTMutex);
     }
 
     gFinishedThreads += gConditionTestOne;
     fFinished = true;
-    umtx_condBroadcast(&gCTCondition);
+    umtx_condBroadcast(&gCTConditionVar);
 
     while (gFinishedThreads < NUMTHREADS) {
-        umtx_condWait(&gCTCondition, &gCTMutex);
+        umtx_condWait(&gCTConditionVar, &gCTMutex);
     }
     umtx_unlock(&gCTMutex);
 }
@@ -1675,11 +1675,11 @@ void MultithreadTest::TestConditionVariables() {
     }
 
     while (gStartedThreads < NUMTHREADS) {
-        umtx_condWait(&gCTCondition, &gCTMutex);
+        umtx_condWait(&gCTConditionVar, &gCTMutex);
     }
 
     while (gFinishedThreads < NUMTHREADS) {
-        umtx_condWait(&gCTCondition, &gCTMutex);
+        umtx_condWait(&gCTConditionVar, &gCTMutex);
     }
 
     umtx_unlock(&gCTMutex);

@@ -134,9 +134,10 @@ umtx_unlock(UMutex* mutex)
 
 
 U_CAPI void U_EXPORT2
-umtx_condBroadcast(UCondition *condition) {
+umtx_condBroadcast(UConditionVar *condition) {
     // We require that the associated mutex be held by the caller,
-    //  so access to fWaitCount is protected and safe.
+    //  so access to fWaitCount is protected and safe. No other thread can
+    //  call condWait() while we are here.
     if (condition->fWaitCount == 0) {
         return;
     }
@@ -145,7 +146,16 @@ umtx_condBroadcast(UCondition *condition) {
 }
 
 U_CAPI void U_EXPORT2
-umtx_condWait(UCondition *condition, UMutex *mutex) {
+umtx_condSignal(UConditionVar *condition) {
+    // Function not implemented. There is no immediate requirement from ICU to have it.
+    // Once ICU drops support for Windows XP and Server 2003, ICU Condition Variables will be
+    // changed to be thin wrappers on native Windows CONDITION_VARIABLEs, and this function
+    // becomes trivial to provide.
+    U_ASSERT(FALSE);
+}
+
+U_CAPI void U_EXPORT2
+umtx_condWait(UConditionVar *condition, UMutex *mutex) {
     if (condition->fEntryGate == NULL) {
         // Note: because the associated mutex must be locked when calling
         //       wait, we know that there can not be multiple threads
@@ -160,8 +170,7 @@ umtx_condWait(UCondition *condition, UMutex *mutex) {
         condition->fExitGate = CreateEvent(NULL, TRUE, TRUE, NULL);
         U_ASSERT(condition->fExitGate != NULL);
     }
-    // Broadcast can poll fWaitCount without holding the associated
-    // mutex, so use safe increment.
+
     condition->fWaitCount++;
     umtx_unlock(mutex);
     WaitForSingleObject(condition->fEntryGate, INFINITE); 
@@ -218,7 +227,7 @@ umtx_unlock(UMutex* mutex)
 
 
 U_CAPI void U_EXPORT2
-umtx_condWait(UCondition *cond, UMutex *mutex) {
+umtx_condWait(UConditionVar *cond, UMutex *mutex) {
     if (mutex == NULL) {
         mutex = &globalMutex;
     }
@@ -228,11 +237,19 @@ umtx_condWait(UCondition *cond, UMutex *mutex) {
 }
 
 U_CAPI void U_EXPORT2
-umtx_condBroadcast(UCondition *cond) {
+umtx_condBroadcast(UConditionVar *cond) {
     int sysErr = pthread_cond_broadcast(&cond->fCondition);
     (void)sysErr;
     U_ASSERT(sysErr == 0);
 }
+
+U_CAPI void U_EXPORT2
+umtx_condSignal(UConditionVar *cond) {
+    int sysErr = pthread_cond_signal(&cond->fCondition);
+    (void)sysErr;
+    U_ASSERT(sysErr == 0);
+}
+
 
 
 U_NAMESPACE_BEGIN
