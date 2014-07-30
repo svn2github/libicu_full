@@ -27,8 +27,8 @@ class U_COMMON_API CacheKeyBase: public UObject {
    virtual int32_t hashCode() const = 0;
    virtual CacheKeyBase *clone() const = 0;
    virtual UBool operator == (const CacheKeyBase &other) const = 0;
-   virtual SharedObject *createObject() const = 0;  // Cannot be void * return
-   virtual CacheKeyBase *createKey() const;
+   virtual SharedObject *createObject(UErrorCode &status) const = 0;
+   virtual CacheKeyBase *createKey(UErrorCode &status) const;
    UBool operator != (const CacheKeyBase &other) const {
        return !(*this == other);
    }
@@ -73,12 +73,11 @@ class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
    virtual CacheKeyBase *clone() const {
        return new LocaleCacheKey<T>(*this);
    }
-   virtual T *createObject() const;
-   virtual CacheKeyBase *createKey() const {
+   virtual T *createObject(UErrorCode &status) const;
+   virtual CacheKeyBase *createKey(UErrorCode & /* status */) const {
        return NULL;
    }
 };
-
 
 class U_COMMON_API UnifiedCache : public UObject {
  public:
@@ -97,19 +96,24 @@ class U_COMMON_API UnifiedCache : public UObject {
        // We have to manually remove the reference that _get adds.
        value->removeRef();
    }
-   UBool contains(const CacheKeyBase& key) const;
-   void flush(UErrorCode &status) const;
+   int32_t keyCount() const;
+   void flush() const;
    virtual ~UnifiedCache();
  private:
    UHashtable *fHashtable;
    UnifiedCache(const UnifiedCache &other);
    UnifiedCache &operator=(const UnifiedCache &other);
-   void _flush(UBool all, UErrorCode &status) const;
-   void _addToCache(
-       const CacheKeyBase &key,
-       const SharedObject *adoptedValue,
-       UBool notifyCreation,
-       UErrorCode &status) const;
+   void _flush(UBool all) const;
+   const SharedObject *_getCompleted(
+        const CacheKeyBase &key, UErrorCode &status) const;
+   UBool _putOrClear(
+        const CacheKeyBase &key, const SharedObject *adoptedObj) const;
+   UBool _replaceWithRealObject(
+        const CacheKeyBase &key,
+        const SharedObject *adoptedObj) const;
+   void _replaceWithError(
+        const CacheKeyBase &key,
+        UErrorCode &status) const;
    const SharedObject *_get(const CacheKeyBase &key, UErrorCode &status) const;
 };
 
