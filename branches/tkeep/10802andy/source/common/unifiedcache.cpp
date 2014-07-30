@@ -17,6 +17,7 @@
 
 static icu::UnifiedCache *gCache = NULL;
 static UMutex gCacheMutex = U_MUTEX_INITIALIZER;
+static UConditionVar gCreationCompleteCond = U_CONDITION_INITIALIZER;
 static icu::UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
 
 U_CDECL_BEGIN
@@ -53,9 +54,11 @@ ucache_deleteKey(void *obj) {
 }
 
 static void waitOnCreation() {
+    umtx_condWait(&gCreationCompleteCond, &gCacheMutex);
 }
 
 static void notifyCreation() {
+    umtx_condBroadcast(&gCreationCompleteCond);
 }
 
 static UBool inCreation(const SharedObject *obj) {
