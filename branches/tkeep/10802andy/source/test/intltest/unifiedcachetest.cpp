@@ -23,6 +23,14 @@ class UCTItem : public SharedObject {
     }
 };
 
+class UCTItem2 : public SharedObject {
+};
+
+template<>
+UCTItem2 *LocaleCacheKey<UCTItem2>::createObject(UErrorCode &status) const {
+    return NULL;
+}
+
 template<>
 UCTItem *LocaleCacheKey<UCTItem>::createObject(UErrorCode &status) const {
     if (uprv_strcmp(fLoc.getName(), "zh") == 0) {
@@ -52,12 +60,14 @@ public:
 private:
     void TestBasic();
     void TestError();
+    void TestHashEquals();
 };
 
 void UnifiedCacheTest::runIndexedTest(int32_t index, UBool exec, const char* &name, char* /*par*/) {
   TESTCASE_AUTO_BEGIN;
   TESTCASE_AUTO(TestBasic);
   TESTCASE_AUTO(TestError);
+  TESTCASE_AUTO(TestHashEquals);
   TESTCASE_AUTO_END;
 }
 
@@ -129,6 +139,21 @@ void UnifiedCacheTest::TestError() {
     cache->flush();
     // error placeholders have no hard references so they always get flushed. 
     assertEquals("", 0, cache->keyCount());
+}
+
+void UnifiedCacheTest::TestHashEquals() {
+    LocaleCacheKey<UCTItem> key1("en_US");
+    LocaleCacheKey<UCTItem> key2("en_US");
+    LocaleCacheKey<UCTItem> diffKey1("en_UT");
+    LocaleCacheKey<UCTItem2> diffKey2("en_US");
+    assertTrue("", key1.hashCode() == key2.hashCode());
+    assertTrue("", key1.hashCode() != diffKey1.hashCode());
+    assertTrue("", key1.hashCode() != diffKey2.hashCode());
+    assertTrue("", diffKey1.hashCode() != diffKey2.hashCode());
+    assertTrue("", key1 == key2);
+    assertTrue("", key1 != diffKey1);
+    assertTrue("", key1 != diffKey2);
+    assertTrue("", diffKey1 != diffKey2);
 }
 
 extern IntlTest *createUnifiedCacheTest() {
