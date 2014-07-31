@@ -14,9 +14,13 @@
 
 class UCTItem : public SharedObject {
   public:
-    const char *value;
-    UCTItem(const char *x) : value(x) { };
-    virtual ~UCTItem() { }
+    char *value;
+    UCTItem(const char *x) : value(NULL) { 
+        value = uprv_strdup(x);
+    }
+    virtual ~UCTItem() {
+        uprv_free(value);
+    }
 };
 
 template<>
@@ -30,7 +34,7 @@ UCTItem *LocaleCacheKey<UCTItem>::createObject(UErrorCode &status) const {
 
 template<>
 CacheKeyBase *LocaleCacheKey<UCTItem>::createKey(UErrorCode &status) const {
-    if (uprv_strcmp(fLoc.getName(), "zh") == 0) {
+    if (uprv_strcmp(fLoc.getName(), "zh_CN") == 0) {
         status = U_MISSING_RESOURCE_ERROR;
         return NULL;
     }
@@ -61,6 +65,7 @@ void UnifiedCacheTest::TestBasic() {
     UErrorCode status = U_ZERO_ERROR;
     const UnifiedCache *cache = UnifiedCache::getInstance(status);
     assertSuccess("", status);
+    cache->flush();
     const UCTItem *enGb = NULL;
     const UCTItem *enUs = NULL;
     const UCTItem *fr = NULL;
@@ -75,6 +80,9 @@ void UnifiedCacheTest::TestBasic() {
     if (fr != frFr) {
         errln("Expected fr and fr_FR to resolve to same object.");
     } 
+    if (enGb == fr) {
+        errln("Expected en_GB and fr to return different objects.");
+    }
     assertSuccess("", status);
     // en_US, en_GB, en share one object; fr_FR and fr share another.
     // 5 keys in all.
@@ -98,6 +106,7 @@ void UnifiedCacheTest::TestError() {
     UErrorCode status = U_ZERO_ERROR;
     const UnifiedCache *cache = UnifiedCache::getInstance(status);
     assertSuccess("", status);
+    cache->flush();
     const UCTItem *zhCn = NULL;
     const UCTItem *zhTw = NULL;
     const UCTItem *zhHk = NULL;
