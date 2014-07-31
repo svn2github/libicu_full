@@ -87,14 +87,25 @@ class U_COMMON_API UnifiedCache : public UObject {
    UnifiedCache(UErrorCode &status);
    static const UnifiedCache *getInstance(UErrorCode &status);
    template<typename T>
-   void get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
+   UBool get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
        const T *value = (const T *) _get(key, status);
        if (U_FAILURE(status)) {
-            return;
+            return FALSE;
        }
        SharedObject::copyPtr(value, ptr);
        // We have to manually remove the reference that _get adds.
        value->removeRef();
+       return TRUE;
+   }
+
+   template<typename T>
+   static UBool getByLocale(
+           const Locale &loc, const T *&ptr, UErrorCode &status) {
+       const UnifiedCache *cache = getInstance(status);
+       if (U_FAILURE(status)) {
+           return FALSE;
+       }
+       return cache->get(LocaleCacheKey<T>(loc), ptr, status);
    }
    int32_t keyCount() const;
    void flush() const;
