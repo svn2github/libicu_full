@@ -39,6 +39,8 @@
 #include "unicode/numfmt.h"
 #include "unicode/uscript.h"
 
+#include <iostream>
+
 #define TEST_ASSERT(x) {if (!(x)) { \
     errln("Failure in file %s, line %d", __FILE__, __LINE__);}}
 
@@ -62,16 +64,16 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
     if (exec) logln("TestSuite RuleBasedBreakIterator: ");
 
     switch (index) {
+        case 0: name = "TestDebug";
+            if(exec) TestDebug();                              break;
+        
 #if !UCONFIG_NO_FILE_IO
-        case 0: name = "TestBug4153072";
+        case 1: name = "TestBug4153072";
             if(exec) TestBug4153072();                         break;
 #else
-        case 0: name = "skip";
-            break;
-#endif
-
         case 1: name = "skip";
             break;
+#endif
         case 2: name = "TestStatusReturn";
             if(exec) TestStatusReturn();                       break;
  
@@ -129,8 +131,8 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
 
         case 18: name = "skip";
             break;
-        case 19: name = "TestDebug";
-            if(exec) TestDebug();                              break;
+        case 19: name = "skip";
+            break;
         case 20: name = "skip";
             break;
 
@@ -4488,29 +4490,28 @@ void RBBITest::TestBug9983(void)  {
 //                  for tracing  without a lot of unwanted extra stuff happening.
 //
 void RBBITest::TestDebug(void) {
-#if 0
+    // UnicodeString testData = UnicodeString("\\u0602\\u2019\\ua191\\U000e0063\\u0a4c\\u003a\\ub4b5\\u003a\\u827f\\u002e").unescape();
+    UnicodeString testData = UnicodeString("\\u0041\\ub4b5\\u003a\\u827f").unescape();
     UErrorCode   status = U_ZERO_ERROR;
     int pos = 0;
-    int ruleStatus = 0;
 
     RuleBasedBreakIterator* bi =
        // (RuleBasedBreakIterator *)BreakIterator::createLineInstance(Locale::getDefault(), status);
-       // (RuleBasedBreakIterator *)BreakIterator::createWordInstance(Locale::Locale("th"), status);
-       (RuleBasedBreakIterator *)BreakIterator::createSentenceInstance(Locale::getDefault(), status);
-    UnicodeString s("\\u2008\\u002e\\udc6a\\u37cd\\u71d0\\u2048\\U000e006a\\u002e\\u0046\\ufd3f\\u000a\\u002e");
-    // UnicodeString s("Aaa.  Bcd");
-    s = s.unescape();
-    bi->setText(s);
-    UBool r = bi->isBoundary(8);
-    printf("%s", r?"true":"false");
-    return;
-    pos = bi->last();
-    do {
-        // ruleStatus = bi->getRuleStatus();
-        printf("%d\t%d\n", pos, ruleStatus);
-        pos = bi->previous();
-    } while (pos != BreakIterator::DONE);
-#endif
+       (RuleBasedBreakIterator *)BreakIterator::createWordInstance(Locale::Locale("en"), status);
+       // (RuleBasedBreakIterator *)BreakIterator::createSentenceInstance(Locale::getDefault(), status);
+    TEST_ASSERT_SUCCESS(status);
+    bi->setText(testData);
+
+    std::cout << "Forward Iteration ... \n";
+    for (pos = bi->first(); pos != BreakIterator::DONE; pos = bi->next()) {
+        std::cout << "   " << pos << std::endl;
+    }
+    std::cout << "Reverse Iteration ... \n";
+    for (pos = bi->last(); pos != BreakIterator::DONE; pos = bi->previous()) {
+        std::cout << "   " << pos << std::endl;
+    }
+
+    delete bi;
 }
 
 void RBBITest::TestProperties() {
