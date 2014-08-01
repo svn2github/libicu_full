@@ -1611,6 +1611,7 @@ static void TestOverrideNumberFormat(void) {
         } else if ( strcmp(overrideNumberFormat[i][0], "do") == 0 ) { // o is an invalid field
             udat_adoptNumberFormatForFields(fmt2, fields, overrideFmt2, &status);
             if(status == U_INVALID_FORMAT_ERROR) {
+                udat_close(fmt2);
                 status = U_ZERO_ERROR;
                 continue;
             }
@@ -1627,6 +1628,9 @@ static void TestOverrideNumberFormat(void) {
                     u_austrncpy(bbuf1,expected,kUbufMax), u_austrncpy(bbuf2,ubuf,kUbufMax) );
 
         udat_close(fmt2);
+        if ( strcmp(overrideNumberFormat[i][0], "") == 0 ) { // set uses clone, so free up
+            udat_close(overrideFmt2);
+        }
     }
     free(expected);
     free(fields);
