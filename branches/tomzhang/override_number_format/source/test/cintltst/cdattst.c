@@ -1556,6 +1556,7 @@ static void TestOverrideNumberFormat(void) {
     UNumberFormat* overrideFmt;
     const UNumberFormat* getter_result;
     int32_t i;
+    unsigned j;
 
     expected=(UChar*)malloc(sizeof(UChar) * 10);
     fields=(UChar*)malloc(sizeof(UChar) * 10);
@@ -1580,7 +1581,7 @@ static void TestOverrideNumberFormat(void) {
     udat_setNumberFormat(fmt, overrideFmt); // test the same override NF will not crash
     udat_close(fmt);
     
-    for (unsigned i=0; i<sizeof(overrideNumberFormat)/sizeof(overrideNumberFormat[0]); i++){
+    for (j=0; i<sizeof(overrideNumberFormat)/sizeof(overrideNumberFormat[0]); i++){
         UChar ubuf[kUbufMax];
         UDateFormat* fmt2;
         UNumberFormat* overrideFmt2;
