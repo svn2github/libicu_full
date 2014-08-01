@@ -1650,7 +1650,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 
 void SimpleDateFormat::adoptNumberFormat(NumberFormat *formatToAdopt) {
     formatToAdopt->setParseIntegerOnly(TRUE);
-    if (fNumberFormat && fNumberFormat != fNumberFormat){
+    if (fNumberFormat && fNumberFormat != formatToAdopt){
         delete fNumberFormat;
     }
     fNumberFormat = formatToAdopt;
