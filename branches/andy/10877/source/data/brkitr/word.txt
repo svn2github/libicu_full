@@ -18,7 +18,6 @@
 ##############################################################################
 
 !!chain;
-!!forward;
 
 #
 #  Character Class Definitions.
@@ -47,35 +46,34 @@ $Hiragana           = [:Hiragana:];
 
 #   Dictionary character set, for triggering language-based break engines. 
 #   There are dictionary support in ICU for Thai, Lao, Khmer, Chinese, Japanese and Korean.
-#   Runs of dictionary characters are kept together by the rules, 
-#   but not mixed with non-dictionary letters.
+#   
 
 $Control          = [\p{Grapheme_Cluster_Break = Control}]; 
 $HangulSyllable   = [\uac00-\ud7a3];
 $ComplexContext   = [:LineBreak = Complex_Context:];
-$KanaKanji        = [$Han $Hiragana $Katakana];
-$dictionaryCJ     = [$KanaKanji];
-$dictionaryHangul = [$HangulSyllable];
-$dictionaryThai   = [[:LineBreak = Complex_Context:] & [:Script = Thai:]];
-$dictionaryLao    = [[:LineBreak = Complex_Context:] & [:Script = Lao:]];
-$dictionaryKhmer  = [[:LineBreak = Complex_Context:] & [:Script = Khmer:]];
 
-$dictionary       = [$dictionaryThai $dictionaryLao $dictionaryKhmer $dictionaryCJ $dictionaryHangul];
+$dictionary       = [\p{Alphabetic} & [[\p{script = Thai}]
+                                       [\p{script = Lao}]
+                                       [\p{script = Khmer}]
+                                       [\p{script = Han}]
+                                       [\p{script = Hiragana}]
+                                       $Katakana
+                                       $HangulSyllable]];
 
-# Keep runs of dictionary characters together.
-# Note different rule status value for Chinese & Japanese.
-
-($dictionaryCJ     ($Extend | $Format)*)+ {400};
-($dictionary       ($Extend | $Format)*)+ {200};
-
-# leave CJK scripts out of ALetterPlus
-$ALetterPlus  = [$ALetter-[$dictionaryCJ $dictionaryHangul] [$ComplexContext-$Extend-$Control]];
+# ALetterPlus is an adjusted variant of Character Class ALetter from UAX-14.
+#   - Add non-dictionary chars from $ComplexContext.
+#     ComplexContext includes scripts that ought to be handled by dictionaries.
+#   - Leave dictionary chars out of ALetterPlus.
+# TODO:  what should this really be?
+#
+$ALetterPlus = [$ALetter [$ComplexContext - $Extend - $Control]];
 
 
 #
 #  Rules 4    Ignore Format and Extend characters, 
 #             except when they appear at the beginning of a region of text.
 #
+$KatakanaEx           = $Katakana           ($Extend |  $Format)*;
 $Hebrew_LetterEx      = $Hebrew_Letter      ($Extend |  $Format)*;
 $ALetterEx            = $ALetterPlus        ($Extend |  $Format)*;
 $Single_QuoteEx       = $Single_Quote       ($Extend |  $Format)*;
@@ -87,11 +85,16 @@ $NumericEx            = $Numeric            ($Extend |  $Format)*;
 $ExtendNumLetEx       = $ExtendNumLet       ($Extend |  $Format)*;
 $Regional_IndicatorEx = $Regional_Indicator ($Extend |  $Format)*;
 
-$Ideographic    = [\p{Ideographic}];
-$IdeographicEx  = $Ideographic  ($Extend |  $Format)*;
+$Ideographic          = [\p{Ideographic}];
+$IdeographicEx        = $Ideographic  ($Extend |  $Format)*;
+$HiraganaEx           = $Hiragana     ($Extend |  $Format)*;
 
 ## -------------------------------------------------
 
+!!forward;
+
+# No breaks between Dictionary characters.
+$dictionary $dictionary;
 
 # Rule 3 - CR x LF
 #
@@ -108,6 +111,8 @@ $NumericEx {100};
 $ALetterEx {200};
 $HangulSyllable {200};
 $Hebrew_LetterEx{200};
+$KatakanaEx {400};       # note:  these status values override those from rule 5
+$HiraganaEx {400};       #        by virtue of being numerically larger.
 $IdeographicEx {400};    #
 
 #
@@ -143,23 +148,20 @@ $NumericEx ($MidNumEx | $MidNumLetEx | $Single_QuoteEx) $NumericEx {100};
 
 # rule 13
 
+$KatakanaEx $KatakanaEx{400};
+
 # rule 13a/b
 
 $ALetterEx       $ExtendNumLetEx {200};    #  (13a)
 $Hebrew_LetterEx $ExtendNumLetEx {200};    #  (13a)
 $NumericEx       $ExtendNumLetEx {100};    #  (13a)
+$KatakanaEx      $ExtendNumLetEx {400};    #  (13a)
 $ExtendNumLetEx  $ExtendNumLetEx {200};    #  (13a)
 
 $ExtendNumLetEx  $ALetterEx      {200};    #  (13b)
 $ExtendNumLetEx  $Hebrew_Letter  {200};    #  (13b)
 $ExtendNumLetEx  $NumericEx      {100};    #  (13b)
-
-# Katakana + ExtendNumLet.
-# TODO: Katakana is part of $Dictionary. Allows matching of mixed dict/non dict runs.
-#       Implication needs to be understood.
-
-$Katakana $ExtendNumLetEx    {400};
-$ExtendNumLetEx $Katakana    {400};
+$ExtendNumLetEx  $KatakanaEx     {400};    #  (13b)
 
 # rule 13c
 
@@ -178,10 +180,11 @@ $BackMidNumLetEx          = ($Format | $Extend)* $MidNumLet;
 $BackNumericEx            = ($Format | $Extend)* $Numeric;
 $BackMidNumEx             = ($Format | $Extend)* $MidNum;
 $BackMidLetterEx          = ($Format | $Extend)* $MidLetter;
+$BackKatakanaEx           = ($Format | $Extend)* $Katakana;
 $BackExtendNumLetEx       = ($Format | $Extend)* $ExtendNumLet;
 $BackRegional_IndicatorEx = ($Format | $Extend)* $Regional_Indicator;
 
-(($Format | $Extend)* $dictionary)+;
+$dictionary $dictionary;
 
 # rule 3
 $LF $CR;
@@ -219,15 +222,14 @@ $BackNumericEx ($BackALetterEx | $BackHebrew_LetterEx);
 
 $BackNumericEx ($BackMidNumEx | $BackMidNumLetEx | $BackSingle_QuoteEx) $BackNumericEx;
 
+# rule 13
+
+$BackKatakanaEx $BackKatakanaEx;
 
 # rules 13 a/b
 #
-$BackExtendNumLetEx ($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx | $BackExtendNumLetEx);
-($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx ) $BackExtendNumLetEx; 
-
-#TODO: see comment of corresponding forward rules.
-$BackExtendNumLetEx $Katakana;
-$Katakana $BackExtendNumLetEx;
+$BackExtendNumLetEx ($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx | $BackKatakanaEx | $BackExtendNumLetEx);
+($BackALetterEx | $BackHebrew_LetterEx | $BackNumericEx | $BackKatakanaEx) $BackExtendNumLetEx; 
 
 # rule 13c
 

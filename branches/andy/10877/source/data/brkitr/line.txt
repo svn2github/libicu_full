@@ -97,15 +97,9 @@ $WJ = [:LineBreak =  Word_Joiner:];
 $XX = [:LineBreak =  Unknown:];
 $ZW = [:LineBreak =  ZWSpace:];
 
-$dictionaryThai = [[:LineBreak = Complex_Context:] & [:Script = Thai:]];
-$dictionaryLao  = [[:LineBreak = Complex_Context:] & [:Script = Lao:]];
-$dictionaryKhmer = [[:LineBreak = Complex_Context:] & [:Script = Khmer:]];
-$dictionary = [$dictionaryThai $dictionaryLao $dictionaryKhmer];
+#   Dictionary character set, for triggering language-based break engines.
 
-# TODO: Move all dictionary chars into ALPlus, so that runs will combine with
-#       OP, NL, etc. Let code subdivide from there.
-#       Code will find $dictionary ranges, suppress breaks within chunk between
-#       dictionary and non-dictionary.
+$dictionary = [[:LineBreak = Complex_Context:] & [[:Script = Thai:][:Script = Lao:][:Script = Khmer:]]];
 
 #
 #  Rule LB1.  By default, treat AI  (characters with ambiguous east Asian width),
@@ -114,13 +108,12 @@ $dictionary = [$dictionaryThai $dictionaryLao $dictionaryKhmer];
 #                               XX  (Unknown, unassigned)
 #                         as $AL  (Alphabetic)
 #
-$ALPlus = [[$AL $AI $SA $SG $XX] - $dictionary];
+$ALPlus = [$AL $AI $SA $SG $XX];
 
 #
 #  Combining Marks.   X $CM*  behaves as if it were X.  Rule LB6.
 #
-$ALcm = $ALPlus $CM*;         # Alphabetics, omitting those handled by dictionaries.
-$DLcm = $dictionary $CM*;     # Alphabetics handled by dictionary code.  (Dictionary Letter)
+$ALcm = $ALPlus $CM*;         # Alphabetics, including those handled by dictionaries.
 $BAcm = $BA $CM*;
 $BBcm = $BB $CM*;
 $B2cm = $B2 $CM*;
@@ -155,7 +148,6 @@ $WJcm = $WJ $CM*;
 #
 #  Each class of character can stand by itself as an unbroken token, with trailing combining stuff
 #
-$dictionary $CM+;
 $ALPlus $CM+;
 $BA $CM+;
 $BB $CM+;
@@ -353,7 +345,7 @@ $HLcm ($HYcm | $BAcm) [^$CB]?;
 $SYcm $HLcm;
 
 # LB 22  Do not break between two ellipses, or between letters or numbers and ellipsis.
-($ALcm | $HLcm | $DLcm) $INcm;
+($ALcm | $HLcm) $INcm;
 $CM+     $INcm;     #  by rule 10, any otherwise unattached CM behaves as AL
 $IDcm    $INcm;
 $INcm    $INcm;
@@ -361,7 +353,6 @@ $NUcm    $INcm;
 
 
 # $LB 23  Do not break alphanumerics.
-#         Note: Dictionary characters do break from numbers, and thus are not included here.
 $IDcm  $POcm;
 $ALcm  $NUcm;       # includes $LB19
 $HLcm  $NUcm;
@@ -374,8 +365,8 @@ $NUcm  $HLcm;
 #         Prefixes include currency signs and plus or minus signs.
 #
 $PRcm $IDcm;
-$PRcm ($ALcm | $HLcm | $DLcm);
-$POcm ($ALcm | $HLcm | $DLcm);
+$PRcm ($ALcm | $HLcm);
+$POcm ($ALcm | $HLcm);
 
 #
 # LB 25   Numbers.
@@ -398,15 +389,14 @@ $PRcm ($JLcm | $JVcm | $JTcm | $H2cm | $H3cm);
 #
 ($ALcm | $HLcm) ($ALcm | $HLcm);
 $CM+ ($ALcm | $HLcm);      # The $CM+ is from rule 10, an unattached CM is treated as AL
-$DLcm $DLcm;
 
 # LB 29   Do not break between numeric punctuation and alphabetics (“e.g.”).
 $IScm ($ALcm | $HLcm);
 
 # LB 30    Do not break between letters, numbers, or ordinary symbols and opening or closing parentheses.
-($ALcm | $HLcm | $NUcm | $DLcm) $OPcm;
+($ALcm | $HLcm | $NUcm) $OPcm;
 $CM+ $OPcm;         # The $CM+ is from rule 10, an unattached CM is treated as AL.          
-$CPcm ($ALcm | $HLcm | $NUcm | $DLcm);
+$CPcm ($ALcm | $HLcm | $NUcm);
 
 # LB 30a  Do not break between regional indicators.
 $RIcm $RIcm;
@@ -418,7 +408,6 @@ $RIcm $RIcm;
 
 !!reverse;
 
-$CM+ $dictionary;
 $CM+ $ALPlus;
 $CM+ $BA;
 $CM+ $BB;
@@ -592,7 +581,7 @@ $CM* [$LB20NonBreaks-$CM] $CM* $BB;                   #  BB x .
 $CM* $HL $CM* $SY;
 
 # LB 22
-$CM* $IN $CM* ($ALPlus | $HL | $dictionary);
+$CM* $IN $CM* ($ALPlus | $HL);
 $CM* $IN $CM* $ID;
 $CM* $IN $CM* $IN;
 $CM* $IN $CM* $NU;
@@ -604,8 +593,8 @@ $CM* ($ALPlus | $HL) $CM* $NU;
 
 # LB 24
 $CM* $ID $CM* $PR;
-$CM* ($ALPlus | $HL | $dictionary) $CM* $PR;
-$CM* ($ALPlus | $HL | $dictionary) $CM* $PO;
+$CM* ($ALPlus | $HL) $CM* $PR;
+$CM* ($ALPlus | $HL) $CM* $PO;
 
 
 # LB 25
@@ -623,15 +612,14 @@ $CM* ($H3 | $H2 | $JT | $JV | $JL) $CM* $PR;
 
 # LB 28
 $CM* ($ALPlus | $HL) $CM* ($ALPlus | $HL);
-$CM* $dictionary $CM* $dictionary;
 
 
 # LB 29
 $CM* ($ALPlus | $HL) $CM* $IS;
 
 # LB 30
-$CM* $OP $CM* ($ALPlus | $HL | $NU | $dictionary);
-$CM* ($ALPlus | $HL | $NU | $dictionary) $CM* $CP;
+$CM* $OP $CM* ($ALPlus | $HL | $NU);
+$CM* ($ALPlus | $HL | $NU) $CM* $CP;
 
 # LB 30a
 $CM* $RI $CM* $RI;
@@ -677,5 +665,5 @@ $CM* ($HY | $BA) $CM* $HL;
 #  turn off rule chaining.  We don't want to move more
 #  than necessary.
 #
-[$CM $OP $QU $CL $CP $B2 $PR $HY $BA $SP]+ [^$CM $OP $QU $CL $CP $B2 $PR $HY $BA];
+[$CM $OP $QU $CL $CP $B2 $PR $HY $BA $SP $dictionary]+ [^$CM $OP $QU $CL $CP $B2 $PR $HY $BA $dictionary];
 

@@ -1955,6 +1955,14 @@ public:
     // Return -1 after reaching end of string.
     virtual  int32_t   next(int32_t i) = 0;
 
+    // Return the dictionary characters set for this break type.
+    // Return NULL if there is no dictionary. (Default behavior).
+    // When synthesizing test data, the monkey test framework will not include any
+    // dictionary characters. setText() will accept data with dictionary chars, but the
+    // breaking then obtained from RBBIMonkeyKind.next() considers only rules,
+    // and does not attempt to find dictionary based boundaries.
+    virtual UnicodeSet *dictionarySet() {return NULL;};
+
     virtual ~RBBIMonkeyKind();
     UErrorCode       deferredStatus;
 
@@ -2234,8 +2242,6 @@ private:
     UnicodeSet  *fKatakanaSet;
     UnicodeSet  *fHebrew_LetterSet;
     UnicodeSet  *fALetterSet;
-    // TODO(jungshik): Do we still need this change? 
-    // UnicodeSet  *fALetterSet; // matches ALetterPlus in word.txt
     UnicodeSet  *fSingle_QuoteSet;
     UnicodeSet  *fDouble_QuoteSet;
     UnicodeSet  *fMidNumLetSet;
@@ -2243,10 +2249,10 @@ private:
     UnicodeSet  *fMidNumSet;
     UnicodeSet  *fNumericSet;
     UnicodeSet  *fFormatSet;
-    UnicodeSet  *fOtherSet;
     UnicodeSet  *fExtendSet;
     UnicodeSet  *fExtendNumLetSet;
-    UnicodeSet  *fDictionaryCjkSet;
+    UnicodeSet  *fOtherSet;
+    UnicodeSet  *fDictionarySet;
 
     const UnicodeString  *fText;
 };
@@ -2261,77 +2267,70 @@ RBBIWordMonkey::RBBIWordMonkey()
     fCRSet           = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = CR}]"),           status);
     fLFSet           = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = LF}]"),           status);
     fNewlineSet      = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Newline}]"),      status);
-    fDictionaryCjkSet= new UnicodeSet("[[\\uac00-\\ud7a3][:Han:][:Hiragana:][:Katakana:]]", status);
-    // Exclude Hangul syllables from ALetterSet during testing.
-    // Leave CJK dictionary characters out from the monkey tests!
-#if 0 
-    fALetterSet      = new UnicodeSet("[\\p{Word_Break = ALetter}"
-                                      "[\\p{Line_Break = Complex_Context}"
-                                      "-\\p{Grapheme_Cluster_Break = Extend}"
-                                      "-\\p{Grapheme_Cluster_Break = Control}"
-                                      "]]",
-                                      status);
-#endif
     fRegionalIndicatorSet =  new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Regional_Indicator}]"), status);
     fKatakanaSet      = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Katakana}]"),     status);
     fHebrew_LetterSet = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Hebrew_Letter}]"), status);
     fALetterSet       = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = ALetter}]"), status);
-    fALetterSet->removeAll(*fDictionaryCjkSet);
     fSingle_QuoteSet  = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Single_Quote}]"),    status);
     fDouble_QuoteSet  = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Double_Quote}]"),    status);
     fMidNumLetSet     = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = MidNumLet}]"),    status);
     fMidLetterSet     = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = MidLetter}]"),    status);
     fMidNumSet        = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = MidNum}]"),       status);
-    // TODO: this set used to contain [\\uff10-\\uff19] (fullwidth digits), but this breaks the test
-    // we should figure out why
     fNumericSet       = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Numeric}]"),      status);
     fFormatSet        = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Format}]"),       status);
-    fExtendNumLetSet  = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = ExtendNumLet}]"), status);
     fExtendSet        = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = Extend}]"),       status);
+    fExtendNumLetSet  = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Word_Break = ExtendNumLet}]"), status);
+    fOtherSet         = new UnicodeSet();
 
-    fOtherSet        = new UnicodeSet();
+    // This Dictionary set definition matches that from word break rules.
+    fDictionarySet    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Alphabetic} &"
+                             "[[\\p{script = Thai}] [\\p{script = Lao}] [\\p{script = Khmer}]"
+                             "[\\p{script = Han}] [\\p{script = Hiragana}] [\\p{Word_Break = Katakana}]"
+                             "[\uac00-\ud7a3]]]"),        // Hangul Syllable
+                             status);
     if(U_FAILURE(status)) {
-      deferredStatus = status;
-      return;
+        deferredStatus = status;
+        return;
     }
 
     fOtherSet->complement();
     fOtherSet->removeAll(*fCRSet);
     fOtherSet->removeAll(*fLFSet);
     fOtherSet->removeAll(*fNewlineSet);
+    fOtherSet->removeAll(*fRegionalIndicatorSet);
     fOtherSet->removeAll(*fKatakanaSet);
     fOtherSet->removeAll(*fHebrew_LetterSet);
     fOtherSet->removeAll(*fALetterSet);
     fOtherSet->removeAll(*fSingle_QuoteSet);
     fOtherSet->removeAll(*fDouble_QuoteSet);
+    fOtherSet->removeAll(*fMidNumLetSet);
     fOtherSet->removeAll(*fMidLetterSet);
     fOtherSet->removeAll(*fMidNumSet);
     fOtherSet->removeAll(*fNumericSet);
-    fOtherSet->removeAll(*fExtendNumLetSet);
     fOtherSet->removeAll(*fFormatSet);
     fOtherSet->removeAll(*fExtendSet);
-    fOtherSet->removeAll(*fRegionalIndicatorSet);
-    // Inhibit dictionary characters from being tested at all.
-    fOtherSet->removeAll(*fDictionaryCjkSet);
-    fOtherSet->removeAll(UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{LineBreak = Complex_Context}]"), status));
+    fOtherSet->removeAll(*fExtendNumLetSet);
+    fOtherSet->removeAll(*fDictionarySet);
 
     fSets->addElement(fCRSet,                status);
     fSets->addElement(fLFSet,                status);
     fSets->addElement(fNewlineSet,           status);
     fSets->addElement(fRegionalIndicatorSet, status);
+    fSets->addElement(fKatakanaSet,          status);
     fSets->addElement(fHebrew_LetterSet,     status);
     fSets->addElement(fALetterSet,           status);
     fSets->addElement(fSingle_QuoteSet,      status);
     fSets->addElement(fDouble_QuoteSet,      status);
-    //fSets->addElement(fKatakanaSet,          status); //TODO: work out how to test katakana
-    fSets->addElement(fMidLetterSet,         status);
     fSets->addElement(fMidNumLetSet,         status);
+    fSets->addElement(fMidLetterSet,         status);
     fSets->addElement(fMidNumSet,            status);
     fSets->addElement(fNumericSet,           status);
     fSets->addElement(fFormatSet,            status);
     fSets->addElement(fExtendSet,            status);
-    fSets->addElement(fOtherSet,             status);
     fSets->addElement(fExtendNumLetSet,      status);
+    fSets->addElement(fOtherSet,             status);
+    // Note: do not add fDictionarySet to fSets because dictionary characters are not
+    //       included when generating the randomized test data.
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2522,6 +2521,7 @@ RBBIWordMonkey::~RBBIWordMonkey() {
     delete fCRSet;
     delete fLFSet;
     delete fNewlineSet;
+    delete fRegionalIndicatorSet;
     delete fKatakanaSet;
     delete fHebrew_LetterSet;
     delete fALetterSet;
@@ -2534,9 +2534,8 @@ RBBIWordMonkey::~RBBIWordMonkey() {
     delete fFormatSet;
     delete fExtendSet;
     delete fExtendNumLetSet;
-    delete fRegionalIndicatorSet;
-    delete fDictionaryCjkSet;
     delete fOtherSet;
+    delete fDictionarySet;
 }
 
 
@@ -4126,6 +4125,7 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
 
     numCharClasses = mk.charClasses()->size();
     chClasses      = mk.charClasses();
+    UnicodeSet *dictionarySet = mk.dictionarySet();
 
     // Check for errors that occured during the construction of the MonkeyKind object.
     //  Can't report them where they occured because errln() is a method coming from intlTest,
@@ -4154,17 +4154,25 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
         //   for this loop iteration in event of an error.
         seed = m_seed;
 
-        // Populate a test string with data.
+        // Populate the test string with data, for each character randomly picking first a
+        // character class, then a random character from the class.  Do not choose
+        // dictionary characters.
+
         testText.truncate(0);
         for (i=0; i<TESTSTRINGLEN; i++) {
             int32_t  aClassNum = m_rand() % numCharClasses;
             UnicodeSet *classSet = (UnicodeSet *)chClasses->elementAt(aClassNum);
-            int32_t   charIdx = m_rand() % classSet->size();
-            UChar32   c = classSet->charAt(charIdx);
-            if (c < 0) {   // TODO:  deal with sets containing strings.
-                errln("c < 0");
-                break;
-            }
+            UChar32  c;
+            do {
+                int32_t   charIdx = m_rand() % classSet->size();
+                c = classSet->charAt(charIdx);
+                if (c < 0) {   // TODO:  deal with sets containing strings.
+                    errln("File %s, line %d: Internal test error: set unexpectedly contains a string.",
+                          __FILE__, __LINE__);
+                    c = 0;
+                    break;
+                }
+            } while (dictionarySet != NULL && dictionarySet->contains(c));
             testText.append(c);
         }
 

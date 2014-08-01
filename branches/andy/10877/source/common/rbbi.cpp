@@ -1798,7 +1798,6 @@ UBool DictTextRange::next() {
                 c = utext_previous32(fBreakIterator->fText);
                 break;
             }
-        }
     }
 
     fRangeLimit = utext_getNativeIndex(fBreakIterator->fText);
