@@ -16,6 +16,8 @@
 #include "sharedobject.h"
 #include "unicode/unistr.h"
 #include "utypeinfo.h"
+#include "cstring.h"
+#include "ustr_imp.h"
 
 struct UHashtable;
 
@@ -39,7 +41,8 @@ class U_COMMON_API CacheKey : public CacheKeyBase {
  public:
    virtual ~CacheKey() { }
    virtual int32_t hashCode() const {
-       return UnicodeString(typeid(T).name()).hashCode();
+       const char *s = typeid(T).name();
+       return ustr_hashCharsN(s, uprv_strlen(s));
    }
    virtual UBool operator == (const CacheKeyBase &other) const {
        return typeid(*this) == typeid(other);
