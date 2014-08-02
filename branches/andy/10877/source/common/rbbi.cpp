@@ -620,6 +620,7 @@ int32_t RuleBasedBreakIterator::previous(void) {
             fBreakCache->populate(result, startPos, status);
             result = fBreakCache->preceding(startPos);
         }
+        utext_setNativeIndex(fText, result);
         return result;
     }
 
@@ -1798,6 +1799,7 @@ UBool DictTextRange::next() {
                 c = utext_previous32(fBreakIterator->fText);
                 break;
             }
+        }
     }
 
     fRangeLimit = utext_getNativeIndex(fBreakIterator->fText);
