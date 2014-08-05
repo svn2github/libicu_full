@@ -34,7 +34,7 @@
 
 #   Temp debugging tests 
 <word>
-<data>• •\\u30a1\\u30a2• •</data>
+<data>• •\u30a1\u30a2<400> •</data>
 
 
 ########################################################################################
@@ -618,6 +618,9 @@ What is the proper use of the abbreviation pp.? •Yes, I am definatelly 12" tal
 <data>•\u0E01\u0E39<200>\u0020•\u0E01\u0E34\u0E19<200>\u0E01\u0E38\u0E49\u0E07<200>\
 \u0020•\u0E1B\u0E34\u0E49\u0E48<200>\u0E07\u0E2D<200>\u0E22\u0E39\u0E48<200>\
 \u0E43\u0E19<200>\u0E16\u0E49\u0E33<200></data>
+
+# Mixture of Thai and Latin. Should be boundaries at the start and end of the Thai.
+<data>•cat<200>กงกอน<200>dog<200></data>
 
 <line>
 <data>•\u0E01\u0E39\u0020•\u0E01\u0E34\u0E19•\u0E01\u0E38\u0E49\u0E07\

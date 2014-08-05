@@ -1751,7 +1751,10 @@ UBool DictTextRange::next() {
         return FALSE;
     }
 
-    // Advance to the first dictionary character. Normally the first char.
+    // Advance to the first word-like character. Normally the first char.
+    // This is normally a dictionary character, but could be a non-dictionary alphabetic
+    // if the text contains a mixture of scripts mixed together.
+
     fDictStart = -1;
     int32_t category = 0;
     UChar32 c;
@@ -1763,41 +1766,65 @@ UBool DictTextRange::next() {
             break;
         }
         UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
-        if ((category & 0x4000) != 0) {
+        if ((category & 0x4000) != 0 || u_isalpha(c)) {
             fDictStart = index;
             break;
         }
     }
 
-    if ((category & 0x4000) == 0) {
+    if (fDictStart == -1) {
         fLBE = NULL;
         fRangeLimit = fFinalLimit;
         return FALSE;
     }
 
-    // This range will contain all contiguous chars belonging to 
-    //    this break engine plus any non-dictionary characters.
-    //    (The Break Rules will keep non-Dictionary letters out of the larger region
-    //     being processed, but there may be combining or format chars mixed in.)
-    //  TODO: probably need to close dictionary sets over normalization forms.
-    fLBE = fBreakIterator->getLanguageBreakEngine(c);
-
     fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
-    while (utext_getNativeIndex(fBreakIterator->fText) < fFinalLimit) {
-        c = utext_next32(fBreakIterator->fText);
-        if (c == U_SENTINEL) {
-            U_ASSERT(FALSE);  // Should not happen.
-            break;
-        }
-        UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
-        if ((category & 0x4000)) {   // It's a dictionary character
-            if (fLBE->handles(c, fBreakIterator->fBreakType)) {
+    if ((category & 0x4000) == 0) {
+        // This range contains non-dictionary alphabetic chars.
+        // The end of the range is either an occurence of a dictionary character
+        // or the overall end of the text identified by the rules.
+        fLBE = NULL;
+        while (utext_getNativeIndex(fBreakIterator->fText) < fFinalLimit) {
+            c = utext_next32(fBreakIterator->fText);
+            if (c == U_SENTINEL) {
+                U_ASSERT(FALSE);  // Should not happen.
+                break;
+            }
+            UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
+            if ((category & 0x4000) == 0) {
                 fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
             } else {
-                // Hit a dictionary character not belonging to this language break engine.
-                // Back up one; end of this range; this character needs to go to the next range.
+                // Hit any dictionary character; this terminates this non-dictionary range.
+                // Back up to last char in this range.
                 c = utext_previous32(fBreakIterator->fText);
                 break;
+            }
+        }
+    } else {
+        // This range will contain all contiguous chars belonging to 
+        //    the same break engine plus any non-dictionary, non-alphabetic characters.
+        //  TODO: probably need to close dictionary sets over normalization forms.
+        fLBE = fBreakIterator->getLanguageBreakEngine(c);
+
+        while (utext_getNativeIndex(fBreakIterator->fText) < fFinalLimit) {
+            c = utext_next32(fBreakIterator->fText);
+            if (c == U_SENTINEL) {
+                U_ASSERT(FALSE);  // Should not happen.
+                break;
+            }
+            UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
+            if ((category & 0x4000) != 0 || u_isalpha(c)) {   // It's a word-like character
+                if (fLBE->handles(c, fBreakIterator->fBreakType)) {
+                    // Character belongs to language break engine for this range.
+                    fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
+                } else {
+                    // Character doesn't belong to this range.
+                    // It's either a dictionary char belonging to a different language break engine,
+                    // or a non-dictionary alphabetic.
+                    // Back up one; this character will go with the next range.
+                    c = utext_previous32(fBreakIterator->fText);
+                    break;
+                }
             }
         }
     }
@@ -1843,7 +1870,14 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
 
     fRawBreaks->removeAllElements();
     utext_setNativeIndex(fThis->fText, range.fDictStart);
-    range.fLBE->findBreaks(fThis->fText, range.fDictLimit, fThis->fBreakType, *fRawBreaks, status);
+    if (range.fLBE != NULL) {
+        range.fLBE->findBreaks(fThis->fText, range.fDictLimit, fThis->fBreakType, *fRawBreaks, status);
+    } else {
+        // Range containing non-dictionary characters only.
+        // Has boundaries at its start and end only.
+        fRawBreaks->addElement(range.fDictStart, status);
+        fRawBreaks->addElement(range.fDictLimit, status);
+    }
 
     // Break engine should always show a break at the start and end
     // of the region it processed.

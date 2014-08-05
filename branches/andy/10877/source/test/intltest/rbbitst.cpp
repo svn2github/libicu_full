@@ -3681,7 +3681,6 @@ void RBBITest::TestWordBreaks(void)
     "\\u398c\\U000104a5\\U0001d173\\u102d\\u002e\\uca3b\\u002e\\u002c\\u5622",
     "\\uac00\\u3588\\u009c\\u0953\\u194b",
     "\\u200e\\U000e0072\\u0a4b\\U000e003f\\ufd2b\\u2027\\u002e\\u002e",
-    "\\u0602\\u2019\\ua191\\U000e0063\\u0a4c\\u003a\\ub4b5\\u003a\\u827f\\u002e",
     "\\u2f1f\\u1634\\u05f8\\u0944\\u04f2\\u0cdf\\u1f9c\\u05f4\\u002e",
     "\\U000e0042\\u002e\\u0fb8\\u09ef\\u0ed1\\u2044",
     "\\u003b\\u024a\\u102e\\U000e0071\\u0600",
@@ -3702,7 +3701,6 @@ void RBBITest::TestWordBreaks(void)
     "\\u0233\\U000e0020\\u0a69\\u0d6a",
     "\\u206f\\u0741\\ub3ab\\u2019\\ubcac\\u2019",
     "\\u18f4\\U000e0049\\u20e7\\u2027",
-    "\\ub315\\U0001d7e5\\U000e0073\\u0c47\\u06f2\\u0c6a\\u0037\\u10fe",
     "\\ua183\\u102d\\u0bec\\u003a",
     "\\u17e8\\u06e7\\u002e\\u096d\\u003b",
     "\\u003a\\u0e57\\u0fad\\u002e",
@@ -3712,7 +3710,6 @@ void RBBITest::TestWordBreaks(void)
     "\\u003a\\u0664\\u00b7\\u1fba",
     "\\u003b\\u0027\\u00b7\\u47a3",
     "\\u2027\\U000e0067\\u0a42\\u00b7\\u4edf\\uc26c\\u003a\\u4186\\u041b",
-    "\\u0027\\u003a\\U0001d70f\\U0001d7df\\ubf4a\\U0001d7f5\\U0001d177\\u003a\\u0e51\\u1058\\U000e0058\\u00b7\\u0673",
     "\\uc30d\\u002e\\U000e002c\\u0c48\\u003a\\ub5a1\\u0661\\u002c",
     };
     int loop;
@@ -3869,13 +3866,9 @@ void RBBITest::TestLineBreaks(void)
      "\\u2014\\u0020\\u000a\\u17c5\\u24fc",
      "\\ufffc\\u0020\\u2116\\uff6c\\u200b\\u0ac3\\U0001028f",
      "\\uaeb0\\u0344\\u0085\\ufffc\\u073b\\u2010",
-     "\\ufeff\\u0589\\u0085\\u0eb8\\u30fd\\u002f\\u003a\\u2014\\ufe43",
      "\\u09cc\\u256a\\u276d\\u002d\\u3085\\u000d\\u0e05\\u2028\\u0fbb",
      "\\u2034\\u00bb\\u0ae6\\u300c\\u0020\\u31f8\\ufffc",
      "\\u2116\\u0ed2\\uff64\\u02cd\\u2001\\u2060",
-         "\\u809d\\u2e02\\u0f0a\\uc48f\\u2540\\u000d\\u0cef\\u003a\\u0e4d"
-         "\\U000e0172\\U000e005c\\u17cf\\U00010ca6\\ufeff\\uf621\\u06f3\\uffe5"
-         "\\u0ea2\\ufeff\\udcea\\u3085\\ua874\\u000a\\u0020\\u000b\\u200b",
      "\\ufe10\\u2060\\u1a5a\\u2060\\u17e4\\ufffc\\ubbe1\\ufe15\\u0020\\u00a0",
          "\\u2060\\u2213\\u200b\\u2019\\uc2dc\\uff6a\\u1736\\u0085\\udb07",
     };
@@ -4490,8 +4483,7 @@ void RBBITest::TestBug9983(void)  {
 //                  for tracing  without a lot of unwanted extra stuff happening.
 //
 void RBBITest::TestDebug(void) {
-    // UnicodeString testData = UnicodeString("\\u0602\\u2019\\ua191\\U000e0063\\u0a4c\\u003a\\ub4b5\\u003a\\u827f\\u002e").unescape();
-    UnicodeString testData = UnicodeString("\\u0041\\ub4b5\\u003a\\u827f").unescape();
+    UnicodeString testData = UnicodeString("\\ub55c\\u0a68\\U000e0037\\u0cd6\\u002c\\ub959").unescape();
     UErrorCode   status = U_ZERO_ERROR;
     int pos = 0;
 
