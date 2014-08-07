@@ -20,7 +20,9 @@
 #include "unicode/measure.h"
 #include "unicode/measunit.h"
 #include "unicode/tmunit.h"
+#include "unicode/plurrule.h"
 #include "charstr.h"
+#include "unicode/reldatefmt.h"
 
 #define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
 
@@ -37,6 +39,7 @@ public:
 
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
+    void TestMine();
     void TestBasic();
     void TestCompatible53_1();
     void TestGetAvailable();
@@ -94,6 +97,7 @@ void MeasureFormatTest::runIndexedTest(
         logln("TestSuite MeasureFormatTest: ");
     }
     TESTCASE_AUTO_BEGIN;
+    TESTCASE_AUTO(TestMine);
     TESTCASE_AUTO(TestBasic);
     TESTCASE_AUTO(TestCompatible53_1);
     TESTCASE_AUTO(TestGetAvailable);
@@ -113,6 +117,20 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestGroupingSeparator);
     TESTCASE_AUTO(TestDoubleZero);
     TESTCASE_AUTO_END;
+}
+
+void MeasureFormatTest::TestMine() {
+    clock_t start = clock();
+    Locale en("en");
+    UErrorCode status = U_ZERO_ERROR;
+/*
+    MeasureFormat fmt(en, UMEASFMT_WIDTH_WIDE, status);
+    MeasureFormat fmt2(en, UMEASFMT_WIDTH_SHORT, status);
+*/
+    for (int i=0; i < 1000000; ++i) {
+      RelativeDateTimeFormatter r(en, status);
+    }
+    errln("Time taken %f", ((double) (clock() - start)) / CLOCKS_PER_SEC);
 }
 
 void MeasureFormatTest::TestCompatible53_1() {

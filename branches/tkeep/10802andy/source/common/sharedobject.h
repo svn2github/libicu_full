@@ -27,22 +27,15 @@ U_NAMESPACE_BEGIN
 class U_COMMON_API SharedObject : public UObject {
 public:
     /** Initializes totalRefCount, softRefCount to 0. */
-    SharedObject() : totalRefCount(0), softRefCount(0), status(U_ZERO_ERROR) {}
-
-    /** Initializes totalRefCount, softRefCount to 0. */
-    SharedObject(UErrorCode creationError) :
-            totalRefCount(0), softRefCount(0), status(creationError) {}
+    SharedObject() : totalRefCount(0), softRefCount(0) {}
 
     /** Initializes totalRefCount, softRefCount to 0. */
     SharedObject(const SharedObject &other)
         : UObject(other),
           totalRefCount(0),
-          softRefCount(0),
-          status(other.status) {}
+          softRefCount(0) {}
 
     virtual ~SharedObject();
-
-    UErrorCode getCreationError() const { return status; }
 
     /**
      * Increments the number of references to this object. Thread-safe.
@@ -135,7 +128,6 @@ public:
 private:
     mutable u_atomic_int32_t totalRefCount;
     mutable u_atomic_int32_t softRefCount;
-    UErrorCode status;
 };
 
 U_NAMESPACE_END
