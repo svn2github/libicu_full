@@ -125,7 +125,7 @@ void UnifiedCache::putErrorIfAbsent(
         if (clonedKey == NULL) {
             return;
         }
-        clonedKey->status = status;
+        clonedKey->creationStatus = status;
         _put(clonedKey, gNoValue);
     }
     if (_inProgress(element)) {
@@ -232,7 +232,9 @@ const SharedObject *UnifiedCache::_poll(
 }
 
 const SharedObject *UnifiedCache::_get(
-        const CacheKeyBase &key, UErrorCode &status) const {
+        const CacheKeyBase &key,
+        const void *creationContext,
+        UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -243,25 +245,25 @@ const SharedObject *UnifiedCache::_get(
     if (result != NULL) {
         return result;
     }
-    result = key.createObject(status);
+    result = key.createObject(creationContext, status);
     if (U_FAILURE(status)) {
         putErrorIfAbsent(key, status);
         status = U_ZERO_ERROR;
     } else if (result != NULL) {
         _putIfAbsent(key, result);
     }
-    return _get(key, status);
+    return _get(key, creationContext, status);
 }
 
 void UnifiedCache::_writeError(const UHashElement *element, UErrorCode status) {
     const CacheKeyBase *theKey = (const CacheKeyBase *) element->key.pointer;
-    theKey->status = status;
+    theKey->creationStatus = status;
 }
 
 const SharedObject *UnifiedCache::_fetch(
         const UHashElement *element, UErrorCode &status) {
     const CacheKeyBase *theKey = (const CacheKeyBase *) element->key.pointer;
-    status = theKey->status;
+    status = theKey->creationStatus;
     if (U_FAILURE(status)) {
         return NULL;
     }

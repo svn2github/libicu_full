@@ -1718,7 +1718,7 @@ class UCTMultiThreadItem : public SharedObject {
 
 template<>
 UCTMultiThreadItem *LocaleCacheKey<UCTMultiThreadItem>::createObject(
-        UErrorCode & /* status */) const {
+        const void * /*unused*/, UErrorCode & /* status */) const {
     // Since multiple threads are hitting the cache for the first time,
     // no objects should be created yet.
     umtx_lock(&gCTMutex);

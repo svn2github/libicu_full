@@ -142,7 +142,7 @@ PluralRules::createDefaultRules(UErrorCode& status) {
 
 template<>
 SharedPluralRules *LocaleCacheKey<SharedPluralRules>::createObject(
-        UErrorCode &status) const {
+        const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
     PluralRules *pr = PluralRules::internalForLocale(
             localeId, UPLURAL_TYPE_CARDINAL, status);

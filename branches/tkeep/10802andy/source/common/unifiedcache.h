@@ -28,17 +28,20 @@ class UnifiedCache;
 
 class U_COMMON_API CacheKeyBase: public UObject {
  public:
-   CacheKeyBase() : status(U_ZERO_ERROR) {}
+   CacheKeyBase() : creationStatus(U_ZERO_ERROR) {}
+   CacheKeyBase(const CacheKeyBase &other) 
+           : creationStatus(other.creationStatus) { }
    virtual ~CacheKeyBase();
    virtual int32_t hashCode() const = 0;
    virtual CacheKeyBase *clone() const = 0;
    virtual UBool operator == (const CacheKeyBase &other) const = 0;
-   virtual SharedObject *createObject(UErrorCode &status) const = 0;
+   virtual SharedObject *createObject(
+           const void *creationContext, UErrorCode &status) const = 0;
    UBool operator != (const CacheKeyBase &other) const {
        return !(*this == other);
    }
  private:
-   mutable UErrorCode status;
+   mutable UErrorCode creationStatus;
    friend class UnifiedCache;
 };
 
@@ -84,7 +87,8 @@ class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
    virtual CacheKeyBase *clone() const {
        return new LocaleCacheKey<T>(*this);
    }
-   virtual T *createObject(UErrorCode &status) const;
+   virtual T *createObject(
+           const void *creationContext, UErrorCode &status) const;
 };
 
 class U_COMMON_API UnifiedCache : public UObject {
@@ -93,10 +97,21 @@ class U_COMMON_API UnifiedCache : public UObject {
     * @internal
     */
    UnifiedCache(UErrorCode &status);
+
    static const UnifiedCache *getInstance(UErrorCode &status);
+
    template<typename T>
    UBool get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
-       const T *value = (const T *) _get(key, status);
+       return get(key, NULL, ptr, status);
+   }
+
+   template<typename T>
+   UBool get(
+           const CacheKey<T>& key,
+           const void *creationContext,
+           const T *&ptr,
+           UErrorCode &status) const {
+       const T *value = (const T *) _get(key, creationContext, status);
        if (U_FAILURE(status)) {
             return FALSE;
        }
@@ -154,7 +169,10 @@ class U_COMMON_API UnifiedCache : public UObject {
            const CacheKeyBase &key,
            UBool pollForGet,
            UErrorCode &status) const;
-   const SharedObject *_get(const CacheKeyBase &key, UErrorCode &status) const;
+   const SharedObject *_get(
+           const CacheKeyBase &key,
+           const void *creationContext,
+           UErrorCode &status) const;
 };
 
 U_NAMESPACE_END

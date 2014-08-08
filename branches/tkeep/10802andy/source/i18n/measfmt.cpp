@@ -290,7 +290,7 @@ static NumericDateFormatters *loadNumericDateFormatters(
 
 template<>
 MeasureFormatCacheData *LocaleCacheKey<MeasureFormatCacheData>::createObject(
-        UErrorCode &status) const {
+        const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
     static UNumberFormatStyle currencyStyles[] = {

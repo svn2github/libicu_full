@@ -27,7 +27,8 @@ class UCTItem2 : public SharedObject {
 };
 
 template<>
-UCTItem *LocaleCacheKey<UCTItem>::createObject(UErrorCode &status) const {
+UCTItem *LocaleCacheKey<UCTItem>::createObject(
+        const void * /*unused*/, UErrorCode &status) const {
     if (uprv_strcmp(fLoc.getName(), "zh") == 0) {
         status = U_MISSING_RESOURCE_ERROR;
         return NULL;
@@ -52,7 +53,8 @@ UCTItem *LocaleCacheKey<UCTItem>::createObject(UErrorCode &status) const {
 }
 
 template<>
-UCTItem2 *LocaleCacheKey<UCTItem2>::createObject(UErrorCode & /*status*/) const {
+UCTItem2 *LocaleCacheKey<UCTItem2>::createObject(
+        const void * /*unused*/, UErrorCode & /*status*/) const {
     return NULL;
 }
 
