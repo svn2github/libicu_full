@@ -35,7 +35,7 @@ class U_COMMON_API CacheKeyBase: public UObject {
    virtual int32_t hashCode() const = 0;
    virtual CacheKeyBase *clone() const = 0;
    virtual UBool operator == (const CacheKeyBase &other) const = 0;
-   virtual SharedObject *createObject(
+   virtual const SharedObject *createObject(
            const void *creationContext, UErrorCode &status) const = 0;
    UBool operator != (const CacheKeyBase &other) const {
        return !(*this == other);
@@ -87,7 +87,7 @@ class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
    virtual CacheKeyBase *clone() const {
        return new LocaleCacheKey<T>(*this);
    }
-   virtual T *createObject(
+   virtual const T *createObject(
            const void *creationContext, UErrorCode &status) const;
 };
 
@@ -122,26 +122,6 @@ class U_COMMON_API UnifiedCache : public UObject {
    }
 
    template<typename T>
-   UBool poll(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
-       const T *value = (const T *) _poll(key, FALSE, status);
-       if (U_FAILURE(status) || value == NULL) {
-            return FALSE;
-       }
-       SharedObject::copyPtr(value, ptr);
-
-       // We have to manually remove the reference that _poll adds.
-       value->removeRef();
-       return TRUE;
-   }
-  
-   template<typename T>
-   void putIfAbsent(const CacheKey<T>& key, const T *ptr) const {
-       _putIfAbsent(key, ptr);
-   }
-
-   void putErrorIfAbsent(const CacheKeyBase& key, UErrorCode status) const;
-
-   template<typename T>
    static UBool getByLocale(
            const Locale &loc, const T *&ptr, UErrorCode &status) {
        const UnifiedCache *cache = getInstance(status);
@@ -157,22 +137,28 @@ class U_COMMON_API UnifiedCache : public UObject {
    UHashtable *fHashtable;
    UnifiedCache(const UnifiedCache &other);
    UnifiedCache &operator=(const UnifiedCache &other);
-   static void _writeError(
-           const UHashElement *element, UErrorCode status);
-   static const SharedObject *_fetch(
-           const UHashElement *element, UErrorCode &status);
-   static UBool _inProgress(const UHashElement *element);
    UBool _put(CacheKeyBase *keyToBeAdopted, const SharedObject *value) const;
    void _flush(UBool all) const;
-   void _putIfAbsent(const CacheKeyBase &key, const SharedObject *value) const;
+   void _putErrorIfAbsent(
+           const CacheKeyBase& key,
+           UErrorCode creationStatus) const;
+   void _putIfAbsent(
+           const CacheKeyBase &key,
+           const SharedObject *value) const;
    const SharedObject *_poll(
            const CacheKeyBase &key,
-           UBool pollForGet,
            UErrorCode &status) const;
    const SharedObject *_get(
            const CacheKeyBase &key,
            const void *creationContext,
            UErrorCode &status) const;
+   static void _writeError(
+           const UHashElement *element, UErrorCode status);
+   static const SharedObject *_fetch(
+           const UHashElement *element, UErrorCode &status);
+   static const SharedObject *_fetchAddingRef(
+           const UHashElement *element, UErrorCode &status);
+   static UBool _inProgress(const UHashElement *element);
 };
 
 U_NAMESPACE_END

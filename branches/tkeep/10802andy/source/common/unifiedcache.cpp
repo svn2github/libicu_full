@@ -115,7 +115,7 @@ int32_t UnifiedCache::keyCount() const {
     return uhash_count(fHashtable);
 }
 
-void UnifiedCache::putErrorIfAbsent(
+void UnifiedCache::_putErrorIfAbsent(
         const CacheKeyBase &key, UErrorCode status) const {
     U_ASSERT(U_FAILURE(status));
     Mutex lock(&gCacheMutex);
@@ -200,7 +200,7 @@ void UnifiedCache::_putIfAbsent(
 }
 
 const SharedObject *UnifiedCache::_poll(
-        const CacheKeyBase &key, UBool pollForGet, UErrorCode &status) const {
+        const CacheKeyBase &key, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -217,16 +217,14 @@ const SharedObject *UnifiedCache::_poll(
         }
         return result;
     }
-    if (pollForGet) {
-        CacheKeyBase *clonedKey = key.clone();
-        if (clonedKey == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return NULL;
-        }
-        if (!_put(clonedKey, gNoValue)) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return NULL;
-        }
+    CacheKeyBase *clonedKey = key.clone();
+    if (clonedKey == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    if (!_put(clonedKey, gNoValue)) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
     }
     return NULL;
 }
@@ -238,7 +236,7 @@ const SharedObject *UnifiedCache::_get(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    const SharedObject *result = _poll(key, TRUE, status);
+    const SharedObject *result = _poll(key, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -247,10 +245,14 @@ const SharedObject *UnifiedCache::_get(
     }
     result = key.createObject(creationContext, status);
     if (U_FAILURE(status)) {
-        putErrorIfAbsent(key, status);
+        _putErrorIfAbsent(key, status);
         status = U_ZERO_ERROR;
     } else if (result != NULL) {
+        if (result->getRefCount() == 0) {
+            result->addRef();
+        }
         _putIfAbsent(key, result);
+        result->removeRef();
     }
     return _get(key, creationContext, status);
 }

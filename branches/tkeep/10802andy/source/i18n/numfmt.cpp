@@ -1235,7 +1235,7 @@ static void U_CALLCONV nscacheInit() {
 }
 
 template<>
-SharedNumberFormat *LocaleCacheKey<SharedNumberFormat>::createObject(
+const SharedNumberFormat *LocaleCacheKey<SharedNumberFormat>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
     NumberFormat *nf = NumberFormat::internalCreateInstance(

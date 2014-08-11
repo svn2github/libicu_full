@@ -289,7 +289,7 @@ static NumericDateFormatters *loadNumericDateFormatters(
 }
 
 template<>
-MeasureFormatCacheData *LocaleCacheKey<MeasureFormatCacheData>::createObject(
+const MeasureFormatCacheData *LocaleCacheKey<MeasureFormatCacheData>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));

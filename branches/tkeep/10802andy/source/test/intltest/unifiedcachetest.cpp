@@ -27,33 +27,24 @@ class UCTItem2 : public SharedObject {
 };
 
 template<>
-UCTItem *LocaleCacheKey<UCTItem>::createObject(
+const UCTItem *LocaleCacheKey<UCTItem>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     if (uprv_strcmp(fLoc.getName(), "zh") == 0) {
         status = U_MISSING_RESOURCE_ERROR;
         return NULL;
     }
     if (uprv_strcmp(fLoc.getLanguage(), fLoc.getName()) != 0) {
-        const UnifiedCache *cache = UnifiedCache::getInstance(status);
         const UCTItem *item = NULL;
-        UErrorCode pollStatus = U_ZERO_ERROR;
-        if (cache->poll(
-                LocaleCacheKey<UCTItem>(
-                        fLoc.getLanguage()), item, pollStatus)) {
-            cache->putIfAbsent(*this, item);
-            item->removeRef();
+        if (!UnifiedCache::getByLocale(fLoc.getLanguage(), item, status)) {
             return NULL;
         }
-        if (U_FAILURE(pollStatus)) {
-            cache->putErrorIfAbsent(*this, pollStatus);
-            return NULL;
-        }
+        return item;
     }
     return new UCTItem(fLoc.getName());
 }
 
 template<>
-UCTItem2 *LocaleCacheKey<UCTItem2>::createObject(
+const UCTItem2 *LocaleCacheKey<UCTItem2>::createObject(
         const void * /*unused*/, UErrorCode & /*status*/) const {
     return NULL;
 }
@@ -95,8 +86,8 @@ void UnifiedCacheTest::TestBasic() {
     if (enGb != enUs) {
         errln("Expected en_GB and en_US to resolve to same object.");
     } 
-    if (fr == frFr) {
-        errln("Expected fr and fr_FR to resolve to different object.");
+    if (fr != frFr) {
+        errln("Expected fr and fr_FR to resolve to same object.");
     } 
     if (enGb == fr) {
         errln("Expected en_GB and fr to return different objects.");
@@ -117,7 +108,7 @@ void UnifiedCacheTest::TestBasic() {
     assertEquals("", 2, cache->keyCount());
     SharedObject::clearPtr(fr);
     cache->flush();
-    assertEquals("", 1, cache->keyCount());
+    assertEquals("", 2, cache->keyCount());
     SharedObject::clearPtr(frFr);
     cache->flush();
     assertEquals("", 0, cache->keyCount());
