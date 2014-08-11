@@ -11,11 +11,12 @@
 #ifndef __UNIFIED_CACHE_H__
 #define __UNIFIED_CACHE_H__
 
+#include "utypeinfo.h"  // for 'typeid' to work
+
 #include "unicode/uobject.h"
 #include "unicode/locid.h"
 #include "sharedobject.h"
 #include "unicode/unistr.h"
-#include "utypeinfo.h"
 #include "cstring.h"
 #include "ustr_imp.h"
 
@@ -26,7 +27,7 @@ U_NAMESPACE_BEGIN
 
 class UnifiedCache;
 
-class U_COMMON_API CacheKeyBase: public UObject {
+class U_COMMON_API CacheKeyBase : public UObject {
  public:
    CacheKeyBase() : creationStatus(U_ZERO_ERROR) {}
    CacheKeyBase(const CacheKeyBase &other) 

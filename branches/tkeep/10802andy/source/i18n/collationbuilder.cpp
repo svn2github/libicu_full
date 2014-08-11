@@ -90,6 +90,7 @@ RuleBasedCollator::RuleBasedCollator()
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -99,6 +100,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -110,6 +112,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -122,6 +125,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -135,6 +139,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -147,6 +152,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -176,7 +182,7 @@ RuleBasedCollator::internalBuildTailoring(const UnicodeString &rules,
         return;
     }
     t->actualLocale.setToBogus();
-    adoptTailoring(t.orphan());
+    adoptTailoring(t.orphan(), errorCode);
     // Set attributes after building the collator,
     // to keep the default settings consistent with the rule string.
     if(strength != UCOL_DEFAULT) {

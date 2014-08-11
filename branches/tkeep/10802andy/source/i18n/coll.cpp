@@ -456,21 +456,17 @@ Collator* U_EXPORT2 Collator::createInstance(const Locale& desiredLocale,
 }
 
 
-Collator* Collator::makeInstance(const Locale&  desiredLocale, 
-                                         UErrorCode& status)
-{
-    Locale validLocale("");
-    const CollationTailoring *t =
-        CollationLoader::loadTailoring(desiredLocale, validLocale, status);
+Collator* Collator::makeInstance(const Locale&  desiredLocale, UErrorCode& status) {
+    const CollationCacheEntry *entry = CollationLoader::loadTailoring(desiredLocale, status);
     if (U_SUCCESS(status)) {
-        Collator *result = new RuleBasedCollator(t, validLocale);
+        Collator *result = new RuleBasedCollator(entry);
         if (result != NULL) {
             return result;
         }
         status = U_MEMORY_ALLOCATION_ERROR;
     }
-    if (t != NULL) {
-        t->deleteIfZeroRefCount();
+    if (entry != NULL) {
+        entry->deleteIfZeroRefCount();
     }
     return NULL;
 }
