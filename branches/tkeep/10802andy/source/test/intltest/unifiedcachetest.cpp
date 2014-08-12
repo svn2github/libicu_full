@@ -74,6 +74,7 @@ void UnifiedCacheTest::TestBasic() {
     const UnifiedCache *cache = UnifiedCache::getInstance(status);
     assertSuccess("", status);
     cache->flush();
+    int32_t baseCount = cache->keyCount();
     const UCTItem *en = NULL;
     const UCTItem *enGb = NULL;
     const UCTItem *enUs = NULL;
@@ -96,23 +97,23 @@ void UnifiedCacheTest::TestBasic() {
     assertSuccess("", status);
     // en_US, en_GB, en share one object; fr_FR and fr don't share.
     // 5 keys in all.
-    assertEquals("", 5, cache->keyCount());
+    assertEquals("", baseCount + 5, cache->keyCount());
     SharedObject::clearPtr(enGb);
     cache->flush();
-    assertEquals("", 5, cache->keyCount());
+    assertEquals("", baseCount + 5, cache->keyCount());
     SharedObject::clearPtr(enUs);
     SharedObject::clearPtr(en);
     cache->flush();
     // With en_GB and en_US and en cleared there are no more hard references to
     // the "en" object, so it gets flushed and the keys that refer to it
     // get removed from the cache.
-    assertEquals("", 2, cache->keyCount());
+    assertEquals("", baseCount + 2, cache->keyCount());
     SharedObject::clearPtr(fr);
     cache->flush();
-    assertEquals("", 2, cache->keyCount());
+    assertEquals("", baseCount + 2, cache->keyCount());
     SharedObject::clearPtr(frFr);
     cache->flush();
-    assertEquals("", 0, cache->keyCount());
+    assertEquals("", baseCount + 0, cache->keyCount());
 }
 
 void UnifiedCacheTest::TestError() {
@@ -120,6 +121,7 @@ void UnifiedCacheTest::TestError() {
     const UnifiedCache *cache = UnifiedCache::getInstance(status);
     assertSuccess("", status);
     cache->flush();
+    int32_t baseCount = cache->keyCount();
     const UCTItem *zh = NULL;
     const UCTItem *zhTw = NULL;
     const UCTItem *zhHk = NULL;
@@ -140,10 +142,10 @@ void UnifiedCacheTest::TestError() {
         errln("Expected U_MISSING_RESOURCE_ERROR");
     }
     // 3 keys in cache zh, zhTW, zhHk all pointing to error placeholders
-    assertEquals("", 3, cache->keyCount());
+    assertEquals("", baseCount + 3, cache->keyCount());
     cache->flush();
     // error placeholders have no hard references so they always get flushed. 
-    assertEquals("", 0, cache->keyCount());
+    assertEquals("", baseCount + 0, cache->keyCount());
 }
 
 void UnifiedCacheTest::TestHashEquals() {
