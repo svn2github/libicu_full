@@ -79,6 +79,11 @@ class LanguageBreakEngine : public UMemory {
                            UVector32 &foundBreaks,
                            UErrorCode &status) const = 0;
 
+  /**
+   * @param The type of break to get tag values for.
+   * @return The status tag values for breaks found using this break engine.
+   */
+  virtual int32_t getTagValue(int32_t breakType) const = 0;
 };
 
 /*******************************************************************
@@ -210,6 +215,10 @@ class UnhandledEngine : public LanguageBreakEngine {
   */
   virtual void handleCharacter(UChar32 c, int32_t breakType);
 
+  /**
+   * @return The status tag for word breaks found using this break engine.
+   */
+  virtual int32_t getTagValue(int32_t breakType) const;
 };
 
 /*******************************************************************

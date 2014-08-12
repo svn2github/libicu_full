@@ -107,6 +107,11 @@ UnhandledEngine::handleCharacter(UChar32 c, int32_t breakType) {
     }
 }
 
+int32_t
+UnhandledEngine::getTagValue(int32_t /*breakType*/) const {
+  return 0;
+}
+
 /*
  ******************************************************************
  */
@@ -229,27 +234,23 @@ ICULanguageBreakFactory::loadEngineFor(UChar32 c, int32_t breakType) {
                 break;
 
 #if !UCONFIG_NO_NORMALIZATION
-                // CJK not available w/o normalization
-            case USCRIPT_HANGUL:
-                engine = new CjkBreakEngine(m, kKorean, status);
-                break;
-
+            // CJK not available w/o normalization
             // use same BreakEngine and dictionary for both Chinese and Japanese
             case USCRIPT_HIRAGANA:
             case USCRIPT_KATAKANA:
             case USCRIPT_HAN:
-                engine = new CjkBreakEngine(m, kChineseJapanese, status);
+                engine = new CjBreakEngine(m, status);
                 break;
 #if 0
             // TODO: Have to get some characters with script=common handled
-            // by CjkBreakEngine (e.g. U+309B). Simply subjecting
-            // them to CjkBreakEngine does not work. The engine has to
+            // by CjBreakEngine (e.g. U+309B). Simply subjecting
+            // them to CjBreakEngine does not work. The engine has to
             // special-case them.
             case USCRIPT_COMMON:
             {
                 UBlockCode block = ublock_getCode(code);
                 if (block == UBLOCK_HIRAGANA || block == UBLOCK_KATAKANA)
-                   engine = new CjkBreakEngine(dict, kChineseJapanese, status);
+                   engine = new CjBreakEngine(dict, status);
                 break;
             }
 #endif

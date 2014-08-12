@@ -95,6 +95,11 @@ class DictionaryBreakEngine : public LanguageBreakEngine {
                            UVector32 &foundBreaks,
                            UErrorCode &status) const;
 
+  /**
+   * @return The status tag for word breaks found using this break engine.
+   */
+  virtual int32_t getTagValue(int32_t breakType) const;
+
  protected:
 
  /**
@@ -403,25 +408,17 @@ class ThaiFrequencyBreakEngine : public FrequencyBreakEngine {
  * CjkBreakEngine
  */
 
-//indicates language/script that the CjkBreakEngine will handle
-enum LanguageType {
-    kKorean,
-    kChineseJapanese
-};
-
-
 /**
  * <p>CjkBreakEngine is a kind of DictionaryBreakEngine that uses a
  * dictionary with costs associated with each word and
  * Viterbi decoding to determine CJK-specific breaks.</p>
  */
-class CjkBreakEngine : public FrequencyBreakEngine {
+class CjBreakEngine : public FrequencyBreakEngine {
  protected:
     /**
      * The set of characters handled by this engine
      * @internal
      */
-  UnicodeSet                fHangulWordSet;
   UnicodeSet                fHanWordSet;
   UnicodeSet                fKatakanaWordSet;
   UnicodeSet                fHiraganaWordSet;
@@ -435,12 +432,17 @@ class CjkBreakEngine : public FrequencyBreakEngine {
      * engine is deleted. The DictionaryMatcher must contain costs for each word
      * in order for the dictionary to work properly.
      */
-  CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType type, UErrorCode &status);
+  CjBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status);
 
     /**
      * <p>Virtual destructor.</p>
      */
-  virtual ~CjkBreakEngine();
+  virtual ~CjBreakEngine();
+
+  /**
+   * @return The status tag for word breaks found using this break engine.
+   */
+  virtual int32_t getTagValue(int32_t breakType) const;
 
  protected:
   virtual void findBoundaries(UnicodeString *inString,

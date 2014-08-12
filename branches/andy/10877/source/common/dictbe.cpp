@@ -70,6 +70,17 @@ DictionaryBreakEngine::setCharacters( const UnicodeSet &set ) {
     fSet.compact();
 }
 
+int32_t DictionaryBreakEngine::getTagValue(int32_t breakType) const {
+  switch (breakType) {
+    case UBRK_WORD:
+      return 200;
+    case UBRK_LINE:
+      return 100;
+    default:
+      return 0;
+  }
+}
+
 /*
  ******************************************************************
  * PossibleWord
@@ -1215,31 +1226,24 @@ ThaiFrequencyBreakEngine::~ThaiFrequencyBreakEngine() {
  ******************************************************************
  * CjkBreakEngine
  */
-CjkBreakEngine::CjkBreakEngine(DictionaryMatcher *adoptDictionary, LanguageType type, UErrorCode &status)
+CjBreakEngine::CjBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode &status)
 : FrequencyBreakEngine(adoptDictionary, 1 << UBRK_WORD, status) {
-    // Korean dictionary only includes Hangul syllables
-    fHangulWordSet.applyPattern(UNICODE_STRING_SIMPLE("[\\uac00-\\ud7a3]"), status);
     fHanWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Han:]"), status);
     fKatakanaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Katakana:]\\uff9e\\uff9f]"), status);
     fHiraganaWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Hiragana:]"), status);
 
     if (U_SUCCESS(status)) {
-        // handle Korean and Japanese/Chinese using different dictionaries
-        if (type == kKorean) {
-            setCharacters(fHangulWordSet);
-        } else { //Chinese and Japanese
-            UnicodeSet cjSet;
-            cjSet.addAll(fHanWordSet);
-            cjSet.addAll(fKatakanaWordSet);
-            cjSet.addAll(fHiraganaWordSet);
-            cjSet.add(0xFF70); // HALFWIDTH KATAKANA-HIRAGANA PROLONGED SOUND MARK
-            cjSet.add(0x30FC); // KATAKANA-HIRAGANA PROLONGED SOUND MARK
-            setCharacters(cjSet);
-        }
+          UnicodeSet cjSet;
+          cjSet.addAll(fHanWordSet);
+          cjSet.addAll(fKatakanaWordSet);
+          cjSet.addAll(fHiraganaWordSet);
+          cjSet.add(0xFF70); // HALFWIDTH KATAKANA-HIRAGANA PROLONGED SOUND MARK
+          cjSet.add(0x30FC); // KATAKANA-HIRAGANA PROLONGED SOUND MARK
+          setCharacters(cjSet);
     }
 }
 
-CjkBreakEngine::~CjkBreakEngine(){
+CjBreakEngine::~CjBreakEngine(){
 }
 
 // The katakanaCost values below are based on the length frequencies of all
@@ -1267,7 +1271,7 @@ static inline bool isKatakana(uint16_t value) {
  * @return The number of breaks found
  */
 void
-CjkBreakEngine::findBoundaries(UnicodeString *inString,
+CjBreakEngine::findBoundaries(UnicodeString *inString,
 		uint32_t numCodePts,
 		UVector32 *bestSnlp,
 		UVector32 *prev,
@@ -1314,6 +1318,11 @@ CjkBreakEngine::findBoundaries(UnicodeString *inString,
         is_prev_katakana = is_katakana;
     }
     utext_close(&fu);
+}
+
+int32_t
+CjBreakEngine::getTagValue(int32_t /*breakType*/) const {
+  return 400;
 }
 #endif
 

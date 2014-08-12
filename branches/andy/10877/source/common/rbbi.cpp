@@ -262,8 +262,7 @@ void RuleBasedBreakIterator::init(UErrorCode &status) {
     fSCharIter            = NULL;
     fDCharIter            = NULL;
     fData                 = NULL;
-    fLastRuleStatusIndex  = 0;
-    fLastStatusIndexValid = TRUE;
+    fLastRuleStatusIndex  = 0;  // < 0 if rule status is invalid.
     fBreakType            = UBRK_WORD;  // Defaulting BreakType to word gives reasonable
                                         //   dictionary behavior for Break Iterators that are
                                         //   built from rules.  Even better would be the ability to
@@ -517,7 +516,6 @@ RuleBasedBreakIterator &RuleBasedBreakIterator::refreshInputText(UText *input, U
  */
 int32_t RuleBasedBreakIterator::first(void) {
     fLastRuleStatusIndex  = 0;
-    fLastStatusIndexValid = TRUE;
     utext_setNativeIndex(fText, 0);
     return 0;
 }
@@ -529,13 +527,12 @@ int32_t RuleBasedBreakIterator::first(void) {
 int32_t RuleBasedBreakIterator::last(void) {
     if (fText == NULL) {
         fLastRuleStatusIndex  = 0;
-        fLastStatusIndexValid = TRUE;
         return BreakIterator::DONE;
     }
 
     // TODO: check cache, it may extend to the end.
 
-    fLastStatusIndexValid = FALSE;
+    fLastRuleStatusIndex  = -1;
     int32_t pos = (int32_t)utext_nativeLength(fText);
     utext_setNativeIndex(fText, pos);
     return pos;
@@ -572,6 +569,8 @@ int32_t RuleBasedBreakIterator::next(void) {
     int32_t startPos = current();
     int32_t result = fBreakCache->following(startPos);
     if (result != BreakIterator::DONE) {
+        fLastRuleStatusIndex = -1;
+        fLastTagValue = fBreakCache->getCurrentRuleStatus();
         utext_setNativeIndex(fText, result);
         return result;
     }
@@ -599,7 +598,6 @@ int32_t RuleBasedBreakIterator::previous(void) {
     // if we're already sitting at the beginning of the text, return DONE
     if (fText == NULL || startPos == 0) {
         fLastRuleStatusIndex  = 0;
-        fLastStatusIndexValid = TRUE;
         return BreakIterator::DONE;
     }
 
@@ -637,8 +635,7 @@ int32_t RuleBasedBreakIterator::previous(void) {
     // starting point.  The last break position before the starting
     // point is our return value
 
-    int32_t ruleStatusIndex = 0;
-    UBool   ruleStatusIndexValid = FALSE; 
+    int32_t ruleStatusIndex = -1;
     for (;;) {
         int32_t nextResult = next();
         if (nextResult == BreakIterator::DONE || nextResult >= startPos) {
@@ -646,14 +643,12 @@ int32_t RuleBasedBreakIterator::previous(void) {
         }
         result = nextResult;
         ruleStatusIndex = fLastRuleStatusIndex;
-        ruleStatusIndexValid = TRUE;
     }
 
     // Note edge case when result == BreakIterator::DONE, which is -1,
     //     utext_setNativeIndex() will clip the -1 back to zero, which is what is needed.
     utext_setNativeIndex(fText, result);
     fLastRuleStatusIndex  = ruleStatusIndex;       // for use by getRuleStatus()
-    fLastStatusIndexValid = ruleStatusIndexValid;
     return result;
 }
 
@@ -676,19 +671,18 @@ int32_t RuleBasedBreakIterator::following(int32_t offset) {
         return first();
     }
 
-    // Move requested offset to a code point start. It might be on a trail surrogate,
-    // or on a trail byte if the input is UTF-8.
-    utext_setNativeIndex(fText, offset);
-    offset = utext_getNativeIndex(fText);
-
     // if we have cached break positions and offset is in the range
-    // covered by them, use them
-
+    // covered by them, use them.
     int32_t result = fBreakCache->following(offset);
     if (result != BreakIterator::DONE) {
         utext_setNativeIndex(fText, result);
         return result;
     }
+
+    // Move requested offset to a code point start. It might be on a trail surrogate,
+    // or on a trail byte if the input is UTF-8.
+    utext_setNativeIndex(fText, offset);
+    offset = utext_getNativeIndex(fText);
 
     // Set our internal iteration position (temporarily)
     // to the position passed in.  If this is the _beginning_ position,
@@ -952,8 +946,7 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable, UBo
         *dictionaryCharsSeen = FALSE;
     }
 
-    // No matter what, handleNext alway correctly sets the break tag value.
-    fLastStatusIndexValid = TRUE;
+    // No matter what, handleNext always correctly sets the break tag value.
     fLastRuleStatusIndex = 0;
 
     // if we're already at the end of the text, return DONE.
@@ -1181,8 +1174,7 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable,
     // Flag the status as invalid; if the user ever asks for status, we will need
     // to back up, then re-find the break position using handleNext(), which does
     // get the status value.
-    fLastStatusIndexValid = FALSE;
-    fLastRuleStatusIndex = 0;
+    fLastRuleStatusIndex = -1;
 
     // if we're already at the start of the text, return DONE.
     if (fText == NULL || fData == NULL || UTEXT_GETNATIVEINDEX(fText)==0) {
@@ -1378,12 +1370,11 @@ continueOn:
 //
 //-------------------------------------------------------------------------------
 void RuleBasedBreakIterator::makeRuleStatusValid() {
-    if (fLastStatusIndexValid == FALSE) {
+    if (fLastRuleStatusIndex < 0) {
         //  No cached status is available.
         if (fText == NULL || current() == 0) {
             //  At start of text, or there is no text.  Status is always zero.
             fLastRuleStatusIndex = 0;
-            fLastStatusIndexValid = TRUE;
         } else {
             //  Not at start of text.  Find status the tedious way.
             int32_t pa = current();
@@ -1393,7 +1384,8 @@ void RuleBasedBreakIterator::makeRuleStatusValid() {
             U_ASSERT(pa == pb);
         }
     }
-    U_ASSERT(fLastRuleStatusIndex >= 0  &&  fLastRuleStatusIndex < fData->fStatusMaxIdx);
+    U_ASSERT(fLastRuleStatusIndex >= 0  &&  fLastRuleStatusIndex < fData->fStatusMaxIdx ||
+             fLastTagValue >= 0);
 }
 
 
@@ -1401,13 +1393,15 @@ int32_t  RuleBasedBreakIterator::getRuleStatus() const {
     RuleBasedBreakIterator *nonConstThis  = (RuleBasedBreakIterator *)this;
     nonConstThis->makeRuleStatusValid();
 
-    // fLastRuleStatusIndex indexes to the start of the appropriate status record
-    //                                                 (the number of status values.)
-    //   This function returns the last (largest) of the array of status values.
-    int32_t  idx = fLastRuleStatusIndex + fData->fRuleStatusTable[fLastRuleStatusIndex];
-    int32_t  tagVal = fData->fRuleStatusTable[idx];
-
-    return tagVal;
+    if (fLastRuleStatusIndex >= 0) {
+      // fLastRuleStatusIndex indexes to the start of the appropriate status record
+      //                                                 (the number of status values.)
+      //   This function returns the last (largest) of the array of status values.
+      int32_t  idx = fLastRuleStatusIndex + fData->fRuleStatusTable[fLastRuleStatusIndex];
+      return fData->fRuleStatusTable[idx];
+    } else {
+      return fLastTagValue;
+    }
 }
 
 
@@ -1646,13 +1640,14 @@ void RuleBasedBreakIterator::setBreakType(int32_t type) {
  */
 
 RuleBasedBreakIterator::BreakCache::BreakCache(RuleBasedBreakIterator *This, UErrorCode &status) :
-        fThis(This), fBreaks(NULL), fRawBreaks(NULL), fStatusIndex(0), fLastIndex(0) {
+        fThis(This), fBreaks(NULL), fRawBreaks(NULL), fTagValues(NULL), fStatusIndex(0), fLastIndex(0) {
     fBreaks = new UVector32(status);
     fRawBreaks = new UVector32(status);
+    fTagValues = new UVector32(status);
     if (U_FAILURE(status)) {
         return;
     }
-    if (fBreaks == NULL || fRawBreaks == NULL) {
+    if (fBreaks == NULL|| fRawBreaks == NULL || fTagValues == NULL ) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return;
     }
@@ -1663,10 +1658,12 @@ RuleBasedBreakIterator::BreakCache::BreakCache(RuleBasedBreakIterator *This, UEr
 RuleBasedBreakIterator::BreakCache::~BreakCache() {
     delete fBreaks;
     delete fRawBreaks;
+    delete fTagValues;
 }
 
 void RuleBasedBreakIterator::BreakCache::reset() {
     fBreaks->removeAllElements();
+    fTagValues->removeAllElements();
     fStatusIndex = 0;
     fLastIndex = 0;
 }
@@ -1679,18 +1676,18 @@ int32_t RuleBasedBreakIterator::BreakCache::following(int32_t position) {
         return UBRK_DONE;
     }
 
+    if (position == fBreaks->elementAti(0)) {
+        fLastIndex = 1;
+        return fBreaks->elementAti(fLastIndex);
+    }
+
     if (position == fBreaks->elementAti(fLastIndex)) {
         ++fLastIndex;
         U_ASSERT(fLastIndex < fBreaks->size());
         return fBreaks->elementAti(fLastIndex);
     }
 
-    if (position == fBreaks->elementAti(0)) {
-        fLastIndex = 1;
-        return fBreaks->elementAti(fLastIndex);
-    }
-
-    for (fLastIndex = 1; fBreaks->elementAti(fLastIndex) <= position; ++fLastIndex) {
+    for (fLastIndex = 1; fBreaks->elementAti(fLastIndex) < position; ++fLastIndex) {
         U_ASSERT(fLastIndex < fBreaks->size());
     };
     return fBreaks->elementAti(fLastIndex);
@@ -1720,6 +1717,10 @@ int32_t RuleBasedBreakIterator::BreakCache::preceding(int32_t position) {
         U_ASSERT(fLastIndex >= 0);
     }
     return fBreaks->elementAti(fLastIndex);
+}
+
+int32_t RuleBasedBreakIterator::BreakCache::getCurrentRuleStatus(void) {
+  return fTagValues->elementAti(fLastIndex);
 }
 
 class DictTextRange {
@@ -1848,6 +1849,8 @@ void RuleBasedBreakIterator::BreakCache::populate(int32_t start, int32_t limit, 
     }
     fBreaks->removeAllElements();
     fBreaks->addElement(start, status);
+    fTagValues->removeAllElements();
+    fTagValues->addElement(0, status);
 
     DictTextRange  range(fThis, start, limit);
     while (range.next()) {
@@ -1870,8 +1873,10 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
 
     fRawBreaks->removeAllElements();
     utext_setNativeIndex(fThis->fText, range.fDictStart);
+    uint32_t tagValue = 0;
     if (range.fLBE != NULL) {
         range.fLBE->findBreaks(fThis->fText, range.fDictLimit, fThis->fBreakType, *fRawBreaks, status);
+        tagValue = range.fLBE->getTagValue(fThis->fBreakType);
     } else {
         // Range containing non-dictionary characters only.
         // Has boundaries at its start and end only.
@@ -1899,10 +1904,12 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
         U_ASSERT(boundary > fBreaks->lastElementi());
         if (fBreaks->size() == 0 || boundary > fBreaks->lastElementi()) {
             fBreaks->addElement(boundary, status);
+            fTagValues->addElement(tagValue, status);
         }
     }
     U_ASSERT(fBreaks->lastElementi() < range.fRangeLimit);
     fBreaks->addElement(range.fRangeLimit, status);
+    fTagValues->addElement(tagValue, status);
 }
 
 

@@ -57,8 +57,7 @@ $dictionary       = [\p{Alphabetic} & [[\p{script = Thai}]
                                        [\p{script = Khmer}]
                                        [\p{script = Han}]
                                        [\p{script = Hiragana}]
-                                       $Katakana
-                                       $HangulSyllable]];
+                                       $Katakana]];
 
 # ALetterPlus is an adjusted variant of Character Class ALetter from UAX-14.
 #   - Add non-dictionary chars from $ComplexContext.

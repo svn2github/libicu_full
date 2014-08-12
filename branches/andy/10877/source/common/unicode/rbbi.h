@@ -80,10 +80,16 @@ private:
 
         void addContainedWords(const DictTextRange &range, UErrorCode &status);
 
+        /**
+         * Returns the rule status of the last break position returned by the break cache.
+         */
+        int32_t getCurrentRuleStatus(void);
+
         RuleBasedBreakIterator *fThis;
       private:
         UVector32  *fBreaks;
         UVector32  *fRawBreaks;
+        UVector32  *fTagValues;
         int32_t     fStatusIndex;
         int32_t     fLastIndex;
     };
@@ -126,17 +132,16 @@ protected:
     RBBIDataWrapper    *fData;
 
     /** Index of the Rule {tag} values for the most recent match.
+     *  If the index is invalid, it will have a value of -1.
      *  @internal
-    */
+     */
     int32_t             fLastRuleStatusIndex;
 
     /**
-     * Rule tag value valid flag.
-     * Some iterator operations don't intrinsically set the correct tag value.
-     * This flag lets us lazily compute the value if we are ever asked for it.
+     * The tag value of the last break position. Only set if fLastRuleStatusIndex is invalid.
      * @internal
      */
-    UBool               fLastStatusIndexValid;
+    int32_t fLastTagValue;
 
     /**
      * When a range of characters is divided up using the dictionary, the break
