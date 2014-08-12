@@ -115,28 +115,6 @@ int32_t UnifiedCache::keyCount() const {
     return uhash_count(fHashtable);
 }
 
-void UnifiedCache::_putErrorIfAbsent(
-        const CacheKeyBase &key, UErrorCode status) const {
-    U_ASSERT(U_FAILURE(status));
-    Mutex lock(&gCacheMutex);
-    const UHashElement *element = uhash_find(fHashtable, &key);
-    if (element == NULL) {
-        CacheKeyBase *clonedKey = key.clone();
-        if (clonedKey == NULL) {
-            return;
-        }
-        clonedKey->creationStatus = status;
-        _put(clonedKey, gNoValue);
-    }
-    if (_inProgress(element)) {
-        _writeError(element, status);
-
-        // Tell waiting threads that we replace in-progress status with
-        // an error.
-        umtx_condBroadcast(&gInProgressValueAddedCond);
-    }
-}
-
 void UnifiedCache::flush() const {
     _flush(FALSE);
 }
@@ -158,52 +136,76 @@ void UnifiedCache::_flush(UBool all) const {
             sharedObject->removeSoftRef();
         }
     }
+    umtx_condBroadcast(&gInProgressValueAddedCond);
 }
 
-UBool UnifiedCache::_put(
-        CacheKeyBase *keyToAdopt, const SharedObject *value) const {
-    UErrorCode status = U_ZERO_ERROR;
+// Places a new value and creationStatus in the cache for the given key.
+// On entry, gCacheMutex must be held. key must not exist in the cache. 
+// On exit, value and creation status placed under key. Soft reference added
+// to value on successful add. On error sets status.
+void UnifiedCache::_putNew(
+        const CacheKeyBase &key, 
+        const SharedObject *value,
+        const UErrorCode creationStatus,
+        UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    CacheKeyBase *keyToAdopt = key.clone();
+    if (keyToAdopt == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    keyToAdopt->creationStatus = creationStatus;
     uhash_put(fHashtable, keyToAdopt, (void *) value, &status);
     if (U_SUCCESS(status)) {
         value->addSoftRef();
-        return TRUE;
     }
-    return FALSE;
 }
 
-void UnifiedCache::_putIfAbsent(
-        const CacheKeyBase &key, const SharedObject *value) const {
-    U_ASSERT(value != NULL);
+// Places value and status at key if there is no value at key or if cache
+// entry for key is in progress. Otherwise, it leaves the current value and
+// status there.
+// On entry. gCacheMutex must not be held. value must be
+// included in the reference count of the object to which it points.
+// On exit, value and status are changed to what was already in the cache if
+// something was there and not in progress. Otherwise, value and status are left
+// unchanged in which case they are placed in the cache on a best-effort basis.
+// Caller must call removeRef() on value.
+void UnifiedCache::_putIfAbsentAndGet(
+        const CacheKeyBase &key,
+        const SharedObject *&value,
+        UErrorCode &status) const {
     Mutex lock(&gCacheMutex);
     const UHashElement *element = uhash_find(fHashtable, &key);
     if (element != NULL && !_inProgress(element)) {
-
-        // Something has already been put here, just return
+        _fetch(element, value, status);
         return;
     }
-    CacheKeyBase *clonedKey = key.clone();
-    if (clonedKey == NULL) {
+    if (element == NULL) {
+        UErrorCode putError = U_ZERO_ERROR;
+        // best-effort basis only.
+        _putNew(key, value, status, putError);
         return;
     }
-    if (!_put(clonedKey, value) && element != NULL) {
-
-        // If put fails to replace in-progress status, write an error
-        // so that waiting threads will wake up.
-        _writeError(element, U_MEMORY_ALLOCATION_ERROR);
-    }
-    if (element != NULL) {
-
-        // Tell other threads that we replaced in-progress with either
-        // a value or an error.
-        umtx_condBroadcast(&gInProgressValueAddedCond);
-    }
+    _put(element, value, status);
 }
 
-const SharedObject *UnifiedCache::_poll(
-        const CacheKeyBase &key, UErrorCode &status) const {
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
+// Attempts to fetch value and status for key from cache.
+// On entry, gCacheMutex must not be held value must be NULL and status must
+// be U_ZERO_ERROR.
+// On exit, either returns FALSE (In this
+// case caller should try to create the object) or returns TRUE with value
+// pointing to the fetched value and status set to fetched status. When
+// FALSE is returned status may be set to failure if an in progress hash
+// entry could not be made but value will remain unchanged. When TRUE is
+// returned, caler must call removeRef() on value.
+UBool UnifiedCache::_poll(
+        const CacheKeyBase &key,
+        const SharedObject *&value,
+        UErrorCode &status) const {
+    U_ASSERT(value == NULL);
+    U_ASSERT(status == U_ZERO_ERROR);
     Mutex lock(&gCacheMutex);
     const UHashElement *element = uhash_find(fHashtable, &key);
     while (element != NULL && _inProgress(element)) {
@@ -211,74 +213,100 @@ const SharedObject *UnifiedCache::_poll(
         element = uhash_find(fHashtable, &key);
     }
     if (element != NULL) {
-        const SharedObject *result = _fetch(element, status);
-        if (result != NULL) {
-            result->addRef();
-        }
-        return result;
+        _fetch(element, value, status);
+        return TRUE;
     }
-    CacheKeyBase *clonedKey = key.clone();
-    if (clonedKey == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-    if (!_put(clonedKey, gNoValue)) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return NULL;
-    }
-    return NULL;
+    _putNew(key, gNoValue, U_ZERO_ERROR, status);
+    return FALSE;
 }
 
-const SharedObject *UnifiedCache::_get(
+// Gets value out of cache.
+// On entry. gCacheMutex must not be held. value must be NULL. status
+// must be U_ZERO_ERROR.
+// On exit. value and status set to what is in cache at key or on cache
+// miss the key's createObject() is called and value and status are set to
+// the result of that. In this latter case, best effort is made to add the
+// value and status to the cache. value will be set to NULL instead of
+// gNoValue. Caller must call removeRef on value if non NULL.
+void UnifiedCache::_get(
         const CacheKeyBase &key,
+        const SharedObject *&value,
         const void *creationContext,
         UErrorCode &status) const {
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    const SharedObject *result = _poll(key, status);
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    if (result != NULL) {
-        return result;
-    }
-    result = key.createObject(creationContext, status);
-    if (U_FAILURE(status)) {
-        _putErrorIfAbsent(key, status);
-        status = U_ZERO_ERROR;
-    } else if (result != NULL) {
-        if (result->getRefCount() == 0) {
-            result->addRef();
+    U_ASSERT(value == NULL);
+    U_ASSERT(status == U_ZERO_ERROR);
+    if (_poll(key, value, status)) {
+        if (value == gNoValue) {
+            SharedObject::clearPtr(value);
         }
-        _putIfAbsent(key, result);
-        result->removeRef();
+        return;
     }
-    return _get(key, creationContext, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    value = key.createObject(creationContext, status);
+    if (value == NULL) {
+        SharedObject::copyPtr(gNoValue, value);
+    } else if (value->getRefCount() == 0) {
+        value->addRef();
+    }
+    U_ASSERT(value != gNoValue || status != U_ZERO_ERROR);
+    _putIfAbsentAndGet(key, value, status);
+    if (value == gNoValue) {
+        SharedObject::clearPtr(value);
+    }
 }
 
-void UnifiedCache::_writeError(const UHashElement *element, UErrorCode status) {
+// Store a value and error in given hash entry.
+// On entry, gCacheMutex must be held. Hash entry element must be in progress.
+// value must be non NULL.
+// On Exit, soft reference added to value. value and status stored in hash
+// entry. Soft reference removed from previous stored value. Waiting
+// threads notified.
+void UnifiedCache::_put(
+        const UHashElement *element, 
+        const SharedObject *value,
+        const UErrorCode status) {
+    U_ASSERT(_inProgress(element));
     const CacheKeyBase *theKey = (const CacheKeyBase *) element->key.pointer;
+    const SharedObject *oldValue = (const SharedObject *) element->value.pointer;
     theKey->creationStatus = status;
+    value->addSoftRef();
+    UHashElement *ptr = const_cast<UHashElement *>(element);
+    ptr->value.pointer = (void *) value;
+    oldValue->removeSoftRef();
+
+    // Tell waiting threads that we replace in-progress status with
+    // an error.
+    umtx_condBroadcast(&gInProgressValueAddedCond);
 }
 
-const SharedObject *UnifiedCache::_fetch(
-        const UHashElement *element, UErrorCode &status) {
+// Fetch value and error code from a particular hash entry.
+// On entry, gCacheMutex must be held. value must be either NULL or must be
+// included in the ref count of the object to which it points.
+// On exit, value and status set to what is in the hash entry. Caller must
+// eventually call removeRef on value.
+// If hash entry is in progress, value will be set to gNoValue and status will
+// be set to U_ZERO_ERROR.
+void UnifiedCache::_fetch(
+        const UHashElement *element,
+        const SharedObject *&value,
+        UErrorCode &status) {
     const CacheKeyBase *theKey = (const CacheKeyBase *) element->key.pointer;
     status = theKey->creationStatus;
-    if (U_FAILURE(status)) {
-        return NULL;
-    }
-    return (const SharedObject *) element->value.pointer;
+    SharedObject::copyPtr(
+            (const SharedObject *) element->value.pointer, value);
 }
     
+// Determine if given hash entry is in progress.
+// On entry, gCacheMutex must be held.
 UBool UnifiedCache::_inProgress(const UHashElement *element) {
+    const SharedObject *value = NULL;
     UErrorCode status = U_ZERO_ERROR;
-    const SharedObject *result = _fetch(element, status);
-    if (U_FAILURE(status)) {
-        return FALSE;
-    }
-    return (result == gNoValue);
+    _fetch(element, value, status);
+    UBool result = (value == gNoValue && status == U_ZERO_ERROR);
+    SharedObject::clearPtr(value);
+    return result;
 }
 
 U_NAMESPACE_END

@@ -35,7 +35,8 @@ const UCTItem *LocaleCacheKey<UCTItem>::createObject(
     }
     if (uprv_strcmp(fLoc.getLanguage(), fLoc.getName()) != 0) {
         const UCTItem *item = NULL;
-        if (!UnifiedCache::getByLocale(fLoc.getLanguage(), item, status)) {
+        UnifiedCache::getByLocale(fLoc.getLanguage(), item, status);
+        if (U_FAILURE(status)) {
             return NULL;
         }
         return item;

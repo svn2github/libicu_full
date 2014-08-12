@@ -599,7 +599,8 @@ void MeasureFormat::initMeasureFormat(
     const char *name = locale.getName();
     setLocaleIDs(name, name);
 
-    if (!UnifiedCache::getByLocale(locale, cache, status)) {
+    UnifiedCache::getByLocale(locale, cache, status);
+    if (U_FAILURE(status)) {
         return;
     }
 

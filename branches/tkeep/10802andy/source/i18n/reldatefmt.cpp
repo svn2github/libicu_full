@@ -814,7 +814,8 @@ void RelativeDateTimeFormatter::init(
         UErrorCode &status) {
     LocalPointer<NumberFormat> nf(nfToAdopt);
     LocalPointer<BreakIterator> bi(biToAdopt);
-    if (!UnifiedCache::getByLocale(fLocale, fCache, status)) {
+    UnifiedCache::getByLocale(fLocale, fCache, status);
+    if (U_FAILURE(status)) {
         return;
     }
     const SharedPluralRules *pr = PluralRules::createSharedInstance(

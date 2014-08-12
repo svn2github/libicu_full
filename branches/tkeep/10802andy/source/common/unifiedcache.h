@@ -102,34 +102,42 @@ class U_COMMON_API UnifiedCache : public UObject {
    static const UnifiedCache *getInstance(UErrorCode &status);
 
    template<typename T>
-   UBool get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
-       return get(key, NULL, ptr, status);
+   void get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
+       get(key, NULL, ptr, status);
    }
 
    template<typename T>
-   UBool get(
+   void get(
            const CacheKey<T>& key,
            const void *creationContext,
            const T *&ptr,
            UErrorCode &status) const {
-       const T *value = (const T *) _get(key, creationContext, status);
        if (U_FAILURE(status)) {
-            return FALSE;
+           return;
        }
-       SharedObject::copyPtr(value, ptr);
-       // We have to manually remove the reference that _get adds.
-       value->removeRef();
-       return TRUE;
+       UErrorCode creationStatus = U_ZERO_ERROR;
+       const SharedObject *value = NULL;
+       _get(key, value, creationContext, creationStatus);
+       const T *tvalue = (const T *) value;
+       if (U_SUCCESS(creationStatus)) {
+           SharedObject::copyPtr(tvalue, ptr);
+       }
+       SharedObject::clearPtr(tvalue);
+       // Take care not to overwrite a warning status passed in with
+       // another warning or U_ZERO_ERROR.
+       if (status == U_ZERO_ERROR || U_FAILURE(creationStatus)) {
+           status = creationStatus;
+       }
    }
 
    template<typename T>
-   static UBool getByLocale(
+   static void getByLocale(
            const Locale &loc, const T *&ptr, UErrorCode &status) {
        const UnifiedCache *cache = getInstance(status);
        if (U_FAILURE(status)) {
-           return FALSE;
+           return;
        }
-       return cache->get(LocaleCacheKey<T>(loc), ptr, status);
+       cache->get(LocaleCacheKey<T>(loc), ptr, status);
    }
    int32_t keyCount() const;
    void flush() const;
@@ -138,27 +146,33 @@ class U_COMMON_API UnifiedCache : public UObject {
    UHashtable *fHashtable;
    UnifiedCache(const UnifiedCache &other);
    UnifiedCache &operator=(const UnifiedCache &other);
-   UBool _put(CacheKeyBase *keyToBeAdopted, const SharedObject *value) const;
    void _flush(UBool all) const;
-   void _putErrorIfAbsent(
-           const CacheKeyBase& key,
-           UErrorCode creationStatus) const;
-   void _putIfAbsent(
+   void _get(
            const CacheKeyBase &key,
-           const SharedObject *value) const;
-   const SharedObject *_poll(
-           const CacheKeyBase &key,
-           UErrorCode &status) const;
-   const SharedObject *_get(
-           const CacheKeyBase &key,
+           const SharedObject *&value,
            const void *creationContext,
            UErrorCode &status) const;
-   static void _writeError(
-           const UHashElement *element, UErrorCode status);
-   static const SharedObject *_fetch(
-           const UHashElement *element, UErrorCode &status);
-   static const SharedObject *_fetchAddingRef(
-           const UHashElement *element, UErrorCode &status);
+   UBool _poll(
+           const CacheKeyBase &key,
+           const SharedObject *&value,
+           UErrorCode &status) const;
+   void _putNew(
+           const CacheKeyBase &key,
+           const SharedObject *value,
+           const UErrorCode creationStatus,
+           UErrorCode &status) const;
+   void _putIfAbsentAndGet(
+           const CacheKeyBase &key,
+           const SharedObject *&value,
+           UErrorCode &status) const;
+   static void _put(
+           const UHashElement *element,
+           const SharedObject *value,
+           const UErrorCode status);
+   static void _fetch(
+           const UHashElement *element,
+           const SharedObject *&value,
+           UErrorCode &status);
    static UBool _inProgress(const UHashElement *element);
 };
 
