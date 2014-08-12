@@ -152,6 +152,8 @@ CollationLoader::loadTailoring(const Locale &locale, UErrorCode &errorCode) {
         return rootEntry;
     }
 
+    // Clear warning codes before loading where they get cached.
+    errorCode = U_ZERO_ERROR;
     CollationLoader loader(rootEntry, locale, errorCode);
     return loader.getCacheEntry(errorCode);
 }

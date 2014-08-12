@@ -4,7 +4,7 @@
 * others. All Rights Reserved.
 ******************************************************************************
 *
-* File UNIFIEDCACHE.H
+* File UNIFIEDCACHE.H - The ICU Unified cache.
 ******************************************************************************
 */
 
@@ -27,17 +27,53 @@ U_NAMESPACE_BEGIN
 
 class UnifiedCache;
 
+/**
+ * A base class for all cache keys
+ */
 class U_COMMON_API CacheKeyBase : public UObject {
  public:
    CacheKeyBase() : creationStatus(U_ZERO_ERROR) {}
+
+   /**
+    * Copy constructor. Needed to support cloning.
+    */
    CacheKeyBase(const CacheKeyBase &other) 
            : creationStatus(other.creationStatus) { }
    virtual ~CacheKeyBase();
+
+   /**
+    * Returns the hash code for this object.
+    */
    virtual int32_t hashCode() const = 0;
+
+   /**
+    * Clones this object polymorphically. Caller owns returned value.
+    */
    virtual CacheKeyBase *clone() const = 0;
+
+   /**
+    * Equality operator.
+    */
    virtual UBool operator == (const CacheKeyBase &other) const = 0;
+
+   /**
+    * Create a new object for this key. Called by cache on cache miss.
+    * If createObject is returning a value already in the cache, it must
+    * add a reference. Otherwise, it can return a brand new object with
+    * zero references. Or it can return NULL and set status to an error.
+    *
+    * @param creationContext the context in which the object is being
+    *                        created. May be NULL.
+    * @param status          Implementations can return a failure here.
+    *                        In addition, implementations may return a
+    *                        non NULL object and set a warning status.
+    */
    virtual const SharedObject *createObject(
            const void *creationContext, UErrorCode &status) const = 0;
+
+   /**
+    * Inequality operator.
+    */
    UBool operator != (const CacheKeyBase &other) const {
        return !(*this == other);
    }
@@ -48,19 +84,34 @@ class U_COMMON_API CacheKeyBase : public UObject {
 
 
 
+/**
+ * Templated version of CacheKeyBase. 
+ * A key of type LocaleCacheKey<T> maps to a value of type T.
+ */
 template<typename T>
 class U_COMMON_API CacheKey : public CacheKeyBase {
  public:
    virtual ~CacheKey() { }
+   /**
+    * The template parameter, T, determines the hash code returned.
+    */
    virtual int32_t hashCode() const {
        const char *s = typeid(T).name();
        return ustr_hashCharsN(s, uprv_strlen(s));
    }
+
+   /**
+    * Two objects are equal if they are of the same type.
+    */
    virtual UBool operator == (const CacheKeyBase &other) const {
        return typeid(*this) == typeid(other);
    }
 };
 
+/**
+ * Cache key based on locale.
+ * A key of type LocaleCacheKey<T> maps to a value of type T.
+ */
 template<typename T>
 class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
  protected:
@@ -92,6 +143,9 @@ class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
            const void *creationContext, UErrorCode &status) const;
 };
 
+/**
+ * The unified cache. A singleton type.
+ */
 class U_COMMON_API UnifiedCache : public UObject {
  public:
    /**
@@ -99,13 +153,37 @@ class U_COMMON_API UnifiedCache : public UObject {
     */
    UnifiedCache(UErrorCode &status);
 
+   /**
+    * Returns the cache instance.
+    */
    static const UnifiedCache *getInstance(UErrorCode &status);
 
+   /**
+    * Fetches a value from the cache by key. Equivalent to
+    * get(key, NULL, ptr, status);
+    */
    template<typename T>
-   void get(const CacheKey<T>& key, const T *&ptr, UErrorCode &status) const {
+   void get(
+           const CacheKey<T>& key,
+           const T *&ptr,
+           UErrorCode &status) const {
        get(key, NULL, ptr, status);
    }
 
+   /**
+    * Fetches value from the cache by key.
+    *
+    * @param key             the cache key.
+    * @param creationContext passed verbatim to createObject method of key
+    * @param ptr             On entry, ptr must be NULL or be included if
+    *                        the reference count of the object it points
+    *                        to. On exit, ptr points to the fetched object
+    *                        from the cache or is left unchanged on
+    *                        failure. Caller must call removeRef on ptr
+    *                        if set to a non NULL value.
+    * @param status          Any error returned here. May be set to a
+    *                        warning value even if ptr is set.
+    */
    template<typename T>
    void get(
            const CacheKey<T>& key,
@@ -130,6 +208,18 @@ class U_COMMON_API UnifiedCache : public UObject {
        }
    }
 
+   /**
+    * Convenience method to get a value of type T from cache for a
+    * particular locale with creationContext == NULL.
+    * @param loc    the locale
+    * @param ptr    On entry, must be NULL or included in the ref count
+    *               of the object to which it points.
+    *               On exit, fetched value stored here or is left
+    *               unchanged on failure. Caller must call removeRef on
+    *               ptr if set to a non NULL value.
+    * @param status Any error returned here. May be set to a
+    *               warning value even if ptr is set.
+    */
    template<typename T>
    static void getByLocale(
            const Locale &loc, const T *&ptr, UErrorCode &status) {
@@ -139,8 +229,18 @@ class U_COMMON_API UnifiedCache : public UObject {
        }
        cache->get(LocaleCacheKey<T>(loc), ptr, status);
    }
+
+   /**
+    * Returns the number of keys in this cache. For testing only.
+    */
    int32_t keyCount() const;
+
+   /**
+    * Removes any values from cache that are not referenced outside
+    * the cache.
+    */
    void flush() const;
+
    virtual ~UnifiedCache();
  private:
    UHashtable *fHashtable;
