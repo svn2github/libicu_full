@@ -23,7 +23,7 @@ luo{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -124,7 +124,7 @@ luo{
                         "Wuok Tich",
                         "Tich Ariyo",
                         "Tich Adek",
-                        "Tich Ang'wen",
+                        "Tich Ang’wen",
                         "Tich Abich",
                         "Ngeso",
                     }
@@ -144,11 +144,15 @@ luo{
             eras{
                 abbreviated{
                     "BC",
+                    "BCE",
                     "AD",
+                    "CE",
                 }
                 wide{
                     "Kapok Kristo obiro",
+                    "BCE",
                     "Ka Kristo osebiro",
+                    "CE",
                 }
             }
             monthNames{
@@ -171,7 +175,7 @@ luo{
                         "Dwe mar Achiel",
                         "Dwe mar Ariyo",
                         "Dwe mar Adek",
-                        "Dwe mar Ang'wen",
+                        "Dwe mar Ang’wen",
                         "Dwe mar Abich",
                         "Dwe mar Auchiel",
                         "Dwe mar Abiriyo",
@@ -225,7 +229,7 @@ luo{
     }
     fields{
         day{
-            dn{"chieng'"}
+            dn{"chieng’"}
             relative{
                 "-1"{"nyoro"}
                 "0"{"kawuono"}
@@ -233,7 +237,7 @@ luo{
             }
         }
         dayperiod{
-            dn{"odieochieng'/otieno"}
+            dn{"odieochieng’/otieno"}
         }
         era{
             dn{"ndalo"}

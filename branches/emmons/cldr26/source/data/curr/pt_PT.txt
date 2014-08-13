@@ -118,7 +118,7 @@ pt_PT{
         }
         BYR{
             "BYR",
-            "Rublo bielorusso",
+            "Rublo bielorrusso",
         }
         BZD{
             "BZD",
@@ -238,7 +238,7 @@ pt_PT{
         }
         GNF{
             "GNF",
-            "Franco Guineense",
+            "Franco guineense",
         }
         GTQ{
             "GTQ",
@@ -446,7 +446,7 @@ pt_PT{
         }
         NIO{
             "NIO",
-            "Córdoba Ouro nicaraguano",
+            "Córdoba de ouro da Nicarágua",
         }
         NOK{
             "NOK",
@@ -466,7 +466,7 @@ pt_PT{
         }
         PAB{
             "PAB",
-            "Balboa panamenho",
+            "Balboa do Panamá",
         }
         PEN{
             "PEN",
@@ -489,10 +489,11 @@ pt_PT{
             "Zloti polaco",
         }
         PTE{
-            "Esc.",
+            "​",
             "Escudo português",
             {
-                "#,##0.00 ¤",
+                "PTE",
+                "PTE",
                 "$",
                 ",",
             }
@@ -503,7 +504,7 @@ pt_PT{
         }
         QAR{
             "QAR",
-            "Rial do Qatar",
+            "Rial do Catar",
         }
         RON{
             "RON",
@@ -514,6 +515,7 @@ pt_PT{
             "Dinar sérvio",
         }
         RUB{
+            "₽",
             "RUB",
             "Rublo russo",
         }
@@ -587,7 +589,7 @@ pt_PT{
         }
         TMT{
             "TMT",
-            "Manat do Turcomenistão",
+            "Manat do Turquemenistão",
         }
         TND{
             "TND",
@@ -598,6 +600,7 @@ pt_PT{
             "Paʻanga de Tonga",
         }
         TRY{
+            "TL",
             "TRY",
             "Lira turca",
         }
@@ -651,7 +654,7 @@ pt_PT{
         }
         XAF{
             "FCFA",
-            "Franco CFA de BEAC",
+            "Franco CFA (BEAC)",
         }
         XCD{
             "EC$",
@@ -659,7 +662,7 @@ pt_PT{
         }
         XOF{
             "CFA",
-            "Franco CFA de BCEAO",
+            "Franco CFA (BCEAO)",
         }
         XPF{
             "CFPF",
@@ -685,6 +688,59 @@ pt_PT{
             "ZMW",
             "Kwacha zambiano",
         }
+    }
+    Currencies%narrow{
+        ARS{"$"}
+        AUD{"$"}
+        BBD{"$"}
+        BDT{"৳"}
+        BMD{"$"}
+        BND{"$"}
+        BRL{"R$"}
+        BSD{"$"}
+        BYR{"р."}
+        BZD{"$"}
+        CAD{"$"}
+        CLP{"$"}
+        CNY{"¥"}
+        COP{"$"}
+        CRC{"₡"}
+        CUP{"$"}
+        DOP{"$"}
+        EUR{"€"}
+        FJD{"$"}
+        GBP{"£"}
+        GIP{"£"}
+        GYD{"$"}
+        HKD{"$"}
+        ILS{"₪"}
+        INR{"₹"}
+        JMD{"$"}
+        JPY{"¥"}
+        KHR{"៛"}
+        KRW{"₩"}
+        KYD{"$"}
+        KZT{"₸"}
+        LAK{"₭"}
+        LRD{"$"}
+        MNT{"₮"}
+        MXN{"$"}
+        NAD{"$"}
+        NGN{"₦"}
+        NZD{"$"}
+        PHP{"₱"}
+        PYG{"₲"}
+        SBD{"$"}
+        SGD{"$"}
+        SRD{"$"}
+        SSP{"£"}
+        TRY{"₺"}
+        TTD{"$"}
+        TWD{"NT$"}
+        UAH{"₴"}
+        USD{"$"}
+        UYU{"$"}
+        VND{"₫"}
     }
     CurrencyPlurals{
         AED{
@@ -780,8 +836,8 @@ pt_PT{
             other{"Pulas de Botswana"}
         }
         BYR{
-            one{"Rublo bielorusso"}
-            other{"Rublos bielorussos"}
+            one{"Rublo bielorrusso"}
+            other{"Rublos bielorrussos"}
         }
         BZD{
             one{"Dólar belizense"}
@@ -892,8 +948,8 @@ pt_PT{
             other{"Dalasis da Gâmbia"}
         }
         GNF{
-            one{"Franco Guineense"}
-            other{"Francos Guineenses"}
+            one{"Franco guineense"}
+            other{"Francos guineenses"}
         }
         GTQ{
             one{"Quetzal da Guatemala"}
@@ -908,7 +964,7 @@ pt_PT{
             other{"Dólares de Hong Kong"}
         }
         HNL{
-            one{"Lempira de Honduras"}
+            one{"Lempira das Honduras"}
             other{"Lempiras das Honduras"}
         }
         HRK{
@@ -965,7 +1021,7 @@ pt_PT{
         }
         KGS{
             one{"Som do Quirguistão"}
-            other{"Soms do Quirguistão"}
+            other{"Sons do Quirguistão"}
         }
         KHR{
             one{"Riel cambojano"}
@@ -1084,7 +1140,7 @@ pt_PT{
             other{"Dólares da Namíbia"}
         }
         NGN{
-            one{"Naira da Nigéria"}
+            one{"Naira nigeriana"}
             other{"Nairas nigerianas"}
         }
         NIO{
@@ -1108,8 +1164,8 @@ pt_PT{
             other{"Riais de Omã"}
         }
         PAB{
-            one{"Balboa panamenho"}
-            other{"Balboa panamenho"}
+            one{"Balboa do Panamá"}
+            other{"Balboas do Panamá"}
         }
         PEN{
             one{"Novo sol peruano"}
@@ -1136,8 +1192,8 @@ pt_PT{
             other{"Guaranis paraguaios"}
         }
         QAR{
-            one{"Rial do Qatar"}
-            other{"Riais do Qatar"}
+            one{"Rial do Catar"}
+            other{"Riais do Catar"}
         }
         RON{
             one{"Leu romeno"}
@@ -1220,8 +1276,8 @@ pt_PT{
             other{"Somonis do Tajaquistão"}
         }
         TMT{
-            one{"Manat do Turcomenistão"}
-            other{"Manats do Turcomenistão"}
+            one{"Manat do Turquemenistão"}
+            other{"Manats do Turquemenistão"}
         }
         TND{
             one{"Dinar tunisino"}
@@ -1284,24 +1340,24 @@ pt_PT{
             other{"Talas samoanos"}
         }
         XAF{
-            one{"Franco CFA de BEAC"}
-            other{"Francos CFA de BEAC"}
+            one{"Franco CFA (BEAC)"}
+            other{"Francos CFA (BEAC)"}
         }
         XCD{
             one{"Dólar das Caraíbas Orientais"}
             other{"Dólares das Caraíbas Orientais"}
         }
         XOF{
-            one{"Franco CFA de BCEAO"}
-            other{"Francos CFA de BCEAO"}
+            one{"Franco CFA (BCEAO)"}
+            other{"Francos CFA (BCEAO)"}
         }
         XPF{
             one{"Franco CFP"}
             other{"Francos CFP"}
         }
         XXX{
-            one{"(Moeda desconhecida)"}
-            other{"(Moeda desconhecida)"}
+            one{"(moeda desconhecida)"}
+            other{"(moedas desconhecidas)"}
         }
         YER{
             one{"Rial iemenita"}
@@ -1324,5 +1380,5 @@ pt_PT{
         one{"{0} {1}"}
         other{"{0} {1}"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.42"}
 }

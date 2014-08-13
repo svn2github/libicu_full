@@ -31,7 +31,7 @@ kok{
         }
         native{"deva"}
     }
-    Version{"2.0.97.91"}
+    Version{"2.1.6.69"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -63,7 +63,9 @@ kok{
             eras{
                 abbreviated{
                     "क्रिस्तपूर्व",
+                    "BCE",
                     "क्रिस्तशखा",
+                    "CE",
                 }
             }
             monthNames{

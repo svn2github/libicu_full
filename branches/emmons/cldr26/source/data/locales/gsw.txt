@@ -37,7 +37,7 @@ gsw{
             }
         }
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.41"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -287,15 +287,21 @@ gsw{
             eras{
                 abbreviated{
                     "v. Chr.",
+                    "BCE",
                     "n. Chr.",
+                    "CE",
                 }
                 narrow{
                     "v. Chr.",
+                    "BCE",
                     "n. Chr.",
+                    "CE",
                 }
                 wide{
                     "v. Chr.",
+                    "BCE",
                     "n. Chr.",
+                    "CE",
                 }
             }
             intervalFormats{

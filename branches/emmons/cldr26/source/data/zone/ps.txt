@@ -10,11 +10,28 @@
  * ICU <specials> source: <path>/common/main/ps.xml
  */
 ps{
-    Version{"2.0.98.62"}
+    Version{"2.1.6.69"}
     zoneStrings{
         "Asia:Kabul"{
             ec{"کابل"}
         }
-        regionFormat{"د {0} په وخت"}
+        "meta:Almaty"{
+            ld{"∅∅∅"}
+            lg{"الماتا په وخت"}
+            ls{"∅∅∅"}
+        }
+        "meta:Europe_Western"{
+            ld{"∅∅∅"}
+            lg{"لوېديزې اروپا وخت"}
+            ls{"∅∅∅"}
+        }
+        "meta:GMT"{
+            ls{"گرينويچ وخت"}
+        }
+        regionFormat{
+            "د {0} په وخت",
+            "{0} (+1)",
+            "{0} (+0)",
+        }
     }
 }

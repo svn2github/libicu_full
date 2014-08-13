@@ -7,12 +7,25 @@
 // *
 // ***************************************************************************
 sv_FI{
-    Version{"2.0.98.14"}
+    Version{"2.1.6.69"}
     zoneStrings{
+        "Africa:Gaborone"{
+            ec{"Gaborone"}
+        }
+        "Africa:Lusaka"{
+            ec{"Lusaka"}
+        }
+        "America:Tegucigalpa"{
+            ec{"Tegucigalpa"}
+        }
         "Etc:Unknown"{
             ec{"(okänd tidszon)"}
         }
         hourFormat{"+H:mm;−H:mm"}
-        regionFormat{"tidszon: {0}"}
+        regionFormat{
+            "tidszon: {0}",
+            "{0} (sommartid)",
+            "{0} (normaltid)",
+        }
     }
 }

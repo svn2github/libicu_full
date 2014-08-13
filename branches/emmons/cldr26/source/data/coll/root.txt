@@ -552,7 +552,7 @@ root{
                 "&ք"
                 "<և"
             }
-            Version{"25"}
+            Version{"26"}
         }
         search{
             Sequence{
@@ -668,11 +668,11 @@ root{
                 "&ᅮᅵ"
                 "=ᅱ"
             }
-            Version{"25"}
+            Version{"26"}
         }
         standard{
             Sequence{""}
-            Version{"25"}
+            Version{"26"}
         }
     }
     depends:process(dependency){"ucadata.icu"}

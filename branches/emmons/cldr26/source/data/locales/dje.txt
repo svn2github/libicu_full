@@ -29,7 +29,7 @@ dje{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -152,11 +152,15 @@ dje{
             eras{
                 abbreviated{
                     "IJ",
+                    "BCE",
                     "IZ",
+                    "CE",
                 }
                 wide{
                     "Isaa jine",
+                    "BCE",
                     "Isaa zamanoo",
+                    "CE",
                 }
             }
             monthNames{

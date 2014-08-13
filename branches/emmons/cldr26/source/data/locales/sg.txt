@@ -27,7 +27,7 @@ sg{
             }
         }
     }
-    Version{"2.0.97.28"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -142,11 +142,15 @@ sg{
             eras{
                 abbreviated{
                     "KnK",
+                    "BCE",
                     "NpK",
+                    "CE",
                 }
                 wide{
                     "Kôzo na Krîstu",
+                    "BCE",
                     "Na pekô tî Krîstu",
+                    "CE",
                 }
             }
             monthNames{

@@ -1,0 +1,29 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2014 International Business Machines
+// * Corporation and others. All Rights Reserved.
+// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
+// * Source File: <path>/common/main/ar_AE.xml
+// *
+// ***************************************************************************
+ar_AE{
+    Version{"2.1.7.41"}
+    zoneStrings{
+        "Europe:Dublin"{
+            ld{"توقيت ايرلندا الصيفي"}
+        }
+        "meta:Apia"{
+            ld{"التوقيت الصيفي لأبيا"}
+            lg{"توقيت آبيا"}
+            ls{"التوقيت الرسمي لآبيا"}
+        }
+        "meta:Argentina_Western"{
+            ld{"توقيت غرب الأرجنتين الصيفي"}
+            lg{"توقيت غرب الأرجنتين"}
+            ls{"توقيت غرب الأرجنتين الرسمي"}
+        }
+        "meta:French_Guiana"{
+            ls{"توقيت غويانا الفرنسية"}
+        }
+    }
+}

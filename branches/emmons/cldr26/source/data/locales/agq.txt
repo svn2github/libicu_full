@@ -34,7 +34,7 @@ agq{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -157,11 +157,15 @@ agq{
             eras{
                 abbreviated{
                     "SK",
+                    "BCE",
                     "BK",
+                    "CE",
                 }
                 wide{
                     "Sěe Kɨ̀lesto",
+                    "BCE",
                     "Bǎa Kɨ̀lesto",
+                    "CE",
                 }
             }
             monthNames{

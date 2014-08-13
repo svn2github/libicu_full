@@ -8,7 +8,7 @@
 // ***************************************************************************
 sv_FI{
     AuxExemplarCharacters{"[ã ç ë í ñ ó š ÿ ü ž]"}
-    Version{"2.0.98.14"}
+    Version{"2.1.6.69"}
     calendar{
         gregorian{
             DateTimePatterns{
@@ -29,7 +29,9 @@ sv_FI{
             eras{
                 wide{
                     "före Kristus",
+                    "före vår tideräkning",
                     "efter Kristus",
+                    "vår tideräkning",
                 }
             }
         }

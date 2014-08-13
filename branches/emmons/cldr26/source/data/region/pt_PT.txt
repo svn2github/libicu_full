@@ -159,10 +159,10 @@ pt_PT{
         JO{"Jordânia"}
         JP{"Japão"}
         KE{"Quénia"}
-        KG{"Quirguizistão"}
+        KG{"Quirguistão"}
         KH{"Camboja"}
         KI{"Quiribati"}
-        KM{"Comoros"}
+        KM{"Comores"}
         KN{"São Cristóvão e Nevis"}
         KP{"Coreia do Norte"}
         KR{"Coreia do Sul"}
@@ -173,6 +173,7 @@ pt_PT{
         LB{"Líbano"}
         LC{"Santa Lúcia"}
         LI{"Liechtenstein"}
+        LK{"Sri Lanka"}
         LR{"Libéria"}
         LS{"Lesoto"}
         LT{"Lituânia"}
@@ -295,7 +296,13 @@ pt_PT{
         ZA{"África do Sul"}
         ZM{"Zâmbia"}
         ZW{"Zimbabué"}
-        ZZ{"Região desconhecida ou inválida"}
+        ZZ{"Região desconhecida"}
+    }
+    Countries%variant{
+        CD{"República Democrática do Congo"}
+        CG{"República do Congo"}
+        FK{"Ilhas Malvinas"}
+        MK{"Antiga República Jugoslava da Macedónia"}
     }
     CountriesShort{
         GB{"RU"}
@@ -304,5 +311,5 @@ pt_PT{
         PS{"Palestina"}
         US{"EUA"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.42"}
 }

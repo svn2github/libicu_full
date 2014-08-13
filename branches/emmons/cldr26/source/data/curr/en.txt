@@ -701,7 +701,7 @@ en{
         }
         MVP{
             "MVP",
-            "Maldivian Rupee",
+            "Maldivian Rupee (1947–1981)",
         }
         MVR{
             "MVR",
@@ -840,6 +840,7 @@ en{
             "Serbian Dinar",
         }
         RUB{
+            "₽",
             "RUB",
             "Russian Ruble",
         }
@@ -885,7 +886,7 @@ en{
         }
         SHP{
             "SHP",
-            "Saint Helena Pound",
+            "St. Helena Pound",
         }
         SIT{
             "SIT",
@@ -917,7 +918,7 @@ en{
         }
         STD{
             "STD",
-            "São Tomé and Príncipe Dobra",
+            "São Tomé & Príncipe Dobra",
         }
         SUR{
             "SUR",
@@ -936,7 +937,7 @@ en{
             "Swazi Lilangeni",
         }
         THB{
-            "฿",
+            "THB",
             "Thai Baht",
         }
         TJR{
@@ -972,12 +973,13 @@ en{
             "Turkish Lira (1922–2005)",
         }
         TRY{
+            "TL",
             "TRY",
             "Turkish Lira",
         }
         TTD{
             "TTD",
-            "Trinidad and Tobago Dollar",
+            "Trinidad & Tobago Dollar",
         }
         TWD{
             "NT$",
@@ -1890,8 +1892,8 @@ en{
             other{"Mauritian rupees"}
         }
         MVP{
-            one{"Maldivian rupee"}
-            other{"Maldivian rupees"}
+            one{"Maldivian rupee (1947–1981)"}
+            other{"Maldivian rupees (1947–1981)"}
         }
         MVR{
             one{"Maldivian rufiyaa"}
@@ -2074,8 +2076,8 @@ en{
             other{"Singapore dollars"}
         }
         SHP{
-            one{"Saint Helena pound"}
-            other{"Saint Helena pounds"}
+            one{"St. Helena pound"}
+            other{"St. Helena pounds"}
         }
         SIT{
             one{"Slovenian tolar"}
@@ -2106,8 +2108,8 @@ en{
             other{"South Sudanese pounds"}
         }
         STD{
-            one{"São Tomé and Príncipe dobra"}
-            other{"São Tomé and Príncipe dobras"}
+            one{"São Tomé & Príncipe dobra"}
+            other{"São Tomé & Príncipe dobras"}
         }
         SUR{
             one{"Soviet rouble"}
@@ -2166,8 +2168,8 @@ en{
             other{"Turkish Lira"}
         }
         TTD{
-            one{"Trinidad and Tobago dollar"}
-            other{"Trinidad and Tobago dollars"}
+            one{"Trinidad & Tobago dollar"}
+            other{"Trinidad & Tobago dollars"}
         }
         TWD{
             one{"New Taiwan dollar"}
@@ -2394,5 +2396,5 @@ en{
         one{"{0} {1}"}
         other{"{0} {1}"}
     }
-    Version{"2.0.98.76"}
+    Version{"2.1.7.79"}
 }

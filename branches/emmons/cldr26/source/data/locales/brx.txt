@@ -47,7 +47,7 @@ brx{
         }
         native{"deva"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -170,7 +170,9 @@ brx{
             eras{
                 abbreviated{
                     "ईसा.पूर्व",
+                    "BCE",
                     "सन",
+                    "CE",
                 }
             }
             monthNames{

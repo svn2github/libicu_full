@@ -33,7 +33,7 @@ nmg{
             }
         }
     }
-    Version{"2.0.98.62"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -156,11 +156,15 @@ nmg{
             eras{
                 abbreviated{
                     "BL",
+                    "BCE",
                     "PB",
+                    "CE",
                 }
                 wide{
                     "Bó Lahlɛ̄",
+                    "BCE",
                     "Pfiɛ Burī",
+                    "CE",
                 }
             }
             monthNames{

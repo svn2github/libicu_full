@@ -7,5 +7,75 @@
 // *
 // ***************************************************************************
 ta_LK{
-    Version{"2.0.90.61"}
+    Ellipsis{
+        final{"{0}…"}
+        initial{"…{0}"}
+        medial{"{0}…{1}"}
+        word-final{"{0} …"}
+        word-initial{"… {0}"}
+        word-medial{"{0} … {1}"}
+    }
+    MoreInformation{"?"}
+    Version{"2.1.6.69"}
+    delimiters{
+        alternateQuotationEnd{"’"}
+        alternateQuotationStart{"‘"}
+        quotationEnd{"”"}
+        quotationStart{"“"}
+    }
+    listPattern{
+        standard{
+            2{"{0} மற்றும் {1}"}
+            end{"{0} மற்றும் {1}"}
+            middle{"{0}, {1}"}
+            start{"{0}, {1}"}
+        }
+        unit{
+            2{"{0}, {1}"}
+            end{"{0}, {1}"}
+            middle{"{0}, {1}"}
+            start{"{0}, {1}"}
+        }
+        unit-narrow{
+            2{"{0} {1}"}
+            end{"{0} {1}"}
+            middle{"{0} {1}"}
+            start{"{0} {1}"}
+        }
+        unit-short{
+            2{"{0}, {1}"}
+            end{"{0}, {1}"}
+            middle{"{0}, {1}"}
+            start{"{0}, {1}"}
+        }
+    }
+    measurementSystemNames{
+        UK{"யூகே"}
+        US{"யூஎஸ்"}
+        metric{"மெட்ரிக்"}
+    }
+    units{
+        duration{
+            microsecond{
+                one{"{0} மைக்ரோவிநாடி"}
+                other{"{0} மைக்ரோவிநாடிகள்"}
+            }
+        }
+        per{
+            duration{
+                microsecond{
+                    dnam{"மைக்ரோவிநாடிகள்"}
+                }
+            }
+        }
+    }
+    unitsShort{
+        duration{
+            microsecond{
+                dnam{"μsecs"}
+                one{"{0} μs"}
+                other{"{0} μs"}
+            }
+        }
+    }
 }

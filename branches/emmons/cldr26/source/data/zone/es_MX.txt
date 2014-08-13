@@ -8,7 +8,7 @@
 // ***************************************************************************
 es_MX{
     %%Parent{"es_419"}
-    Version{"2.0.98.52"}
+    Version{"2.1.7.42"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"Abiyán"}
@@ -48,6 +48,9 @@ es_MX{
         }
         "Africa:Cairo"{
             ec{"El Cairo"}
+        }
+        "Africa:Casablanca"{
+            ec{"Casablanca"}
         }
         "Africa:Ceuta"{
             ec{"Ceuta"}
@@ -404,7 +407,7 @@ es_MX{
             ec{"Louisville"}
         }
         "America:Lower_Princes"{
-            ec{"Lower Prince's Quarter"}
+            ec{"Lower Prince’s Quarter"}
         }
         "America:Maceio"{
             ec{"Maceió"}
@@ -608,7 +611,7 @@ es_MX{
             ec{"Davis"}
         }
         "Antarctica:DumontDUrville"{
-            ec{"Dumont d'Urville"}
+            ec{"Dumont d’Urville"}
         }
         "Antarctica:Macquarie"{
             ec{"Macquarie"}
@@ -627,6 +630,9 @@ es_MX{
         }
         "Antarctica:Syowa"{
             ec{"Syowa"}
+        }
+        "Antarctica:Troll"{
+            ec{"Troll"}
         }
         "Antarctica:Vostok"{
             ec{"Vostok"}
@@ -1260,6 +1266,12 @@ es_MX{
         "meta:Afghanistan"{
             ls{"Hora de Afganistán"}
         }
+        "meta:Africa_Central"{
+            ls{"Hora de África Central"}
+        }
+        "meta:Africa_Eastern"{
+            ls{"Hora de África Oriental"}
+        }
         "meta:Africa_Southern"{
             ls{"Hora de Sudáfrica"}
         }
@@ -1297,6 +1309,11 @@ es_MX{
             ld{"Hora de verano del Pacífico de Norteamérica"}
             lg{"Hora del Pacífico de Norteamérica"}
             ls{"Hora estándar del Pacífico de Norteamérica"}
+        }
+        "meta:Apia"{
+            ld{"Hora de verano de Apia"}
+            lg{"Hora de Apia"}
+            ls{"Hora estándar de Apia"}
         }
         "meta:Arabian"{
             ld{"Hora de verano de Arabia"}
@@ -1447,6 +1464,9 @@ es_MX{
             ld{"Hora de verano de Europa del Este"}
             lg{"Hora de Europa del Este"}
             ls{"Hora estándar de Europa del Este"}
+        }
+        "meta:Europe_Further_Eastern"{
+            ls{"Hora del Extremo Oriental de Europa"}
         }
         "meta:Europe_Western"{
             ld{"Hora de verano de Europa Occidental"}
@@ -1833,8 +1853,10 @@ es_MX{
         gmtFormat{"GMT{0}"}
         gmtZeroFormat{"GMT"}
         hourFormat{"+HH:mm;-HH:mm"}
-        regionFormat{"Hora de {0}"}
-        regionFormatDaylight{"(horario de verano de {0})"}
-        regionFormatStandard{"(horario estándar de {0})"}
+        regionFormat{
+            "Hora de {0}",
+            "(horario de verano de {0})",
+            "(horario estándar de {0})",
+        }
     }
 }

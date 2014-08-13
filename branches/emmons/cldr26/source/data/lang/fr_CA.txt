@@ -8,90 +8,394 @@
 // ***************************************************************************
 fr_CA{
     Keys{
-        calendar{"Calendrier"}
-        collation{"ordonnancement"}
-        currency{"Devise"}
-        numbers{"Chiffres"}
+        calendar{"calendrier"}
+        collation{"ordre de tri"}
+        currency{"devise"}
+        numbers{"nombres"}
     }
     Languages{
+        ab{"abkhaze"}
+        af{"afrikaans"}
+        agq{"aghem"}
+        ak{"akan"}
+        am{"amharique"}
+        ar{"arabe"}
+        ar_001{"arabe standard moderne"}
+        arn{"araukan"}
+        as{"assamais"}
+        asa{"assou"}
+        az{"azéri"}
+        ba{"bachkir"}
+        bal{"baloutchi"}
+        bas{"bassa"}
+        bax{"bamoun"}
+        bbj{"ghomala"}
+        be{"biélorusse"}
+        bej{"bedja"}
+        bem{"bemba"}
+        bez{"béna"}
+        bfd{"bafut"}
+        bg{"bulgare"}
+        bkm{"kom"}
+        bm{"bambara"}
+        bn{"bengali"}
+        bo{"tibétain"}
+        br{"breton"}
+        brx{"bodo"}
+        bs{"bosniaque"}
+        bss{"akoose"}
+        bum{"boulou"}
+        byv{"medumba"}
+        ca{"catalan"}
+        cgg{"kiga"}
+        chr{"cherokee"}
+        ckb{"sorani"}
+        co{"corse"}
+        cop{"copte"}
+        cs{"tchèque"}
+        cy{"gallois"}
+        da{"danois"}
+        dav{"taita"}
+        de{"allemand"}
+        de_AT{"allemand autrichien"}
+        de_CH{"allemand suisse"}
+        dje{"zarma"}
+        doi{"dogri"}
+        dsb{"bas-sorabe"}
+        dua{"douala"}
+        dyo{"diola-fogny"}
+        dz{"dzongkha"}
+        dzg{"dazaga"}
+        ebu{"embou"}
+        ee{"éwé"}
+        el{"grec"}
+        en{"anglais"}
+        en_AU{"anglais australien"}
+        en_CA{"anglais canadien"}
+        en_GB{"anglais britannique"}
+        en_US{"anglais américain"}
+        eo{"espéranto"}
+        es{"espagnol"}
+        es_419{"espagnol latino-américain"}
         es_ES{"espagnol ibérique"}
+        es_MX{"espagnol mexicain"}
+        et{"estonien"}
+        eu{"basque"}
+        ewo{"éwondo"}
+        fa{"persan"}
+        fan{"fang"}
+        ff{"peul"}
+        fi{"finnois"}
+        fil{"filipino"}
+        fj{"fidjien"}
+        fo{"féroïen"}
+        fr{"français"}
+        fr_CA{"français canadien"}
+        fr_CH{"français suisse"}
         fy{"frison"}
+        ga{"irlandais"}
+        gag{"gag"}
+        gl{"galicien"}
+        gn{"guarani"}
+        gsw{"suisse allemand"}
         gu{"goudjarâtî"}
+        guz{"gusii"}
+        gv{"manx"}
+        ha{"haoussa"}
+        haw{"hawaïen"}
+        he{"hébreu"}
+        hi{"hindi"}
+        hr{"croate"}
+        hsb{"haut-sorabe"}
+        ht{"haïtien"}
+        hu{"hongrois"}
+        hy{"arménien"}
+        id{"indonésien"}
+        ig{"igbo"}
+        ii{"yi de Sichuan"}
+        is{"islandais"}
+        it{"italien"}
+        iu{"inuktitut"}
+        ja{"japonais"}
+        jgo{"ngomba"}
+        jmc{"machame"}
+        jv{"javanais"}
+        ka{"géorgien"}
+        kab{"kabyle"}
+        kam{"kamba"}
+        kbl{"kanembou"}
+        kde{"makonde"}
+        kea{"capverdien"}
+        kg{"kongo"}
+        khq{"koyra chiini"}
+        ki{"kikuyu"}
+        kk{"kazakh"}
+        kkj{"kako"}
+        kl{"groenlandais"}
+        kln{"kalenjin"}
+        km{"khmer"}
+        kn{"kannada"}
+        ko{"coréen"}
+        koi{"komi-permiak"}
+        kok{"konkani"}
+        ks{"kashmiri"}
+        ksb{"chambala"}
+        ksf{"bafia"}
+        ku{"kurde"}
+        kw{"cornique"}
+        ky{"kirghize"}
+        la{"latin"}
+        lag{"langi"}
+        lb{"luxembourgeois"}
+        lg{"ganda"}
+        lkt{"lakota"}
+        ln{"lingala"}
+        lo{"lao"}
+        lt{"lituanien"}
+        lu{"luba-katanga"}
+        luo{"luo"}
+        luy{"oluluyia"}
+        lv{"letton"}
+        maf{"mafa"}
+        mas{"masai"}
+        mde{"maba"}
+        mer{"merou"}
+        mfe{"créole mauricien"}
+        mg{"malgache"}
+        mgh{"makhuwa-meetto"}
+        mgo{"méta’"}
+        mi{"maori"}
+        mk{"macédonien"}
+        ml{"malayalam"}
+        mn{"mongol"}
+        moh{"mohawk"}
+        mr{"marathe"}
+        ms{"malais"}
+        mt{"maltais"}
+        mua{"mundang"}
+        my{"birman"}
+        mye{"myènè"}
+        naq{"nama"}
+        nb{"norvégien bokmål"}
+        nd{"ndébélé du Nord"}
+        ne{"népalais"}
+        nl{"néerlandais"}
+        nl_BE{"flamand"}
+        nmg{"kwasio"}
+        nn{"norvégien nynorsk"}
+        nnh{"ngiemboon"}
+        nqo{"n’ko"}
+        nus{"nuer"}
+        nyn{"nyankolé"}
+        om{"oromo"}
+        or{"oriya"}
+        pa{"pendjabi"}
+        pl{"polonais"}
+        ps{"pachto"}
+        pt{"portugais"}
+        pt_BR{"portugais brésilien"}
         pt_PT{"portugais ibérique"}
-        si{"singhalais"}
+        qu{"quechua"}
+        quc{"k’iche’"}
+        rm{"romanche"}
+        rn{"roundi"}
+        ro{"roumain"}
+        ro_MD{"moldave"}
+        rof{"rombo"}
+        ru{"russe"}
+        rw{"kinyarwanda"}
+        rwk{"rwa"}
+        sa{"sanskrit"}
+        saq{"samburu"}
+        sba{"ngambay"}
+        sbp{"sangu"}
+        sd{"sindhi"}
+        se{"sami du Nord"}
+        seh{"sena"}
+        ses{"koyraboro senni"}
+        sg{"sangho"}
+        shi{"chleuh"}
+        shu{"arabe tchadien"}
+        si{"cingalais"}
+        sk{"slovaque"}
+        sl{"slovène"}
+        sma{"sami du Sud"}
+        smj{"sami de Lule"}
+        smn{"sami d’Inari"}
+        sms{"sami skolt"}
+        sn{"shona"}
+        so{"somali"}
+        sq{"albanais"}
+        sr{"serbe"}
+        su{"soundanais"}
+        sv{"suédois"}
+        sw{"swahili"}
+        swc{"swahili du Congo"}
+        ta{"tamoul"}
+        te{"télougou"}
+        teo{"teso"}
+        tg{"tadjik"}
+        th{"thaï"}
+        ti{"tigrigna"}
+        tk{"turkmène"}
         to{"tongan"}
+        tr{"turc"}
+        tt{"tatar"}
+        twq{"tasawaq"}
+        tzm{"tamazight"}
         ug{"ouïgour"}
+        uk{"ukrainien"}
         und{"indéterminé"}
+        ur{"ourdou"}
+        uz{"ouzbek"}
+        vai{"vaï"}
+        vi{"vietnamien"}
+        vun{"vunjo"}
+        wo{"wolof"}
+        xh{"xhosa"}
+        xog{"soga"}
+        yav{"yangben"}
         ybb{"yémba"}
+        yo{"yoruba"}
+        zgh{"amazighe standard marocain"}
+        zh{"chinois"}
+        zh_Hans{"chinois simplifié"}
+        zh_Hant{"chinois traditionnel"}
+        zu{"zoulou"}
+        zxx{"sans contenu linguistique"}
+    }
+    Languages%variant{
+        ps{"pashto"}
+        ug{"ouïghour"}
     }
     LanguagesShort{
+        az{"azéri"}
         en_GB{"anglais (GB)"}
+        en_US{"anglais (É.-U.)"}
     }
     Scripts{
-        Beng{"bengâglî"}
+        Arab{"arabe"}
+        Armn{"arménien"}
+        Beng{"bengali"}
+        Bopo{"bopomofo"}
+        Brai{"braille"}
+        Cyrl{"cyrillique"}
+        Deva{"devanagari"}
+        Ethi{"éthiopique"}
+        Geor{"géorgien"}
+        Grek{"grec"}
+        Gujr{"gujarati"}
+        Guru{"gourmoukhî"}
+        Hang{"hangûl"}
+        Hani{"sinogrammes"}
         Hans{"idéogrammes han simplifiés"}
         Hant{"idéogrammes han traditionnels"}
+        Hebr{"hébreu"}
+        Hira{"hiragana"}
+        Jpan{"japonais"}
+        Kana{"katakana"}
+        Khmr{"khmer"}
+        Knda{"kannara"}
+        Kore{"coréen"}
+        Laoo{"lao"}
+        Latn{"latin"}
         Mlym{"malayâlam"}
+        Mong{"mongol"}
+        Mymr{"birman"}
         Orya{"oriyâ"}
         Sinh{"cingalais"}
+        Taml{"tamoul"}
+        Telu{"télougou"}
+        Thaa{"thâna"}
+        Thai{"thaï"}
+        Tibt{"tibétain"}
+        Zsym{"symboles"}
+        Zxxx{"non écrit"}
+        Zyyy{"commun"}
+        Zzzz{"écriture inconnue"}
     }
     Scripts%stand-alone{
         Hans{"chinois simplifié"}
         Hant{"chinois traditionnel"}
     }
+    Scripts%variant{
+        Arab{"arabo-persan"}
+    }
     Types{
         calendar{
-            ethiopic-amete-alem{"Calendrier éthiopien de l'An de grâce"}
-            gregorian{"Calendrier grégorien"}
-            islamic{"Calendrier musulman"}
-            islamic-civil{"Calendrier civil musulman"}
+            buddhist{"calendrier bouddhiste"}
+            chinese{"calendrier chinois"}
+            dangi{"calendrier dangi"}
+            ethiopic{"calendrier éthiopien"}
+            ethiopic-amete-alem{"Calendrier éthiopien de l’An de grâce"}
+            gregorian{"calendrier grégorien"}
+            hebrew{"calendrier hébraïque"}
+            islamic{"calendrier musulman"}
+            islamic-civil{"calendrier musulman (tabulaire, époque civile)"}
             islamic-tbla{"calendrier religieux musulman"}
-            persian{"Calendrier perse"}
+            iso8601{"calendrier ISO 8601"}
+            japanese{"calendrier japonais"}
+            persian{"calendrier persan"}
+            roc{"calendrier républicain chinois"}
         }
         collation{
             dictionary{"Ordre de tri du dictionnaire"}
-            ducet{"Ordre de tri Unicode par défaut"}
+            ducet{"ordre de tri Unicode par défaut"}
             reformed{"Ordre de tri réformé"}
-            search{"Recherche générale"}
+            search{"recherche générique"}
+            searchjl{"Rechercher par consonne initiale en hangeul"}
+            standard{"ordre de tri standard"}
             unihan{"Ordre de tri radical et trait"}
         }
         numbers{
-            arab{"Chiffres indo-arabes"}
-            arabext{"Chiffres indo-arabes étendus"}
-            armn{"Chiffres arméniens"}
-            armnlow{"Chiffres minuscules arméniens"}
-            beng{"Chiffres bengali"}
-            deva{"Chiffres devanagari"}
-            ethi{"Chiffre éthiopiens"}
-            fullwide{"Chiffre pleine largeur"}
-            geor{"Chiffres géorgiens"}
-            grek{"Chiffres grecs"}
-            greklow{"Chiffres minuscules grecs"}
-            gujr{"Chiffres gujarati"}
-            guru{"Chiffres gurmukhī"}
-            hanidec{"Chiffres numériques chinois"}
-            hans{"Chiffres chinois simplifiés"}
-            hansfin{"Chiffres monétaires chinois simplifiés"}
-            hant{"Chiffres chinois traditionnels"}
-            hantfin{"Chiffres financiers en chinois traditionnel"}
-            hebr{"Chiffre hébreux"}
-            jpan{"Chiffres japonais"}
-            jpanfin{"Chiffres monétaires japonais"}
-            khmr{"Chiffres khmer"}
-            knda{"Chiffres canara"}
-            laoo{"Chiffres laotiens"}
-            latn{"Chiffres occidentaux"}
-            mlym{"Chiffres malayâlam"}
+            arab{"chiffres arabes"}
+            arabext{"chiffres arabes étendus"}
+            armn{"chiffres arméniens"}
+            armnlow{"chiffres arméniens minuscules"}
+            bali{"chiffres balinais"}
+            beng{"chiffres bengalis"}
+            deva{"chiffres devanagaris"}
+            ethi{"chiffres éthiopiens"}
+            fullwide{"chiffres pleine chasse"}
+            geor{"chiffres géorgiens"}
+            grek{"chiffres grecs"}
+            greklow{"chiffres grecs minuscules"}
+            gujr{"chiffres gujarati"}
+            guru{"chiffres gourmoukhîs"}
+            hanidec{"nombres décimaux chinois"}
+            hans{"chiffres en chinois simplifié"}
+            hansfin{"chiffres financiers en chinois simplifié"}
+            hant{"chiffres en chinois traditionnel"}
+            hantfin{"chiffres financiers en chinois traditionnel"}
+            hebr{"chiffres hébreux"}
+            jpan{"chiffres japonais"}
+            jpanfin{"chiffres japonais financiers"}
+            khmr{"chiffres khmers"}
+            knda{"chiffres en kannada"}
+            laoo{"chiffres laotiens"}
+            latn{"chiffres occidentaux"}
+            mlym{"chiffres malayâlams"}
             mong{"Chiffres mongols"}
-            mymr{"Chiffres birmans"}
-            orya{"Chiffres oriya"}
-            roman{"Chiffres romains"}
-            romanlow{"Chiffres minuscules romains"}
-            taml{"Chiffres tamoul"}
-            telu{"Chiffres telugu"}
-            thai{"Chiffres thaïlandais"}
-            tibt{"Chiffres tibétains"}
+            mymr{"chiffres birmans"}
+            orya{"chiffres oriyas"}
+            roman{"chiffres romains"}
+            romanlow{"chiffres romains minuscules"}
+            taml{"chiffres tamouls traditionnels"}
+            tamldec{"chiffres tamouls"}
+            telu{"chiffres télougous"}
+            thai{"chiffres thaïs"}
+            tibt{"chiffres tibétains"}
         }
     }
-    Version{"2.0.92.80"}
+    Version{"2.1.7.42"}
+    codePatterns{
+        language{"langue : {0}"}
+        script{"écriture : {0}"}
+        territory{"région : {0}"}
+    }
+    localeDisplayPattern{
+        keyTypePattern{"{0} : {1}"}
+        pattern{"{0} ({1})"}
+        separator{"{0}, {1}"}
+    }
 }

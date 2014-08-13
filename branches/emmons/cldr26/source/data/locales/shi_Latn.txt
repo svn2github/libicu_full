@@ -28,7 +28,7 @@ shi_Latn{
             }
         }
     }
-    Version{"2.0.97.28"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -132,11 +132,15 @@ shi_Latn{
             eras{
                 abbreviated{
                     "daɛ",
+                    "BCE",
                     "dfɛ",
+                    "CE",
                 }
                 wide{
                     "dat n ɛisa",
+                    "BCE",
                     "dffir n ɛisa",
+                    "CE",
                 }
             }
             monthNames{

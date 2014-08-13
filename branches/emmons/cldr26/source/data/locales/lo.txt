@@ -214,16 +214,18 @@ lo{
                 infinity{"∞"}
                 list{";"}
                 minusSign{"-"}
-                nan{"ບໍ່ແມ່ນໂຕເລກ"}
+                nan{"ບໍ່​ແມ່ນ​ໂຕ​ເລກ"}
                 perMille{"‰"}
                 percentSign{"%"}
                 plusSign{"+"}
                 superscriptingExponent{"×"}
+                timeSeparator{":"}
             }
         }
+        minimumGroupingDigits{"1"}
         native{"laoo"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.42"}
     calendar{
         chinese{
             DateTimePatterns{
@@ -780,6 +782,10 @@ lo{
                 "ກ່ອນທ່ຽງ",
                 "ຫຼັງທ່ຽງ",
             }
+            AmPmMarkersNarrow{
+                "ກທ",
+                "ຫຼທ",
+            }
             DateTimePatterns{
                 "H ໂມງ m ນາທີ ss ວິນາທີ zzzz",
                 "H ໂມງ m ນາທີ ss ວິນາທີ z",
@@ -795,10 +801,13 @@ lo{
                 "{1}, {0}",
                 "{1}, {0}",
             }
+            NoonMarker{"ທ່ຽງ"}
+            NoonMarkerNarrow{"ທ"}
             appendItems{
                 Timezone{"{0} {1}"}
             }
             availableFormats{
+                E{"ccc"}
                 EHm{"E HH:mm"}
                 EHms{"E HH:mm:ss"}
                 Ed{"E, d"}
@@ -853,13 +862,13 @@ lo{
                         "7",
                     }
                     short{
-                        "ວັນອາທິດ",
-                        "ວັນຈັນ",
-                        "ວັນອັງຄານ",
-                        "ວັນພຸດ",
-                        "ວັນພະຫັດ",
-                        "ວັນສຸກ",
-                        "ວັນເສົາ",
+                        "ອາ.",
+                        "ຈ.",
+                        "ອ.",
+                        "ພ.",
+                        "ພຫ.",
+                        "ສຸ.",
+                        "ສ.",
                     }
                     wide{
                         "ວັນອາທິດ",
@@ -873,31 +882,31 @@ lo{
                 }
                 stand-alone{
                     abbreviated{
-                        "ວັນອາທິດ",
-                        "ວັນຈັນ",
-                        "ວັນອັງຄານ",
-                        "ວັນພຸດ",
-                        "ວັນພະຫັດ",
-                        "ວັນສຸກ",
-                        "ວັນເສົາ",
+                        "ອາທິດ",
+                        "ຈັນ",
+                        "ອັງຄານ",
+                        "ພຸດ",
+                        "ພະຫັດ",
+                        "ສຸກ",
+                        "ເສົາ",
                     }
                     narrow{
-                        "ທ",
+                        "ອ",
                         "ຈ",
-                        "ຄ",
-                        "​ພຸ",
+                        "ອ",
                         "ພ",
-                        "​ສຸ",
+                        "ພຫ",
+                        "ສຸ",
                         "ສ",
                     }
                     short{
-                        "ອ.ທ.",
-                        "ຈັນ",
-                        "ຄ",
-                        "ພ",
-                        "ພຫ",
-                        "ວັນສຸກ",
-                        "ເສົາ",
+                        "ອາ.",
+                        "ຈ.",
+                        "ອ.",
+                        "ພ.",
+                        "ພຫ.",
+                        "ສຸ.",
+                        "ສ.",
                     }
                     wide{
                         "ວັນອາທິດ",
@@ -913,7 +922,15 @@ lo{
             eras{
                 abbreviated{
                     "ກ່ອນ ຄ.ສ.",
+                    "BCE",
                     "ຄ.ສ.",
+                    "CE",
+                }
+                wide{
+                    "ກ່ອນຄຣິດສັກກະລາດ",
+                    "ກ່ອນສາກົນສັກກະລາດ",
+                    "ຄຣິດສັກກະລາດ",
+                    "ສາກົນສັກກະລາດ",
                 }
             }
             intervalFormats{
@@ -1347,7 +1364,7 @@ lo{
                 d{"d"}
                 h{"ha"}
                 hm{"h mm a"}
-                hms{"H:mm:ss"}
+                hms{"h:mm:ss a"}
                 ms{"mm:ss"}
                 y{"y"}
                 yM{"M/y"}
@@ -1831,6 +1848,28 @@ lo{
                 }
             }
         }
+        day-narrow{
+            dn{"ມື້"}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ມື້"}
+                }
+                past{
+                    other{"{0} ມື້ກ່ອນ"}
+                }
+            }
+        }
+        day-short{
+            dn{"ມື້"}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ມື້"}
+                }
+                past{
+                    other{"{0} ມື້ກ່ອນ"}
+                }
+            }
+        }
         dayperiod{
             dn{"ກ່ອນທ່ຽງ/ຫຼັງທ່ຽງ"}
         }
@@ -1844,8 +1883,44 @@ lo{
                 "1"{"ວັນສຸກໜ້າ"}
             }
         }
+        fri-narrow{
+            relative{
+                "-1"{"ສຸ. ແລ້ວ"}
+                "0"{"ສຸ. ນີ້"}
+                "1"{"ສຸ. ໜ້າ"}
+            }
+        }
+        fri-short{
+            relative{
+                "-1"{"ສຸກແລ້ວ"}
+                "0"{"ສຸກນີ້"}
+                "1"{"ສຸກໜ້າ"}
+            }
+        }
         hour{
             dn{"ຊົ່ວໂມງ"}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ຊົ່ວໂມງ"}
+                }
+                past{
+                    other{"{0} ຊົ່ວໂມງກ່ອນ"}
+                }
+            }
+        }
+        hour-narrow{
+            dn{"ຊມ"}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ຊົ່ວໂມງ"}
+                }
+                past{
+                    other{"{0} ຊົ່ວໂມງກ່ອນ"}
+                }
+            }
+        }
+        hour-short{
+            dn{"ຊມ."}
             relativeTime{
                 future{
                     other{"ໃນອີກ {0} ຊົ່ວໂມງ"}
@@ -1866,11 +1941,47 @@ lo{
                 }
             }
         }
+        minute-narrow{
+            dn{"ນ."}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ນາທີ"}
+                }
+                past{
+                    other{"{0} ນາທີກ່ອນ"}
+                }
+            }
+        }
+        minute-short{
+            dn{"ນທ."}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ນາທີ"}
+                }
+                past{
+                    other{"{0} ນາທີກ່ອນ"}
+                }
+            }
+        }
         mon{
             relative{
                 "-1"{"ວັນຈັນແລ້ວ"}
                 "0"{"ວັນຈັນນີ້"}
                 "1"{"ວັນຈັນໜ້າ"}
+            }
+        }
+        mon-narrow{
+            relative{
+                "-1"{"ຈ. ແລ້ວ"}
+                "0"{"ຈ. ນີ້"}
+                "1"{"ຈ. ໜ້າ"}
+            }
+        }
+        mon-short{
+            relative{
+                "-1"{"ຈັນແລ້ວ"}
+                "0"{"ຈັນນີ້"}
+                "1"{"ຈັນໜ້າ"}
             }
         }
         month{
@@ -1889,11 +2000,80 @@ lo{
                 }
             }
         }
+        month-narrow{
+            dn{"ດ."}
+            relativeTime{
+                future{
+                    other{"+{0} ດ."}
+                }
+                past{
+                    other{"-{0} ດ."}
+                }
+            }
+        }
+        month-short{
+            dn{"ດ."}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ດ."}
+                }
+                past{
+                    other{"{0} ດ. ກ່ອນ"}
+                }
+            }
+        }
+        quarter{
+            dn{"ຄວດເຕີ"}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ຄວດເຕີ"}
+                }
+                past{
+                    other{"{0} ຄວດເຕີກ່ອນ"}
+                }
+            }
+        }
+        quarter-narrow{
+            dn{"ຄຕ."}
+            relativeTime{
+                future{
+                    other{"+{0} ຄຕ."}
+                }
+                past{
+                    other{"-{0} ຄຕ."}
+                }
+            }
+        }
+        quarter-short{
+            dn{"ຄຕ."}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ຄຕ."}
+                }
+                past{
+                    other{"{0} ຄຕ. ກ່ອນ"}
+                }
+            }
+        }
         sat{
             relative{
                 "-1"{"ວັນເສົາແລ້ວ"}
                 "0"{"ວັນເສົານີ້"}
                 "1"{"ວັນເສົາໜ້າ"}
+            }
+        }
+        sat-narrow{
+            relative{
+                "-1"{"ສ. ແລ້ວ"}
+                "0"{"ສ. ນີ້"}
+                "1"{"ສ. ໜ້າ"}
+            }
+        }
+        sat-short{
+            relative{
+                "-1"{"ເສົາແລ້ວ"}
+                "0"{"ເສົານີ້"}
+                "1"{"ເສົາໜ້າ"}
             }
         }
         second{
@@ -1910,11 +2090,47 @@ lo{
                 }
             }
         }
+        second-narrow{
+            dn{"ວ."}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ວິນາທີ"}
+                }
+                past{
+                    other{"{0} ວິນາທີກ່ອນ"}
+                }
+            }
+        }
+        second-short{
+            dn{"ວິ."}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ວິນາທີ"}
+                }
+                past{
+                    other{"{0} ວິນາທີກ່ອນ"}
+                }
+            }
+        }
         sun{
             relative{
-                "-1"{"ວັນເສົາແລ້ວ"}
-                "0"{"ວັນເສົານີ້"}
-                "1"{"ວັນເສົາໜ້າ"}
+                "-1"{"ວັນອາທິດແລ້ວ"}
+                "0"{"ວັນອາທິດນີ້"}
+                "1"{"ວັນອາທິດໜ້າ"}
+            }
+        }
+        sun-narrow{
+            relative{
+                "-1"{"ອາ. ແລ້ວ"}
+                "0"{"ອາ. ນີ້"}
+                "1"{"ອາ. ໜ້າ"}
+            }
+        }
+        sun-short{
+            relative{
+                "-1"{"ອາທິດແລ້ວ"}
+                "0"{"ອາທິດນີ້"}
+                "1"{"ອາທິດໜ້າ"}
             }
         }
         thu{
@@ -1924,6 +2140,20 @@ lo{
                 "1"{"ວັນພະຫັດໜ້າ"}
             }
         }
+        thu-narrow{
+            relative{
+                "-1"{"ພຫ. ແລ້ວ"}
+                "0"{"ພຫ. ນີ້"}
+                "1"{"ພຫ. ໜ້າ"}
+            }
+        }
+        thu-short{
+            relative{
+                "-1"{"ພະຫັດແລ້ວ"}
+                "0"{"ພະຫັດນີ້"}
+                "1"{"ພະຫັດໜ້າ"}
+            }
+        }
         tue{
             relative{
                 "-1"{"ວັນອັງຄານແລ້ວ"}
@@ -1931,11 +2161,39 @@ lo{
                 "1"{"ວັນອັງຄານໜ້າ"}
             }
         }
+        tue-narrow{
+            relative{
+                "-1"{"ອ. ແລ້ວ"}
+                "0"{"ອ. ນີ້"}
+                "1"{"ອ. ໜ້າ"}
+            }
+        }
+        tue-short{
+            relative{
+                "-1"{"ອັງຄານແລ້ວ"}
+                "0"{"ອັງຄານນີ້"}
+                "1"{"ອັງຄານໜ້າ"}
+            }
+        }
         wed{
             relative{
                 "-1"{"ວັນພຸດແລ້ວ"}
                 "0"{"ວັນພຸດນີ້"}
                 "1"{"ວັນພຸດໜ້າ"}
+            }
+        }
+        wed-narrow{
+            relative{
+                "-1"{"ພ. ແລ້ວ"}
+                "0"{"ພ. ນີ້"}
+                "1"{"ພ. ໜ້າ"}
+            }
+        }
+        wed-short{
+            relative{
+                "-1"{"ພຸດແລ້ວ"}
+                "0"{"ພຸດນີ້"}
+                "1"{"ພຸດໜ້າ"}
             }
         }
         week{
@@ -1951,6 +2209,28 @@ lo{
                 }
                 past{
                     other{"{0} ອາທິດກ່ອນ"}
+                }
+            }
+        }
+        week-narrow{
+            dn{"ອ."}
+            relativeTime{
+                future{
+                    other{"+{0} ອທ."}
+                }
+                past{
+                    other{"-{0} ອທ."}
+                }
+            }
+        }
+        week-short{
+            dn{"ອ."}
+            relativeTime{
+                future{
+                    other{"ໃນອີກ {0} ອທ."}
+                }
+                past{
+                    other{"{0} ອທ. ກ່ອນ"}
                 }
             }
         }
@@ -1972,6 +2252,9 @@ lo{
                     other{"{0} ປີກ່ອນ"}
                 }
             }
+        }
+        year-short{
+            dn{"ປ."}
         }
         zone{
             dn{"ເຂດເວລາ"}
@@ -2001,6 +2284,9 @@ lo{
             g-force{
                 other{"{0} ແຮງຈີ"}
             }
+            meter-per-second-squared{
+                other{"{0} m/s²"}
+            }
         }
         angle{
             arc-minute{
@@ -2012,6 +2298,9 @@ lo{
             degree{
                 other{"{0} ອົງສາ"}
             }
+            radian{
+                other{"{0} radians"}
+            }
         }
         area{
             acre{
@@ -2020,8 +2309,14 @@ lo{
             hectare{
                 other{"{0} ເຮັກຕາ"}
             }
+            square-centimeter{
+                other{"{0} ຕາຊັງຕາແມັດ"}
+            }
             square-foot{
-                other{"{0} ft²"}
+                other{"{0} ຕາ​ຟຸດ"}
+            }
+            square-inch{
+                other{"{0} ຕາລາງນິ້ວ"}
             }
             square-kilometer{
                 other{"{0} ກິໂລຕາແມັດ"}
@@ -2030,11 +2325,54 @@ lo{
                 other{"{0} ຕາແມັດ"}
             }
             square-mile{
-                other{"{0} ຕາໄມ"}
+                other{"{0} ຕາ​ໄມລ໌"}
+            }
+            square-yard{
+                other{"{0} ຕາລາງຢາດ"}
             }
         }
         compound{
             per{"{0} ຕໍ່ {1}"}
+        }
+        consumption{
+            liter-per-kilometer{
+                other{"{0} ລິດຕໍ່ກິໂລແມັດ"}
+            }
+            mile-per-gallon{
+                other{"{0} ໄມລ໌ຕໍ່ແກລອນ"}
+            }
+        }
+        digital{
+            bit{
+                other{"{0} bit"}
+            }
+            byte{
+                other{"{0} byte"}
+            }
+            gigabit{
+                other{"{0} Gb"}
+            }
+            gigabyte{
+                other{"{0} GB"}
+            }
+            kilobit{
+                other{"{0} kb"}
+            }
+            kilobyte{
+                other{"{0} kB"}
+            }
+            megabit{
+                other{"{0} Mb"}
+            }
+            megabyte{
+                other{"{0} MB"}
+            }
+            terabit{
+                other{"{0} Tb"}
+            }
+            terabyte{
+                other{"{0} TB"}
+            }
         }
         duration{
             day{
@@ -2042,6 +2380,9 @@ lo{
             }
             hour{
                 other{"{0} ຊົ່ວໂມງ"}
+            }
+            microsecond{
+                other{"{0} ໄມ​ໂຄຣ​ວິ​ນາ​ທີ"}
             }
             millisecond{
                 other{"{0} ມິນລີວິນາທີ"}
@@ -2051,6 +2392,9 @@ lo{
             }
             month{
                 other{"{0} ເດືອນ"}
+            }
+            nanosecond{
+                other{"{0} ນາ​ໂນ​ວິ​ນາ​ທີ"}
             }
             second{
                 other{"{0} ວິນາທີ"}
@@ -2062,9 +2406,63 @@ lo{
                 other{"{0} ປີ"}
             }
         }
+        electric{
+            ampere{
+                other{"{0} A"}
+            }
+            milliampere{
+                other{"{0} mA"}
+            }
+            ohm{
+                other{"{0} Ω"}
+            }
+            volt{
+                other{"{0} V"}
+            }
+        }
+        energy{
+            calorie{
+                other{"{0} cal"}
+            }
+            foodcalorie{
+                other{"{0} Cal"}
+            }
+            joule{
+                other{"{0} J"}
+            }
+            kilocalorie{
+                other{"{0} kcal"}
+            }
+            kilojoule{
+                other{"{0} kJ"}
+            }
+            kilowatt-hour{
+                other{"{0} kWh"}
+            }
+        }
+        frequency{
+            gigahertz{
+                other{"{0} GHz"}
+            }
+            hertz{
+                other{"{0} Hz"}
+            }
+            kilohertz{
+                other{"{0} kHz"}
+            }
+            megahertz{
+                other{"{0} MHz"}
+            }
+        }
         length{
+            astronomical-unit{
+                other{"{0} astronomical units"}
+            }
             centimeter{
                 other{"{0} ຊັງຕີແມັດ"}
+            }
+            decimeter{
+                other{"{0} decimeters"}
             }
             foot{
                 other{"{0} ຟຸດ"}
@@ -2081,11 +2479,23 @@ lo{
             meter{
                 other{"{0} ແມັດ"}
             }
+            micrometer{
+                other{"{0} micrometers"}
+            }
             mile{
                 other{"{0} ໄມ"}
             }
             millimeter{
                 other{"{0} ມິນລິແມັດ"}
+            }
+            nanometer{
+                other{"{0} ນາໂນແມັດ"}
+            }
+            nautical-mile{
+                other{"{0} nautical miles"}
+            }
+            parsec{
+                other{"{0} parsecs"}
             }
             picometer{
                 other{"{0} ປິໂກແມັດ"}
@@ -2094,26 +2504,440 @@ lo{
                 other{"{0} ຫລາ"}
             }
         }
+        light{
+            lux{
+                other{"{0} lux"}
+            }
+        }
         mass{
+            carat{
+                other{"{0} CD"}
+            }
             gram{
                 other{"{0} ກຣາມ"}
             }
             kilogram{
                 other{"{0} ກິໂລກຣາມ"}
             }
+            metric-ton{
+                other{"{0} t"}
+            }
+            microgram{
+                other{"{0} µg"}
+            }
+            milligram{
+                other{"{0} mg"}
+            }
             ounce{
                 other{"{0} ອອນ"}
+            }
+            ounce-troy{
+                other{"{0} oz t"}
             }
             pound{
                 other{"{0} ປອນ"}
             }
+            ton{
+                other{"{0} tn"}
+            }
+        }
+        per{
+            acceleration{
+                g-force{
+                    dnam{"ແຮງຈີ"}
+                }
+                meter-per-second-squared{
+                    dnam{"m/s²"}
+                }
+            }
+            angle{
+                arc-minute{
+                    dnam{"arcminutes"}
+                }
+                arc-second{
+                    dnam{"arcseconds"}
+                }
+                degree{
+                    dnam{"ອົງສາ"}
+                }
+                radian{
+                    dnam{"radians"}
+                }
+            }
+            area{
+                acre{
+                    dnam{"ເອເຄີ"}
+                }
+                hectare{
+                    dnam{"ເຮັກຕາ"}
+                }
+                square-centimeter{
+                    dnam{"ຕາຊັງຕີແມັດ"}
+                }
+                square-foot{
+                    dnam{"ຕາ​ຟຸດ"}
+                }
+                square-inch{
+                    dnam{"ຕານິ້ວ"}
+                }
+                square-kilometer{
+                    dnam{"ກິໂລຕາແມັດ"}
+                }
+                square-meter{
+                    dnam{"ຕາແມັດ"}
+                }
+                square-mile{
+                    dnam{"ຕາ​ໄມລ໌"}
+                }
+                square-yard{
+                    dnam{"square yards"}
+                }
+            }
+            consumption{
+                mile-per-gallon{
+                    dnam{"ໄມລ໌ຕໍ່ແກລອນ"}
+                }
+            }
+            digital{
+                bit{
+                    dnam{"bit"}
+                }
+                byte{
+                    dnam{"byte"}
+                }
+                gigabit{
+                    dnam{"Gb"}
+                }
+                gigabyte{
+                    dnam{"GB"}
+                }
+                kilobit{
+                    dnam{"kb"}
+                }
+                kilobyte{
+                    dnam{"kB"}
+                }
+                megabit{
+                    dnam{"Mb"}
+                }
+                megabyte{
+                    dnam{"MB"}
+                }
+                terabit{
+                    dnam{"Tb"}
+                }
+                terabyte{
+                    dnam{"TB"}
+                }
+            }
+            duration{
+                day{
+                    dnam{"ມື້"}
+                }
+                hour{
+                    dnam{"ຊົ່ວໂມງ"}
+                    per{"{0} ຕໍ່ຊົ່ວໂມງ"}
+                }
+                microsecond{
+                    dnam{"ໄມ​ໂຄຣ​ວິ​ນາ​ທີ"}
+                }
+                millisecond{
+                    dnam{"ມິນລີວິນາທີ"}
+                }
+                minute{
+                    dnam{"ນາທີ"}
+                }
+                month{
+                    dnam{"ເດືອນ"}
+                }
+                nanosecond{
+                    dnam{"ນາ​ໂນ​ວິ​ນາ​ທີ"}
+                }
+                second{
+                    dnam{"ວິນາທີ"}
+                    per{"{0} ຕໍ່ວິນາທີ"}
+                }
+                week{
+                    dnam{"ອາທິດ"}
+                }
+                year{
+                    dnam{"ປີ"}
+                }
+            }
+            electric{
+                ampere{
+                    dnam{"amp"}
+                }
+                milliampere{
+                    dnam{"mA"}
+                }
+                ohm{
+                    dnam{"ohm"}
+                }
+                volt{
+                    dnam{"volt"}
+                }
+            }
+            energy{
+                calorie{
+                    dnam{"cal"}
+                }
+                foodcalorie{
+                    dnam{"Cal"}
+                }
+                joule{
+                    dnam{"joule"}
+                }
+                kilocalorie{
+                    dnam{"kcal"}
+                }
+                kilojoule{
+                    dnam{"kJ"}
+                }
+                kilowatt-hour{
+                    dnam{"kWh"}
+                }
+            }
+            frequency{
+                gigahertz{
+                    dnam{"GHz"}
+                }
+                hertz{
+                    dnam{"Hz"}
+                }
+                kilohertz{
+                    dnam{"kHz"}
+                }
+                megahertz{
+                    dnam{"MHz"}
+                }
+            }
+            length{
+                astronomical-unit{
+                    dnam{"astronomical units"}
+                }
+                centimeter{
+                    dnam{"ຊັງຕີແມັດ"}
+                }
+                foot{
+                    dnam{"ຟຸດ"}
+                }
+                inch{
+                    dnam{"ນິ້ວ"}
+                }
+                kilometer{
+                    dnam{"ກິໂລແມັດ"}
+                }
+                light-year{
+                    dnam{"ປີແສງ"}
+                }
+                meter{
+                    dnam{"ແມັດ"}
+                }
+                micrometer{
+                    dnam{"micrometers"}
+                }
+                mile{
+                    dnam{"ໄມ"}
+                }
+                millimeter{
+                    dnam{"ມິນລິແມັດ"}
+                }
+                nanometer{
+                    dnam{"ນາໂນແມັດ"}
+                }
+                parsec{
+                    dnam{"parsecs"}
+                }
+                picometer{
+                    dnam{"ປິໂກແມັດ"}
+                }
+                yard{
+                    dnam{"ຫລາ"}
+                }
+            }
+            light{
+                lux{
+                    dnam{"lux"}
+                }
+            }
+            mass{
+                carat{
+                    dnam{"CD"}
+                }
+                gram{
+                    dnam{"ກຣາມ"}
+                }
+                kilogram{
+                    dnam{"ກິໂລກຣາມ"}
+                }
+                metric-ton{
+                    dnam{"t"}
+                }
+                microgram{
+                    dnam{"µg"}
+                }
+                milligram{
+                    dnam{"mg"}
+                }
+                ounce{
+                    dnam{"ອອນ"}
+                }
+                ounce-troy{
+                    dnam{"oz t"}
+                }
+                pound{
+                    dnam{"ປອນ"}
+                }
+                ton{
+                    dnam{"tn"}
+                }
+            }
+            power{
+                gigawatt{
+                    dnam{"GW"}
+                }
+                horsepower{
+                    dnam{"ແຮງມ້າ"}
+                }
+                kilowatt{
+                    dnam{"ກິໂລວັດ"}
+                }
+                megawatt{
+                    dnam{"MW"}
+                }
+                milliwatt{
+                    dnam{"mW"}
+                }
+                watt{
+                    dnam{"ວັດ"}
+                }
+            }
+            pressure{
+                hectopascal{
+                    dnam{"hectopascals"}
+                }
+                inch-hg{
+                    dnam{"inches of mercury"}
+                }
+                millibar{
+                    dnam{"ມິນລິບາ"}
+                }
+                millimeter-of-mercury{
+                    dnam{"mm Hg"}
+                }
+                pound-per-square-inch{
+                    dnam{"pounds per square inch"}
+                }
+            }
+            proportion{
+                karat{
+                    dnam{"ກະຣັດ"}
+                }
+            }
+            speed{
+                kilometer-per-hour{
+                    dnam{"ກິໂລແມັດຕໍ່ຊົ່ວໂມງ"}
+                }
+                meter-per-second{
+                    dnam{"ແມັດຕໍ່ນາທີ"}
+                }
+                mile-per-hour{
+                    dnam{"ໄມລ໌ຕໍ່ຊົ່ວໂມງ"}
+                }
+            }
+            temperature{
+                celsius{
+                    dnam{"ອົງສາເຊວຊຽສ"}
+                }
+                fahrenheit{
+                    dnam{"ອົງສາຟາເຣນຮາຍ"}
+                }
+                kelvin{
+                    dnam{"ອົງສາເຄວິນ"}
+                }
+            }
+            volume{
+                acre-foot{
+                    dnam{"ac ft"}
+                }
+                centiliter{
+                    dnam{"cL"}
+                }
+                cubic-centimeter{
+                    dnam{"cm³"}
+                }
+                cubic-foot{
+                    dnam{"ft³"}
+                }
+                cubic-inch{
+                    dnam{"in³"}
+                }
+                cubic-kilometer{
+                    dnam{"ກິໂລແມັດກ້ອນ"}
+                }
+                cubic-meter{
+                    dnam{"m³"}
+                }
+                cubic-mile{
+                    dnam{"ໄມລ໌ກ້ອນ"}
+                }
+                cubic-yard{
+                    dnam{"yd³"}
+                }
+                cup{
+                    dnam{"cup"}
+                }
+                deciliter{
+                    dnam{"dL"}
+                }
+                fluid-ounce{
+                    dnam{"fl oz"}
+                }
+                gallon{
+                    dnam{"gal"}
+                }
+                hectoliter{
+                    dnam{"hL"}
+                }
+                liter{
+                    dnam{"ລິດ"}
+                }
+                megaliter{
+                    dnam{"ML"}
+                }
+                milliliter{
+                    dnam{"mL"}
+                }
+                pint{
+                    dnam{"pt"}
+                }
+                quart{
+                    dnam{"qt"}
+                }
+                tablespoon{
+                    dnam{"tbsp"}
+                }
+                teaspoon{
+                    dnam{"tsp"}
+                }
+            }
         }
         power{
+            gigawatt{
+                other{"{0} GW"}
+            }
             horsepower{
                 other{"{0} ແຮງມ້າ"}
             }
             kilowatt{
                 other{"{0} ກິໂລວັດ"}
+            }
+            megawatt{
+                other{"{0} MW"}
+            }
+            milliwatt{
+                other{"{0} mW"}
             }
             watt{
                 other{"{0} ວັດ"}
@@ -2121,13 +2945,24 @@ lo{
         }
         pressure{
             hectopascal{
-                other{"{0} hPa"}
+                other{"{0} hectopascals"}
             }
             inch-hg{
-                other{"{0} inHg"}
+                other{"{0} inches of mercury"}
             }
             millibar{
                 other{"{0} ມິນລິບາ"}
+            }
+            millimeter-of-mercury{
+                other{"{0} mm Hg"}
+            }
+            pound-per-square-inch{
+                other{"{0} pounds per square inch"}
+            }
+        }
+        proportion{
+            karat{
+                other{"{0} ກະຣັດ"}
             }
         }
         speed{
@@ -2138,7 +2973,7 @@ lo{
                 other{"{0} ແມັດຕໍ່ນາທີ"}
             }
             mile-per-hour{
-                other{"{0} ໄມຕໍ່ຊົ່ວໂມງ"}
+                other{"{0} ໄມລ໌ຕໍ່ຊົ່ວໂມງ"}
             }
         }
         temperature{
@@ -2148,16 +2983,73 @@ lo{
             fahrenheit{
                 other{"{0} ອົງສາຟາເຣນຮາຍ"}
             }
+            kelvin{
+                other{"{0} ອົງສາເຄວິນ"}
+            }
         }
         volume{
+            acre-foot{
+                other{"{0} ac ft"}
+            }
+            centiliter{
+                other{"{0} cL"}
+            }
+            cubic-centimeter{
+                other{"{0} cm³"}
+            }
+            cubic-foot{
+                other{"{0} ft³"}
+            }
+            cubic-inch{
+                other{"{0} in³"}
+            }
             cubic-kilometer{
                 other{"{0} ກິໂລແມັດກ້ອນ"}
             }
+            cubic-meter{
+                other{"{0} m³"}
+            }
             cubic-mile{
-                other{"{0} ໄມກ້ອນ"}
+                other{"{0} ໄມລ໌ກ້ອນ"}
+            }
+            cubic-yard{
+                other{"{0} yd³"}
+            }
+            cup{
+                other{"{0} c"}
+            }
+            deciliter{
+                other{"{0} dL"}
+            }
+            fluid-ounce{
+                other{"{0} fl oz"}
+            }
+            gallon{
+                other{"{0} gal"}
+            }
+            hectoliter{
+                other{"{0} hL"}
             }
             liter{
                 other{"{0} ລິດ"}
+            }
+            megaliter{
+                other{"{0} ML"}
+            }
+            milliliter{
+                other{"{0} mL"}
+            }
+            pint{
+                other{"{0} pt"}
+            }
+            quart{
+                other{"{0} qt"}
+            }
+            tablespoon{
+                other{"{0} tbsp"}
+            }
+            teaspoon{
+                other{"{0} tsp"}
             }
         }
     }
@@ -2184,10 +3076,12 @@ lo{
                 other{"{0} ft²"}
             }
             square-kilometer{
-                other{"{0} km²"}
+                dnam{"ກມ²"}
+                other{"{0} ກມ²"}
             }
             square-meter{
-                other{"{0} m²"}
+                dnam{"ແມັດ²"}
+                other{"{0} ແມັດ²"}
             }
             square-mile{
                 other{"{0} mi²"}
@@ -2198,67 +3092,87 @@ lo{
         }
         duration{
             day{
-                other{"{0} ມື້"}
+                dnam{"ມື້"}
+                other{"{0} ມ."}
             }
             hour{
+                dnam{"ຊົ່ວໂມງ"}
                 other{"{0} ຊມ"}
             }
             millisecond{
+                dnam{"ມລວ"}
                 other{"{0} ມລ. ວິ."}
             }
             minute{
+                dnam{"ນທ."}
                 other{"{0} ນທ"}
             }
             month{
-                other{"{0} ດ"}
+                dnam{"ເດືອນ"}
+                other{"{0} ດ."}
             }
             second{
+                dnam{"ວິ."}
                 other{"{0} ວິ"}
             }
             week{
-                other{"{0} ອທ"}
+                dnam{"ອທ."}
+                other{"{0} ອທ."}
             }
             year{
+                dnam{"ປີ"}
                 other{"{0} ປ"}
             }
         }
         length{
             centimeter{
+                dnam{"ຊມ"}
                 other{"{0} ຊມ"}
             }
             foot{
+                dnam{"ຟຸດ"}
                 other{"{0} ຟ"}
             }
             inch{
+                dnam{"ນິ້ວ"}
                 other{"{0} ນ"}
             }
             kilometer{
+                dnam{"ກມ"}
                 other{"{0} ກມ"}
             }
             light-year{
+                dnam{"ປີແສງ"}
                 other{"{0} ປສ"}
             }
             meter{
+                dnam{"ແມັດ"}
                 other{"{0} ມ"}
             }
             mile{
+                dnam{"ໄມ"}
                 other{"{0} ໄມ"}
             }
             millimeter{
-                other{"{0} ມິນ"}
+                dnam{"ມມ"}
+                other{"{0} ມມ"}
             }
             picometer{
-                other{"{0} ປກມ"}
+                dnam{"pm"}
+                other{"{0} pm"}
             }
             yard{
+                dnam{"ຫລາ"}
                 other{"{0} ຫລາ"}
             }
         }
         mass{
             gram{
+                dnam{"ກຣາມ"}
                 other{"{0} ກຼ"}
             }
             kilogram{
+                dnam{"ກິໂລກຣາມ"}
                 other{"{0} ກລ"}
             }
             ounce{
@@ -2281,17 +3195,21 @@ lo{
         }
         pressure{
             hectopascal{
-                other{"{0} hPa"}
+                dnam{"hPA"}
+                other{"{0} hPA"}
             }
             inch-hg{
-                other{"{0} inHg"}
+                dnam{"in Hg"}
+                other{"{0} in Hg"}
             }
             millibar{
-                other{"{0} ມິນ. ບາ"}
+                dnam{"mbar"}
+                other{"{0} mbar"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"ກມ/ຊມ"}
                 other{"{0} km/h"}
             }
             meter-per-second{
@@ -2303,10 +3221,12 @@ lo{
         }
         temperature{
             celsius{
-                other{"{0} ອົງສາ ຊີ."}
+                dnam{"°C"}
+                other{"{0}°"}
             }
             fahrenheit{
-                other{"{0} ອົງສາ ຟ."}
+                dnam{"°F"}
+                other{"{0}°F"}
             }
         }
         volume{
@@ -2317,6 +3237,7 @@ lo{
                 other{"{0} mi³"}
             }
             liter{
+                dnam{"ລິດ"}
                 other{"{0} ລ"}
             }
         }
@@ -2324,165 +3245,511 @@ lo{
     unitsShort{
         acceleration{
             g-force{
-                other{"{0} g force"}
+                dnam{"ແຮງຈີ"}
+                other{"{0} G"}
+            }
+            meter-per-second-squared{
+                dnam{"m/s²"}
+                other{"{0} m/s²"}
             }
         }
         angle{
             arc-minute{
-                other{"{0} ນທ."}
+                dnam{"arcmins"}
+                other{"{0} arcmins"}
             }
             arc-second{
-                other{"{0} ວິ."}
+                dnam{"arcsecs"}
+                other{"{0} arcsecs"}
             }
             degree{
+                dnam{"ອົງສາ"}
                 other{"{0} ອົງສາ"}
+            }
+            radian{
+                dnam{"radians"}
+                other{"{0} rad"}
             }
         }
         area{
             acre{
+                dnam{"ເອເຄີ"}
                 other{"{0} ເອເຄີ"}
             }
             hectare{
+                dnam{"ເຮັກຕາ"}
                 other{"{0} ຮຕ."}
             }
+            square-centimeter{
+                dnam{"ຊມ²"}
+                other{"{0} ຊມ²"}
+            }
             square-foot{
-                other{"{0} ft²"}
+                dnam{"ຟຸດ²"}
+                other{"{0} ຟຸດ²"}
+            }
+            square-inch{
+                dnam{"ນິ້ວ²"}
+                other{"{0} in²"}
             }
             square-kilometer{
-                other{"{0} km²"}
+                dnam{"ກມ²"}
+                other{"{0} ກມ²"}
             }
             square-meter{
-                other{"{0} m²"}
+                dnam{"ແມັດ²"}
+                other{"{0} ແມັດ²"}
             }
             square-mile{
+                dnam{"sq miles"}
                 other{"{0} mi²"}
+            }
+            square-yard{
+                dnam{"yards²"}
+                other{"{0} yd²"}
             }
         }
         compound{
             per{"{0}/{1}"}
         }
+        consumption{
+            liter-per-kilometer{
+                dnam{"ລ/ກມ"}
+                other{"{0} ລ/ກມ"}
+            }
+            mile-per-gallon{
+                dnam{"ໄມລ໌/ແກລ"}
+                other{"{0} mpg"}
+            }
+        }
+        digital{
+            bit{
+                dnam{"bit"}
+                other{"{0} bit"}
+            }
+            byte{
+                dnam{"byte"}
+                other{"{0} byte"}
+            }
+            gigabit{
+                dnam{"Gb"}
+                other{"{0} Gb"}
+            }
+            gigabyte{
+                dnam{"GB"}
+                other{"{0} GB"}
+            }
+            kilobit{
+                dnam{"kb"}
+                other{"{0} kb"}
+            }
+            kilobyte{
+                dnam{"kB"}
+                other{"{0} kB"}
+            }
+            megabit{
+                dnam{"Mb"}
+                other{"{0} Mb"}
+            }
+            megabyte{
+                dnam{"MB"}
+                other{"{0} MB"}
+            }
+            terabit{
+                dnam{"Tb"}
+                other{"{0} Tb"}
+            }
+            terabyte{
+                dnam{"TB"}
+                other{"{0} TB"}
+            }
+        }
         duration{
             day{
+                dnam{"ມື້"}
                 other{"{0} ມື້"}
             }
             hour{
+                dnam{"ຊົ່ວໂມງ"}
                 other{"{0} ຊມ."}
+                per{"{0}/ຊມ."}
+            }
+            microsecond{
+                dnam{"μວິ"}
+                other{"{0} μວິ"}
             }
             millisecond{
-                other{"{0} ມລ ວິນາທີ"}
+                dnam{"ມິນລີວິ"}
+                other{"{0} ມລວ"}
             }
             minute{
+                dnam{"ນທ."}
                 other{"{0} ນທ."}
             }
             month{
+                dnam{"ເດືອນ"}
                 other{"{0} ດ."}
             }
+            nanosecond{
+                dnam{"ນາ​ໂນ​ວິ​"}
+                other{"{0} ນນ​ວິ"}
+            }
             second{
+                dnam{"ວິ."}
                 other{"{0} ວິ."}
+                per{"{0}/ວິ."}
             }
             week{
+                dnam{"ອາທິດ"}
                 other{"{0} ອທ."}
             }
             year{
+                dnam{"ປີ"}
                 other{"{0} ປີ"}
             }
         }
+        electric{
+            ampere{
+                dnam{"amp"}
+                other{"{0} A"}
+            }
+            milliampere{
+                dnam{"mA"}
+                other{"{0} mA"}
+            }
+            ohm{
+                dnam{"ohm"}
+                other{"{0} Ω"}
+            }
+            volt{
+                dnam{"volt"}
+                other{"{0} V"}
+            }
+        }
+        energy{
+            calorie{
+                dnam{"cal"}
+                other{"{0} cal"}
+            }
+            foodcalorie{
+                dnam{"Cal"}
+                other{"{0} Cal"}
+            }
+            joule{
+                dnam{"joule"}
+                other{"{0} J"}
+            }
+            kilocalorie{
+                dnam{"kcal"}
+                other{"{0} kcal"}
+            }
+            kilojoule{
+                dnam{"kJ"}
+                other{"{0} kJ"}
+            }
+            kilowatt-hour{
+                dnam{"kWh"}
+                other{"{0} kWh"}
+            }
+        }
+        frequency{
+            gigahertz{
+                dnam{"GHz"}
+                other{"{0} GHz"}
+            }
+            hertz{
+                dnam{"Hz"}
+                other{"{0} Hz"}
+            }
+            kilohertz{
+                dnam{"kHz"}
+                other{"{0} kHz"}
+            }
+            megahertz{
+                dnam{"MHz"}
+                other{"{0} MHz"}
+            }
+        }
         length{
+            astronomical-unit{
+                dnam{"au"}
+                other{"{0} au"}
+            }
             centimeter{
+                dnam{"ຊມ"}
                 other{"{0} ຊມ"}
             }
+            decimeter{
+                dnam{"dm"}
+                other{"{0} dm"}
+            }
             foot{
+                dnam{"ຟຸດ"}
                 other{"{0} ຟ"}
             }
             inch{
+                dnam{"ນິ້ວ"}
                 other{"{0} ນິ"}
             }
             kilometer{
+                dnam{"ກມ"}
                 other{"{0} ກມ"}
             }
             light-year{
+                dnam{"ປີແສງ"}
                 other{"{0} ປສ"}
             }
             meter{
+                dnam{"ແມັດ"}
                 other{"{0} ມ"}
             }
+            micrometer{
+                dnam{"µm"}
+                other{"{0} µm"}
+            }
             mile{
+                dnam{"ໄມ"}
                 other{"{0} ໄມ"}
             }
             millimeter{
-                other{"{0} ມິນ"}
+                dnam{"ມມ"}
+                other{"{0} ມມ"}
+            }
+            nanometer{
+                dnam{"nm"}
+                other{"{0} nm"}
+            }
+            nautical-mile{
+                dnam{"nmi"}
+                other{"{0} nmi"}
+            }
+            parsec{
+                dnam{"parsecs"}
+                other{"{0} pc"}
             }
             picometer{
-                other{"{0} ປກມ"}
+                dnam{"pm"}
+                other{"{0} pm"}
             }
             yard{
+                dnam{"ຫລາ"}
                 other{"{0} ຫລາ"}
             }
         }
+        light{
+            lux{
+                dnam{"lux"}
+                other{"{0} lx"}
+            }
+        }
         mass{
+            carat{
+                dnam{"CD"}
+                other{"{0} CD"}
+            }
             gram{
+                dnam{"ກຣາມ"}
                 other{"{0} ກຼ"}
             }
             kilogram{
+                dnam{"ກິໂລກຣາມ"}
                 other{"{0} ກິໂລ"}
             }
+            metric-ton{
+                dnam{"t"}
+                other{"{0} t"}
+            }
+            microgram{
+                dnam{"µg"}
+                other{"{0} µg"}
+            }
+            milligram{
+                dnam{"mg"}
+                other{"{0} mg"}
+            }
             ounce{
+                dnam{"ອອນ"}
                 other{"{0} ອ"}
             }
+            ounce-troy{
+                dnam{"oz t"}
+                other{"{0} oz t"}
+            }
             pound{
+                dnam{"ປອນ"}
                 other{"{0} ປ"}
+            }
+            ton{
+                dnam{"tn"}
+                other{"{0} tn"}
             }
         }
         power{
+            gigawatt{
+                dnam{"GW"}
+                other{"{0} GW"}
+            }
             horsepower{
+                dnam{"ແຮງມ້າ"}
                 other{"{0} hp"}
             }
             kilowatt{
+                dnam{"ກິໂລວັດ"}
                 other{"{0} ກລ. ວັດ"}
             }
+            megawatt{
+                dnam{"MW"}
+                other{"{0} MW"}
+            }
+            milliwatt{
+                dnam{"mW"}
+                other{"{0} mW"}
+            }
             watt{
-                other{"{0} W"}
+                dnam{"ວັດ"}
+                other{"{0} ວັດ"}
             }
         }
         pressure{
             hectopascal{
-                other{"{0} hPa"}
+                dnam{"hPA"}
+                other{"{0} hPA"}
             }
             inch-hg{
-                other{"{0} inHg"}
+                dnam{"in Hg"}
+                other{"{0} in Hg"}
             }
             millibar{
-                other{"{0} ມິນ. ບາ"}
+                dnam{"mbar"}
+                other{"{0} mbar"}
+            }
+            millimeter-of-mercury{
+                dnam{"mm Hg"}
+                other{"{0} mm Hg"}
+            }
+            pound-per-square-inch{
+                dnam{"psi"}
+                other{"{0} psi"}
+            }
+        }
+        proportion{
+            karat{
+                dnam{"ກະຣັດ"}
+                other{"{0} kt"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"ກມ/ຊມ"}
                 other{"{0} ກມ/ຊມ"}
             }
             meter-per-second{
-                other{"{0} ມ/ນທ"}
+                dnam{"ແມັດ/ນທ."}
+                other{"{0} ມ/ນທ."}
             }
             mile-per-hour{
-                other{"{0} ໄມ/ຊມ"}
+                dnam{"ໄມລ໌/ຊົ່ວໂມງ"}
+                other{"{0} ມ/ຊມ"}
             }
         }
         temperature{
             celsius{
+                dnam{"ອົງ​ສາ ຊ."}
                 other{"{0} ອົງສາ ຊີ."}
             }
             fahrenheit{
+                dnam{"ອົງ​ສາ ຟ."}
                 other{"{0} ອົງສາ ຟ."}
+            }
+            kelvin{
+                dnam{"ອົງສາ ເຄ."}
+                other{"{0}°K"}
             }
         }
         volume{
+            acre-foot{
+                dnam{"ac ft"}
+                other{"{0} ac ft"}
+            }
+            centiliter{
+                dnam{"cL"}
+                other{"{0} cL"}
+            }
+            cubic-centimeter{
+                dnam{"cm³"}
+                other{"{0} cm³"}
+            }
+            cubic-foot{
+                dnam{"ft³"}
+                other{"{0} ft³"}
+            }
+            cubic-inch{
+                dnam{"in³"}
+                other{"{0} in³"}
+            }
             cubic-kilometer{
+                dnam{"km³"}
                 other{"{0} km³"}
             }
+            cubic-meter{
+                dnam{"m³"}
+                other{"{0} m³"}
+            }
             cubic-mile{
+                dnam{"mi³"}
                 other{"{0} mi³"}
             }
+            cubic-yard{
+                dnam{"yd³"}
+                other{"{0} yd³"}
+            }
+            cup{
+                dnam{"cup"}
+                other{"{0} c"}
+            }
+            deciliter{
+                dnam{"dL"}
+                other{"{0} dL"}
+            }
+            fluid-ounce{
+                dnam{"fl oz"}
+                other{"{0} fl oz"}
+            }
+            gallon{
+                dnam{"gal"}
+                other{"{0} gal"}
+            }
+            hectoliter{
+                dnam{"hL"}
+                other{"{0} hL"}
+            }
             liter{
+                dnam{"ລິດ"}
                 other{"{0} ລິດ"}
+            }
+            megaliter{
+                dnam{"ML"}
+                other{"{0} ML"}
+            }
+            milliliter{
+                dnam{"mL"}
+                other{"{0} mL"}
+            }
+            pint{
+                dnam{"pt"}
+                other{"{0} pt"}
+            }
+            quart{
+                dnam{"qt"}
+                other{"{0} qt"}
+            }
+            tablespoon{
+                dnam{"tbsp"}
+                other{"{0} tbsp"}
+            }
+            teaspoon{
+                dnam{"tsp"}
+                other{"{0} tsp"}
             }
         }
     }

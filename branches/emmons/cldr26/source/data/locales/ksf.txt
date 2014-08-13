@@ -31,7 +31,7 @@ ksf{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -154,11 +154,15 @@ ksf{
             eras{
                 abbreviated{
                     "d.Y.",
+                    "BCE",
                     "k.Y.",
+                    "CE",
                 }
                 wide{
                     "di Yɛ́sus aká yálɛ",
+                    "BCE",
                     "cámɛɛn kǝ kǝbɔpka Y",
+                    "CE",
                 }
             }
             monthNames{

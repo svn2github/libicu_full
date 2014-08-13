@@ -24,7 +24,7 @@ teo{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -125,7 +125,7 @@ teo{
                         "Nakaebarasa",
                         "Nakaare",
                         "Nakauni",
-                        "Nakaung'on",
+                        "Nakaung’on",
                         "Nakakany",
                         "Nakasabiti",
                     }
@@ -145,11 +145,15 @@ teo{
             eras{
                 abbreviated{
                     "KK",
+                    "BCE",
                     "BK",
+                    "CE",
                 }
                 wide{
                     "Kabla ya Christo",
+                    "BCE",
                     "Baada ya Christo",
+                    "CE",
                 }
             }
             monthNames{
@@ -171,10 +175,10 @@ teo{
                     wide{
                         "Orara",
                         "Omuk",
-                        "Okwamg'",
-                        "Odung'el",
+                        "Okwamg’",
+                        "Odung’el",
                         "Omaruk",
-                        "Omodok'king'ol",
+                        "Omodok’king’ol",
                         "Ojola",
                         "Opedel",
                         "Osokosokoma",
@@ -212,7 +216,7 @@ teo{
                         "Akwota abe",
                         "Akwota Aane",
                         "Akwota auni",
-                        "Akwota Aung'on",
+                        "Akwota Aung’on",
                     }
                 }
             }

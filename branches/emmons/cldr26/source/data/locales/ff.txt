@@ -27,7 +27,7 @@ ff{
             }
         }
     }
-    Version{"2.0.97.28"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -146,11 +146,15 @@ ff{
             eras{
                 abbreviated{
                     "H-I",
+                    "BCE",
                     "C-I",
+                    "CE",
                 }
                 wide{
                     "Hade Iisa",
+                    "BCE",
                     "Caggal Iisa",
+                    "CE",
                 }
             }
             monthNames{

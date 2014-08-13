@@ -1,0 +1,34 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2014 International Business Machines
+// * Corporation and others. All Rights Reserved.
+// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
+// * Source File: <path>/common/main/ar_AE.xml
+// *
+// ***************************************************************************
+ar_AE{
+    Languages{
+        af{"الأفريقانية"}
+        agq{"الأغم"}
+        az{"الأذربيجانية"}
+        dje{"الزارمية"}
+        gag{"الغاغوز"}
+        guz{"الغيزية"}
+        koi{"كومي-بيرماياك"}
+        lag{"لانجي"}
+        lkt{"لاكوتا"}
+        nmg{"كواسيو"}
+        quc{"كيشي"}
+        shi{"تكلحيت"}
+    }
+    Types{
+        calendar{
+            dangi{"تقويم دانجي"}
+            iso8601{"تقويم ISO-8601"}
+        }
+        collation{
+            ducet{"الإفتراضي Unicode ترتيب"}
+        }
+    }
+    Version{"2.1.7.41"}
+}

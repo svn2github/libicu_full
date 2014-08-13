@@ -11,7 +11,7 @@ en_GI{
     Currencies{
         GBP{
             "GB£",
-            "British Pound",
+            "British Pound Sterling",
         }
         GIP{
             "£",
@@ -22,5 +22,5 @@ en_GI{
             "US Dollar",
         }
     }
-    Version{"2.0.90.61"}
+    Version{"2.1.6.69"}
 }

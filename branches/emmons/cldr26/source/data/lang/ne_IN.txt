@@ -1,0 +1,46 @@
+﻿// ***************************************************************************
+// *
+// * Copyright (C) 2014 International Business Machines
+// * Corporation and others. All Rights Reserved.
+// * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
+// * Source File: <path>/common/main/ne_IN.xml
+// *
+// ***************************************************************************
+ne_IN{
+    Languages{
+        am{"अम्हारिक"}
+        ar_001{"अधुनिक प्रमाणिक अरबी"}
+        as{"आसामी"}
+        asa{"आसु"}
+        az{"अजरबैजानी"}
+        be{"वेलारूसी"}
+        bem{"बेम्बा"}
+        bez{"बेना"}
+        bg{"बुल्गेरियाली"}
+        bm{"बाम्बारा"}
+        bo{"तिब्बती"}
+        br{"ब्रेटन"}
+        brx{"बोडो"}
+        bs{"बोस्नियाली"}
+        ca{"क्याटालन"}
+        cgg{"चिगा"}
+        chr{"चेरोकी"}
+        ckb{"सोरानी कुर्दिश"}
+        co{"कोर्सिकन"}
+        da{"डेनिश"}
+        dav{"ताइता"}
+        de{"जर्मन"}
+        dz{"जोङ्खा"}
+    }
+    Version{"2.1.7.41"}
+    codePatterns{
+        language{"{0}"}
+        script{"{0}"}
+        territory{"{0}"}
+    }
+    localeDisplayPattern{
+        keyTypePattern{"{0}: {1}"}
+        pattern{"{0} ({1})"}
+        separator{"{0}, {1}"}
+    }
+}

@@ -27,7 +27,7 @@ ak{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -150,11 +150,15 @@ ak{
             eras{
                 abbreviated{
                     "AK",
+                    "BCE",
                     "KE",
+                    "CE",
                 }
                 wide{
                     "Ansa Kristo",
+                    "BCE",
                     "Kristo Ekyiri",
+                    "CE",
                 }
             }
             monthNames{

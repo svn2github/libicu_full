@@ -27,7 +27,7 @@ mas{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -148,11 +148,15 @@ mas{
             eras{
                 abbreviated{
                     "MY",
+                    "BCE",
                     "EY",
+                    "CE",
                 }
                 wide{
                     "Meínō Yɛ́sʉ",
+                    "BCE",
                     "Eínō Yɛ́sʉ",
+                    "CE",
                 }
             }
             monthNames{

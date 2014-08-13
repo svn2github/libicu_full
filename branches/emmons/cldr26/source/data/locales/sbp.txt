@@ -29,7 +29,7 @@ sbp{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -152,11 +152,15 @@ sbp{
             eras{
                 abbreviated{
                     "AK",
+                    "BCE",
                     "PK",
+                    "CE",
                 }
                 wide{
                     "Ashanali uKilisito",
+                    "BCE",
                     "Pamwandi ya Kilisto",
+                    "CE",
                 }
             }
             monthNames{
@@ -220,7 +224,7 @@ sbp{
             dn{"Lusiku"}
             relative{
                 "-1"{"Imehe"}
-                "0"{"Ineng'uni"}
+                "0"{"Ineng’uni"}
                 "1"{"Pamulaawu"}
             }
         }

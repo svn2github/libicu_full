@@ -16,7 +16,7 @@ es_CO{
             }
         }
     }
-    Version{"2.0.92.8"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -36,6 +36,10 @@ es_CO{
             }
         }
         gregorian{
+            AmPmMarkersNarrow{
+                "a. m.",
+                "p. m.",
+            }
             DateTimePatterns{
                 "h:mm:ss a (zzzz)",
                 "h:mm:ss a z",
@@ -51,6 +55,7 @@ es_CO{
                 "{1} {0}",
                 "{1} {0}",
             }
+            NoonMarkerNarrow{"m."}
         }
     }
 }

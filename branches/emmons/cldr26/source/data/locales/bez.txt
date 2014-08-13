@@ -23,7 +23,7 @@ bez{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -148,11 +148,15 @@ bez{
             eras{
                 abbreviated{
                     "KM",
+                    "BCE",
                     "BM",
+                    "CE",
                 }
                 wide{
                     "Kabla ya Mtwaa",
+                    "BCE",
                     "Baada ya Mtwaa",
+                    "CE",
                 }
             }
             monthNames{
@@ -232,7 +236,7 @@ bez{
             dn{"Sihu"}
             relative{
                 "-1"{"Igolo"}
-                "0"{"Neng'u ni"}
+                "0"{"Neng’u ni"}
                 "1"{"Hilawu"}
             }
         }

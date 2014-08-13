@@ -29,12 +29,15 @@ pt_PT{
         ab{"abcázio"}
         ady{"adigue"}
         ae{"avéstico"}
-        af{"afrikaans"}
+        af{"africânder"}
         agq{"aghem"}
+        ak{"akan"}
         alt{"altai do sul"}
         am{"amárico"}
         anp{"angika"}
         ar{"árabe"}
+        ar_001{"árabe moderno padrão"}
+        arn{"mapuche"}
         as{"assamês"}
         asa{"asu"}
         av{"avaric"}
@@ -43,15 +46,18 @@ pt_PT{
         bal{"balúchi"}
         bax{"bamun"}
         bbj{"ghomala"}
-        be{"bielo-russo"}
+        be{"bielorrusso"}
         bej{"beja"}
+        bem{"bemba"}
         bez{"bena"}
         bfd{"bafut"}
         bg{"búlgaro"}
         bho{"bhojpuri"}
         bkm{"kom"}
+        bm{"bambara"}
         bn{"bengali"}
         bo{"tibetano"}
+        br{"bretão"}
         bra{"braj"}
         brx{"bodo"}
         bs{"bósnio"}
@@ -66,8 +72,9 @@ pt_PT{
         cgg{"chiga"}
         chm{"mari"}
         chn{"jargão chinook"}
+        chr{"cherokee"}
         ckb{"sorani curdo"}
-        co{"corso"}
+        co{"córsico"}
         cop{"copta"}
         crh{"turco da Crimeia"}
         cs{"checo"}
@@ -81,9 +88,13 @@ pt_PT{
         de_CH{"alto alemão suíço"}
         dje{"zarma"}
         doi{"dogri"}
+        dsb{"baixo sórabio"}
+        dua{"duala"}
         dyo{"jola-fonyi"}
         dyu{"diula"}
+        dz{"dzonga"}
         dzg{"dazaga"}
+        ebu{"embu"}
         ee{"ewe"}
         egy{"egípcio clássico"}
         el{"grego"}
@@ -112,6 +123,7 @@ pt_PT{
         frs{"frísio oriental"}
         fy{"frísico ocidental"}
         ga{"irlandês"}
+        gag{"gagauz"}
         gba{"gbaia"}
         gl{"galego"}
         gmh{"alemão medieval alto"}
@@ -121,49 +133,59 @@ pt_PT{
         gsw{"alemão suíço"}
         gu{"guzerate"}
         guz{"gusii"}
+        gv{"manx"}
         ha{"haúça"}
         haw{"havaiano"}
         he{"hebraico"}
         hi{"hindi"}
         hr{"croata"}
-        hsb{"sorbiano superior"}
+        hsb{"alto sórabio"}
         ht{"haitiano"}
         hu{"húngaro"}
         hy{"arménio"}
         ibb{"ibibio"}
         id{"indonésio"}
         ig{"igbo"}
+        ii{"sichuan yi"}
         ik{"inupiaq"}
         inh{"inguche"}
         is{"islandês"}
         it{"italiano"}
+        iu{"inuktitut"}
         ja{"japonês"}
         jgo{"nguemba"}
         jmc{"machame"}
         jv{"javanês"}
         ka{"georgiano"}
         kaa{"kara-kalpak"}
+        kab{"kabyle"}
+        kam{"kamba"}
         kbd{"kabardiano"}
         kbl{"kanembu"}
-        kde{"makonde"}
+        kde{"maconde"}
+        kea{"cabo-verdiano"}
         kg{"conguês"}
         khq{"koyra chiini"}
+        ki{"quicuio"}
         kk{"cazaque"}
         kkj{"kako"}
+        kl{"groenlandês"}
         kln{"kalenjin"}
         km{"cmer"}
         kn{"canarim"}
         ko{"coreano"}
+        koi{"komi-permyak"}
         kok{"concani"}
         krc{"karachay-balkar"}
         krl{"idioma carélio"}
         kru{"kurukh"}
-        ks{"caxemirense"}
+        ks{"caxemira"}
         ksb{"shambala"}
         ksf{"bafia"}
         ku{"curdo"}
         kum{"kumyk"}
         kv{"komi"}
+        kw{"córnico"}
         ky{"quirguiz"}
         la{"latim"}
         lag{"langi"}
@@ -171,29 +193,35 @@ pt_PT{
         lb{"luxemburguês"}
         lez{"lezghiano"}
         lg{"ganda"}
+        lkt{"lacota"}
+        ln{"lingala"}
         lo{"laosiano"}
         loz{"lozi"}
         lt{"lituano"}
+        lu{"luba-catanga"}
         lua{"luba-lulua"}
+        luo{"luo"}
         lus{"lushai"}
         luy{"luyia"}
         lv{"letão"}
         maf{"mafa"}
         mag{"magahi"}
         mai{"maithili"}
+        mas{"massai"}
         mde{"maba"}
         mdf{"mocsa"}
         mer{"meru"}
-        mfe{"crioulo das Ilhas Maurícias"}
+        mfe{"morisyen"}
         mg{"malgaxe"}
         mga{"irlandês, medieval"}
-        mgh{"makhuwa-meetto"}
-        mgo{"meta'"}
+        mgh{"macua"}
+        mgo{"meta’"}
         mi{"maori"}
         mk{"macedónio"}
         ml{"malaiala"}
         mn{"mongol"}
         mni{"manipuri"}
+        moh{"mohawk"}
         mr{"marata"}
         ms{"malaio"}
         mt{"maltês"}
@@ -204,6 +232,7 @@ pt_PT{
         myv{"erzya"}
         naq{"nama"}
         nb{"norueguês bokmål"}
+        nd{"ndebele do norte"}
         nds{"baixo alemão"}
         ne{"nepali"}
         new{"newari"}
@@ -215,7 +244,9 @@ pt_PT{
         nog{"nogai"}
         non{"norse, old"}
         nus{"nuer"}
+        nyn{"nyankole"}
         oc{"provençal"}
+        om{"oromo"}
         or{"oriya"}
         os{"ossético"}
         pa{"panjabi"}
@@ -227,41 +258,53 @@ pt_PT{
         pt_BR{"português do Brasil"}
         pt_PT{"português europeu"}
         qu{"quíchua"}
+        quc{"quiché"}
         rm{"romanche"}
+        rn{"rundi"}
         ro{"romeno"}
+        rof{"rombo"}
         rom{"romanês"}
         root{"root"}
         ru{"russo"}
+        rw{"kinyarwanda"}
+        rwk{"rwa"}
         sa{"sânscrito"}
         sah{"sakha"}
         saq{"samburu"}
         sba{"ngambay"}
         sbp{"sangu"}
         sd{"sindi"}
+        se{"sami do norte"}
         see{"seneca"}
         seh{"sena"}
         sel{"selkup"}
         ses{"koyraboro senni"}
+        sg{"sango"}
         shi{"tachelhit"}
         shu{"árabe do Chade"}
         si{"cingalês"}
         sk{"eslovaco"}
         sl{"esloveno"}
+        sma{"sami do sul"}
+        smj{"lule sami"}
+        smn{"inari sami"}
+        sms{"skolt sami"}
+        sn{"shona"}
         so{"somali"}
         sq{"albanês"}
         sr{"sérvio"}
         ssy{"saho"}
         su{"sundanês"}
         sv{"sueco"}
-        sw{"suaili"}
+        sw{"suaíli"}
         swb{"língua comoriana"}
-        swc{"suaili do Congo"}
+        swc{"suaíli do Congo"}
         ta{"tâmil"}
         te{"telugu"}
         teo{"teso"}
         tg{"tajique"}
         th{"tailandês"}
-        ti{"tigre"}
+        ti{"tigrínia"}
         tk{"turcomano"}
         to{"tonga"}
         tog{"toganês"}
@@ -270,13 +313,14 @@ pt_PT{
         tt{"tatar"}
         twq{"tasawaq"}
         tyv{"tuviniano"}
-        tzm{"tamazight de Marrocos Central"}
+        tzm{"tamazight do Atlas Central"}
         udm{"udmurt"}
-        ug{"uighur"}
+        ug{"uigur"}
         uk{"ucraniano"}
         und{"idioma desconhecido"}
         ur{"urdu"}
         uz{"usbeque"}
+        vai{"vai"}
         vi{"vietnamita"}
         vun{"vunjo"}
         wo{"uólofe"}
@@ -287,13 +331,16 @@ pt_PT{
         ybb{"yemba"}
         yo{"ioruba"}
         zbl{"símbolos blis"}
-        zgh{"tamaxeque padrão de Marrocos"}
+        zgh{"tamazight padrão de Marrocos"}
         zh{"chinês"}
         zh_Hans{"chinês simplificado"}
         zh_Hant{"chinês tradicional"}
         zu{"zulu"}
         zxx{"sem conteúdo linguístico"}
         zza{"zaza"}
+    }
+    Languages%variant{
+        ps{"pushto"}
     }
     LanguagesShort{
         az{"azeri"}
@@ -354,15 +401,25 @@ pt_PT{
         Hans{"han simplificado"}
         Hant{"han tradicional"}
     }
+    Scripts%variant{
+        Arab{"perso-árabe"}
+    }
     Types{
         calendar{
-            chinese{"Calendário Chinês"}
+            buddhist{"Calendário budista"}
+            chinese{"Calendário chinês"}
             coptic{"Calendário Copta"}
-            ethiopic{"Calendário Etíope"}
+            dangi{"Calendário dangi"}
+            ethiopic{"Calendário etíope"}
             ethiopic-amete-alem{"Calendário Etíope Amete Alem"}
-            gregorian{"Calendário Gregoriano"}
+            gregorian{"Calendário gregoriano"}
+            hebrew{"Calendário hebraico"}
+            islamic{"Calendário islâmico"}
             islamic-civil{"Calendário Islâmico/Civil"}
-            persian{"Calendário Persa"}
+            iso8601{"Calendário ISO-8601"}
+            japanese{"Calendário japonês"}
+            persian{"Calendário persa"}
+            roc{"Calendário da República da China"}
         }
         colAlternate{
             non-ignorable{"Ordenar Símbolos"}
@@ -402,14 +459,14 @@ pt_PT{
         }
         collation{
             dictionary{"Ordenação do Dicionário"}
-            ducet{"Ordenação Unicode Predefinida"}
+            ducet{"Ordenação Unicode predefinida"}
             phonebook{"Ordem da Lista Telefónica"}
             phonetic{"Sequência de Ordenação Fonética"}
             pinyin{"Ordem do Chinês Simplificado Pinyin"}
             reformed{"Reforma da Ordenação"}
             search{"Pesquisa de uso geral"}
             searchjl{"Pesquisar Por Consoante Inicial Hangul"}
-            standard{"Ordenação Predefinida"}
+            standard{"Ordenação padrão"}
             stroke{"Ordem por traços"}
             traditional{"Ordem tradicional"}
             unihan{"Ordem por radical e traços"}
@@ -417,42 +474,42 @@ pt_PT{
         numbers{
             arab{"Algarismos indo-arábicos"}
             arabext{"Algarismos indo-arábicos por extenso"}
-            armn{"Algarismos Arménios"}
-            armnlow{"Numeração Arménia Minúscula"}
-            beng{"Algarismos Bengalis"}
-            deva{"Algarismos Devanágaris"}
-            ethi{"Numeração Etíope"}
+            armn{"Numeração arménia"}
+            armnlow{"Numeração arménia minúscula"}
+            beng{"Algarismos bengalis"}
+            deva{"Algarismos devanágaris"}
+            ethi{"Numeração etíope"}
             finance{"Algarismos Financeiros"}
-            fullwide{"Algarismos de Largura Completa"}
-            geor{"Numeração Georgiana"}
-            grek{"Numeração Grega"}
-            greklow{"Numeração Grega Minúscula"}
-            gujr{"Algarismos de Guzerate"}
-            guru{"Algarismos Gurmukhi"}
-            hanidec{"Numeração Decimal Chinesa"}
-            hans{"Numeração Chinês Simplificado"}
-            hansfin{"Numeração Financeira Chinês Simplificado"}
-            hant{"Numeração Chinês Tradicional"}
-            hantfin{"Numeração Financeira Chinês Tradicional"}
-            hebr{"Numeração Hebraica"}
-            jpan{"Numeração Japonesa"}
-            jpanfin{"Numeração Financeira Japonesa"}
-            khmr{"Algarismos Khmer"}
-            knda{"Algarismos de Canarim"}
-            laoo{"Algarismos de Laos"}
-            latn{"Algarismos Ocidentais"}
-            mlym{"Algarismos Malaiala"}
+            fullwide{"Algarismos de largura completa"}
+            geor{"Numeração georgiana"}
+            grek{"Numeração grega"}
+            greklow{"Numeração grega minúscula"}
+            gujr{"Algarismos de guzerate"}
+            guru{"Algarismos de gurmukhi"}
+            hanidec{"Numeração decimal chinesa"}
+            hans{"Numeração em chinês simplificado"}
+            hansfin{"Numeração financeira em chinês simplificado"}
+            hant{"Numeração em chinês tradicional"}
+            hantfin{"Numeração financeira em chinês tradicional"}
+            hebr{"Numeração hebraica"}
+            jpan{"Numeração japonesa"}
+            jpanfin{"Numeração financeira japonesa"}
+            khmr{"Algarismos de cmer"}
+            knda{"Algarismos de canarim"}
+            laoo{"Algarismos laosianos"}
+            latn{"Algarismos ocidentais"}
+            mlym{"Algarismos de malaiala"}
             mong{"Algarismos Mongóis"}
-            mymr{"Algarismos de Mianmar"}
+            mymr{"Algarismos birmaneses"}
             native{"Dígitos Nativos"}
-            orya{"Algarismos Oriá"}
-            roman{"Numeração Romana"}
-            romanlow{"Numeração Romana Minúscula"}
-            taml{"Numeração Tâmil"}
-            tamldec{"Algarismos Tâmil"}
-            telu{"Algarismos de Telugu"}
-            thai{"Algarismos Tailandeses"}
-            tibt{"Algarismos Tibetanos"}
+            orya{"Algarismos de oriya"}
+            roman{"Numeração romana"}
+            romanlow{"Numeração romana minúscula"}
+            taml{"Numeração tâmil"}
+            tamldec{"Algarismos de tâmil"}
+            telu{"Algarismos de telugu"}
+            thai{"Algarismos tailandeses"}
+            tibt{"Algarismos tibetanos"}
             traditional{"Algarismos Tradicionais"}
             vaii{"Dígitos Vai"}
         }
@@ -473,7 +530,7 @@ pt_PT{
         SOLBA{"dialecto stolvizza/solbica"}
         WADEGILE{"Romanização Wade-Giles"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.42"}
     codePatterns{
         language{"Idioma: {0}"}
         script{"Escrita: {0}"}

@@ -24,7 +24,7 @@ nd{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -141,11 +141,15 @@ nd{
             eras{
                 abbreviated{
                     "BC",
+                    "BCE",
                     "AD",
+                    "CE",
                 }
                 wide{
                     "UKristo angakabuyi",
+                    "BCE",
                     "Ukristo ebuyile",
+                    "CE",
                 }
             }
             monthNames{

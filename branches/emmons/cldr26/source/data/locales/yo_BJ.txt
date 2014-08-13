@@ -21,7 +21,7 @@ yo_BJ{
             }
         }
     }
-    Version{"2.0.98.62"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -131,11 +131,15 @@ yo_BJ{
             eras{
                 abbreviated{
                     "SK",
+                    "BCE",
                     "LK",
+                    "CE",
                 }
                 wide{
                     "Saju Kristi",
+                    "BCE",
                     "Lehin Kristi",
+                    "CE",
                 }
             }
             monthNames{

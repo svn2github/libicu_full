@@ -10,7 +10,7 @@
  * ICU <specials> source: <path>/common/main/dz.xml
  */
 dz{
-    Version{"2.0.98.52"}
+    Version{"2.1.6.69"}
     zoneStrings{
         "Africa:Cairo"{
             ec{"ཀཱའི་རོ"}
@@ -549,6 +549,10 @@ dz{
         gmtFormat{"ཇི་ཨེམ་ཏི་{0}"}
         gmtZeroFormat{"ཇི་ཨེམ་ཊི་"}
         hourFormat{"+HH:mm;-HH:mm"}
-        regionFormat{"{0}་ཆུ་ཚོད།"}
+        regionFormat{
+            "{0}་ཆུ་ཚོད།",
+            "{0} (+1)",
+            "{0} (+0)",
+        }
     }
 }

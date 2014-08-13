@@ -11,7 +11,7 @@
  */
 bs_Cyrl{
     %%Parent{"root"}
-    Version{"2.0.98.52"}
+    Version{"2.1.7.39"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"Абиџан"}
@@ -1832,6 +1832,10 @@ bs_Cyrl{
         fallbackFormat{"{1} ({0})"}
         gmtFormat{"GMT{0}"}
         hourFormat{"+HHmm;-HHmm"}
-        regionFormat{"Време у земљи: {0}"}
+        regionFormat{
+            "Време у земљи: {0}",
+            "{0} (+1)",
+            "{0} (+0)",
+        }
     }
 }

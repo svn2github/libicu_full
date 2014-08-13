@@ -35,7 +35,7 @@ bas{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -158,11 +158,15 @@ bas{
             eras{
                 abbreviated{
                     "b.Y.K",
+                    "BCE",
                     "m.Y.K",
+                    "CE",
                 }
                 wide{
                     "bisū bi Yesù Krǐstò",
+                    "BCE",
                     "i mbūs Yesù Krǐstò",
+                    "CE",
                 }
             }
             monthNames{

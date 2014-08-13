@@ -808,6 +808,7 @@ ee{
             "serbiaga dinar",
         }
         RUB{
+            "₽",
             "RUB",
             "rɔtsiaga ruble",
         }
@@ -900,7 +901,7 @@ ee{
             "swaziga lilangeni",
         }
         THB{
-            "฿",
+            "THB",
             "thaiga baht",
         }
         TJR{
@@ -925,7 +926,7 @@ ee{
         }
         TOP{
             "TOP",
-            "tonagaga pa'anga",
+            "tonagaga pa’anga",
         }
         TPE{
             "TPE",
@@ -936,6 +937,7 @@ ee{
             "tɛkiiga lira (1922–2005)",
         }
         TRY{
+            "TL",
             "TRY",
             "tɛkiiga lira",
         }
@@ -2070,8 +2072,8 @@ ee{
             other{"tunisiaga dinar"}
         }
         TOP{
-            one{"tonagaga pa'anga"}
-            other{"tonagaga pa'anga"}
+            one{"tonagaga pa’anga"}
+            other{"tonagaga pa’anga"}
         }
         TPE{
             one{"timɔga escudo"}
@@ -2306,5 +2308,5 @@ ee{
         one{"{1} {0}"}
         other{"{1} {0}"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.39"}
 }

@@ -35,7 +35,7 @@ ln{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -158,11 +158,15 @@ ln{
             eras{
                 abbreviated{
                     "libóso ya",
+                    "BCE",
                     "nsima ya Y",
+                    "CE",
                 }
                 wide{
                     "Yambo ya Yézu Krís",
+                    "BCE",
                     "Nsima ya Yézu Krís",
+                    "CE",
                 }
             }
             monthNames{

@@ -18,5 +18,5 @@ en_MO{
             "US Dollar",
         }
     }
-    Version{"2.0.92.29"}
+    Version{"2.1.6.69"}
 }

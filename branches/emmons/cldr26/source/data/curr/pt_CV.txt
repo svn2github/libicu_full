@@ -10,23 +10,25 @@ pt_CV{
     %%Parent{"pt_PT"}
     Currencies{
         CVE{
-            "CVE",
+            "​",
             "Escudo cabo-verdiano",
             {
-                "#,##0.00 ¤",
+                "CVE",
+                "CVE",
                 "$",
-                " ",
+                ",",
             }
         }
         PTE{
-            "Esc.",
+            "​PTE",
             "Escudo português",
             {
-                "#,##0.00 ¤",
+                "PTE",
+                "PTE",
                 ",",
                 " ",
             }
         }
     }
-    Version{"2.0.90.61"}
+    Version{"2.1.7.8"}
 }

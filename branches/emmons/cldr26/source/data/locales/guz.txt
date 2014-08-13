@@ -24,7 +24,7 @@ guz{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.7.39"}
     calendar{
         generic{
             DateTimePatterns{
@@ -145,11 +145,15 @@ guz{
             eras{
                 abbreviated{
                     "YA",
+                    "BCE",
                     "YK",
+                    "CE",
                 }
                 wide{
                     "Yeso ataiborwa",
+                    "BCE",
                     "Yeso kaiboirwe",
+                    "CE",
                 }
             }
             monthNames{
@@ -209,7 +213,7 @@ guz{
                         "E4",
                     }
                     wide{
-                        "Erobo entang'ani",
+                        "Erobo entang’ani",
                         "Erobo yakabere",
                         "Erobo yagatato",
                         "Erobo yakane",
@@ -255,13 +259,13 @@ guz{
             dn{"Omokubio"}
         }
         weekday{
-            dn{"Rituko r'ewiki"}
+            dn{"Rituko r’ewiki"}
         }
         year{
             dn{"Omwaka"}
         }
         zone{
-            dn{"Chinse 'chimo"}
+            dn{"Chinse ‘chimo"}
         }
     }
 }

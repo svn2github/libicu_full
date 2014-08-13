@@ -14,7 +14,7 @@ es_MX{
             "dírham de los Emiratos Árabes Unidos",
         }
         AFN{
-            "AFN",
+            "Af",
             "afgani afgano",
         }
         ALL{
@@ -42,7 +42,7 @@ es_MX{
             "peso argentino (1983–1985)",
         }
         ARS{
-            "AR$",
+            "$a",
             "peso argentino",
         }
         AUD{
@@ -51,7 +51,7 @@ es_MX{
         }
         AWG{
             "Afl.",
-            "florín de Aruba",
+            "florín arubeño",
         }
         AZN{
             "AZN",
@@ -63,7 +63,7 @@ es_MX{
         }
         BBD{
             "BBD",
-            "dólar de Barbados",
+            "dólar barbadense",
         }
         BDT{
             "BDT",
@@ -79,7 +79,7 @@ es_MX{
         }
         BIF{
             "BIF",
-            "franco de Burundi",
+            "franco burundés",
         }
         BMD{
             "BMD",
@@ -135,7 +135,7 @@ es_MX{
         }
         BSD{
             "BSD",
-            "dólar de las Bahamas",
+            "dólar bahameño",
         }
         BTN{
             "BTN",
@@ -151,7 +151,7 @@ es_MX{
         }
         BZD{
             "BZD",
-            "dólar de Belice",
+            "dólar beliceño",
         }
         CAD{
             "CAD",
@@ -211,7 +211,7 @@ es_MX{
         }
         DJF{
             "DJF",
-            "franco de Yibuti",
+            "franco yibutiano",
         }
         DKK{
             "DKK",
@@ -251,11 +251,11 @@ es_MX{
         }
         FJD{
             "FJD",
-            "dólar de las Islas Fiyi",
+            "dólar fiyiano",
         }
         FKP{
             "FKP",
-            "libra de las Islas Malvinas",
+            "libra malvinense",
         }
         GBP{
             "GBP",
@@ -271,7 +271,7 @@ es_MX{
         }
         GIP{
             "GIP",
-            "libra de Gibraltar",
+            "libra gibraltareña",
         }
         GMD{
             "GMD",
@@ -315,7 +315,7 @@ es_MX{
         }
         ILS{
             "ILS",
-            "nuevo sheqel israelí",
+            "nuevo shéquel israelí",
         }
         INR{
             "INR",
@@ -335,7 +335,7 @@ es_MX{
         }
         JMD{
             "JMD",
-            "dólar de Jamaica",
+            "dólar jamaiquino",
         }
         JOD{
             "JOD",
@@ -347,7 +347,7 @@ es_MX{
         }
         KES{
             "KES",
-            "chelín keniata",
+            "chelín keniano",
         }
         KGS{
             "KGS",
@@ -379,7 +379,7 @@ es_MX{
         }
         KZT{
             "KZT",
-            "tenge kazako",
+            "tenge kazajo",
         }
         LAK{
             "LAK",
@@ -451,7 +451,7 @@ es_MX{
         }
         MWK{
             "MWK",
-            "kwacha de Malawi",
+            "kwacha malauí",
         }
         MXN{
             "$",
@@ -463,7 +463,7 @@ es_MX{
         }
         MYR{
             "MYR",
-            "ringgit malasio",
+            "ringgit malayo",
         }
         MZN{
             "MZN",
@@ -471,7 +471,7 @@ es_MX{
         }
         NAD{
             "NAD",
-            "dólar de Namibia",
+            "dólar namibio",
         }
         NGN{
             "NGN",
@@ -491,7 +491,7 @@ es_MX{
         }
         NPR{
             "NPR",
-            "rupia nepalesa",
+            "rupia nepalí",
         }
         NZD{
             "NZD",
@@ -550,6 +550,7 @@ es_MX{
             "dinar serbio",
         }
         RUB{
+            "₽",
             "RUB",
             "rublo ruso",
         }
@@ -631,7 +632,7 @@ es_MX{
         }
         TMT{
             "TMT",
-            "manat turcomano",
+            "manat turkmeno",
         }
         TND{
             "TND",
@@ -642,6 +643,7 @@ es_MX{
             "paʻanga tongano",
         }
         TRY{
+            "TL",
             "TRY",
             "lira turca",
         }
@@ -738,6 +740,59 @@ es_MX{
             "kwacha zambiano",
         }
     }
+    Currencies%narrow{
+        ARS{"$a"}
+        AUD{"$"}
+        BBD{"$"}
+        BDT{"৳"}
+        BMD{"$"}
+        BND{"$"}
+        BRL{"R$"}
+        BSD{"$"}
+        BYR{"Br"}
+        BZD{"$"}
+        CAD{"$"}
+        CLP{"$"}
+        CNY{"¥"}
+        COP{"$"}
+        CRC{"₡"}
+        CUP{"$"}
+        DOP{"RD$"}
+        EUR{"€"}
+        FJD{"$"}
+        GBP{"£"}
+        GIP{"£"}
+        GYD{"$"}
+        HKD{"$"}
+        ILS{"₪"}
+        INR{"₹"}
+        JMD{"$"}
+        JPY{"¥"}
+        KHR{"៛"}
+        KRW{"₩"}
+        KYD{"$"}
+        KZT{"₸"}
+        LAK{"₭"}
+        LRD{"$"}
+        MNT{"₮"}
+        MXN{"$"}
+        NAD{"$"}
+        NGN{"₦"}
+        NZD{"$"}
+        PHP{"₱"}
+        PYG{"₲"}
+        SBD{"$"}
+        SGD{"$"}
+        SRD{"$"}
+        SSP{"£"}
+        TRY{"TL"}
+        TTD{"$"}
+        TWD{"NT$"}
+        UAH{"₴"}
+        USD{"$"}
+        UYU{"$"}
+        VND{"₫"}
+    }
     CurrencyPlurals{
         AED{
             one{"dírham de los Emiratos Árabes Unidos"}
@@ -779,6 +834,10 @@ es_MX{
             one{"dólar australiano"}
             other{"dólares australianos"}
         }
+        AWG{
+            one{"florín arubeño"}
+            other{"florines arubeños"}
+        }
         AZN{
             one{"manat azerí"}
             other{"manat azeríes"}
@@ -786,6 +845,10 @@ es_MX{
         BAM{
             one{"marco convertible de Bosnia-Herzegovina"}
             other{"marcos convertibles de Bosnia-Herzegovina"}
+        }
+        BBD{
+            one{"dólar barbadense"}
+            other{"dólares barbadenses"}
         }
         BDT{
             one{"taka de Bangladesh"}
@@ -798,6 +861,10 @@ es_MX{
         BHD{
             one{"dinar bahreiní"}
             other{"dinares bahreiníes"}
+        }
+        BIF{
+            one{"franco burundés"}
+            other{"francos burundeses"}
         }
         BMD{
             one{"dólar de Bermudas"}
@@ -831,13 +898,25 @@ es_MX{
             one{"nuevo cruzado brasileño"}
             other{"nuevos cruzados brasileños"}
         }
+        BSD{
+            one{"dólar bahameño"}
+            other{"dólares bahameños"}
+        }
         BTN{
             one{"ngultrum butanés"}
             other{"ngultrum butaneses"}
         }
+        BWP{
+            one{"pula botsuano"}
+            other{"pulas botsuanos"}
+        }
         BYR{
             one{"rublo bielorruso"}
             other{"rublos bielorrusos"}
+        }
+        BZD{
+            one{"dólar beliceño"}
+            other{"dólares beliceños"}
         }
         CAD{
             one{"dólar canadiense"}
@@ -887,6 +966,10 @@ es_MX{
             one{"corona checa"}
             other{"coronas checas"}
         }
+        DJF{
+            one{"franco yibutiano"}
+            other{"francos yibutianos"}
+        }
         DKK{
             one{"corona danesa"}
             other{"coronas danesas"}
@@ -922,6 +1005,14 @@ es_MX{
         EUR{
             one{"euro"}
             other{"euros"}
+        }
+        FJD{
+            one{"dólar fiyiano"}
+            other{"dólares fiyianos"}
+        }
+        FKP{
+            one{"libra malvinense"}
+            other{"libras malvinenses"}
         }
         GBP{
             one{"libra esterlina británica"}
@@ -979,6 +1070,10 @@ es_MX{
             one{"rupia indonesia"}
             other{"rupias indonesias"}
         }
+        ILS{
+            one{"nuevo shéquel israelí"}
+            other{"nuevos shéquels israelíes"}
+        }
         INR{
             one{"rupia india"}
             other{"rupias indias"}
@@ -995,6 +1090,10 @@ es_MX{
             one{"corona islandesa"}
             other{"coronas islandesas"}
         }
+        JMD{
+            one{"dólar jamaiquino"}
+            other{"dólares jamaiquinos"}
+        }
         JOD{
             one{"dinar jordano"}
             other{"dinares jordanos"}
@@ -1002,6 +1101,10 @@ es_MX{
         JPY{
             one{"yen japonés"}
             other{"yenes japoneses"}
+        }
+        KES{
+            one{"chelín keniano"}
+            other{"chelines kenianos"}
         }
         KGS{
             one{"som kirguís"}
@@ -1027,6 +1130,14 @@ es_MX{
             one{"dinar kuwaití"}
             other{"dinares kuwaitíes"}
         }
+        KYD{
+            one{"dólar de las Islas Caimán"}
+            other{"dólares de las Islas Caimán"}
+        }
+        KZT{
+            one{"tenge kasajo"}
+            other{"tenges kasajos"}
+        }
         LAK{
             one{"kip laosiano"}
             other{"kips laosianos"}
@@ -1042,6 +1153,10 @@ es_MX{
         LRD{
             one{"dólar liberiano"}
             other{"dólares liberianos"}
+        }
+        LTL{
+            one{"litas lituana"}
+            other{"litas lituanas"}
         }
         LVL{
             one{"lats letón"}
@@ -1091,6 +1206,10 @@ es_MX{
             one{"rufiyaa de Maldivas"}
             other{"rufiyaas de Maldivas"}
         }
+        MWK{
+            one{"kwacha malauí"}
+            other{"kwaschas malauíes"}
+        }
         MXN{
             one{"peso mexicano"}
             other{"pesos mexicanos"}
@@ -1099,9 +1218,17 @@ es_MX{
             one{"peso de plata mexicano (MXP)"}
             other{"pesos de plata mexicanos (MXP)"}
         }
+        MYR{
+            one{"ringgit malayo"}
+            other{"ringgits malayos"}
+        }
         MZN{
             one{"metical mozambiqueño"}
             other{"meticales mozambiqueños"}
+        }
+        NAD{
+            one{"dólar namibio"}
+            other{"dólares namibios"}
         }
         NGN{
             one{"naira nigeriano"}
@@ -1118,6 +1245,10 @@ es_MX{
         NOK{
             one{"corona noruega"}
             other{"coronas noruegas"}
+        }
+        NPR{
+            one{"rupia nepalí"}
+            other{"rupias nepalíes"}
         }
         NZD{
             one{"dólar neozelandés"}
@@ -1251,6 +1382,10 @@ es_MX{
             one{"somoni tayiko"}
             other{"somonis tayikos"}
         }
+        TMT{
+            one{"manat turkmeno"}
+            other{"manats turkmenos"}
+        }
         TND{
             one{"dinar tunecino"}
             other{"dinares tunecinos"}
@@ -1274,6 +1409,10 @@ es_MX{
         TZS{
             one{"chelín tanzano"}
             other{"chelines tanzanos"}
+        }
+        UAH{
+            one{"grivna ucraniana"}
+            other{"grivnas ucranianas"}
         }
         UGX{
             one{"chelín ugandés"}
@@ -1356,5 +1495,5 @@ es_MX{
         one{"{0} {1}"}
         other{"{0} {1}"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.42"}
 }

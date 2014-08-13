@@ -10,7 +10,7 @@
  * ICU <specials> source: <path>/common/main/ee.xml
  */
 ee{
-    Version{"2.0.98.52"}
+    Version{"2.1.7.39"}
     zoneStrings{
         "Africa:Abidjan"{
             ec{"Abidzan nutomegaƒoƒome"}
@@ -571,7 +571,7 @@ ee{
             ec{"Davis nutomegaƒoƒome"}
         }
         "Antarctica:DumontDUrville"{
-            ec{"Dumont d'Urville nutomegaƒoƒome"}
+            ec{"Dumont d’Urville nutomegaƒoƒome"}
         }
         "Antarctica:Mawson"{
             ec{"Mawson nutomegaƒoƒome"}
@@ -1218,6 +1218,10 @@ ee{
         "meta:Suriname"{
             ls{"Suriname gaƒoƒome"}
         }
-        regionFormat{"{0} gaƒoƒo"}
+        regionFormat{
+            "{0} gaƒoƒo",
+            "{0} (+1)",
+            "{0} (+0)",
+        }
     }
 }

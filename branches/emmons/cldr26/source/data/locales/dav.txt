@@ -24,7 +24,7 @@ dav{
             }
         }
     }
-    Version{"2.0.92.87"}
+    Version{"2.1.6.69"}
     calendar{
         generic{
             DateTimePatterns{
@@ -149,11 +149,15 @@ dav{
             eras{
                 abbreviated{
                     "KK",
+                    "BCE",
                     "BK",
+                    "CE",
                 }
                 wide{
                     "Kabla ya Kristo",
+                    "BCE",
                     "Baada ya Kristo",
+                    "CE",
                 }
             }
             monthNames{

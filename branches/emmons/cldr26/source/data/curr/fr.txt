@@ -236,7 +236,7 @@ fr{
             "peso chilien",
         }
         CNY{
-            "¥CN",
+            "CNY",
             "yuan renminbi chinois",
         }
         COP{
@@ -268,7 +268,7 @@ fr{
             "peso cubain",
         }
         CVE{
-            "$CV",
+            "CVE",
             "escudo capverdien",
         }
         CYP{
@@ -316,7 +316,7 @@ fr{
             "couronne estonienne",
         }
         EGP{
-            "£EG",
+            "EGP",
             "livre égyptienne",
         }
         ERN{
@@ -420,7 +420,7 @@ fr{
             "dollar du Guyana",
         }
         HKD{
-            "$HK",
+            "HKD",
             "dollar de Hong Kong",
         }
         HNL{
@@ -488,7 +488,7 @@ fr{
             "dinar jordanien",
         }
         JPY{
-            "¥JP",
+            "JPY",
             "yen japonais",
         }
         KES{
@@ -540,7 +540,7 @@ fr{
             "roupie srilankaise",
         }
         LRD{
-            "$LR",
+            "LRD",
             "dollar libérien",
         }
         LSL{
@@ -772,6 +772,7 @@ fr{
             "dinar serbe",
         }
         RUB{
+            "₽",
             "RUB",
             "rouble russe",
         }
@@ -800,7 +801,7 @@ fr{
             "dinar soudanais",
         }
         SDG{
-            "£SD",
+            "SDG",
             "livre soudanaise",
         }
         SDP{
@@ -816,7 +817,7 @@ fr{
             "dollar de Singapour",
         }
         SHP{
-            "£SH",
+            "SHP",
             "livre de Sainte-Hélène",
         }
         SIT{
@@ -844,7 +845,7 @@ fr{
             "florin surinamais",
         }
         SSP{
-            "£SS",
+            "SSP",
             "livre sud-soudanaise",
         }
         STD{
@@ -904,6 +905,7 @@ fr{
             "livre turque (1844–2005)",
         }
         TRY{
+            "TL",
             "TRY",
             "livre turque",
         }
@@ -912,7 +914,7 @@ fr{
             "dollar trinidadien",
         }
         TWD{
-            "$TW",
+            "TWD",
             "nouveau dollar taïwanais",
         }
         TZS{
@@ -1012,7 +1014,7 @@ fr{
             "unité de compte européenne (XBD)",
         }
         XCD{
-            "EC$",
+            "XCD",
             "dollar des Caraïbes orientales",
         }
         XDR{
@@ -1115,6 +1117,59 @@ fr{
             "ZWR",
             "dollar zimbabwéen (2008)",
         }
+    }
+    Currencies%narrow{
+        ARS{"$"}
+        AUD{"$"}
+        BBD{"$"}
+        BDT{"৳"}
+        BMD{"$"}
+        BND{"$"}
+        BRL{"R$"}
+        BSD{"$"}
+        BYR{"р."}
+        BZD{"$"}
+        CAD{"$"}
+        CLP{"$"}
+        CNY{"¥"}
+        COP{"$"}
+        CRC{"₡"}
+        CUP{"$"}
+        DOP{"$"}
+        EUR{"€"}
+        FJD{"$"}
+        GBP{"£"}
+        GIP{"£"}
+        GYD{"$"}
+        HKD{"$"}
+        ILS{"₪"}
+        INR{"₹"}
+        JMD{"$"}
+        JPY{"¥"}
+        KHR{"៛"}
+        KRW{"₩"}
+        KYD{"$"}
+        KZT{"₸"}
+        LAK{"₭"}
+        LRD{"$"}
+        MNT{"₮"}
+        MXN{"$"}
+        NAD{"$"}
+        NGN{"₦"}
+        NZD{"$"}
+        PHP{"₱"}
+        PYG{"₲"}
+        SBD{"$"}
+        SGD{"$"}
+        SRD{"$"}
+        SSP{"£"}
+        TRY{"₺"}
+        TTD{"$"}
+        TWD{"NT$"}
+        UAH{"₴"}
+        USD{"$"}
+        UYU{"$"}
+        VND{"₫"}
     }
     CurrencyPlurals{
         ADP{
@@ -2158,8 +2213,8 @@ fr{
             other{"(devises de test)"}
         }
         XXX{
-            one{"devise inconnue ou non valide"}
-            other{"devise inconnue ou non valide"}
+            one{"(devise inconnue ou non valide)"}
+            other{"(devise inconnue ou non valide)"}
         }
         YDD{
             one{"dinar nord-yéménite"}
@@ -2222,5 +2277,5 @@ fr{
         one{"{0} {1}"}
         other{"{0} {1}"}
     }
-    Version{"2.0.98.52"}
+    Version{"2.1.7.42"}
 }
