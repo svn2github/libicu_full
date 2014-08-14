@@ -66,6 +66,7 @@
  */
 U_STABLE const char* U_EXPORT2 u_getDataDirectory(void);
 
+
 /** 
  * Set the ICU data directory. 
  * The data directory is where common format ICU data files (.dat files)
@@ -86,6 +87,16 @@ U_STABLE const char* U_EXPORT2 u_getDataDirectory(void);
  * @stable ICU 2.0
  */
 U_STABLE void U_EXPORT2 u_setDataDirectory(const char *directory);
+
+/**
+  * Return the time zone files override directory, or an empty string if
+  * no directory was specified. Certain time zone resources will be preferrentially
+  * loaded from individual files in this directory.
+  *
+  * @return the time zone data override directory.
+  * @internal
+  */ 
+U_INTERNAL const char * U_EXPORT2 u_getTimeZoneFilesDirectory(UErrorCode *status);
 
 /**
  * @{
