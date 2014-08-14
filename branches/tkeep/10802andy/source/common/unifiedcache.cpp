@@ -116,16 +116,79 @@ int32_t UnifiedCache::keyCount() const {
 }
 
 void UnifiedCache::flush() const {
-    _flush(FALSE);
+    Mutex lock(&gCacheMutex);
+
+    // Use a loop in case cache items that are flushed held hard references to
+    // other cache items making those additional cache items eligible for
+    // flushing.
+    while (_flush(FALSE));
+    umtx_condBroadcast(&gInProgressValueAddedCond);
+}
+
+void UnifiedCache::dump() {
+    UErrorCode status = U_ZERO_ERROR;
+    const UnifiedCache *cache = getInstance(status);
+    if (U_FAILURE(status)) {
+        fprintf(stderr, "Unified Cache: Error fetching cache.\n");
+        return;
+    }
+    cache->dumpContents();
+}
+
+void UnifiedCache::dumpContents() const {
+    Mutex lock(&gCacheMutex);
+    _dumpContents();
+}
+
+// Dumps content of cache.
+// On entry, gCacheMutex must be held.
+// On exit, cache contents dumped to stderr.
+void UnifiedCache::_dumpContents() const {
+    int32_t pos = -1;
+    const UHashElement *element = uhash_nextElement(fHashtable, &pos);
+    char buffer[256];
+    int32_t cnt = 0;
+    for (; element != NULL; element = uhash_nextElement(fHashtable, &pos)) {
+        const SharedObject *sharedObject =
+                (const SharedObject *) element->value.pointer;
+        const CacheKeyBase *key =
+                (const CacheKeyBase *) element->key.pointer;
+        if (!sharedObject->allSoftReferences()) {
+            ++cnt;
+            fprintf(
+                    stderr,
+                    "Unified Cache: Key '%s', error %d, value %p, total refcount %d, soft refcount %d\n", 
+                    key->writeDescription(buffer, 256),
+                    key->creationStatus,
+                    sharedObject == gNoValue ? NULL :sharedObject,
+                    sharedObject->getRefCount(),
+                    sharedObject->getSoftRefCount());
+        }
+    }
+    fprintf(stderr, "Unified Cache: %d out of a total of %d still have hard references\n", cnt, uhash_count(fHashtable));
 }
 
 UnifiedCache::~UnifiedCache() {
-    _flush(TRUE);
+    // Try our best to clean up first.
+    flush();
+    {
+        // Now all that should be left in the cache are entries that refer to
+        // each other and entries with hard references from outside the cache. 
+        // Nothing we can do about these so proceed to wipe out the cache.
+        Mutex lock(&gCacheMutex);
+        _flush(TRUE);
+    }
     uhash_close(fHashtable);
 }
 
-void UnifiedCache::_flush(UBool all) const {
-    Mutex lock(&gCacheMutex);
+// Flushes the contents of the cache. If cache values hold references to other
+// cache values then _flush should be called in a loop until it returns FALSE.
+// On entry, gCacheMutex must be held.
+// On exit, those values with only soft references are flushed. If all is true
+// then every value is flushed even if hard references are held.
+// Returns TRUE if any value in cache was flushed or FALSE otherwise.
+UBool UnifiedCache::_flush(UBool all) const {
+    UBool result = FALSE;
     int32_t pos = -1;
     const UHashElement *element = uhash_nextElement(fHashtable, &pos);
     for (; element != NULL; element = uhash_nextElement(fHashtable, &pos)) {
@@ -134,9 +197,10 @@ void UnifiedCache::_flush(UBool all) const {
         if (all || sharedObject->allSoftReferences()) {
             uhash_removeElement(fHashtable, element);
             sharedObject->removeSoftRef();
+            result = TRUE;
         }
     }
-    umtx_condBroadcast(&gInProgressValueAddedCond);
+    return result;
 }
 
 // Places a new value and creationStatus in the cache for the given key.

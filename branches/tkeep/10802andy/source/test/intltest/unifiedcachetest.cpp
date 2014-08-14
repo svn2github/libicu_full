@@ -77,6 +77,7 @@ void UnifiedCacheTest::TestBasic() {
     int32_t baseCount = cache->keyCount();
     const UCTItem *en = NULL;
     const UCTItem *enGb = NULL;
+    const UCTItem *enGb2 = NULL;
     const UCTItem *enUs = NULL;
     const UCTItem *fr = NULL;
     const UCTItem *frFr = NULL;
@@ -85,6 +86,8 @@ void UnifiedCacheTest::TestBasic() {
     cache->get(LocaleCacheKey<UCTItem>("en_GB"), enGb, status);
     cache->get(LocaleCacheKey<UCTItem>("fr_FR"), frFr, status);
     cache->get(LocaleCacheKey<UCTItem>("fr"), fr, status);
+    cache->get(LocaleCacheKey<UCTItem>("en_GB"), enGb2, status);
+    SharedObject::clearPtr(enGb2);
     if (enGb != enUs) {
         errln("Expected en_GB and en_US to resolve to same object.");
     } 

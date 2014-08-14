@@ -64,6 +64,12 @@ public:
     int32_t getRefCount() const;
 
     /**
+     * Returns the count of soft references only. Uses a memory barrier.
+     * Used for testing the cache. Regular clients won't need this.
+     */
+    int32_t getSoftRefCount() const;
+
+    /**
      * If allSoftReferences() == TRUE then this object has only soft
      * references. The converse is not necessarily true.
      */

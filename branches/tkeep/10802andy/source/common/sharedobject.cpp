@@ -44,6 +44,11 @@ SharedObject::getRefCount() const {
     return umtx_loadAcquire(totalRefCount);
 }
 
+int32_t
+SharedObject::getSoftRefCount() const {
+    return umtx_loadAcquire(softRefCount);
+}
+
 void
 SharedObject::deleteIfZeroRefCount() const {
     if(getRefCount() == 0) {

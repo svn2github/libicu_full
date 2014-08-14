@@ -72,6 +72,12 @@ class U_COMMON_API CacheKeyBase : public UObject {
            const void *creationContext, UErrorCode &status) const = 0;
 
    /**
+    * Writes a description of this key to buffer and returns buffer. Written
+    * description is NULL terminated.
+    */
+   virtual char *writeDescription(char *buffer, int32_t bufSize) const = 0;
+
+   /**
     * Inequality operator.
     */
    UBool operator != (const CacheKeyBase &other) const {
@@ -98,6 +104,16 @@ class U_COMMON_API CacheKey : public CacheKeyBase {
    virtual int32_t hashCode() const {
        const char *s = typeid(T).name();
        return ustr_hashCharsN(s, uprv_strlen(s));
+   }
+
+   /**
+    * Use the value type, T,  as the description.
+    */
+   virtual char *writeDescription(char *buffer, int32_t bufLen) const {
+       const char *s = typeid(T).name();
+       uprv_strncpy(buffer, s, bufLen);
+       buffer[bufLen - 1] = 0;
+       return buffer;
    }
 
    /**
@@ -141,6 +157,16 @@ class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
    }
    virtual const T *createObject(
            const void *creationContext, UErrorCode &status) const;
+   /**
+    * Use the locale id as the description.
+    */
+   virtual char *writeDescription(char *buffer, int32_t bufLen) const {
+       const char *s = fLoc.getName();
+       uprv_strncpy(buffer, s, bufLen);
+       buffer[bufLen - 1] = 0;
+       return buffer;
+   }
+
 };
 
 /**
@@ -209,6 +235,12 @@ class U_COMMON_API UnifiedCache : public UObject {
    }
 
    /**
+    * Dumps the contents of this cache to standard error. Used for testing of
+    * cache only.
+    */
+   void dumpContents() const;
+
+   /**
     * Convenience method to get a value of type T from cache for a
     * particular locale with creationContext == NULL.
     * @param loc    the locale
@@ -231,6 +263,11 @@ class U_COMMON_API UnifiedCache : public UObject {
    }
 
    /**
+    * Dumps the cache contents to stderr. For testing only.
+    */
+   static void dump();
+
+   /**
     * Returns the number of keys in this cache. For testing only.
     */
    int32_t keyCount() const;
@@ -246,7 +283,7 @@ class U_COMMON_API UnifiedCache : public UObject {
    UHashtable *fHashtable;
    UnifiedCache(const UnifiedCache &other);
    UnifiedCache &operator=(const UnifiedCache &other);
-   void _flush(UBool all) const;
+   UBool _flush(UBool all) const;
    void _get(
            const CacheKeyBase &key,
            const SharedObject *&value,
@@ -265,6 +302,7 @@ class U_COMMON_API UnifiedCache : public UObject {
            const CacheKeyBase &key,
            const SharedObject *&value,
            UErrorCode &status) const;
+   void _dumpContents() const;
    static void _put(
            const UHashElement *element,
            const SharedObject *value,
