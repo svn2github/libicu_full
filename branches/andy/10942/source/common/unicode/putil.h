@@ -99,6 +99,17 @@ U_STABLE void U_EXPORT2 u_setDataDirectory(const char *directory);
 U_INTERNAL const char * U_EXPORT2 u_getTimeZoneFilesDirectory(UErrorCode *status);
 
 /**
+  * Set the time zone files override directory.
+  * This function is not thread safe; it must not be called concurrently with
+  *   u_getTimeZoneFilesDirectory() or any other use of ICU time zone functions.
+  * This function should only be called before using any ICU service that
+  *   will access the time zone data.
+  * @internal
+  */
+U_INTERNAL void U_EXPORT2 u_setTimeZoneFilesDirectory(const char *path, UErrorCode *status);
+
+
+/**
  * @{
  * Filesystem file and path separator characters.
  * Example: '/' and ':' on Unix, '\\' and ';' on Windows.

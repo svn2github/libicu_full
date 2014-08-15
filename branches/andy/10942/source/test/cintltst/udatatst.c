@@ -16,6 +16,7 @@
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
 #include "unicode/udata.h"
+#include "unicode/ucal.h"
 #include "unicode/uchar.h"
 #include "unicode/ucnv.h"
 #include "unicode/ures.h"
@@ -72,6 +73,7 @@ static void TestICUDataName(void);
 static void PointerTableOfContents(void);
 static void SetBadCommonData(void);
 static void TestUDataFileAccess(void);
+static void TestTZDataDir(void); 
 
 
 void addUDataTest(TestNode** root);
@@ -94,6 +96,7 @@ addUDataTest(TestNode** root)
     addTest(root, &PointerTableOfContents, "udatatst/PointerTableOfContents" );
     addTest(root, &SetBadCommonData, "udatatst/SetBadCommonData" );
     addTest(root, &TestUDataFileAccess, "udatatst/TestUDataFileAccess" );
+    addTest(root, &TestTZDataDir, "udatatst/TestTZDataDir" );
 }
 
 #if 0
@@ -1813,3 +1816,15 @@ static void SetBadCommonData(void) {
     }
 }
 
+static void TestTZDataDir(void) {
+    UErrorCode status = U_ZERO_ERROR;
+    const char *tzDataVersion;
+
+    tzDataVersion = ucal_getTZDataVersion(&status);
+    printf("tz data version is %s\n", tzDataVersion);
+    ctest_resetICU();
+    u_setTimeZoneFilesDirectory("/usr/local/google/home/aheninger/icu/icu/branches/andy/10942/source/test/testdata", &status);
+    tzDataVersion = ucal_getTZDataVersion(&status);
+    printf("tz data version is %s\n", tzDataVersion);
+
+}
