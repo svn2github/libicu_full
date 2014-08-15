@@ -155,6 +155,7 @@ const SharedPluralRules *LocaleCacheKey<SharedPluralRules>::createObject(
         delete pr;
         return NULL;
     }
+    result->addRef();
     return result;
 }
 

@@ -333,6 +333,7 @@ const MeasureFormatCacheData *LocaleCacheKey<MeasureFormatCacheData>::createObje
         decfmt->setRoundingMode(DecimalFormat::kRoundDown);
     }
     result->adoptIntegerFormat(inf);
+    result->addRef();
     return result.orphan();
 }
 

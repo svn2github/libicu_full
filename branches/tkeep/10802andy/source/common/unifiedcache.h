@@ -58,9 +58,10 @@ class U_COMMON_API CacheKeyBase : public UObject {
 
    /**
     * Create a new object for this key. Called by cache on cache miss.
-    * If createObject is returning a value already in the cache, it must
-    * add a reference. Otherwise, it can return a brand new object with
-    * zero references. Or it can return NULL and set status to an error.
+    * createObject must add a reference to the object it returns. Note
+    * that getting an object from the cache and returning it without calling
+    * removeRef on it satisfies this requirement. It can also return NULL
+    * and set status to an error.
     *
     * @param creationContext the context in which the object is being
     *                        created. May be NULL.

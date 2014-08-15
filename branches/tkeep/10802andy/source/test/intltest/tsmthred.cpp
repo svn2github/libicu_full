@@ -1734,7 +1734,9 @@ const UCTMultiThreadItem *LocaleCacheKey<UCTMultiThreadItem>::createObject(
     umtx_lock(&gCTMutex);
     ++gObjectsCreated;
     umtx_unlock(&gCTMutex);
-    return new UCTMultiThreadItem(fLoc.getName());
+    UCTMultiThreadItem *result = new UCTMultiThreadItem(fLoc.getName());
+    result->addRef();
+    return result;
 }
 
 class UnifiedCacheThread: public SimpleThread {

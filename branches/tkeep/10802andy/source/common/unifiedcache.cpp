@@ -309,12 +309,11 @@ void UnifiedCache::_get(
         return;
     }
     value = key.createObject(creationContext, status);
+    U_ASSERT(value == NULL || !value->allSoftReferences());
+    U_ASSERT(value != NULL || status != U_ZERO_ERROR);
     if (value == NULL) {
         SharedObject::copyPtr(gNoValue, value);
-    } else if (value->getRefCount() == 0) {
-        value->addRef();
     }
-    U_ASSERT(value != gNoValue || status != U_ZERO_ERROR);
     _putIfAbsentAndGet(key, value, status);
     if (value == gNoValue) {
         SharedObject::clearPtr(value);

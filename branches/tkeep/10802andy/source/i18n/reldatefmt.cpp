@@ -606,6 +606,7 @@ const RelativeDateTimeCacheData *LocaleCacheKey<RelativeDateTimeCacheData>::crea
     if (U_FAILURE(status)) {
         return NULL;
     }
+    result->addRef();
     return result.orphan();
 }
 

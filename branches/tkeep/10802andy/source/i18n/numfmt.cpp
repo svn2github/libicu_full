@@ -1249,6 +1249,7 @@ const SharedNumberFormat *LocaleCacheKey<SharedNumberFormat>::createObject(
         delete nf;
         return NULL;
     }
+    result->addRef();
     return result;
 }
 

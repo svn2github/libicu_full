@@ -41,7 +41,9 @@ const UCTItem *LocaleCacheKey<UCTItem>::createObject(
         }
         return item;
     }
-    return new UCTItem(fLoc.getName());
+    UCTItem *result = new UCTItem(fLoc.getName());
+    result->addRef();
+    return result;
 }
 
 template<>
