@@ -9,7 +9,7 @@
 plurals:table(nofallback){
     locales{
         af{"set8"}
-        ak{"set6"}
+        ak{"set5"}
         am{"set1"}
         ar{"set34"}
         asa{"set8"}
@@ -19,7 +19,7 @@ plurals:table(nofallback){
         bem{"set8"}
         bez{"set8"}
         bg{"set8"}
-        bh{"set6"}
+        bh{"set5"}
         bm{"set0"}
         bn{"set1"}
         bo{"set0"}
@@ -57,7 +57,7 @@ plurals:table(nofallback){
         gl{"set3"}
         gsw{"set8"}
         gu{"set1"}
-        guw{"set6"}
+        guw{"set5"}
         gv{"set33"}
         ha{"set8"}
         haw{"set8"}
@@ -104,12 +104,12 @@ plurals:table(nofallback){
         lb{"set8"}
         lg{"set8"}
         lkt{"set0"}
-        ln{"set6"}
+        ln{"set5"}
         lo{"set0"}
         lt{"set28"}
         lv{"set14"}
         mas{"set8"}
-        mg{"set6"}
+        mg{"set5"}
         mgo{"set8"}
         mk{"set12"}
         ml{"set8"}
@@ -130,18 +130,18 @@ plurals:table(nofallback){
         no{"set8"}
         nqo{"set0"}
         nr{"set8"}
-        nso{"set6"}
+        nso{"set5"}
         ny{"set8"}
         nyn{"set8"}
         om{"set8"}
         or{"set8"}
         os{"set8"}
-        pa{"set6"}
+        pa{"set5"}
         pap{"set8"}
         pl{"set26"}
         prg{"set14"}
         ps{"set8"}
-        pt{"set4"}
+        pt{"set7"}
         pt_PT{"set9"}
         rm{"set8"}
         ro{"set19"}
@@ -157,7 +157,7 @@ plurals:table(nofallback){
         sg{"set0"}
         sh{"set20"}
         shi{"set18"}
-        si{"set5"}
+        si{"set4"}
         sk{"set25"}
         sl{"set22"}
         sma{"set17"}
@@ -179,7 +179,7 @@ plurals:table(nofallback){
         te{"set8"}
         teo{"set8"}
         th{"set0"}
-        ti{"set6"}
+        ti{"set5"}
         tig{"set8"}
         tk{"set8"}
         tl{"set13"}
@@ -187,7 +187,7 @@ plurals:table(nofallback){
         to{"set0"}
         tr{"set8"}
         ts{"set8"}
-        tzm{"set7"}
+        tzm{"set6"}
         ug{"set8"}
         uk{"set30"}
         ur{"set3"}
@@ -196,7 +196,7 @@ plurals:table(nofallback){
         vi{"set0"}
         vo{"set8"}
         vun{"set8"}
-        wa{"set6"}
+        wa{"set5"}
         wae{"set8"}
         wo{"set0"}
         xh{"set8"}
@@ -210,18 +210,18 @@ plurals:table(nofallback){
         af{"set36"}
         am{"set36"}
         ar{"set36"}
-        az{"set49"}
+        az{"set50"}
         bg{"set36"}
-        bn{"set51"}
+        bn{"set52"}
         bs{"set36"}
-        ca{"set47"}
+        ca{"set48"}
         cs{"set36"}
-        cy{"set52"}
+        cy{"set53"}
         da{"set36"}
         de{"set36"}
         dsb{"set36"}
         el{"set36"}
-        en{"set45"}
+        en{"set46"}
         es{"set36"}
         et{"set36"}
         eu{"set36"}
@@ -231,9 +231,9 @@ plurals:table(nofallback){
         fr{"set38"}
         fy{"set36"}
         gl{"set36"}
-        gu{"set50"}
+        gu{"set51"}
         he{"set36"}
-        hi{"set50"}
+        hi{"set51"}
         hr{"set36"}
         hsb{"set36"}
         hu{"set39"}
@@ -241,11 +241,11 @@ plurals:table(nofallback){
         id{"set36"}
         in{"set36"}
         is{"set36"}
-        it{"set42"}
+        it{"set43"}
         iw{"set36"}
         ja{"set36"}
-        ka{"set43"}
-        kk{"set41"}
+        ka{"set44"}
+        kk{"set42"}
         km{"set36"}
         kn{"set36"}
         ko{"set36"}
@@ -253,11 +253,11 @@ plurals:table(nofallback){
         lo{"set38"}
         lt{"set36"}
         lv{"set36"}
-        mk{"set48"}
+        mk{"set49"}
         ml{"set36"}
         mn{"set36"}
         mo{"set38"}
-        mr{"set46"}
+        mr{"set47"}
         ms{"set38"}
         my{"set36"}
         nb{"set36"}
@@ -274,7 +274,7 @@ plurals:table(nofallback){
         si{"set36"}
         sk{"set36"}
         sl{"set36"}
-        sq{"set44"}
+        sq{"set45"}
         sr{"set36"}
         sv{"set37"}
         sw{"set36"}
@@ -283,7 +283,7 @@ plurals:table(nofallback){
         th{"set36"}
         tl{"set38"}
         tr{"set36"}
-        uk{"set36"}
+        uk{"set41"}
         ur{"set36"}
         uz{"set36"}
         vi{"set38"}
@@ -472,25 +472,24 @@ plurals:table(nofallback){
         set23{
             few{
                 "v = 0 and i % 100 = 3..4 or f % 100 = 3..4 @integer 3, 4, 103, 104, "
-                "203, 204, 303, 304, 403, 404, 503, 504, 603, 604, 703, 704, 803, 804"
-                ", 903, 904, 1003, 1004, … @decimal 0.3, 0.4, 0.103, 0.104, 0.203, 0."
-                "204, 0.303, 0.304, 0.403, 0.404, 0.503, 0.504, 1.3, 1.4, 1.103, 1.10"
-                "4, …"
+                "203, 204, 303, 304, 403, 404, 503, 504, 603, 604, 703, 704, 1003, … "
+                "@decimal 0.3, 0.4, 1.3, 1.4, 2.3, 2.4, 3.3, 3.4, 4.3, 4.4, 5.3, 5.4,"
+                " 6.3, 6.4, 7.3, 7.4, 10.3, 100.3, 1000.3, …"
             }
             one{
                 "v = 0 and i % 100 = 1 or f % 100 = 1 @integer 1, 101, 201, 301, 401,"
-                " 501, 601, 701, 801, 901, 1001, … @decimal 0.1, 0.101, 0.201, 0.301,"
-                " 0.401, 0.501, 0.601, 0.701, 0.801, 0.901, 1.1, 1.101, 1.201, …"
+                " 501, 601, 701, 1001, … @decimal 0.1, 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, "
+                "7.1, 10.1, 100.1, 1000.1, …"
             }
             other{
-                " @integer 0, 5~100, 105~200, 205~300, … @decimal 0.0, 0.5~1.0, 1.5~2"
-                ".0, 0.05~1.00, 1.05~2.00, 0.005~0.100, 0.105~0.200, 0.205~0.300, 1.0"
-                "05~1.100, 1.105~1.200, 1.205~1.300, …"
+                " @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0"
+                ", 0.5~1.0, 1.5~2.0, 2.5~2.7, 10.0, 100.0, 1000.0, 10000.0, 100000.0,"
+                " 1000000.0, …"
             }
             two{
                 "v = 0 and i % 100 = 2 or f % 100 = 2 @integer 2, 102, 202, 302, 402,"
-                " 502, 602, 702, 802, 902, 1002, … @decimal 0.2, 0.102, 0.202, 0.302,"
-                " 0.402, 0.502, 0.602, 0.702, 0.802, 0.902, 1.2, 1.102, 1.202, …"
+                " 502, 602, 702, 1002, … @decimal 0.2, 1.2, 2.2, 3.2, 4.2, 5.2, 6.2, "
+                "7.2, 10.2, 100.2, 1000.2, …"
             }
         }
         set24{
@@ -717,12 +716,12 @@ plurals:table(nofallback){
         }
         set4{
             one{
-                "i = 1 and v = 0 or i = 0 and t = 1 @integer 1 @decimal 0.1, 0.01, 0."
-                "10, 0.001, 0.010, 0.100, 0.0001, 0.0010, 0.0100, 0.1000"
+                "n = 0,1 or i = 0 and f = 1 @integer 0, 1 @decimal 0.0, 0.1, 1.0, 0.0"
+                "0, 0.01, 1.00, 0.000, 0.001, 1.000, 0.0000, 0.0001, 1.0000"
             }
             other{
-                " @integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0"
-                ", 0.2~1.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …"
+                " @integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 0.2~0."
+                "9, 1.1~1.8, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …"
             }
         }
         set40{
@@ -730,6 +729,13 @@ plurals:table(nofallback){
             other{" @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …"}
         }
         set41{
+            few{
+                "n % 10 = 3 and n % 100 != 13 @integer 3, 23, 33, 43, 53, 63, 73, 83,"
+                " 103, 1003, …"
+            }
+            other{" @integer 0~2, 4~16, 100, 1000, 10000, 100000, 1000000, …"}
+        }
+        set42{
             many{
                 "n % 10 = 6 or n % 10 = 9 or n % 10 = 0 and n != 0 @integer 6, 9, 10,"
                 " 16, 19, 20, 26, 29, 30, 36, 39, 40, 100, 1000, 10000, 100000, 10000"
@@ -737,16 +743,16 @@ plurals:table(nofallback){
             }
             other{" @integer 0~5, 7, 8, 11~15, 17, 18, 21, 101, 1001, …"}
         }
-        set42{
+        set43{
             many{"n = 11,8,80,800 @integer 8, 11, 80, 800"}
             other{" @integer 0~7, 9, 10, 12~17, 100, 1000, 10000, 100000, 1000000, …"}
         }
-        set43{
+        set44{
             many{"i = 0 or i % 100 = 2..20,40,60,80 @integer 0, 2~16, 102, 1002, …"}
             one{"i = 1 @integer 1"}
             other{" @integer 21~36, 100, 1000, 10000, 100000, 1000000, …"}
         }
-        set44{
+        set45{
             many{
                 "n % 10 = 4 and n % 100 != 14 @integer 4, 24, 34, 44, 54, 64, 74, 84,"
                 " 104, 1004, …"
@@ -754,7 +760,7 @@ plurals:table(nofallback){
             one{"n = 1 @integer 1"}
             other{" @integer 0, 2, 3, 5~17, 100, 1000, 10000, 100000, 1000000, …"}
         }
-        set45{
+        set46{
             few{
                 "n % 10 = 3 and n % 100 != 13 @integer 3, 23, 33, 43, 53, 63, 73, 83,"
                 " 103, 1003, …"
@@ -769,19 +775,19 @@ plurals:table(nofallback){
                 " 102, 1002, …"
             }
         }
-        set46{
+        set47{
             few{"n = 4 @integer 4"}
             one{"n = 1 @integer 1"}
             other{" @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …"}
             two{"n = 2,3 @integer 2, 3"}
         }
-        set47{
+        set48{
             few{"n = 4 @integer 4"}
             one{"n = 1,3 @integer 1, 3"}
             other{" @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …"}
             two{"n = 2 @integer 2"}
         }
-        set48{
+        set49{
             many{
                 "i % 10 = 7,8 and i % 100 != 17,18 @integer 7, 8, 27, 28, 37, 38, 47,"
                 " 48, 57, 58, 67, 68, 77, 78, 87, 88, 107, 1007, …"
@@ -796,7 +802,17 @@ plurals:table(nofallback){
                 " 102, 1002, …"
             }
         }
-        set49{
+        set5{
+            one{
+                "n = 0..1 @integer 0, 1 @decimal 0.0, 1.0, 0.00, 1.00, 0.000, 1.000, "
+                "0.0000, 1.0000"
+            }
+            other{
+                " @integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 0.1~0."
+                "9, 1.1~1.7, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …"
+            }
+        }
+        set50{
             few{
                 "i % 10 = 3,4 or i % 1000 = 100,200,300,400,500,600,700,800,900 @inte"
                 "ger 3, 4, 13, 14, 23, 24, 33, 34, 43, 44, 53, 54, 63, 64, 73, 74, 10"
@@ -815,31 +831,21 @@ plurals:table(nofallback){
                 "00000, 1000000, …"
             }
         }
-        set5{
-            one{
-                "n = 0,1 or i = 0 and f = 1 @integer 0, 1 @decimal 0.0, 0.1, 1.0, 0.0"
-                "0, 0.01, 1.00, 0.000, 0.001, 1.000, 0.0000, 0.0001, 1.0000"
-            }
-            other{
-                " @integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 0.2~0."
-                "9, 1.1~1.8, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …"
-            }
-        }
-        set50{
+        set51{
             few{"n = 4 @integer 4"}
             many{"n = 6 @integer 6"}
             one{"n = 1 @integer 1"}
             other{" @integer 0, 5, 7~20, 100, 1000, 10000, 100000, 1000000, …"}
             two{"n = 2,3 @integer 2, 3"}
         }
-        set51{
+        set52{
             few{"n = 4 @integer 4"}
             many{"n = 6 @integer 6"}
             one{"n = 1,5,7,8,9,10 @integer 1, 5, 7~10"}
             other{" @integer 0, 11~25, 100, 1000, 10000, 100000, 1000000, …"}
             two{"n = 2,3 @integer 2, 3"}
         }
-        set52{
+        set53{
             few{"n = 3,4 @integer 3, 4"}
             many{"n = 5,6 @integer 5, 6"}
             one{"n = 1 @integer 1"}
@@ -849,16 +855,6 @@ plurals:table(nofallback){
         }
         set6{
             one{
-                "n = 0..1 @integer 0, 1 @decimal 0.0, 1.0, 0.00, 1.00, 0.000, 1.000, "
-                "0.0000, 1.0000"
-            }
-            other{
-                " @integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 0.1~0."
-                "9, 1.1~1.7, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …"
-            }
-        }
-        set7{
-            one{
                 "n = 0..1 or n = 11..99 @integer 0, 1, 11~24 @decimal 0.0, 1.0, 11.0,"
                 " 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 2"
                 "3.0, 24.0"
@@ -866,6 +862,16 @@ plurals:table(nofallback){
             other{
                 " @integer 2~10, 100~106, 1000, 10000, 100000, 1000000, … @decimal 0."
                 "1~0.9, 1.1~1.7, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …"
+            }
+        }
+        set7{
+            one{
+                "n = 0..2 and n != 2 @integer 0, 1 @decimal 0.0, 1.0, 0.00, 1.00, 0.0"
+                "00, 1.000, 0.0000, 1.0000"
+            }
+            other{
+                " @integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 0.1~0."
+                "9, 1.1~1.7, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …"
             }
         }
         set8{

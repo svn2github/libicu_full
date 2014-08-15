@@ -165,7 +165,7 @@ hy{
         native{"latn"}
         traditional{"armn"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     calendar{
         generic{
             DateTimePatterns{

@@ -8,272 +8,29 @@
 // ***************************************************************************
 es_419{
     Keys{
-        calendar{"calendario"}
-        collation{"orden"}
-        currency{"moneda"}
         numbers{"Números"}
     }
     Languages{
-        ab{"abjasio"}
-        af{"afrikáans"}
-        agq{"aghem"}
-        ak{"akan"}
-        am{"amárico"}
-        ar{"árabe"}
-        ar_001{"árabe estándar moderno"}
         arn{"mapuche"}
-        as{"asamés"}
-        asa{"asu"}
         az{"azerbaiyano"}
         ba{"baskir"}
-        be{"bielorruso"}
-        bem{"bemba"}
-        bez{"bena"}
-        bg{"búlgaro"}
-        bm{"bambara"}
-        bn{"bengalí"}
-        bo{"tibetano"}
-        br{"bretón"}
-        brx{"bodo"}
-        bs{"bosnio"}
-        ca{"catalán"}
-        cgg{"chiga"}
-        chr{"cheroqui"}
-        ckb{"kurdo sorani"}
-        co{"corso"}
-        cs{"checo"}
-        cy{"galés"}
-        da{"danés"}
-        dav{"taita"}
-        de{"alemán"}
-        de_CH{"alto alemán de Suiza"}
-        dje{"zarma"}
-        dsb{"sorbio inferior"}
-        dua{"duala"}
-        dyo{"jola-fonyi"}
-        dz{"dzongkha"}
-        ebu{"embu"}
-        ee{"ewé"}
-        el{"griego"}
-        en{"inglés"}
-        eo{"esperanto"}
-        es{"español"}
-        et{"estonio"}
         eu{"vasco"}
-        fa{"persa"}
-        fi{"finés"}
-        fil{"filipino"}
-        fj{"fiyiano"}
-        fo{"feroés"}
-        fr{"francés"}
-        fy{"frisón occidental"}
-        ga{"irlandés"}
-        gag{"gagauzo"}
-        gl{"gallego"}
-        gn{"guaraní"}
         gsw{"alemán (Suiza)"}
-        gu{"gujarati"}
-        guz{"gusii"}
-        gv{"gaélico manés"}
-        ha{"hausa"}
-        haw{"hawaiano"}
-        he{"hebreo"}
-        hi{"hindi"}
-        hr{"croata"}
-        hsb{"sorbio superior"}
-        ht{"haitiano"}
-        hu{"húngaro"}
-        hy{"armenio"}
-        id{"indonesio"}
-        ig{"igbo"}
-        ii{"yi de Sichuán"}
-        is{"islandés"}
-        it{"italiano"}
-        iu{"inuktitut"}
-        ja{"japonés"}
-        jgo{"ngomba"}
-        jmc{"machame"}
-        jv{"javanés"}
-        ka{"georgiano"}
-        kab{"cabila"}
-        kam{"kamba"}
-        kde{"makonde"}
-        kea{"criollo caboverdiano"}
-        khq{"koyra chiini"}
-        ki{"kikuyu"}
-        kk{"kazajo"}
-        kl{"groenlandés"}
-        kln{"kalenjin"}
-        km{"jemer"}
-        kn{"canarés"}
-        ko{"coreano"}
-        koi{"komi permio"}
-        kok{"konkaní"}
-        ks{"cachemiro"}
-        ksb{"shambala"}
-        ksf{"bafia"}
-        ku{"kurdo"}
-        kw{"córnico"}
-        ky{"kirguís"}
-        la{"latín"}
-        lag{"langi"}
-        lb{"luxemburgués"}
-        lg{"ganda"}
-        lkt{"lakota"}
-        ln{"lingala"}
-        lo{"laosiano"}
-        lt{"lituano"}
-        lu{"luba-katanga"}
         luo{"luo"}
-        luy{"luyia"}
-        lv{"letón"}
-        mas{"masái"}
-        mer{"meru"}
-        mfe{"criollo mauriciano"}
-        mg{"malgache"}
-        mgh{"makhuwa-meetto"}
-        mgo{"meta’"}
-        mi{"maorí"}
-        mk{"macedonio"}
-        ml{"malayalam"}
-        mn{"mongol"}
-        moh{"mohawk"}
         mr{"maratí"}
-        ms{"malayo"}
-        mt{"maltés"}
-        mua{"mundang"}
-        my{"birmano"}
-        naq{"nama"}
-        nb{"bokmal noruego"}
-        nd{"ndebele septentrional"}
-        ne{"nepalí"}
-        nl{"neerlandés"}
-        nl_BE{"flamenco"}
-        nmg{"kwasio"}
-        nn{"nynorsk noruego"}
-        nqo{"n’ko"}
-        nus{"nuer"}
-        nyn{"nyankole"}
-        om{"oromo"}
-        or{"oriya"}
-        pa{"punjabí"}
-        pl{"polaco"}
-        ps{"pastún"}
-        pt{"portugués"}
-        qu{"quechua"}
-        quc{"quiché"}
-        rm{"retorrománico"}
-        rn{"kiroundi"}
-        ro{"rumano"}
-        ro_MD{"moldavo"}
-        rof{"rombo"}
-        ru{"ruso"}
-        rw{"kinyarwanda"}
-        rwk{"rwa"}
-        sa{"sánscrito"}
-        saq{"samburu"}
-        sbp{"sangu"}
-        sd{"sindhi"}
-        se{"sami septentrional"}
-        seh{"sena"}
-        ses{"koyraboro senni"}
-        sg{"sango"}
-        shi{"tashelhit"}
-        si{"cingalés"}
-        sk{"eslovaco"}
-        sl{"esloveno"}
-        sma{"sami meridional"}
-        smj{"sami lule"}
-        smn{"sami inari"}
-        sms{"sami skolt"}
-        sn{"shona"}
-        so{"somalí"}
-        sq{"albanés"}
-        sr{"serbio"}
-        su{"sundanés"}
-        sv{"sueco"}
-        sw{"swahili"}
-        swc{"swahili del Congo"}
-        ta{"tamil"}
-        te{"telugu"}
-        teo{"teso"}
-        tg{"tayiko"}
-        th{"tailandés"}
-        ti{"tigriña"}
-        tk{"turcomano"}
-        to{"tongano"}
-        tr{"turco"}
-        tt{"tártaro"}
-        twq{"tasawaq"}
-        tzm{"tamazight del Marruecos Central"}
-        ug{"uigur"}
-        uk{"ucraniano"}
-        und{"lengua desconocida"}
-        ur{"urdu"}
-        uz{"uzbeko"}
         vai{"vai"}
-        vi{"vietnamita"}
-        vun{"kivunjo"}
-        wo{"wólof"}
-        xh{"xhosa"}
-        xog{"soga"}
-        yo{"yoruba"}
-        zgh{"tamazight"}
-        zh{"chino"}
-        zh_Hans{"chino simplificado"}
-        zh_Hant{"chino tradicional"}
-        zu{"zulú"}
-        zxx{"sin contenido lingüístico"}
     }
     Languages%variant{
         ps{"Pastú"}
         ug{"Uyghur"}
     }
     LanguagesShort{
-        az{"azerí"}
         en_GB{"inglés (R. U.)"}
-        en_US{"inglés (EE. UU.)"}
     }
     Scripts{
-        Arab{"árabe"}
-        Armn{"armenio"}
-        Beng{"bengalí"}
-        Bopo{"bopomofo"}
-        Brai{"braille"}
-        Cyrl{"cirílico"}
-        Deva{"devanagari"}
-        Ethi{"etiópico"}
-        Geor{"georgiano"}
-        Grek{"griego"}
-        Gujr{"gujarati"}
-        Guru{"gurmuji"}
-        Hang{"hangul"}
-        Hani{"han"}
-        Hans{"simplificado"}
-        Hant{"tradicional"}
-        Hebr{"hebreo"}
-        Hira{"hiragana"}
-        Jpan{"japonés"}
-        Kana{"katakana"}
-        Khmr{"jemer"}
-        Knda{"canarés"}
-        Kore{"coreano"}
         Laoo{"laosiano"}
-        Latn{"latín"}
         Mlym{"malayalam"}
-        Mong{"mongol"}
-        Mymr{"birmano"}
-        Orya{"oriya"}
         Sinh{"sinhala"}
-        Taml{"tamil"}
-        Telu{"telugu"}
-        Thaa{"thaana"}
-        Thai{"tailandés"}
-        Tibt{"tibetano"}
-        Zsym{"símbolos"}
-        Zxxx{"no escrito"}
-        Zyyy{"común"}
-        Zzzz{"alfabeto desconocido"}
     }
     Scripts%stand-alone{
         Hans{"Han simplificado"}
@@ -284,27 +41,16 @@ es_419{
     }
     Types{
         calendar{
-            buddhist{"calendario budista"}
-            chinese{"calendario chino"}
             coptic{"Calendario cóptico"}
-            dangi{"calendario dangi"}
             ethiopic{"Calendario etíope"}
             ethiopic-amete-alem{"Calendario etíope Amete Alem"}
-            gregorian{"calendario gregoriano"}
-            hebrew{"calendario hebreo"}
-            islamic{"calendario islámico"}
-            iso8601{"calendario ISO-8601"}
-            japanese{"calendario japonés"}
             persian{"Calendario persa"}
-            roc{"calendario de la República de China"}
         }
         collation{
             dictionary{"Orden de clasificación del diccionario"}
             ducet{"Orden de clasificación de Unicode predeterminado"}
             reformed{"Orden de clasificación reformado"}
             search{"Búsqueda generalizada"}
-            standard{"orden estándar"}
-            traditional{"orden tradicional"}
             unihan{"Orden de clasificación de trazos radicales"}
         }
         numbers{
@@ -340,21 +86,13 @@ es_419{
             roman{"Números romanos"}
             romanlow{"Números romanos en minúscula"}
             taml{"Números en Tamil"}
-            tamldec{"dígitos en tamil"}
             telu{"Dígitos en telugu"}
             thai{"Dígitos en tailandés"}
             tibt{"Dígitos tibetanos"}
         }
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.19"}
     codePatterns{
-        language{"Idioma: {0}"}
         script{"Alfabeto: {0}"}
-        territory{"Región: {0}"}
-    }
-    localeDisplayPattern{
-        keyTypePattern{"{0}: {1}"}
-        pattern{"{0} ({1})"}
-        separator{"{0}, {1}"}
     }
 }

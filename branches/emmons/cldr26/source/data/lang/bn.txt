@@ -778,7 +778,7 @@ bn{
             vaii{"ভাই সংখ্যা"}
         }
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"ভাষা: {0}"}
         script{"লিপি: {0}"}

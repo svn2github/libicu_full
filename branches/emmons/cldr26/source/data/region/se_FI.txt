@@ -8,27 +8,10 @@
 // ***************************************************************************
 se_FI{
     Countries{
-        001{"máilbmi"}
-        002{"Afrihkká"}
         003{"Davvi-Amerihkká ja Gaska-Amerihkká"}
         005{"Lulli-Amerihkká"}
-        011{"oarji-Afrihkká"}
         013{"Gaska-Amerihkká"}
-        015{"davvi-Afrihkká"}
-        017{"gaska-Afrihkká"}
-        019{"Amerihkká"}
         021{"Davvi-Amerihkká"}
-        029{"Karibia"}
-        030{"nuorta-Ásia"}
-        034{"mátta-Ásia"}
-        035{"mátta-nuorta-Ásia"}
-        039{"mátta-Eurohpá"}
-        143{"gaska-Ásia"}
-        145{"oarji-Ásia"}
-        150{"Eurohpá"}
-        151{"nuorta-Eurohpá"}
-        154{"davvi-Eurohpá"}
-        155{"oarji-Eurohpá"}
         419{"Latiinnalaš-Amerihkká"}
         BA{"Bosnia ja Hercegovina"}
         KH{"Kamboža"}
@@ -38,5 +21,5 @@ se_FI{
     Countries%variant{
         CI{"Côte d’Ivoire"}
     }
-    Version{"2.1.6.69"}
+    Version{"2.1.8.19"}
 }

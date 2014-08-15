@@ -752,7 +752,7 @@ ro{
         SCOTLAND{"engleză standard scoțiană"}
         WADEGILE{"Wade-Giles"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"Limbă: {0}"}
         script{"Scriere: {0}"}

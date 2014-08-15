@@ -1023,7 +1023,7 @@ fi{
         VALLADER{"reoromaanin vallader-muoto"}
         WADEGILE{"kiinan Wade-Giles-latinaistus"}
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"kieli: {0}"}
         script{"kirjoitusjärjestelmä: {0}"}

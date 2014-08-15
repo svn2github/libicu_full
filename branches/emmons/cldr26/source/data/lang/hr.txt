@@ -874,7 +874,7 @@ hr{
         VALENCIA{"valencijski"}
         WADEGILE{"Wade-Giles romanizacija"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"Jezik: {0}"}
         script{"Pismo: {0}"}

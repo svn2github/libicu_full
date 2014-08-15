@@ -793,7 +793,7 @@ ar{
         VALENCIA{"بلنسية"}
         WADEGILE{"المندرين باللاتينية - ويد–جيلز"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"اللغة: {0}"}
         script{"نظام الكتابة: {0}"}

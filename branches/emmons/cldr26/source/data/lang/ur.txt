@@ -445,7 +445,7 @@ ur{
             vaii{"وائی ہندسے"}
         }
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"زبان:{0}"}
         script{"رسم الخط:{0}"}

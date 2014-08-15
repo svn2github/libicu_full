@@ -435,7 +435,7 @@ ne{
         AREVELA{"पूर्वी आर्मेनियाली"}
         POSIX{"कम्प्युटर"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"{0}"}
         script{"{0}"}

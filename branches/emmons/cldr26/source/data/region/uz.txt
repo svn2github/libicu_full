@@ -316,5 +316,5 @@ uz{
         PS{"Falastin"}
         US{"AQSH"}
     }
-    Version{"2.1.7.41"}
+    Version{"2.1.8.9"}
 }

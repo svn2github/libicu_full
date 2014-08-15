@@ -12,10 +12,7 @@ ar_LB{
             ducet{"ترتيب تصنيف الشفرة الافتراضية"}
         }
     }
-    Version{"2.1.6.69"}
-    codePatterns{
-        language{"اللغة: {0}"}
-    }
+    Version{"2.1.8.19"}
     localeDisplayPattern{
         separator{"{0}, {1}"}
     }

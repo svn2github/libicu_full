@@ -371,7 +371,7 @@ pa{
             tibt{"ਤਿੱਬਤੀ ਅੰਕ"}
         }
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"ਭਾਸ਼ਾ: {0}"}
         script{"ਲਿਪੀ: {0}"}

@@ -796,7 +796,7 @@ gu{
         PINYIN{"પિનયિન રોમનાઇઝેશન"}
         WADEGILE{"વેડ-ગિલ્સ રોમનાઇઝેશન"}
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"ભાષા: {0}"}
         script{"સ્ક્રીપ્ટ: {0}"}

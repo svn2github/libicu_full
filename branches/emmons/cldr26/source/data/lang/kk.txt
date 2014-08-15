@@ -345,7 +345,7 @@ kk{
             tibt{"Тибет сандары"}
         }
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"Тіл: {0}"}
         script{"Жазылуы: {0}"}

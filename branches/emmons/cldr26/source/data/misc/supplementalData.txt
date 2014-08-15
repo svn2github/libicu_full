@@ -8152,7 +8152,7 @@ supplementalData:table(nofallback){
             }
             {
                 "lo",
-                "th",
+                "en",
                 "10",
             }
             {

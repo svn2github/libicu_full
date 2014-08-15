@@ -723,7 +723,7 @@ sk{
     Variants{
         SCOTLAND{"škótska štandardná angličtina"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"Jazyk: {0}"}
         script{"Písmo: {0}"}

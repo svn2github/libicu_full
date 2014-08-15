@@ -382,7 +382,7 @@ dsb{
             tibt{"tibetske cyfry"}
         }
     }
-    Version{"2.1.7.41"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"Rěc: {0}"}
         script{"Pismo: {0}"}

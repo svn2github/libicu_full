@@ -319,5 +319,5 @@ en{
         PS{"Palestine"}
         US{"U.S."}
     }
-    Version{"2.1.7.79"}
+    Version{"2.1.8.0"}
 }

@@ -779,7 +779,7 @@ kn{
             vaii{"ವಾಯ್ ಅಂಕೆಗಳು"}
         }
     }
-    Version{"2.1.6.76"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"ಭಾಷೆ: {0}"}
         script{"ಲಿಪಿ : {0}"}

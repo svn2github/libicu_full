@@ -7,11 +7,7 @@
 // *
 // ***************************************************************************
 ne_IN{
-    NumberElements{
-        default{"deva"}
-        native{"deva"}
-    }
-    Version{"2.1.7.41"}
+    Version{"2.1.8.19"}
     calendar{
         gregorian{
             AmPmMarkers{
@@ -50,20 +46,6 @@ ne_IN{
                 }
             }
             quarters{
-                format{
-                    abbreviated{
-                        "पहिलो सत्र",
-                        "दोस्रो सत्र",
-                        "तेस्रो सत्र",
-                        "चौथो सत्र",
-                    }
-                    wide{
-                        "पहिलो सत्र",
-                        "दोस्रो सत्र",
-                        "तेस्रो सत्र",
-                        "चौथो सत्र",
-                    }
-                }
                 stand-alone{
                     abbreviated{
                         "पहिलो सत्र",

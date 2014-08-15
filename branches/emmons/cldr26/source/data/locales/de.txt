@@ -168,7 +168,7 @@ de{
         minimumGroupingDigits{"1"}
         native{"latn"}
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.9"}
     calendar{
         buddhist{
             eras{
@@ -3103,8 +3103,8 @@ de{
         acceleration{
             g-force{
                 dnam{"g-Kraft"}
-                one{"{0} g"}
-                other{"{0} g"}
+                one{"{0} G"}
+                other{"{0} G"}
             }
             meter-per-second-squared{
                 dnam{"m/s²"}

@@ -403,7 +403,7 @@ my{
         REVISED{"ပြန်လည်စီစစ်ထားသော ရေးထုံး"}
         SCOTLAND{"စကော့ စံ အင်္ဂလိပ်"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"ဘာသာစကား - {0}"}
         script{"စာ - {0}"}

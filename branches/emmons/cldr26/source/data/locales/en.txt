@@ -159,7 +159,7 @@ en{
             arabext{"X Arabic-Indic Digits"}
         }
     }
-    Version{"2.1.7.79"}
+    Version{"2.1.8.0"}
     calendar{
         buddhist{
             eras{
@@ -2837,9 +2837,9 @@ en{
                 other{"{0}hPa"}
             }
             inch-hg{
-                dnam{"\u0022 Hg"}
-                one{"{0}\u0022 Hg"}
-                other{"{0}\u0022 Hg"}
+                dnam{"″ Hg"}
+                one{"{0}″ Hg"}
+                other{"{0}″ Hg"}
             }
             millibar{
                 dnam{"mbar"}

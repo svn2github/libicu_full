@@ -11,50 +11,26 @@ sv_FI{
         timezone{"tidszon"}
     }
     Languages{
-        bax{"bamunska"}
-        bbj{"ghomala"}
-        bfd{"bafut"}
-        bkm{"bamekon"}
-        bss{"bakossi"}
-        bum{"boulou"}
-        byv{"bagangte"}
         chm{"mari"}
         fj{"fiji"}
-        ha{"hausa"}
-        ibb{"ibibio"}
-        ig{"igbo"}
-        kkj{"mkako"}
         km{"khmer"}
         ks{"kashmiri"}
         ky{"kirgiziska"}
         lo{"lao"}
-        maf{"mafa"}
-        mye{"myene"}
         nb{"bokmål"}
-        nnh{"bamileké-ngiemboon"}
         pa{"panjabi"}
         ps{"pashto"}
         te{"telugu"}
         th{"thai"}
         ti{"tigrinska"}
         und{"okänt språk"}
-        ybb{"bamileké-jemba"}
     }
     LanguagesShort{
         az{"azerbajdzjanska"}
     }
     Scripts{
-        Bamu{"bamunska"}
-        Gran{"gammaltamilska"}
         Hrkt{"kana"}
-        Khoj{"khojkiska"}
-        Lisu{"Fraser"}
-        Merc{"kursiv-meroitiska"}
         Mero{"meroitiska"}
-        Nkgb{"naxi geba"}
-        Sarb{"fornsydarabiska"}
-        Tirh{"tirhuta"}
-        Wara{"varang kshiti"}
     }
     Scripts%variant{
         Arab{"persisk-arabiska"}
@@ -67,5 +43,5 @@ sv_FI{
     Variants{
         1996{"1996 års stavning"}
     }
-    Version{"2.1.6.69"}
+    Version{"2.1.8.19"}
 }

@@ -207,7 +207,7 @@ zh_Hant{
         native{"hanidec"}
         traditional{"hant"}
     }
-    Version{"2.1.7.17"}
+    Version{"2.1.8.18"}
     calendar{
         buddhist{
             DateTimePatterns{

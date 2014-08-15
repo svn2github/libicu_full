@@ -169,7 +169,7 @@ kn{
         minimumGroupingDigits{"1"}
         native{"knda"}
     }
-    Version{"2.1.6.76"}
+    Version{"2.1.8.9"}
     calendar{
         generic{
             DateTimePatterns{

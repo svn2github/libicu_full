@@ -818,7 +818,7 @@ ml{
         POSIX{"കമ്പ്യൂട്ടർ"}
         REVISED{"പരിഷ്ക്കരിച്ച ലിപി"}
     }
-    Version{"2.1.6.76"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"ഭാഷ: {0}"}
         script{"ലിപി: {0}"}

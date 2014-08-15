@@ -316,5 +316,5 @@ sr_Latn{
         PS{"Palestina"}
         US{"SAD"}
     }
-    Version{"2.1.7.43"}
+    Version{"2.1.8.20"}
 }

@@ -13,11 +13,11 @@ bs{
     Version{"2.0.96.14"}
     collations{
         search{
-            Sequence{"[import und-u-co-search][import hr-u-co-standard][reorder others]"}
+            Sequence{"[import hr-u-co-search]"}
             Version{"26"}
         }
         standard{
-            Sequence{"[import hr-u-co-standard]"}
+            Sequence{"[import hr]"}
             Version{"26"}
         }
     }

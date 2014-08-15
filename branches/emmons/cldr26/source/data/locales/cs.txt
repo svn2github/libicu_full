@@ -213,7 +213,7 @@ cs{
         minimumGroupingDigits{"1"}
         native{"latn"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     calendar{
         buddhist{
             availableFormats{
@@ -1767,10 +1767,10 @@ cs{
     units{
         acceleration{
             g-force{
-                few{"{0} g"}
-                many{"{0} g"}
-                one{"{0} g"}
-                other{"{0} g"}
+                few{"{0} G"}
+                many{"{0} G"}
+                one{"{0} G"}
+                other{"{0} G"}
             }
             meter-per-second-squared{
                 few{"{0} metry za sekundu na druhou"}
@@ -2937,11 +2937,11 @@ cs{
     unitsNarrow{
         acceleration{
             g-force{
-                dnam{"g"}
-                few{"{0} g"}
-                many{"{0} g"}
-                one{"{0} g"}
-                other{"{0} g"}
+                dnam{"G"}
+                few{"{0} G"}
+                many{"{0} G"}
+                one{"{0} G"}
+                other{"{0} G"}
             }
             meter-per-second-squared{
                 dnam{"m/s²"}
@@ -3826,11 +3826,11 @@ cs{
     unitsShort{
         acceleration{
             g-force{
-                dnam{"g"}
-                few{"{0} g"}
-                many{"{0} g"}
-                one{"{0} g"}
-                other{"{0} g"}
+                dnam{"G"}
+                few{"{0} G"}
+                many{"{0} G"}
+                one{"{0} G"}
+                other{"{0} G"}
             }
             meter-per-second-squared{
                 dnam{"m/s²"}

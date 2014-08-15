@@ -13,7 +13,6 @@ sv_FI{
         BQ{"Bonaire, S:t Eustatius och Saba"}
         CD{"Demokratiska republiken Kongo"}
         CG{"Kongo"}
-        CW{"Curaçao"}
         GB{"Förenade kungariket"}
         KN{"Saint Kitts och Nevis"}
         LC{"Saint Lucia"}
@@ -24,14 +23,12 @@ sv_FI{
         PS{"Palestinska området"}
         SD{"Nordsudan"}
         SH{"Saint Helena"}
-        SS{"Sydsudan"}
         SX{"Sint Martin"}
         TK{"Tokelauöarna"}
         US{"Förenta staterna"}
         VA{"Vatikanen"}
         VC{"Saint Vincent och Grenadinerna"}
         WF{"Wallis- och Futuna"}
-        ZZ{"okänd region"}
     }
-    Version{"2.1.6.69"}
+    Version{"2.1.8.19"}
 }

@@ -162,7 +162,7 @@ da{
         minimumGroupingDigits{"1"}
         native{"latn"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     calendar{
         buddhist{
             eras{
@@ -330,7 +330,7 @@ da{
                 "HH.mm.ss",
                 "HH.mm",
                 "EEEE 'den' d. MMMM y",
-                "d. MMM y",
+                "d. MMMM y",
                 "dd/MM/y",
                 "dd/MM/yy",
                 "{1} {0}",

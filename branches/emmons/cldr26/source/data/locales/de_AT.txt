@@ -14,7 +14,7 @@ de_AT{
             }
         }
     }
-    Version{"2.1.6.69"}
+    Version{"2.1.8.19"}
     calendar{
         generic{
             DateTimePatterns{
@@ -34,14 +34,6 @@ de_AT{
             }
         }
         gregorian{
-            AmPmMarkers{
-                "vorm.",
-                "nachm.",
-            }
-            AmPmMarkersNarrow{
-                "vorm.",
-                "nachm.",
-            }
             DateTimePatterns{
                 "HH:mm:ss zzzz",
                 "HH:mm:ss z",
@@ -57,214 +49,24 @@ de_AT{
                 "{1}, {0}",
                 "{1}, {0}",
             }
-            NoonMarker{"Mittag"}
-            NoonMarkerNarrow{"Mittag"}
-            appendItems{
-                Timezone{"{0} {1}"}
-            }
-            availableFormats{
-                E{"ccc"}
-                EHm{"E, HH:mm"}
-                EHms{"E, HH:mm:ss"}
-                Ed{"E, d."}
-                Gy{"y G"}
-                GyMMM{"MMM y G"}
-                GyMMMEd{"E, d. MMM y G"}
-                GyMMMd{"d. MMM y G"}
-                H{"HH 'Uhr'"}
-                Hm{"HH:mm"}
-                Hms{"HH:mm:ss"}
-                M{"L"}
-                MEd{"E, d.M."}
-                MMM{"LLL"}
-                MMMEd{"E, d. MMM"}
-                MMMMEd{"E, d. MMMM"}
-                MMMd{"d. MMM"}
-                MMd{"d.MM."}
-                MMdd{"dd.MM."}
-                Md{"d.M."}
-                d{"d"}
-                ms{"mm:ss"}
-                y{"y"}
-                yMEd{"E, d.M.y"}
-                yMMM{"MMM y"}
-                yMMMEd{"E, d. MMM y"}
-                yMMMM{"MMMM y"}
-                yMMMd{"d. MMM y"}
-                yMMdd{"dd.MM.y"}
-                yMd{"d.M.y"}
-                yQQQ{"QQQ y"}
-                yQQQQ{"QQQQ y"}
-            }
-            dayNames{
-                format{
-                    abbreviated{
-                        "So.",
-                        "Mo.",
-                        "Di.",
-                        "Mi.",
-                        "Do.",
-                        "Fr.",
-                        "Sa.",
-                    }
-                    narrow{
-                        "S",
-                        "M",
-                        "D",
-                        "M",
-                        "D",
-                        "F",
-                        "S",
-                    }
-                    short{
-                        "So.",
-                        "Mo.",
-                        "Di.",
-                        "Mi.",
-                        "Do.",
-                        "Fr.",
-                        "Sa.",
-                    }
-                    wide{
-                        "Sonntag",
-                        "Montag",
-                        "Dienstag",
-                        "Mittwoch",
-                        "Donnerstag",
-                        "Freitag",
-                        "Samstag",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "So",
-                        "Mo",
-                        "Di",
-                        "Mi",
-                        "Do",
-                        "Fr",
-                        "Sa",
-                    }
-                    narrow{
-                        "S",
-                        "M",
-                        "D",
-                        "M",
-                        "D",
-                        "F",
-                        "S",
-                    }
-                    short{
-                        "So.",
-                        "Mo.",
-                        "Di.",
-                        "Mi.",
-                        "Do.",
-                        "Fr.",
-                        "Sa.",
-                    }
-                    wide{
-                        "Sonntag",
-                        "Montag",
-                        "Dienstag",
-                        "Mittwoch",
-                        "Donnerstag",
-                        "Freitag",
-                        "Samstag",
-                    }
-                }
-            }
-            eras{
-                abbreviated{
-                    "v. Chr.",
-                    "v. u. Z.",
-                    "n. Chr.",
-                    "u. Z.",
-                }
-                wide{
-                    "v. Chr.",
-                    "vor unserer Zeitrechnung",
-                    "n. Chr.",
-                    "unserer Zeitrechnung",
-                }
-            }
             intervalFormats{
-                H{
-                    H{"HH-HH 'Uhr'"}
-                }
-                Hm{
-                    H{"HH:mm-HH:mm"}
-                    m{"HH:mm-HH:mm"}
-                }
-                Hmv{
-                    H{"HH:mm-HH:mm v"}
-                    m{"HH:mm-HH:mm v"}
-                }
-                Hv{
-                    H{"HH-HH 'Uhr' v"}
-                }
-                M{
-                    M{"M.-M."}
-                }
-                MEd{
-                    M{"E, dd.MM. - E, dd.MM."}
-                    d{"E, dd.MM. - E, dd.MM."}
-                }
-                MMM{
-                    M{"MMM-MMM"}
-                }
                 MMMEd{
                     M{"E, dd. MMM - E, dd. MMM"}
                     d{"E, dd. - E, dd. MMM"}
                 }
-                MMMM{
-                    M{"LLLL-LLLL"}
-                }
                 MMMd{
                     M{"dd. MMM - dd. MMM"}
                     d{"dd.-dd. MMM"}
-                }
-                Md{
-                    M{"dd.MM. - dd.MM."}
-                    d{"dd.MM. - dd.MM."}
-                }
-                d{
-                    d{"d.-d."}
-                }
-                y{
-                    y{"y-y"}
-                }
-                yM{
-                    M{"MM.y - MM.y"}
-                    y{"MM.y - MM.y"}
-                }
-                yMEd{
-                    M{"E, dd.MM.y - E, dd.MM.y"}
-                    d{"E, dd.MM.y - E, dd.MM.y"}
-                    y{"E, dd.MM.y - E, dd.MM.y"}
-                }
-                yMMM{
-                    M{"MMM-MMM y"}
-                    y{"MMM y - MMM y"}
                 }
                 yMMMEd{
                     M{"E, dd. MMM - E, dd. MMM y"}
                     d{"E, dd. - E, dd. MMM y"}
                     y{"E, dd. MMM y - E, dd. MMM y"}
                 }
-                yMMMM{
-                    M{"MMMM-MMMM y"}
-                    y{"MMMM y - MMMM y"}
-                }
                 yMMMd{
                     M{"dd. MMM - dd. MMM y"}
                     d{"dd.-dd. MMM y"}
                     y{"dd. MMM y - dd. MMM y"}
-                }
-                yMd{
-                    M{"dd.MM.y - dd.MM.y"}
-                    d{"dd.MM.y - dd.MM.y"}
-                    y{"dd.MM.y - dd.MM.y"}
                 }
             }
             monthNames{
@@ -282,20 +84,6 @@ de_AT{
                         "Okt.",
                         "Nov.",
                         "Dez.",
-                    }
-                    narrow{
-                        "J",
-                        "F",
-                        "M",
-                        "A",
-                        "M",
-                        "J",
-                        "J",
-                        "A",
-                        "S",
-                        "O",
-                        "N",
-                        "D",
                     }
                     wide{
                         "Jänner",
@@ -327,20 +115,6 @@ de_AT{
                         "Nov",
                         "Dez",
                     }
-                    narrow{
-                        "J",
-                        "F",
-                        "M",
-                        "A",
-                        "M",
-                        "J",
-                        "J",
-                        "A",
-                        "S",
-                        "O",
-                        "N",
-                        "D",
-                    }
                     wide{
                         "Jänner",
                         "Februar",
@@ -354,48 +128,6 @@ de_AT{
                         "Oktober",
                         "November",
                         "Dezember",
-                    }
-                }
-            }
-            quarters{
-                format{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1. Quartal",
-                        "2. Quartal",
-                        "3. Quartal",
-                        "4. Quartal",
-                    }
-                }
-                stand-alone{
-                    abbreviated{
-                        "Q1",
-                        "Q2",
-                        "Q3",
-                        "Q4",
-                    }
-                    narrow{
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                    }
-                    wide{
-                        "1. Quartal",
-                        "2. Quartal",
-                        "3. Quartal",
-                        "4. Quartal",
                     }
                 }
             }

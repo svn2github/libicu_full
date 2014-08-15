@@ -172,7 +172,7 @@ gu{
         minimumGroupingDigits{"1"}
         native{"gujr"}
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.9"}
     calendar{
         generic{
             DateTimePatterns{

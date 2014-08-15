@@ -172,7 +172,7 @@ hu{
         minimumGroupingDigits{"1"}
         native{"latn"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     calendar{
         buddhist{
             eras{
@@ -1774,8 +1774,8 @@ hu{
     units{
         acceleration{
             g-force{
-                one{"{0} g gyorsulás"}
-                other{"{0} g gyorsulás"}
+                one{"{0} G gyorsulás"}
+                other{"{0} G gyorsulás"}
             }
             meter-per-second-squared{
                 one{"{0} méter per másodpercnégyzet"}
@@ -2114,7 +2114,7 @@ hu{
         per{
             acceleration{
                 g-force{
-                    dnam{"g gyorsulás"}
+                    dnam{"G gyorsulás"}
                 }
                 meter-per-second-squared{
                     dnam{"méter per másodpercnégyzet"}
@@ -2902,9 +2902,9 @@ hu{
     unitsShort{
         acceleration{
             g-force{
-                dnam{"g gyorsulás"}
-                one{"{0} g"}
-                other{"{0} g"}
+                dnam{"G gyorsulás"}
+                one{"{0} G"}
+                other{"{0} G"}
             }
             meter-per-second-squared{
                 dnam{"m/s²"}

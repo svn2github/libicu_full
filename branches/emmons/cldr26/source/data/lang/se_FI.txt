@@ -37,7 +37,6 @@ se_FI{
         th{"thaigiella"}
         vi{"vietnamagiella"}
         zh_Hans{"álkes kiinnágiella"}
-        zh_Hant{"árbevirolaš kiinnágiella"}
     }
     LanguagesShort{
         en_GB{"brihttalaš eaŋgalsgiella"}
@@ -69,7 +68,7 @@ se_FI{
             fullwide{"fullwide"}
         }
     }
-    Version{"2.1.6.69"}
+    Version{"2.1.8.19"}
     codePatterns{
         script{"čállin: {0}"}
     }

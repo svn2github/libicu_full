@@ -201,7 +201,7 @@ dsb{
         }
         minimumGroupingDigits{"1"}
     }
-    Version{"2.1.7.41"}
+    Version{"2.1.8.9"}
     calendar{
         generic{
             DateTimePatterns{

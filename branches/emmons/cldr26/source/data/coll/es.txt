@@ -13,7 +13,10 @@ es{
     Version{"2.1.6.32"}
     collations{
         search{
-            Sequence{"[import und-u-co-search][import es-u-co-standard]"}
+            Sequence{
+                "[import und-u-co-search]"
+                "&N<ñ<<<Ñ"
+            }
             Version{"26"}
         }
         standard{

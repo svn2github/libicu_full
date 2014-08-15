@@ -164,7 +164,7 @@ mn{
         minimumGroupingDigits{"1"}
         native{"latn"}
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.9"}
     calendar{
         generic{
             DateTimePatterns{

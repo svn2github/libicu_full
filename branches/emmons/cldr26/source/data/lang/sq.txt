@@ -358,7 +358,7 @@ sq{
             tibt{"shifra tibetiane"}
         }
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"Gjuha: {0}"}
         script{"Shkrimi: {0}"}

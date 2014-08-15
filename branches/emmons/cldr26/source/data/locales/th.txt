@@ -145,7 +145,7 @@ th{
         minimumGroupingDigits{"1"}
         native{"thai"}
     }
-    Version{"2.1.7.71"}
+    Version{"2.1.8.9"}
     calendar{
         buddhist{
             DateTimePatterns{
@@ -1109,7 +1109,7 @@ th{
                 "HH:mm:ss",
                 "HH:mm",
                 "EEEEที่ d MMMM G y",
-                "d MMMM y",
+                "d MMMM G y",
                 "d MMM y",
                 "d/M/yy",
                 "{1} {0}",

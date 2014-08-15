@@ -1016,7 +1016,7 @@ ja{
         VALLADER{"ヴァラダー"}
         WADEGILE{"ウェード式ローマ字表記法"}
     }
-    Version{"2.1.7.41"}
+    Version{"2.1.8.9"}
     codePatterns{
         language{"言語: {0}"}
         script{"文字: {0}"}

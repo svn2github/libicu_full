@@ -13,10 +13,6 @@ en_MT{
             "GB£",
             "British Pound Sterling",
         }
-        USD{
-            "US$",
-            "US Dollar",
-        }
     }
-    Version{"2.1.6.69"}
+    Version{"2.1.8.19"}
 }

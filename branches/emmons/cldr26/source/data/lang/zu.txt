@@ -83,7 +83,6 @@ zu{
         eo{"isi-Esperanto"}
         es{"isi-Spanish"}
         es_419{"isi-Latin American Spanish"}
-        es_ES{"isi-Spanish (i-Spain)"}
         es_MX{"isi-Mexican Spanish"}
         et{"isi-Estonia"}
         eu{"isi-Basque"}
@@ -280,7 +279,6 @@ zu{
     }
     Languages%variant{
         ps{"isi-Pushto"}
-        ug{"isi-Uighur"}
     }
     LanguagesShort{
         az{"isi-Azeria"}
@@ -448,7 +446,7 @@ zu{
             vaii{"Izinhlazu Zezinombolo ze-Vai"}
         }
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.18"}
     codePatterns{
         language{"{0}"}
         script{"{0}"}

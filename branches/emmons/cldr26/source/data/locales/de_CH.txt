@@ -23,7 +23,7 @@ de_CH{
             }
         }
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.21"}
     delimiters{
         alternateQuotationEnd{"›"}
         alternateQuotationStart{"‹"}
@@ -41,6 +41,36 @@ de_CH{
             foot{
                 one{"{0} Fuss"}
                 other{"{0} Fuss"}
+            }
+        }
+        per{
+            area{
+                square-foot{
+                    dnam{"Quadratfuss"}
+                }
+            }
+            length{
+                foot{
+                    dnam{"Fuss"}
+                }
+            }
+            volume{
+                cubic-foot{
+                    dnam{"Kubikfuss"}
+                }
+            }
+        }
+        volume{
+            cubic-foot{
+                one{"{0} Kubikfuss"}
+                other{"{0} Kubikfuss"}
+            }
+        }
+    }
+    unitsShort{
+        length{
+            foot{
+                dnam{"Fuss"}
             }
         }
     }

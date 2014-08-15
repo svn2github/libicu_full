@@ -10,10 +10,13 @@
  * ICU <specials> source: <path>/xml/collation/fi.xml
  */
 fi{
-    Version{"2.1.6.34"}
+    Version{"2.1.8.12"}
     collations{
-        default{"phonebook"}
-        phonebook{
+        search{
+            Sequence{"[import und-u-co-search][import fi-u-co-trad]"}
+            Version{"26"}
+        }
+        standard{
             Sequence{
                 "&D\u0335<<đ<<<Đ"
                 "&G\u0335<<ǥ<<<Ǥ"
@@ -25,11 +28,7 @@ fi{
             }
             Version{"26"}
         }
-        search{
-            Sequence{"[import und-u-co-search][import fi-u-co-standard]"}
-            Version{"26"}
-        }
-        standard{
+        traditional{
             Sequence{
                 "&D<<ð<<<Ð<<đ<<<Đ"
                 "&N<<ŋ<<<Ŋ"

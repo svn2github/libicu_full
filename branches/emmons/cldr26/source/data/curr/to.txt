@@ -65,5 +65,5 @@ to{
     CurrencyUnitPatterns{
         other{"{1} {0}"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
 }

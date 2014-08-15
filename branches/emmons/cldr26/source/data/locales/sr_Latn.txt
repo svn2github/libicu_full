@@ -187,7 +187,7 @@ sr_Latn{
         minimumGroupingDigits{"1"}
         native{"latn"}
     }
-    Version{"2.1.7.43"}
+    Version{"2.1.8.20"}
     calendar{
         buddhist{
             eras{

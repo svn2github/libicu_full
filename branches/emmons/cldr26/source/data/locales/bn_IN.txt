@@ -120,7 +120,7 @@ bn_IN{
             }
         }
     }
-    Version{"2.1.6.69"}
+    Version{"2.1.8.19"}
     calendar{
         gregorian{
             intervalFormats{

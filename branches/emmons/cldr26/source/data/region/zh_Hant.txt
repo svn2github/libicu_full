@@ -306,10 +306,8 @@ zh_Hant{
     Countries%variant{
         CD{"剛果民主共和國"}
         CG{"剛果共和國"}
-        CI{"象牙海岸"}
         FK{"福克蘭群島（馬爾維納斯群島）"}
         MK{"前南斯拉夫馬其頓共和國"}
-        TL{"東帝汶"}
     }
     CountriesShort{
         GB{"英國"}
@@ -318,5 +316,5 @@ zh_Hant{
         PS{"巴勒斯坦"}
         US{"美國"}
     }
-    Version{"2.1.7.17"}
+    Version{"2.1.8.18"}
 }

@@ -168,7 +168,7 @@ ta{
         native{"tamldec"}
         traditional{"taml"}
     }
-    Version{"2.1.7.42"}
+    Version{"2.1.8.9"}
     calendar{
         chinese{
             DateTimePatterns{
