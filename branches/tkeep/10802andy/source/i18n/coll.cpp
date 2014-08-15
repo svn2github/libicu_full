@@ -461,12 +461,16 @@ Collator* Collator::makeInstance(const Locale&  desiredLocale, UErrorCode& statu
     if (U_SUCCESS(status)) {
         Collator *result = new RuleBasedCollator(entry);
         if (result != NULL) {
+            // Both the unified cache's get() and the RBC constructor
+            // did addRef(). Undo one of them.
+            entry->removeRef();
             return result;
         }
         status = U_MEMORY_ALLOCATION_ERROR;
     }
     if (entry != NULL) {
-        entry->deleteIfZeroRefCount();
+        // Undo the addRef() from the cache.get().
+        entry->removeRef();
     }
     return NULL;
 }

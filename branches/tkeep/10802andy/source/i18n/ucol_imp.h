@@ -69,9 +69,10 @@ public:
     static void appendRootRules(UnicodeString &s);
     static UnicodeString *loadRules(const char *localeID, const char *collationType,
                                     UErrorCode &errorCode);
+    // Adds a reference to returned value.
     static const CollationCacheEntry *loadTailoring(const Locale &locale, UErrorCode &errorCode);
 
-    // Cache callback.
+    // Cache callback. Adds a reference to returned value.
     const CollationCacheEntry *createCacheEntry(UErrorCode &errorCode);
 
 private:
@@ -86,15 +87,21 @@ private:
     CollationLoader(const CollationCacheEntry *re, const Locale &requested, UErrorCode &errorCode);
     ~CollationLoader();
 
+    // All loadFromXXX methods add a reference to returned value.
     const CollationCacheEntry *loadFromLocale(UErrorCode &errorCode);
     const CollationCacheEntry *loadFromBundle(UErrorCode &errorCode);
     const CollationCacheEntry *loadFromCollations(UErrorCode &errorCode);
     const CollationCacheEntry *loadFromData(UErrorCode &errorCode);
 
+    // Adds a reference to returned value.
     const CollationCacheEntry *getCacheEntry(UErrorCode &errorCode);
-    static const CollationCacheEntry *makeCacheEntry(const Locale &loc,
-                                                     const CollationCacheEntry *e,
-                                                     UErrorCode &errorCode);
+
+    // e is always included in the reference count of what it points to.
+    // both on entry and on exit.
+    static void makeCacheEntry(
+            const Locale &loc,
+            const CollationCacheEntry *&e,
+            UErrorCode &errorCode);
 
     const UnifiedCache *cache;
     const CollationCacheEntry *rootEntry;

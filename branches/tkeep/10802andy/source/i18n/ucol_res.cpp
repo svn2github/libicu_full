@@ -149,12 +149,17 @@ CollationLoader::loadTailoring(const Locale &locale, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) { return NULL; }
     const char *name = locale.getName();
     if(*name == 0 || uprv_strcmp(name, "root") == 0) {
+
+        // Have to add a ref.
+        rootEntry->addRef();
         return rootEntry;
     }
 
     // Clear warning codes before loading where they get cached.
     errorCode = U_ZERO_ERROR;
     CollationLoader loader(rootEntry, locale, errorCode);
+
+    // getCacheEntry adds a ref for us.
     return loader.getCacheEntry(errorCode);
 }
 
@@ -225,6 +230,9 @@ CollationLoader::loadFromLocale(UErrorCode &errorCode) {
     bundle = ures_open(U_ICUDATA_COLL, locale.getBaseName(), &errorCode);
     if(errorCode == U_MISSING_RESOURCE_ERROR) {
         errorCode = U_USING_DEFAULT_WARNING;
+
+        // Have to add that ref that we promise.
+        rootEntry->addRef();
         return rootEntry;
     }
     Locale requestedLocale(locale);
@@ -250,7 +258,10 @@ CollationLoader::loadFromBundle(UErrorCode &errorCode) {
     if(errorCode == U_MISSING_RESOURCE_ERROR) {
         errorCode = U_USING_DEFAULT_WARNING;
         // Return the root tailoring with the validLocale, without collation type.
-        return makeCacheEntry(validLocale, rootEntry, errorCode);
+        const CollationCacheEntry *madeEntry = rootEntry;
+        madeEntry->addRef();
+        makeCacheEntry(validLocale, madeEntry, errorCode);
+        return madeEntry;
     }
     if(U_FAILURE(errorCode)) { return NULL; }
 
@@ -328,7 +339,10 @@ CollationLoader::loadFromCollations(UErrorCode &errorCode) {
             uprv_strcpy(type, "standard");
         } else {
             // Return the root tailoring with the validLocale, without collation type.
-            return makeCacheEntry(validLocale, rootEntry, errorCode);
+            const CollationCacheEntry *madeEntry = rootEntry;
+            madeEntry->addRef();
+            makeCacheEntry(validLocale, madeEntry, errorCode);
+            return madeEntry;
         }
         locale.setKeywordValue("collation", type, errorCode);
         return getCacheEntry(errorCode);
@@ -355,14 +369,18 @@ CollationLoader::loadFromCollations(UErrorCode &errorCode) {
         if(typeFallback) {
             errorCode = U_USING_DEFAULT_WARNING;
         }
-        return makeCacheEntry(validLocale, rootEntry, errorCode);
+        const CollationCacheEntry *madeEntry = rootEntry;
+        madeEntry->addRef();
+        makeCacheEntry(validLocale, madeEntry, errorCode);
+        return madeEntry;
     }
 
     locale = Locale(actualLocale);
     if(actualAndValidLocalesAreDifferent) {
         locale.setKeywordValue("collation", type, errorCode);
         const CollationCacheEntry *entry = getCacheEntry(errorCode);
-        return makeCacheEntry(validLocale, entry, errorCode);
+        makeCacheEntry(validLocale, entry, errorCode);
+        return entry;
     } else {
         return loadFromData(errorCode);
     }
@@ -445,6 +463,8 @@ CollationLoader::loadFromData(UErrorCode &errorCode) {
     } else {
         t.orphan();
     }
+    // Have to add that reference that we promise.
+    entry->addRef();
     return entry;
 }
 
@@ -456,18 +476,30 @@ CollationLoader::getCacheEntry(UErrorCode &errorCode) {
     return entry;
 }
 
-const CollationCacheEntry *
-CollationLoader::makeCacheEntry(const Locale &loc, const CollationCacheEntry *e,
-                                UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { return NULL; }
+// Makes a cache entry for loc using e.
+// On entry, e is included in the ref count of what it points to.
+// On exit, e points to the cache entry for locale loc. e may be left
+// unchanged or may be made to point to a new cache entry. On error, e is
+// set to NULL. In all cases, refcounts are adjusted as necessary.
+void
+CollationLoader::makeCacheEntry(
+        const Locale &loc,
+        const CollationCacheEntry *&e,
+        UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) { 
+        SharedObject::clearPtr(e);
+        return;
+    }
     if(loc == e->validLocale) {
-        return e;  // The cache will increment the reference counter.
+        return;  // The cache will increment the reference counter.
     }
     CollationCacheEntry *entry = new CollationCacheEntry(loc, e->tailoring);
     if(entry == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
+        SharedObject::clearPtr(e);
+        return;
     }
-    return entry;
+    SharedObject::copyPtr(entry, e);
 }
 
 U_NAMESPACE_END
