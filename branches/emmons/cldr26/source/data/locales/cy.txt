@@ -1141,6 +1141,7 @@ cy{
                 zero{"{0} eiliad"}
             }
             degree{
+                dnam{"gradd"}
                 few{"{0} gradd"}
                 many{"{0} gradd"}
                 one{"{0} radd"}
@@ -1384,26 +1385,6 @@ cy{
                 zero{"{0} pwys"}
             }
         }
-        per{
-            angle{
-                degree{
-                    dnam{"gradd"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hectopascal"}
-                }
-                millibar{
-                    dnam{"milibar"}
-                }
-            }
-            temperature{
-                fahrenheit{
-                    dnam{"gradd Fahrenheit"}
-                }
-            }
-        }
         power{
             horsepower{
                 few{"{0} marchnerth"}
@@ -1432,6 +1413,7 @@ cy{
         }
         pressure{
             hectopascal{
+                dnam{"hectopascal"}
                 few{"{0} hectopascal"}
                 many{"{0} hectopascal"}
                 one{"{0} hectopascal"}
@@ -1448,6 +1430,7 @@ cy{
                 zero{"{0} modfedd o fercwri"}
             }
             millibar{
+                dnam{"milibar"}
                 few{"{0} milibar"}
                 many{"{0} milibar"}
                 one{"{0} milibar"}
@@ -1492,6 +1475,7 @@ cy{
                 zero{"{0} gradd Celsius"}
             }
             fahrenheit{
+                dnam{"gradd Fahrenheit"}
                 few{"{0} gradd Fahrenheit"}
                 many{"{0} gradd Fahrenheit"}
                 one{"{0} radd Fahrenheit"}

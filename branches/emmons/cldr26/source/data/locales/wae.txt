@@ -6,6 +6,9 @@
 // * Source File: <path>/common/main/wae.xml
 // *
 // ***************************************************************************
+/**
+ * ICU <specials> source: <path>/common/main/wae.xml
+ */
 wae{
     AuxExemplarCharacters{"[à ă â å ā æ ç è ĕ ê ë ē ì ĭ î ï ī ñ ò ŏ ô ø ō œ ß ù ŭ û ū ÿ]"}
     ExemplarCharacters{
@@ -13,6 +16,9 @@ wae{
         " z]"
     }
     ExemplarCharactersIndex{"[A B C D E F G H I J K L M N O P Q R S T U V W X Y Z]"}
+    LocaleScript{
+        "Latn",
+    }
     NumberElements{
         latn{
             symbols{
@@ -602,57 +608,39 @@ wae{
     units{
         duration{
             day{
+                dnam{"täg"}
                 one{"{0} täg"}
                 other{"{0} täg"}
             }
             hour{
+                dnam{"stunde"}
                 one{"{0} stund"}
                 other{"{0} stunde"}
             }
             minute{
+                dnam{"minüte"}
                 one{"{0} minüta"}
                 other{"{0} minüte"}
             }
             month{
+                dnam{"mánet"}
                 one{"{0} mánet"}
                 other{"{0} mánet"}
             }
             second{
+                dnam{"sekunde"}
                 one{"{0} sekund"}
                 other{"{0} sekunde"}
             }
             week{
+                dnam{"wučä"}
                 one{"{0} wuča"}
                 other{"{0} wučä"}
             }
             year{
+                dnam{"jár"}
                 one{"{0} jár"}
                 other{"{0} jár"}
-            }
-        }
-        per{
-            duration{
-                day{
-                    dnam{"täg"}
-                }
-                hour{
-                    dnam{"stunde"}
-                }
-                minute{
-                    dnam{"minüte"}
-                }
-                month{
-                    dnam{"mánet"}
-                }
-                second{
-                    dnam{"sekunde"}
-                }
-                week{
-                    dnam{"wučä"}
-                }
-                year{
-                    dnam{"jár"}
-                }
             }
         }
     }

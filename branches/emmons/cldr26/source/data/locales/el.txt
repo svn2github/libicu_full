@@ -1326,66 +1326,81 @@ el{
     units{
         acceleration{
             g-force{
+                dnam{"ατμοσφαιρική επιτάχυνση βαρύτητας"}
                 one{"{0} δύναμη επιτάχυνσης"}
                 other{"{0} δύναμη επιτάχυνσης"}
             }
             meter-per-second-squared{
+                dnam{"μέτρα ανά τετραγωνικό δευτερόλεπτο"}
                 one{"{0} μέτρο ανά τετραγωνικό δευτερόλεπτο"}
                 other{"{0} μέτρα ανά τετραγωνικό δευτερόλεπτο"}
             }
         }
         angle{
             arc-minute{
+                dnam{"λεπτά του τόξου"}
                 one{"{0} λεπτό του τόξου"}
                 other{"{0} λεπτά του τόξου"}
             }
             arc-second{
+                dnam{"δευτερόλεπτα του τόξου"}
                 one{"{0} δευτερόλεπτο του τόξου"}
                 other{"{0} δευτερόλεπτα του τόξου"}
             }
             degree{
+                dnam{"μοίρες"}
                 one{"{0} μοίρα"}
                 other{"{0} μοίρες"}
             }
             radian{
+                dnam{"ακτίνια"}
                 one{"{0} ακτίνιο"}
                 other{"{0} ακτίνιο"}
             }
         }
         area{
             acre{
+                dnam{"ακρ"}
                 one{"{0} ακρ"}
                 other{"{0} ακρ"}
             }
             hectare{
+                dnam{"εκτάρια"}
                 one{"{0} εκτάριο"}
                 other{"{0} εκτάρια"}
             }
             square-centimeter{
+                dnam{"τετραγωνικά εκατοστά"}
                 one{"{0} τετραγωνικό εκατοστό"}
                 other{"{0} τετραγωνικά εκατοστά"}
             }
             square-foot{
+                dnam{"τετραγωνικά πόδια"}
                 one{"{0} τετραγωνικό πόδι"}
                 other{"{0} τετραγωνικά πόδια"}
             }
             square-inch{
+                dnam{"τετραγωνικές ίντσες"}
                 one{"{0} τετραγωνική ίντσα"}
                 other{"{0} τετραγωνικές ίντσες"}
             }
             square-kilometer{
+                dnam{"τετραγωνικά χιλιόμετρα"}
                 one{"{0} τετραγωνικό χιλιόμετρο"}
                 other{"{0} τετραγωνικά χιλιόμετρα"}
             }
             square-meter{
+                dnam{"τετραγωνικά μέτρα"}
                 one{"{0} τετραγωνικό μέτρο"}
                 other{"{0} τετραγωνικά μέτρα"}
             }
             square-mile{
+                dnam{"τετραγωνικά μίλια"}
                 one{"{0} τετραγωνικό μίλι"}
                 other{"{0} τετραγωνικά μίλια"}
             }
             square-yard{
+                dnam{"τετραγωνικές γιάρδες"}
                 one{"{0} τετραγωνική γιάρδα"}
                 other{"{0} τετραγωνικές γιάρδες"}
             }
@@ -1395,829 +1410,542 @@ el{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"λίτρα ανά χιλιόμετρο"}
                 one{"{0} λίτρο ανά χιλιόμετρο"}
                 other{"{0} λίτρα ανά χιλιόμετρο"}
             }
             mile-per-gallon{
+                dnam{"μίλια ανά γαλόνι"}
                 one{"{0} μίλι ανά γαλόνι"}
                 other{"{0} μίλια ανά γαλόνι"}
             }
         }
         digital{
             bit{
+                dnam{"bit"}
                 one{"{0} bit"}
                 other{"{0} bit"}
             }
             byte{
+                dnam{"byte"}
                 one{"{0} byte"}
                 other{"{0} byte"}
             }
             gigabit{
+                dnam{"gigabit"}
                 one{"{0} gigabit"}
                 other{"{0} gigabit"}
             }
             gigabyte{
+                dnam{"gigabyte"}
                 one{"{0} gigabyte"}
                 other{"{0} gigabyte"}
             }
             kilobit{
+                dnam{"kilobit"}
                 one{"{0} kilobit"}
                 other{"{0} kilobit"}
             }
             kilobyte{
+                dnam{"kilobyte"}
                 one{"{0} kilobyte"}
                 other{"{0} kilobyte"}
             }
             megabit{
+                dnam{"megabit"}
                 one{"{0} megabit"}
                 other{"{0} megabit"}
             }
             megabyte{
+                dnam{"megabyte"}
                 one{"{0} megabyte"}
                 other{"{0} megabyte"}
             }
             terabit{
+                dnam{"terabit"}
                 one{"{0} terabit"}
                 other{"{0} terabit"}
             }
             terabyte{
+                dnam{"terabyte"}
                 one{"{0} terabyte"}
                 other{"{0} terabyte"}
             }
         }
         duration{
             day{
+                dnam{"ημέρες"}
                 one{"{0} ημέρα"}
                 other{"{0} ημέρες"}
             }
             hour{
+                dnam{"ώρες"}
                 one{"{0} ώρα"}
                 other{"{0} ώρες"}
+                per{"{0} ανά ώρα"}
             }
             microsecond{
+                dnam{"μικροδευτερόλεπτα"}
                 one{"{0} μικροδευτερόλεπτο"}
                 other{"{0} μικροδευτερόλεπτα"}
             }
             millisecond{
+                dnam{"χιλιοστά του δευτερολέπτου"}
                 one{"{0} χιλιοστό του δευτερολέπτου"}
                 other{"{0} χιλιοστά του δευτερολέπτου"}
             }
             minute{
+                dnam{"λεπτά"}
                 one{"{0} λεπτό"}
                 other{"{0} λεπτά"}
             }
             month{
+                dnam{"μήνες"}
                 one{"{0} μήνας"}
                 other{"{0} μήνες"}
             }
             nanosecond{
+                dnam{"νανοδευτερόλεπτα"}
                 one{"{0} νανοδευτερόλεπτο"}
                 other{"{0} νανοδευτερόλεπτα"}
             }
             second{
+                dnam{"δευτερόλεπτα"}
                 one{"{0} δευτερόλεπτο"}
                 other{"{0} δευτερόλεπτα"}
+                per{"{0} ανά δευτερόλεπτο"}
             }
             week{
+                dnam{"εβδομάδες"}
                 one{"{0} εβδομάδα"}
                 other{"{0} εβδομάδες"}
             }
             year{
+                dnam{"έτη"}
                 one{"{0} έτος"}
                 other{"{0} έτη"}
             }
         }
         electric{
             ampere{
+                dnam{"αμπέρ"}
                 one{"{0} αμπέρ"}
                 other{"{0} αμπέρ"}
             }
             milliampere{
+                dnam{"μιλιαμπέρ"}
                 one{"{0} μιλιαμπέρ"}
                 other{"{0} μιλιαμπέρ"}
             }
             ohm{
+                dnam{"ωμ"}
                 one{"{0} ωμ"}
                 other{"{0} ωμ"}
             }
             volt{
+                dnam{"βολτ"}
                 one{"{0} βολτ"}
                 other{"{0} βολτ"}
             }
         }
         energy{
             calorie{
+                dnam{"θερμίδες"}
                 one{"{0} θερμίδα"}
                 other{"{0} θερμίδες"}
             }
             foodcalorie{
+                dnam{"Θερμίδες"}
                 one{"{0} Θερμίδα"}
                 other{"{0} Θερμίδες"}
             }
             joule{
+                dnam{"τζάουλ"}
                 one{"{0} τζάουλ"}
                 other{"{0} τζάουλ"}
             }
             kilocalorie{
+                dnam{"χιλιοθερμίδες"}
                 one{"{0} χιλιοθερμίδα"}
                 other{"{0} χιλιοθερμίδες"}
             }
             kilojoule{
+                dnam{"κιλοτζάουλ"}
                 one{"{0} κιλοτζάουλ"}
                 other{"{0} κιλοτζάουλ"}
             }
             kilowatt-hour{
+                dnam{"κιλοβατώρες"}
                 one{"{0} κιλοβατώρα"}
                 other{"{0} κιλοβατώρες"}
             }
         }
         frequency{
             gigahertz{
+                dnam{"γιγαχέρτζ"}
                 one{"{0} γιγαχέρτζ"}
                 other{"{0} γιγαχέρτζ"}
             }
             hertz{
+                dnam{"χερτζ"}
                 one{"{0} χερτζ"}
                 other{"{0} χερτζ"}
             }
             kilohertz{
+                dnam{"κιλοχέρτζ"}
                 one{"{0} κιλοχέρτζ"}
                 other{"{0} κιλοχέρτζ"}
             }
             megahertz{
+                dnam{"μεγαχέρτζ"}
                 one{"{0} μεγαχέρτζ"}
                 other{"{0} μεγαχέρτζ"}
             }
         }
         length{
             astronomical-unit{
+                dnam{"αστρονομικές μονάδες"}
                 one{"{0} αστρονομική μονάδα"}
                 other{"{0} αστρονομικές μονάδες"}
             }
             centimeter{
+                dnam{"εκατοστά"}
                 one{"{0} εκατοστό"}
                 other{"{0} εκατοστά"}
             }
             decimeter{
+                dnam{"δεκατόμετρα"}
                 one{"{0} δεκατόμετρο"}
                 other{"{0} δεκατόμετρα"}
             }
             foot{
+                dnam{"πόδια"}
                 one{"{0} πόδι"}
                 other{"{0} πόδια"}
             }
             inch{
+                dnam{"ίντσες"}
                 one{"{0} ίντσα"}
                 other{"{0} ίντσες"}
             }
             kilometer{
+                dnam{"χιλιόμετρα"}
                 one{"{0} χιλιόμετρο"}
                 other{"{0} χιλιόμετρα"}
             }
             light-year{
+                dnam{"έτη φωτός"}
                 one{"{0} έτος φωτός"}
                 other{"{0} έτη φωτός"}
             }
             meter{
+                dnam{"μέτρα"}
                 one{"{0} μέτρο"}
                 other{"{0} μέτρα"}
             }
             micrometer{
+                dnam{"µm"}
                 one{"{0} μικρόμετρο"}
                 other{"{0} μικρόμετρα"}
             }
             mile{
+                dnam{"μίλια"}
                 one{"{0} μίλι"}
                 other{"{0} μίλια"}
             }
             millimeter{
+                dnam{"χιλιοστόμετρα"}
                 one{"{0} χιλιοστόμετρο"}
                 other{"{0} χιλιοστόμετρα"}
             }
             nanometer{
+                dnam{"νανόμετρα"}
                 one{"{0} νανόμετρο"}
                 other{"{0} νανόμετρα"}
             }
             nautical-mile{
+                dnam{"ναυτικά μίλια"}
                 one{"{0} ναυτικό μίλι"}
                 other{"{0} ναυτικά μίλια"}
             }
             parsec{
+                dnam{"παρσέκ"}
                 one{"{0} παρσέκ"}
                 other{"{0} παρσέκ"}
             }
             picometer{
+                dnam{"πικόμετρα"}
                 one{"{0} πικόμετρο"}
                 other{"{0} πικόμετρα"}
             }
             yard{
+                dnam{"γιάρδες"}
                 one{"{0} γιάρδα"}
                 other{"{0} γιάρδες"}
             }
         }
         light{
             lux{
+                dnam{"lux"}
                 one{"{0} lux"}
                 other{"{0} lux"}
             }
         }
         mass{
             carat{
+                dnam{"καράτια"}
                 one{"{0} καράτι"}
                 other{"{0} καράτια"}
             }
             gram{
+                dnam{"γραμμάρια"}
                 one{"{0} γραμμάριο"}
                 other{"{0} γραμμάρια"}
             }
             kilogram{
+                dnam{"χιλιόγραμμα"}
                 one{"{0} χιλιόγραμμο"}
                 other{"{0} χιλιόγραμμα"}
             }
             metric-ton{
+                dnam{"μετρικοί τόνοι"}
                 one{"{0} μετρικός τόνος"}
                 other{"{0} μετρικοί τόνοι"}
             }
             microgram{
+                dnam{"μικρογραμμάρια"}
                 one{"{0} μικρογραμμάριο"}
                 other{"{0} μικρογραμμάρια"}
             }
             milligram{
+                dnam{"χιλιοστόγραμμα"}
                 one{"{0} χιλιοστόγραμμο"}
                 other{"{0} χιλιοστόγραμμα"}
             }
             ounce{
+                dnam{"ουγγιές"}
                 one{"{0} ουγγιά"}
                 other{"{0} ουγγιές"}
             }
             ounce-troy{
+                dnam{"ευγενείς ουγγιές"}
                 one{"{0} ευγενής ουγγιά"}
                 other{"{0} ευγενείς ουγγιές"}
             }
             pound{
+                dnam{"λίβρες"}
                 one{"{0} λίβρα"}
                 other{"{0} λίβρες"}
             }
             ton{
+                dnam{"τόνοι"}
                 one{"{0} τόνος"}
                 other{"{0} τόνοι"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"ατμοσφαιρική επιτάχυνση βαρύτητας"}
-                }
-                meter-per-second-squared{
-                    dnam{"μέτρα ανά τετραγωνικό δευτερόλεπτο"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"λεπτά του τόξου"}
-                }
-                arc-second{
-                    dnam{"δευτερόλεπτα του τόξου"}
-                }
-                degree{
-                    dnam{"μοίρες"}
-                }
-                radian{
-                    dnam{"ακτίνια"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"ακρ"}
-                }
-                hectare{
-                    dnam{"εκτάρια"}
-                }
-                square-centimeter{
-                    dnam{"τετραγωνικά εκατοστά"}
-                }
-                square-foot{
-                    dnam{"τετραγωνικά πόδια"}
-                }
-                square-inch{
-                    dnam{"τετραγωνικές ίντσες"}
-                }
-                square-kilometer{
-                    dnam{"τετραγωνικά χιλιόμετρα"}
-                }
-                square-meter{
-                    dnam{"τετραγωνικά μέτρα"}
-                }
-                square-mile{
-                    dnam{"τετραγωνικά μίλια"}
-                }
-                square-yard{
-                    dnam{"τετραγωνικές γιάρδες"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"λίτρα ανά χιλιόμετρο"}
-                }
-                mile-per-gallon{
-                    dnam{"μίλια ανά γαλόνι"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bit"}
-                }
-                byte{
-                    dnam{"byte"}
-                }
-                gigabit{
-                    dnam{"gigabit"}
-                }
-                gigabyte{
-                    dnam{"gigabyte"}
-                }
-                kilobit{
-                    dnam{"kilobit"}
-                }
-                kilobyte{
-                    dnam{"kilobyte"}
-                }
-                megabit{
-                    dnam{"megabit"}
-                }
-                megabyte{
-                    dnam{"megabyte"}
-                }
-                terabit{
-                    dnam{"terabit"}
-                }
-                terabyte{
-                    dnam{"terabyte"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"ημέρες"}
-                }
-                hour{
-                    dnam{"ώρες"}
-                    per{"{0} ανά ώρα"}
-                }
-                microsecond{
-                    dnam{"μικροδευτερόλεπτα"}
-                }
-                millisecond{
-                    dnam{"χιλιοστά του δευτερολέπτου"}
-                }
-                minute{
-                    dnam{"λεπτά"}
-                }
-                month{
-                    dnam{"μήνες"}
-                }
-                nanosecond{
-                    dnam{"νανοδευτερόλεπτα"}
-                }
-                second{
-                    dnam{"δευτερόλεπτα"}
-                    per{"{0} ανά δευτερόλεπτο"}
-                }
-                week{
-                    dnam{"εβδομάδες"}
-                }
-                year{
-                    dnam{"έτη"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"αμπέρ"}
-                }
-                milliampere{
-                    dnam{"μιλιαμπέρ"}
-                }
-                ohm{
-                    dnam{"ωμ"}
-                }
-                volt{
-                    dnam{"βολτ"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"θερμίδες"}
-                }
-                foodcalorie{
-                    dnam{"Θερμίδες"}
-                }
-                joule{
-                    dnam{"τζάουλ"}
-                }
-                kilocalorie{
-                    dnam{"χιλιοθερμίδες"}
-                }
-                kilojoule{
-                    dnam{"κιλοτζάουλ"}
-                }
-                kilowatt-hour{
-                    dnam{"κιλοβατώρες"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"γιγαχέρτζ"}
-                }
-                hertz{
-                    dnam{"χερτζ"}
-                }
-                kilohertz{
-                    dnam{"κιλοχέρτζ"}
-                }
-                megahertz{
-                    dnam{"μεγαχέρτζ"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"αστρονομικές μονάδες"}
-                }
-                centimeter{
-                    dnam{"εκατοστά"}
-                }
-                decimeter{
-                    dnam{"δεκατόμετρα"}
-                }
-                foot{
-                    dnam{"πόδια"}
-                }
-                inch{
-                    dnam{"ίντσες"}
-                }
-                kilometer{
-                    dnam{"χιλιόμετρα"}
-                }
-                light-year{
-                    dnam{"έτη φωτός"}
-                }
-                meter{
-                    dnam{"μέτρα"}
-                }
-                micrometer{
-                    dnam{"µm"}
-                }
-                mile{
-                    dnam{"μίλια"}
-                }
-                millimeter{
-                    dnam{"χιλιοστόμετρα"}
-                }
-                nanometer{
-                    dnam{"νανόμετρα"}
-                }
-                nautical-mile{
-                    dnam{"ναυτικά μίλια"}
-                }
-                parsec{
-                    dnam{"παρσέκ"}
-                }
-                picometer{
-                    dnam{"πικόμετρα"}
-                }
-                yard{
-                    dnam{"γιάρδες"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"lux"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"καράτια"}
-                }
-                gram{
-                    dnam{"γραμμάρια"}
-                }
-                kilogram{
-                    dnam{"χιλιόγραμμα"}
-                }
-                metric-ton{
-                    dnam{"μετρικοί τόνοι"}
-                }
-                microgram{
-                    dnam{"μικρογραμμάρια"}
-                }
-                milligram{
-                    dnam{"χιλιοστόγραμμα"}
-                }
-                ounce{
-                    dnam{"ουγγιές"}
-                }
-                ounce-troy{
-                    dnam{"ευγενείς ουγγιές"}
-                }
-                pound{
-                    dnam{"λίβρες"}
-                }
-                ton{
-                    dnam{"τόνοι"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"γιγαβάτ"}
-                }
-                horsepower{
-                    dnam{"ίπποι"}
-                }
-                kilowatt{
-                    dnam{"κιλοβάτ"}
-                }
-                megawatt{
-                    dnam{"μεγαβάτ"}
-                }
-                milliwatt{
-                    dnam{"μιλιβάτ"}
-                }
-                watt{
-                    dnam{"βατ"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"εκτοπασκάλ"}
-                }
-                inch-hg{
-                    dnam{"ίντσες στήλης υδραργύρου"}
-                }
-                millibar{
-                    dnam{"μιλιμπάρ"}
-                }
-                millimeter-of-mercury{
-                    dnam{"χιλιοστόμετρα στήλης υδραργύρου"}
-                }
-                pound-per-square-inch{
-                    dnam{"λίβρα ανά τετραγωνική ίντσα"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"καράτια"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"χιλιόμετρα ανά ώρα"}
-                }
-                meter-per-second{
-                    dnam{"μέτρα ανά δευτερόλεπτο"}
-                }
-                mile-per-hour{
-                    dnam{"μίλια ανά ώρα"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"βαθμοί Κελσίου"}
-                }
-                fahrenheit{
-                    dnam{"βαθμοί Φαρενάιτ"}
-                }
-                kelvin{
-                    dnam{"κέλβιν"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"ακρ-πόδια"}
-                }
-                centiliter{
-                    dnam{"εκατοστόλιτρα"}
-                }
-                cubic-centimeter{
-                    dnam{"κυβικά εκατοστά"}
-                }
-                cubic-foot{
-                    dnam{"κυβικά πόδια"}
-                }
-                cubic-inch{
-                    dnam{"κυβικές ίντσες"}
-                }
-                cubic-kilometer{
-                    dnam{"κυβικά χιλιόμετρα"}
-                }
-                cubic-meter{
-                    dnam{"κυβικά μέτρα"}
-                }
-                cubic-mile{
-                    dnam{"κυβικά μίλια"}
-                }
-                cubic-yard{
-                    dnam{"κυβικές γιάρδες"}
-                }
-                cup{
-                    dnam{"κύπελλο"}
-                }
-                deciliter{
-                    dnam{"δεκατόλιτρα"}
-                }
-                fluid-ounce{
-                    dnam{"ουγγιές υγρού"}
-                }
-                gallon{
-                    dnam{"γαλόνια"}
-                }
-                hectoliter{
-                    dnam{"εκτόλιτρα"}
-                }
-                liter{
-                    dnam{"λίτρα"}
-                }
-                megaliter{
-                    dnam{"μεγαλίτρα"}
-                }
-                milliliter{
-                    dnam{"χιλιοστόλιτρο"}
-                }
-                pint{
-                    dnam{"πίντες"}
-                }
-                quart{
-                    dnam{"τέταρτα του γαλονιού"}
-                }
-                tablespoon{
-                    dnam{"κουταλιές της σούπας"}
-                }
-                teaspoon{
-                    dnam{"κουταλιές του γλυκού"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"γιγαβάτ"}
                 one{"{0} γιγαβάτ"}
                 other{"{0} γιγαβάτ"}
             }
             horsepower{
+                dnam{"ίπποι"}
                 one{"{0} ίππος"}
                 other{"{0} ίπποι"}
             }
             kilowatt{
+                dnam{"κιλοβάτ"}
                 one{"{0} κιλοβάτ"}
                 other{"{0} κιλοβάτ"}
             }
             megawatt{
+                dnam{"μεγαβάτ"}
                 one{"{0} μεγαβάτ"}
                 other{"{0} μεγαβάτ"}
             }
             milliwatt{
+                dnam{"μιλιβάτ"}
                 one{"{0} μιλιβάτ"}
                 other{"{0} μιλιβάτ"}
             }
             watt{
+                dnam{"βατ"}
                 one{"{0} βατ"}
                 other{"{0} βατ"}
             }
         }
         pressure{
             hectopascal{
+                dnam{"εκτοπασκάλ"}
                 one{"{0} εκτοπασκάλ"}
                 other{"{0} εκτοπασκάλ"}
             }
             inch-hg{
+                dnam{"ίντσες στήλης υδραργύρου"}
                 one{"{0} ίντσα στήλης υδραργύρου"}
                 other{"{0} ίντσες στήλης υδραργύρου"}
             }
             millibar{
+                dnam{"μιλιμπάρ"}
                 one{"{0} μιλιμπάρ"}
                 other{"{0} μιλιμπάρ"}
             }
             millimeter-of-mercury{
+                dnam{"χιλιοστόμετρα στήλης υδραργύρου"}
                 one{"{0} χιλιοστόμετρα στήλης υδραργύρου"}
                 other{"{0} χιλιοστόμετρα στήλης υδραργύρου"}
             }
             pound-per-square-inch{
+                dnam{"λίβρα ανά τετραγωνική ίντσα"}
                 one{"{0} λίβρα ανά τετραγωνική ίντσα"}
                 other{"{0} λίβρες ανά τετραγωνική ίντσα"}
             }
         }
         proportion{
             karat{
+                dnam{"καράτια"}
                 one{"{0} καράτι"}
                 other{"{0} καράτια"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"χιλιόμετρα ανά ώρα"}
                 one{"{0} χιλιόμετρο ανά ώρα"}
                 other{"{0} χιλιόμετρα ανά ώρα"}
             }
             meter-per-second{
+                dnam{"μέτρα ανά δευτερόλεπτο"}
                 one{"{0} μέτρο ανά δευτερόλεπτο"}
                 other{"{0} μέτρα ανά δευτερόλεπτο"}
             }
             mile-per-hour{
+                dnam{"μίλια ανά ώρα"}
                 one{"{0} μίλι ανά ώρα"}
                 other{"{0} μίλια ανά ώρα"}
             }
         }
         temperature{
             celsius{
+                dnam{"βαθμοί Κελσίου"}
                 one{"{0} βαθμός Κελσίου"}
                 other{"{0} βαθμοί Κελσίου"}
             }
             fahrenheit{
+                dnam{"βαθμοί Φαρενάιτ"}
                 one{"{0} βαθμός Φαρενάιτ"}
                 other{"{0} βαθμοί Φαρενάιτ"}
             }
             kelvin{
+                dnam{"κέλβιν"}
                 one{"{0} κέλβιν"}
                 other{"{0} κέλβιν"}
             }
         }
         volume{
             acre-foot{
+                dnam{"ακρ-πόδια"}
                 one{"{0} ακρ-πόδι"}
                 other{"{0} ακρ-πόδια"}
             }
             centiliter{
+                dnam{"εκατοστόλιτρα"}
                 one{"{0} εκατοστόλιτρο"}
                 other{"{0} εκατοστόλιτρα"}
             }
             cubic-centimeter{
+                dnam{"κυβικά εκατοστά"}
                 one{"{0} κυβικό εκατοστό"}
                 other{"{0} κυβικά εκατοστά"}
             }
             cubic-foot{
+                dnam{"κυβικά πόδια"}
                 one{"{0} κυβικό πόδι"}
                 other{"{0} κυβικά πόδια"}
             }
             cubic-inch{
+                dnam{"κυβικές ίντσες"}
                 one{"{0} κυβική ίντσα"}
                 other{"{0} κυβικές ίντσες"}
             }
             cubic-kilometer{
+                dnam{"κυβικά χιλιόμετρα"}
                 one{"{0} κυβικό χιλιόμετρο"}
                 other{"{0} κυβικά χιλιόμετρα"}
             }
             cubic-meter{
+                dnam{"κυβικά μέτρα"}
                 one{"{0} κυβικό μέτρο"}
                 other{"{0} κυβικό μέτρο"}
             }
             cubic-mile{
+                dnam{"κυβικά μίλια"}
                 one{"{0} κυβικό μίλι"}
                 other{"{0} κυβικά μίλια"}
             }
             cubic-yard{
+                dnam{"κυβικές γιάρδες"}
                 one{"{0} κυβική γιάρδα"}
                 other{"{0} κυβικές γιάρδες"}
             }
             cup{
+                dnam{"κύπελλο"}
                 one{"{0} κύπελλο"}
                 other{"{0} κύπελλα"}
             }
             deciliter{
+                dnam{"δεκατόλιτρα"}
                 one{"{0} δεκατόλιτρο"}
                 other{"{0} δεκατόλιτρα"}
             }
             fluid-ounce{
+                dnam{"ουγγιές υγρού"}
                 one{"{0} ουγγιά υγρού"}
                 other{"{0} ουγγιές υγρού"}
             }
             gallon{
+                dnam{"γαλόνια"}
                 one{"{0} γαλόνι"}
                 other{"{0} γαλόνια"}
             }
             hectoliter{
+                dnam{"εκτόλιτρα"}
                 one{"{0} εκτόλιτρο"}
                 other{"{0} εκτόλιτρα"}
             }
             liter{
+                dnam{"λίτρα"}
                 one{"{0} λίτρο"}
                 other{"{0} λίτρα"}
             }
             megaliter{
+                dnam{"μεγαλίτρα"}
                 one{"{0} μεγαλίτρο"}
                 other{"{0} μεγαλίτρα"}
             }
             milliliter{
+                dnam{"χιλιοστόλιτρο"}
                 one{"{0} χιλιοστόλιτρο"}
                 other{"{0} χιλιοστόλιτρα"}
             }
             pint{
+                dnam{"πίντες"}
                 one{"{0} πίντα"}
                 other{"{0} πίντες"}
             }
             quart{
+                dnam{"τέταρτα του γαλονιού"}
                 one{"{0} τέταρτο του γαλονιού"}
                 other{"{0} τέταρτα του γαλονιού"}
             }
             tablespoon{
+                dnam{"κουταλιές της σούπας"}
                 one{"{0} κουταλιά της σούπας"}
                 other{"{0} κουταλιές της σούπας"}
             }
             teaspoon{
+                dnam{"κουταλιές του γλυκού"}
                 one{"{0} κουταλιά του γλυκού"}
                 other{"{0} κουταλιές του γλυκού"}
             }

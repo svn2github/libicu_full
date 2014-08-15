@@ -41,5 +41,5 @@ mt{
             other{"Munita Mhux Magħruf jew Mhux Validu"}
         }
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.22"}
 }

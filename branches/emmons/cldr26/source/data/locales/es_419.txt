@@ -599,65 +599,45 @@ es_419{
         Numeric{"Numéricas"}
     }
     units{
+        acceleration{
+            g-force{
+                dnam{"unidad de fuerza gravitacional"}
+            }
+        }
         energy{
             calorie{
+                dnam{"calorías por gramo"}
                 one{"{0} caloría por gramo"}
                 other{"{0} calorías por gramo"}
             }
             foodcalorie{
+                dnam{"calorías por kilogramo"}
                 one{"{0} caloría por kilogramo"}
                 other{"{0} calorías por kilogramo"}
             }
         }
+        length{
+            decimeter{
+                dnam{"decímetro"}
+            }
+        }
         mass{
             carat{
+                dnam{"quilates de gemología"}
                 one{"{0} quilate de gemología"}
                 other{"{0} quilates de gemología"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"unidad de fuerza gravitacional"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"calorías por gramo"}
-                }
-                foodcalorie{
-                    dnam{"calorías por kilogramo"}
-                }
-            }
-            length{
-                decimeter{
-                    dnam{"decímetro"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"quilates de gemología"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"quilates de orfebrería"}
-                }
-            }
-            temperature{
-                kelvin{
-                    dnam{"grados Kelvin"}
-                }
-            }
-        }
         proportion{
             karat{
+                dnam{"quilates de orfebrería"}
                 one{"{0} quilate de orfebrería"}
                 other{"{0} quilates de orfebrería"}
             }
         }
         temperature{
             kelvin{
+                dnam{"grados Kelvin"}
                 one{"{0} grado Kelvin"}
                 other{"{0} grados Kelvin"}
             }

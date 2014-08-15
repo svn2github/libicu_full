@@ -1412,6 +1412,7 @@ ga{
     units{
         acceleration{
             g-force{
+                dnam{"g-fhórsa"}
                 few{"{0} g-fhórsa"}
                 many{"{0} g-fhórsa"}
                 one{"{0} g-fhórsa"}
@@ -1419,6 +1420,7 @@ ga{
                 two{"{0} g-fhórsa"}
             }
             meter-per-second-squared{
+                dnam{"méadair sa soicind cearnaithe"}
                 few{"{0} mhéadar sa soicind cearnaithe"}
                 many{"{0} méadar sa soicind cearnaithe"}
                 one{"{0} mhéadar sa soicind cearnaithe"}
@@ -1428,6 +1430,7 @@ ga{
         }
         angle{
             arc-minute{
+                dnam{"nóiméid stua"}
                 few{"{0} nóiméad stua"}
                 many{"{0} nóiméad stua"}
                 one{"{0} nóiméad stua"}
@@ -1435,6 +1438,7 @@ ga{
                 two{"{0} nóiméad stua"}
             }
             arc-second{
+                dnam{"soicindí stua"}
                 few{"{0} shoicind stua"}
                 many{"{0} soicind stua"}
                 one{"{0} soicind stua"}
@@ -1442,6 +1446,7 @@ ga{
                 two{"{0} shoicind stua"}
             }
             degree{
+                dnam{"céimeanna"}
                 few{"{0} chéim"}
                 many{"{0} gcéim"}
                 one{"{0} chéim"}
@@ -1449,6 +1454,7 @@ ga{
                 two{"{0} chéim"}
             }
             radian{
+                dnam{"raidiain"}
                 few{"{0} raidian"}
                 many{"{0} raidian"}
                 one{"{0} raidian"}
@@ -1458,6 +1464,7 @@ ga{
         }
         area{
             acre{
+                dnam{"acraí"}
                 few{"{0} acra"}
                 many{"{0} n-acra"}
                 one{"{0} acra"}
@@ -1465,6 +1472,7 @@ ga{
                 two{"{0} acra"}
             }
             hectare{
+                dnam{"heicteáir"}
                 few{"{0} heicteár"}
                 many{"{0} heicteár"}
                 one{"{0} heicteár"}
@@ -1472,6 +1480,7 @@ ga{
                 two{"{0} heicteár"}
             }
             square-centimeter{
+                dnam{"ceintiméadair chearnacha"}
                 few{"{0} cheintiméadar chearnacha"}
                 many{"{0} gceintiméadar chearnacha"}
                 one{"{0} cheintiméadar cearnach"}
@@ -1479,6 +1488,7 @@ ga{
                 two{"{0} cheintiméadar chearnacha"}
             }
             square-foot{
+                dnam{"troithe cearnacha"}
                 few{"{0} throigh chearnacha"}
                 many{"{0} dtroigh chearnacha"}
                 one{"{0} troigh chearnach"}
@@ -1486,6 +1496,7 @@ ga{
                 two{"{0} throigh chearnacha"}
             }
             square-inch{
+                dnam{"orlaí cearnacha"}
                 few{"{0} orlach chearnacha"}
                 many{"{0} orlach chearnacha"}
                 one{"{0} orlach cearnach"}
@@ -1493,6 +1504,7 @@ ga{
                 two{"{0} orlach chearnacha"}
             }
             square-kilometer{
+                dnam{"ciliméadair chearnacha"}
                 few{"{0} chiliméadar chearnacha"}
                 many{"{0} gciliméadar chearnacha"}
                 one{"{0} chiliméadar cearnach"}
@@ -1500,6 +1512,7 @@ ga{
                 two{"{0} chiliméadar chearnacha"}
             }
             square-meter{
+                dnam{"méadair chearnacha"}
                 few{"{0} mhéadar chearnacha"}
                 many{"{0} méadar chearnacha"}
                 one{"{0} mhéadar cearnach"}
@@ -1507,6 +1520,7 @@ ga{
                 two{"{0} mhéadar chearnacha"}
             }
             square-mile{
+                dnam{"mílte cearnacha"}
                 few{"{0} mhíle chearnacha"}
                 many{"{0} míle chearnacha"}
                 one{"{0} mhíle cearnach"}
@@ -1514,6 +1528,7 @@ ga{
                 two{"{0} mhíle chearnacha"}
             }
             square-yard{
+                dnam{"slata cearnacha"}
                 few{"{0} shlat chearnacha"}
                 many{"{0} slat chearnacha"}
                 one{"{0} slat chearnach"}
@@ -1523,6 +1538,7 @@ ga{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"lítir sa chiliméadar"}
                 few{"{0} lítear sa chiliméadar"}
                 many{"{0} lítear sa chiliméadar"}
                 one{"{0} lítear sa chiliméadar"}
@@ -1530,6 +1546,7 @@ ga{
                 two{"{0} lítear sa chiliméadar"}
             }
             mile-per-gallon{
+                dnam{"mílte an galún"}
                 few{"{0} mhíle an galún"}
                 many{"{0} míle an galún"}
                 one{"{0} mhíle an galún"}
@@ -1539,6 +1556,7 @@ ga{
         }
         digital{
             bit{
+                dnam{"giotáin"}
                 few{"{0} ghiotán"}
                 many{"{0} ngiotán"}
                 one{"{0} ghiotán"}
@@ -1546,6 +1564,7 @@ ga{
                 two{"{0} ghiotán"}
             }
             byte{
+                dnam{"bearta"}
                 few{"{0} bheart"}
                 many{"{0} mbeart"}
                 one{"{0} bheart"}
@@ -1553,6 +1572,7 @@ ga{
                 two{"{0} bheart"}
             }
             gigabit{
+                dnam{"gigighiotáin"}
                 few{"{0} ghigighiotán"}
                 many{"{0} ngigighiotán"}
                 one{"{0} ghigighiotán"}
@@ -1560,6 +1580,7 @@ ga{
                 two{"{0} ghigighiotán"}
             }
             gigabyte{
+                dnam{"gigibhearta"}
                 few{"{0} ghigibheart"}
                 many{"{0} ngigibheart"}
                 one{"{0} ghigibheart"}
@@ -1567,6 +1588,7 @@ ga{
                 two{"{0} ghigibheart"}
             }
             kilobit{
+                dnam{"cilighiotáin"}
                 few{"{0} chilighiotán"}
                 many{"{0} gcilighiotán"}
                 one{"{0} chilighiotán"}
@@ -1574,6 +1596,7 @@ ga{
                 two{"{0} chilighiotán"}
             }
             kilobyte{
+                dnam{"cilibhearta"}
                 few{"{0} chilibheart"}
                 many{"{0} gcilibheart"}
                 one{"{0} chilibheart"}
@@ -1581,6 +1604,7 @@ ga{
                 two{"{0} chilibheart"}
             }
             megabit{
+                dnam{"meigighiotáin"}
                 few{"{0} mheigighiotán"}
                 many{"{0} meigighiotán"}
                 one{"{0} mheigighiotán"}
@@ -1588,6 +1612,7 @@ ga{
                 two{"{0} mheigighiotán"}
             }
             megabyte{
+                dnam{"meigibhearta"}
                 few{"{0} mheigibheart"}
                 many{"{0} meigibheart"}
                 one{"{0} mheigibheart"}
@@ -1595,6 +1620,7 @@ ga{
                 two{"{0} mheigibheart"}
             }
             terabit{
+                dnam{"teirighiotáin"}
                 few{"{0} theirighiotán"}
                 many{"{0} dteirighiotán"}
                 one{"{0} teirighiotán"}
@@ -1602,6 +1628,7 @@ ga{
                 two{"{0} theirighiotán"}
             }
             terabyte{
+                dnam{"teiribhearta"}
                 few{"{0} theiribheart"}
                 many{"{0} dteiribheart"}
                 one{"{0} teiribheart"}
@@ -1611,6 +1638,7 @@ ga{
         }
         duration{
             day{
+                dnam{"laethanta"}
                 few{"{0} lá"}
                 many{"{0} lá"}
                 one{"{0} lá"}
@@ -1618,13 +1646,16 @@ ga{
                 two{"{0} lá"}
             }
             hour{
+                dnam{"uaireanta"}
                 few{"{0} huaire"}
                 many{"{0} n-uaire"}
                 one{"{0} uair"}
                 other{"{0} uair"}
+                per{"{0} san uair"}
                 two{"{0} uair"}
             }
             microsecond{
+                dnam{"micreashoicindí"}
                 few{"{0} mhicreashoicind"}
                 many{"{0} micreashoicind"}
                 one{"{0} mhicreashoicind"}
@@ -1632,6 +1663,7 @@ ga{
                 two{"{0} mhicreashoicind"}
             }
             millisecond{
+                dnam{"milleasoicindí"}
                 few{"{0} mhilleasoicind"}
                 many{"{0} milleasoicind"}
                 one{"{0} mhilleasoicind"}
@@ -1639,6 +1671,7 @@ ga{
                 two{"{0} mhilleasoicind"}
             }
             minute{
+                dnam{"nóiméid"}
                 few{"{0} nóiméad"}
                 many{"{0} nóiméad"}
                 one{"{0} nóiméad"}
@@ -1646,6 +1679,7 @@ ga{
                 two{"{0} nóiméad"}
             }
             month{
+                dnam{"míonna"}
                 few{"{0} mhí"}
                 many{"{0} mí"}
                 one{"{0} mhí"}
@@ -1653,6 +1687,7 @@ ga{
                 two{"{0} mhí"}
             }
             nanosecond{
+                dnam{"nanashoicindí"}
                 few{"{0} nanashoicind"}
                 many{"{0} nanashoicind"}
                 one{"{0} nanashoicind"}
@@ -1660,13 +1695,16 @@ ga{
                 two{"{0} nanashoicind"}
             }
             second{
+                dnam{"soicindí"}
                 few{"{0} shoicind"}
                 many{"{0} soicind"}
                 one{"{0} soicind"}
                 other{"{0} soicind"}
+                per{"{0} sa soicind"}
                 two{"{0} shoicind"}
             }
             week{
+                dnam{"seachtainí"}
                 few{"{0} seachtaine"}
                 many{"{0} seachtaine"}
                 one{"{0} seachtain"}
@@ -1674,6 +1712,7 @@ ga{
                 two{"{0} sheachtain"}
             }
             year{
+                dnam{"blianta"}
                 few{"{0} bliana"}
                 many{"{0} mbliana"}
                 one{"{0} bhliain"}
@@ -1683,6 +1722,7 @@ ga{
         }
         electric{
             ampere{
+                dnam{"aimpéir"}
                 few{"{0} aimpéar"}
                 many{"{0} n-aimpéar"}
                 one{"{0} aimpéar"}
@@ -1690,6 +1730,7 @@ ga{
                 two{"{0} aimpéar"}
             }
             milliampere{
+                dnam{"miollaimpéir"}
                 few{"{0} mhiollaimpéar"}
                 many{"{0} miollaimpéar"}
                 one{"{0} mhiollaimpéar"}
@@ -1697,6 +1738,7 @@ ga{
                 two{"{0} mhiollaimpéar"}
             }
             ohm{
+                dnam{"óim"}
                 few{"{0} óm"}
                 many{"{0} n-óm"}
                 one{"{0} óm"}
@@ -1704,6 +1746,7 @@ ga{
                 two{"{0} óm"}
             }
             volt{
+                dnam{"voltanna"}
                 few{"{0} volta"}
                 many{"{0} volta"}
                 one{"{0} volta"}
@@ -1713,6 +1756,7 @@ ga{
         }
         energy{
             calorie{
+                dnam{"calraí"}
                 few{"{0} chalra"}
                 many{"{0} gcalra"}
                 one{"{0} chalra"}
@@ -1720,6 +1764,7 @@ ga{
                 two{"{0} chalra"}
             }
             foodcalorie{
+                dnam{"Calraí"}
                 few{"{0} Chalra"}
                 many{"{0} gCalra"}
                 one{"{0} Chalra"}
@@ -1727,6 +1772,7 @@ ga{
                 two{"{0} Chalra"}
             }
             joule{
+                dnam{"giúil"}
                 few{"{0} ghiúl"}
                 many{"{0} ngiúl"}
                 one{"{0} ghiúl"}
@@ -1734,6 +1780,7 @@ ga{
                 two{"{0} ghiúl"}
             }
             kilocalorie{
+                dnam{"cileacalraí"}
                 few{"{0} chileacalra"}
                 many{"{0} gcileacalra"}
                 one{"{0} chileacalra"}
@@ -1741,6 +1788,7 @@ ga{
                 two{"{0} chileacalra"}
             }
             kilojoule{
+                dnam{"ciligiúil"}
                 few{"{0} chiligiúl"}
                 many{"{0} gciligiúl"}
                 one{"{0} chiligiúl"}
@@ -1748,6 +1796,7 @@ ga{
                 two{"{0} chiligiúl"}
             }
             kilowatt-hour{
+                dnam{"cileavatuaireanta"}
                 few{"{0} chileavatuair"}
                 many{"{0} gcileavatuair"}
                 one{"{0} chileavatuair"}
@@ -1757,6 +1806,7 @@ ga{
         }
         frequency{
             gigahertz{
+                dnam{"gigiheirts"}
                 few{"{0} ghigiheirts"}
                 many{"{0} ngigiheirts"}
                 one{"{0} ghigiheirts"}
@@ -1764,6 +1814,7 @@ ga{
                 two{"{0} ghigiheirts"}
             }
             hertz{
+                dnam{"heirts"}
                 few{"{0} heirts"}
                 many{"{0} heirts"}
                 one{"{0} heirts"}
@@ -1771,6 +1822,7 @@ ga{
                 two{"{0} heirts"}
             }
             kilohertz{
+                dnam{"ciliheirts"}
                 few{"{0} chiliheirts"}
                 many{"{0} gciliheirts"}
                 one{"{0} chiliheirts"}
@@ -1778,6 +1830,7 @@ ga{
                 two{"{0} chiliheirts"}
             }
             megahertz{
+                dnam{"meigiheirts"}
                 few{"{0} mheigiheirts"}
                 many{"{0} meigiheirts"}
                 one{"{0} mheigiheirts"}
@@ -1787,6 +1840,7 @@ ga{
         }
         length{
             astronomical-unit{
+                dnam{"aonaid réalteolaíocha"}
                 few{"{0} aonad réalteolaíoch"}
                 many{"{0} n-aonad réalteolaíoch"}
                 one{"{0} aonad réalteolaíoch"}
@@ -1794,6 +1848,7 @@ ga{
                 two{"{0} aonad réalteolaíoch"}
             }
             centimeter{
+                dnam{"ceintiméadair"}
                 few{"{0} cheintiméadar"}
                 many{"{0} gceintiméadar"}
                 one{"{0} cheintiméadar"}
@@ -1801,6 +1856,7 @@ ga{
                 two{"{0} cheintiméadar"}
             }
             decimeter{
+                dnam{"deiciméadair"}
                 few{"{0} dheiciméadar"}
                 many{"{0} ndeiciméadar"}
                 one{"{0} deiciméadar"}
@@ -1808,6 +1864,7 @@ ga{
                 two{"{0} dheiciméadar"}
             }
             fathom{
+                dnam{"feánna"}
                 few{"{0} fheá"}
                 many{"{0} bhfeá"}
                 one{"{0} fheá"}
@@ -1815,6 +1872,7 @@ ga{
                 two{"{0} fheá"}
             }
             foot{
+                dnam{"troithe"}
                 few{"{0} throigh"}
                 many{"{0} dtroigh"}
                 one{"{0} troigh"}
@@ -1822,6 +1880,7 @@ ga{
                 two{"{0} throigh"}
             }
             furlong{
+                dnam{"staideanna"}
                 few{"{0} staid"}
                 many{"{0} staid"}
                 one{"{0} staid"}
@@ -1829,6 +1888,7 @@ ga{
                 two{"{0} staid"}
             }
             inch{
+                dnam{"orlaí"}
                 few{"{0} orlach"}
                 many{"{0} n-orlach"}
                 one{"{0} orlach"}
@@ -1836,6 +1896,7 @@ ga{
                 two{"{0} orlach"}
             }
             kilometer{
+                dnam{"ciliméadair"}
                 few{"{0} chiliméadar"}
                 many{"{0} gciliméadar"}
                 one{"{0} chiliméadar"}
@@ -1843,6 +1904,7 @@ ga{
                 two{"{0} chiliméadar"}
             }
             light-year{
+                dnam{"solasbhlianta"}
                 few{"{0} sholasbhliain"}
                 many{"{0} solasbhliain"}
                 one{"{0} solasbhliain"}
@@ -1850,6 +1912,7 @@ ga{
                 two{"{0} sholasbhliain"}
             }
             meter{
+                dnam{"méadair"}
                 few{"{0} mhéadar"}
                 many{"{0} méadar"}
                 one{"{0} mhéadar"}
@@ -1857,6 +1920,7 @@ ga{
                 two{"{0} mhéadar"}
             }
             micrometer{
+                dnam{"micriméadair"}
                 few{"{0} mhicriméadar"}
                 many{"{0} micriméadar"}
                 one{"{0} mhicriméadar"}
@@ -1864,6 +1928,7 @@ ga{
                 two{"{0} mhicriméadar"}
             }
             mile{
+                dnam{"mílte"}
                 few{"{0} mhíle"}
                 many{"{0} míle"}
                 one{"{0} mhíle"}
@@ -1871,6 +1936,7 @@ ga{
                 two{"{0} mhíle"}
             }
             millimeter{
+                dnam{"milliméadair"}
                 few{"{0} mhilliméadar"}
                 many{"{0} milliméadar"}
                 one{"{0} mhilliméadar"}
@@ -1878,6 +1944,7 @@ ga{
                 two{"{0} mhilliméadar"}
             }
             nanometer{
+                dnam{"nanaiméadair"}
                 few{"{0} nanaiméadar"}
                 many{"{0} nanaiméadar"}
                 one{"{0} nanaiméadar"}
@@ -1885,6 +1952,7 @@ ga{
                 two{"{0} nanaiméadar"}
             }
             nautical-mile{
+                dnam{"muirmhílte"}
                 few{"{0} mhuirmhíle"}
                 many{"{0} muirmhíle"}
                 one{"{0} mhuirmhíle"}
@@ -1892,6 +1960,7 @@ ga{
                 two{"{0} mhuirmhíle"}
             }
             parsec{
+                dnam{"parsoiceanna"}
                 few{"{0} pharsoic"}
                 many{"{0} bparsoic"}
                 one{"{0} pharsoic"}
@@ -1899,6 +1968,7 @@ ga{
                 two{"{0} pharsoic"}
             }
             picometer{
+                dnam{"piciméadair"}
                 few{"{0} phiciméadar"}
                 many{"{0} bpiciméadar"}
                 one{"{0} phiciméadar"}
@@ -1906,6 +1976,7 @@ ga{
                 two{"{0} phiciméadar"}
             }
             yard{
+                dnam{"slata"}
                 few{"{0} shlat"}
                 many{"{0} slat"}
                 one{"{0} slat"}
@@ -1915,6 +1986,7 @@ ga{
         }
         light{
             lux{
+                dnam{"lucsa"}
                 few{"{0} lucsa"}
                 many{"{0} lucsa"}
                 one{"{0} lucsa"}
@@ -1924,6 +1996,7 @@ ga{
         }
         mass{
             carat{
+                dnam{"carait"}
                 few{"{0} charat"}
                 many{"{0} gcarat"}
                 one{"{0} charat"}
@@ -1931,6 +2004,7 @@ ga{
                 two{"{0} charat"}
             }
             gram{
+                dnam{"graim"}
                 few{"{0} ghram"}
                 many{"{0} ngram"}
                 one{"{0} ghram"}
@@ -1938,6 +2012,7 @@ ga{
                 two{"{0} ghram"}
             }
             kilogram{
+                dnam{"cileagraim"}
                 few{"{0} chileagram"}
                 many{"{0} gcileagram"}
                 one{"{0} chileagram"}
@@ -1945,6 +2020,7 @@ ga{
                 two{"{0} chileagram"}
             }
             metric-ton{
+                dnam{"tonnaí méadracha"}
                 few{"{0} thonna mhéadracha"}
                 many{"{0} dtonna mhéadracha"}
                 one{"{0} tonna méadrach"}
@@ -1952,6 +2028,7 @@ ga{
                 two{"{0} thonna mhéadracha"}
             }
             microgram{
+                dnam{"micreagraim"}
                 few{"{0} mhicreagram"}
                 many{"{0} micreagram"}
                 one{"{0} mhicreagram"}
@@ -1959,6 +2036,7 @@ ga{
                 two{"{0} mhicreagram"}
             }
             milligram{
+                dnam{"milleagraim"}
                 few{"{0} mhilleagram"}
                 many{"{0} milleagram"}
                 one{"{0} mhilleagram"}
@@ -1966,6 +2044,7 @@ ga{
                 two{"{0} mhilleagram"}
             }
             ounce{
+                dnam{"unsaí"}
                 few{"{0} unsa"}
                 many{"{0} n-unsa"}
                 one{"{0} unsa"}
@@ -1973,6 +2052,7 @@ ga{
                 two{"{0} unsa"}
             }
             ounce-troy{
+                dnam{"unsaí troí"}
                 few{"{0} unsa troí"}
                 many{"{0} n-unsa troí"}
                 one{"{0} unsa troí"}
@@ -1980,6 +2060,7 @@ ga{
                 two{"{0} unsa troí"}
             }
             pound{
+                dnam{"puint"}
                 few{"{0} phunt"}
                 many{"{0} bpunt"}
                 one{"{0} phunt"}
@@ -1987,6 +2068,7 @@ ga{
                 two{"{0} phunt"}
             }
             stone{
+                dnam{"clocha"}
                 few{"{0} chloch"}
                 many{"{0} gcloch"}
                 one{"{0} chloch"}
@@ -1994,6 +2076,7 @@ ga{
                 two{"{0} chloch"}
             }
             ton{
+                dnam{"tonnaí gearra"}
                 few{"{0} thonna ghearra"}
                 many{"{0} dtonna ghearra"}
                 one{"{0} tonna gearr"}
@@ -2001,411 +2084,9 @@ ga{
                 two{"{0} thonna ghearra"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"g-fhórsa"}
-                }
-                meter-per-second-squared{
-                    dnam{"méadair sa soicind cearnaithe"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"nóiméid stua"}
-                }
-                arc-second{
-                    dnam{"soicindí stua"}
-                }
-                degree{
-                    dnam{"céimeanna"}
-                }
-                radian{
-                    dnam{"raidiain"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"acraí"}
-                }
-                hectare{
-                    dnam{"heicteáir"}
-                }
-                square-centimeter{
-                    dnam{"ceintiméadair chearnacha"}
-                }
-                square-foot{
-                    dnam{"troithe cearnacha"}
-                }
-                square-inch{
-                    dnam{"orlaí cearnacha"}
-                }
-                square-kilometer{
-                    dnam{"ciliméadair chearnacha"}
-                }
-                square-meter{
-                    dnam{"méadair chearnacha"}
-                }
-                square-mile{
-                    dnam{"mílte cearnacha"}
-                }
-                square-yard{
-                    dnam{"slata cearnacha"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"lítir sa chiliméadar"}
-                }
-                mile-per-gallon{
-                    dnam{"mílte an galún"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"giotáin"}
-                }
-                byte{
-                    dnam{"bearta"}
-                }
-                gigabit{
-                    dnam{"gigighiotáin"}
-                }
-                gigabyte{
-                    dnam{"gigibhearta"}
-                }
-                kilobit{
-                    dnam{"cilighiotáin"}
-                }
-                kilobyte{
-                    dnam{"cilibhearta"}
-                }
-                megabit{
-                    dnam{"meigighiotáin"}
-                }
-                megabyte{
-                    dnam{"meigibhearta"}
-                }
-                terabit{
-                    dnam{"teirighiotáin"}
-                }
-                terabyte{
-                    dnam{"teiribhearta"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"laethanta"}
-                }
-                hour{
-                    dnam{"uaireanta"}
-                    per{"{0} san uair"}
-                }
-                microsecond{
-                    dnam{"micreashoicindí"}
-                }
-                millisecond{
-                    dnam{"milleasoicindí"}
-                }
-                minute{
-                    dnam{"nóiméid"}
-                }
-                month{
-                    dnam{"míonna"}
-                }
-                nanosecond{
-                    dnam{"nanashoicindí"}
-                }
-                second{
-                    dnam{"soicindí"}
-                    per{"{0} sa soicind"}
-                }
-                week{
-                    dnam{"seachtainí"}
-                }
-                year{
-                    dnam{"blianta"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"aimpéir"}
-                }
-                milliampere{
-                    dnam{"miollaimpéir"}
-                }
-                ohm{
-                    dnam{"óim"}
-                }
-                volt{
-                    dnam{"voltanna"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"calraí"}
-                }
-                foodcalorie{
-                    dnam{"Calraí"}
-                }
-                joule{
-                    dnam{"giúil"}
-                }
-                kilocalorie{
-                    dnam{"cileacalraí"}
-                }
-                kilojoule{
-                    dnam{"ciligiúil"}
-                }
-                kilowatt-hour{
-                    dnam{"cileavatuaireanta"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigiheirts"}
-                }
-                hertz{
-                    dnam{"heirts"}
-                }
-                kilohertz{
-                    dnam{"ciliheirts"}
-                }
-                megahertz{
-                    dnam{"meigiheirts"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"aonaid réalteolaíocha"}
-                }
-                centimeter{
-                    dnam{"ceintiméadair"}
-                }
-                decimeter{
-                    dnam{"deiciméadair"}
-                }
-                fathom{
-                    dnam{"feánna"}
-                }
-                foot{
-                    dnam{"troithe"}
-                }
-                furlong{
-                    dnam{"staideanna"}
-                }
-                inch{
-                    dnam{"orlaí"}
-                }
-                kilometer{
-                    dnam{"ciliméadair"}
-                }
-                light-year{
-                    dnam{"solasbhlianta"}
-                }
-                meter{
-                    dnam{"méadair"}
-                }
-                micrometer{
-                    dnam{"micriméadair"}
-                }
-                mile{
-                    dnam{"mílte"}
-                }
-                millimeter{
-                    dnam{"milliméadair"}
-                }
-                nanometer{
-                    dnam{"nanaiméadair"}
-                }
-                nautical-mile{
-                    dnam{"muirmhílte"}
-                }
-                parsec{
-                    dnam{"parsoiceanna"}
-                }
-                picometer{
-                    dnam{"piciméadair"}
-                }
-                yard{
-                    dnam{"slata"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"lucsa"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"carait"}
-                }
-                gram{
-                    dnam{"graim"}
-                }
-                kilogram{
-                    dnam{"cileagraim"}
-                }
-                metric-ton{
-                    dnam{"tonnaí méadracha"}
-                }
-                microgram{
-                    dnam{"micreagraim"}
-                }
-                milligram{
-                    dnam{"milleagraim"}
-                }
-                ounce{
-                    dnam{"unsaí"}
-                }
-                ounce-troy{
-                    dnam{"unsaí troí"}
-                }
-                pound{
-                    dnam{"puint"}
-                }
-                stone{
-                    dnam{"clocha"}
-                }
-                ton{
-                    dnam{"tonnaí gearra"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigeavatanna"}
-                }
-                horsepower{
-                    dnam{"each-chumhacht"}
-                }
-                kilowatt{
-                    dnam{"cileavatanna"}
-                }
-                megawatt{
-                    dnam{"meigeavatanna"}
-                }
-                milliwatt{
-                    dnam{"milleavatanna"}
-                }
-                watt{
-                    dnam{"vatanna"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"heicteapascail"}
-                }
-                inch-hg{
-                    dnam{"orlaí mearcair"}
-                }
-                millibar{
-                    dnam{"milleabair"}
-                }
-                millimeter-of-mercury{
-                    dnam{"milliméadair mhearcair"}
-                }
-                pound-per-square-inch{
-                    dnam{"puint san orlach cearnach"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"carait óir"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"ciliméadair san uair"}
-                }
-                meter-per-second{
-                    dnam{"méadair sa soicind"}
-                }
-                mile-per-hour{
-                    dnam{"mílte san uair"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"céimeanna Celsius"}
-                }
-                fahrenheit{
-                    dnam{"céimeanna Fahrenheit"}
-                }
-                kelvin{
-                    dnam{"céimeanna ceilvin"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"acra-troithe"}
-                }
-                bushel{
-                    dnam{"buiséil"}
-                }
-                centiliter{
-                    dnam{"ceintilítir"}
-                }
-                cubic-centimeter{
-                    dnam{"ceintiméadair chiúbacha"}
-                }
-                cubic-foot{
-                    dnam{"troithe ciúbacha"}
-                }
-                cubic-inch{
-                    dnam{"orlaí ciúbacha"}
-                }
-                cubic-kilometer{
-                    dnam{"ciliméadair chiúbacha"}
-                }
-                cubic-meter{
-                    dnam{"méadair chiúbacha"}
-                }
-                cubic-mile{
-                    dnam{"mílte ciúbacha"}
-                }
-                cubic-yard{
-                    dnam{"slata ciúbacha"}
-                }
-                cup{
-                    dnam{"cupáin"}
-                }
-                deciliter{
-                    dnam{"deicilítir"}
-                }
-                fluid-ounce{
-                    dnam{"unsaí leachtacha"}
-                }
-                gallon{
-                    dnam{"galúin"}
-                }
-                hectoliter{
-                    dnam{"heictilítir"}
-                }
-                liter{
-                    dnam{"lítir"}
-                }
-                megaliter{
-                    dnam{"meigilítir"}
-                }
-                milliliter{
-                    dnam{"millilítir"}
-                }
-                pint{
-                    dnam{"piontaí"}
-                }
-                quart{
-                    dnam{"cáirt"}
-                }
-                tablespoon{
-                    dnam{"spúnóga boird"}
-                }
-                teaspoon{
-                    dnam{"taespúnóga"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigeavatanna"}
                 few{"{0} ghigeavata"}
                 many{"{0} ngigeavata"}
                 one{"{0} ghigeavata"}
@@ -2413,6 +2094,7 @@ ga{
                 two{"{0} ghigeavata"}
             }
             horsepower{
+                dnam{"each-chumhacht"}
                 few{"{0} each-chumhacht"}
                 many{"{0} n-each-chumhacht"}
                 one{"{0} each-chumhacht"}
@@ -2420,6 +2102,7 @@ ga{
                 two{"{0} each-chumhacht"}
             }
             kilowatt{
+                dnam{"cileavatanna"}
                 few{"{0} chileavata"}
                 many{"{0} gcileavata"}
                 one{"{0} chileavata"}
@@ -2427,6 +2110,7 @@ ga{
                 two{"{0} chileavata"}
             }
             megawatt{
+                dnam{"meigeavatanna"}
                 few{"{0} mheigeavata"}
                 many{"{0} meigeavata"}
                 one{"{0} mheigeavata"}
@@ -2434,6 +2118,7 @@ ga{
                 two{"{0} mheigeavata"}
             }
             milliwatt{
+                dnam{"milleavatanna"}
                 few{"{0} mhilleavata"}
                 many{"{0} milleavata"}
                 one{"{0} mhilleavata"}
@@ -2441,6 +2126,7 @@ ga{
                 two{"{0} mhilleavata"}
             }
             watt{
+                dnam{"vatanna"}
                 few{"{0} vata"}
                 many{"{0} vata"}
                 one{"{0} vata"}
@@ -2450,6 +2136,7 @@ ga{
         }
         pressure{
             hectopascal{
+                dnam{"heicteapascail"}
                 few{"{0} heicteapascal"}
                 many{"{0} heicteapascal"}
                 one{"{0} heicteapascal"}
@@ -2457,6 +2144,7 @@ ga{
                 two{"{0} heicteapascal"}
             }
             inch-hg{
+                dnam{"orlaí mearcair"}
                 few{"{0} orlach mearcair"}
                 many{"{0} n-orlach mearcair"}
                 one{"{0} orlach mearcair"}
@@ -2464,6 +2152,7 @@ ga{
                 two{"{0} orlach mearcair"}
             }
             millibar{
+                dnam{"milleabair"}
                 few{"{0} mhilleabar"}
                 many{"{0} milleabar"}
                 one{"{0} mhilleabar"}
@@ -2471,6 +2160,7 @@ ga{
                 two{"{0} mhilleabar"}
             }
             millimeter-of-mercury{
+                dnam{"milliméadair mhearcair"}
                 few{"{0} mhilliméadar mearcair"}
                 many{"{0} milliméadar mearcair"}
                 one{"{0} mhilliméadar mearcair"}
@@ -2478,6 +2168,7 @@ ga{
                 two{"{0} mhilliméadar mearcair"}
             }
             pound-per-square-inch{
+                dnam{"puint san orlach cearnach"}
                 few{"{0} phunt san orlach cearnach"}
                 many{"{0} bpunt san orlach cearnach"}
                 one{"{0} phunt san orlach cearnach"}
@@ -2487,6 +2178,7 @@ ga{
         }
         proportion{
             karat{
+                dnam{"carait óir"}
                 few{"{0} charat óir"}
                 many{"{0} gcarat óir"}
                 one{"{0} charat óir"}
@@ -2496,6 +2188,7 @@ ga{
         }
         speed{
             kilometer-per-hour{
+                dnam{"ciliméadair san uair"}
                 few{"{0} chiliméadar san uair"}
                 many{"{0} gciliméadar san uair"}
                 one{"{0} chiliméadar san uair"}
@@ -2503,6 +2196,7 @@ ga{
                 two{"{0} chiliméadar san uair"}
             }
             meter-per-second{
+                dnam{"méadair sa soicind"}
                 few{"{0} mhéadar sa soicind"}
                 many{"{0} méadar sa soicind"}
                 one{"{0} mhéadar sa soicind"}
@@ -2510,6 +2204,7 @@ ga{
                 two{"{0} mhéadar sa soicind"}
             }
             mile-per-hour{
+                dnam{"mílte san uair"}
                 few{"{0} mhíle san uair"}
                 many{"{0} míle san uair"}
                 one{"{0} mhíle san uair"}
@@ -2519,6 +2214,7 @@ ga{
         }
         temperature{
             celsius{
+                dnam{"céimeanna Celsius"}
                 few{"{0} chéim Celsius"}
                 many{"{0} gcéim Celsius"}
                 one{"{0} chéim Celsius"}
@@ -2526,6 +2222,7 @@ ga{
                 two{"{0} chéim Celsius"}
             }
             fahrenheit{
+                dnam{"céimeanna Fahrenheit"}
                 few{"{0} chéim Fahrenheit"}
                 many{"{0} gcéim Fahrenheit"}
                 one{"{0} chéim Fahrenheit"}
@@ -2533,6 +2230,7 @@ ga{
                 two{"{0} chéim Fahrenheit"}
             }
             kelvin{
+                dnam{"céimeanna ceilvin"}
                 few{"{0} chéim cheilvin"}
                 many{"{0} gcéim cheilvin"}
                 one{"{0} chéim cheilvin"}
@@ -2542,6 +2240,7 @@ ga{
         }
         volume{
             acre-foot{
+                dnam{"acra-troithe"}
                 few{"{0} acra-troigh"}
                 many{"{0} n-acra-troigh"}
                 one{"{0} acra-troigh"}
@@ -2549,6 +2248,7 @@ ga{
                 two{"{0} acra-troigh"}
             }
             bushel{
+                dnam{"buiséil"}
                 few{"{0} bhuiséal"}
                 many{"{0} mbuiséal"}
                 one{"{0} bhuiséal"}
@@ -2556,6 +2256,7 @@ ga{
                 two{"{0} bhuiséal"}
             }
             centiliter{
+                dnam{"ceintilítir"}
                 few{"{0} cheintilítear"}
                 many{"{0} gceintilítear"}
                 one{"{0} cheintilítear"}
@@ -2563,6 +2264,7 @@ ga{
                 two{"{0} cheintilítear"}
             }
             cubic-centimeter{
+                dnam{"ceintiméadair chiúbacha"}
                 few{"{0} cheintiméadar chiúbacha"}
                 many{"{0} gceintiméadar chiúbacha"}
                 one{"{0} cheintiméadar ciúbach"}
@@ -2570,6 +2272,7 @@ ga{
                 two{"{0} cheintiméadar chiúbacha"}
             }
             cubic-foot{
+                dnam{"troithe ciúbacha"}
                 few{"{0} throigh chiúbacha"}
                 many{"{0} dtroigh chiúbacha"}
                 one{"{0} troigh chiúbach"}
@@ -2577,6 +2280,7 @@ ga{
                 two{"{0} throigh chiúbacha"}
             }
             cubic-inch{
+                dnam{"orlaí ciúbacha"}
                 few{"{0} orlach chiúbacha"}
                 many{"{0} n-orlach chiúbacha"}
                 one{"{0} orlach ciúbach"}
@@ -2584,6 +2288,7 @@ ga{
                 two{"{0} orlach chiúbacha"}
             }
             cubic-kilometer{
+                dnam{"ciliméadair chiúbacha"}
                 few{"{0} chiliméadar chiúbacha"}
                 many{"{0} gciliméadar chiúbacha"}
                 one{"{0} chiliméadar ciúbach"}
@@ -2591,6 +2296,7 @@ ga{
                 two{"{0} chiliméadar chiúbacha"}
             }
             cubic-meter{
+                dnam{"méadair chiúbacha"}
                 few{"{0} mhéadar chiúbacha"}
                 many{"{0} méadar chiúbacha"}
                 one{"{0} mhéadar ciúbach"}
@@ -2598,6 +2304,7 @@ ga{
                 two{"{0} mhéadar chiúbacha"}
             }
             cubic-mile{
+                dnam{"mílte ciúbacha"}
                 few{"{0} mhíle chiúbacha"}
                 many{"{0} míle chiúbacha"}
                 one{"{0} mhíle ciúbach"}
@@ -2605,6 +2312,7 @@ ga{
                 two{"{0} mhíle chiúbacha"}
             }
             cubic-yard{
+                dnam{"slata ciúbacha"}
                 few{"{0} shlat chiúbacha"}
                 many{"{0} slat chiúbacha"}
                 one{"{0} slat chiúbach"}
@@ -2612,6 +2320,7 @@ ga{
                 two{"{0} shlat chiúbacha"}
             }
             cup{
+                dnam{"cupáin"}
                 few{"{0} chupán"}
                 many{"{0} gcupán"}
                 one{"{0} chupán"}
@@ -2619,6 +2328,7 @@ ga{
                 two{"{0} chupán"}
             }
             deciliter{
+                dnam{"deicilítir"}
                 few{"{0} dheicilítear"}
                 many{"{0} ndeicilítear"}
                 one{"{0} deicilítear"}
@@ -2626,6 +2336,7 @@ ga{
                 two{"{0} dheicilítear"}
             }
             fluid-ounce{
+                dnam{"unsaí leachtacha"}
                 few{"{0} unsa leachtacha"}
                 many{"{0} n-unsa leachtacha"}
                 one{"{0} unsa leachtach"}
@@ -2633,6 +2344,7 @@ ga{
                 two{"{0} unsa leachtacha"}
             }
             gallon{
+                dnam{"galúin"}
                 few{"{0} ghalún"}
                 many{"{0} ngalún"}
                 one{"{0} ghalún"}
@@ -2640,6 +2352,7 @@ ga{
                 two{"{0} ghalún"}
             }
             hectoliter{
+                dnam{"heictilítir"}
                 few{"{0} heictilítear"}
                 many{"{0} heictilítear"}
                 one{"{0} heictilítear"}
@@ -2647,6 +2360,7 @@ ga{
                 two{"{0} heictilítear"}
             }
             liter{
+                dnam{"lítir"}
                 few{"{0} lítear"}
                 many{"{0} lítear"}
                 one{"{0} lítear"}
@@ -2654,6 +2368,7 @@ ga{
                 two{"{0} lítear"}
             }
             megaliter{
+                dnam{"meigilítir"}
                 few{"{0} mheigilítear"}
                 many{"{0} meigilítear"}
                 one{"{0} mheigilítear"}
@@ -2661,6 +2376,7 @@ ga{
                 two{"{0} mheigilítear"}
             }
             milliliter{
+                dnam{"millilítir"}
                 few{"{0} mhillilítear"}
                 many{"{0} millilítear"}
                 one{"{0} mhillilítear"}
@@ -2668,6 +2384,7 @@ ga{
                 two{"{0} mhillilítear"}
             }
             pint{
+                dnam{"piontaí"}
                 few{"{0} phionta"}
                 many{"{0} bpionta"}
                 one{"{0} phionta"}
@@ -2675,6 +2392,7 @@ ga{
                 two{"{0} phionta"}
             }
             quart{
+                dnam{"cáirt"}
                 few{"{0} chárt"}
                 many{"{0} gcárt"}
                 one{"{0} chárt"}
@@ -2682,6 +2400,7 @@ ga{
                 two{"{0} chárt"}
             }
             tablespoon{
+                dnam{"spúnóga boird"}
                 few{"{0} spúnóg bhoird"}
                 many{"{0} spúnóg bhoird"}
                 one{"{0} spúnóg bhoird"}
@@ -2689,6 +2408,7 @@ ga{
                 two{"{0} spúnóg bhoird"}
             }
             teaspoon{
+                dnam{"taespúnóga"}
                 few{"{0} thaespúnóg"}
                 many{"{0} dtaespúnóg"}
                 one{"{0} taespúnóg"}

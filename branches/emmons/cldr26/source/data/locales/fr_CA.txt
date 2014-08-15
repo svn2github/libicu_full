@@ -513,6 +513,11 @@ fr_CA{
         x-Publishing{"Édition"}
     }
     units{
+        acceleration{
+            g-force{
+                dnam{"force G"}
+            }
+        }
         angle{
             arc-minute{
                 one{"{0} minute d’angle"}
@@ -521,130 +526,85 @@ fr_CA{
         }
         area{
             acre{
+                dnam{"acres"}
                 one{"{0} acre"}
                 other{"{0} acres"}
             }
             square-mile{
+                dnam{"milles carrés"}
                 one{"{0} mille carré"}
                 other{"{0} milles carrés"}
             }
             square-yard{
+                dnam{"verges carrées"}
                 one{"{0} verge carrée"}
                 other{"{0} verges carrées"}
             }
         }
         consumption{
             mile-per-gallon{
+                dnam{"milles au gallon"}
                 one{"{0} mille au gallon"}
                 other{"{0} milles au gallon"}
             }
         }
+        duration{
+            second{
+                per{"{0} à la seconde"}
+            }
+        }
         energy{
             foodcalorie{
+                dnam{"kilocalories"}
                 one{"{0} kilocalorie"}
                 other{"{0} kilocalories"}
             }
         }
         length{
             mile{
+                dnam{"mille"}
                 one{"{0} mille"}
                 other{"{0} milles"}
             }
             yard{
+                dnam{"verges"}
                 one{"{0} verge"}
                 other{"{0} verges"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"force G"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"acres"}
-                }
-                square-mile{
-                    dnam{"milles carrés"}
-                }
-                square-yard{
-                    dnam{"verges carrées"}
-                }
-            }
-            consumption{
-                mile-per-gallon{
-                    dnam{"milles au gallon"}
-                }
-            }
-            duration{
-                second{
-                    per{"{0} à la seconde"}
-                }
-            }
-            energy{
-                foodcalorie{
-                    dnam{"kilocalories"}
-                }
-            }
-            length{
-                mile{
-                    dnam{"mille"}
-                }
-                yard{
-                    dnam{"verges"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilomètres à l’heure"}
-                }
-                mile-per-hour{
-                    dnam{"milles par heure"}
-                }
-            }
-            volume{
-                cubic-mile{
-                    dnam{"milles cubes"}
-                }
-                cubic-yard{
-                    dnam{"verges cubes"}
-                }
-                pint{
-                    dnam{"chopine"}
-                }
-                quart{
-                    dnam{"pintes"}
-                }
-                teaspoon{
-                    dnam{"cuillères à thé"}
-                }
-            }
-        }
         speed{
+            kilometer-per-hour{
+                dnam{"kilomètres à l’heure"}
+            }
             mile-per-hour{
+                dnam{"milles par heure"}
                 one{"{0} mille par heure"}
                 other{"{0} milles par heure"}
             }
         }
         volume{
             cubic-mile{
+                dnam{"milles cubes"}
                 one{"{0} mille cube"}
                 other{"{0} milles cubes"}
             }
             cubic-yard{
+                dnam{"verges cubes"}
                 one{"{0} verge cube"}
                 other{"{0} verges cubes"}
             }
             pint{
+                dnam{"chopine"}
                 one{"{0} chopine"}
                 other{"{0} chopines"}
             }
             quart{
+                dnam{"pintes"}
                 one{"{0} pinte"}
                 other{"{0} pintes"}
             }
             teaspoon{
+                dnam{"cuillères à thé"}
                 one{"{0} cuillère à thé"}
                 other{"{0} cuillères à thé"}
             }

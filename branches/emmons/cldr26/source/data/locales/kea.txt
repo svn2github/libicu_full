@@ -1175,516 +1175,338 @@ kea{
     units{
         acceleration{
             g-force{
+                dnam{"forsa G"}
                 other{"{0} forsa G"}
             }
             meter-per-second-squared{
+                dnam{"métru pur sigundu kuadradu"}
                 other{"{0} métru pur sigundu kuadradu"}
             }
         }
         angle{
             degree{
+                dnam{"grau"}
                 other{"{0} grau"}
             }
             radian{
+                dnam{"radianu"}
                 other{"{0} radianu"}
             }
         }
         area{
             acre{
+                dnam{"ákri"}
                 other{"{0} ákri"}
             }
             hectare{
+                dnam{"ektar"}
                 other{"{0} ektar"}
             }
             square-centimeter{
+                dnam{"sentímetru kuadradu"}
                 other{"{0} sentímetru kuadradu"}
             }
             square-foot{
+                dnam{"pé kuadradu"}
                 other{"{0} pé kuadradu"}
             }
             square-inch{
+                dnam{"pulegada kuadradu"}
                 other{"{0} pulegada kuadradu"}
             }
             square-kilometer{
+                dnam{"kilómetru kuadradu"}
                 other{"{0} kilómetru kuadradu"}
             }
             square-meter{
+                dnam{"métru kuadradu"}
                 other{"{0} métru kuadradu"}
             }
             square-mile{
+                dnam{"milha kuadradu"}
                 other{"{0} milha kuadradu"}
             }
             square-yard{
+                dnam{"jarda kuadradu"}
                 other{"{0} jarda kuadradu"}
             }
         }
         consumption{
             liter-per-kilometer{
+                dnam{"litru pur kilómetru"}
                 other{"{0} litru pur kilómetru"}
             }
             mile-per-gallon{
+                dnam{"milha pur galãu"}
                 other{"{0} milha pur galãu"}
             }
         }
         digital{
             bit{
+                dnam{"bit"}
                 other{"{0} bit"}
             }
             byte{
+                dnam{"byte"}
                 other{"{0} byte"}
             }
             gigabit{
+                dnam{"jigabit"}
                 other{"{0} jigabit"}
             }
             gigabyte{
+                dnam{"jigabyte"}
                 other{"{0} jigabyte"}
             }
             kilobit{
+                dnam{"kilobit"}
                 other{"{0} kilobit"}
             }
             kilobyte{
+                dnam{"kilobyte"}
                 other{"{0} kilobyte"}
             }
             megabit{
+                dnam{"megabit"}
                 other{"{0} megabit"}
             }
             megabyte{
+                dnam{"megabyte"}
                 other{"{0} megabyte"}
             }
             terabit{
+                dnam{"terabit"}
                 other{"{0} terabit"}
             }
             terabyte{
+                dnam{"terabyte"}
                 other{"{0} terabyte"}
             }
         }
         duration{
             day{
+                dnam{"dia"}
                 other{"{0} dia"}
             }
             hour{
+                dnam{"ora"}
                 other{"{0} ora"}
+                per{"{0} pur ora"}
             }
             microsecond{
+                dnam{"mikrosigundu"}
                 other{"{0} mikrosigundu"}
             }
             millisecond{
+                dnam{"milisigundu"}
                 other{"{0} milisigundu"}
             }
             minute{
+                dnam{"minutu"}
                 other{"{0} minutu"}
             }
             month{
+                dnam{"mes"}
                 other{"{0} mes"}
             }
             nanosecond{
+                dnam{"nanosigundu"}
                 other{"{0} nanosigundu"}
             }
             second{
+                dnam{"sigundu"}
                 other{"{0} sigundu"}
+                per{"{0} pur sigundu"}
             }
             week{
+                dnam{"simana"}
                 other{"{0} simana"}
             }
             year{
+                dnam{"anu"}
                 other{"{0} anu"}
             }
         }
         length{
             astronomical-unit{
+                dnam{"unidadi astronómiku"}
                 other{"{0} unidadi astronómiku"}
             }
             centimeter{
+                dnam{"sentímetru"}
                 other{"{0} sentímetru"}
             }
             decimeter{
+                dnam{"desímetru"}
                 other{"{0} desímetru"}
             }
             foot{
+                dnam{"pé"}
                 other{"{0} pé"}
             }
             inch{
+                dnam{"pulegada"}
                 other{"{0} pulegada"}
             }
             kilometer{
+                dnam{"kilómetru"}
                 other{"{0} kilómetru"}
             }
             light-year{
+                dnam{"anu-lus"}
                 other{"{0} anu-lus"}
             }
             meter{
+                dnam{"métru"}
                 other{"{0} métru"}
             }
             micrometer{
+                dnam{"mikrómetru"}
                 other{"{0} mikrómetru"}
             }
             mile{
+                dnam{"milha"}
                 other{"{0} milha"}
             }
             millimeter{
+                dnam{"milímetru"}
                 other{"{0} milímetru"}
             }
             nanometer{
+                dnam{"nanómetru"}
                 other{"{0} nanómetru"}
             }
             nautical-mile{
+                dnam{"milha náutiku"}
                 other{"{0} milha náutiku"}
             }
             parsec{
+                dnam{"parsek"}
                 other{"{0} parsek"}
             }
             picometer{
+                dnam{"pikómetru"}
                 other{"{0} pikómetru"}
             }
             yard{
+                dnam{"jarda"}
                 other{"{0} jarda"}
             }
         }
         light{
             lux{
+                dnam{"lux"}
                 other{"{0} lux"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"forsa G"}
-                }
-                meter-per-second-squared{
-                    dnam{"métru pur sigundu kuadradu"}
-                }
-            }
-            angle{
-                degree{
-                    dnam{"grau"}
-                }
-                radian{
-                    dnam{"radianu"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"ákri"}
-                }
-                hectare{
-                    dnam{"ektar"}
-                }
-                square-centimeter{
-                    dnam{"sentímetru kuadradu"}
-                }
-                square-foot{
-                    dnam{"pé kuadradu"}
-                }
-                square-inch{
-                    dnam{"pulegada kuadradu"}
-                }
-                square-kilometer{
-                    dnam{"kilómetru kuadradu"}
-                }
-                square-meter{
-                    dnam{"métru kuadradu"}
-                }
-                square-mile{
-                    dnam{"milha kuadradu"}
-                }
-                square-yard{
-                    dnam{"jarda kuadradu"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"litru pur kilómetru"}
-                }
-                mile-per-gallon{
-                    dnam{"milha pur galãu"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bit"}
-                }
-                byte{
-                    dnam{"byte"}
-                }
-                gigabit{
-                    dnam{"jigabit"}
-                }
-                gigabyte{
-                    dnam{"jigabyte"}
-                }
-                kilobit{
-                    dnam{"kilobit"}
-                }
-                kilobyte{
-                    dnam{"kilobyte"}
-                }
-                megabit{
-                    dnam{"megabit"}
-                }
-                megabyte{
-                    dnam{"megabyte"}
-                }
-                terabit{
-                    dnam{"terabit"}
-                }
-                terabyte{
-                    dnam{"terabyte"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"dia"}
-                }
-                hour{
-                    dnam{"ora"}
-                    per{"{0} pur ora"}
-                }
-                microsecond{
-                    dnam{"mikrosigundu"}
-                }
-                millisecond{
-                    dnam{"milisigundu"}
-                }
-                minute{
-                    dnam{"minutu"}
-                }
-                month{
-                    dnam{"mes"}
-                }
-                nanosecond{
-                    dnam{"nanosigundu"}
-                }
-                second{
-                    dnam{"sigundu"}
-                    per{"{0} pur sigundu"}
-                }
-                week{
-                    dnam{"simana"}
-                }
-                year{
-                    dnam{"anu"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"unidadi astronómiku"}
-                }
-                centimeter{
-                    dnam{"sentímetru"}
-                }
-                decimeter{
-                    dnam{"desímetru"}
-                }
-                foot{
-                    dnam{"pé"}
-                }
-                inch{
-                    dnam{"pulegada"}
-                }
-                kilometer{
-                    dnam{"kilómetru"}
-                }
-                light-year{
-                    dnam{"anu-lus"}
-                }
-                meter{
-                    dnam{"métru"}
-                }
-                micrometer{
-                    dnam{"mikrómetru"}
-                }
-                mile{
-                    dnam{"milha"}
-                }
-                millimeter{
-                    dnam{"milímetru"}
-                }
-                nanometer{
-                    dnam{"nanómetru"}
-                }
-                nautical-mile{
-                    dnam{"milha náutiku"}
-                }
-                parsec{
-                    dnam{"parsek"}
-                }
-                picometer{
-                    dnam{"pikómetru"}
-                }
-                yard{
-                    dnam{"jarda"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"lux"}
-                }
-            }
-            power{
-                watt{
-                    dnam{"watt"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"kilati"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilómetru pur ora"}
-                }
-                meter-per-second{
-                    dnam{"métru pur sigundu"}
-                }
-                mile-per-hour{
-                    dnam{"milha pur ora"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"ákri-pé"}
-                }
-                centiliter{
-                    dnam{"sentilitru"}
-                }
-                cubic-centimeter{
-                    dnam{"sentímetru kúbiku"}
-                }
-                cubic-foot{
-                    dnam{"pé kúbiku"}
-                }
-                cubic-inch{
-                    dnam{"pulegada kúbiku"}
-                }
-                cubic-kilometer{
-                    dnam{"kilómetru kúbiku"}
-                }
-                cubic-meter{
-                    dnam{"métru kúbiku"}
-                }
-                cubic-mile{
-                    dnam{"milha kúbiku"}
-                }
-                cubic-yard{
-                    dnam{"jarda kúbiku"}
-                }
-                cup{
-                    dnam{"xávina"}
-                }
-                deciliter{
-                    dnam{"desilitru"}
-                }
-                fluid-ounce{
-                    dnam{"ónsa fluídu"}
-                }
-                gallon{
-                    dnam{"galãu"}
-                }
-                hectoliter{
-                    dnam{"ektolitru"}
-                }
-                liter{
-                    dnam{"litru"}
-                }
-                megaliter{
-                    dnam{"megalitru"}
-                }
-                milliliter{
-                    dnam{"mililitru"}
-                }
-                pint{
-                    dnam{"pint"}
-                }
-                quart{
-                    dnam{"kuart"}
-                }
-                tablespoon{
-                    dnam{"kudjer di sopa"}
-                }
-                teaspoon{
-                    dnam{"kudjer di xá"}
-                }
+        power{
+            watt{
+                dnam{"watt"}
             }
         }
         proportion{
             karat{
+                dnam{"kilati"}
                 other{"{0} kilati"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilómetru pur ora"}
                 other{"{0} kilómetru pur ora"}
             }
             meter-per-second{
+                dnam{"métru pur sigundu"}
                 other{"{0} métru pur sigundu"}
             }
             mile-per-hour{
+                dnam{"milha pur ora"}
                 other{"{0} milha pur ora"}
             }
         }
         volume{
             acre-foot{
+                dnam{"ákri-pé"}
                 other{"{0} ákri-pé"}
             }
             centiliter{
+                dnam{"sentilitru"}
                 other{"{0} sentilitru"}
             }
             cubic-centimeter{
+                dnam{"sentímetru kúbiku"}
                 other{"{0} sentímetru kúbiku"}
             }
             cubic-foot{
+                dnam{"pé kúbiku"}
                 other{"{0} pé kúbiku"}
             }
             cubic-inch{
+                dnam{"pulegada kúbiku"}
                 other{"{0} pulegada kúbiku"}
             }
             cubic-kilometer{
+                dnam{"kilómetru kúbiku"}
                 other{"{0} kilómetru kúbiku"}
             }
             cubic-meter{
+                dnam{"métru kúbiku"}
                 other{"{0} métru kúbiku"}
             }
             cubic-mile{
+                dnam{"milha kúbiku"}
                 other{"{0} milha kúbiku"}
             }
             cubic-yard{
+                dnam{"jarda kúbiku"}
                 other{"{0} jarda kúbiku"}
             }
             cup{
+                dnam{"xávina"}
                 other{"{0} xávina"}
             }
             deciliter{
+                dnam{"desilitru"}
                 other{"{0} desilitru"}
             }
             fluid-ounce{
+                dnam{"ónsa fluídu"}
                 other{"{0} ónsa fluídu"}
             }
             gallon{
+                dnam{"galãu"}
                 other{"{0} galãu"}
             }
             hectoliter{
+                dnam{"ektolitru"}
                 other{"{0} ektolitru"}
             }
             liter{
+                dnam{"litru"}
                 other{"{0} litru"}
             }
             megaliter{
+                dnam{"megalitru"}
                 other{"{0} megalitru"}
             }
             milliliter{
+                dnam{"mililitru"}
                 other{"{0} mililitru"}
             }
             pint{
+                dnam{"pint"}
                 other{"{0} pint"}
             }
             quart{
+                dnam{"kuart"}
                 other{"{0} kuart"}
             }
             tablespoon{
+                dnam{"kudjer di sopa"}
                 other{"{0} kudjer di sopa"}
             }
             teaspoon{
+                dnam{"kudjer di xá"}
                 other{"{0} kudjer di xá"}
             }
         }

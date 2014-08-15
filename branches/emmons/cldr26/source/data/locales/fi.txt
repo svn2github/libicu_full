@@ -1508,66 +1508,81 @@ fi{
     units{
         acceleration{
             g-force{
+                dnam{"G-voimat"}
                 one{"{0} G-voima"}
                 other{"{0} G-voimaa"}
             }
             meter-per-second-squared{
+                dnam{"metrit per sekunti toiseen"}
                 one{"{0} metri per sekunti toiseen"}
                 other{"{0} metriä per sekunti toiseen"}
             }
         }
         angle{
             arc-minute{
+                dnam{"kulmaminuutit"}
                 one{"{0} kulmaminuutti"}
                 other{"{0} kulmaminuuttia"}
             }
             arc-second{
+                dnam{"kulmasekunnit"}
                 one{"{0} kulmasekunti"}
                 other{"{0} kulmasekuntia"}
             }
             degree{
+                dnam{"asteet"}
                 one{"{0} aste"}
                 other{"{0} astetta"}
             }
             radian{
+                dnam{"radiaanit"}
                 one{"{0} radiaani"}
                 other{"{0} radiaania"}
             }
         }
         area{
             acre{
+                dnam{"eekkerit"}
                 one{"{0} eekkeri"}
                 other{"{0} eekkeriä"}
             }
             hectare{
+                dnam{"hehtaarit"}
                 one{"{0} hehtaari"}
                 other{"{0} hehtaaria"}
             }
             square-centimeter{
+                dnam{"neliösenttimetrit"}
                 one{"{0} neliösenttimetri"}
                 other{"{0} neliösenttimetriä"}
             }
             square-foot{
+                dnam{"neliöjalat"}
                 one{"{0} neliöjalka"}
                 other{"{0} neliöjalkaa"}
             }
             square-inch{
+                dnam{"neliötuumat"}
                 one{"{0} neliötuuma"}
                 other{"{0} neliötuumaa"}
             }
             square-kilometer{
+                dnam{"neliökilometrit"}
                 one{"{0} neliökilometri"}
                 other{"{0} neliökilometriä"}
             }
             square-meter{
+                dnam{"neliömetrit"}
                 one{"{0} neliömetri"}
                 other{"{0} neliömetriä"}
             }
             square-mile{
+                dnam{"neliömailit"}
                 one{"{0} neliömaili"}
                 other{"{0} neliömailia"}
             }
             square-yard{
+                dnam{"neliöjaardit"}
                 one{"{0} neliöjaardi"}
                 other{"{0} neliöjaardia"}
             }
@@ -1577,857 +1592,562 @@ fi{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"litrat per kilometri"}
                 one{"{0} litra per kilometri"}
                 other{"{0} litraa per kilometri"}
             }
             mile-per-gallon{
+                dnam{"mailit per gallona"}
                 one{"{0} maili per gallona"}
                 other{"{0} mailia per gallona"}
             }
         }
         digital{
             bit{
+                dnam{"bitit"}
                 one{"{0} bitti"}
                 other{"{0} bittiä"}
             }
             byte{
+                dnam{"tavut"}
                 one{"{0} tavu"}
                 other{"{0} tavua"}
             }
             gigabit{
+                dnam{"gigabitit"}
                 one{"{0} gigabitti"}
                 other{"{0} gigabittiä"}
             }
             gigabyte{
+                dnam{"gigatavut"}
                 one{"{0} gigatavu"}
                 other{"{0} gigatavua"}
             }
             kilobit{
+                dnam{"kilobitit"}
                 one{"{0} kilobitti"}
                 other{"{0} kilobittiä"}
             }
             kilobyte{
+                dnam{"kilotavut"}
                 one{"{0} kilotavu"}
                 other{"{0} kilotavua"}
             }
             megabit{
+                dnam{"megabitit"}
                 one{"{0} megabitti"}
                 other{"{0} megabittiä"}
             }
             megabyte{
+                dnam{"megatavut"}
                 one{"{0} megatavu"}
                 other{"{0} megatavua"}
             }
             terabit{
+                dnam{"terabitit"}
                 one{"{0} terabitti"}
                 other{"{0} terabittiä"}
             }
             terabyte{
+                dnam{"teratavut"}
                 one{"{0} teratavu"}
                 other{"{0} teratavua"}
             }
         }
         duration{
             day{
+                dnam{"päivät"}
                 one{"{0} päivä"}
                 other{"{0} päivää"}
             }
             hour{
+                dnam{"tunnit"}
                 one{"{0} tunti"}
                 other{"{0} tuntia"}
+                per{"{0} tunnissa"}
             }
             microsecond{
+                dnam{"mikrosekunnit"}
                 one{"{0} mikrosekunti"}
                 other{"{0} mikrosekuntia"}
             }
             millisecond{
+                dnam{"millisekunnit"}
                 one{"{0} millisekunti"}
                 other{"{0} millisekuntia"}
             }
             minute{
+                dnam{"minuutit"}
                 one{"{0} minuutti"}
                 other{"{0} minuuttia"}
             }
             month{
+                dnam{"kuukaudet"}
                 one{"{0} kuukausi"}
                 other{"{0} kuukautta"}
             }
             nanosecond{
+                dnam{"nanosekunnit"}
                 one{"{0} nanosekunti"}
                 other{"{0} nanosekuntia"}
             }
             second{
+                dnam{"sekunnit"}
                 one{"{0} sekunti"}
                 other{"{0} sekuntia"}
+                per{"{0} sekunnissa"}
             }
             week{
+                dnam{"viikot"}
                 one{"{0} viikko"}
                 other{"{0} viikkoa"}
             }
             year{
+                dnam{"vuodet"}
                 one{"{0} vuosi"}
                 other{"{0} vuotta"}
             }
         }
         electric{
             ampere{
+                dnam{"ampeerit"}
                 one{"{0} ampeeri"}
                 other{"{0} ampeeria"}
             }
             milliampere{
+                dnam{"milliampeerit"}
                 one{"{0} milliampeeri"}
                 other{"{0} milliampeeria"}
             }
             ohm{
+                dnam{"ohmit"}
                 one{"{0} ohmi"}
                 other{"{0} ohmia"}
             }
             volt{
+                dnam{"voltit"}
                 one{"{0} voltti"}
                 other{"{0} volttia"}
             }
         }
         energy{
             calorie{
+                dnam{"kalorit"}
                 one{"{0} kalori"}
                 other{"{0} kaloria"}
             }
             foodcalorie{
+                dnam{"kilokalorit"}
                 one{"{0} kilokalori"}
                 other{"{0} kilokaloria"}
             }
             joule{
+                dnam{"joulet"}
                 one{"{0} joule"}
                 other{"{0} joulea"}
             }
             kilocalorie{
+                dnam{"kilokalorit"}
                 one{"{0} kilokalori"}
                 other{"{0} kilokaloria"}
             }
             kilojoule{
+                dnam{"kilojoulet"}
                 one{"{0} kilojoule"}
                 other{"{0} kilojoulea"}
             }
             kilowatt-hour{
+                dnam{"kilowattitunnit"}
                 one{"{0} kilowattitunti"}
                 other{"{0} kilowattituntia"}
             }
         }
         frequency{
             gigahertz{
+                dnam{"gigahertsit"}
                 one{"{0} gigahertsi"}
                 other{"{0} gigahertsiä"}
             }
             hertz{
+                dnam{"hertsit"}
                 one{"{0} hertsi"}
                 other{"{0} hertsiä"}
             }
             kilohertz{
+                dnam{"kilohertsit"}
                 one{"{0} kilohertsi"}
                 other{"{0} kilohertsiä"}
             }
             megahertz{
+                dnam{"megahertsit"}
                 one{"{0} megahertsi"}
                 other{"{0} megahertsiä"}
             }
         }
         length{
             astronomical-unit{
+                dnam{"astronomiset yksiköt"}
                 one{"{0} astronominen yksikkö"}
                 other{"{0} astronomista yksikköä"}
             }
             centimeter{
+                dnam{"senttimetrit"}
                 one{"{0} senttimetri"}
                 other{"{0} senttimetriä"}
             }
             decimeter{
+                dnam{"desimetrit"}
                 one{"{0} desimetri"}
                 other{"{0} desimetriä"}
             }
             fathom{
+                dnam{"sylet"}
                 one{"syli"}
                 other{"{0} syltä"}
             }
             foot{
+                dnam{"jalat"}
                 one{"{0} jalka"}
                 other{"{0} jalkaa"}
             }
             furlong{
+                dnam{"furlongit"}
                 one{"{0} furlong"}
                 other{"{0} furlongia"}
             }
             inch{
+                dnam{"tuumat"}
                 one{"{0} tuuma"}
                 other{"{0} tuumaa"}
             }
             kilometer{
+                dnam{"kilometrit"}
                 one{"{0} kilometri"}
                 other{"{0} kilometriä"}
             }
             light-year{
+                dnam{"valovuodet"}
                 one{"{0} valovuosi"}
                 other{"{0} valovuotta"}
             }
             meter{
+                dnam{"metrit"}
                 one{"{0} metri"}
                 other{"{0} metriä"}
             }
             micrometer{
+                dnam{"mikrometrit"}
                 one{"{0} mikrometri"}
                 other{"{0} mikrometriä"}
             }
             mile{
+                dnam{"mailit"}
                 one{"{0} maili"}
                 other{"{0} mailia"}
             }
             millimeter{
+                dnam{"millimetrit"}
                 one{"{0} millimetri"}
                 other{"{0} millimetriä"}
             }
             nanometer{
+                dnam{"nanometrit"}
                 one{"{0} nanometri"}
                 other{"{0} nanometriä"}
             }
             nautical-mile{
+                dnam{"meripeninkulmat"}
                 one{"{0} meripeninkulma"}
                 other{"{0} meripeninkulmaa"}
             }
             parsec{
+                dnam{"parsekit"}
                 one{"{0} parsek"}
                 other{"{0} parsekia"}
             }
             picometer{
+                dnam{"pikometrit"}
                 one{"{0} pikometri"}
                 other{"{0} pikometriä"}
             }
             yard{
+                dnam{"jaardit"}
                 one{"{0} jaardi"}
                 other{"{0} jaardia"}
             }
         }
         light{
             lux{
+                dnam{"luksit"}
                 one{"{0} luksi"}
                 other{"{0} luksia"}
             }
         }
         mass{
             carat{
+                dnam{"karaatit"}
                 one{"{0} karaatti"}
                 other{"{0} karaattia"}
             }
             gram{
+                dnam{"grammat"}
                 one{"{0} gramma"}
                 other{"{0} grammaa"}
             }
             kilogram{
+                dnam{"kilogrammat"}
                 one{"{0} kilogramma"}
                 other{"{0} kilogrammaa"}
             }
             metric-ton{
+                dnam{"tonnit"}
                 one{"{0} tonni"}
                 other{"{0} tonnia"}
             }
             microgram{
+                dnam{"mikrogrammat"}
                 one{"{0} mikrogramma"}
                 other{"{0} mikrogrammaa"}
             }
             milligram{
+                dnam{"milligrammat"}
                 one{"{0} milligramma"}
                 other{"{0} milligrammaa"}
             }
             ounce{
+                dnam{"unssit"}
                 one{"{0} unssi"}
                 other{"{0} unssia"}
             }
             ounce-troy{
+                dnam{"troy-unssit"}
                 one{"{0} troy-unssi"}
                 other{"{0} troy-unssia"}
             }
             pound{
+                dnam{"paunat"}
                 one{"{0} pauna"}
                 other{"{0} paunaa"}
             }
             stone{
+                dnam{"stonet"}
                 one{"{0} stone"}
                 other{"{0} stonea"}
             }
             ton{
+                dnam{"US-tonnit"}
                 one{"{0} US-tonni"}
                 other{"{0} US-tonnia"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"G-voimat"}
-                }
-                meter-per-second-squared{
-                    dnam{"metrit per sekunti toiseen"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"kulmaminuutit"}
-                }
-                arc-second{
-                    dnam{"kulmasekunnit"}
-                }
-                degree{
-                    dnam{"asteet"}
-                }
-                radian{
-                    dnam{"radiaanit"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"eekkerit"}
-                }
-                hectare{
-                    dnam{"hehtaarit"}
-                }
-                square-centimeter{
-                    dnam{"neliösenttimetrit"}
-                }
-                square-foot{
-                    dnam{"neliöjalat"}
-                }
-                square-inch{
-                    dnam{"neliötuumat"}
-                }
-                square-kilometer{
-                    dnam{"neliökilometrit"}
-                }
-                square-meter{
-                    dnam{"neliömetrit"}
-                }
-                square-mile{
-                    dnam{"neliömailit"}
-                }
-                square-yard{
-                    dnam{"neliöjaardit"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"litrat per kilometri"}
-                }
-                mile-per-gallon{
-                    dnam{"mailit per gallona"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bitit"}
-                }
-                byte{
-                    dnam{"tavut"}
-                }
-                gigabit{
-                    dnam{"gigabitit"}
-                }
-                gigabyte{
-                    dnam{"gigatavut"}
-                }
-                kilobit{
-                    dnam{"kilobitit"}
-                }
-                kilobyte{
-                    dnam{"kilotavut"}
-                }
-                megabit{
-                    dnam{"megabitit"}
-                }
-                megabyte{
-                    dnam{"megatavut"}
-                }
-                terabit{
-                    dnam{"terabitit"}
-                }
-                terabyte{
-                    dnam{"teratavut"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"päivät"}
-                }
-                hour{
-                    dnam{"tunnit"}
-                    per{"{0} tunnissa"}
-                }
-                microsecond{
-                    dnam{"mikrosekunnit"}
-                }
-                millisecond{
-                    dnam{"millisekunnit"}
-                }
-                minute{
-                    dnam{"minuutit"}
-                }
-                month{
-                    dnam{"kuukaudet"}
-                }
-                nanosecond{
-                    dnam{"nanosekunnit"}
-                }
-                second{
-                    dnam{"sekunnit"}
-                    per{"{0} sekunnissa"}
-                }
-                week{
-                    dnam{"viikot"}
-                }
-                year{
-                    dnam{"vuodet"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"ampeerit"}
-                }
-                milliampere{
-                    dnam{"milliampeerit"}
-                }
-                ohm{
-                    dnam{"ohmit"}
-                }
-                volt{
-                    dnam{"voltit"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"kalorit"}
-                }
-                foodcalorie{
-                    dnam{"kilokalorit"}
-                }
-                joule{
-                    dnam{"joulet"}
-                }
-                kilocalorie{
-                    dnam{"kilokalorit"}
-                }
-                kilojoule{
-                    dnam{"kilojoulet"}
-                }
-                kilowatt-hour{
-                    dnam{"kilowattitunnit"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigahertsit"}
-                }
-                hertz{
-                    dnam{"hertsit"}
-                }
-                kilohertz{
-                    dnam{"kilohertsit"}
-                }
-                megahertz{
-                    dnam{"megahertsit"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"astronomiset yksiköt"}
-                }
-                centimeter{
-                    dnam{"senttimetrit"}
-                }
-                decimeter{
-                    dnam{"desimetrit"}
-                }
-                fathom{
-                    dnam{"sylet"}
-                }
-                foot{
-                    dnam{"jalat"}
-                }
-                furlong{
-                    dnam{"furlongit"}
-                }
-                inch{
-                    dnam{"tuumat"}
-                }
-                kilometer{
-                    dnam{"kilometrit"}
-                }
-                light-year{
-                    dnam{"valovuodet"}
-                }
-                meter{
-                    dnam{"metrit"}
-                }
-                micrometer{
-                    dnam{"mikrometrit"}
-                }
-                mile{
-                    dnam{"mailit"}
-                }
-                millimeter{
-                    dnam{"millimetrit"}
-                }
-                nanometer{
-                    dnam{"nanometrit"}
-                }
-                nautical-mile{
-                    dnam{"meripeninkulmat"}
-                }
-                parsec{
-                    dnam{"parsekit"}
-                }
-                picometer{
-                    dnam{"pikometrit"}
-                }
-                yard{
-                    dnam{"jaardit"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"luksit"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"karaatit"}
-                }
-                gram{
-                    dnam{"grammat"}
-                }
-                kilogram{
-                    dnam{"kilogrammat"}
-                }
-                metric-ton{
-                    dnam{"tonnit"}
-                }
-                microgram{
-                    dnam{"mikrogrammat"}
-                }
-                milligram{
-                    dnam{"milligrammat"}
-                }
-                ounce{
-                    dnam{"unssit"}
-                }
-                ounce-troy{
-                    dnam{"troy-unssit"}
-                }
-                pound{
-                    dnam{"paunat"}
-                }
-                stone{
-                    dnam{"stonet"}
-                }
-                ton{
-                    dnam{"US-tonnit"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigawatit"}
-                }
-                horsepower{
-                    dnam{"hevosvoimat"}
-                }
-                kilowatt{
-                    dnam{"kilowatit"}
-                }
-                megawatt{
-                    dnam{"megawatit"}
-                }
-                milliwatt{
-                    dnam{"milliwatit"}
-                }
-                watt{
-                    dnam{"watit"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hehtopascalit"}
-                }
-                inch-hg{
-                    dnam{"elohopeatuumat"}
-                }
-                millibar{
-                    dnam{"millibaarit"}
-                }
-                millimeter-of-mercury{
-                    dnam{"elohopeamillimetrit"}
-                }
-                pound-per-square-inch{
-                    dnam{"paunat neliötuumaa kohti"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"karaatit"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilometrit tunnissa"}
-                }
-                meter-per-second{
-                    dnam{"metrit sekunnissa"}
-                }
-                mile-per-hour{
-                    dnam{"mailit tunnissa"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"celsiusasteet"}
-                }
-                fahrenheit{
-                    dnam{"fahrenheitasteet"}
-                }
-                kelvin{
-                    dnam{"kelvinit"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"eekkerijalat"}
-                }
-                bushel{
-                    dnam{"bushelit"}
-                }
-                centiliter{
-                    dnam{"senttilitrat"}
-                }
-                cubic-centimeter{
-                    dnam{"kuutiosenttimetrit"}
-                }
-                cubic-foot{
-                    dnam{"kuutiojalat"}
-                }
-                cubic-inch{
-                    dnam{"kuutiotuumat"}
-                }
-                cubic-kilometer{
-                    dnam{"kuutiokilometrit"}
-                }
-                cubic-meter{
-                    dnam{"kuutiometrit"}
-                }
-                cubic-mile{
-                    dnam{"kuutiomailit"}
-                }
-                cubic-yard{
-                    dnam{"kuutiojaardit"}
-                }
-                cup{
-                    dnam{"kupit"}
-                }
-                deciliter{
-                    dnam{"desilitrat"}
-                }
-                fluid-ounce{
-                    dnam{"nesteunssit"}
-                }
-                gallon{
-                    dnam{"gallonat"}
-                }
-                hectoliter{
-                    dnam{"hehtolitrat"}
-                }
-                liter{
-                    dnam{"litrat"}
-                }
-                megaliter{
-                    dnam{"megalitrat"}
-                }
-                milliliter{
-                    dnam{"millilitrat"}
-                }
-                pint{
-                    dnam{"pintit"}
-                }
-                quart{
-                    dnam{"neljännesgallonat"}
-                }
-                tablespoon{
-                    dnam{"ruokalusikat"}
-                }
-                teaspoon{
-                    dnam{"teelusikat"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigawatit"}
                 one{"{0} gigawatti"}
                 other{"{0} gigawattia"}
             }
             horsepower{
+                dnam{"hevosvoimat"}
                 one{"{0} hevosvoima"}
                 other{"{0} hevosvoimaa"}
             }
             kilowatt{
+                dnam{"kilowatit"}
                 one{"{0} kilowatti"}
                 other{"{0} kilowattia"}
             }
             megawatt{
+                dnam{"megawatit"}
                 one{"{0} megawatti"}
                 other{"{0} megawattia"}
             }
             milliwatt{
+                dnam{"milliwatit"}
                 one{"{0} milliwatti"}
                 other{"{0} milliwattia"}
             }
             watt{
+                dnam{"watit"}
                 one{"{0} watti"}
                 other{"{0} wattia"}
             }
         }
         pressure{
             hectopascal{
+                dnam{"hehtopascalit"}
                 one{"{0} hehtopascal"}
                 other{"{0} hehtopascalia"}
             }
             inch-hg{
+                dnam{"elohopeatuumat"}
                 one{"{0} tuuma elohopeaa"}
                 other{"{0} tuumaa elohopeaa"}
             }
             millibar{
+                dnam{"millibaarit"}
                 one{"{0} millibaari"}
                 other{"{0} millibaaria"}
             }
             millimeter-of-mercury{
+                dnam{"elohopeamillimetrit"}
                 one{"{0} millimetri elohopeaa"}
                 other{"{0} millimetriä elohopeaa"}
             }
             pound-per-square-inch{
+                dnam{"paunat neliötuumaa kohti"}
                 one{"{0} pauna neliötuumaa kohti"}
                 other{"{0} paunaa neliötuumaa kohti"}
             }
         }
         proportion{
             karat{
+                dnam{"karaatit"}
                 one{"{0} karaatti"}
                 other{"{0} karaattia"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilometrit tunnissa"}
                 one{"{0} kilometri tunnissa"}
                 other{"{0} kilometriä tunnissa"}
             }
             meter-per-second{
+                dnam{"metrit sekunnissa"}
                 one{"{0} metri sekunnissa"}
                 other{"{0} metriä sekunnissa"}
             }
             mile-per-hour{
+                dnam{"mailit tunnissa"}
                 one{"{0} maili tunnissa"}
                 other{"{0} mailia tunnissa"}
             }
         }
         temperature{
             celsius{
+                dnam{"celsiusasteet"}
                 one{"{0} celsiusaste"}
                 other{"{0} celsiusastetta"}
             }
             fahrenheit{
+                dnam{"fahrenheitasteet"}
                 one{"{0} fahrenheitaste"}
                 other{"{0} fahrenheitastetta"}
             }
             kelvin{
+                dnam{"kelvinit"}
                 one{"{0} kelvin"}
                 other{"{0} kelviniä"}
             }
         }
         volume{
             acre-foot{
+                dnam{"eekkerijalat"}
                 one{"{0} eekkerijalka"}
                 other{"{0} eekkerijalkaa"}
             }
             bushel{
+                dnam{"bushelit"}
                 one{"{0} busheli"}
                 other{"{0} bushelia"}
             }
             centiliter{
+                dnam{"senttilitrat"}
                 one{"{0} senttilitra"}
                 other{"{0} senttilitraa"}
             }
             cubic-centimeter{
+                dnam{"kuutiosenttimetrit"}
                 one{"{0} kuutiosenttimetri"}
                 other{"{0} kuutiosenttimetriä"}
             }
             cubic-foot{
+                dnam{"kuutiojalat"}
                 one{"{0} kuutiojalka"}
                 other{"{0} kuutiojalkaa"}
             }
             cubic-inch{
+                dnam{"kuutiotuumat"}
                 one{"{0} kuutiotuuma"}
                 other{"{0} kuutiotuumaa"}
             }
             cubic-kilometer{
+                dnam{"kuutiokilometrit"}
                 one{"{0} kuutiokilometri"}
                 other{"{0} kuutiokilometriä"}
             }
             cubic-meter{
+                dnam{"kuutiometrit"}
                 one{"{0} kuutiometri"}
                 other{"{0} kuutiometriä"}
             }
             cubic-mile{
+                dnam{"kuutiomailit"}
                 one{"{0} kuutiomaili"}
                 other{"{0} kuutiomailia"}
             }
             cubic-yard{
+                dnam{"kuutiojaardit"}
                 one{"{0} kuutiojaardi"}
                 other{"{0} kuutiojaardia"}
             }
             cup{
+                dnam{"kupit"}
                 one{"{0} kuppi"}
                 other{"{0} kuppia"}
             }
             deciliter{
+                dnam{"desilitrat"}
                 one{"{0} desilitra"}
                 other{"{0} desilitraa"}
             }
             fluid-ounce{
+                dnam{"nesteunssit"}
                 one{"{0} nesteunssi"}
                 other{"{0} nesteunssia"}
             }
             gallon{
+                dnam{"gallonat"}
                 one{"{0} gallona"}
                 other{"{0} gallonaa"}
             }
             hectoliter{
+                dnam{"hehtolitrat"}
                 one{"{0} hehtolitra"}
                 other{"{0} hehtolitraa"}
             }
             liter{
+                dnam{"litrat"}
                 one{"{0} litra"}
                 other{"{0} litraa"}
             }
             megaliter{
+                dnam{"megalitrat"}
                 one{"{0} megalitra"}
                 other{"{0} megalitraa"}
             }
             milliliter{
+                dnam{"millilitrat"}
                 one{"{0} millilitra"}
                 other{"{0} millilitraa"}
             }
             pint{
+                dnam{"pintit"}
                 one{"{0} pint"}
                 other{"{0} pinttiä"}
             }
             quart{
+                dnam{"neljännesgallonat"}
                 one{"{0} neljännesgallona"}
                 other{"{0} neljännesgallonaa"}
             }
             tablespoon{
+                dnam{"ruokalusikat"}
                 one{"{0} ruokalusikka"}
                 other{"{0} ruokalusikkaa"}
             }
             teaspoon{
+                dnam{"teelusikat"}
                 one{"{0} teelusikka"}
                 other{"{0} teelusikkaa"}
             }

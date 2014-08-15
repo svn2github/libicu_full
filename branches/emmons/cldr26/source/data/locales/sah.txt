@@ -6,11 +6,17 @@
 // * Source File: <path>/common/main/sah.xml
 // *
 // ***************************************************************************
+/**
+ * ICU <specials> source: <path>/common/main/sah.xml
+ */
 sah{
     AuxExemplarCharacters{"[в е ё ж з ф ц ш щ ъ ь ю я]"}
     ExemplarCharacters{"[а б г ҕ д {дь} и й к л м н {нь} ҥ о ө п р с т у ү х һ ч ы э]"}
     ExemplarCharactersIndex{"[А Б Г Ҕ Д {Дь} И Й К Л М Н {Нь} Ҥ О Ө П Р С Т У Ү Х Һ Ч Ы Э]"}
     ExemplarCharactersPunctuation{"[\\:]"}
+    LocaleScript{
+        "Cyrl",
+    }
     NumberElements{
         default{"latn"}
         latn{
@@ -345,50 +351,32 @@ sah{
     units{
         duration{
             day{
+                dnam{"күн"}
                 other{"{0} күн"}
             }
             hour{
+                dnam{"чаас"}
                 other{"{0} чаас"}
             }
             minute{
+                dnam{"мүнүүтэ"}
                 other{"{0} мүнүүтэ"}
             }
             month{
+                dnam{"ый"}
                 other{"{0} ый"}
             }
             second{
+                dnam{"сөкүүндэ"}
                 other{"{0} сөкүүндэ"}
             }
             week{
+                dnam{"нэдиэлэ"}
                 other{"{0} нэдиэлэ"}
             }
             year{
+                dnam{"сыл"}
                 other{"{0} сыл"}
-            }
-        }
-        per{
-            duration{
-                day{
-                    dnam{"күн"}
-                }
-                hour{
-                    dnam{"чаас"}
-                }
-                minute{
-                    dnam{"мүнүүтэ"}
-                }
-                month{
-                    dnam{"ый"}
-                }
-                second{
-                    dnam{"сөкүүндэ"}
-                }
-                week{
-                    dnam{"нэдиэлэ"}
-                }
-                year{
-                    dnam{"сыл"}
-                }
             }
         }
     }

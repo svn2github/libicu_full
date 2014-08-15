@@ -735,162 +735,116 @@ es_MX{
         US{"estadounidense"}
     }
     units{
+        acceleration{
+            g-force{
+                dnam{"fuerza G"}
+            }
+        }
         angle{
             arc-minute{
+                dnam{"arcominutos"}
                 one{"{0} minuto"}
                 other{"{0} minutos"}
             }
             arc-second{
+                dnam{"arcosegundos"}
                 one{"{0} segundo"}
                 other{"{0} segundos"}
             }
         }
         energy{
             calorie{
+                dnam{"calorías"}
                 one{"{0} caloría"}
                 other{"{0} calorías"}
             }
             foodcalorie{
+                dnam{"calorías"}
                 one{"{0} caloría"}
                 other{"{0} calorías"}
             }
+            joule{
+                dnam{"joules"}
+            }
+            kilojoule{
+                dnam{"kilojoules"}
+            }
             kilowatt-hour{
+                dnam{"kilowatt-hora"}
                 one{"kilowatt-hora"}
                 other{"{0} kilowatts-hora"}
             }
         }
         length{
+            decimeter{
+                dnam{"decímetros"}
+            }
             micrometer{
+                dnam{"micrometros"}
                 one{"{0} micrometro"}
                 other{"{0} micrometros"}
             }
             nautical-mile{
+                dnam{"millas naúticas"}
                 one{"{0} milla naútica"}
                 other{"{0} millas naúticas"}
             }
             parsec{
+                dnam{"pársecs"}
                 one{"{0} pársec"}
                 other{"{0} pársecs"}
             }
         }
+        light{
+            lux{
+                dnam{"lux"}
+            }
+        }
         mass{
             carat{
+                dnam{"quilates"}
                 one{"{0} quilate"}
                 other{"{0} quilates"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"fuerza G"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"arcominutos"}
-                }
-                arc-second{
-                    dnam{"arcosegundos"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"calorías"}
-                }
-                foodcalorie{
-                    dnam{"calorías"}
-                }
-                joule{
-                    dnam{"joules"}
-                }
-                kilojoule{
-                    dnam{"kilojoules"}
-                }
-                kilowatt-hour{
-                    dnam{"kilowatt-hora"}
-                }
-            }
-            length{
-                decimeter{
-                    dnam{"decímetros"}
-                }
-                micrometer{
-                    dnam{"micrometros"}
-                }
-                nautical-mile{
-                    dnam{"millas naúticas"}
-                }
-                parsec{
-                    dnam{"pársecs"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"lux"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"quilates"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigawatts"}
-                }
-                kilowatt{
-                    dnam{"kilowatts"}
-                }
-                megawatt{
-                    dnam{"megawatts"}
-                }
-                milliwatt{
-                    dnam{"miliwatts"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"quilates"}
-                }
-            }
-            temperature{
-                kelvin{
-                    dnam{"kelvines"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"acre-pies"}
-                }
-                fluid-ounce{
-                    dnam{"onzas líquidas"}
-                }
-            }
-        }
         power{
+            gigawatt{
+                dnam{"gigawatts"}
+            }
+            kilowatt{
+                dnam{"kilowatts"}
+            }
+            megawatt{
+                dnam{"megawatts"}
+            }
             milliwatt{
+                dnam{"miliwatts"}
                 one{"{0} miliwatt"}
                 other{"{0} miliwatts"}
             }
         }
         proportion{
             karat{
+                dnam{"quilates"}
                 one{"{0} quilate"}
                 other{"{0} quilates"}
             }
         }
         temperature{
             kelvin{
+                dnam{"kelvines"}
                 one{"kelvin"}
                 other{"{0} kelvines"}
             }
         }
         volume{
             acre-foot{
+                dnam{"acre-pies"}
                 one{"{0} acre-pie"}
                 other{"{0} acre-pies"}
             }
             fluid-ounce{
+                dnam{"onzas líquidas"}
                 one{"{0} onza líquida"}
                 other{"{0} onzas líquidas"}
             }

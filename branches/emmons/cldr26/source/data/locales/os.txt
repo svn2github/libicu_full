@@ -6,6 +6,9 @@
 // * Source File: <path>/common/main/os.xml
 // *
 // ***************************************************************************
+/**
+ * ICU <specials> source: <path>/common/main/os.xml
+ */
 os{
     AuxExemplarCharacters{"[]"}
     Ellipsis{
@@ -24,6 +27,9 @@ os{
     ExemplarCharactersPunctuation{
         "[\\- ‐ – — , ; \\: ! ? . … ' ‘ ‚ \u0022 “ „ « » ( ) \\[ \\] \\{ \\} § @ * / "
         "\\& #]"
+    }
+    LocaleScript{
+        "Cyrl",
     }
     MoreInformation{"?"}
     NumberElements{
@@ -510,57 +516,39 @@ os{
     units{
         duration{
             day{
+                dnam{"боны"}
                 one{"{0} бон"}
                 other{"{0} боны"}
             }
             hour{
+                dnam{"сахаты"}
                 one{"{0} сахат"}
                 other{"{0} сахаты"}
             }
             minute{
+                dnam{"минуты"}
                 one{"{0} минут"}
                 other{"{0} минуты"}
             }
             month{
+                dnam{"мӕйы"}
                 one{"{0} мӕй"}
                 other{"{0} мӕйы"}
             }
             second{
+                dnam{"секунды"}
                 one{"{0} секунд"}
                 other{"{0} секунды"}
             }
             week{
+                dnam{"къуырийы"}
                 one{"{0} къуыри"}
                 other{"{0} къуырийы"}
             }
             year{
+                dnam{"азы"}
                 one{"{0} аз"}
                 other{"{0} азы"}
-            }
-        }
-        per{
-            duration{
-                day{
-                    dnam{"боны"}
-                }
-                hour{
-                    dnam{"сахаты"}
-                }
-                minute{
-                    dnam{"минуты"}
-                }
-                month{
-                    dnam{"мӕйы"}
-                }
-                second{
-                    dnam{"секунды"}
-                }
-                week{
-                    dnam{"къуырийы"}
-                }
-                year{
-                    dnam{"азы"}
-                }
             }
         }
     }

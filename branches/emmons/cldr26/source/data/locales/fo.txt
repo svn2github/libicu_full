@@ -748,26 +748,31 @@ fo{
     units{
         acceleration{
             g-force{
+                dnam{"tyngdakraft Jørðin"}
                 one{"{0} tyngdakraft Jørðin"}
                 other{"{0} tyngdakraft Jørðin"}
             }
         }
         angle{
             arc-minute{
+                dnam{"bueminuttir"}
                 one{"{0} bueminutt"}
                 other{"{0} bueminuttir"}
             }
             arc-second{
+                dnam{"buesekundir"}
                 one{"{0} buesekund"}
                 other{"{0} buesekundir"}
             }
             degree{
+                dnam{"gradir"}
                 one{"{0} grad"}
                 other{"{0} gradir"}
             }
         }
         area{
             hectare{
+                dnam{"hektar"}
                 one{"{0} hektar"}
                 other{"{0} hektar"}
             }
@@ -777,176 +782,105 @@ fo{
         }
         duration{
             day{
+                dnam{"samdøgur"}
                 one{"{0} samdøgur"}
                 other{"{0} samdøgur"}
             }
             hour{
+                dnam{"tímar"}
                 one{"{0} tími"}
                 other{"{0} tímar"}
             }
             millisecond{
+                dnam{"millissekundir"}
                 one{"{0} millisekund"}
                 other{"{0} millissekundir"}
             }
             minute{
+                dnam{"minuttir"}
                 one{"{0} minuttur"}
                 other{"{0} minuttir"}
             }
             month{
+                dnam{"mánaðir"}
                 one{"{0} mánadur"}
                 other{"{0} mánaðir"}
             }
             second{
+                dnam{"sekundir"}
                 one{"{0} sekund"}
                 other{"{0} sekundir"}
             }
             week{
+                dnam{"vikur"}
                 one{"{0} vika"}
                 other{"{0} vikur"}
             }
             year{
+                dnam{"ára"}
                 one{"{0} ár"}
                 other{"{0} ára"}
             }
         }
         length{
             centimeter{
+                dnam{"sentimeter"}
                 one{"{0} sentimeter"}
                 other{"{0} sentimeter"}
             }
             kilometer{
+                dnam{"kilometer"}
                 one{"{0} kilometer"}
                 other{"{0} kilometer"}
             }
             meter{
+                dnam{"meter"}
                 one{"{0} meter"}
                 other{"{0} meter"}
             }
             millimeter{
+                dnam{"millimeter"}
                 one{"{0} millimeter"}
                 other{"{0} millimeter"}
             }
             picometer{
+                dnam{"pikometer"}
                 one{"{0} pikometer"}
                 other{"{0} pikometer"}
             }
         }
         mass{
             gram{
+                dnam{"gram"}
                 one{"{0} gram"}
                 other{"{0} gram"}
             }
             kilogram{
+                dnam{"kilogram"}
                 one{"{0} kilogram"}
                 other{"{0} kilogram"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"tyngdakraft Jørðin"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"bueminuttir"}
-                }
-                arc-second{
-                    dnam{"buesekundir"}
-                }
-                degree{
-                    dnam{"gradir"}
-                }
-            }
-            area{
-                hectare{
-                    dnam{"hektar"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"samdøgur"}
-                }
-                hour{
-                    dnam{"tímar"}
-                }
-                millisecond{
-                    dnam{"millissekundir"}
-                }
-                minute{
-                    dnam{"minuttir"}
-                }
-                month{
-                    dnam{"mánaðir"}
-                }
-                second{
-                    dnam{"sekundir"}
-                }
-                week{
-                    dnam{"vikur"}
-                }
-                year{
-                    dnam{"ára"}
-                }
-            }
-            length{
-                centimeter{
-                    dnam{"sentimeter"}
-                }
-                kilometer{
-                    dnam{"kilometer"}
-                }
-                meter{
-                    dnam{"meter"}
-                }
-                millimeter{
-                    dnam{"millimeter"}
-                }
-                picometer{
-                    dnam{"pikometer"}
-                }
-            }
-            mass{
-                gram{
-                    dnam{"gram"}
-                }
-                kilogram{
-                    dnam{"kilogram"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hektopascal"}
-                }
-                millibar{
-                    dnam{"millibar"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"gradir Celsius"}
-                }
-                fahrenheit{
-                    dnam{"gradir Fahrenheit"}
-                }
-            }
-        }
         pressure{
             hectopascal{
+                dnam{"hektopascal"}
                 one{"{0} hektopascal"}
                 other{"{0} hektopascal"}
             }
             millibar{
+                dnam{"millibar"}
                 one{"{0} millibar"}
                 other{"{0} millibar"}
             }
         }
         temperature{
             celsius{
+                dnam{"gradir Celsius"}
                 one{"{0} grad Celsius"}
                 other{"{0} gradir Celsius"}
             }
             fahrenheit{
+                dnam{"gradir Fahrenheit"}
                 one{"{0} grad Fahrenheit"}
                 other{"{0} gradir Fahrenheit"}
             }

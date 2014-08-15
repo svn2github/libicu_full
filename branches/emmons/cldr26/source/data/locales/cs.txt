@@ -1767,12 +1767,14 @@ cs{
     units{
         acceleration{
             g-force{
+                dnam{"gravitační síla"}
                 few{"{0} G"}
                 many{"{0} G"}
                 one{"{0} G"}
                 other{"{0} G"}
             }
             meter-per-second-squared{
+                dnam{"metr za sekundu na druhou"}
                 few{"{0} metry za sekundu na druhou"}
                 many{"{0} metru za sekundu na druhou"}
                 one{"{0} metr za sekundu na druhou"}
@@ -1781,24 +1783,28 @@ cs{
         }
         angle{
             arc-minute{
+                dnam{"minuty"}
                 few{"{0} minuty"}
                 many{"{0} minuty"}
                 one{"{0} minuta"}
                 other{"{0} minut"}
             }
             arc-second{
+                dnam{"vteřiny"}
                 few{"{0} vteřiny"}
                 many{"{0} vteřiny"}
                 one{"{0} vteřina"}
                 other{"{0} vteřin"}
             }
             degree{
+                dnam{"stupně"}
                 few{"{0} stupně"}
                 many{"{0} stupně"}
                 one{"{0} stupeň"}
                 other{"{0} stupňů"}
             }
             radian{
+                dnam{"radiány"}
                 few{"{0} radiány"}
                 many{"{0} radiánu"}
                 one{"{0} radián"}
@@ -1807,54 +1813,63 @@ cs{
         }
         area{
             acre{
+                dnam{"akry"}
                 few{"{0} akry"}
                 many{"{0} akru"}
                 one{"{0} akr"}
                 other{"{0} akrů"}
             }
             hectare{
+                dnam{"hektary"}
                 few{"{0} hektary"}
                 many{"{0} hektaru"}
                 one{"{0} hektar"}
                 other{"{0} hektarů"}
             }
             square-centimeter{
+                dnam{"centimetry čtvereční"}
                 few{"{0} centimetry čtvereční"}
                 many{"{0} centimetru čtverečního"}
                 one{"{0} centimetr čtvereční"}
                 other{"{0} centimetrů čtverečních"}
             }
             square-foot{
+                dnam{"stopy čtvereční"}
                 few{"{0} stopy čtvereční"}
                 many{"{0} stopy čtvereční"}
                 one{"{0} stopa čtvereční"}
                 other{"{0} stop čtverečních"}
             }
             square-inch{
+                dnam{"palce čtvereční"}
                 few{"{0} palce čtvereční"}
                 many{"{0} palce čtverečního"}
                 one{"{0} palec čtvereční"}
                 other{"{0} palců čtverečních"}
             }
             square-kilometer{
+                dnam{"kilometry čtvereční"}
                 few{"{0} kilometry čtvereční"}
                 many{"{0} kilometru čtverečního"}
                 one{"{0} kilometr čtvereční"}
                 other{"{0} kilometrů čtverečních"}
             }
             square-meter{
+                dnam{"metry čtvereční"}
                 few{"{0} metry čtvereční"}
                 many{"{0} metru čtverečního"}
                 one{"{0} metr čtvereční"}
                 other{"{0} metrů čtverečních"}
             }
             square-mile{
+                dnam{"míle čtvereční"}
                 few{"{0} míle čtvereční"}
                 many{"{0} míle čtvereční"}
                 one{"{0} míle čtvereční"}
                 other{"{0} mil čtverečních"}
             }
             square-yard{
+                dnam{"yardy čtvereční"}
                 few{"{0} yardy čtvereční"}
                 many{"{0} yardu čtverečního"}
                 one{"{0} yard čtvereční"}
@@ -1866,12 +1881,14 @@ cs{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"litry na kilometr"}
                 few{"{0} litry na kilometr"}
                 many{"{0} litru na kilometr"}
                 one{"{0} litr na kilometr"}
                 other{"{0} litrů na kilometr"}
             }
             mile-per-gallon{
+                dnam{"míle na galon"}
                 few{"{0} míle na galon"}
                 many{"{0} míle na galon"}
                 one{"{0} míle na galon"}
@@ -1880,60 +1897,70 @@ cs{
         }
         digital{
             bit{
+                dnam{"bity"}
                 few{"{0} bity"}
                 many{"{0} bitu"}
                 one{"{0} bit"}
                 other{"{0} bitů"}
             }
             byte{
+                dnam{"bajty"}
                 few{"{0} bajty"}
                 many{"{0} bajtu"}
                 one{"{0} bajt"}
                 other{"{0} bajtů"}
             }
             gigabit{
+                dnam{"gigabity"}
                 few{"{0} gigabity"}
                 many{"{0} gigabitu"}
                 one{"{0} gigabit"}
                 other{"{0} gigabitů"}
             }
             gigabyte{
+                dnam{"gigabajty"}
                 few{"{0} gigabajty"}
                 many{"{0} gigabajtu"}
                 one{"{0} gigabajt"}
                 other{"{0} gigabajtů"}
             }
             kilobit{
+                dnam{"kilobity"}
                 few{"{0} kilobity"}
                 many{"{0} kilobitu"}
                 one{"{0} kilobit"}
                 other{"{0} kilobitů"}
             }
             kilobyte{
+                dnam{"kilobajty"}
                 few{"{0} kilobajty"}
                 many{"{0} kilobajtu"}
                 one{"{0} kilobajt"}
                 other{"{0} kilobajtů"}
             }
             megabit{
+                dnam{"megabity"}
                 few{"{0} megabity"}
                 many{"{0} megabitu"}
                 one{"{0} megabit"}
                 other{"{0} megabitů"}
             }
             megabyte{
+                dnam{"megabajty"}
                 few{"{0} megabajty"}
                 many{"{0} megabajtu"}
                 one{"{0} megabajt"}
                 other{"{0} megabajtů"}
             }
             terabit{
+                dnam{"terabity"}
                 few{"{0} terabity"}
                 many{"{0} terabitu"}
                 one{"{0} terabit"}
                 other{"{0} terabitů"}
             }
             terabyte{
+                dnam{"terabajty"}
                 few{"{0} terabajty"}
                 many{"{0} terabajtu"}
                 one{"{0} terabajt"}
@@ -1942,60 +1969,72 @@ cs{
         }
         duration{
             day{
+                dnam{"dny"}
                 few{"{0} dny"}
                 many{"{0} dne"}
                 one{"{0} den"}
                 other{"{0} dní"}
             }
             hour{
+                dnam{"hodiny"}
                 few{"{0} hodiny"}
                 many{"{0} hodiny"}
                 one{"{0} hodina"}
                 other{"{0} hodin"}
+                per{"za hodinu"}
             }
             microsecond{
+                dnam{"mikrosekundy"}
                 few{"{0} mikrosekundy"}
                 many{"{0} mikrosekundy"}
                 one{"{0} mikrosekunda"}
                 other{"{0} mikrosekund"}
             }
             millisecond{
+                dnam{"milisekundy"}
                 few{"{0} milisekundy"}
                 many{"{0} milisekundy"}
                 one{"{0} milisekunda"}
                 other{"{0} milisekund"}
             }
             minute{
+                dnam{"minuty"}
                 few{"{0} minuty"}
                 many{"{0} minuty"}
                 one{"{0} minuta"}
                 other{"{0} minut"}
             }
             month{
+                dnam{"měsíce"}
                 few{"{0} měsíce"}
                 many{"{0} měsíce"}
                 one{"{0} měsíc"}
                 other{"{0} měsíců"}
             }
             nanosecond{
+                dnam{"nanosekundy"}
                 few{"{0} nanosekundy"}
                 many{"{0} nanosekundy"}
                 one{"{0} nanosekunda"}
                 other{"{0} nanosekund"}
             }
             second{
+                dnam{"sekundy"}
                 few{"{0} sekundy"}
                 many{"{0} sekundy"}
                 one{"{0} sekunda"}
                 other{"{0} sekund"}
+                per{"za sekundu"}
             }
             week{
+                dnam{"týdny"}
                 few{"{0} týdny"}
                 many{"{0} týdne"}
                 one{"{0} týden"}
                 other{"{0} týdnů"}
             }
             year{
+                dnam{"roky"}
                 few{"{0} roky"}
                 many{"{0} roku"}
                 one{"{0} rok"}
@@ -2004,24 +2043,28 @@ cs{
         }
         electric{
             ampere{
+                dnam{"ampéry"}
                 few{"{0} ampéry"}
                 many{"{0} ampéru"}
                 one{"{0} ampér"}
                 other{"{0} ampérů"}
             }
             milliampere{
+                dnam{"miliampéry"}
                 few{"{0} miliampéry"}
                 many{"{0} miliampéru"}
                 one{"{0} miliampér"}
                 other{"{0} miliampérů"}
             }
             ohm{
+                dnam{"ohmy"}
                 few{"{0} ohmy"}
                 many{"{0} ohmu"}
                 one{"{0} ohm"}
                 other{"{0} ohmů"}
             }
             volt{
+                dnam{"volty"}
                 few{"{0} volty"}
                 many{"{0} voltu"}
                 one{"{0} volt"}
@@ -2030,36 +2073,42 @@ cs{
         }
         energy{
             calorie{
+                dnam{"kalorie"}
                 few{"{0} kalorie"}
                 many{"{0} kalorie"}
                 one{"{0} kalorie"}
                 other{"{0} kalorií"}
             }
             foodcalorie{
+                dnam{"kilokalorie"}
                 few{"{0} kilokalorie"}
                 many{"{0} kilokalorie"}
                 one{"{0} kilokalorie"}
                 other{"{0} kilokalorií"}
             }
             joule{
+                dnam{"jouly"}
                 few{"{0} jouly"}
                 many{"{0} joulu"}
                 one{"{0} joule"}
                 other{"{0} joulů"}
             }
             kilocalorie{
+                dnam{"kilokalorie"}
                 few{"{0} kilokalorie"}
                 many{"{0} kilokalorie"}
                 one{"{0} kilokalorie"}
                 other{"{0} kilokalorií"}
             }
             kilojoule{
+                dnam{"kilojouly"}
                 few{"{0} kilojouly"}
                 many{"{0} kilojoulu"}
                 one{"{0} kilojoule"}
                 other{"{0} kilojoulů"}
             }
             kilowatt-hour{
+                dnam{"kilowatthodiny"}
                 few{"{0} kilowatthodiny"}
                 many{"{0} kilowatthodiny"}
                 one{"{0} kilowatthodina"}
@@ -2068,24 +2117,28 @@ cs{
         }
         frequency{
             gigahertz{
+                dnam{"gigahertzy"}
                 few{"{0} gigahertzy"}
                 many{"{0} gigahertzu"}
                 one{"{0} gigahertz"}
                 other{"{0} gigahertzů"}
             }
             hertz{
+                dnam{"hertzy"}
                 few{"{0} hertzy"}
                 many{"{0} hertzu"}
                 one{"{0} hertz"}
                 other{"{0} hertzů"}
             }
             kilohertz{
+                dnam{"kilohertzy"}
                 few{"{0} kilohertzy"}
                 many{"{0} kilohertzu"}
                 one{"{0} kilohertz"}
                 other{"{0} kilohertzů"}
             }
             megahertz{
+                dnam{"megahertzy"}
                 few{"{0} megahertzy"}
                 many{"{0} megahertzu"}
                 one{"{0} megahertz"}
@@ -2094,108 +2147,126 @@ cs{
         }
         length{
             astronomical-unit{
+                dnam{"astronomické jednotky"}
                 few{"{0} astronomické jednotky"}
                 many{"{0} astronomické jednotky"}
                 one{"{0} astronomická jednotka"}
                 other{"{0} astronomických jednotek"}
             }
             centimeter{
+                dnam{"centimetry"}
                 few{"{0} centimetry"}
                 many{"{0} centimetru"}
                 one{"{0} centimetr"}
                 other{"{0} centimetrů"}
             }
             decimeter{
+                dnam{"decimetry"}
                 few{"{0} decimetry"}
                 many{"{0} decimetru"}
                 one{"{0} decimetr"}
                 other{"{0} decimetrů"}
             }
             fathom{
+                dnam{"fathomy"}
                 few{"{0} fathomy"}
                 many{"{0} fathomu"}
                 one{"{0} fathom"}
                 other{"{0} fathomů"}
             }
             foot{
+                dnam{"stopy"}
                 few{"{0} stopy"}
                 many{"{0} stopy"}
                 one{"{0} stopa"}
                 other{"{0} stop"}
             }
             furlong{
+                dnam{"furlongy"}
                 few{"{0} furlongy"}
                 many{"{0} furlongu"}
                 one{"{0} furlong"}
                 other{"{0} furlongů"}
             }
             inch{
+                dnam{"palce"}
                 few{"{0} palce"}
                 many{"{0} palce"}
                 one{"{0} palec"}
                 other{"{0} palců"}
             }
             kilometer{
+                dnam{"kilometry"}
                 few{"{0} kilometry"}
                 many{"{0} kilometru"}
                 one{"{0} kilometr"}
                 other{"{0} kilometrů"}
             }
             light-year{
+                dnam{"světelné roky"}
                 few{"{0} světelné roky"}
                 many{"{0} světelného roku"}
                 one{"{0} světelný rok"}
                 other{"{0} světelných let"}
             }
             meter{
+                dnam{"metry"}
                 few{"{0} metry"}
                 many{"{0} metru"}
                 one{"{0} metr"}
                 other{"{0} metrů"}
             }
             micrometer{
+                dnam{"mikrometry"}
                 few{"{0} mikrometry"}
                 many{"{0} mikrometru"}
                 one{"{0} mikrometr"}
                 other{"{0} mikrometrů"}
             }
             mile{
+                dnam{"míle"}
                 few{"{0} míle"}
                 many{"{0} míle"}
                 one{"{0} míle"}
                 other{"{0} mil"}
             }
             millimeter{
+                dnam{"milimetry"}
                 few{"{0} milimetry"}
                 many{"{0} milimetru"}
                 one{"{0} milimetr"}
                 other{"{0} milimetrů"}
             }
             nanometer{
+                dnam{"nanometry"}
                 few{"{0} nanometry"}
                 many{"{0} nanometru"}
                 one{"{0} nanometr"}
                 other{"{0} nanometrů"}
             }
             nautical-mile{
+                dnam{"námořní míle"}
                 few{"{0} námořní míle"}
                 many{"{0} námořní míle"}
                 one{"{0} námořní míle"}
                 other{"{0} námořních mil"}
             }
             parsec{
+                dnam{"parseky"}
                 few{"{0} parseky"}
                 many{"{0} parseku"}
                 one{"{0} parsek"}
                 other{"{0} parseků"}
             }
             picometer{
+                dnam{"pikometry"}
                 few{"{0} pikometry"}
                 many{"{0} pikometru"}
                 one{"{0} pikometr"}
                 other{"{0} pikometrů"}
             }
             yard{
+                dnam{"yardy"}
                 few{"{0} yardy"}
                 many{"{0} yardu"}
                 one{"{0} yard"}
@@ -2204,6 +2275,7 @@ cs{
         }
         light{
             lux{
+                dnam{"luxy"}
                 few{"{0} luxy"}
                 many{"{0} luxu"}
                 one{"{0} lux"}
@@ -2212,507 +2284,121 @@ cs{
         }
         mass{
             carat{
+                dnam{"karáty"}
                 few{"{0} karáty"}
                 many{"{0} karátu"}
                 one{"{0} karát"}
                 other{"{0} karátů"}
             }
             gram{
+                dnam{"gramy"}
                 few{"{0} gramy"}
                 many{"{0} gramu"}
                 one{"{0} gram"}
                 other{"{0} gramů"}
             }
             kilogram{
+                dnam{"kilogramy"}
                 few{"{0} kilogramy"}
                 many{"{0} kilogramu"}
                 one{"{0} kilogram"}
                 other{"{0} kilogramů"}
             }
             metric-ton{
+                dnam{"metrické tuny"}
                 few{"{0} metrické tuny"}
                 many{"{0} metrické tuny"}
                 one{"{0} metrická tuna"}
                 other{"{0} metrických tun"}
             }
             microgram{
+                dnam{"mikrogramy"}
                 few{"{0} mikrogramy"}
                 many{"{0} mikrogramu"}
                 one{"{0} mikrogram"}
                 other{"{0} mikrogramů"}
             }
             milligram{
+                dnam{"miligramy"}
                 few{"{0} miligramy"}
                 many{"{0} miligramu"}
                 one{"{0} miligram"}
                 other{"{0} miligramů"}
             }
             ounce{
+                dnam{"unce"}
                 few{"{0} unce"}
                 many{"{0} unce"}
                 one{"{0} unce"}
                 other{"{0} uncí"}
             }
             ounce-troy{
+                dnam{"trojské unce"}
                 few{"{0} trojské unce"}
                 many{"{0} trojské unce"}
                 one{"{0} trojská unce"}
                 other{"{0} trojských uncí"}
             }
             pound{
+                dnam{"libra"}
                 few{"{0} libry"}
                 many{"{0} libry"}
                 one{"{0} libra"}
                 other{"{0} liber"}
             }
             stone{
+                dnam{"kameny"}
                 few{"{0} kameny"}
                 many{"{0} kamene"}
                 one{"{0} kámen"}
                 other{"{0} kamenů"}
             }
             ton{
+                dnam{"tuny"}
                 few{"{0} tuny"}
                 many{"{0} tuny"}
                 one{"{0} tuna"}
                 other{"{0} tun"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"gravitační síla"}
-                }
-                meter-per-second-squared{
-                    dnam{"metr za sekundu na druhou"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"minuty"}
-                }
-                arc-second{
-                    dnam{"vteřiny"}
-                }
-                degree{
-                    dnam{"stupně"}
-                }
-                radian{
-                    dnam{"radiány"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"akry"}
-                }
-                hectare{
-                    dnam{"hektary"}
-                }
-                square-centimeter{
-                    dnam{"centimetry čtvereční"}
-                }
-                square-foot{
-                    dnam{"stopy čtvereční"}
-                }
-                square-inch{
-                    dnam{"palce čtvereční"}
-                }
-                square-kilometer{
-                    dnam{"kilometry čtvereční"}
-                }
-                square-meter{
-                    dnam{"metry čtvereční"}
-                }
-                square-mile{
-                    dnam{"míle čtvereční"}
-                }
-                square-yard{
-                    dnam{"yardy čtvereční"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"litry na kilometr"}
-                }
-                mile-per-gallon{
-                    dnam{"míle na galon"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bity"}
-                }
-                byte{
-                    dnam{"bajty"}
-                }
-                gigabit{
-                    dnam{"gigabity"}
-                }
-                gigabyte{
-                    dnam{"gigabajty"}
-                }
-                kilobit{
-                    dnam{"kilobity"}
-                }
-                kilobyte{
-                    dnam{"kilobajty"}
-                }
-                megabit{
-                    dnam{"megabity"}
-                }
-                megabyte{
-                    dnam{"megabajty"}
-                }
-                terabit{
-                    dnam{"terabity"}
-                }
-                terabyte{
-                    dnam{"terabajty"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"dny"}
-                }
-                hour{
-                    dnam{"hodiny"}
-                    per{"za hodinu"}
-                }
-                microsecond{
-                    dnam{"mikrosekundy"}
-                }
-                millisecond{
-                    dnam{"milisekundy"}
-                }
-                minute{
-                    dnam{"minuty"}
-                }
-                month{
-                    dnam{"měsíce"}
-                }
-                nanosecond{
-                    dnam{"nanosekundy"}
-                }
-                second{
-                    dnam{"sekundy"}
-                    per{"za sekundu"}
-                }
-                week{
-                    dnam{"týdny"}
-                }
-                year{
-                    dnam{"roky"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"ampéry"}
-                }
-                milliampere{
-                    dnam{"miliampéry"}
-                }
-                ohm{
-                    dnam{"ohmy"}
-                }
-                volt{
-                    dnam{"volty"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"kalorie"}
-                }
-                foodcalorie{
-                    dnam{"kilokalorie"}
-                }
-                joule{
-                    dnam{"jouly"}
-                }
-                kilocalorie{
-                    dnam{"kilokalorie"}
-                }
-                kilojoule{
-                    dnam{"kilojouly"}
-                }
-                kilowatt-hour{
-                    dnam{"kilowatthodiny"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigahertzy"}
-                }
-                hertz{
-                    dnam{"hertzy"}
-                }
-                kilohertz{
-                    dnam{"kilohertzy"}
-                }
-                megahertz{
-                    dnam{"megahertzy"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"astronomické jednotky"}
-                }
-                centimeter{
-                    dnam{"centimetry"}
-                }
-                decimeter{
-                    dnam{"decimetry"}
-                }
-                fathom{
-                    dnam{"fathomy"}
-                }
-                foot{
-                    dnam{"stopy"}
-                }
-                furlong{
-                    dnam{"furlongy"}
-                }
-                inch{
-                    dnam{"palce"}
-                }
-                kilometer{
-                    dnam{"kilometry"}
-                }
-                light-year{
-                    dnam{"světelné roky"}
-                }
-                meter{
-                    dnam{"metry"}
-                }
-                micrometer{
-                    dnam{"mikrometry"}
-                }
-                mile{
-                    dnam{"míle"}
-                }
-                millimeter{
-                    dnam{"milimetry"}
-                }
-                nanometer{
-                    dnam{"nanometry"}
-                }
-                nautical-mile{
-                    dnam{"námořní míle"}
-                }
-                parsec{
-                    dnam{"parseky"}
-                }
-                picometer{
-                    dnam{"pikometry"}
-                }
-                yard{
-                    dnam{"yardy"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"luxy"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"karáty"}
-                }
-                gram{
-                    dnam{"gramy"}
-                }
-                kilogram{
-                    dnam{"kilogramy"}
-                }
-                metric-ton{
-                    dnam{"metrické tuny"}
-                }
-                microgram{
-                    dnam{"mikrogramy"}
-                }
-                milligram{
-                    dnam{"miligramy"}
-                }
-                ounce{
-                    dnam{"unce"}
-                }
-                ounce-troy{
-                    dnam{"trojské unce"}
-                }
-                pound{
-                    dnam{"libra"}
-                }
-                stone{
-                    dnam{"kameny"}
-                }
-                ton{
-                    dnam{"tuny"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigawatty"}
-                }
-                horsepower{
-                    dnam{"koňská síla"}
-                }
-                kilowatt{
-                    dnam{"kilowatty"}
-                }
-                megawatt{
-                    dnam{"megawatty"}
-                }
-                milliwatt{
-                    dnam{"miliwatty"}
-                }
-                watt{
-                    dnam{"watty"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hektopascaly"}
-                }
-                inch-hg{
-                    dnam{"palce rtuti"}
-                }
-                millibar{
-                    dnam{"milibary"}
-                }
-                millimeter-of-mercury{
-                    dnam{"milimetry rtuti"}
-                }
-                pound-per-square-inch{
-                    dnam{"libry na čtvereční palec"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"karáty"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilometry za hodinu"}
-                }
-                meter-per-second{
-                    dnam{"metry za sekundu"}
-                }
-                mile-per-hour{
-                    dnam{"míle za hodinu"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"stupně Celsia"}
-                }
-                fahrenheit{
-                    dnam{"stupně Fahrenheita"}
-                }
-                kelvin{
-                    dnam{"kelviny"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"akro-stopy"}
-                }
-                bushel{
-                    dnam{"bušly"}
-                }
-                centiliter{
-                    dnam{"centilitry"}
-                }
-                cubic-centimeter{
-                    dnam{"centimetry krychlové"}
-                }
-                cubic-foot{
-                    dnam{"stopy krychlové"}
-                }
-                cubic-inch{
-                    dnam{"palce krychlové"}
-                }
-                cubic-kilometer{
-                    dnam{"kilometry krychlové"}
-                }
-                cubic-meter{
-                    dnam{"metry krychlové"}
-                }
-                cubic-mile{
-                    dnam{"míle krychlové"}
-                }
-                cubic-yard{
-                    dnam{"yardy krychlové"}
-                }
-                cup{
-                    dnam{"šálek"}
-                }
-                deciliter{
-                    dnam{"decilitry"}
-                }
-                fluid-ounce{
-                    dnam{"kapalinové unce"}
-                }
-                gallon{
-                    dnam{"galon"}
-                }
-                hectoliter{
-                    dnam{"hektolitr"}
-                }
-                liter{
-                    dnam{"litry"}
-                }
-                megaliter{
-                    dnam{"megalitry"}
-                }
-                milliliter{
-                    dnam{"mililitry"}
-                }
-                pint{
-                    dnam{"pinty"}
-                }
-                quart{
-                    dnam{"kvarty"}
-                }
-                tablespoon{
-                    dnam{"lžíce"}
-                }
-                teaspoon{
-                    dnam{"lžička"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigawatty"}
                 few{"{0} gigawatty"}
                 many{"{0} gigawattu"}
                 one{"{0} gigawatt"}
                 other{"{0} gigawattů"}
             }
             horsepower{
+                dnam{"koňská síla"}
                 few{"{0} koňské síly"}
                 many{"{0} koňské síly"}
                 one{"{0} koňská síla"}
                 other{"{0} koňských sil"}
             }
             kilowatt{
+                dnam{"kilowatty"}
                 few{"{0} kilowatty"}
                 many{"{0} kilowattu"}
                 one{"{0} kilowatt"}
                 other{"{0} kilowattů"}
             }
             megawatt{
+                dnam{"megawatty"}
                 few{"{0} megawatty"}
                 many{"{0} megawattu"}
                 one{"{0} megawatt"}
                 other{"{0} megawattů"}
             }
             milliwatt{
+                dnam{"miliwatty"}
                 few{"{0} miliwatty"}
                 many{"{0} miliwattu"}
                 one{"{0} miliwatt"}
                 other{"{0} miliwattů"}
             }
             watt{
+                dnam{"watty"}
                 few{"{0} watty"}
                 many{"{0} wattu"}
                 one{"{0} watt"}
@@ -2721,30 +2407,35 @@ cs{
         }
         pressure{
             hectopascal{
+                dnam{"hektopascaly"}
                 few{"{0} hektopascaly"}
                 many{"{0} hektopascalu"}
                 one{"{0} hektopascal"}
                 other{"{0} hektopascalů"}
             }
             inch-hg{
+                dnam{"palce rtuti"}
                 few{"{0} palce rtuti"}
                 many{"{0} palce rtuti"}
                 one{"{0} palec rtuti"}
                 other{"{0} palců rtuti"}
             }
             millibar{
+                dnam{"milibary"}
                 few{"{0} milibary"}
                 many{"{0} milibaru"}
                 one{"{0} milibar"}
                 other{"{0} milibarů"}
             }
             millimeter-of-mercury{
+                dnam{"milimetry rtuti"}
                 few{"{0} milimetry rtuti"}
                 many{"{0} milimetru rtuti"}
                 one{"{0} milimetr rtuti"}
                 other{"{0} milimetrů rtuti"}
             }
             pound-per-square-inch{
+                dnam{"libry na čtvereční palec"}
                 few{"{0} libry na čtvereční palec"}
                 many{"{0} libry na čtvereční palec"}
                 one{"{0} libra na čtvereční palec"}
@@ -2753,6 +2444,7 @@ cs{
         }
         proportion{
             karat{
+                dnam{"karáty"}
                 few{"{0} karáty"}
                 many{"{0} karátu"}
                 one{"{0} karát"}
@@ -2761,18 +2453,21 @@ cs{
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilometry za hodinu"}
                 few{"{0} kilometry za hodinu"}
                 many{"{0} kilometru za hodinu"}
                 one{"{0} kilometr za hodinu"}
                 other{"{0} kilometrů za hodinu"}
             }
             meter-per-second{
+                dnam{"metry za sekundu"}
                 few{"{0} metry za sekundu"}
                 many{"{0} metru za sekundu"}
                 one{"{0} metr za sekundu"}
                 other{"{0} metrů za sekundu"}
             }
             mile-per-hour{
+                dnam{"míle za hodinu"}
                 few{"{0} míle za hodinu"}
                 many{"{0} míle za hodinu"}
                 one{"{0} míle za hodinu"}
@@ -2781,18 +2476,21 @@ cs{
         }
         temperature{
             celsius{
+                dnam{"stupně Celsia"}
                 few{"{0} stupně Celsia"}
                 many{"{0} stupně Celsia"}
                 one{"{0} stupeň Celsia"}
                 other{"{0} stupňů Celsia"}
             }
             fahrenheit{
+                dnam{"stupně Fahrenheita"}
                 few{"{0} stupně Fahrenheita"}
                 many{"{0} stupně Fahrenheita"}
                 one{"{0} stupeň Fahrenheita"}
                 other{"{0} stupňů Fahrenheita"}
             }
             kelvin{
+                dnam{"kelviny"}
                 few{"{0} kelviny"}
                 many{"{0} kelvinu"}
                 one{"{0} kelvin"}
@@ -2801,132 +2499,154 @@ cs{
         }
         volume{
             acre-foot{
+                dnam{"akro-stopy"}
                 few{"{0} akro-stopy"}
                 many{"{0} akro-stopy"}
                 one{"{0} akro-stopa"}
                 other{"{0} akro-stop"}
             }
             bushel{
+                dnam{"bušly"}
                 few{"{0} bušly"}
                 many{"{0} bušlu"}
                 one{"{0} bušl"}
                 other{"{0} bušlů"}
             }
             centiliter{
+                dnam{"centilitry"}
                 few{"{0} centilitry"}
                 many{"{0} centilitru"}
                 one{"{0} centilitr"}
                 other{"{0} centilitrů"}
             }
             cubic-centimeter{
+                dnam{"centimetry krychlové"}
                 few{"{0} centimetry krychlové"}
                 many{"{0} centimetru krychlového"}
                 one{"{0} centimetr krychlový"}
                 other{"{0} centimetrů krychlových"}
             }
             cubic-foot{
+                dnam{"stopy krychlové"}
                 few{"{0} stopy krychlové"}
                 many{"{0} stopy krychlové"}
                 one{"{0} stopa krychlová"}
                 other{"{0} stop krychlových"}
             }
             cubic-inch{
+                dnam{"palce krychlové"}
                 few{"{0} palce krychlové"}
                 many{"{0} palce krychlového"}
                 one{"{0} palec krychlový"}
                 other{"{0} palců krychlových"}
             }
             cubic-kilometer{
+                dnam{"kilometry krychlové"}
                 few{"{0} kilometry krychlové"}
                 many{"{0} kilometru krychlového"}
                 one{"{0} kilometr krychlový"}
                 other{"{0} kilometrů krychlových"}
             }
             cubic-meter{
+                dnam{"metry krychlové"}
                 few{"{0} metry krychlové"}
                 many{"{0} metru krychlového"}
                 one{"{0} metr krychlový"}
                 other{"{0} metrů krychlových"}
             }
             cubic-mile{
+                dnam{"míle krychlové"}
                 few{"{0} míle krychlové"}
                 many{"{0} míle krychlové"}
                 one{"{0} míle krychlová"}
                 other{"{0} mil krychlových"}
             }
             cubic-yard{
+                dnam{"yardy krychlové"}
                 few{"{0} yardy krychlové"}
                 many{"{0} yardu krychlového"}
                 one{"{0} yard krychlový"}
                 other{"{0} yardů krychlových"}
             }
             cup{
+                dnam{"šálek"}
                 few{"{0} šálky"}
                 many{"{0} šálku"}
                 one{"{0} šálek"}
                 other{"{0} šálků"}
             }
             deciliter{
+                dnam{"decilitry"}
                 few{"{0} decilitry"}
                 many{"{0} decilitru"}
                 one{"{0} decilitr"}
                 other{"{0} decilitrů"}
             }
             fluid-ounce{
+                dnam{"kapalinové unce"}
                 few{"{0} kapalinové unce"}
                 many{"{0} kapalinové unce"}
                 one{"{0} kapalinová unce"}
                 other{"{0} kapalinových uncí"}
             }
             gallon{
+                dnam{"galon"}
                 few{"{0} galony"}
                 many{"{0} galonu"}
                 one{"{0} galon"}
                 other{"{0} galonů"}
             }
             hectoliter{
+                dnam{"hektolitr"}
                 few{"{0} hektolitry"}
                 many{"{0} hektolitru"}
                 one{"{0} hektolitr"}
                 other{"{0} hektolitrů"}
             }
             liter{
+                dnam{"litry"}
                 few{"{0} litry"}
                 many{"{0} litru"}
                 one{"{0} litr"}
                 other{"{0} litrů"}
             }
             megaliter{
+                dnam{"megalitry"}
                 few{"{0} megalitry"}
                 many{"{0} megalitru"}
                 one{"{0} megalitr"}
                 other{"{0} megalitrů"}
             }
             milliliter{
+                dnam{"mililitry"}
                 few{"{0} mililitry"}
                 many{"{0} mililitru"}
                 one{"{0} mililitr"}
                 other{"{0} mililitrů"}
             }
             pint{
+                dnam{"pinty"}
                 few{"{0} pinty"}
                 many{"{0} pinty"}
                 one{"{0} pinta"}
                 other{"{0} pint"}
             }
             quart{
+                dnam{"kvarty"}
                 few{"{0} kvarty"}
                 many{"{0} kvartu"}
                 one{"{0} kvart"}
                 other{"{0} kvartů"}
             }
             tablespoon{
+                dnam{"lžíce"}
                 few{"{0} lžíce"}
                 many{"{0} lžíce"}
                 one{"{0} lžíce"}
                 other{"{0} lžic"}
             }
             teaspoon{
+                dnam{"lžička"}
                 few{"{0} lžičky"}
                 many{"{0} lžičky"}
                 one{"{0} lžička"}

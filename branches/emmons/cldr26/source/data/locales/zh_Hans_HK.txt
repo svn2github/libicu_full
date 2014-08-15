@@ -289,25 +289,15 @@ zh_Hans_HK{
                 other{"{0}秒"}
             }
         }
-        per{
-            proportion{
-                karat{
-                    dnam{"开"}
-                }
-            }
-            temperature{
-                kelvin{
-                    dnam{"开氏度"}
-                }
-            }
-        }
         proportion{
             karat{
+                dnam{"开"}
                 other{"{0}开"}
             }
         }
         temperature{
             kelvin{
+                dnam{"开氏度"}
                 other{"{0}开氏度"}
             }
         }

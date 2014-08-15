@@ -33,35 +33,21 @@ de_CH{
     units{
         area{
             square-foot{
+                dnam{"Quadratfuss"}
                 one{"{0} Quadratfuss"}
                 other{"{0} Quadratfuss"}
             }
         }
         length{
             foot{
+                dnam{"Fuss"}
                 one{"{0} Fuss"}
                 other{"{0} Fuss"}
             }
         }
-        per{
-            area{
-                square-foot{
-                    dnam{"Quadratfuss"}
-                }
-            }
-            length{
-                foot{
-                    dnam{"Fuss"}
-                }
-            }
-            volume{
-                cubic-foot{
-                    dnam{"Kubikfuss"}
-                }
-            }
-        }
         volume{
             cubic-foot{
+                dnam{"Kubikfuss"}
                 one{"{0} Kubikfuss"}
                 other{"{0} Kubikfuss"}
             }

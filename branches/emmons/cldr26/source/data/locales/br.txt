@@ -385,6 +385,7 @@ br{
     units{
         angle{
             degree{
+                dnam{"derezioù"}
                 few{"{0} derez"}
                 many{"{0} a zerezioù"}
                 one{"{0} derez"}
@@ -392,6 +393,7 @@ br{
                 two{"{0} zerez"}
             }
             radian{
+                dnam{"radianoù"}
                 few{"{0} radian"}
                 many{"{0} a radianoù"}
                 one{"{0} radian"}
@@ -401,6 +403,7 @@ br{
         }
         area{
             hectare{
+                dnam{"hektaroù"}
                 few{"{0} hektar"}
                 many{"{0} a hektaroù"}
                 one{"{0} hektar"}
@@ -408,6 +411,7 @@ br{
                 two{"{0} hektar"}
             }
             square-centimeter{
+                dnam{"kentimetroù karrez"}
                 few{"{0} c'hentimetr karrez"}
                 many{"{0} a gentimetroù karrez"}
                 one{"{0} c'hentimetr karrez"}
@@ -415,6 +419,7 @@ br{
                 two{"{0} gentimetr karrez"}
             }
             square-foot{
+                dnam{"troatadoù karrez"}
                 few{"{0} zroatad karrez"}
                 many{"{0} a droatadoù karrez"}
                 one{"{0} troatad karrez"}
@@ -422,6 +427,7 @@ br{
                 two{"{0} droatad karrez"}
             }
             square-inch{
+                dnam{"meutadoù karrez"}
                 few{"{0} meutad karrez"}
                 many{"{0} a veutadoù karrez"}
                 one{"{0} meutad karrez"}
@@ -429,6 +435,7 @@ br{
                 two{"{0} veutad karrez"}
             }
             square-kilometer{
+                dnam{"kilometroù karrez"}
                 few{"{0} c'hilometr karrez"}
                 many{"{0} a gilometroù karrez"}
                 one{"{0} c'hilometr karrez"}
@@ -436,6 +443,7 @@ br{
                 two{"{0} gilometr karrez"}
             }
             square-meter{
+                dnam{"metroù karrez"}
                 few{"{0} metr karrez"}
                 many{"{0} a vetroù garrez"}
                 one{"{0} metr karrez"}
@@ -443,6 +451,7 @@ br{
                 two{"{0} vetr karrez"}
             }
             square-mile{
+                dnam{"miltirioù karrez"}
                 few{"{0} miltir karrez"}
                 many{"{0} a viltirioù karrez"}
                 one{"{0} miltir karrez"}
@@ -452,6 +461,7 @@ br{
         }
         digital{
             bit{
+                dnam{"bitoù"}
                 few{"{0} bit"}
                 many{"{0} a vitoù"}
                 one{"{0} bit"}
@@ -459,6 +469,7 @@ br{
                 two{"{0} vit"}
             }
             byte{
+                dnam{"oktedoù"}
                 few{"{0} okted"}
                 many{"{0} a oktedoù"}
                 one{"{0} okted"}
@@ -466,6 +477,7 @@ br{
                 two{"{0} okted"}
             }
             gigabit{
+                dnam{"gigabitoù"}
                 few{"{0} gigabit"}
                 many{"{0} a c'higabitoù"}
                 one{"{0} gigabit"}
@@ -473,6 +485,7 @@ br{
                 two{"{0} c'higabit"}
             }
             gigabyte{
+                dnam{"gigaoktedoù"}
                 few{"{0} gigaokted"}
                 many{"{0} a c'higaoktedoù"}
                 one{"{0} gigaokted"}
@@ -480,6 +493,7 @@ br{
                 two{"{0} c'higaokted"}
             }
             kilobit{
+                dnam{"kilobitoù"}
                 few{"{0} c'hilobit"}
                 many{"{0} a gilobitoù"}
                 one{"{0} c'hilobit"}
@@ -487,6 +501,7 @@ br{
                 two{"{0} gilobit"}
             }
             kilobyte{
+                dnam{"kilooktedoù"}
                 few{"{0} c'hilookted"}
                 many{"{0} a gilooktedoù"}
                 one{"{0} c'hilookted"}
@@ -494,6 +509,7 @@ br{
                 two{"{0} gilookted"}
             }
             megabit{
+                dnam{"megabitoù"}
                 few{"{0} megabit"}
                 many{"{0} a vegabitoù"}
                 one{"{0} megabit"}
@@ -501,6 +517,7 @@ br{
                 two{"{0} vegabit"}
             }
             megabyte{
+                dnam{"megaoktedoù"}
                 few{"{0} megaokted"}
                 many{"{0} a vegaoktedoù"}
                 one{"{0} megaokted"}
@@ -508,6 +525,7 @@ br{
                 two{"{0} vegaokted"}
             }
             terabit{
+                dnam{"terabitoù"}
                 few{"{0} zerabit"}
                 many{"{0} a derabitoù"}
                 one{"{0} terabit"}
@@ -515,6 +533,7 @@ br{
                 two{"{0} derabit"}
             }
             terabyte{
+                dnam{"teraoktedoù"}
                 few{"{0} zeraokted"}
                 many{"{0} a deraoktedoù"}
                 one{"{0} teraokted"}
@@ -524,6 +543,7 @@ br{
         }
         duration{
             day{
+                dnam{"deizioù"}
                 few{"{0} deiz"}
                 many{"{0} a zeizioù"}
                 one{"{0} deiz"}
@@ -531,13 +551,16 @@ br{
                 two{"{0} zeiz"}
             }
             hour{
+                dnam{"eurioù"}
                 few{"{0} eur"}
                 many{"{0} a eurioù"}
                 one{"{0} eur"}
                 other{"{0} eur"}
+                per{"{0} dre eur"}
                 two{"{0} eur"}
             }
             microsecond{
+                dnam{"mikroeilennoù"}
                 few{"{0} mikroeilenn"}
                 many{"{0} a vikroeilennoù"}
                 one{"{0} mikroeilenn"}
@@ -545,6 +568,7 @@ br{
                 two{"{0} vikroeilenn"}
             }
             millisecond{
+                dnam{"milieilennoù"}
                 few{"{0} milieilenn"}
                 many{"{0} a vilieilennoù"}
                 one{"{0} milieilenn"}
@@ -552,6 +576,7 @@ br{
                 two{"{0} vilieilenn"}
             }
             minute{
+                dnam{"munutoù"}
                 few{"{0} munut"}
                 many{"{0} a vunutoù"}
                 one{"{0} munut"}
@@ -559,6 +584,7 @@ br{
                 two{"{0} vunut"}
             }
             month{
+                dnam{"mizioù"}
                 few{"{0} miz"}
                 many{"{0} a vizioù"}
                 one{"{0} miz"}
@@ -566,6 +592,7 @@ br{
                 two{"{0} viz"}
             }
             nanosecond{
+                dnam{"nanoeilennoù"}
                 few{"{0} nanoeilenn"}
                 many{"{0} a nanoeilennoù"}
                 one{"{0} nanoeilenn"}
@@ -573,13 +600,16 @@ br{
                 two{"{0} nanoeilenn"}
             }
             second{
+                dnam{"eilennoù"}
                 few{"{0} eilenn"}
                 many{"{0} a eilennoù"}
                 one{"{0} eilenn"}
                 other{"{0} eilenn"}
+                per{"{0} dre eilenn"}
                 two{"{0} eilenn"}
             }
             year{
+                dnam{"bloazioù"}
                 few{"{0} bloaz"}
                 many{"{0} a vloazioù"}
                 one{"{0} bloaz"}
@@ -589,6 +619,7 @@ br{
         }
         electric{
             ampere{
+                dnam{"amperoù"}
                 few{"{0} amper"}
                 many{"{0} a amperoù"}
                 one{"{0} amper"}
@@ -596,6 +627,7 @@ br{
                 two{"{0} amper"}
             }
             milliampere{
+                dnam{"miliamperoù"}
                 few{"{0} miliamper"}
                 many{"{0} a viliamperoù"}
                 one{"{0} miliamper"}
@@ -603,6 +635,7 @@ br{
                 two{"{0} viliamper"}
             }
             ohm{
+                dnam{"ohmoù"}
                 few{"{0} ohm"}
                 many{"{0} a ohmoù"}
                 one{"{0} ohm"}
@@ -610,6 +643,7 @@ br{
                 two{"{0} ohm"}
             }
             volt{
+                dnam{"voltoù"}
                 few{"{0} volt"}
                 many{"{0} a voltoù"}
                 one{"{0} volt"}
@@ -619,6 +653,7 @@ br{
         }
         energy{
             calorie{
+                dnam{"kaloriennoù"}
                 few{"{0} c'halorienn"}
                 many{"{0} a galoriennoù"}
                 one{"{0} galorienn"}
@@ -626,6 +661,7 @@ br{
                 two{"{0} galorienn"}
             }
             joule{
+                dnam{"jouloù"}
                 few{"{0} joul"}
                 many{"{0} a jouloù"}
                 one{"{0} joul"}
@@ -633,6 +669,7 @@ br{
                 two{"{0} joul"}
             }
             kilocalorie{
+                dnam{"kilokaloriennoù"}
                 few{"{0} c'hilokalorienn"}
                 many{"{0} a gilokaloriennoù"}
                 one{"{0} gilokalorienn"}
@@ -640,6 +677,7 @@ br{
                 two{"{0} gilokalorienn"}
             }
             kilojoule{
+                dnam{"kilojouloù"}
                 few{"{0} c'hilojoul"}
                 many{"{0} a gilojouloù"}
                 one{"{0} c'hilojoul"}
@@ -647,6 +685,7 @@ br{
                 two{"{0} gilojoul"}
             }
             kilowatt-hour{
+                dnam{"kilowattoù-eurioù"}
                 few{"{0} c'hilowatt-eur"}
                 many{"{0} a gilowattoù-eurioù"}
                 one{"{0} c'hilowatt-eur"}
@@ -656,6 +695,7 @@ br{
         }
         frequency{
             gigahertz{
+                dnam{"gigahertzoù"}
                 few{"{0} gigahertz"}
                 many{"{0} a c'higahertzoù"}
                 one{"{0} gigahertz"}
@@ -663,6 +703,7 @@ br{
                 two{"{0} c'higahertz"}
             }
             hertz{
+                dnam{"hertzoù"}
                 few{"{0} hertz"}
                 many{"{0} a hertzoù"}
                 one{"{0} hertz"}
@@ -670,6 +711,7 @@ br{
                 two{"{0} hertz"}
             }
             kilohertz{
+                dnam{"kilohertzoù"}
                 few{"{0} c'hilohertz"}
                 many{"{0} a gilohertzoù"}
                 one{"{0} c'hilohertz"}
@@ -677,6 +719,7 @@ br{
                 two{"{0} gilohertz"}
             }
             megahertz{
+                dnam{"megahertzoù"}
                 few{"{0} megahertz"}
                 many{"{0} a vegahertzoù"}
                 one{"{0} megahertz"}
@@ -686,6 +729,7 @@ br{
         }
         length{
             centimeter{
+                dnam{"kentimetroù"}
                 few{"{0} c'hentimetr"}
                 many{"{0} a gentimetroù"}
                 one{"{0} c'hentimetr"}
@@ -693,6 +737,7 @@ br{
                 two{"{0} gentimetr"}
             }
             decimeter{
+                dnam{"dekimetroù"}
                 few{"{0} dekimetr"}
                 many{"{0} a zekimetroù"}
                 one{"{0} dekimetr"}
@@ -700,6 +745,7 @@ br{
                 two{"{0} zekimetr"}
             }
             fathom{
+                dnam{"gourhedadoù"}
                 few{"{0} gourhedad"}
                 many{"{0} a c'hourhedadoù"}
                 one{"{0} gourhedad"}
@@ -707,6 +753,7 @@ br{
                 two{"{0} c'hourhedad"}
             }
             foot{
+                dnam{"troatadoù"}
                 few{"{0} zroatad"}
                 many{"{0} a droatadoù"}
                 one{"{0} troatad"}
@@ -714,6 +761,7 @@ br{
                 two{"{0} droatad"}
             }
             inch{
+                dnam{"meutadoù"}
                 few{"{0} meutad"}
                 many{"{0} a veutadoù"}
                 one{"{0} meutad"}
@@ -721,6 +769,7 @@ br{
                 two{"{0} veutad"}
             }
             kilometer{
+                dnam{"kilometroù"}
                 few{"{0} c'hilometr"}
                 many{"{0} a gilometroù"}
                 one{"{0} c'hilometr"}
@@ -728,6 +777,7 @@ br{
                 two{"{0} gilometr"}
             }
             meter{
+                dnam{"metroù"}
                 few{"{0} metr"}
                 many{"{0} a vetroù"}
                 one{"{0} metr"}
@@ -735,6 +785,7 @@ br{
                 two{"{0} vetr"}
             }
             micrometer{
+                dnam{"mikrometroù"}
                 few{"{0} mikrometr"}
                 many{"{0} a vikrometroù"}
                 one{"{0} mikrometr"}
@@ -742,6 +793,7 @@ br{
                 two{"{0} vikrometr"}
             }
             mile{
+                dnam{"miltirioù"}
                 few{"{0} miltir"}
                 many{"{0} a viltirioù"}
                 one{"{0} miltir"}
@@ -749,6 +801,7 @@ br{
                 two{"{0} viltir"}
             }
             millimeter{
+                dnam{"milimetroù"}
                 few{"{0} milimetr"}
                 many{"{0} a vilimetroù"}
                 one{"{0} milimetr"}
@@ -756,6 +809,7 @@ br{
                 two{"{0} vilimetr"}
             }
             nanometer{
+                dnam{"nanometroù"}
                 few{"{0} nanometr"}
                 many{"{0} a nanometroù"}
                 one{"{0} nanometr"}
@@ -763,6 +817,7 @@ br{
                 two{"{0} nanometr"}
             }
             nautical-mile{
+                dnam{"milmorioù"}
                 few{"{0} milmor"}
                 many{"{0} a vilmorioù"}
                 one{"{0} milmor"}
@@ -770,6 +825,7 @@ br{
                 two{"{0} vilmor"}
             }
             parsec{
+                dnam{"parsekoù"}
                 few{"{0} farsek"}
                 many{"{0} a barsekoù"}
                 one{"{0} parsek"}
@@ -777,6 +833,7 @@ br{
                 two{"{0} barsek"}
             }
             picometer{
+                dnam{"pikometroù"}
                 few{"{0} fikometr"}
                 many{"{0} a bikometroù"}
                 one{"{0} pikometr"}
@@ -786,6 +843,7 @@ br{
         }
         light{
             lux{
+                dnam{"luksoù"}
                 few{"{0} lx"}
                 many{"{0} a luksoù"}
                 one{"{0} luks"}
@@ -795,6 +853,7 @@ br{
         }
         mass{
             carat{
+                dnam{"karatoù"}
                 few{"{0} c'harat"}
                 many{"{0} a garatoù"}
                 one{"{0} c'harat"}
@@ -802,6 +861,7 @@ br{
                 two{"{0} garat"}
             }
             gram{
+                dnam{"grammoù"}
                 few{"{0} gramm"}
                 many{"{0} a c'hrammoù"}
                 one{"{0} gramm"}
@@ -809,6 +869,7 @@ br{
                 two{"{0} c'hramm"}
             }
             kilogram{
+                dnam{"kilogrammoù"}
                 few{"{0} c'hilogramm"}
                 many{"{0} a gilogrammoù"}
                 one{"{0} c'hilogramm"}
@@ -816,6 +877,7 @@ br{
                 two{"{0} gilogramm"}
             }
             metric-ton{
+                dnam{"tonennoù metrek"}
                 few{"{0} zonenn metrek"}
                 many{"{0} a donennoù metrek"}
                 one{"{0} donenn vetrek"}
@@ -823,6 +885,7 @@ br{
                 two{"{0} donenn vetrek"}
             }
             microgram{
+                dnam{"mikrogrammoù"}
                 few{"{0} mikrogramm"}
                 many{"{0} a vikrogrammoù"}
                 one{"{0} mikrogramm"}
@@ -830,6 +893,7 @@ br{
                 two{"{0} vikrogramm"}
             }
             milligram{
+                dnam{"miligrammoù"}
                 few{"{0} miligramm"}
                 many{"{0} a viligrammoù"}
                 one{"{0} miligramm"}
@@ -837,6 +901,7 @@ br{
                 two{"{0} viligramm"}
             }
             ounce{
+                dnam{"oñsoù"}
                 few{"{0} oñs"}
                 many{"{0} a oñsoù"}
                 one{"{0} oñs"}
@@ -844,6 +909,7 @@ br{
                 two{"{0} oñs"}
             }
             pound{
+                dnam{"lurioù"}
                 few{"{0} lur"}
                 many{"{0} a lurioù"}
                 one{"{0} lur"}
@@ -851,6 +917,7 @@ br{
                 two{"{0} lur"}
             }
             ton{
+                dnam{"tonennoù"}
                 few{"{0} zonenn"}
                 many{"{0} a donennoù"}
                 one{"{0} donenn"}
@@ -858,320 +925,9 @@ br{
                 two{"{0} donenn"}
             }
         }
-        per{
-            angle{
-                degree{
-                    dnam{"derezioù"}
-                }
-                radian{
-                    dnam{"radianoù"}
-                }
-            }
-            area{
-                hectare{
-                    dnam{"hektaroù"}
-                }
-                square-centimeter{
-                    dnam{"kentimetroù karrez"}
-                }
-                square-foot{
-                    dnam{"troatadoù karrez"}
-                }
-                square-inch{
-                    dnam{"meutadoù karrez"}
-                }
-                square-kilometer{
-                    dnam{"kilometroù karrez"}
-                }
-                square-meter{
-                    dnam{"metroù karrez"}
-                }
-                square-mile{
-                    dnam{"miltirioù karrez"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bitoù"}
-                }
-                byte{
-                    dnam{"oktedoù"}
-                }
-                gigabit{
-                    dnam{"gigabitoù"}
-                }
-                gigabyte{
-                    dnam{"gigaoktedoù"}
-                }
-                kilobit{
-                    dnam{"kilobitoù"}
-                }
-                kilobyte{
-                    dnam{"kilooktedoù"}
-                }
-                megabit{
-                    dnam{"megabitoù"}
-                }
-                megabyte{
-                    dnam{"megaoktedoù"}
-                }
-                terabit{
-                    dnam{"terabitoù"}
-                }
-                terabyte{
-                    dnam{"teraoktedoù"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"deizioù"}
-                }
-                hour{
-                    dnam{"eurioù"}
-                    per{"{0} dre eur"}
-                }
-                microsecond{
-                    dnam{"mikroeilennoù"}
-                }
-                millisecond{
-                    dnam{"milieilennoù"}
-                }
-                minute{
-                    dnam{"munutoù"}
-                }
-                month{
-                    dnam{"mizioù"}
-                }
-                nanosecond{
-                    dnam{"nanoeilennoù"}
-                }
-                second{
-                    dnam{"eilennoù"}
-                    per{"{0} dre eilenn"}
-                }
-                year{
-                    dnam{"bloazioù"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"amperoù"}
-                }
-                milliampere{
-                    dnam{"miliamperoù"}
-                }
-                ohm{
-                    dnam{"ohmoù"}
-                }
-                volt{
-                    dnam{"voltoù"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"kaloriennoù"}
-                }
-                joule{
-                    dnam{"jouloù"}
-                }
-                kilocalorie{
-                    dnam{"kilokaloriennoù"}
-                }
-                kilojoule{
-                    dnam{"kilojouloù"}
-                }
-                kilowatt-hour{
-                    dnam{"kilowattoù-eurioù"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigahertzoù"}
-                }
-                hertz{
-                    dnam{"hertzoù"}
-                }
-                kilohertz{
-                    dnam{"kilohertzoù"}
-                }
-                megahertz{
-                    dnam{"megahertzoù"}
-                }
-            }
-            length{
-                centimeter{
-                    dnam{"kentimetroù"}
-                }
-                decimeter{
-                    dnam{"dekimetroù"}
-                }
-                fathom{
-                    dnam{"gourhedadoù"}
-                }
-                foot{
-                    dnam{"troatadoù"}
-                }
-                inch{
-                    dnam{"meutadoù"}
-                }
-                kilometer{
-                    dnam{"kilometroù"}
-                }
-                meter{
-                    dnam{"metroù"}
-                }
-                micrometer{
-                    dnam{"mikrometroù"}
-                }
-                mile{
-                    dnam{"miltirioù"}
-                }
-                millimeter{
-                    dnam{"milimetroù"}
-                }
-                nanometer{
-                    dnam{"nanometroù"}
-                }
-                nautical-mile{
-                    dnam{"milmorioù"}
-                }
-                parsec{
-                    dnam{"parsekoù"}
-                }
-                picometer{
-                    dnam{"pikometroù"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"luksoù"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"karatoù"}
-                }
-                gram{
-                    dnam{"grammoù"}
-                }
-                kilogram{
-                    dnam{"kilogrammoù"}
-                }
-                metric-ton{
-                    dnam{"tonennoù metrek"}
-                }
-                microgram{
-                    dnam{"mikrogrammoù"}
-                }
-                milligram{
-                    dnam{"miligrammoù"}
-                }
-                ounce{
-                    dnam{"oñsoù"}
-                }
-                pound{
-                    dnam{"lurioù"}
-                }
-                ton{
-                    dnam{"tonennoù"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigawattoù"}
-                }
-                kilowatt{
-                    dnam{"kilowattoù"}
-                }
-                megawatt{
-                    dnam{"megawattoù"}
-                }
-                milliwatt{
-                    dnam{"miliwattoù"}
-                }
-                watt{
-                    dnam{"wattoù"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hektopaskaloù"}
-                }
-                millibar{
-                    dnam{"milibaroù"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"karatoù"}
-                }
-            }
-            speed{
-                meter-per-second{
-                    dnam{"metroù dre eilenn"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"derezioù Celsius"}
-                }
-                fahrenheit{
-                    dnam{"derezioù Fahrenheit"}
-                }
-                kelvin{
-                    dnam{"kelvinoù"}
-                }
-            }
-            volume{
-                bushel{
-                    dnam{"poezelladoù"}
-                }
-                centiliter{
-                    dnam{"kentilitroù"}
-                }
-                cubic-centimeter{
-                    dnam{"kentimetroù diñs"}
-                }
-                cubic-foot{
-                    dnam{"troatadoù diñs"}
-                }
-                cubic-inch{
-                    dnam{"meutadoù diñs"}
-                }
-                cubic-kilometer{
-                    dnam{"kilometroù diñs"}
-                }
-                cubic-meter{
-                    dnam{"metroù diñs"}
-                }
-                cubic-mile{
-                    dnam{"miltirioù diñs"}
-                }
-                deciliter{
-                    dnam{"dekilitroù"}
-                }
-                gallon{
-                    dnam{"gallonoù"}
-                }
-                hectoliter{
-                    dnam{"hektolitroù"}
-                }
-                liter{
-                    dnam{"litroù"}
-                }
-                megaliter{
-                    dnam{"megalitroù"}
-                }
-                milliliter{
-                    dnam{"mililitroù"}
-                }
-                pint{
-                    dnam{"pintoù"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigawattoù"}
                 few{"{0} gigawatt"}
                 many{"{0} a c'higawattoù"}
                 one{"{0} gigawatt"}
@@ -1179,6 +935,7 @@ br{
                 two{"{0} c'higawatt"}
             }
             kilowatt{
+                dnam{"kilowattoù"}
                 few{"{0} c'hilowatt"}
                 many{"{0} a gilowattoù"}
                 one{"{0} c'hilowatt"}
@@ -1186,6 +943,7 @@ br{
                 two{"{0} gilowatt"}
             }
             megawatt{
+                dnam{"megawattoù"}
                 few{"{0} megawatt"}
                 many{"{0} a vegawattoù"}
                 one{"{0} megawatt"}
@@ -1193,6 +951,7 @@ br{
                 two{"{0} vegawatt"}
             }
             milliwatt{
+                dnam{"miliwattoù"}
                 few{"{0} miliwatt"}
                 many{"{0} a viliwattoù"}
                 one{"{0} miliwatt"}
@@ -1200,6 +959,7 @@ br{
                 two{"{0} viliwatt"}
             }
             watt{
+                dnam{"wattoù"}
                 few{"{0} watt"}
                 many{"{0} a wattoù"}
                 one{"{0} watt"}
@@ -1209,6 +969,7 @@ br{
         }
         pressure{
             hectopascal{
+                dnam{"hektopaskaloù"}
                 few{"{0} hektopaskal"}
                 many{"{0} a hektopaskaloù"}
                 one{"{0} hektopaskal"}
@@ -1216,6 +977,7 @@ br{
                 two{"{0} hektopaskal"}
             }
             millibar{
+                dnam{"milibaroù"}
                 few{"{0} milibar"}
                 many{"{0} a vilibaroù"}
                 one{"{0} milibar"}
@@ -1225,6 +987,7 @@ br{
         }
         proportion{
             karat{
+                dnam{"karatoù"}
                 few{"{0} c'harat"}
                 many{"{0} a garatoù"}
                 one{"{0} c'harat"}
@@ -1234,6 +997,7 @@ br{
         }
         speed{
             meter-per-second{
+                dnam{"metroù dre eilenn"}
                 few{"{0} metr dre eilenn"}
                 many{"{0} a vetroù dre eilenn"}
                 one{"{0} metr dre eilenn"}
@@ -1243,6 +1007,7 @@ br{
         }
         temperature{
             celsius{
+                dnam{"derezioù Celsius"}
                 few{"{0} derez Celsius"}
                 many{"{0} a zerezioù Celsius"}
                 one{"{0} derez Celsius"}
@@ -1250,15 +1015,20 @@ br{
                 two{"{0} zerez Celsius"}
             }
             fahrenheit{
+                dnam{"derezioù Fahrenheit"}
                 few{"{0} derez Fahrenheit"}
                 many{"{0} a zerezioù Fahrenheit"}
                 one{"{0} derez Fahrenheit"}
                 other{"{0} derez Fahrenheit"}
                 two{"{0} zerez Fahrenheit"}
             }
+            kelvin{
+                dnam{"kelvinoù"}
+            }
         }
         volume{
             bushel{
+                dnam{"poezelladoù"}
                 few{"{0} foezellad"}
                 many{"{0} a boezelladoù"}
                 one{"{0} poezellad"}
@@ -1266,6 +1036,7 @@ br{
                 two{"{0} boezellad"}
             }
             centiliter{
+                dnam{"kentilitroù"}
                 few{"{0} c'hentilitr"}
                 many{"{0} a gentilitroù"}
                 one{"{0} c'hentilitr"}
@@ -1273,6 +1044,7 @@ br{
                 two{"{0} gentilitr"}
             }
             cubic-centimeter{
+                dnam{"kentimetroù diñs"}
                 few{"{0} c'hentimetr diñs"}
                 many{"{0} a gentimetroù diñs"}
                 one{"{0} c'hentimetr diñs"}
@@ -1280,6 +1052,7 @@ br{
                 two{"{0} gentimetr diñs"}
             }
             cubic-foot{
+                dnam{"troatadoù diñs"}
                 few{"{0} zroatad diñs"}
                 many{"{0} a droatadoù diñs"}
                 one{"{0} troatad diñs"}
@@ -1287,6 +1060,7 @@ br{
                 two{"{0} droatad diñs"}
             }
             cubic-inch{
+                dnam{"meutadoù diñs"}
                 few{"{0} meutad diñs"}
                 many{"{0} a veutadoù diñs"}
                 one{"{0} meutad diñs"}
@@ -1294,6 +1068,7 @@ br{
                 two{"{0} veutad diñs"}
             }
             cubic-kilometer{
+                dnam{"kilometroù diñs"}
                 few{"{0} c'hilometr diñs"}
                 many{"{0} a gilometroù diñs"}
                 one{"{0} c'hilometr diñs"}
@@ -1301,6 +1076,7 @@ br{
                 two{"{0} gilometr diñs"}
             }
             cubic-meter{
+                dnam{"metroù diñs"}
                 few{"{0} metr diñs"}
                 many{"{0} a vetroù diñs"}
                 one{"{0} metr diñs"}
@@ -1308,6 +1084,7 @@ br{
                 two{"{0} vetr diñs"}
             }
             cubic-mile{
+                dnam{"miltirioù diñs"}
                 few{"{0} miltir diñs"}
                 many{"{0} a viltirioù diñs"}
                 one{"{0} miltir diñs"}
@@ -1315,6 +1092,7 @@ br{
                 two{"{0} viltir diñs"}
             }
             deciliter{
+                dnam{"dekilitroù"}
                 few{"{0} dekilitr"}
                 many{"{0} a zekilitroù"}
                 one{"{0} dekilitr"}
@@ -1322,6 +1100,7 @@ br{
                 two{"{0} zekilitr"}
             }
             gallon{
+                dnam{"gallonoù"}
                 few{"{0} gallon"}
                 many{"{0} a c'hallonoù"}
                 one{"{0} gallon"}
@@ -1329,6 +1108,7 @@ br{
                 two{"{0} c'hallon"}
             }
             hectoliter{
+                dnam{"hektolitroù"}
                 few{"{0} hektolitr"}
                 many{"{0} a hektolitroù"}
                 one{"{0} hektolitr"}
@@ -1336,6 +1116,7 @@ br{
                 two{"{0} hektolitr"}
             }
             liter{
+                dnam{"litroù"}
                 few{"{0} litr"}
                 many{"{0} a litroù"}
                 one{"{0} litr"}
@@ -1343,6 +1124,7 @@ br{
                 two{"{0} litr"}
             }
             megaliter{
+                dnam{"megalitroù"}
                 few{"{0} megalitr"}
                 many{"{0} a vegalitroù"}
                 one{"{0} megalitr"}
@@ -1350,6 +1132,7 @@ br{
                 two{"{0} vegalitr"}
             }
             milliliter{
+                dnam{"mililitroù"}
                 few{"{0} mililitr"}
                 many{"{0} a vililitroù"}
                 one{"{0} mililitr"}
@@ -1357,6 +1140,7 @@ br{
                 two{"{0} vililitr"}
             }
             pint{
+                dnam{"pintoù"}
                 few{"{0} fint"}
                 many{"{0} a bintoù"}
                 one{"{0} pint"}

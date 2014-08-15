@@ -3009,12 +3009,14 @@ lt{
     units{
         acceleration{
             g-force{
+                dnam{"laisvojo kritimo pagreičiai"}
                 few{"{0} laisvojo kritimo pagreičiai"}
                 many{"{0} laisvojo kritimo pagreičio"}
                 one{"{0} laisvojo kritimo pagreitis"}
                 other{"{0} laisvojo kritimo pagreičių"}
             }
             meter-per-second-squared{
+                dnam{"metrai per kvadratinę sekundę"}
                 few{"{0} metrai per kvadratinęsekundę"}
                 many{"{0} metro per kvadratinę sekundę"}
                 one{"{0} metras per kvadratinę sekundę"}
@@ -3023,24 +3025,28 @@ lt{
         }
         angle{
             arc-minute{
+                dnam{"kampo minutės"}
                 few{"{0} kampo minutės"}
                 many{"{0} kampo minutės"}
                 one{"{0} kampo minutė"}
                 other{"{0} kampo minučių"}
             }
             arc-second{
+                dnam{"kampo sekundės"}
                 few{"{0} kampo sekundės"}
                 many{"{0} kampo sekundės"}
                 one{"{0} kampo sekundė"}
                 other{"{0} kampo sekundžių"}
             }
             degree{
+                dnam{"laipsniai"}
                 few{"{0} laipsniai"}
                 many{"{0} laipsnio"}
                 one{"{0} laipsnis"}
                 other{"{0} laipsnių"}
             }
             radian{
+                dnam{"radianai"}
                 few{"{0} radianai"}
                 many{"{0} radiano"}
                 one{"{0} radianas"}
@@ -3049,54 +3055,63 @@ lt{
         }
         area{
             acre{
+                dnam{"akrai"}
                 few{"{0} akrai"}
                 many{"{0} akro"}
                 one{"{0} akras"}
                 other{"{0} akrų"}
             }
             hectare{
+                dnam{"hektarai"}
                 few{"{0} hektarai"}
                 many{"{0} hektaro"}
                 one{"{0} hektaras"}
                 other{"{0} hektarų"}
             }
             square-centimeter{
+                dnam{"kvadratiniai centimetrai"}
                 few{"{0} kvadratiniai centimetrai"}
                 many{"{0} kvadratinio centimetro"}
                 one{"{0} kvadratinis centimetras"}
                 other{"{0} kvadratinių centimetrų"}
             }
             square-foot{
+                dnam{"kvadratinės pėdos"}
                 few{"{0} kvadratinės pėdos"}
                 many{"{0} kvadratinės pėdos"}
                 one{"{0} kvadratinė pėda"}
                 other{"{0} kvadratinių pėdų"}
             }
             square-inch{
+                dnam{"kvadratiniai coliai"}
                 few{"{0} kvadratiniai coliai"}
                 many{"{0} kvadratinio colio"}
                 one{"{0} kvadratinis colis"}
                 other{"{0} kvadratinių colių"}
             }
             square-kilometer{
+                dnam{"kvadratiniai kilometrai"}
                 few{"{0} kvadratiniai kilometrai"}
                 many{"{0} kvadratinio kilometro"}
                 one{"{0} kvadratinis kilometras"}
                 other{"{0} kvadratinių kilometrų"}
             }
             square-meter{
+                dnam{"kvadratiniai metrai"}
                 few{"{0} kvadratiniai metrai"}
                 many{"{0} kvadratinio metro"}
                 one{"{0} kvadratinis metras"}
                 other{"{0} kvadratinių metrų"}
             }
             square-mile{
+                dnam{"kvadratinės mylios"}
                 few{"{0} kvadratinės mylios"}
                 many{"{0} kvadratinės mylios"}
                 one{"{0} kvadratinė mylia"}
                 other{"{0} kvadratinių mylių"}
             }
             square-yard{
+                dnam{"kvadratiniai jardai"}
                 few{"{0} kvadratiniai jardai"}
                 many{"{0} kvadratinio jardo"}
                 one{"{0} kvadratinis jardas"}
@@ -3108,12 +3123,14 @@ lt{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"litrai kilometrui"}
                 few{"{0} litrai kilometrui"}
                 many{"{0} litro kilometrui"}
                 one{"{0} litras kilometrui"}
                 other{"{0} litrų kilometrui"}
             }
             mile-per-gallon{
+                dnam{"mylios už galoną"}
                 few{"{0} mylios už galoną"}
                 many{"{0} mylios už galoną"}
                 one{"{0} mylia už galoną"}
@@ -3122,60 +3139,70 @@ lt{
         }
         digital{
             bit{
+                dnam{"bitai"}
                 few{"{0} bitai"}
                 many{"{0} bito"}
                 one{"{0} bitas"}
                 other{"{0} bitų"}
             }
             byte{
+                dnam{"baitai"}
                 few{"{0} baitai"}
                 many{"{0} baito"}
                 one{"{0} baitas"}
                 other{"{0} baitų"}
             }
             gigabit{
+                dnam{"gigabitai"}
                 few{"{0} gigabitai"}
                 many{"{0} gigabito"}
                 one{"{0} gigabitas"}
                 other{"{0} gigabitų"}
             }
             gigabyte{
+                dnam{"gigabaitai"}
                 few{"{0} gigabaitai"}
                 many{"{0} gigabaito"}
                 one{"{0} gigabaitas"}
                 other{"{0} gigabaitų"}
             }
             kilobit{
+                dnam{"kilobitai"}
                 few{"{0} kilobitai"}
                 many{"{0} kilobito"}
                 one{"{0} kilobitas"}
                 other{"{0} kilobitų"}
             }
             kilobyte{
+                dnam{"kilobaitai"}
                 few{"{0} kilobaitai"}
                 many{"{0} kilobaito"}
                 one{"{0} kilobaitas"}
                 other{"{0} kilobaitų"}
             }
             megabit{
+                dnam{"megabitai"}
                 few{"{0} megabitai"}
                 many{"{0} megabito"}
                 one{"{0} megabitas"}
                 other{"{0} megabitų"}
             }
             megabyte{
+                dnam{"megabaitai"}
                 few{"{0} megabaitai"}
                 many{"{0} megabaito"}
                 one{"{0} megabaitas"}
                 other{"{0} megabaitų"}
             }
             terabit{
+                dnam{"terabitai"}
                 few{"{0} terabitai"}
                 many{"{0} terabito"}
                 one{"{0} terabitas"}
                 other{"{0} terabitų"}
             }
             terabyte{
+                dnam{"terabaitai"}
                 few{"{0} terabaitai"}
                 many{"{0} terabaito"}
                 one{"{0} terabaitas"}
@@ -3184,60 +3211,72 @@ lt{
         }
         duration{
             day{
+                dnam{"dienos"}
                 few{"{0} dienos"}
                 many{"{0} dienos"}
                 one{"{0} diena"}
                 other{"{0} dienų"}
             }
             hour{
+                dnam{"valandos"}
                 few{"{0} valandos"}
                 many{"{0} valandos"}
                 one{"{0} valanda"}
                 other{"{0} valandų"}
+                per{"{0}/h"}
             }
             microsecond{
+                dnam{"mikrosekundės"}
                 few{"{0} mikrosekundės"}
                 many{"{0} mikrosekundės"}
                 one{"{0} mikrosekundė"}
                 other{"{0} mikrosekundžių"}
             }
             millisecond{
+                dnam{"milisekundės"}
                 few{"{0} milisekundės"}
                 many{"{0} milisekundės"}
                 one{"{0} milisekundė"}
                 other{"{0} milisekundžių"}
             }
             minute{
+                dnam{"minutės"}
                 few{"{0} minutės"}
                 many{"{0} minutės"}
                 one{"{0} minutė"}
                 other{"{0} minučių"}
             }
             month{
+                dnam{"mėnesiai"}
                 few{"{0} mėnesiai"}
                 many{"{0} mėnesio"}
                 one{"{0} mėnuo"}
                 other{"{0} mėnesių"}
             }
             nanosecond{
+                dnam{"nanosekundės"}
                 few{"{0} nanosekundės"}
                 many{"{0} nanosekundės"}
                 one{"{0} nanosekundė"}
                 other{"{0} nanosekundžių"}
             }
             second{
+                dnam{"sekundės"}
                 few{"{0} sekundės"}
                 many{"{0} sekundės"}
                 one{"{0} sekundė"}
                 other{"{0} sekundžių"}
+                per{"{0}/s"}
             }
             week{
+                dnam{"savaitės"}
                 few{"{0} savaitės"}
                 many{"{0} savaitės"}
                 one{"{0} savaitė"}
                 other{"{0} savaičių"}
             }
             year{
+                dnam{"metai"}
                 few{"{0} metai"}
                 many{"{0} metų"}
                 one{"{0} metai"}
@@ -3246,24 +3285,28 @@ lt{
         }
         electric{
             ampere{
+                dnam{"amperai"}
                 few{"{0} amperai"}
                 many{"{0} ampero"}
                 one{"{0} amperas"}
                 other{"{0} amperų"}
             }
             milliampere{
+                dnam{"miliamperai"}
                 few{"{0} miliamperai"}
                 many{"{0} miliampero"}
                 one{"{0} miliamperas"}
                 other{"{0} miliamperų"}
             }
             ohm{
+                dnam{"omai"}
                 few{"{0} omai"}
                 many{"{0} omo"}
                 one{"{0} omas"}
                 other{"{0} omų"}
             }
             volt{
+                dnam{"voltai"}
                 few{"{0} voltai"}
                 many{"{0} volto"}
                 one{"{0} voltas"}
@@ -3272,36 +3315,42 @@ lt{
         }
         energy{
             calorie{
+                dnam{"kalorijos"}
                 few{"{0} kalorijos"}
                 many{"{0} kalorijos"}
                 one{"{0} kalorija"}
                 other{"{0} kalorijų"}
             }
             foodcalorie{
+                dnam{"kalorijos"}
                 few{"{0} kalorijos"}
                 many{"{0} kalorijos"}
                 one{"{0} kalorija"}
                 other{"{0} kalorijų"}
             }
             joule{
+                dnam{"džauliai"}
                 few{"{0} džauliai"}
                 many{"{0} džaulio"}
                 one{"{0} džaulis"}
                 other{"{0} džaulių"}
             }
             kilocalorie{
+                dnam{"kilokalorijos"}
                 few{"{0} kilokalorijos"}
                 many{"{0} kilokalorijos"}
                 one{"{0} kilokalorija"}
                 other{"{0} kilokalorijų"}
             }
             kilojoule{
+                dnam{"kilodžauliai"}
                 few{"{0} kilodžauliai"}
                 many{"{0} kilodžaulio"}
                 one{"{0} kilodžaulis"}
                 other{"{0} kilodžaulių"}
             }
             kilowatt-hour{
+                dnam{"kilovatvalandės"}
                 few{"{0} kilovatvalandės"}
                 many{"{0} kilovatvalandės"}
                 one{"{0} kilovatvalandė"}
@@ -3310,24 +3359,28 @@ lt{
         }
         frequency{
             gigahertz{
+                dnam{"gigahercai"}
                 few{"{0} gigahercai"}
                 many{"{0} gigaherco"}
                 one{"{0} gigahercas"}
                 other{"{0} gigahercų"}
             }
             hertz{
+                dnam{"hercai"}
                 few{"{0} hercai"}
                 many{"{0} herco"}
                 one{"{0} hercas"}
                 other{"{0} hercų"}
             }
             kilohertz{
+                dnam{"kilohercai"}
                 few{"{0} kilohercai"}
                 many{"{0} kiloherco"}
                 one{"{0} kilohercas"}
                 other{"{0} kilohercų"}
             }
             megahertz{
+                dnam{"megahercai"}
                 few{"{0} megahercai"}
                 many{"{0} megaherco"}
                 one{"{0} megahercas"}
@@ -3336,108 +3389,126 @@ lt{
         }
         length{
             astronomical-unit{
+                dnam{"astronominiai vienetai"}
                 few{"{0} astronominiai vienetai"}
                 many{"{0} astronominio vieneto"}
                 one{"{0} astronominis vienetas"}
                 other{"{0} astronominių vienetų"}
             }
             centimeter{
+                dnam{"centimetrai"}
                 few{"{0} centimetrai"}
                 many{"{0} centimetro"}
                 one{"{0} centimetras"}
                 other{"{0} centimetrų"}
             }
             decimeter{
+                dnam{"decimetrai"}
                 few{"{0} decimetrai"}
                 many{"{0} decimetro"}
                 one{"{0} decimetras"}
                 other{"{0} decimetrų"}
             }
             fathom{
+                dnam{"fadomai"}
                 few{"{0} fadomai"}
                 many{"{0} fadomo"}
                 one{"{0} fadomas"}
                 other{"{0} ftm"}
             }
             foot{
+                dnam{"pėdos"}
                 few{"{0} pėdos"}
                 many{"{0} pėdos"}
                 one{"{0} pėda"}
                 other{"{0} pėdų"}
             }
             furlong{
+                dnam{"furlongai"}
                 few{"{0} furlongai"}
                 many{"{0} furlongo"}
                 one{"{0} furlongas"}
                 other{"{0} furlongų"}
             }
             inch{
+                dnam{"coliai"}
                 few{"{0} coliai"}
                 many{"{0} colio"}
                 one{"{0} colis"}
                 other{"{0} colių"}
             }
             kilometer{
+                dnam{"kilometrai"}
                 few{"{0} kilometrai"}
                 many{"{0} kilometro"}
                 one{"{0} kilometras"}
                 other{"{0} kilometrų"}
             }
             light-year{
+                dnam{"šviesmečiai"}
                 few{"{0} šviesmečiai"}
                 many{"{0} šviesmečio"}
                 one{"{0} šviesmetis"}
                 other{"{0} šviesmečių"}
             }
             meter{
+                dnam{"metrai"}
                 few{"{0} metrai"}
                 many{"{0} metro"}
                 one{"{0} metras"}
                 other{"{0} metrų"}
             }
             micrometer{
+                dnam{"mikrometrai"}
                 few{"{0} mikrometrai"}
                 many{"{0} mikrometro"}
                 one{"{0} mikrometras"}
                 other{"{0} mikrometrų"}
             }
             mile{
+                dnam{"mylios"}
                 few{"{0} mylios"}
                 many{"{0} mylios"}
                 one{"{0} mylia"}
                 other{"{0} mylių"}
             }
             millimeter{
+                dnam{"milimetrai"}
                 few{"{0} milimetrai"}
                 many{"{0} milimetro"}
                 one{"{0} milimetras"}
                 other{"{0} milimetrų"}
             }
             nanometer{
+                dnam{"nanometrai"}
                 few{"{0} nanometrai"}
                 many{"{0} nanometro"}
                 one{"{0} nanometras"}
                 other{"{0} nanometrų"}
             }
             nautical-mile{
+                dnam{"jūrmylės"}
                 few{"{0} jūrmylės"}
                 many{"{0} jūrmylės"}
                 one{"{0} jūrmylė"}
                 other{"{0} jūrmylių"}
             }
             parsec{
+                dnam{"parsekas"}
                 few{"{0} parsekai"}
                 many{"{0} parseko"}
                 one{"{0} parsekas"}
                 other{"{0} parsekų"}
             }
             picometer{
+                dnam{"pikometrai"}
                 few{"{0} pikometrai"}
                 many{"{0} pikometro"}
                 one{"{0} pikometras"}
                 other{"{0} pikometrų"}
             }
             yard{
+                dnam{"jardai"}
                 few{"{0} jardai"}
                 many{"{0} jardo"}
                 one{"{0} jardas"}
@@ -3446,6 +3517,7 @@ lt{
         }
         light{
             lux{
+                dnam{"liuksai"}
                 few{"{0} liuksai"}
                 many{"{0} liukso"}
                 one{"{0} liuksas"}
@@ -3454,507 +3526,121 @@ lt{
         }
         mass{
             carat{
+                dnam{"karatai"}
                 few{"{0} karatai"}
                 many{"{0} karato"}
                 one{"{0} karatas"}
                 other{"{0} karatų"}
             }
             gram{
+                dnam{"gramai"}
                 few{"{0} gramai"}
                 many{"{0} gramo"}
                 one{"{0} gramas"}
                 other{"{0} gramų"}
             }
             kilogram{
+                dnam{"kilogramai"}
                 few{"{0} kilogramai"}
                 many{"{0} kilogramo"}
                 one{"{0} kilogramas"}
                 other{"{0} kilogramų"}
             }
             metric-ton{
+                dnam{"metrinės tonos"}
                 few{"{0} metrinės tonos"}
                 many{"{0} metrinės tonos"}
                 one{"{0} metrinė tona"}
                 other{"{0} metrinių tonų"}
             }
             microgram{
+                dnam{"mikrogramai"}
                 few{"{0} mikrogramai"}
                 many{"{0} mikrogramo"}
                 one{"{0} mikrogramas"}
                 other{"{0} mikrogramų"}
             }
             milligram{
+                dnam{"miligramai"}
                 few{"{0} miligramai"}
                 many{"{0} miligramo"}
                 one{"{0} miligramas"}
                 other{"{0} miligramų"}
             }
             ounce{
+                dnam{"uncijos"}
                 few{"{0} uncijos"}
                 many{"{0} uncijos"}
                 one{"{0} uncija"}
                 other{"{0} uncijų"}
             }
             ounce-troy{
+                dnam{"Trojos uncijos"}
                 few{"{0} Trojos uncijos"}
                 many{"{0} Trojos uncijos"}
                 one{"{0} Trojos uncija"}
                 other{"{0} Trojos uncijų"}
             }
             pound{
+                dnam{"svarai"}
                 few{"{0} svarai"}
                 many{"{0} svaro"}
                 one{"{0} svaras"}
                 other{"{0} svarų"}
             }
             stone{
+                dnam{"stonai"}
                 few{"{0} stonai"}
                 many{"{0} stono"}
                 one{"{0} stonas"}
                 other{"{0} stonų"}
             }
             ton{
+                dnam{"tonos"}
                 few{"{0} tonos"}
                 many{"{0} tonos"}
                 one{"{0} tona"}
                 other{"{0} tonų"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"laisvojo kritimo pagreičiai"}
-                }
-                meter-per-second-squared{
-                    dnam{"metrai per kvadratinę sekundę"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"kampo minutės"}
-                }
-                arc-second{
-                    dnam{"kampo sekundės"}
-                }
-                degree{
-                    dnam{"laipsniai"}
-                }
-                radian{
-                    dnam{"radianai"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"akrai"}
-                }
-                hectare{
-                    dnam{"hektarai"}
-                }
-                square-centimeter{
-                    dnam{"kvadratiniai centimetrai"}
-                }
-                square-foot{
-                    dnam{"kvadratinės pėdos"}
-                }
-                square-inch{
-                    dnam{"kvadratiniai coliai"}
-                }
-                square-kilometer{
-                    dnam{"kvadratiniai kilometrai"}
-                }
-                square-meter{
-                    dnam{"kvadratiniai metrai"}
-                }
-                square-mile{
-                    dnam{"kvadratinės mylios"}
-                }
-                square-yard{
-                    dnam{"kvadratiniai jardai"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"litrai kilometrui"}
-                }
-                mile-per-gallon{
-                    dnam{"mylios už galoną"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bitai"}
-                }
-                byte{
-                    dnam{"baitai"}
-                }
-                gigabit{
-                    dnam{"gigabitai"}
-                }
-                gigabyte{
-                    dnam{"gigabaitai"}
-                }
-                kilobit{
-                    dnam{"kilobitai"}
-                }
-                kilobyte{
-                    dnam{"kilobaitai"}
-                }
-                megabit{
-                    dnam{"megabitai"}
-                }
-                megabyte{
-                    dnam{"megabaitai"}
-                }
-                terabit{
-                    dnam{"terabitai"}
-                }
-                terabyte{
-                    dnam{"terabaitai"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"dienos"}
-                }
-                hour{
-                    dnam{"valandos"}
-                    per{"{0}/h"}
-                }
-                microsecond{
-                    dnam{"mikrosekundės"}
-                }
-                millisecond{
-                    dnam{"milisekundės"}
-                }
-                minute{
-                    dnam{"minutės"}
-                }
-                month{
-                    dnam{"mėnesiai"}
-                }
-                nanosecond{
-                    dnam{"nanosekundės"}
-                }
-                second{
-                    dnam{"sekundės"}
-                    per{"{0}/s"}
-                }
-                week{
-                    dnam{"savaitės"}
-                }
-                year{
-                    dnam{"metai"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"amperai"}
-                }
-                milliampere{
-                    dnam{"miliamperai"}
-                }
-                ohm{
-                    dnam{"omai"}
-                }
-                volt{
-                    dnam{"voltai"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"kalorijos"}
-                }
-                foodcalorie{
-                    dnam{"kalorijos"}
-                }
-                joule{
-                    dnam{"džauliai"}
-                }
-                kilocalorie{
-                    dnam{"kilokalorijos"}
-                }
-                kilojoule{
-                    dnam{"kilodžauliai"}
-                }
-                kilowatt-hour{
-                    dnam{"kilovatvalandės"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigahercai"}
-                }
-                hertz{
-                    dnam{"hercai"}
-                }
-                kilohertz{
-                    dnam{"kilohercai"}
-                }
-                megahertz{
-                    dnam{"megahercai"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"astronominiai vienetai"}
-                }
-                centimeter{
-                    dnam{"centimetrai"}
-                }
-                decimeter{
-                    dnam{"decimetrai"}
-                }
-                fathom{
-                    dnam{"fadomai"}
-                }
-                foot{
-                    dnam{"pėdos"}
-                }
-                furlong{
-                    dnam{"furlongai"}
-                }
-                inch{
-                    dnam{"coliai"}
-                }
-                kilometer{
-                    dnam{"kilometrai"}
-                }
-                light-year{
-                    dnam{"šviesmečiai"}
-                }
-                meter{
-                    dnam{"metrai"}
-                }
-                micrometer{
-                    dnam{"mikrometrai"}
-                }
-                mile{
-                    dnam{"mylios"}
-                }
-                millimeter{
-                    dnam{"milimetrai"}
-                }
-                nanometer{
-                    dnam{"nanometrai"}
-                }
-                nautical-mile{
-                    dnam{"jūrmylės"}
-                }
-                parsec{
-                    dnam{"parsekas"}
-                }
-                picometer{
-                    dnam{"pikometrai"}
-                }
-                yard{
-                    dnam{"jardai"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"liuksai"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"karatai"}
-                }
-                gram{
-                    dnam{"gramai"}
-                }
-                kilogram{
-                    dnam{"kilogramai"}
-                }
-                metric-ton{
-                    dnam{"metrinės tonos"}
-                }
-                microgram{
-                    dnam{"mikrogramai"}
-                }
-                milligram{
-                    dnam{"miligramai"}
-                }
-                ounce{
-                    dnam{"uncijos"}
-                }
-                ounce-troy{
-                    dnam{"Trojos uncijos"}
-                }
-                pound{
-                    dnam{"svarai"}
-                }
-                stone{
-                    dnam{"stonai"}
-                }
-                ton{
-                    dnam{"tonos"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigavatai"}
-                }
-                horsepower{
-                    dnam{"arklio galios"}
-                }
-                kilowatt{
-                    dnam{"kilovatai"}
-                }
-                megawatt{
-                    dnam{"megavatai"}
-                }
-                milliwatt{
-                    dnam{"milivatai"}
-                }
-                watt{
-                    dnam{"vatai"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hektopaskaliai"}
-                }
-                inch-hg{
-                    dnam{"gyvsidabrio stulpelio coliai"}
-                }
-                millibar{
-                    dnam{"milbaras"}
-                }
-                millimeter-of-mercury{
-                    dnam{"gysidabrio stulpelio milimetrai"}
-                }
-                pound-per-square-inch{
-                    dnam{"svarai kv. colyje"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"karatai"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilometrai per valandą"}
-                }
-                meter-per-second{
-                    dnam{"metrai per sekundę"}
-                }
-                mile-per-hour{
-                    dnam{"mylios per valandą"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"Celsijaus laipsniai"}
-                }
-                fahrenheit{
-                    dnam{"Farenheito laipsniai"}
-                }
-                kelvin{
-                    dnam{"kelvinai"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"pėdos akre"}
-                }
-                bushel{
-                    dnam{"bušeliai"}
-                }
-                centiliter{
-                    dnam{"centilitrai"}
-                }
-                cubic-centimeter{
-                    dnam{"kubiniai centimetrai"}
-                }
-                cubic-foot{
-                    dnam{"kubinės pėdos"}
-                }
-                cubic-inch{
-                    dnam{"kubiniai coliai"}
-                }
-                cubic-kilometer{
-                    dnam{"kubiniai kilometrai"}
-                }
-                cubic-meter{
-                    dnam{"kubiniai metrai"}
-                }
-                cubic-mile{
-                    dnam{"kubinės mylios"}
-                }
-                cubic-yard{
-                    dnam{"kubiniai jardai"}
-                }
-                cup{
-                    dnam{"stiklinės"}
-                }
-                deciliter{
-                    dnam{"decilitrai"}
-                }
-                fluid-ounce{
-                    dnam{"skysčio uncijos"}
-                }
-                gallon{
-                    dnam{"galonai"}
-                }
-                hectoliter{
-                    dnam{"hektolitrai"}
-                }
-                liter{
-                    dnam{"litrai"}
-                }
-                megaliter{
-                    dnam{"megalitrai"}
-                }
-                milliliter{
-                    dnam{"mililitrai"}
-                }
-                pint{
-                    dnam{"pintos"}
-                }
-                quart{
-                    dnam{"kvortos"}
-                }
-                tablespoon{
-                    dnam{"valgomieji šaukštai"}
-                }
-                teaspoon{
-                    dnam{"arbatiniai šaukšteliai"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigavatai"}
                 few{"{0} gigavatai"}
                 many{"{0} gigavato"}
                 one{"{0} gigavatas"}
                 other{"{0} gigavatų"}
             }
             horsepower{
+                dnam{"arklio galios"}
                 few{"{0} arklio galios"}
                 many{"{0} arklio galios"}
                 one{"{0} arklio galia"}
                 other{"{0} arklio galių"}
             }
             kilowatt{
+                dnam{"kilovatai"}
                 few{"{0} kilovatai"}
                 many{"{0} kilovato"}
                 one{"{0} kilovatas"}
                 other{"{0} kilovatų"}
             }
             megawatt{
+                dnam{"megavatai"}
                 few{"{0} megavatai"}
                 many{"{0} megavato"}
                 one{"{0} megavatas"}
                 other{"{0} megavatų"}
             }
             milliwatt{
+                dnam{"milivatai"}
                 few{"{0} milivatai"}
                 many{"{0} milivato"}
                 one{"{0} milivatas"}
                 other{"{0} milivatų"}
             }
             watt{
+                dnam{"vatai"}
                 few{"{0} vatai"}
                 many{"{0} vato"}
                 one{"{0} vatas"}
@@ -3963,30 +3649,35 @@ lt{
         }
         pressure{
             hectopascal{
+                dnam{"hektopaskaliai"}
                 few{"{0} hektopaskaliai"}
                 many{"{0} hektopaskalio"}
                 one{"{0} hektopaskalis"}
                 other{"{0} hektopaskalių"}
             }
             inch-hg{
+                dnam{"gyvsidabrio stulpelio coliai"}
                 few{"{0} gyvsidabrio stulpelio coliai"}
                 many{"{0} gyvsidabrio stulpelio colio"}
                 one{"{0} gyvsidabrio stulpelio colis"}
                 other{"{0} gyvsidabrio stulpelio colių"}
             }
             millibar{
+                dnam{"milbaras"}
                 few{"{0} milibarai"}
                 many{"{0} milibaro"}
                 one{"{0} milibaras"}
                 other{"{0} milibarų"}
             }
             millimeter-of-mercury{
+                dnam{"gysidabrio stulpelio milimetrai"}
                 few{"{0} gysidabrio stulpelio milimetrai"}
                 many{"{0} gysidabrio stulpelio milimetro"}
                 one{"{0} gysidabrio stulpelio milimetras"}
                 other{"{0} gysidabrio stulpelio milimetrų"}
             }
             pound-per-square-inch{
+                dnam{"svarai kv. colyje"}
                 few{"{0} svarai kv. colyje"}
                 many{"{0} svaro kv. colyje"}
                 one{"{0} svaras kv. colyje"}
@@ -3995,6 +3686,7 @@ lt{
         }
         proportion{
             karat{
+                dnam{"karatai"}
                 few{"{0} karatai"}
                 many{"{0} karato"}
                 one{"{0} karatas"}
@@ -4003,18 +3695,21 @@ lt{
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilometrai per valandą"}
                 few{"{0} kilometrai per valandą"}
                 many{"{0} kilometro per valandą"}
                 one{"{0} kilometras per valandą"}
                 other{"{0} kilometrų per valandą"}
             }
             meter-per-second{
+                dnam{"metrai per sekundę"}
                 few{"{0} metrai per sekundę"}
                 many{"{0} metro per sekundę"}
                 one{"{0} metras per sekundę"}
                 other{"{0} metrų per sekundę"}
             }
             mile-per-hour{
+                dnam{"mylios per valandą"}
                 few{"{0} mylios per valandą"}
                 many{"{0} mylios per valandą"}
                 one{"{0} mylia per valandą"}
@@ -4023,18 +3718,21 @@ lt{
         }
         temperature{
             celsius{
+                dnam{"Celsijaus laipsniai"}
                 few{"{0} Celsijaus laipsniai"}
                 many{"{0} Celsijaus laipsnio"}
                 one{"{0} Celsijaus laipsnis"}
                 other{"{0} Celsijaus laipsnių"}
             }
             fahrenheit{
+                dnam{"Farenheito laipsniai"}
                 few{"{0} Farenheito laipsniai"}
                 many{"{0} Farenheito laipsnio"}
                 one{"{0} Farenheito laipsnis"}
                 other{"{0} Farenheito laipsnių"}
             }
             kelvin{
+                dnam{"kelvinai"}
                 few{"{0} kelvinai"}
                 many{"{0} kelvino"}
                 one{"{0} kelvinas"}
@@ -4043,132 +3741,154 @@ lt{
         }
         volume{
             acre-foot{
+                dnam{"pėdos akre"}
                 few{"{0} pėdos akre"}
                 many{"{0} pėdos akre"}
                 one{"{0} pėda akre"}
                 other{"{0} pėdų akre"}
             }
             bushel{
+                dnam{"bušeliai"}
                 few{"{0} bušeliai"}
                 many{"{0} bušelio"}
                 one{"{0} bušelis"}
                 other{"{0} bušelių"}
             }
             centiliter{
+                dnam{"centilitrai"}
                 few{"{0} centilitrai"}
                 many{"{0} centilitro"}
                 one{"{0} centilitras"}
                 other{"{0} centilitrų"}
             }
             cubic-centimeter{
+                dnam{"kubiniai centimetrai"}
                 few{"{0} kubiniai centimetrai"}
                 many{"{0} kubinio centimetro"}
                 one{"{0} kubinis centimetras"}
                 other{"{0} kubinių centimetrų"}
             }
             cubic-foot{
+                dnam{"kubinės pėdos"}
                 few{"{0} kubinės pėdos"}
                 many{"{0} kubinės pėdos"}
                 one{"{0} kubinė pėda"}
                 other{"{0} kubinių pėdų"}
             }
             cubic-inch{
+                dnam{"kubiniai coliai"}
                 few{"{0} kubiniai coliai"}
                 many{"{0} kubinio colio"}
                 one{"{0} kubinis colis"}
                 other{"{0} kubinių colių"}
             }
             cubic-kilometer{
+                dnam{"kubiniai kilometrai"}
                 few{"{0} kubiniai kilimetrai"}
                 many{"{0} kubinio kilometro"}
                 one{"{0} kubinis kilometras"}
                 other{"{0} kubinių kilometrų"}
             }
             cubic-meter{
+                dnam{"kubiniai metrai"}
                 few{"{0} kubiniai metrai"}
                 many{"{0} kubinio metro"}
                 one{"{0} kubinis metras"}
                 other{"{0} kubinių metrų"}
             }
             cubic-mile{
+                dnam{"kubinės mylios"}
                 few{"{0} kubinės mylios"}
                 many{"{0} kubinės mylios"}
                 one{"{0} kubinė mylia"}
                 other{"{0} kubinių mylių"}
             }
             cubic-yard{
+                dnam{"kubiniai jardai"}
                 few{"{0} kubiniai jardai"}
                 many{"{0} kubinio jardo"}
                 one{"{0} kubinis jardas"}
                 other{"{0} kubinių jardų"}
             }
             cup{
+                dnam{"stiklinės"}
                 few{"{0} stiklinės"}
                 many{"{0} stiklinės"}
                 one{"{0} stiklinė"}
                 other{"{0} stiklinių"}
             }
             deciliter{
+                dnam{"decilitrai"}
                 few{"{0} decilitrai"}
                 many{"{0} decilitro"}
                 one{"{0} decilitras"}
                 other{"{0} decilitrų"}
             }
             fluid-ounce{
+                dnam{"skysčio uncijos"}
                 few{"{0} skysčio uncijos"}
                 many{"{0} skysčio uncijos"}
                 one{"{0} skysčio uncija"}
                 other{"{0} skysčio uncijų"}
             }
             gallon{
+                dnam{"galonai"}
                 few{"{0} galonai"}
                 many{"{0} galono"}
                 one{"{0} galonas"}
                 other{"{0} galonų"}
             }
             hectoliter{
+                dnam{"hektolitrai"}
                 few{"{0} hektolitrai"}
                 many{"{0} hektolitro"}
                 one{"{0} hektolitras"}
                 other{"{0} hektolitrų"}
             }
             liter{
+                dnam{"litrai"}
                 few{"{0} litrai"}
                 many{"{0} litro"}
                 one{"{0} litras"}
                 other{"{0} litrų"}
             }
             megaliter{
+                dnam{"megalitrai"}
                 few{"{0} megalitrai"}
                 many{"{0} megalitro"}
                 one{"{0} megalitras"}
                 other{"{0} megalitrų"}
             }
             milliliter{
+                dnam{"mililitrai"}
                 few{"{0} mililitrai"}
                 many{"{0} mililitro"}
                 one{"{0} mililitras"}
                 other{"{0} mililitrų"}
             }
             pint{
+                dnam{"pintos"}
                 few{"{0} pintos"}
                 many{"{0} pintos"}
                 one{"{0} pinta"}
                 other{"{0} pintų"}
             }
             quart{
+                dnam{"kvortos"}
                 few{"{0} kvortos"}
                 many{"{0} kvortos"}
                 one{"{0} kvorta"}
                 other{"{0} kvortų"}
             }
             tablespoon{
+                dnam{"valgomieji šaukštai"}
                 few{"{0} valgomieji šaukštai"}
                 many{"{0} valgomojo šaukšto"}
                 one{"{0} valgomasis šaukštas"}
                 other{"{0} valgomųjų šaukštų"}
             }
             teaspoon{
+                dnam{"arbatiniai šaukšteliai"}
                 few{"{0} arbatiniai šaukšteliai"}
                 many{"{0} arbatinio šaukštelio"}
                 one{"{0} arbatinis šaukštelis"}

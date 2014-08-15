@@ -6,12 +6,18 @@
 // * Source File: <path>/common/main/se.xml
 // *
 // ***************************************************************************
+/**
+ * ICU <specials> source: <path>/common/main/se.xml
+ */
 se{
     AuxExemplarCharacters{"[à ç é è í ń ñ ó ò q ú w x y ü ø æ å ä ã ö]"}
     ExemplarCharacters{"[a á b c č d đ e f g h i j k l m n ŋ o p r s š t ŧ u v z ž]"}
     ExemplarCharactersIndex{
         "[A Á B C Č D Đ E É F G H I J K L M N Ŋ O P Q R S Š T Ŧ U V W X Y Z Ž Ø Æ Å Ä"
         " Ö]"
+    }
+    LocaleScript{
+        "Latn",
     }
     NumberElements{
         latn{
@@ -439,6 +445,7 @@ se{
     units{
         acceleration{
             g-force{
+                dnam{"Maapallo gravitaatiovoimat"}
                 one{"{0} Maapallo gravitaatiovoima"}
                 other{"{0} Maapallo gravitaatiovoimat"}
                 two{"{0} Maapallo gravitaatiovoimat"}
@@ -446,16 +453,19 @@ se{
         }
         angle{
             arc-minute{
+                dnam{"jorbbas minuhtta"}
                 one{"{0} jorbbas minuhta"}
                 other{"{0} jorbbas minuhtta"}
                 two{"{0} jorbbas minuhtta"}
             }
             arc-second{
+                dnam{"jorbbas sekundda"}
                 one{"{0} jorbbas sekunda"}
                 other{"{0} jorbbas sekundda"}
                 two{"{0} jorbbas sekundda"}
             }
             degree{
+                dnam{"grádat"}
                 one{"{0} grádat"}
                 other{"{0} grádat"}
                 two{"{0} grádat"}
@@ -463,31 +473,37 @@ se{
         }
         area{
             acre{
+                dnam{"Amerihká tynnyrinala"}
                 one{"{0} Amerihká tynnyrinala"}
                 other{"{0} Amerihká tynnyrinala"}
                 two{"{0} Amerihká tynnyrinala"}
             }
             hectare{
+                dnam{"hehtaaria"}
                 one{"{0} hehtaari"}
                 other{"{0} hehtaaria"}
                 two{"{0} hehtaaria"}
             }
             square-foot{
+                dnam{"neliöjuolgi"}
                 one{"{0} neliöjuolgi"}
                 other{"{0} neliöjuolgi"}
                 two{"{0} neliöjuolgi"}
             }
             square-kilometer{
+                dnam{"neliökilomehtera"}
                 one{"{0} neliökilomehter"}
                 other{"{0} neliökilomehtera"}
                 two{"{0} neliökilomehtera"}
             }
             square-meter{
+                dnam{"neliömehtera"}
                 one{"{0} neliömehter"}
                 other{"{0} neliömehtera"}
                 two{"{0} neliömehtera"}
             }
             square-mile{
+                dnam{"eangas neliömiila"}
                 one{"{0} eangas neliömiil"}
                 other{"{0} eangas neliömiila"}
                 two{"{0} eangas neliömiila"}
@@ -498,41 +514,49 @@ se{
         }
         duration{
             day{
+                dnam{"jándora"}
                 one{"{0} jándor"}
                 other{"{0} jándora"}
                 two{"{0} jándora"}
             }
             hour{
+                dnam{"diibmur"}
                 one{"{0} diibmu"}
                 other{"{0} diibmur"}
                 two{"{0} diimmur"}
             }
             millisecond{
+                dnam{"millisekundda"}
                 one{"{0} millisekunda"}
                 other{"{0} millisekundda"}
                 two{"{0} millisekundda"}
             }
             minute{
+                dnam{"minuhtta"}
                 one{"{0} minuhta"}
                 other{"{0} minuhtta"}
                 two{"{0} minuhtta"}
             }
             month{
+                dnam{"mánotbadji"}
                 one{"{0} mánotbadji"}
                 other{"{0} mánotbadji"}
                 two{"{0} mánotbaji"}
             }
             second{
+                dnam{"sekundda"}
                 one{"{0} sekunda"}
                 other{"{0} sekundda"}
                 two{"{0} sekundda"}
             }
             week{
+                dnam{"váhkku"}
                 one{"{0} váhku"}
                 other{"{0} váhkku"}
                 two{"{0} váhkku"}
             }
             year{
+                dnam{"jahkki"}
                 one{"{0} jahki"}
                 other{"{0} jahkki"}
                 two{"{0} jahkki"}
@@ -540,51 +564,61 @@ se{
         }
         length{
             centimeter{
+                dnam{"sentimehtera"}
                 one{"{0} sentimehter"}
                 other{"{0} sentimehtera"}
                 two{"{0} sentimehtera"}
             }
             foot{
+                dnam{"juolgi"}
                 one{"{0} juolgi"}
                 other{"{0} juolgi"}
                 two{"{0} juolgi"}
             }
             inch{
+                dnam{"bealgi"}
                 one{"{0} bealgi"}
                 other{"{0} bealgi"}
                 two{"{0} bealgi"}
             }
             kilometer{
+                dnam{"kilomehtera"}
                 one{"{0} kilomehter"}
                 other{"{0} kilomehtera"}
                 two{"{0} kilomehtera"}
             }
             light-year{
+                dnam{"chuovgat jagi"}
                 one{"{0} chuovgat jagi"}
                 other{"{0} chuovgat jagi"}
                 two{"{0} chuovgat jagi"}
             }
             meter{
+                dnam{"mehtera"}
                 one{"{0} mehter"}
                 other{"{0} mehtera"}
                 two{"{0} mehtera"}
             }
             mile{
+                dnam{"eangas miila"}
                 one{"{0} eangas miil"}
                 other{"{0} eangas miila"}
                 two{"{0} eangas miila"}
             }
             millimeter{
+                dnam{"millimehtera"}
                 one{"{0} millimehter"}
                 other{"{0} millimehtera"}
                 two{"{0} millimehtera"}
             }
             picometer{
+                dnam{"pikomehtera"}
                 one{"{0} pikomehter"}
                 other{"{0} pikomehtera"}
                 two{"{0} pikomehtera"}
             }
             yard{
+                dnam{"eangas yard"}
                 one{"{0} eangas yard"}
                 other{"{0} eangas yard"}
                 two{"{0} eangas yard"}
@@ -592,200 +626,45 @@ se{
         }
         mass{
             gram{
+                dnam{"gram"}
                 one{"{0} gram"}
                 other{"{0} gram"}
                 two{"{0} gram"}
             }
             kilogram{
+                dnam{"kilogram"}
                 one{"{0} kilogram"}
                 other{"{0} kilogram"}
                 two{"{0} kilogram"}
             }
             ounce{
+                dnam{"unssi"}
                 one{"{0} unssi"}
                 other{"{0} unssi"}
                 two{"{0} unssi"}
             }
             pound{
+                dnam{"pauna"}
                 one{"{0} pauna"}
                 other{"{0} pauna"}
                 two{"{0} pauna"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"Maapallo gravitaatiovoimat"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"jorbbas minuhtta"}
-                }
-                arc-second{
-                    dnam{"jorbbas sekundda"}
-                }
-                degree{
-                    dnam{"grádat"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"Amerihká tynnyrinala"}
-                }
-                hectare{
-                    dnam{"hehtaaria"}
-                }
-                square-foot{
-                    dnam{"neliöjuolgi"}
-                }
-                square-kilometer{
-                    dnam{"neliökilomehtera"}
-                }
-                square-meter{
-                    dnam{"neliömehtera"}
-                }
-                square-mile{
-                    dnam{"eangas neliömiila"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"jándora"}
-                }
-                hour{
-                    dnam{"diibmur"}
-                }
-                millisecond{
-                    dnam{"millisekundda"}
-                }
-                minute{
-                    dnam{"minuhtta"}
-                }
-                month{
-                    dnam{"mánotbadji"}
-                }
-                second{
-                    dnam{"sekundda"}
-                }
-                week{
-                    dnam{"váhkku"}
-                }
-                year{
-                    dnam{"jahkki"}
-                }
-            }
-            length{
-                centimeter{
-                    dnam{"sentimehtera"}
-                }
-                foot{
-                    dnam{"juolgi"}
-                }
-                inch{
-                    dnam{"bealgi"}
-                }
-                kilometer{
-                    dnam{"kilomehtera"}
-                }
-                light-year{
-                    dnam{"chuovgat jagi"}
-                }
-                meter{
-                    dnam{"mehtera"}
-                }
-                mile{
-                    dnam{"eangas miila"}
-                }
-                millimeter{
-                    dnam{"millimehtera"}
-                }
-                picometer{
-                    dnam{"pikomehtera"}
-                }
-                yard{
-                    dnam{"eangas yard"}
-                }
-            }
-            mass{
-                gram{
-                    dnam{"gram"}
-                }
-                kilogram{
-                    dnam{"kilogram"}
-                }
-                ounce{
-                    dnam{"unssi"}
-                }
-                pound{
-                    dnam{"pauna"}
-                }
-            }
-            power{
-                horsepower{
-                    dnam{"hevosvoima"}
-                }
-                kilowatt{
-                    dnam{"kilowatt"}
-                }
-                watt{
-                    dnam{"watt"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hehtopascal"}
-                }
-                inch-hg{
-                    dnam{"bealgi kvikksølv"}
-                }
-                millibar{
-                    dnam{"millibar"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilomehtera kohti diibmu"}
-                }
-                meter-per-second{
-                    dnam{"mehtera kohti sekunti"}
-                }
-                mile-per-hour{
-                    dnam{"eangas miila kohti diibmu"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"grádat Celsius"}
-                }
-                fahrenheit{
-                    dnam{"grádat Fahrenheit"}
-                }
-            }
-            volume{
-                cubic-kilometer{
-                    dnam{"kubikkilomehtera"}
-                }
-                cubic-mile{
-                    dnam{"eangas kubikkmiila"}
-                }
-                liter{
-                    dnam{"lihtara"}
-                }
-            }
-        }
         power{
             horsepower{
+                dnam{"hevosvoima"}
                 one{"{0} hevosvoima"}
                 other{"{0} hevosvoima"}
                 two{"{0} hevosvoima"}
             }
             kilowatt{
+                dnam{"kilowatt"}
                 one{"{0} kilowatt"}
                 other{"{0} kilowatt"}
                 two{"{0} kilowatt"}
             }
             watt{
+                dnam{"watt"}
                 one{"{0} watt"}
                 other{"{0} watt"}
                 two{"{0} watt"}
@@ -793,16 +672,19 @@ se{
         }
         pressure{
             hectopascal{
+                dnam{"hehtopascal"}
                 one{"{0} hehtopascal"}
                 other{"{0} hehtopascal"}
                 two{"{0} hehtopascal"}
             }
             inch-hg{
+                dnam{"bealgi kvikksølv"}
                 one{"{0} bealgi kvikksølv"}
                 other{"{0} bealgi kvikksølv"}
                 two{"{0} bealgi kvikksølv"}
             }
             millibar{
+                dnam{"millibar"}
                 one{"{0} millibar"}
                 other{"{0} millibar"}
                 two{"{0} millibar"}
@@ -810,16 +692,19 @@ se{
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilomehtera kohti diibmu"}
                 one{"{0} kilomehter kohti diibmu"}
                 other{"{0} kilomehtera kohti diibmu"}
                 two{"{0} kilomehtera kohti diibmu"}
             }
             meter-per-second{
+                dnam{"mehtera kohti sekunti"}
                 one{"{0} mehter kohti sekunti"}
                 other{"{0} mehtera kohti sekunti"}
                 two{"{0} mehtera kohti sekunti"}
             }
             mile-per-hour{
+                dnam{"eangas miila kohti diibmu"}
                 one{"{0} eangas miil kohti diibmu"}
                 other{"{0} eangas miila kohti diibmu"}
                 two{"{0} eangas miila kohti diibmu"}
@@ -827,11 +712,13 @@ se{
         }
         temperature{
             celsius{
+                dnam{"grádat Celsius"}
                 one{"{0} grádat Celsius"}
                 other{"{0} grádat Celsius"}
                 two{"{0} grádat Celsius"}
             }
             fahrenheit{
+                dnam{"grádat Fahrenheit"}
                 one{"{0} grádat Fahrenheit"}
                 other{"{0} grádat Fahrenheit"}
                 two{"{0} grádat Fahrenheit"}
@@ -839,16 +726,19 @@ se{
         }
         volume{
             cubic-kilometer{
+                dnam{"kubikkilomehtera"}
                 one{"{0} kubikkilomehter"}
                 other{"{0} kubikkilomehtera"}
                 two{"{0} kubikkilomehtera"}
             }
             cubic-mile{
+                dnam{"eangas kubikkmiila"}
                 one{"{0} eangas kubikkmiil"}
                 other{"{0} eangas kubikkmiila"}
                 two{"{0} eangas kubikkmiila"}
             }
             liter{
+                dnam{"lihtara"}
                 one{"{0} lihtar"}
                 other{"{0} lihtara"}
                 two{"{0} lihtara"}

@@ -20,7 +20,7 @@ mt{
         word-medial{"{0} … {1}"}
     }
     ExemplarCharacters{"[a à b ċ d e è f ġ g {għ} h ħ i ì j k l m n o ò p q r s t u ù v w x ż z]"}
-    ExemplarCharactersIndex{"[A B Ċ C D E F Ġ G {GĦ} H Ħ I {IE} J K L M N O P Q R S T U V W X Y Ż Z]"}
+    ExemplarCharactersIndex{"[A B Ċ C D E F Ġ G {GĦ} H Ħ I {IE*} J K L M N O P Q R S T U V W X Y Ż Z]"}
     ExemplarCharactersPunctuation{"[\\- , ; \\: ! ? . ' ‘ ’ \u0022 “ ” ( ) \\[ \\] \\{ \\}]"}
     LocaleScript{
         "Latn",
@@ -49,7 +49,7 @@ mt{
         minimumGroupingDigits{"1"}
         native{"latn"}
     }
-    Version{"2.1.7.39"}
+    Version{"2.1.8.22"}
     calendar{
         generic{
             DateTimePatterns{
@@ -416,6 +416,7 @@ mt{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"L/km"}
                 few{"{0} litri kull kilometru"}
                 many{"{0} litri kull kilometru"}
                 one{"{0} litru kull kilometru"}
@@ -424,18 +425,21 @@ mt{
         }
         digital{
             megabyte{
+                dnam{"megabytes"}
                 few{"{0} megabytes"}
                 many{"{0} megabytes"}
                 one{"{0} megabyte"}
                 other{"{0} megabytes"}
             }
             terabit{
+                dnam{"terabits"}
                 few{"{0} terabits"}
                 many{"{0} terabits"}
                 one{"{0} terabit"}
                 other{"{0} terabits"}
             }
             terabyte{
+                dnam{"terabytes"}
                 few{"{0} terabytes"}
                 many{"{0} terabytes"}
                 one{"{0} terabyte"}
@@ -444,6 +448,7 @@ mt{
         }
         duration{
             millisecond{
+                dnam{"millisekondi"}
                 few{"{0} millisekondi"}
                 many{"{0} millisekondi"}
                 one{"{0} millisekonda"}
@@ -452,47 +457,16 @@ mt{
         }
         light{
             lux{
+                dnam{"lx"}
                 few{"{0} lx"}
                 many{"{0} lx"}
                 one{"{0} lx"}
                 other{"{0} lx"}
             }
         }
-        per{
-            consumption{
-                liter-per-kilometer{
-                    dnam{"L/km"}
-                }
-            }
-            digital{
-                megabyte{
-                    dnam{"megabytes"}
-                }
-                terabit{
-                    dnam{"terabits"}
-                }
-                terabyte{
-                    dnam{"terabytes"}
-                }
-            }
-            duration{
-                millisecond{
-                    dnam{"millisekondi"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"lx"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"karati"}
-                }
-            }
-        }
         proportion{
             karat{
+                dnam{"karati"}
                 few{"{0} kt"}
                 many{"{0} kt"}
                 one{"{0} kt"}

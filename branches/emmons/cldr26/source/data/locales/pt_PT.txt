@@ -749,133 +749,89 @@ pt_PT{
     units{
         acceleration{
             g-force{
+                dnam{"força G"}
                 one{"{0} força G"}
                 other{"{0} força G"}
             }
             meter-per-second-squared{
+                dnam{"metros por segundo quadrado"}
                 one{"{0} metro por segundo quadrado"}
                 other{"{0} metros por segundo quadrado"}
             }
         }
         area{
             square-kilometer{
+                dnam{"quilómetros quadrados"}
                 one{"{0} quilómetro quadrado"}
                 other{"{0} quilómetros quadrados"}
             }
         }
         consumption{
             liter-per-kilometer{
+                dnam{"litros por quilómetro"}
                 one{"{0} litro por quilómetro"}
                 other{"{0} litros por quilómetro"}
             }
         }
+        duration{
+            hour{
+                per{"{0}/h"}
+            }
+            second{
+                per{"{0}/s"}
+            }
+        }
         energy{
             foodcalorie{
+                dnam{"quilocalorias"}
                 one{"{0} quilocaloria"}
                 other{"{0} quilocalorias"}
             }
         }
         length{
             astronomical-unit{
+                dnam{"unidades astronómicas"}
                 one{"{0} unidade astronómica"}
                 other{"{0} unidades astronómicas"}
             }
             kilometer{
+                dnam{"quilómetros"}
                 one{"{0} quilómetro"}
                 other{"{0} quilómetros"}
             }
             micrometer{
+                dnam{"micrómetros"}
                 one{"{0} micrómetro"}
                 other{"{0} micrómetros"}
             }
             nanometer{
+                dnam{"nanómetros"}
                 one{"{0} nanómetro"}
                 other{"{0} nanómetros"}
             }
             picometer{
+                dnam{"picómetros"}
                 one{"{0} picómetro"}
                 other{"{0} picómetros"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"força G"}
-                }
-                meter-per-second-squared{
-                    dnam{"metros por segundo quadrado"}
-                }
-            }
-            area{
-                square-kilometer{
-                    dnam{"quilómetros quadrados"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"litros por quilómetro"}
-                }
-            }
-            duration{
-                hour{
-                    per{"{0}/h"}
-                }
-                second{
-                    per{"{0}/s"}
-                }
-            }
-            energy{
-                foodcalorie{
-                    dnam{"quilocalorias"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"unidades astronómicas"}
-                }
-                kilometer{
-                    dnam{"quilómetros"}
-                }
-                micrometer{
-                    dnam{"micrómetros"}
-                }
-                nanometer{
-                    dnam{"nanómetros"}
-                }
-                picometer{
-                    dnam{"picómetros"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"quilates"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"quilómetros por hora"}
-                }
-            }
-            volume{
-                cubic-kilometer{
-                    dnam{"quilómetros cúbicos"}
-                }
-            }
-        }
         proportion{
             karat{
+                dnam{"quilates"}
                 one{"{0} quilate"}
                 other{"{0} quilates"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"quilómetros por hora"}
                 one{"{0} quilómetro por hora"}
                 other{"{0} quilómetros por hora"}
             }
         }
         volume{
             cubic-kilometer{
+                dnam{"quilómetros cúbicos"}
                 one{"{0} quilómetro cúbico"}
                 other{"{0} quilómetros cúbicos"}
             }

@@ -6,6 +6,9 @@
 // * Source File: <path>/common/main/ksh.xml
 // *
 // ***************************************************************************
+/**
+ * ICU <specials> source: <path>/common/main/ksh.xml
+ */
 ksh{
     AuxExemplarCharacters{"[á à ă â ã ā ç é è ĕ ê ē ğ í ì ĭ î ï ī ĳ ı ł ñ ó ò ŏ ô ø ō ú ù ŭ û ū ÿ]"}
     ExemplarCharacters{"[a å ä æ b c d e ë ė f g h i j k l m n o ö œ p q r s ß t u ů ü v w x y z]"}
@@ -13,6 +16,9 @@ ksh{
     ExemplarCharactersPunctuation{
         "[_ ‐ – — ⸗ , ; \\: ! ? . … ' ‘ ‚ \u0022 “ „ ( ) \\[ \\] \\{ \\} § @ * / \\& "
         "# % † ‡ ° < = > ~ \$]"
+    }
+    LocaleScript{
+        "Latn",
     }
     NumberElements{
         latn{
@@ -652,6 +658,7 @@ ksh{
     units{
         acceleration{
             g-force{
+                dnam{"-fache Erdbeschleunigung"}
                 one{"{0}-fache Erdbeschleunigung"}
                 other{"{0}-fache Erdbeschleunigung"}
                 zero{"{0}-fache Erdbeschleunigung"}
@@ -659,16 +666,19 @@ ksh{
         }
         angle{
             arc-minute{
+                dnam{"Winkelmenutte"}
                 one{"{0} Winkelmenutte"}
                 other{"{0} Winkelmenutte"}
                 zero{"{0} Winkelmenutte"}
             }
             arc-second{
+                dnam{"Winkelsekunde"}
                 one{"{0} Winkelsekunde"}
                 other{"{0} Winkelsekunde"}
                 zero{"{0} Winkelsekunde"}
             }
             degree{
+                dnam{"Graad"}
                 one{"{0} Graad"}
                 other{"{0} Graad"}
                 zero{"{0} Graad"}
@@ -676,31 +686,37 @@ ksh{
         }
         area{
             acre{
+                dnam{"angloamerikanischen Acre"}
                 one{"{0} angloamerikanische Acre"}
                 other{"{0} angloamerikanischen Acre"}
                 zero{"{0} angloamerikanischen Acre"}
             }
             hectare{
+                dnam{"hektar"}
                 one{"{0} hektar"}
                 other{"{0} hektar"}
                 zero{"{0} hektar"}
             }
             square-foot{
+                dnam{"Quadratvoss"}
                 one{"{0} Quadratvoss"}
                 other{"{0} Quadratvoss"}
                 zero{"{0} Quadratvoss"}
             }
             square-kilometer{
+                dnam{"Quadratkilometer"}
                 one{"{0} Quadratkilometer"}
                 other{"{0} Quadratkilometer"}
                 zero{"{0} Quadratkilometer"}
             }
             square-meter{
+                dnam{"Quadratmeter"}
                 one{"{0} Quadratmeter"}
                 other{"{0} Quadratmeter"}
                 zero{"{0} Quadratmeter"}
             }
             square-mile{
+                dnam{"englischen Quadratmeilen"}
                 one{"{0} englische Quadratmeile"}
                 other{"{0} englischen Quadratmeilen"}
                 zero{"{0} englischen Quadratmeilen"}
@@ -711,41 +727,49 @@ ksh{
         }
         duration{
             day{
+                dnam{"Dääsch"}
                 one{"{0} Dääsch"}
                 other{"{0} Dääsch"}
                 zero{"{0} Dääsch"}
             }
             hour{
+                dnam{"Schtunde"}
                 one{"{0} Schtunde"}
                 other{"{0} Schtunde"}
                 zero{"{0} Schtunde"}
             }
             millisecond{
+                dnam{"Millisekunde"}
                 one{"{0} Millisekunde"}
                 other{"{0} Millisekunde"}
                 zero{"{0} Millisekunde"}
             }
             minute{
+                dnam{"Menutte"}
                 one{"{0} Menutte"}
                 other{"{0} Menutte"}
                 zero{"{0} Menutte"}
             }
             month{
+                dnam{"Mohnde"}
                 one{"{0} Mohnde"}
                 other{"{0} Mohnde"}
                 zero{"{0} Mohnde"}
             }
             second{
+                dnam{"Sekunde"}
                 one{"{0} Sekunde"}
                 other{"{0} Sekunde"}
                 zero{"{0} Sekunde"}
             }
             week{
+                dnam{"Woche"}
                 one{"{0} Woche"}
                 other{"{0} Woche"}
                 zero{"{0} Woche"}
             }
             year{
+                dnam{"Johre"}
                 one{"{0} Johre"}
                 other{"{0} Johre"}
                 zero{"{0} Johre"}
@@ -753,41 +777,49 @@ ksh{
         }
         length{
             centimeter{
+                dnam{"Zentimeter"}
                 one{"{0} Zentimeter"}
                 other{"{0} Zentimeter"}
                 zero{"{0} Zentimeter"}
             }
             foot{
+                dnam{"Voss"}
                 one{"{0} Voss"}
                 other{"{0} Voss"}
                 zero{"{0} Voss"}
             }
             inch{
+                dnam{"Dumm"}
                 one{"{0} Dumm"}
                 other{"{0} Dumm"}
                 zero{"{0} Dumm"}
             }
             kilometer{
+                dnam{"Kilometer"}
                 one{"{0} Kilometer"}
                 other{"{0} Kilometer"}
                 zero{"{0} Kilometer"}
             }
             meter{
+                dnam{"Meter"}
                 one{"{0} Meter"}
                 other{"{0} Meter"}
                 zero{"{0} Meter"}
             }
             mile{
+                dnam{"englischen Meilen"}
                 one{"{0} englische Meile"}
                 other{"{0} englischen Meilen"}
                 zero{"{0} englischen Meilen"}
             }
             millimeter{
+                dnam{"Millimeter"}
                 one{"{0} Millimeter"}
                 other{"{0} Millimeter"}
                 zero{"{0} Millimeter"}
             }
             picometer{
+                dnam{"Pikometer"}
                 one{"{0} Pikometer"}
                 other{"{0} Pikometer"}
                 zero{"{0} Pikometer"}
@@ -795,194 +827,45 @@ ksh{
         }
         mass{
             gram{
+                dnam{"Gramm"}
                 one{"{0} Gramm"}
                 other{"{0} Gramm"}
                 zero{"{0} Gramm"}
             }
             kilogram{
+                dnam{"Kilogramm"}
                 one{"{0} Kilogramm"}
                 other{"{0} Kilogramm"}
                 zero{"{0} Kilogramm"}
             }
             ounce{
+                dnam{"Unzen"}
                 one{"{0} Unze"}
                 other{"{0} Unzen"}
                 zero{"{0} Unzen"}
             }
             pound{
+                dnam{"Pfund"}
                 one{"{0} Pfund"}
                 other{"{0} Pfund"}
                 zero{"{0} Pfund"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"-fache Erdbeschleunigung"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"Winkelmenutte"}
-                }
-                arc-second{
-                    dnam{"Winkelsekunde"}
-                }
-                degree{
-                    dnam{"Graad"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"angloamerikanischen Acre"}
-                }
-                hectare{
-                    dnam{"hektar"}
-                }
-                square-foot{
-                    dnam{"Quadratvoss"}
-                }
-                square-kilometer{
-                    dnam{"Quadratkilometer"}
-                }
-                square-meter{
-                    dnam{"Quadratmeter"}
-                }
-                square-mile{
-                    dnam{"englischen Quadratmeilen"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"Dääsch"}
-                }
-                hour{
-                    dnam{"Schtunde"}
-                }
-                millisecond{
-                    dnam{"Millisekunde"}
-                }
-                minute{
-                    dnam{"Menutte"}
-                }
-                month{
-                    dnam{"Mohnde"}
-                }
-                second{
-                    dnam{"Sekunde"}
-                }
-                week{
-                    dnam{"Woche"}
-                }
-                year{
-                    dnam{"Johre"}
-                }
-            }
-            length{
-                centimeter{
-                    dnam{"Zentimeter"}
-                }
-                foot{
-                    dnam{"Voss"}
-                }
-                inch{
-                    dnam{"Dumm"}
-                }
-                kilometer{
-                    dnam{"Kilometer"}
-                }
-                meter{
-                    dnam{"Meter"}
-                }
-                mile{
-                    dnam{"englischen Meilen"}
-                }
-                millimeter{
-                    dnam{"Millimeter"}
-                }
-                picometer{
-                    dnam{"Pikometer"}
-                }
-            }
-            mass{
-                gram{
-                    dnam{"Gramm"}
-                }
-                kilogram{
-                    dnam{"Kilogramm"}
-                }
-                ounce{
-                    dnam{"Unzen"}
-                }
-                pound{
-                    dnam{"Pfund"}
-                }
-            }
-            power{
-                horsepower{
-                    dnam{"Pferdestärken"}
-                }
-                kilowatt{
-                    dnam{"Kilowatt"}
-                }
-                watt{
-                    dnam{"Watt"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"Hektopascal"}
-                }
-                inch-hg{
-                    dnam{"Dumm Quecksilbersäule"}
-                }
-                millibar{
-                    dnam{"Millibar"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"Kilometer pro Schtunde"}
-                }
-                meter-per-second{
-                    dnam{"Meter pro Sekunde"}
-                }
-                mile-per-hour{
-                    dnam{"englischen Meilen pro Schtunde"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"Graad Celsius"}
-                }
-                fahrenheit{
-                    dnam{"Graad Fahrenheit"}
-                }
-            }
-            volume{
-                cubic-kilometer{
-                    dnam{"Kubikkilometer"}
-                }
-                cubic-mile{
-                    dnam{"englischen Kubikmeilen"}
-                }
-                liter{
-                    dnam{"Liter"}
-                }
-            }
-        }
         power{
             horsepower{
+                dnam{"Pferdestärken"}
                 one{"{0} Pferdestärke"}
                 other{"{0} Pferdestärken"}
                 zero{"{0} Pferdestärken"}
             }
             kilowatt{
+                dnam{"Kilowatt"}
                 one{"{0} Kilowatt"}
                 other{"{0} Kilowatt"}
                 zero{"{0} Kilowatt"}
             }
             watt{
+                dnam{"Watt"}
                 one{"{0} Watt"}
                 other{"{0} Watt"}
                 zero{"{0} Watt"}
@@ -990,16 +873,19 @@ ksh{
         }
         pressure{
             hectopascal{
+                dnam{"Hektopascal"}
                 one{"{0} Hektopascal"}
                 other{"{0} Hektopascal"}
                 zero{"{0} Hektopascal"}
             }
             inch-hg{
+                dnam{"Dumm Quecksilbersäule"}
                 one{"{0} Dumm Quecksilbersäule"}
                 other{"{0} Dumm Quecksilbersäule"}
                 zero{"{0} Dumm Quecksilbersäule"}
             }
             millibar{
+                dnam{"Millibar"}
                 one{"{0} Millibar"}
                 other{"{0} Millibar"}
                 zero{"{0} Millibar"}
@@ -1007,16 +893,19 @@ ksh{
         }
         speed{
             kilometer-per-hour{
+                dnam{"Kilometer pro Schtunde"}
                 one{"{0} Kilometer pro Schtunde"}
                 other{"{0} Kilometer pro Schtunde"}
                 zero{"{0} Kilometer pro Schtunde"}
             }
             meter-per-second{
+                dnam{"Meter pro Sekunde"}
                 one{"{0} Meter pro Sekunde"}
                 other{"{0} Meter pro Sekunde"}
                 zero{"{0} Meter pro Sekunde"}
             }
             mile-per-hour{
+                dnam{"englischen Meilen pro Schtunde"}
                 one{"{0} englische Meile pro Schtunde"}
                 other{"{0} englischen Meilen pro Schtunde"}
                 zero{"{0} englischen Meilen pro Schtunde"}
@@ -1024,11 +913,13 @@ ksh{
         }
         temperature{
             celsius{
+                dnam{"Graad Celsius"}
                 one{"{0} Graad Celsius"}
                 other{"{0} Graad Celsius"}
                 zero{"{0} Graad Celsius"}
             }
             fahrenheit{
+                dnam{"Graad Fahrenheit"}
                 one{"{0} Graad Fahrenheit"}
                 other{"{0} Graad Fahrenheit"}
                 zero{"{0} Graad Fahrenheit"}
@@ -1036,16 +927,19 @@ ksh{
         }
         volume{
             cubic-kilometer{
+                dnam{"Kubikkilometer"}
                 one{"{0} Kubikkilometer"}
                 other{"{0} Kubikkilometer"}
                 zero{"{0} Kubikkilometer"}
             }
             cubic-mile{
+                dnam{"englischen Kubikmeilen"}
                 one{"{0} englische Kubikmeile"}
                 other{"{0} englischen Kubikmeilen"}
                 zero{"{0} englischen Kubikmeilen"}
             }
             liter{
+                dnam{"Liter"}
                 one{"{0} Liter"}
                 other{"{0} Liter"}
                 zero{"{0} Liter"}

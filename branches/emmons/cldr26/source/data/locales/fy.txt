@@ -6,6 +6,9 @@
 // * Source File: <path>/common/main/fy.xml
 // *
 // ***************************************************************************
+/**
+ * ICU <specials> source: <path>/common/main/fy.xml
+ */
 fy{
     AuxExemplarCharacters{"[à â æ è ê ô ù û]"}
     Ellipsis{
@@ -24,6 +27,9 @@ fy{
     ExemplarCharactersPunctuation{
         "[\\- ‐ – — , ; \\: ! ? . … ' ‘ ’ \u0022 “ ” ( ) \\[ \\] § @ * / \\& # † ‡ ′ "
         "″]"
+    }
+    LocaleScript{
+        "Latn",
     }
     MoreInformation{"?"}
     NumberElements{
@@ -2304,46 +2310,56 @@ fy{
     units{
         acceleration{
             g-force{
+                dnam{"G-krachten"}
                 one{"{0} G-kracht"}
                 other{"{0} G-krachten"}
             }
         }
         angle{
             arc-minute{
+                dnam{"boogminuten"}
                 one{"{0} boogminút"}
                 other{"{0} boogminuten"}
             }
             arc-second{
+                dnam{"boogsekonden"}
                 one{"{0} boogsekonde"}
                 other{"{0} boogsekonden"}
             }
             degree{
+                dnam{"booggraden"}
                 one{"{0} booggraad"}
                 other{"{0} booggraden"}
             }
         }
         area{
             acre{
+                dnam{"ares"}
                 one{"{0} are"}
                 other{"{0} ares"}
             }
             hectare{
+                dnam{"hektare"}
                 one{"{0} hektare"}
                 other{"{0} hektare"}
             }
             square-foot{
+                dnam{"fjouwerkante foet"}
                 one{"{0} fjouwerkante foet"}
                 other{"{0} fjouwerkante foet"}
             }
             square-kilometer{
+                dnam{"fjouwerkante kilometer"}
                 one{"{0} fjouwerkante kilometer"}
                 other{"{0} fjouwerkante kilometer"}
             }
             square-meter{
+                dnam{"fjouwerkante meter"}
                 one{"{0} fjouwerkante meter"}
                 other{"{0} fjouwerkante meter"}
             }
             square-mile{
+                dnam{"fjouwerkante myl"}
                 one{"{0} fjouwerkante myl"}
                 other{"{0} fjouwerkante myl"}
             }
@@ -2353,322 +2369,196 @@ fy{
         }
         duration{
             day{
+                dnam{"deien"}
                 one{"{0} dei"}
                 other{"{0} deien"}
             }
             hour{
+                dnam{"oere"}
                 one{"{0} oere"}
                 other{"{0} oere"}
             }
             millisecond{
+                dnam{"millisekonden"}
                 one{"{0} millisekonde"}
                 other{"{0} millisekonden"}
             }
             minute{
+                dnam{"minuten"}
                 one{"{0} minút"}
                 other{"{0} minuten"}
             }
             month{
+                dnam{"moanneen"}
                 one{"{0} moanne"}
                 other{"{0} moanneen"}
             }
             second{
+                dnam{"sekonden"}
                 one{"{0} sekonde"}
                 other{"{0} sekonden"}
             }
             week{
+                dnam{"wiken"}
                 one{"{0} wike"}
                 other{"{0} wiken"}
             }
             year{
+                dnam{"jier"}
                 one{"{0} jier"}
                 other{"{0} jier"}
             }
         }
         length{
             centimeter{
+                dnam{"sentimeter"}
                 one{"{0} sentimeter"}
                 other{"{0} sentimeter"}
             }
             foot{
+                dnam{"foet"}
                 one{"{0} foet"}
                 other{"{0} foet"}
             }
             inch{
+                dnam{"tommen"}
                 one{"{0} tomme"}
                 other{"{0} tommen"}
             }
             kilometer{
+                dnam{"kilometer"}
                 one{"{0} kilometer"}
                 other{"{0} kilometer"}
             }
             light-year{
+                dnam{"ljochtjier"}
                 one{"{0} ljochtjier"}
                 other{"{0} ljochtjier"}
             }
             meter{
+                dnam{"meter"}
                 one{"{0} meter"}
                 other{"{0} meter"}
             }
             mile{
+                dnam{"myl"}
                 one{"{0} myl"}
                 other{"{0} myl"}
             }
             millimeter{
+                dnam{"millimeter"}
                 one{"{0} millimeter"}
                 other{"{0} millimeter"}
             }
             picometer{
+                dnam{"pikometer"}
                 one{"{0} pikometer"}
                 other{"{0} pikometer"}
             }
             yard{
+                dnam{"yards"}
                 one{"{0} yard"}
                 other{"{0} yards"}
             }
         }
         mass{
             gram{
+                dnam{"gram"}
                 one{"{0} gram"}
                 other{"{0} gram"}
             }
             kilogram{
+                dnam{"kilogram"}
                 one{"{0} kilogram"}
                 other{"{0} kilogram"}
             }
             ounce{
+                dnam{"oz"}
                 one{"{0} oz"}
                 other{"{0} oz"}
             }
             pound{
+                dnam{"lb"}
                 one{"{0} lb"}
                 other{"{0} lb"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"G-krachten"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"boogminuten"}
-                }
-                arc-second{
-                    dnam{"boogsekonden"}
-                }
-                degree{
-                    dnam{"booggraden"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"ares"}
-                }
-                hectare{
-                    dnam{"hektare"}
-                }
-                square-foot{
-                    dnam{"fjouwerkante foet"}
-                }
-                square-kilometer{
-                    dnam{"fjouwerkante kilometer"}
-                }
-                square-meter{
-                    dnam{"fjouwerkante meter"}
-                }
-                square-mile{
-                    dnam{"fjouwerkante myl"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"deien"}
-                }
-                hour{
-                    dnam{"oere"}
-                }
-                millisecond{
-                    dnam{"millisekonden"}
-                }
-                minute{
-                    dnam{"minuten"}
-                }
-                month{
-                    dnam{"moanneen"}
-                }
-                second{
-                    dnam{"sekonden"}
-                }
-                week{
-                    dnam{"wiken"}
-                }
-                year{
-                    dnam{"jier"}
-                }
-            }
-            length{
-                centimeter{
-                    dnam{"sentimeter"}
-                }
-                foot{
-                    dnam{"foet"}
-                }
-                inch{
-                    dnam{"tommen"}
-                }
-                kilometer{
-                    dnam{"kilometer"}
-                }
-                light-year{
-                    dnam{"ljochtjier"}
-                }
-                meter{
-                    dnam{"meter"}
-                }
-                mile{
-                    dnam{"myl"}
-                }
-                millimeter{
-                    dnam{"millimeter"}
-                }
-                picometer{
-                    dnam{"pikometer"}
-                }
-                yard{
-                    dnam{"yards"}
-                }
-            }
-            mass{
-                gram{
-                    dnam{"gram"}
-                }
-                kilogram{
-                    dnam{"kilogram"}
-                }
-                ounce{
-                    dnam{"oz"}
-                }
-                pound{
-                    dnam{"lb"}
-                }
-            }
-            power{
-                horsepower{
-                    dnam{"hynstekrêften"}
-                }
-                kilowatt{
-                    dnam{"kilowatt"}
-                }
-                watt{
-                    dnam{"watt"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hektopaskal"}
-                }
-                inch-hg{
-                    dnam{"inHg"}
-                }
-                millibar{
-                    dnam{"millibar"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilometer de oere"}
-                }
-                meter-per-second{
-                    dnam{"meter de sekonde"}
-                }
-                mile-per-hour{
-                    dnam{"myl de oere"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"graden Celsius"}
-                }
-                fahrenheit{
-                    dnam{"graden Fahrenheit"}
-                }
-            }
-            volume{
-                cubic-kilometer{
-                    dnam{"kubike kilometer"}
-                }
-                cubic-mile{
-                    dnam{"kubike myl"}
-                }
-                liter{
-                    dnam{"liter"}
-                }
-            }
-        }
         power{
             horsepower{
+                dnam{"hynstekrêften"}
                 one{"{0} hynstekrêft"}
                 other{"{0} hynstekrêften"}
             }
             kilowatt{
+                dnam{"kilowatt"}
                 one{"{0} kilowatt"}
                 other{"{0} kilowatt"}
             }
             watt{
+                dnam{"watt"}
                 one{"{0} watt"}
                 other{"{0} watt"}
             }
         }
         pressure{
             hectopascal{
+                dnam{"hektopaskal"}
                 one{"{0} hektopaskal"}
                 other{"{0} hektopaskal"}
             }
             inch-hg{
+                dnam{"inHg"}
                 one{"{0} inHg"}
                 other{"{0} inHg"}
             }
             millibar{
+                dnam{"millibar"}
                 one{"{0} millibar"}
                 other{"{0} millibar"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilometer de oere"}
                 one{"{0} kilometer de oere"}
                 other{"{0} kilometer de oere"}
             }
             meter-per-second{
+                dnam{"meter de sekonde"}
                 one{"{0} meter de sekonde"}
                 other{"{0} meter de sekonde"}
             }
             mile-per-hour{
+                dnam{"myl de oere"}
                 one{"{0} myl de oere"}
                 other{"{0} myl de oere"}
             }
         }
         temperature{
             celsius{
+                dnam{"graden Celsius"}
                 one{"{0} graad Celsius"}
                 other{"{0} graden Celsius"}
             }
             fahrenheit{
+                dnam{"graden Fahrenheit"}
                 one{"{0} graad Fahrenheit"}
                 other{"{0} graden Fahrenheit"}
             }
         }
         volume{
             cubic-kilometer{
+                dnam{"kubike kilometer"}
                 one{"{0} kubike kilometer"}
                 other{"{0} kubike kilometer"}
             }
             cubic-mile{
+                dnam{"kubike myl"}
                 one{"{0} kubike myl"}
                 other{"{0} kubike myl"}
             }
             liter{
+                dnam{"liter"}
                 one{"{0} liter"}
                 other{"{0} liter"}
             }

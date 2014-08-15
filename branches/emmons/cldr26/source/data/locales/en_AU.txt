@@ -569,15 +569,9 @@ en_AU{
     units{
         mass{
             metric-ton{
+                dnam{"tonnes"}
                 one{"tonne"}
                 other{"{0} tonnes"}
-            }
-        }
-        per{
-            mass{
-                metric-ton{
-                    dnam{"tonnes"}
-                }
             }
         }
     }

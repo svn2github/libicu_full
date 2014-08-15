@@ -1373,66 +1373,81 @@ es{
     units{
         acceleration{
             g-force{
+                dnam{"fuerza G"}
                 one{"{0} unidad de fuerza gravitacional"}
                 other{"{0} unidades de fuerza gravitacional"}
             }
             meter-per-second-squared{
+                dnam{"metros por segundo al cuadrado"}
                 one{"{0} metro por segundo al cuadrado"}
                 other{"{0} metros por segundo al cuadrado"}
             }
         }
         angle{
             arc-minute{
+                dnam{"minutos de arco"}
                 one{"{0} minuto de arco"}
                 other{"{0} minutos de arco"}
             }
             arc-second{
+                dnam{"segundos de arco"}
                 one{"{0} segundo de arco"}
                 other{"{0} segundos de arco"}
             }
             degree{
+                dnam{"grados"}
                 one{"{0} grado"}
                 other{"{0} grados"}
             }
             radian{
+                dnam{"radianes"}
                 one{"{0} radián"}
                 other{"{0} radianes"}
             }
         }
         area{
             acre{
+                dnam{"acres"}
                 one{"{0} acre"}
                 other{"{0} acres"}
             }
             hectare{
+                dnam{"hectáreas"}
                 one{"{0} hectárea"}
                 other{"{0} hectáreas"}
             }
             square-centimeter{
+                dnam{"centímetros cuadrados"}
                 one{"{0} centímetro cuadrado"}
                 other{"{0} centímetros cuadrados"}
             }
             square-foot{
+                dnam{"pies cuadrados"}
                 one{"{0} pie cuadrado"}
                 other{"{0} pies cuadrados"}
             }
             square-inch{
+                dnam{"pulgadas cuadradas"}
                 one{"{0} pulgada cuadrada"}
                 other{"{0} pulgadas cuadradas"}
             }
             square-kilometer{
+                dnam{"kilómetros cuadrados"}
                 one{"{0} kilómetro cuadrado"}
                 other{"{0} kilómetros cuadrados"}
             }
             square-meter{
+                dnam{"metros cuadrados"}
                 one{"{0} metro cuadrado"}
                 other{"{0} metros cuadrados"}
             }
             square-mile{
+                dnam{"millas cuadradas"}
                 one{"{0} milla cuadrada"}
                 other{"{0} millas cuadradas"}
             }
             square-yard{
+                dnam{"yardas cuadradas"}
                 one{"{0} yarda cuadrada"}
                 other{"{0} yardas cuadradas"}
             }
@@ -1442,829 +1457,542 @@ es{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"litros por kilómetro"}
                 one{"{0} litro por kilómetro"}
                 other{"{0} litros por kilómetro"}
             }
             mile-per-gallon{
+                dnam{"millas por galón"}
                 one{"{0} milla por galón"}
                 other{"{0} millas por galón"}
             }
         }
         digital{
             bit{
+                dnam{"bits"}
                 one{"{0} bit"}
                 other{"{0} bits"}
             }
             byte{
+                dnam{"bytes"}
                 one{"{0} byte"}
                 other{"{0} bytes"}
             }
             gigabit{
+                dnam{"gigabits"}
                 one{"{0} gigabit"}
                 other{"{0} gigabits"}
             }
             gigabyte{
+                dnam{"gigabytes"}
                 one{"{0} gigabyte"}
                 other{"{0} gigabytes"}
             }
             kilobit{
+                dnam{"kilobits"}
                 one{"{0} kilobit"}
                 other{"{0} kilobits"}
             }
             kilobyte{
+                dnam{"kilobytes"}
                 one{"{0} kilobyte"}
                 other{"{0} kilobytes"}
             }
             megabit{
+                dnam{"megabits"}
                 one{"{0} megabit"}
                 other{"{0} megabits"}
             }
             megabyte{
+                dnam{"megabytes"}
                 one{"{0} megabyte"}
                 other{"{0} megabytes"}
             }
             terabit{
+                dnam{"terabits"}
                 one{"{0} terabit"}
                 other{"{0} terabits"}
             }
             terabyte{
+                dnam{"terabytes"}
                 one{"{0} terabyte"}
                 other{"{0} terabytes"}
             }
         }
         duration{
             day{
+                dnam{"días"}
                 one{"{0} día"}
                 other{"{0} días"}
             }
             hour{
+                dnam{"horas"}
                 one{"{0} hora"}
                 other{"{0} horas"}
+                per{"{0} por hora"}
             }
             microsecond{
+                dnam{"microsegundos"}
                 one{"{0} microsegundo"}
                 other{"{0} microsegundos"}
             }
             millisecond{
+                dnam{"milisegundos"}
                 one{"{0} milisegundo"}
                 other{"{0} milisegundos"}
             }
             minute{
+                dnam{"minutos"}
                 one{"{0} minuto"}
                 other{"{0} minutos"}
             }
             month{
+                dnam{"meses"}
                 one{"{0} mes"}
                 other{"{0} meses"}
             }
             nanosecond{
+                dnam{"nanosegundos"}
                 one{"{0} nanosegundo"}
                 other{"{0} nanosegundos"}
             }
             second{
+                dnam{"segundos"}
                 one{"{0} segundo"}
                 other{"{0} segundos"}
+                per{"{0} por segundo"}
             }
             week{
+                dnam{"semanas"}
                 one{"{0} semana"}
                 other{"{0} semanas"}
             }
             year{
+                dnam{"años"}
                 one{"{0} año"}
                 other{"{0} años"}
             }
         }
         electric{
             ampere{
+                dnam{"amperios"}
                 one{"{0} amperio"}
                 other{"{0} amperios"}
             }
             milliampere{
+                dnam{"miliamperios"}
                 one{"{0} miliamperio"}
                 other{"{0} miliamperios"}
             }
             ohm{
+                dnam{"ohmios"}
                 one{"{0} ohmio"}
                 other{"{0} ohmios"}
             }
             volt{
+                dnam{"voltios"}
                 one{"{0} voltio"}
                 other{"{0} voltios"}
             }
         }
         energy{
             calorie{
+                dnam{"calorías"}
                 one{"{0} caloría"}
                 other{"{0} calorías"}
             }
             foodcalorie{
+                dnam{"calorías"}
                 one{"{0} caloría"}
                 other{"{0} calorías"}
             }
             joule{
+                dnam{"julios"}
                 one{"{0} julio"}
                 other{"{0} julios"}
             }
             kilocalorie{
+                dnam{"kilocalorías"}
                 one{"{0} kilocaloría"}
                 other{"{0} kilocalorías"}
             }
             kilojoule{
+                dnam{"kilojulios"}
                 one{"{0} kilojulio"}
                 other{"{0} kilojulios"}
             }
             kilowatt-hour{
+                dnam{"kilovatios hora"}
                 one{"{0} kilovatio hora"}
                 other{"{0} kilovatios hora"}
             }
         }
         frequency{
             gigahertz{
+                dnam{"gigahercios"}
                 one{"{0} gigahercio"}
                 other{"{0} gigahercios"}
             }
             hertz{
+                dnam{"hercios"}
                 one{"{0} hercio"}
                 other{"{0} hercios"}
             }
             kilohertz{
+                dnam{"kilohercios"}
                 one{"{0} kilohercio"}
                 other{"{0} kilohercios"}
             }
             megahertz{
+                dnam{"megahercios"}
                 one{"{0} megahercio"}
                 other{"{0} megahercios"}
             }
         }
         length{
             astronomical-unit{
+                dnam{"unidades astronómicas"}
                 one{"{0} unidad astronómica"}
                 other{"{0} unidades astronómicas"}
             }
             centimeter{
+                dnam{"centímetros"}
                 one{"{0} centímetro"}
                 other{"{0} centímetros"}
             }
             decimeter{
+                dnam{"decímetros"}
                 one{"{0} decímetro"}
                 other{"{0} decímetros"}
             }
             foot{
+                dnam{"pies"}
                 one{"{0} pie"}
                 other{"{0} pies"}
             }
             inch{
+                dnam{"pulgadas"}
                 one{"{0} pulgada"}
                 other{"{0} pulgadas"}
             }
             kilometer{
+                dnam{"kilómetros"}
                 one{"{0} kilómetro"}
                 other{"{0} kilómetros"}
             }
             light-year{
+                dnam{"años luz"}
                 one{"{0} año luz"}
                 other{"{0} años luz"}
             }
             meter{
+                dnam{"metros"}
                 one{"{0} metro"}
                 other{"{0} metros"}
             }
             micrometer{
+                dnam{"micrómetros"}
                 one{"{0} micrómetro"}
                 other{"{0} micrómetros"}
             }
             mile{
+                dnam{"millas"}
                 one{"{0} milla"}
                 other{"{0} millas"}
             }
             millimeter{
+                dnam{"milímetros"}
                 one{"{0} milímetro"}
                 other{"{0} milímetros"}
             }
             nanometer{
+                dnam{"nanómetros"}
                 one{"{0} nanómetro"}
                 other{"{0} nanómetros"}
             }
             nautical-mile{
+                dnam{"millas náuticas"}
                 one{"{0} milla náutica"}
                 other{"{0} millas náuticas"}
             }
             parsec{
+                dnam{"parsecs"}
                 one{"{0} parsec"}
                 other{"{0} parsecs"}
             }
             picometer{
+                dnam{"picómetros"}
                 one{"{0} picómetro"}
                 other{"{0} picómetros"}
             }
             yard{
+                dnam{"yardas"}
                 one{"{0} yarda"}
                 other{"{0} yardas"}
             }
         }
         light{
             lux{
+                dnam{"luxes"}
                 one{"{0} lux"}
                 other{"{0} luxes"}
             }
         }
         mass{
             carat{
+                dnam{"quilates"}
                 one{"{0} quilate"}
                 other{"{0} quilates"}
             }
             gram{
+                dnam{"gramos"}
                 one{"{0} gramo"}
                 other{"{0} gramos"}
             }
             kilogram{
+                dnam{"kilogramos"}
                 one{"{0} kilogramo"}
                 other{"{0} kilogramos"}
             }
             metric-ton{
+                dnam{"toneladas métricas"}
                 one{"{0} tonelada métrica"}
                 other{"{0} toneladas métricas"}
             }
             microgram{
+                dnam{"microgramos"}
                 one{"{0} microgramo"}
                 other{"{0} microgramos"}
             }
             milligram{
+                dnam{"miligramos"}
                 one{"{0} miligramo"}
                 other{"{0} miligramos"}
             }
             ounce{
+                dnam{"onzas"}
                 one{"{0} onza"}
                 other{"{0} onzas"}
             }
             ounce-troy{
+                dnam{"onzas troy"}
                 one{"{0} onza troy"}
                 other{"{0} onzas troy"}
             }
             pound{
+                dnam{"libras"}
                 one{"{0} libra"}
                 other{"{0} libras"}
             }
             ton{
+                dnam{"toneladas"}
                 one{"{0} tonelada"}
                 other{"{0} toneladas"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"fuerza G"}
-                }
-                meter-per-second-squared{
-                    dnam{"metros por segundo al cuadrado"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"minutos de arco"}
-                }
-                arc-second{
-                    dnam{"segundos de arco"}
-                }
-                degree{
-                    dnam{"grados"}
-                }
-                radian{
-                    dnam{"radianes"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"acres"}
-                }
-                hectare{
-                    dnam{"hectáreas"}
-                }
-                square-centimeter{
-                    dnam{"centímetros cuadrados"}
-                }
-                square-foot{
-                    dnam{"pies cuadrados"}
-                }
-                square-inch{
-                    dnam{"pulgadas cuadradas"}
-                }
-                square-kilometer{
-                    dnam{"kilómetros cuadrados"}
-                }
-                square-meter{
-                    dnam{"metros cuadrados"}
-                }
-                square-mile{
-                    dnam{"millas cuadradas"}
-                }
-                square-yard{
-                    dnam{"yardas cuadradas"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"litros por kilómetro"}
-                }
-                mile-per-gallon{
-                    dnam{"millas por galón"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bits"}
-                }
-                byte{
-                    dnam{"bytes"}
-                }
-                gigabit{
-                    dnam{"gigabits"}
-                }
-                gigabyte{
-                    dnam{"gigabytes"}
-                }
-                kilobit{
-                    dnam{"kilobits"}
-                }
-                kilobyte{
-                    dnam{"kilobytes"}
-                }
-                megabit{
-                    dnam{"megabits"}
-                }
-                megabyte{
-                    dnam{"megabytes"}
-                }
-                terabit{
-                    dnam{"terabits"}
-                }
-                terabyte{
-                    dnam{"terabytes"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"días"}
-                }
-                hour{
-                    dnam{"horas"}
-                    per{"{0} por hora"}
-                }
-                microsecond{
-                    dnam{"microsegundos"}
-                }
-                millisecond{
-                    dnam{"milisegundos"}
-                }
-                minute{
-                    dnam{"minutos"}
-                }
-                month{
-                    dnam{"meses"}
-                }
-                nanosecond{
-                    dnam{"nanosegundos"}
-                }
-                second{
-                    dnam{"segundos"}
-                    per{"{0} por segundo"}
-                }
-                week{
-                    dnam{"semanas"}
-                }
-                year{
-                    dnam{"años"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"amperios"}
-                }
-                milliampere{
-                    dnam{"miliamperios"}
-                }
-                ohm{
-                    dnam{"ohmios"}
-                }
-                volt{
-                    dnam{"voltios"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"calorías"}
-                }
-                foodcalorie{
-                    dnam{"calorías"}
-                }
-                joule{
-                    dnam{"julios"}
-                }
-                kilocalorie{
-                    dnam{"kilocalorías"}
-                }
-                kilojoule{
-                    dnam{"kilojulios"}
-                }
-                kilowatt-hour{
-                    dnam{"kilovatios hora"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigahercios"}
-                }
-                hertz{
-                    dnam{"hercios"}
-                }
-                kilohertz{
-                    dnam{"kilohercios"}
-                }
-                megahertz{
-                    dnam{"megahercios"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"unidades astronómicas"}
-                }
-                centimeter{
-                    dnam{"centímetros"}
-                }
-                decimeter{
-                    dnam{"decímetros"}
-                }
-                foot{
-                    dnam{"pies"}
-                }
-                inch{
-                    dnam{"pulgadas"}
-                }
-                kilometer{
-                    dnam{"kilómetros"}
-                }
-                light-year{
-                    dnam{"años luz"}
-                }
-                meter{
-                    dnam{"metros"}
-                }
-                micrometer{
-                    dnam{"micrómetros"}
-                }
-                mile{
-                    dnam{"millas"}
-                }
-                millimeter{
-                    dnam{"milímetros"}
-                }
-                nanometer{
-                    dnam{"nanómetros"}
-                }
-                nautical-mile{
-                    dnam{"millas náuticas"}
-                }
-                parsec{
-                    dnam{"parsecs"}
-                }
-                picometer{
-                    dnam{"picómetros"}
-                }
-                yard{
-                    dnam{"yardas"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"luxes"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"quilates"}
-                }
-                gram{
-                    dnam{"gramos"}
-                }
-                kilogram{
-                    dnam{"kilogramos"}
-                }
-                metric-ton{
-                    dnam{"toneladas métricas"}
-                }
-                microgram{
-                    dnam{"microgramos"}
-                }
-                milligram{
-                    dnam{"miligramos"}
-                }
-                ounce{
-                    dnam{"onzas"}
-                }
-                ounce-troy{
-                    dnam{"onzas troy"}
-                }
-                pound{
-                    dnam{"libras"}
-                }
-                ton{
-                    dnam{"toneladas"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigavatios"}
-                }
-                horsepower{
-                    dnam{"caballos de vapor"}
-                }
-                kilowatt{
-                    dnam{"kilovatios"}
-                }
-                megawatt{
-                    dnam{"megavatios"}
-                }
-                milliwatt{
-                    dnam{"milivatios"}
-                }
-                watt{
-                    dnam{"vatios"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hectopascales"}
-                }
-                inch-hg{
-                    dnam{"pulgadas de mercurio"}
-                }
-                millibar{
-                    dnam{"milibares"}
-                }
-                millimeter-of-mercury{
-                    dnam{"milímetros de mercurio"}
-                }
-                pound-per-square-inch{
-                    dnam{"libras por pulgada cuadrada"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"quilates"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilómetros por hora"}
-                }
-                meter-per-second{
-                    dnam{"metros por segundo"}
-                }
-                mile-per-hour{
-                    dnam{"millas por hora"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"grados Celsius"}
-                }
-                fahrenheit{
-                    dnam{"grados Fahrenheit"}
-                }
-                kelvin{
-                    dnam{"kelvin"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"acres pies"}
-                }
-                centiliter{
-                    dnam{"centilitros"}
-                }
-                cubic-centimeter{
-                    dnam{"centímetros cúbicos"}
-                }
-                cubic-foot{
-                    dnam{"pies cúbicos"}
-                }
-                cubic-inch{
-                    dnam{"pulgadas cúbicas"}
-                }
-                cubic-kilometer{
-                    dnam{"kilómetros cúbicos"}
-                }
-                cubic-meter{
-                    dnam{"metros cúbicos"}
-                }
-                cubic-mile{
-                    dnam{"millas cúbicas"}
-                }
-                cubic-yard{
-                    dnam{"yardas cúbicas"}
-                }
-                cup{
-                    dnam{"tazas"}
-                }
-                deciliter{
-                    dnam{"decilitros"}
-                }
-                fluid-ounce{
-                    dnam{"onzas fluidas"}
-                }
-                gallon{
-                    dnam{"galones"}
-                }
-                hectoliter{
-                    dnam{"hectolitros"}
-                }
-                liter{
-                    dnam{"litros"}
-                }
-                megaliter{
-                    dnam{"megalitros"}
-                }
-                milliliter{
-                    dnam{"mililitros"}
-                }
-                pint{
-                    dnam{"pintas"}
-                }
-                quart{
-                    dnam{"cuartos"}
-                }
-                tablespoon{
-                    dnam{"cucharadas"}
-                }
-                teaspoon{
-                    dnam{"cucharaditas"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigavatios"}
                 one{"{0} gigavatio"}
                 other{"{0} gigavatios"}
             }
             horsepower{
+                dnam{"caballos de vapor"}
                 one{"{0} caballo de vapor"}
                 other{"{0} caballos de vapor"}
             }
             kilowatt{
+                dnam{"kilovatios"}
                 one{"{0} kilovatio"}
                 other{"{0} kilovatios"}
             }
             megawatt{
+                dnam{"megavatios"}
                 one{"{0} megavatio"}
                 other{"{0} megavatios"}
             }
             milliwatt{
+                dnam{"milivatios"}
                 one{"{0} milivatio"}
                 other{"{0} milivatios"}
             }
             watt{
+                dnam{"vatios"}
                 one{"{0} vatio"}
                 other{"{0} vatios"}
             }
         }
         pressure{
             hectopascal{
+                dnam{"hectopascales"}
                 one{"{0} hectopascal"}
                 other{"{0} hectopascales"}
             }
             inch-hg{
+                dnam{"pulgadas de mercurio"}
                 one{"{0} pulgada de mercurio"}
                 other{"{0} pulgadas de mercurio"}
             }
             millibar{
+                dnam{"milibares"}
                 one{"{0} milibar"}
                 other{"{0} milibares"}
             }
             millimeter-of-mercury{
+                dnam{"milímetros de mercurio"}
                 one{"{0} milímetro de mercurio"}
                 other{"{0} milímetros de mercurio"}
             }
             pound-per-square-inch{
+                dnam{"libras por pulgada cuadrada"}
                 one{"{0} libra por pulgada cuadrada"}
                 other{"{0} libras por pulgada cuadrada"}
             }
         }
         proportion{
             karat{
+                dnam{"quilates"}
                 one{"{0} quilate"}
                 other{"{0} quilates"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilómetros por hora"}
                 one{"{0} kilómetro por hora"}
                 other{"{0} kilómetros por hora"}
             }
             meter-per-second{
+                dnam{"metros por segundo"}
                 one{"{0} metro por segundo"}
                 other{"{0} metros por segundo"}
             }
             mile-per-hour{
+                dnam{"millas por hora"}
                 one{"{0} milla por hora"}
                 other{"{0} millas por hora"}
             }
         }
         temperature{
             celsius{
+                dnam{"grados Celsius"}
                 one{"{0} grado Celsius"}
                 other{"{0} grados Celsius"}
             }
             fahrenheit{
+                dnam{"grados Fahrenheit"}
                 one{"{0} grado Fahrenheit"}
                 other{"{0} grados Fahrenheit"}
             }
             kelvin{
+                dnam{"kelvin"}
                 one{"{0} kelvin"}
                 other{"{0} kelvin"}
             }
         }
         volume{
             acre-foot{
+                dnam{"acres pies"}
                 one{"{0} acre pie"}
                 other{"{0} acres pies"}
             }
             centiliter{
+                dnam{"centilitros"}
                 one{"{0} centilitro"}
                 other{"{0} centilitros"}
             }
             cubic-centimeter{
+                dnam{"centímetros cúbicos"}
                 one{"{0} centímetro cúbico"}
                 other{"{0} centímetros cúbicos"}
             }
             cubic-foot{
+                dnam{"pies cúbicos"}
                 one{"{0} pie cúbico"}
                 other{"{0} pies cúbicos"}
             }
             cubic-inch{
+                dnam{"pulgadas cúbicas"}
                 one{"{0} pulgada cúbica"}
                 other{"{0} pulgadas cúbicas"}
             }
             cubic-kilometer{
+                dnam{"kilómetros cúbicos"}
                 one{"{0} kilómetro cúbico"}
                 other{"{0} kilómetros cúbicos"}
             }
             cubic-meter{
+                dnam{"metros cúbicos"}
                 one{"{0} metro cúbico"}
                 other{"{0} metros cúbicos"}
             }
             cubic-mile{
+                dnam{"millas cúbicas"}
                 one{"{0} milla cúbica"}
                 other{"{0} millas cúbicas"}
             }
             cubic-yard{
+                dnam{"yardas cúbicas"}
                 one{"{0} yarda cúbica"}
                 other{"{0} yardas cúbicas"}
             }
             cup{
+                dnam{"tazas"}
                 one{"{0} taza"}
                 other{"{0} tazas"}
             }
             deciliter{
+                dnam{"decilitros"}
                 one{"{0} decilitro"}
                 other{"{0} decilitros"}
             }
             fluid-ounce{
+                dnam{"onzas fluidas"}
                 one{"{0} onza fluida"}
                 other{"{0} onzas fluidas"}
             }
             gallon{
+                dnam{"galones"}
                 one{"{0} galón"}
                 other{"{0} galones"}
             }
             hectoliter{
+                dnam{"hectolitros"}
                 one{"{0} hectolitro"}
                 other{"{0} hectolitros"}
             }
             liter{
+                dnam{"litros"}
                 one{"{0} litro"}
                 other{"{0} litros"}
             }
             megaliter{
+                dnam{"megalitros"}
                 one{"{0} megalitro"}
                 other{"{0} megalitros"}
             }
             milliliter{
+                dnam{"mililitros"}
                 one{"{0} mililitro"}
                 other{"{0} mililitros"}
             }
             pint{
+                dnam{"pintas"}
                 one{"{0} pinta"}
                 other{"{0} pintas"}
             }
             quart{
+                dnam{"cuartos"}
                 one{"{0} cuarto"}
                 other{"{0} cuartos"}
             }
             tablespoon{
+                dnam{"cucharadas"}
                 one{"{0} cucharada"}
                 other{"{0} cucharadas"}
             }
             teaspoon{
+                dnam{"cucharaditas"}
                 one{"{0} cucharadita"}
                 other{"{0} cucharaditas"}
             }

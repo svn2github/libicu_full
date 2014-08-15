@@ -1774,66 +1774,81 @@ hu{
     units{
         acceleration{
             g-force{
+                dnam{"G gyorsulás"}
                 one{"{0} G gyorsulás"}
                 other{"{0} G gyorsulás"}
             }
             meter-per-second-squared{
+                dnam{"méter per másodpercnégyzet"}
                 one{"{0} méter per másodpercnégyzet"}
                 other{"{0} méter per másodpercnégyzet"}
             }
         }
         angle{
             arc-minute{
+                dnam{"ívperc"}
                 one{"{0} ívperc"}
                 other{"{0} ívperc"}
             }
             arc-second{
+                dnam{"ívmásodperc"}
                 one{"{0} ívmásodperc"}
                 other{"{0} ívmásodperc"}
             }
             degree{
+                dnam{"fok"}
                 one{"{0} fok"}
                 other{"{0} fok"}
             }
             radian{
+                dnam{"radián"}
                 one{"{0} radián"}
                 other{"{0} radián"}
             }
         }
         area{
             acre{
+                dnam{"hold"}
                 one{"{0} hold"}
                 other{"{0} hold"}
             }
             hectare{
+                dnam{"hektár"}
                 one{"{0} hektár"}
                 other{"{0} hektár"}
             }
             square-centimeter{
+                dnam{"négyzetcentiméter"}
                 one{"{0} négyzetcentiméter"}
                 other{"{0} négyzetcentiméter"}
             }
             square-foot{
+                dnam{"négyzetláb"}
                 one{"{0} négyzetláb"}
                 other{"{0} négyzetláb"}
             }
             square-inch{
+                dnam{"négyzethüvelyk"}
                 one{"{0} négyzethüvelyk"}
                 other{"{0} négyzethüvelyk"}
             }
             square-kilometer{
+                dnam{"négyzetkilométer"}
                 one{"{0} négyzetkilométer"}
                 other{"{0} négyzetkilométer"}
             }
             square-meter{
+                dnam{"négyzetméter"}
                 one{"{0} négyzetméter"}
                 other{"{0} négyzetméter"}
             }
             square-mile{
+                dnam{"négyzetmérföld"}
                 one{"{0} négyzetmérföld"}
                 other{"{0} négyzetmérföld"}
             }
             square-yard{
+                dnam{"négyzetyard"}
                 one{"{0} négyzetyard"}
                 other{"{0} négyzetyard"}
             }
@@ -1843,829 +1858,542 @@ hu{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"liter per kilométer"}
                 one{"{0} liter per kilométer"}
                 other{"{0} liter per kilométer"}
             }
             mile-per-gallon{
+                dnam{"mérföld per gallon"}
                 one{"{0} mérföld per gallon"}
                 other{"{0} mérföld per gallon"}
             }
         }
         digital{
             bit{
+                dnam{"bit"}
                 one{"{0} bit"}
                 other{"{0} bit"}
             }
             byte{
+                dnam{"bájt"}
                 one{"{0} bájt"}
                 other{"{0} bájt"}
             }
             gigabit{
+                dnam{"gigabit"}
                 one{"{0} gigabit"}
                 other{"{0} gigabit"}
             }
             gigabyte{
+                dnam{"gigabájt"}
                 one{"{0} gigabájt"}
                 other{"{0} gigabájt"}
             }
             kilobit{
+                dnam{"kilobit"}
                 one{"{0} kilobit"}
                 other{"{0} kilobit"}
             }
             kilobyte{
+                dnam{"kilobájt"}
                 one{"{0} kilobájt"}
                 other{"{0} kilobájt"}
             }
             megabit{
+                dnam{"megabit"}
                 one{"{0} megabit"}
                 other{"{0} megabit"}
             }
             megabyte{
+                dnam{"megabájt"}
                 one{"{0} megabájt"}
                 other{"{0} megabájt"}
             }
             terabit{
+                dnam{"terabit"}
                 one{"{0} terabit"}
                 other{"{0} terabit"}
             }
             terabyte{
+                dnam{"terabájt"}
                 one{"{0} terabájt"}
                 other{"{0} terabájt"}
             }
         }
         duration{
             day{
+                dnam{"nap"}
                 one{"{0} nap"}
                 other{"{0} nap"}
             }
             hour{
+                dnam{"óra"}
                 one{"{0} óra"}
                 other{"{0} óra"}
+                per{"{0}/óra"}
             }
             microsecond{
+                dnam{"mikroszekundum"}
                 one{"{0} mikroszekundum"}
                 other{"{0} mikroszekundum"}
             }
             millisecond{
+                dnam{"ezredmásodperc"}
                 one{"{0} ezredmásodperc"}
                 other{"{0} ezredmásodperc"}
             }
             minute{
+                dnam{"perc"}
                 one{"{0} perc"}
                 other{"{0} perc"}
             }
             month{
+                dnam{"hónap"}
                 one{"{0} hónap"}
                 other{"{0} hónap"}
             }
             nanosecond{
+                dnam{"nanoszekundum"}
                 one{"{0} nanoszekundum"}
                 other{"{0} nanoszekundum"}
             }
             second{
+                dnam{"másodperc"}
                 one{"{0} másodperc"}
                 other{"{0} másodperc"}
+                per{"{0}/másodperc"}
             }
             week{
+                dnam{"hét"}
                 one{"{0} hét"}
                 other{"{0} hét"}
             }
             year{
+                dnam{"év"}
                 one{"{0} év"}
                 other{"{0} év"}
             }
         }
         electric{
             ampere{
+                dnam{"amper"}
                 one{"{0} amper"}
                 other{"{0} amper"}
             }
             milliampere{
+                dnam{"milliamper"}
                 one{"{0} milliamper"}
                 other{"{0} milliamper"}
             }
             ohm{
+                dnam{"ohm"}
                 one{"{0} ohm"}
                 other{"{0} ohm"}
             }
             volt{
+                dnam{"volt"}
                 one{"{0} volt"}
                 other{"{0} volt"}
             }
         }
         energy{
             calorie{
+                dnam{"kalória"}
                 one{"{0} kalória"}
                 other{"{0} kalória"}
             }
             foodcalorie{
+                dnam{"kalória"}
                 one{"{0} kalória"}
                 other{"{0} kalória"}
             }
             joule{
+                dnam{"joule"}
                 one{"{0} joule"}
                 other{"{0} joule"}
             }
             kilocalorie{
+                dnam{"kilokalória"}
                 one{"{0} kilokalória"}
                 other{"{0} kilokalória"}
             }
             kilojoule{
+                dnam{"kilojoule"}
                 one{"{0} kilojoule"}
                 other{"{0} kilojoule"}
             }
             kilowatt-hour{
+                dnam{"kilowattóra"}
                 one{"{0} kilowattóra"}
                 other{"{0} kilowattóra"}
             }
         }
         frequency{
             gigahertz{
+                dnam{"gigahertz"}
                 one{"{0} gigahertz"}
                 other{"{0} gigahertz"}
             }
             hertz{
+                dnam{"hertz"}
                 one{"{0} hertz"}
                 other{"{0} hertz"}
             }
             kilohertz{
+                dnam{"kilohertz"}
                 one{"{0} kilohertz"}
                 other{"{0} kilohertz"}
             }
             megahertz{
+                dnam{"megahertz"}
                 one{"{0} megahertz"}
                 other{"{0} megahertz"}
             }
         }
         length{
             astronomical-unit{
+                dnam{"csillagászati egység"}
                 one{"{0} csillagászati egység"}
                 other{"{0} csillagászati egység"}
             }
             centimeter{
+                dnam{"centiméter"}
                 one{"{0} centiméter"}
                 other{"{0} centiméter"}
             }
             decimeter{
+                dnam{"deciméter"}
                 one{"{0} deciméter"}
                 other{"{0} deciméter"}
             }
             foot{
+                dnam{"láb"}
                 one{"{0} láb"}
                 other{"{0} láb"}
             }
             inch{
+                dnam{"hüvelyk"}
                 one{"{0} hüvelyk"}
                 other{"{0} hüvelyk"}
             }
             kilometer{
+                dnam{"kilométer"}
                 one{"{0} kilométer"}
                 other{"{0} kilométer"}
             }
             light-year{
+                dnam{"fényév"}
                 one{"{0} fényév"}
                 other{"{0} fényév"}
             }
             meter{
+                dnam{"méter"}
                 one{"{0} méter"}
                 other{"{0} méter"}
             }
             micrometer{
+                dnam{"mikrométer"}
                 one{"{0} mikrométer"}
                 other{"{0} mikrométer"}
             }
             mile{
+                dnam{"mérföld"}
                 one{"{0} mérföld"}
                 other{"{0} mérföld"}
             }
             millimeter{
+                dnam{"milliméter"}
                 one{"{0} milliméter"}
                 other{"{0} milliméter"}
             }
             nanometer{
+                dnam{"nanométer"}
                 one{"{0} nanométer"}
                 other{"{0} nanométer"}
             }
             nautical-mile{
+                dnam{"tengeri mérföld"}
                 one{"{0} tengeri mérföld"}
                 other{"{0} tengeri mérföld"}
             }
             parsec{
+                dnam{"parszek"}
                 one{"{0} parszek"}
                 other{"{0} parszek"}
             }
             picometer{
+                dnam{"pikométer"}
                 one{"{0} pikométer"}
                 other{"{0} pikométer"}
             }
             yard{
+                dnam{"yard"}
                 one{"{0} yard"}
                 other{"{0} yard"}
             }
         }
         light{
             lux{
+                dnam{"lux"}
                 one{"{0} lux"}
                 other{"{0} lux"}
             }
         }
         mass{
             carat{
+                dnam{"karát"}
                 one{"{0} karát"}
                 other{"{0} karát"}
             }
             gram{
+                dnam{"gramm"}
                 one{"{0} gramm"}
                 other{"{0} gramm"}
             }
             kilogram{
+                dnam{"kilogramm"}
                 one{"{0} kilogramm"}
                 other{"{0} kilogramm"}
             }
             metric-ton{
+                dnam{"metrikus tonna"}
                 one{"{0} metrikus tonna"}
                 other{"{0} metrikus tonna"}
             }
             microgram{
+                dnam{"mikrogramm"}
                 one{"{0} mikrogramm"}
                 other{"{0} mikrogramm"}
             }
             milligram{
+                dnam{"milligramm"}
                 one{"{0} milligramm"}
                 other{"{0} milligramm"}
             }
             ounce{
+                dnam{"uncia"}
                 one{"{0} uncia"}
                 other{"{0} uncia"}
             }
             ounce-troy{
+                dnam{"troy uncia"}
                 one{"{0} troy uncia"}
                 other{"{0} troy uncia"}
             }
             pound{
+                dnam{"font"}
                 one{"{0} font"}
                 other{"{0} font"}
             }
             ton{
+                dnam{"tonna"}
                 one{"{0} tonna"}
                 other{"{0} tonna"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"G gyorsulás"}
-                }
-                meter-per-second-squared{
-                    dnam{"méter per másodpercnégyzet"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"ívperc"}
-                }
-                arc-second{
-                    dnam{"ívmásodperc"}
-                }
-                degree{
-                    dnam{"fok"}
-                }
-                radian{
-                    dnam{"radián"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"hold"}
-                }
-                hectare{
-                    dnam{"hektár"}
-                }
-                square-centimeter{
-                    dnam{"négyzetcentiméter"}
-                }
-                square-foot{
-                    dnam{"négyzetláb"}
-                }
-                square-inch{
-                    dnam{"négyzethüvelyk"}
-                }
-                square-kilometer{
-                    dnam{"négyzetkilométer"}
-                }
-                square-meter{
-                    dnam{"négyzetméter"}
-                }
-                square-mile{
-                    dnam{"négyzetmérföld"}
-                }
-                square-yard{
-                    dnam{"négyzetyard"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"liter per kilométer"}
-                }
-                mile-per-gallon{
-                    dnam{"mérföld per gallon"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bit"}
-                }
-                byte{
-                    dnam{"bájt"}
-                }
-                gigabit{
-                    dnam{"gigabit"}
-                }
-                gigabyte{
-                    dnam{"gigabájt"}
-                }
-                kilobit{
-                    dnam{"kilobit"}
-                }
-                kilobyte{
-                    dnam{"kilobájt"}
-                }
-                megabit{
-                    dnam{"megabit"}
-                }
-                megabyte{
-                    dnam{"megabájt"}
-                }
-                terabit{
-                    dnam{"terabit"}
-                }
-                terabyte{
-                    dnam{"terabájt"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"nap"}
-                }
-                hour{
-                    dnam{"óra"}
-                    per{"{0}/óra"}
-                }
-                microsecond{
-                    dnam{"mikroszekundum"}
-                }
-                millisecond{
-                    dnam{"ezredmásodperc"}
-                }
-                minute{
-                    dnam{"perc"}
-                }
-                month{
-                    dnam{"hónap"}
-                }
-                nanosecond{
-                    dnam{"nanoszekundum"}
-                }
-                second{
-                    dnam{"másodperc"}
-                    per{"{0}/másodperc"}
-                }
-                week{
-                    dnam{"hét"}
-                }
-                year{
-                    dnam{"év"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"amper"}
-                }
-                milliampere{
-                    dnam{"milliamper"}
-                }
-                ohm{
-                    dnam{"ohm"}
-                }
-                volt{
-                    dnam{"volt"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"kalória"}
-                }
-                foodcalorie{
-                    dnam{"kalória"}
-                }
-                joule{
-                    dnam{"joule"}
-                }
-                kilocalorie{
-                    dnam{"kilokalória"}
-                }
-                kilojoule{
-                    dnam{"kilojoule"}
-                }
-                kilowatt-hour{
-                    dnam{"kilowattóra"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigahertz"}
-                }
-                hertz{
-                    dnam{"hertz"}
-                }
-                kilohertz{
-                    dnam{"kilohertz"}
-                }
-                megahertz{
-                    dnam{"megahertz"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"csillagászati egység"}
-                }
-                centimeter{
-                    dnam{"centiméter"}
-                }
-                decimeter{
-                    dnam{"deciméter"}
-                }
-                foot{
-                    dnam{"láb"}
-                }
-                inch{
-                    dnam{"hüvelyk"}
-                }
-                kilometer{
-                    dnam{"kilométer"}
-                }
-                light-year{
-                    dnam{"fényév"}
-                }
-                meter{
-                    dnam{"méter"}
-                }
-                micrometer{
-                    dnam{"mikrométer"}
-                }
-                mile{
-                    dnam{"mérföld"}
-                }
-                millimeter{
-                    dnam{"milliméter"}
-                }
-                nanometer{
-                    dnam{"nanométer"}
-                }
-                nautical-mile{
-                    dnam{"tengeri mérföld"}
-                }
-                parsec{
-                    dnam{"parszek"}
-                }
-                picometer{
-                    dnam{"pikométer"}
-                }
-                yard{
-                    dnam{"yard"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"lux"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"karát"}
-                }
-                gram{
-                    dnam{"gramm"}
-                }
-                kilogram{
-                    dnam{"kilogramm"}
-                }
-                metric-ton{
-                    dnam{"metrikus tonna"}
-                }
-                microgram{
-                    dnam{"mikrogramm"}
-                }
-                milligram{
-                    dnam{"milligramm"}
-                }
-                ounce{
-                    dnam{"uncia"}
-                }
-                ounce-troy{
-                    dnam{"troy uncia"}
-                }
-                pound{
-                    dnam{"font"}
-                }
-                ton{
-                    dnam{"tonna"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigawatt"}
-                }
-                horsepower{
-                    dnam{"lóerő"}
-                }
-                kilowatt{
-                    dnam{"kilowatt"}
-                }
-                megawatt{
-                    dnam{"megawatt"}
-                }
-                milliwatt{
-                    dnam{"milliwatt"}
-                }
-                watt{
-                    dnam{"watt"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hektopascal"}
-                }
-                inch-hg{
-                    dnam{"higanyhüvelyk"}
-                }
-                millibar{
-                    dnam{"millibar"}
-                }
-                millimeter-of-mercury{
-                    dnam{"mm Hg"}
-                }
-                pound-per-square-inch{
-                    dnam{"font per négyzethüvelyk"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"karát"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilométer per óra"}
-                }
-                meter-per-second{
-                    dnam{"méter per másodperc"}
-                }
-                mile-per-hour{
-                    dnam{"mérföld per óra"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"Celsius-fok"}
-                }
-                fahrenheit{
-                    dnam{"Fahrenheit-fok"}
-                }
-                kelvin{
-                    dnam{"kelvin"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"hold-láb"}
-                }
-                centiliter{
-                    dnam{"centiliter"}
-                }
-                cubic-centimeter{
-                    dnam{"köbcentiméter"}
-                }
-                cubic-foot{
-                    dnam{"köbláb"}
-                }
-                cubic-inch{
-                    dnam{"köbhüvelyk"}
-                }
-                cubic-kilometer{
-                    dnam{"köbkilométer"}
-                }
-                cubic-meter{
-                    dnam{"köbméter"}
-                }
-                cubic-mile{
-                    dnam{"köbmérföld"}
-                }
-                cubic-yard{
-                    dnam{"köbyard"}
-                }
-                cup{
-                    dnam{"csésze"}
-                }
-                deciliter{
-                    dnam{"deciliter"}
-                }
-                fluid-ounce{
-                    dnam{"folyadékuncia"}
-                }
-                gallon{
-                    dnam{"gallon"}
-                }
-                hectoliter{
-                    dnam{"hektoliter"}
-                }
-                liter{
-                    dnam{"liter"}
-                }
-                megaliter{
-                    dnam{"megaliter"}
-                }
-                milliliter{
-                    dnam{"milliliter"}
-                }
-                pint{
-                    dnam{"pint"}
-                }
-                quart{
-                    dnam{"quart"}
-                }
-                tablespoon{
-                    dnam{"evőkanál"}
-                }
-                teaspoon{
-                    dnam{"kávéskanál"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigawatt"}
                 one{"{0} gigawatt"}
                 other{"{0} gigawatt"}
             }
             horsepower{
+                dnam{"lóerő"}
                 one{"{0} lóerő"}
                 other{"{0} lóerő"}
             }
             kilowatt{
+                dnam{"kilowatt"}
                 one{"{0} kilowatt"}
                 other{"{0} kilowatt"}
             }
             megawatt{
+                dnam{"megawatt"}
                 one{"{0} megawatt"}
                 other{"{0} megawatt"}
             }
             milliwatt{
+                dnam{"milliwatt"}
                 one{"{0} milliwatt"}
                 other{"{0} milliwatt"}
             }
             watt{
+                dnam{"watt"}
                 one{"{0} watt"}
                 other{"{0} watt"}
             }
         }
         pressure{
             hectopascal{
+                dnam{"hektopascal"}
                 one{"{0} hektopascal"}
                 other{"{0} hektopascal"}
             }
             inch-hg{
+                dnam{"higanyhüvelyk"}
                 one{"{0} higanyhüvelyk"}
                 other{"{0} higanyhüvelyk"}
             }
             millibar{
+                dnam{"millibar"}
                 one{"{0} millibar"}
                 other{"{0} millibar"}
             }
             millimeter-of-mercury{
+                dnam{"mm Hg"}
                 one{"{0} higanymilliméter"}
                 other{"{0} higanymilliméter"}
             }
             pound-per-square-inch{
+                dnam{"font per négyzethüvelyk"}
                 one{"{0} font per négyzethüvelyk"}
                 other{"{0} font per négyzethüvelyk"}
             }
         }
         proportion{
             karat{
+                dnam{"karát"}
                 one{"{0} karát"}
                 other{"{0} karát"}
             }
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilométer per óra"}
                 one{"{0} kilométer per óra"}
                 other{"{0} kilométer per óra"}
             }
             meter-per-second{
+                dnam{"méter per másodperc"}
                 one{"{0} méter per másodperc"}
                 other{"{0} méter per másodperc"}
             }
             mile-per-hour{
+                dnam{"mérföld per óra"}
                 one{"{0} mérföld per óra"}
                 other{"{0} mérföld per óra"}
             }
         }
         temperature{
             celsius{
+                dnam{"Celsius-fok"}
                 one{"{0} Celsius-fok"}
                 other{"{0} Celsius-fok"}
             }
             fahrenheit{
+                dnam{"Fahrenheit-fok"}
                 one{"{0} Fahrenheit-fok"}
                 other{"{0} Fahrenheit-fok"}
             }
             kelvin{
+                dnam{"kelvin"}
                 one{"{0} kelvin"}
                 other{"{0} kelvin"}
             }
         }
         volume{
             acre-foot{
+                dnam{"hold-láb"}
                 one{"{0} hold-láb"}
                 other{"{0} hold-láb"}
             }
             centiliter{
+                dnam{"centiliter"}
                 one{"{0} centiliter"}
                 other{"{0} centiliter"}
             }
             cubic-centimeter{
+                dnam{"köbcentiméter"}
                 one{"{0} köbcentiméter"}
                 other{"{0} köbcentiméter"}
             }
             cubic-foot{
+                dnam{"köbláb"}
                 one{"{0} köbláb"}
                 other{"{0} köbláb"}
             }
             cubic-inch{
+                dnam{"köbhüvelyk"}
                 one{"{0} köbhüvelyk"}
                 other{"{0} köbhüvelyk"}
             }
             cubic-kilometer{
+                dnam{"köbkilométer"}
                 one{"{0} köbkilométer"}
                 other{"{0} köbkilométer"}
             }
             cubic-meter{
+                dnam{"köbméter"}
                 one{"{0} köbméter"}
                 other{"{0} köbméter"}
             }
             cubic-mile{
+                dnam{"köbmérföld"}
                 one{"{0} köbmérföld"}
                 other{"{0} köbmérföld"}
             }
             cubic-yard{
+                dnam{"köbyard"}
                 one{"{0} köbyard"}
                 other{"{0} köbyard"}
             }
             cup{
+                dnam{"csésze"}
                 one{"{0} csésze"}
                 other{"{0} csésze"}
             }
             deciliter{
+                dnam{"deciliter"}
                 one{"{0} deciliter"}
                 other{"{0} deciliter"}
             }
             fluid-ounce{
+                dnam{"folyadékuncia"}
                 one{"{0} folyadékuncia"}
                 other{"{0} folyadékuncia"}
             }
             gallon{
+                dnam{"gallon"}
                 one{"{0} gallon"}
                 other{"{0} gallon"}
             }
             hectoliter{
+                dnam{"hektoliter"}
                 one{"{0} hektoliter"}
                 other{"{0} hektoliter"}
             }
             liter{
+                dnam{"liter"}
                 one{"{0} liter"}
                 other{"{0} liter"}
             }
             megaliter{
+                dnam{"megaliter"}
                 one{"{0} megaliter"}
                 other{"{0} megaliter"}
             }
             milliliter{
+                dnam{"milliliter"}
                 one{"{0} milliliter"}
                 other{"{0} milliliter"}
             }
             pint{
+                dnam{"pint"}
                 one{"{0} pint"}
                 other{"{0} pint"}
             }
             quart{
+                dnam{"quart"}
                 one{"{0} quart"}
                 other{"{0} quart"}
             }
             tablespoon{
+                dnam{"evőkanál"}
                 one{"{0} evőkanál"}
                 other{"{0} evőkanál"}
             }
             teaspoon{
+                dnam{"kávéskanál"}
                 one{"{0} kávéskanál"}
                 other{"{0} kávéskanál"}
             }

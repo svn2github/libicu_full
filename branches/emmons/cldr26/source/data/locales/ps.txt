@@ -162,14 +162,12 @@ ps{
         characters{"right-to-left"}
     }
     units{
-        per{
-            duration{
-                day{
-                    dnam{"ورځ"}
-                }
-                year{
-                    dnam{"کالونه"}
-                }
+        duration{
+            day{
+                dnam{"ورځ"}
+            }
+            year{
+                dnam{"کالونه"}
             }
         }
     }

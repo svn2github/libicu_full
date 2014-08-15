@@ -2168,11 +2168,13 @@ hr{
     units{
         acceleration{
             g-force{
+                dnam{"G"}
                 few{"{0} G"}
                 one{"{0} G"}
                 other{"{0} G"}
             }
             meter-per-second-squared{
+                dnam{"metri u sekundi na kvadrat"}
                 few{"{0} metra u sekundi na kvadrat"}
                 one{"{0} metar u sekundi na kvadrat"}
                 other{"{0} metara u sekundi na kvadrat"}
@@ -2180,21 +2182,25 @@ hr{
         }
         angle{
             arc-minute{
+                dnam{"minute"}
                 few{"{0} minute"}
                 one{"{0} minuta"}
                 other{"{0} minuta"}
             }
             arc-second{
+                dnam{"sekunde"}
                 few{"{0} sekunde"}
                 one{"{0} sekunda"}
                 other{"{0} sekundi"}
             }
             degree{
+                dnam{"stupnjevi"}
                 few{"{0} stupnja"}
                 one{"{0} stupanj"}
                 other{"{0} stupnjeva"}
             }
             radian{
+                dnam{"radijani"}
                 few{"{0} radijana"}
                 one{"{0} radijan"}
                 other{"{0} radijana"}
@@ -2202,46 +2208,55 @@ hr{
         }
         area{
             acre{
+                dnam{"katastarska jutra"}
                 few{"{0} katastarska jutra"}
                 one{"{0} katastarsko jutro"}
                 other{"{0} katastarskih jutara"}
             }
             hectare{
+                dnam{"hektari"}
                 few{"{0} hektara"}
                 one{"{0} hektar"}
                 other{"{0} hektara"}
             }
             square-centimeter{
+                dnam{"kvadratni centimetri"}
                 few{"{0} kvadratna centimetra"}
                 one{"{0} kvadratni centimetar"}
                 other{"{0} kvadratnih centimetara"}
             }
             square-foot{
+                dnam{"kvadratne stope"}
                 few{"{0} kvadratne stope"}
                 one{"{0} kvadratna stopa"}
                 other{"{0} kvadratnih stopa"}
             }
             square-inch{
+                dnam{"kvadratni inči"}
                 few{"{0} kvadratna inča"}
                 one{"{0} kvadratni inč"}
                 other{"{0} kvadratnih inča"}
             }
             square-kilometer{
+                dnam{"kvadratni kilometri"}
                 few{"{0} kvadratna kilometra"}
                 one{"{0} kvadratni kilometar"}
                 other{"{0} kvadratnih kilometara"}
             }
             square-meter{
+                dnam{"kvadratni metri"}
                 few{"{0} kvadratna metra"}
                 one{"{0} kvadratni metar"}
                 other{"{0} kvadratnih metara"}
             }
             square-mile{
+                dnam{"kvadratne milje"}
                 few{"{0} kvadratne milje"}
                 one{"{0} kvadratna milja"}
                 other{"{0} kvadratnih milja"}
             }
             square-yard{
+                dnam{"kvadratni jardi"}
                 few{"{0} kvadratna jarda"}
                 one{"{0} kvadratni jard"}
                 other{"{0} kvadratnih jardi"}
@@ -2252,11 +2267,13 @@ hr{
         }
         consumption{
             liter-per-kilometer{
+                dnam{"litre po kilometru"}
                 few{"{0} litre po kilometru"}
                 one{"{0} litra po kilometru"}
                 other{"{0} litara po kilometru"}
             }
             mile-per-gallon{
+                dnam{"milje po galonu"}
                 few{"{0} milje po galonu"}
                 one{"{0} milja po galonu"}
                 other{"{0} milja po galonu"}
@@ -2264,51 +2281,61 @@ hr{
         }
         digital{
             bit{
+                dnam{"bitovi"}
                 few{"{0} bita"}
                 one{"{0} bit"}
                 other{"{0} bitova"}
             }
             byte{
+                dnam{"bajtovi"}
                 few{"{0} bajta"}
                 one{"{0} bajt"}
                 other{"{0} bajtova"}
             }
             gigabit{
+                dnam{"gigabiti"}
                 few{"{0} gigabita"}
                 one{"{0} gigabit"}
                 other{"{0} gigabita"}
             }
             gigabyte{
+                dnam{"gigabajti"}
                 few{"{0} gigabajta"}
                 one{"{0} gigabajt"}
                 other{"{0} gigabajta"}
             }
             kilobit{
+                dnam{"kilobiti"}
                 few{"{0} kilobita"}
                 one{"{0} kilobit"}
                 other{"{0} kilobita"}
             }
             kilobyte{
+                dnam{"kilobajti"}
                 few{"{0} kilobajta"}
                 one{"{0} kilobajt"}
                 other{"{0} kilobajta"}
             }
             megabit{
+                dnam{"megabiti"}
                 few{"{0} megabita"}
                 one{"{0} megabit"}
                 other{"{0} megabita"}
             }
             megabyte{
+                dnam{"megabajti"}
                 few{"{0} megabajta"}
                 one{"{0} megabajt"}
                 other{"{0} megabajta"}
             }
             terabit{
+                dnam{"terabiti"}
                 few{"{0} terabita"}
                 one{"{0} terabit"}
                 other{"{0} terabita"}
             }
             terabyte{
+                dnam{"terabajti"}
                 few{"{0} terabajta"}
                 one{"{0} terabajt"}
                 other{"{0} terabajta"}
@@ -2316,51 +2343,63 @@ hr{
         }
         duration{
             day{
+                dnam{"dani"}
                 few{"{0} dana"}
                 one{"{0} dan"}
                 other{"{0} dana"}
             }
             hour{
+                dnam{"sati"}
                 few{"{0} sata"}
                 one{"{0} sat"}
                 other{"{0} sati"}
+                per{"{0}/h"}
             }
             microsecond{
+                dnam{"mikrosekunde"}
                 few{"{0} mikrosekunde"}
                 one{"{0} mikrosekunda"}
                 other{"{0} mikrosekundi"}
             }
             millisecond{
+                dnam{"milisekunde"}
                 few{"{0} milisekunde"}
                 one{"{0} milisekunda"}
                 other{"{0} milisekundi"}
             }
             minute{
+                dnam{"minute"}
                 few{"{0} minute"}
                 one{"{0} minuta"}
                 other{"{0} minuta"}
             }
             month{
+                dnam{"mjeseci"}
                 few{"{0} mjeseca"}
                 one{"{0} mjesec"}
                 other{"{0} mjeseci"}
             }
             nanosecond{
+                dnam{"nanosekunde"}
                 few{"{0} nanosekunde"}
                 one{"{0} nanosekunda"}
                 other{"{0} nanosekundi"}
             }
             second{
+                dnam{"sekunde"}
                 few{"{0} sekunde"}
                 one{"{0} sekunda"}
                 other{"{0} sekundi"}
+                per{"{0}/s"}
             }
             week{
+                dnam{"tjedni"}
                 few{"{0} tjedna"}
                 one{"{0} tjedan"}
                 other{"{0} tjedana"}
             }
             year{
+                dnam{"godine"}
                 few{"{0} godine"}
                 one{"{0} godina"}
                 other{"{0} godina"}
@@ -2368,21 +2407,25 @@ hr{
         }
         electric{
             ampere{
+                dnam{"amperi"}
                 few{"{0} ampera"}
                 one{"{0} amper"}
                 other{"{0} ampera"}
             }
             milliampere{
+                dnam{"miliamperi"}
                 few{"{0} miliampera"}
                 one{"{0} miliamper"}
                 other{"{0} miliampera"}
             }
             ohm{
+                dnam{"omi"}
                 few{"{0} oma"}
                 one{"{0} om"}
                 other{"{0} oma"}
             }
             volt{
+                dnam{"volti"}
                 few{"{0} volta"}
                 one{"{0} volt"}
                 other{"{0} volti"}
@@ -2390,31 +2433,37 @@ hr{
         }
         energy{
             calorie{
+                dnam{"kalorije"}
                 few{"{0} kalorije"}
                 one{"{0} kalorija"}
                 other{"{0} kalorija"}
             }
             foodcalorie{
+                dnam{"kilokalorije"}
                 few{"{0} kilokalorije"}
                 one{"{0} kilokalorija"}
                 other{"{0} kilokalorija"}
             }
             joule{
+                dnam{"džuli"}
                 few{"{0} džula"}
                 one{"{0} džul"}
                 other{"{0} džula"}
             }
             kilocalorie{
+                dnam{"kilokalorije"}
                 few{"{0} kilokalorije"}
                 one{"{0} kilokalorija"}
                 other{"{0} kilokalorija"}
             }
             kilojoule{
+                dnam{"kilodžuli"}
                 few{"{0} kilodžula"}
                 one{"{0} kilodžul"}
                 other{"{0} kilodžula"}
             }
             kilowatt-hour{
+                dnam{"kilovatsati"}
                 few{"{0} kilovatsata"}
                 one{"{0} kilovatsat"}
                 other{"{0} kilovatsati"}
@@ -2422,21 +2471,25 @@ hr{
         }
         frequency{
             gigahertz{
+                dnam{"gigaherci"}
                 few{"{0} gigaherca"}
                 one{"{0} gigaherc"}
                 other{"{0} gigaherca"}
             }
             hertz{
+                dnam{"herci"}
                 few{"{0} herca"}
                 one{"{0} herc"}
                 other{"{0} herca"}
             }
             kilohertz{
+                dnam{"kiloherci"}
                 few{"{0} kiloherca"}
                 one{"{0} kiloherc"}
                 other{"{0} kiloherca"}
             }
             megahertz{
+                dnam{"megaherci"}
                 few{"{0} megaherca"}
                 one{"{0} megaherc"}
                 other{"{0} megaherca"}
@@ -2444,91 +2497,109 @@ hr{
         }
         length{
             astronomical-unit{
+                dnam{"astronomske jedinice"}
                 few{"{0} astronomske jedinice"}
                 one{"{0} astronomska jedinica"}
                 other{"{0} astronomskih jedinica"}
             }
             centimeter{
+                dnam{"centimetri"}
                 few{"{0} centimetra"}
                 one{"{0} centimetar"}
                 other{"{0} centimetara"}
             }
             decimeter{
+                dnam{"decimetri"}
                 few{"{0} decimetra"}
                 one{"{0} decimetar"}
                 other{"{0} decimetara"}
             }
             fathom{
+                dnam{"hvati"}
                 few{"{0} hvata"}
                 one{"{0} hvat"}
                 other{"{0} hvati"}
             }
             foot{
+                dnam{"stope"}
                 few{"{0} stope"}
                 one{"{0} stopa"}
                 other{"{0} stopa"}
             }
             furlong{
+                dnam{"furlonzi"}
                 few{"{0} furlonga"}
                 one{"{0} furlong"}
                 other{"{0} furlonga"}
             }
             inch{
+                dnam{"inči"}
                 few{"{0} inča"}
                 one{"{0} inč"}
                 other{"{0} inča"}
             }
             kilometer{
+                dnam{"kilometri"}
                 few{"{0} kilometra"}
                 one{"{0} kilometar"}
                 other{"{0} kilometara"}
             }
             light-year{
+                dnam{"svjetlosne godine"}
                 few{"{0} svjetlosne godine"}
                 one{"{0} svjetlosna godina"}
                 other{"{0} svjetlosnih godina"}
             }
             meter{
+                dnam{"metri"}
                 few{"{0} metra"}
                 one{"{0} metar"}
                 other{"{0} metara"}
             }
             micrometer{
+                dnam{"mikrometri"}
                 few{"{0} mikrometra"}
                 one{"{0} mikrometar"}
                 other{"{0} mikrometara"}
             }
             mile{
+                dnam{"milje"}
                 few{"{0} milje"}
                 one{"{0} milja"}
                 other{"{0} milja"}
             }
             millimeter{
+                dnam{"milimetri"}
                 few{"{0} milimetra"}
                 one{"{0} milimetar"}
                 other{"{0} milimetara"}
             }
             nanometer{
+                dnam{"nanometri"}
                 few{"{0} nanometra"}
                 one{"{0} nanometar"}
                 other{"{0} nanometara"}
             }
             nautical-mile{
+                dnam{"nautičke milje"}
                 few{"{0} nautičke milje"}
                 one{"{0} nautička milja"}
                 other{"{0} nautičkih milja"}
             }
             parsec{
+                dnam{"parseci"}
                 few{"{0} parseka"}
                 one{"{0} parsek"}
                 other{"{0} parseka"}
             }
             picometer{
+                dnam{"pikometri"}
                 few{"{0} pikometra"}
                 one{"{0} pikometar"}
                 other{"{0} pikometara"}
             }
             yard{
+                dnam{"jardi"}
                 few{"{0} jarda"}
                 one{"{0} jard"}
                 other{"{0} jardi"}
@@ -2536,6 +2607,7 @@ hr{
         }
         light{
             lux{
+                dnam{"luksi"}
                 few{"{0} luksa"}
                 one{"{0} luks"}
                 other{"{0} luksa"}
@@ -2543,491 +2615,105 @@ hr{
         }
         mass{
             carat{
+                dnam{"karati"}
                 few{"{0} karata"}
                 one{"{0} karat"}
                 other{"{0} karata"}
             }
             gram{
+                dnam{"grami"}
                 few{"{0} grama"}
                 one{"{0} gram"}
                 other{"{0} grama"}
             }
             kilogram{
+                dnam{"kilogrami"}
                 few{"{0} kilograma"}
                 one{"{0} kilogram"}
                 other{"{0} kilograma"}
             }
             metric-ton{
+                dnam{"tone"}
                 few{"{0} tone"}
                 one{"{0} tona"}
                 other{"{0} tona"}
             }
             microgram{
+                dnam{"mikrogrami"}
                 few{"{0} mikrograma"}
                 one{"{0} mikrogram"}
                 other{"{0} mikrograma"}
             }
             milligram{
+                dnam{"miligrami"}
                 few{"{0} miligrama"}
                 one{"{0} miligram"}
                 other{"{0} miligrama"}
             }
             ounce{
+                dnam{"unce"}
                 few{"{0} unce"}
                 one{"{0} unca"}
                 other{"{0} unci"}
             }
             ounce-troy{
+                dnam{"troy unce"}
                 few{"{0} troy unce"}
                 one{"{0} troy unca"}
                 other{"{0} troy unci"}
             }
             pound{
+                dnam{"funte"}
                 few{"{0} funte"}
                 one{"{0} funta"}
                 other{"{0} funti"}
             }
             stone{
+                dnam{"kameni"}
                 few{"{0} kamena"}
                 one{"{0} kamen"}
                 other{"{0} kamena"}
             }
             ton{
+                dnam{"kratke tone"}
                 few{"{0} kratke tone"}
                 one{"{0} kratka tona"}
                 other{"{0} kratkih tona"}
             }
         }
-        per{
-            acceleration{
-                g-force{
-                    dnam{"G"}
-                }
-                meter-per-second-squared{
-                    dnam{"metri u sekundi na kvadrat"}
-                }
-            }
-            angle{
-                arc-minute{
-                    dnam{"minute"}
-                }
-                arc-second{
-                    dnam{"sekunde"}
-                }
-                degree{
-                    dnam{"stupnjevi"}
-                }
-                radian{
-                    dnam{"radijani"}
-                }
-            }
-            area{
-                acre{
-                    dnam{"katastarska jutra"}
-                }
-                hectare{
-                    dnam{"hektari"}
-                }
-                square-centimeter{
-                    dnam{"kvadratni centimetri"}
-                }
-                square-foot{
-                    dnam{"kvadratne stope"}
-                }
-                square-inch{
-                    dnam{"kvadratni inči"}
-                }
-                square-kilometer{
-                    dnam{"kvadratni kilometri"}
-                }
-                square-meter{
-                    dnam{"kvadratni metri"}
-                }
-                square-mile{
-                    dnam{"kvadratne milje"}
-                }
-                square-yard{
-                    dnam{"kvadratni jardi"}
-                }
-            }
-            consumption{
-                liter-per-kilometer{
-                    dnam{"litre po kilometru"}
-                }
-                mile-per-gallon{
-                    dnam{"milje po galonu"}
-                }
-            }
-            digital{
-                bit{
-                    dnam{"bitovi"}
-                }
-                byte{
-                    dnam{"bajtovi"}
-                }
-                gigabit{
-                    dnam{"gigabiti"}
-                }
-                gigabyte{
-                    dnam{"gigabajti"}
-                }
-                kilobit{
-                    dnam{"kilobiti"}
-                }
-                kilobyte{
-                    dnam{"kilobajti"}
-                }
-                megabit{
-                    dnam{"megabiti"}
-                }
-                megabyte{
-                    dnam{"megabajti"}
-                }
-                terabit{
-                    dnam{"terabiti"}
-                }
-                terabyte{
-                    dnam{"terabajti"}
-                }
-            }
-            duration{
-                day{
-                    dnam{"dani"}
-                }
-                hour{
-                    dnam{"sati"}
-                    per{"{0}/h"}
-                }
-                microsecond{
-                    dnam{"mikrosekunde"}
-                }
-                millisecond{
-                    dnam{"milisekunde"}
-                }
-                minute{
-                    dnam{"minute"}
-                }
-                month{
-                    dnam{"mjeseci"}
-                }
-                nanosecond{
-                    dnam{"nanosekunde"}
-                }
-                second{
-                    dnam{"sekunde"}
-                    per{"{0}/s"}
-                }
-                week{
-                    dnam{"tjedni"}
-                }
-                year{
-                    dnam{"godine"}
-                }
-            }
-            electric{
-                ampere{
-                    dnam{"amperi"}
-                }
-                milliampere{
-                    dnam{"miliamperi"}
-                }
-                ohm{
-                    dnam{"omi"}
-                }
-                volt{
-                    dnam{"volti"}
-                }
-            }
-            energy{
-                calorie{
-                    dnam{"kalorije"}
-                }
-                foodcalorie{
-                    dnam{"kilokalorije"}
-                }
-                joule{
-                    dnam{"džuli"}
-                }
-                kilocalorie{
-                    dnam{"kilokalorije"}
-                }
-                kilojoule{
-                    dnam{"kilodžuli"}
-                }
-                kilowatt-hour{
-                    dnam{"kilovatsati"}
-                }
-            }
-            frequency{
-                gigahertz{
-                    dnam{"gigaherci"}
-                }
-                hertz{
-                    dnam{"herci"}
-                }
-                kilohertz{
-                    dnam{"kiloherci"}
-                }
-                megahertz{
-                    dnam{"megaherci"}
-                }
-            }
-            length{
-                astronomical-unit{
-                    dnam{"astronomske jedinice"}
-                }
-                centimeter{
-                    dnam{"centimetri"}
-                }
-                decimeter{
-                    dnam{"decimetri"}
-                }
-                fathom{
-                    dnam{"hvati"}
-                }
-                foot{
-                    dnam{"stope"}
-                }
-                furlong{
-                    dnam{"furlonzi"}
-                }
-                inch{
-                    dnam{"inči"}
-                }
-                kilometer{
-                    dnam{"kilometri"}
-                }
-                light-year{
-                    dnam{"svjetlosne godine"}
-                }
-                meter{
-                    dnam{"metri"}
-                }
-                micrometer{
-                    dnam{"mikrometri"}
-                }
-                mile{
-                    dnam{"milje"}
-                }
-                millimeter{
-                    dnam{"milimetri"}
-                }
-                nanometer{
-                    dnam{"nanometri"}
-                }
-                nautical-mile{
-                    dnam{"nautičke milje"}
-                }
-                parsec{
-                    dnam{"parseci"}
-                }
-                picometer{
-                    dnam{"pikometri"}
-                }
-                yard{
-                    dnam{"jardi"}
-                }
-            }
-            light{
-                lux{
-                    dnam{"luksi"}
-                }
-            }
-            mass{
-                carat{
-                    dnam{"karati"}
-                }
-                gram{
-                    dnam{"grami"}
-                }
-                kilogram{
-                    dnam{"kilogrami"}
-                }
-                metric-ton{
-                    dnam{"tone"}
-                }
-                microgram{
-                    dnam{"mikrogrami"}
-                }
-                milligram{
-                    dnam{"miligrami"}
-                }
-                ounce{
-                    dnam{"unce"}
-                }
-                ounce-troy{
-                    dnam{"troy unce"}
-                }
-                pound{
-                    dnam{"funte"}
-                }
-                stone{
-                    dnam{"kameni"}
-                }
-                ton{
-                    dnam{"kratke tone"}
-                }
-            }
-            power{
-                gigawatt{
-                    dnam{"gigavati"}
-                }
-                horsepower{
-                    dnam{"konjske snage"}
-                }
-                kilowatt{
-                    dnam{"kilovati"}
-                }
-                megawatt{
-                    dnam{"megavati"}
-                }
-                milliwatt{
-                    dnam{"milivati"}
-                }
-                watt{
-                    dnam{"vati"}
-                }
-            }
-            pressure{
-                hectopascal{
-                    dnam{"hektopaskali"}
-                }
-                inch-hg{
-                    dnam{"inči žive"}
-                }
-                millibar{
-                    dnam{"milibari"}
-                }
-                millimeter-of-mercury{
-                    dnam{"milimetri živina stupca"}
-                }
-                pound-per-square-inch{
-                    dnam{"funte po kvadratnom inču"}
-                }
-            }
-            proportion{
-                karat{
-                    dnam{"karati"}
-                }
-            }
-            speed{
-                kilometer-per-hour{
-                    dnam{"kilometri na sat"}
-                }
-                meter-per-second{
-                    dnam{"metri u sekundi"}
-                }
-                mile-per-hour{
-                    dnam{"milje na sat"}
-                }
-            }
-            temperature{
-                celsius{
-                    dnam{"Celzijevi stupnjevi"}
-                }
-                fahrenheit{
-                    dnam{"Fahrenheitovi stupnjevi"}
-                }
-                kelvin{
-                    dnam{"kelvini"}
-                }
-            }
-            volume{
-                acre-foot{
-                    dnam{"aker-stope"}
-                }
-                bushel{
-                    dnam{"bušeli"}
-                }
-                centiliter{
-                    dnam{"centilitri"}
-                }
-                cubic-centimeter{
-                    dnam{"kubni centimetri"}
-                }
-                cubic-foot{
-                    dnam{"kubne stope"}
-                }
-                cubic-inch{
-                    dnam{"kubni inči"}
-                }
-                cubic-kilometer{
-                    dnam{"kubni kilometri"}
-                }
-                cubic-meter{
-                    dnam{"kubni metri"}
-                }
-                cubic-mile{
-                    dnam{"kubne milje"}
-                }
-                cubic-yard{
-                    dnam{"kubni jardi"}
-                }
-                cup{
-                    dnam{"šalice"}
-                }
-                deciliter{
-                    dnam{"decilitri"}
-                }
-                fluid-ounce{
-                    dnam{"tekuće unce"}
-                }
-                gallon{
-                    dnam{"galoni"}
-                }
-                hectoliter{
-                    dnam{"hektolitri"}
-                }
-                liter{
-                    dnam{"litre"}
-                }
-                megaliter{
-                    dnam{"megalitri"}
-                }
-                milliliter{
-                    dnam{"mililitri"}
-                }
-                pint{
-                    dnam{"pinte"}
-                }
-                quart{
-                    dnam{"četvrtine"}
-                }
-                tablespoon{
-                    dnam{"žlice"}
-                }
-                teaspoon{
-                    dnam{"žličice"}
-                }
-            }
-        }
         power{
             gigawatt{
+                dnam{"gigavati"}
                 few{"{0} gigavata"}
                 one{"{0} gigavat"}
                 other{"{0} gigavata"}
             }
             horsepower{
+                dnam{"konjske snage"}
                 few{"{0} konjske snage"}
                 one{"{0} konjska snaga"}
                 other{"{0} konjskih snaga"}
             }
             kilowatt{
+                dnam{"kilovati"}
                 few{"{0} kilovata"}
                 one{"{0} kilovat"}
                 other{"{0} kilovata"}
             }
             megawatt{
+                dnam{"megavati"}
                 few{"{0} megavata"}
                 one{"{0} megavat"}
                 other{"{0} megavata"}
             }
             milliwatt{
+                dnam{"milivati"}
                 few{"{0} milivata"}
                 one{"{0} milivat"}
                 other{"{0} milivata"}
             }
             watt{
+                dnam{"vati"}
                 few{"{0} vata"}
                 one{"{0} vat"}
                 other{"{0} vati"}
@@ -3035,26 +2721,31 @@ hr{
         }
         pressure{
             hectopascal{
+                dnam{"hektopaskali"}
                 few{"{0} hektopaskala"}
                 one{"{0} hektopaskal"}
                 other{"{0} hektopaskala"}
             }
             inch-hg{
+                dnam{"inči žive"}
                 few{"{0} inča žive"}
                 one{"{0} inč žive"}
                 other{"{0} inča žive"}
             }
             millibar{
+                dnam{"milibari"}
                 few{"{0} milibara"}
                 one{"{0} milibar"}
                 other{"{0} milibara"}
             }
             millimeter-of-mercury{
+                dnam{"milimetri živina stupca"}
                 few{"{0} milimetra živina stupca"}
                 one{"{0} milimetar živina stupca"}
                 other{"{0} milimetara živina stupca"}
             }
             pound-per-square-inch{
+                dnam{"funte po kvadratnom inču"}
                 few{"{0} funte po kvadratnom inču"}
                 one{"{0} funta po kvadratnom inču"}
                 other{"{0} funti po kvadratnom inču"}
@@ -3062,6 +2753,7 @@ hr{
         }
         proportion{
             karat{
+                dnam{"karati"}
                 few{"{0} karata"}
                 one{"{0} karat"}
                 other{"{0} karata"}
@@ -3069,16 +2761,19 @@ hr{
         }
         speed{
             kilometer-per-hour{
+                dnam{"kilometri na sat"}
                 few{"{0} kilometra na sat"}
                 one{"{0} kilometar na sat"}
                 other{"{0} kilometara na sat"}
             }
             meter-per-second{
+                dnam{"metri u sekundi"}
                 few{"{0} metra u sekundi"}
                 one{"{0} metar u sekundi"}
                 other{"{0} metara u sekundi"}
             }
             mile-per-hour{
+                dnam{"milje na sat"}
                 few{"{0} milje na sat"}
                 one{"{0} milja na sat"}
                 other{"{0} milja na sat"}
@@ -3086,16 +2781,19 @@ hr{
         }
         temperature{
             celsius{
+                dnam{"Celzijevi stupnjevi"}
                 few{"{0} Celzijeva stupnja"}
                 one{"{0} Celzijev stupanj"}
                 other{"{0} Celzijevih stupnjeva"}
             }
             fahrenheit{
+                dnam{"Fahrenheitovi stupnjevi"}
                 few{"{0} Fahrenheitova stupnja"}
                 one{"{0} Fahrenheitov stupanj"}
                 other{"{0} Fahrenheitovih stupnjeva"}
             }
             kelvin{
+                dnam{"kelvini"}
                 few{"{0} kelvina"}
                 one{"{0} kelvin"}
                 other{"{0} kelvina"}
@@ -3103,111 +2801,133 @@ hr{
         }
         volume{
             acre-foot{
+                dnam{"aker-stope"}
                 few{"{0} aker-stope"}
                 one{"{0} aker-stopa"}
                 other{"{0} aker-stopi"}
             }
             bushel{
+                dnam{"bušeli"}
                 few{"{0} bušela"}
                 one{"{0} bušel"}
                 other{"{0} bušela"}
             }
             centiliter{
+                dnam{"centilitri"}
                 few{"{0} centilitra"}
                 one{"{0} centilitar"}
                 other{"{0} centilitara"}
             }
             cubic-centimeter{
+                dnam{"kubni centimetri"}
                 few{"{0} kubna centimetra"}
                 one{"{0} kubni centimetar"}
                 other{"{0} kubnih centimetara"}
             }
             cubic-foot{
+                dnam{"kubne stope"}
                 few{"{0} kubne stope"}
                 one{"{0} kubna stopa"}
                 other{"{0} kubnih stopa"}
             }
             cubic-inch{
+                dnam{"kubni inči"}
                 few{"{0} kubna inča"}
                 one{"{0} kubni inč"}
                 other{"{0} kubnih inča"}
             }
             cubic-kilometer{
+                dnam{"kubni kilometri"}
                 few{"{0} kubna kilometra"}
                 one{"{0} kubni kilometar"}
                 other{"{0} kubnih kilometara"}
             }
             cubic-meter{
+                dnam{"kubni metri"}
                 few{"{0} kubna metra"}
                 one{"{0} kubni metar"}
                 other{"{0} kubnih metara"}
             }
             cubic-mile{
+                dnam{"kubne milje"}
                 few{"{0} kubne milje"}
                 one{"{0} kubna milja"}
                 other{"{0} kubnih milja"}
             }
             cubic-yard{
+                dnam{"kubni jardi"}
                 few{"{0} kubna jarda"}
                 one{"{0} kubni jard"}
                 other{"{0} kubnih jardi"}
             }
             cup{
+                dnam{"šalice"}
                 few{"{0} šalice"}
                 one{"{0} šalica"}
                 other{"{0} šalica"}
             }
             deciliter{
+                dnam{"decilitri"}
                 few{"{0} decilitra"}
                 one{"{0} decilitar"}
                 other{"{0} decilitara"}
             }
             fluid-ounce{
+                dnam{"tekuće unce"}
                 few{"{0} tekuće unce"}
                 one{"{0} tekuća unca"}
                 other{"{0} tekućih unci"}
             }
             gallon{
+                dnam{"galoni"}
                 few{"{0} galona"}
                 one{"{0} galon"}
                 other{"{0} galona"}
             }
             hectoliter{
+                dnam{"hektolitri"}
                 few{"{0} hektolitra"}
                 one{"{0} hektolitar"}
                 other{"{0} hektolitara"}
             }
             liter{
+                dnam{"litre"}
                 few{"{0} litre"}
                 one{"{0} litra"}
                 other{"{0} litara"}
             }
             megaliter{
+                dnam{"megalitri"}
                 few{"{0} megalitra"}
                 one{"{0} megalitar"}
                 other{"{0} megalitara"}
             }
             milliliter{
+                dnam{"mililitri"}
                 few{"{0} mililitra"}
                 one{"{0} mililitar"}
                 other{"{0} mililitara"}
             }
             pint{
+                dnam{"pinte"}
                 few{"{0} pinte"}
                 one{"{0} pinta"}
                 other{"{0} pinti"}
             }
             quart{
+                dnam{"četvrtine"}
                 few{"{0} četvrtine"}
                 one{"{0} četvrtina"}
                 other{"{0} četvrtina"}
             }
             tablespoon{
+                dnam{"žlice"}
                 few{"{0} žlice"}
                 one{"{0} žlica"}
                 other{"{0} žlica"}
             }
             teaspoon{
+                dnam{"žličice"}
                 few{"{0} žličice"}
                 one{"{0} žličica"}
                 other{"{0} žličica"}
