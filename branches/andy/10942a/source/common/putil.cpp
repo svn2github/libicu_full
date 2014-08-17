@@ -52,6 +52,7 @@
 #include "cstring.h"
 #include "locmap.h"
 #include "ucln_cmn.h"
+#include "charstr.h"
 
 /* Include standard headers. */
 #include <stdio.h>
@@ -151,6 +152,8 @@
 #endif
 
 #define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+
+U_NAMESPACE_USE
 
 /* Define the extension for data files, again... */
 #define DATA_TYPE "dat"
@@ -1115,6 +1118,8 @@ uprv_tzname(int n)
 static icu::UInitOnce gDataDirInitOnce = U_INITONCE_INITIALIZER;
 static char *gDataDirectory = NULL;
 
+UInitOnce gTimeZoneFilesInitOnce = U_INITONCE_INITIALIZER;
+static CharString *gTimeZoneFilesDirectory = NULL;
 
 #if U_POSIX_LOCALE || U_PLATFORM_USES_ONLY_WIN32_API
  static char *gCorrectedPOSIXLocale = NULL; /* Heap allocated */
@@ -1127,6 +1132,10 @@ static UBool U_CALLCONV putil_cleanup(void)
     }
     gDataDirectory = NULL;
     gDataDirInitOnce.reset();
+
+    delete gTimeZoneFilesDirectory;
+    gTimeZoneFilesDirectory = NULL;
+    gTimeZoneFilesInitOnce.reset();
 
 #if U_POSIX_LOCALE || U_PLATFORM_USES_ONLY_WIN32_API
     if (gCorrectedPOSIXLocale) {
@@ -1286,6 +1295,57 @@ u_getDataDirectory(void) {
     umtx_initOnce(gDataDirInitOnce, &dataDirectoryInitFn);
     return gDataDirectory;
 }
+
+static void setTimeZoneFilesDir(const char *path, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    gTimeZoneFilesDirectory->clear();
+    gTimeZoneFilesDirectory->append(path, status);
+    #if (U_FILE_SEP_CHAR != U_FILE_ALT_SEP_CHAR)
+        char *p = gTimeZoneFilesDirectory->data();
+        while (p = uprv_strchr(p, U_FILE_ALT_SEP_CHAR)) {
+            *p = U_FILE_SEP_CHAR;
+        }
+    #endif
+}
+
+static void U_CALLCONV TimeZoneDataDirInitFn(UErrorCode &status) {
+    U_ASSERT(gTimeZoneFilesDirectory == NULL);
+    ucln_common_registerCleanup(UCLN_COMMON_PUTIL, putil_cleanup);
+    gTimeZoneFilesDirectory = new CharString();
+    if (gTimeZoneFilesDirectory == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    const char *dir = getenv("ICU_TIMEZONE_FILES_DIR");
+    if (dir == NULL) {
+#if defined U_TIMEZONE_FILES_DIR
+        dir = #U_TIMEZONE_FILES_DIR;
+#endif
+    } else {
+        dir = "";
+    }
+    setTimeZoneFilesDir(dir, status);
+}
+
+
+U_CAPI const char * U_EXPORT2
+u_getTimeZoneFilesDirectory(UErrorCode *status) {
+    umtx_initOnce(gTimeZoneFilesInitOnce, &TimeZoneDataDirInitFn, *status);
+    return U_SUCCESS(*status) ? gTimeZoneFilesDirectory->data() : "";
+}
+
+U_CAPI void U_EXPORT2
+u_setTimeZoneFilesDirectory(const char *path, UErrorCode *status) {
+    umtx_initOnce(gTimeZoneFilesInitOnce, &TimeZoneDataDirInitFn, *status);
+    setTimeZoneFilesDir(path, *status);
+
+    // Note: this function does some extra churn, first setting based on the
+    //       environment, then immediately replacing with the value passed in.
+    //       The logic is simpler that way, and performance shouldn't be an issue.
+}
+
 
 #if U_POSIX_LOCALE
 /* A helper function used by uprv_getPOSIXIDForDefaultLocale and

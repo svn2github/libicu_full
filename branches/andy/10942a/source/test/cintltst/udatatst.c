@@ -16,6 +16,7 @@
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
 #include "unicode/udata.h"
+#include "unicode/ucal.h"
 #include "unicode/uchar.h"
 #include "unicode/ucnv.h"
 #include "unicode/ures.h"
@@ -72,6 +73,7 @@ static void TestICUDataName(void);
 static void PointerTableOfContents(void);
 static void SetBadCommonData(void);
 static void TestUDataFileAccess(void);
+static void TestTZDataDir(void); 
 
 
 void addUDataTest(TestNode** root);
@@ -94,6 +96,7 @@ addUDataTest(TestNode** root)
     addTest(root, &PointerTableOfContents, "udatatst/PointerTableOfContents" );
     addTest(root, &SetBadCommonData, "udatatst/SetBadCommonData" );
     addTest(root, &TestUDataFileAccess, "udatatst/TestUDataFileAccess" );
+    addTest(root, &TestTZDataDir, "udatatst/TestTZDataDir" );
 }
 
 #if 0
@@ -1813,3 +1816,42 @@ static void SetBadCommonData(void) {
     }
 }
 
+static void TestTZDataDir(void) {
+    UErrorCode status = U_ZERO_ERROR;
+    const char *tzDataVersion;
+
+    tzDataVersion = ucal_getTZDataVersion(&status);
+    // printf("tz data version is %s\n", tzDataVersion);
+
+    const char *testDataPath = loadTestData(&status);
+    // The produced by loadTestData() will look something like 
+    //     whatever/.../testdata/out/testdata
+    // The desired path to the individual time zone resource files is 
+    //     whatever/.../testdata/out/build
+    // printf("Test data path: %s\n", testDataPath);
+    int len = strlen(testDataPath);
+    if (U_FAILURE(status) || len < 20 ||
+            strncmp(testDataPath+len- 8, "testdata", 8) != 0 ||
+            strncmp(testDataPath+len-12, "out", 3) != 0) {
+        log_info("File %s:%d - Skipping Time Zone Data loading test. Test data directory not as expected.",
+            __FILE__, __LINE__);
+        return;
+    }
+    char *zonePath = malloc(len+1);
+    if (zonePath == NULL) {
+        log_err("File %s:%d - malloc failed.", __FILE__, __LINE__);
+        return;
+    }
+    strcpy(zonePath, testDataPath);
+    strcpy(zonePath+len-8, "build");
+
+    ctest_resetICU();
+    u_setTimeZoneFilesDirectory(zonePath, &status);
+    tzDataVersion = ucal_getTZDataVersion(&status);
+    if (strcmp("2014a", tzDataVersion) != 0) {
+        log_err("File %s:%d - expected \"2014a\"; actual \"%s\"", __FILE__, __LINE__, tzDataVersion);
+    }
+
+    free(zonePath);
+    ctest_resetICU();   // Return ICU to using its standard tz data.
+}
