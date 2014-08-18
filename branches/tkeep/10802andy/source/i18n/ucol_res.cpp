@@ -482,11 +482,7 @@ CollationLoader::makeCacheEntry(
         const Locale &loc,
         const CollationCacheEntry *entryFromCache,
         UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) {
-        entryFromCache->removeRef();
-        return NULL;
-    }
-    if(loc == entryFromCache->validLocale) {
+    if(U_FAILURE(errorCode) || loc == entryFromCache->validLocale) {
         return entryFromCache;
     }
     CollationCacheEntry *entry = new CollationCacheEntry(loc, entryFromCache->tailoring);
