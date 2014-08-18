@@ -87,7 +87,7 @@ private:
     CollationLoader(const CollationCacheEntry *re, const Locale &requested, UErrorCode &errorCode);
     ~CollationLoader();
 
-    // All loadFromXXX methods add a reference to returned value.
+    // All loadFromXXX methods add a reference to the returned value.
     const CollationCacheEntry *loadFromLocale(UErrorCode &errorCode);
     const CollationCacheEntry *loadFromBundle(UErrorCode &errorCode);
     const CollationCacheEntry *loadFromCollations(UErrorCode &errorCode);
@@ -96,11 +96,23 @@ private:
     // Adds a reference to returned value.
     const CollationCacheEntry *getCacheEntry(UErrorCode &errorCode);
 
-    // e is always included in the reference count of what it points to.
-    // both on entry and on exit.
-    static void makeCacheEntry(
+    /**
+     * Returns the rootEntry (with one addRef()) if loc==root,
+     * or else returns a new cache entry with ref count 1 for the loc and
+     * the root tailoring.
+     */
+    const CollationCacheEntry *makeCacheEntryFromRoot(
+            const Locale &loc, UErrorCode &errorCode) const;
+
+    /**
+     * Returns the entryFromCache as is if loc==validLocale,
+     * or else returns a new cache entry with ref count 1 for the loc and
+     * the same tailoring. In the latter case, entryFromCache is adjusted
+     * to point to the new cache entry with ref counts updated accordingly.
+     */
+    static const CollationCacheEntry *makeCacheEntry(
             const Locale &loc,
-            const CollationCacheEntry *&e,
+            const CollationCacheEntry *&entryFromCache,
             UErrorCode &errorCode);
 
     const UnifiedCache *cache;
