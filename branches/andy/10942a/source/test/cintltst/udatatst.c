@@ -1819,17 +1819,20 @@ static void SetBadCommonData(void) {
 static void TestTZDataDir(void) {
     UErrorCode status = U_ZERO_ERROR;
     const char *tzDataVersion;
+    const char *testDataPath;
+    int len;
+    char *zonePath;
 
     tzDataVersion = ucal_getTZDataVersion(&status);
     // printf("tz data version is %s\n", tzDataVersion);
 
-    const char *testDataPath = loadTestData(&status);
+    testDataPath = loadTestData(&status);
     // The produced by loadTestData() will look something like 
     //     whatever/.../testdata/out/testdata
     // The desired path to the individual time zone resource files is 
     //     whatever/.../testdata/out/build
     // printf("Test data path: %s\n", testDataPath);
-    int len = strlen(testDataPath);
+    len = strlen(testDataPath);
     if (U_FAILURE(status) || len < 20 ||
             strncmp(testDataPath+len- 8, "testdata", 8) != 0 ||
             strncmp(testDataPath+len-12, "out", 3) != 0) {
@@ -1837,7 +1840,7 @@ static void TestTZDataDir(void) {
             __FILE__, __LINE__);
         return;
     }
-    char *zonePath = malloc(len+1);
+    zonePath = (char *)malloc(len+1);
     if (zonePath == NULL) {
         log_err("File %s:%d - malloc failed.", __FILE__, __LINE__);
         return;
