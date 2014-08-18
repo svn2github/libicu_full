@@ -473,32 +473,31 @@ CollationLoader::makeCacheEntryFromRoot(
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
-    const CollationCacheEntry *madeEntry = rootEntry;
-    madeEntry->addRef();
-    return makeCacheEntry(validLocale, madeEntry, errorCode);
+    rootEntry->addRef();
+    return makeCacheEntry(validLocale, rootEntry, errorCode);
 }
 
 const CollationCacheEntry *
 CollationLoader::makeCacheEntry(
         const Locale &loc,
-        const CollationCacheEntry *&e,
+        const CollationCacheEntry *entryFromCache,
         UErrorCode &errorCode) {
-    if(U_FAILURE(errorCode)) { 
-        SharedObject::clearPtr(e);
-        return e;
+    if(U_FAILURE(errorCode)) {
+        entryFromCache->removeRef();
+        return NULL;
     }
-    if(loc == e->validLocale) {
-        // Leave e as is
-        return e;
+    if(loc == entryFromCache->validLocale) {
+        return entryFromCache;
     }
-    CollationCacheEntry *entry = new CollationCacheEntry(loc, e->tailoring);
+    CollationCacheEntry *entry = new CollationCacheEntry(loc, entryFromCache->tailoring);
     if(entry == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
-        SharedObject::clearPtr(e);
-        return e;
+        entryFromCache->removeRef();
+        return NULL;
     }
-    SharedObject::copyPtr(entry, e);
-    return e;
+    entry->addRef();
+    entryFromCache->removeRef();
+    return entry;
 }
 
 U_NAMESPACE_END

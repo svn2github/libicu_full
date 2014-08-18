@@ -107,12 +107,12 @@ private:
     /**
      * Returns the entryFromCache as is if loc==validLocale,
      * or else returns a new cache entry with ref count 1 for the loc and
-     * the same tailoring. In the latter case, entryFromCache is adjusted
-     * to point to the new cache entry with ref counts updated accordingly.
+     * the same tailoring. In the latter case, a ref count is removed from
+     * entryFromCache.
      */
     static const CollationCacheEntry *makeCacheEntry(
             const Locale &loc,
-            const CollationCacheEntry *&entryFromCache,
+            const CollationCacheEntry *entryFromCache,
             UErrorCode &errorCode);
 
     const UnifiedCache *cache;
