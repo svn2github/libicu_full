@@ -133,7 +133,7 @@ CollationLoader::loadRules(const char *localeID, const char *collationType, UErr
     return rules;
 }
 
-template<>
+template<>  __declspec(dllexport)
 const CollationCacheEntry *
 LocaleCacheKey<CollationCacheEntry>::createObject(const void *creationContext,
                                                   UErrorCode &errorCode) const {

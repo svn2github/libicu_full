@@ -30,7 +30,7 @@ class UnifiedCache;
 /**
  * A base class for all cache keys
  */
-class U_COMMON_API CacheKeyBase : public UObject {
+class CacheKeyBase : public UObject {
  public:
    CacheKeyBase() : creationStatus(U_ZERO_ERROR) {}
 
@@ -96,7 +96,7 @@ class U_COMMON_API CacheKeyBase : public UObject {
  * A key of type LocaleCacheKey<T> maps to a value of type T.
  */
 template<typename T>
-class U_COMMON_API CacheKey : public CacheKeyBase {
+class CacheKey : public CacheKeyBase {
  public:
    virtual ~CacheKey() { }
    /**
@@ -130,7 +130,7 @@ class U_COMMON_API CacheKey : public CacheKeyBase {
  * A key of type LocaleCacheKey<T> maps to a value of type T.
  */
 template<typename T>
-class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
+class LocaleCacheKey : public CacheKey<T> {
  protected:
    Locale   fLoc;
  public:
@@ -173,7 +173,7 @@ class U_COMMON_API LocaleCacheKey : public CacheKey<T> {
 /**
  * The unified cache. A singleton type.
  */
-class U_COMMON_API UnifiedCache : public UObject {
+class UnifiedCache : public UObject {
  public:
    /**
     * @internal

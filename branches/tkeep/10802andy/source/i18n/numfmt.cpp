@@ -1234,7 +1234,7 @@ static void U_CALLCONV nscacheInit() {
     uhash_setValueDeleter(NumberingSystem_cache, deleteNumberingSystem);
 }
 
-template<>
+template<>  __declspec(dllexport)
 const SharedNumberFormat *LocaleCacheKey<SharedNumberFormat>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
