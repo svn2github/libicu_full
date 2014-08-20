@@ -1716,7 +1716,7 @@ class UCTMultiThreadItem : public SharedObject {
     }
 };
 
-template<>  __declspec(dllexport)
+template<> U_EXPORT
 const UCTMultiThreadItem *LocaleCacheKey<UCTMultiThreadItem>::createObject(
         const void * /*unused*/, UErrorCode & /* status */) const {
     // Since multiple threads are hitting the cache for the first time,

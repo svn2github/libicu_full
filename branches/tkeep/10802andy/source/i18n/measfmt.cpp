@@ -288,7 +288,7 @@ static NumericDateFormatters *loadNumericDateFormatters(
     return result;
 }
 
-template<>  __declspec(dllexport)
+template<> U_I18N_API
 const MeasureFormatCacheData *LocaleCacheKey<MeasureFormatCacheData>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();

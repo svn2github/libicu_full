@@ -578,7 +578,7 @@ static UBool getDateTimePattern(
     return getStringByIndex(topLevel.getAlias(), 8, result, status);
 }
 
-template<>  __declspec(dllexport)
+template<> U_I18N_API
 const RelativeDateTimeCacheData *LocaleCacheKey<RelativeDateTimeCacheData>::createObject(const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));

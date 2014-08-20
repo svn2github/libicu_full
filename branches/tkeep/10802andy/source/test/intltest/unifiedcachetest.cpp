@@ -26,7 +26,7 @@ class UCTItem : public SharedObject {
 class UCTItem2 : public SharedObject {
 };
 
-template<>  __declspec(dllexport)
+template<> U_EXPORT
 const UCTItem *LocaleCacheKey<UCTItem>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     if (uprv_strcmp(fLoc.getName(), "zh") == 0) {
@@ -46,7 +46,7 @@ const UCTItem *LocaleCacheKey<UCTItem>::createObject(
     return result;
 }
 
-template<>  __declspec(dllexport)
+template<> U_EXPORT
 const UCTItem2 *LocaleCacheKey<UCTItem2>::createObject(
         const void * /*unused*/, UErrorCode & /*status*/) const {
     return NULL;

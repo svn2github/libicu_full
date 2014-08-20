@@ -140,7 +140,7 @@ PluralRules::createDefaultRules(UErrorCode& status) {
 /******************************************************************************/
 /* Create PluralRules cache */
 
-template<>  __declspec(dllexport)
+template<> U_I18N_API
 const SharedPluralRules *LocaleCacheKey<SharedPluralRules>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
