@@ -54,26 +54,22 @@ namespace {
 
 class BundleImporter : public CollationRuleParser::Importer {
 public:
-    BundleImporter() : rules(NULL) {}
+    BundleImporter() {}
     virtual ~BundleImporter();
-    virtual const UnicodeString *getRules(
+    virtual void getRules(
             const char *localeID, const char *collationType,
+            UnicodeString &rules,
             const char *&errorReason, UErrorCode &errorCode);
-
-private:
-    UnicodeString *rules;
 };
 
-BundleImporter::~BundleImporter() {
-    delete rules;
-}
+BundleImporter::~BundleImporter() {}
 
-const UnicodeString *
+void
 BundleImporter::getRules(
         const char *localeID, const char *collationType,
+        UnicodeString &rules,
         const char *& /*errorReason*/, UErrorCode &errorCode) {
-    delete rules;
-    return rules = CollationLoader::loadRules(localeID, collationType, errorCode);
+    CollationLoader::loadRules(localeID, collationType, rules, errorCode);
 }
 
 }  // namespace
@@ -556,12 +552,9 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
         ce = rootElements.firstCEWithPrimaryAtLeast(
             baseData->getFirstPrimaryForGroup(USCRIPT_HAN));
         break;
-    case CollationRuleParser::FIRST_IMPLICIT: {
-        uint32_t ce32 = baseData->getCE32(0x4e00);
-        U_ASSERT(Collation::hasCE32Tag(ce32, Collation::OFFSET_TAG));
-        ce = baseData->getCEFromOffsetCE32(0x4e00, ce32);
+    case CollationRuleParser::FIRST_IMPLICIT:
+        ce = baseData->getSingleCE(0x4e00, errorCode);
         break;
-    }
     case CollationRuleParser::LAST_IMPLICIT:
         // We do not support tailoring to an unassigned-implicit CE.
         errorCode = U_UNSUPPORTED_ERROR;

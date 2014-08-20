@@ -109,6 +109,7 @@ windowsZones:table(nofallback){
         "Central Asia Standard Time"{
             001{"Asia/Almaty"}
             AQ{"Antarctica/Vostok"}
+            CN{"Asia/Urumqi"}
             IO{"Indian/Chagos"}
             KG{"Asia/Bishkek"}
             KZ{"Asia/Almaty Asia/Qyzylorda"}
@@ -167,7 +168,7 @@ windowsZones:table(nofallback){
         }
         "China Standard Time"{
             001{"Asia/Shanghai"}
-            CN{"Asia/Shanghai Asia/Chongqing Asia/Harbin Asia/Kashgar Asia/Urumqi"}
+            CN{"Asia/Shanghai"}
             HK{"Asia/Hong_Kong"}
             MO{"Asia/Macau"}
         }
@@ -321,9 +322,14 @@ windowsZones:table(nofallback){
             001{"Africa/Tripoli"}
             LY{"Africa/Tripoli"}
         }
+        "Line Islands Standard Time"{
+            001{"Pacific/Kiritimati"}
+            KI{"Pacific/Kiritimati"}
+            ZZ{"Etc/GMT-14"}
+        }
         "Magadan Standard Time"{
             001{"Asia/Magadan"}
-            RU{"Asia/Magadan Asia/Anadyr Asia/Kamchatka"}
+            RU{"Asia/Magadan Asia/Anadyr Asia/Kamchatka Asia/Srednekolymsk"}
         }
         "Mauritius Standard Time"{
             001{"Indian/Mauritius"}
@@ -670,7 +676,7 @@ windowsZones:table(nofallback){
         }
         "Yakutsk Standard Time"{
             001{"Asia/Yakutsk"}
-            RU{"Asia/Yakutsk Asia/Khandyga"}
+            RU{"Asia/Yakutsk Asia/Chita Asia/Khandyga"}
         }
     }
 }

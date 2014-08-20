@@ -67,8 +67,8 @@ class UnifiedCache;
 class CollationLoader {
 public:
     static void appendRootRules(UnicodeString &s);
-    static UnicodeString *loadRules(const char *localeID, const char *collationType,
-                                    UErrorCode &errorCode);
+    static void loadRules(const char *localeID, const char *collationType,
+                          UnicodeString &rules, UErrorCode &errorCode);
     // Adds a reference to returned value.
     static const CollationCacheEntry *loadTailoring(const Locale &locale, UErrorCode &errorCode);
 
