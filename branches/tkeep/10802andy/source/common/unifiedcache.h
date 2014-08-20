@@ -30,7 +30,7 @@ class UnifiedCache;
 /**
  * A base class for all cache keys
  */
-class CacheKeyBase : public UObject {
+class U_COMMON_API CacheKeyBase : public UObject {
  public:
    CacheKeyBase() : creationStatus(U_ZERO_ERROR) {}
 
@@ -173,7 +173,7 @@ class LocaleCacheKey : public CacheKey<T> {
 /**
  * The unified cache. A singleton type.
  */
-class UnifiedCache : public UObject {
+class U_COMMON_API UnifiedCache : public UObject {
  public:
    /**
     * @internal
