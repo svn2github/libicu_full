@@ -1132,4 +1132,97 @@ uloc_toLanguageTag(const char* localeID,
                    UBool strict,
                    UErrorCode* err);
 
+#ifndef U_HIDE_DRAFT_API
+/**
+ * Converts the specified keyword (legacy keyword, or BCP 47 Unicode locale
+ * extension key) to the equivalent BCP 47 Unicode locale extension key.
+ * For example, BCP 47 Unicode locale extension key "co" is returned for
+ * the input keyword "collation".
+ * 
+ * @param keyword       the input locale keyword (either legacy keyword
+ *                      such as "collation" or BCP 47 Unicode locale extension
+ *                      key such as "co"), NULL terminated.
+ * @return              the BCP 47 Unicode locale extension key (NULL terminated)
+ *                      or NULL if the specified locale keyword is not recognized.
+ * @see toKeyword
+ * @draft ICU 54
+ */
+U_DRAFT const char* U_EXPORT
+uloc_toUnicodeLocaleKey(const char* keyword);
+
+/**
+ * Converts the specified keyword value (legacy keyword value, or BCP 47
+ * Unicode locale extension type) to the equivalent BCP 47 Unicode locale
+ * extension type for the specified keyword (category). For example, BCP 47
+ * Unicode locale extension type "phonebk" is returned for the input
+ * keyword value "phonebook", with the keyword "collation" (or "co").
+ * 
+ * @param keyword       the locale keyword (either legacy keyword such as
+ *                      "collation" or BCP 47 Unicode locale extension
+ *                      key such as "co"), NULL terminated.
+ * @param value         the locale keyword value (either legacy keyword value
+ *                      such as "phonebook" or BCP 47 Unicode locale extension
+ *                      type such as "phonebk"), NULL terminated.
+ * @param bcpType       the output buffer receiving the BCP47 Unicode locale
+ *                      extension type.
+ * @param bcpTypeCapacitcy
+ *                      the size of output buffer receiving the BCP 47 Unicode
+ *                      locale extension type.
+ * @param err           receives error information
+ * @return              the actual buffer size needed for the BCP 47 Unicode
+ *                      locale extension type. If it's greater than bcpTypeCapacity,
+ *                      the result will be truncated.
+ * @see toKeywordValue
+ * @draft ICU 54
+ */
+U_DRAFT int32_t U_EXPORT2
+uloc_toUnicodeLocaleType(const char* keyword, const char* value,
+                         char* bcpType, int32_t bcpTypeCapacity, UErrorCode* err);
+
+/**
+ * Converts the specified keyword (BCP 47 Unicode locale extension key, or
+ * legacy keyword) to the canonical legacy keyword. For example, locale keyword
+ * "collation" is returned for the input BCP 47 Unicode locale extension key "co".
+ * 
+ * @param keyword       the input locale keyword (either BCP 47 Unicode locale
+ *                      extension key or legacy keyword).
+ * @return              the canonical legacy keyword, or null if the specified
+ *                      keyword is not recognized.
+ * @see toUnicodeLocaleKey
+ * @draft ICU 54
+ * @provisional This API might change or be removed in a future release.
+ */
+U_DRAFT const char* U_EXPORT2
+uloc_toKeyword(const char* keyword);
+
+/**
+ * Converts the specified keyword value (BCP 47 Unicode locale extension type,
+ * or legacy keyword value) to the canonical legacy keyword value. For example,
+ * locale keyword value "phonebook" is returned for the input BCP 47 Unicode
+ * locale extension type "phonebk" with the keyword "collation" (or "co").
+ * 
+ * @param keyword       the locale keyword (either legacy keyword such as
+ *                      "collation" or BCP 47 Unicode locale extension
+ *                      key such as "co").
+ * @param value         the locale keyword value (either BCP 47 Unicode locale
+ *                      extension type such as "phonebk" or legacy keyword value
+ *                      such as "phonebook").
+ * @param resultValue   the output buffer receiving the canonical legacy keyword
+ *                      value.
+ * @param resultValueCapacity
+ *                      the size of output buffer receiving the canonical legacy
+ *                      keyword value.
+ * @return              the actual buffer size needed for the canonical legacy
+ *                      keyword value. If it's greater than resultValueCapacity,
+ *                      the result will be truncated.
+ * @see toUnicodeLocaleType
+ * @draft ICU 54
+ * @provisional This API might change or be removed in a future release.
+ */
+U_DRAFT int32_t U_EXPORT2
+uloc_toKeywordValue(const char* keyword, const char* value,
+                    char* resultValue, int32_t resultValueCapacity, UErrorCode* err);
+
+#endif  /* U_HIDE_DRAFT_API */
+
 #endif /*_ULOC*/
