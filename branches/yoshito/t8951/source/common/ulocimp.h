@@ -62,4 +62,17 @@ ulocimp_getCountry(const char *localeID,
 U_CAPI const char * U_EXPORT2
 locale_getKeywordsStart(const char *localeID);
 
+
+U_CFUNC const char*
+uloc_toBcpKey(const char* key);
+
+U_CFUNC const char*
+uloc_toLegacyKey(const char* key);
+
+U_CFUNC const char*
+uloc_toBcpType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType);
+
+U_CFUNC const char*
+uloc_toLegacyType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType);
+
 #endif

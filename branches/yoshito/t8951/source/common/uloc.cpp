@@ -2524,4 +2524,28 @@ uloc_acceptLanguage(char *result, int32_t resultAvailable,
     return -1;
 }
 
+U_CAPI const char* U_EXPORT2
+uloc_toUnicodeLocaleKey(const char* keyword)
+{
+    return NULL;
+}
+
+U_CAPI const char* U_EXPORT2
+uloc_toUnicodeLocaleType(const char* keyword, const char* value, UErrorCode* err)
+{
+    return NULL;
+}
+
+U_CAPI const char* U_EXPORT2
+uloc_toKeyword(const char* keyword)
+{
+    return NULL;
+}
+
+U_CAPI const char* U_EXPORT2
+uloc_toKeywordValue(const char* keyword, const char* value, UErrorCode* err)
+{
+    return NULL;
+}
+
 /*eof*/

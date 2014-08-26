@@ -1147,7 +1147,7 @@ uloc_toLanguageTag(const char* localeID,
  * @see toKeyword
  * @draft ICU 54
  */
-U_DRAFT const char* U_EXPORT
+U_DRAFT const char* U_EXPORT2
 uloc_toUnicodeLocaleKey(const char* keyword);
 
 /**
@@ -1156,6 +1156,10 @@ uloc_toUnicodeLocaleKey(const char* keyword);
  * extension type for the specified keyword (category). For example, BCP 47
  * Unicode locale extension type "phonebk" is returned for the input
  * keyword value "phonebook", with the keyword "collation" (or "co").
+ * <p>
+ * If the keyword value is a syntactically valid 'variable' type, then the
+ * pointer to the input type value itself will be returned. For example,
+ * <code>uloc_toKeywordValue("vt", "00A4")</code> returns "00A4".
  * 
  * @param keyword       the locale keyword (either legacy keyword such as
  *                      "collation" or BCP 47 Unicode locale extension
@@ -1163,21 +1167,14 @@ uloc_toUnicodeLocaleKey(const char* keyword);
  * @param value         the locale keyword value (either legacy keyword value
  *                      such as "phonebook" or BCP 47 Unicode locale extension
  *                      type such as "phonebk"), NULL terminated.
- * @param bcpType       the output buffer receiving the BCP47 Unicode locale
- *                      extension type.
- * @param bcpTypeCapacitcy
- *                      the size of output buffer receiving the BCP 47 Unicode
- *                      locale extension type.
- * @param err           receives error information
- * @return              the actual buffer size needed for the BCP 47 Unicode
- *                      locale extension type. If it's greater than bcpTypeCapacity,
- *                      the result will be truncated.
+ * @param err           receives error information - U_ILLEGAL_ARGUMENT_ERROR,
+ *                      when the specified keyword is not recognized. 
+ * @return              the BCP47 Unicode locale extension type.
  * @see toKeywordValue
  * @draft ICU 54
  */
-U_DRAFT int32_t U_EXPORT2
-uloc_toUnicodeLocaleType(const char* keyword, const char* value,
-                         char* bcpType, int32_t bcpTypeCapacity, UErrorCode* err);
+U_DRAFT const char* U_EXPORT2
+uloc_toUnicodeLocaleType(const char* keyword, const char* value, UErrorCode* err);
 
 /**
  * Converts the specified keyword (BCP 47 Unicode locale extension key, or
@@ -1200,6 +1197,10 @@ uloc_toKeyword(const char* keyword);
  * or legacy keyword value) to the canonical legacy keyword value. For example,
  * locale keyword value "phonebook" is returned for the input BCP 47 Unicode
  * locale extension type "phonebk" with the keyword "collation" (or "co").
+ * <p>
+ * If the keyword value is a syntactically valid 'variable' type, then the
+ * pointer to the input type value itself will be returned. For example,
+ * <code>uloc_toKeywordValue("vt", "00A4")</code> returns "00A4".
  * 
  * @param keyword       the locale keyword (either legacy keyword such as
  *                      "collation" or BCP 47 Unicode locale extension
@@ -1207,21 +1208,17 @@ uloc_toKeyword(const char* keyword);
  * @param value         the locale keyword value (either BCP 47 Unicode locale
  *                      extension type such as "phonebk" or legacy keyword value
  *                      such as "phonebook").
- * @param resultValue   the output buffer receiving the canonical legacy keyword
- *                      value.
- * @param resultValueCapacity
- *                      the size of output buffer receiving the canonical legacy
- *                      keyword value.
- * @return              the actual buffer size needed for the canonical legacy
- *                      keyword value. If it's greater than resultValueCapacity,
- *                      the result will be truncated.
+ * @param err           receives error information - U_ILLEGAL_ARGUMENT_ERROR,
+ *                      when the specified keyword is not recognized. 
+ * @return              the canonical legacy keyword value. If the input type
+ *                      is a syntactically valid 'variable' type, the pointer
+ *                      to the input type itself will be returned.
  * @see toUnicodeLocaleType
  * @draft ICU 54
  * @provisional This API might change or be removed in a future release.
  */
-U_DRAFT int32_t U_EXPORT2
-uloc_toKeywordValue(const char* keyword, const char* value,
-                    char* resultValue, int32_t resultValueCapacity, UErrorCode* err);
+U_DRAFT const char* U_EXPORT2
+uloc_toKeywordValue(const char* keyword, const char* value, UErrorCode* err);
 
 #endif  /* U_HIDE_DRAFT_API */
 
