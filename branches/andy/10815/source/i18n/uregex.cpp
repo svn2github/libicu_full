@@ -584,7 +584,7 @@ uregex_find64(URegularExpression *regexp2,
     }
     if (startIndex == -1) {
         regexp->fMatcher->resetPreserveRegion();
-        result = regexp->fMatcher->find();
+        result = regexp->fMatcher->find(*status);
     } else {
         result = regexp->fMatcher->find(startIndex, *status);
     }
@@ -604,7 +604,7 @@ uregex_findNext(URegularExpression *regexp2,
     if (validateRE(regexp, TRUE, status) == FALSE) {
         return FALSE;
     }
-    UBool result = regexp->fMatcher->find();
+    UBool result = regexp->fMatcher->find(*status);
     return result;
 }
 
