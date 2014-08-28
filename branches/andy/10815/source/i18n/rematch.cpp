@@ -33,26 +33,6 @@
 
 // #include <malloc.h>        // Needed for heapcheck testing
 
-
-// Find progress callback
-// ----------------------
-// Macro to inline test & call to ReportFindProgress().  Eliminates unnecessary function call.
-//
-#define REGEXFINDPROGRESS_INTERRUPT(pos, status)     \
-    (fFindProgressCallbackFn != NULL) && (ReportFindProgress(pos, status) == FALSE)
-
-
-// Smart Backtracking
-// ------------------
-// When a failure would go back to a LOOP_C instruction,
-// strings, characters, and setrefs scan backwards for a valid start
-// character themselves, pop the stack, and save state, emulating the
-// LOOP_C's effect but assured that the next character of input is a
-// possible matching character.
-//
-// Good idea in theory; unfortunately it only helps out a few specific
-// cases and slows the engine down a little in the rest.
-
 U_NAMESPACE_BEGIN
 
 // Default limit for the size of the back track stack, to avoid system
@@ -589,9 +569,6 @@ UBool RegexMatcher::find() {
     }
     UErrorCode status = U_ZERO_ERROR;
     UBool result = find(status);
-    if (U_FAILURE(status)) {
-        fDeferredStatus = status;
-    }
     return result;
 }
 
@@ -691,7 +668,7 @@ UBool RegexMatcher::find(UErrorCode &status) {
             // Note that it's perfectly OK for a pattern to have a zero-length
             //   match at the end of a string, so we must make sure that the loop
             //   runs with startPos == testStartLimit the last time through.
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
         U_ASSERT(FALSE);
@@ -738,7 +715,7 @@ UBool RegexMatcher::find(UErrorCode &status) {
                     fHitEnd = TRUE;
                     return FALSE;
                 }
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
             }
         }
@@ -770,7 +747,7 @@ UBool RegexMatcher::find(UErrorCode &status) {
                     fHitEnd = TRUE;
                     return FALSE;
                 }
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
            }
         }
@@ -818,7 +795,7 @@ UBool RegexMatcher::find(UErrorCode &status) {
                     // Note that it's perfectly OK for a pattern to have a zero-length
                     //   match at the end of a string, so we must make sure that the loop
                     //   runs with startPos == testStartLimit the last time through.
-		            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+                    if  (findProgressInterrupt(startPos, status))
                         return FALSE;
                 }
             } else {
@@ -848,7 +825,7 @@ UBool RegexMatcher::find(UErrorCode &status) {
                     // Note that it's perfectly OK for a pattern to have a zero-length
                     //   match at the end of a string, so we must make sure that the loop
                     //   runs with startPos == testStartLimit the last time through.
-		            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+                    if  (findProgressInterrupt(startPos, status))
                         return FALSE;
                 }
             }
@@ -967,7 +944,7 @@ UBool RegexMatcher::findUsingChunk(UErrorCode &status) {
             // Note that it's perfectly OK for a pattern to have a zero-length
             //   match at the end of a string, so we must make sure that the loop
             //   runs with startPos == testLen the last time through.
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
         U_ASSERT(FALSE);
@@ -1008,7 +985,7 @@ UBool RegexMatcher::findUsingChunk(UErrorCode &status) {
                 fHitEnd = TRUE;
                 return FALSE;
             }
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
     }
@@ -1037,7 +1014,7 @@ UBool RegexMatcher::findUsingChunk(UErrorCode &status) {
                 fHitEnd = TRUE;
                 return FALSE;
             }
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
     }
@@ -1078,7 +1055,7 @@ UBool RegexMatcher::findUsingChunk(UErrorCode &status) {
                 // Note that it's perfectly OK for a pattern to have a zero-length
                 //   match at the end of a string, so we must make sure that the loop
                 //   runs with startPos == testLen the last time through.
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
             }
         } else {
@@ -1106,7 +1083,7 @@ UBool RegexMatcher::findUsingChunk(UErrorCode &status) {
                 // Note that it's perfectly OK for a pattern to have a zero-length
                 //   match at the end of a string, so we must make sure that the loop
                 //   runs with startPos == testLen the last time through.
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, status))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
             }
         }
@@ -1193,8 +1170,8 @@ UnicodeString RegexMatcher::group(int32_t groupNum, UErrorCode &status) const {
 
 
 //  Return deep (mutable) clone
-//		Technology Preview (as an API), but note that the UnicodeString API is implemented
-//		using this function.
+//      Technology Preview (as an API), but note that the UnicodeString API is implemented
+//      using this function.
 UText *RegexMatcher::group(int32_t groupNum, UText *dest, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return dest;
@@ -1886,7 +1863,6 @@ void RegexMatcher::resetPreserveRegion() {
 
 
 RegexMatcher &RegexMatcher::reset(const UnicodeString &input) {
-    // TODO: clear deferredStatus?
     fInputText = utext_openConstUnicodeString(fInputText, &input, &fDeferredStatus);
     if (fPattern->fNeedsAltInput) {
         fAltInputText = utext_clone(fAltInputText, fInputText, FALSE, TRUE, &fDeferredStatus);
@@ -2647,25 +2623,20 @@ void RegexMatcher::IncrementTime(UErrorCode &status) {
 
 //--------------------------------------------------------------------------------
 //
-//   ReportFindProgress     This function is called once for each advance in the target
+//   findProgressInterrupt  This function is called once for each advance in the target
 //                          string from the find() function, and calls the user progress callback
 //                          function if there is one installed.
 //
-//                          NOTE:
-//
-//                          If the match operation needs to be aborted because the user
-//                          callback asked for it, just set an error status.
-//                          The engine will pick that up and stop in its outer loop.
+//         Return:  TRUE if the find operation is to be terminated.
+//                  FALSE if the find operation is to continue running.
 //
 //--------------------------------------------------------------------------------
-UBool RegexMatcher::ReportFindProgress(int64_t matchIndex, UErrorCode &status) {
-    if (fFindProgressCallbackFn != NULL) {
-        if ((*fFindProgressCallbackFn)(fFindProgressCallbackContext, matchIndex) == FALSE) {
-            status = U_ZERO_ERROR /*U_REGEX_STOPPED_BY_CALLER*/;
-            return FALSE;
-        }
+UBool RegexMatcher::findProgressInterrupt(int64_t pos, UErrorCode &status) {
+    if (fFindProgressCallbackFn && !(*fFindProgressCallbackFn)(fFindProgressCallbackContext, pos)) {
+        status = U_REGEX_STOPPED_BY_CALLER;
+        return TRUE;
     }
-    return TRUE;
+    return FALSE;
 }
 
 //--------------------------------------------------------------------------------

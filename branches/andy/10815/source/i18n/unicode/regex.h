@@ -1759,7 +1759,9 @@ private:
     REStackFrame        *resetStack();
     inline REStackFrame *StateSave(REStackFrame *fp, int64_t savePatIdx, UErrorCode &status);
     void                 IncrementTime(UErrorCode &status);
-    UBool                ReportFindProgress(int64_t matchIndex, UErrorCode &status);
+
+    // Call user find callback function, if set. Return TRUE if operation should be interrupted.
+    inline UBool         findProgressInterrupt(int64_t matchIndex, UErrorCode &status);
     
     int64_t              appendGroup(int32_t groupNum, UText *dest, UErrorCode &status) const;
     
