@@ -1302,12 +1302,12 @@ static void setTimeZoneFilesDir(const char *path, UErrorCode &status) {
     }
     gTimeZoneFilesDirectory->clear();
     gTimeZoneFilesDirectory->append(path, status);
-    #if (U_FILE_SEP_CHAR != U_FILE_ALT_SEP_CHAR)
-        char *p = gTimeZoneFilesDirectory->data();
-        while (p = uprv_strchr(p, U_FILE_ALT_SEP_CHAR)) {
-            *p = U_FILE_SEP_CHAR;
-        }
-    #endif
+#if (U_FILE_SEP_CHAR != U_FILE_ALT_SEP_CHAR)
+    char *p = gTimeZoneFilesDirectory->data();
+    while (p = uprv_strchr(p, U_FILE_ALT_SEP_CHAR)) {
+        *p = U_FILE_SEP_CHAR;
+    }
+#endif
 }
 
 static void U_CALLCONV TimeZoneDataDirInitFn(UErrorCode &status) {
