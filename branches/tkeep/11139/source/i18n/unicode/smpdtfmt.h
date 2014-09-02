@@ -1575,8 +1575,6 @@ private:
      */
     const SharedNumberFormat    **fSharedNumberFormatters;
 
-    NSOverride      *fOverrideList;
-
     UBool fHaveDefaultCentury;
 
     BreakIterator* fCapitalizationBrkIter;

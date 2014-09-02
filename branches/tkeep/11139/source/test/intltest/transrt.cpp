@@ -1024,6 +1024,7 @@ void TransliteratorRoundTripTest::TestJamo() {
 }
 
 void TransliteratorRoundTripTest::TestHangul() {
+/*
     RTTest t("Latin-Hangul");
     Legal *legal = new Legal();
     if (quick) t.setPairLimit(1000);
@@ -1031,6 +1032,7 @@ void TransliteratorRoundTripTest::TestHangul() {
            UnicodeString("[\\uAC00-\\uD7A4]", ""), 
            NULL, this, quick, legal, 1);
     delete legal;
+*/
 }
 
 

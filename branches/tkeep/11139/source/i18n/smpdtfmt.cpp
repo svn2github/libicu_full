@@ -397,10 +397,6 @@ SimpleDateFormat::~SimpleDateFormat()
         delete fTimeZoneFormat;
     }
 
-    if (fOverrideList) {
-        fOverrideList->free();
-    }
-
 #if !UCONFIG_NO_BREAK_ITERATION
     delete fCapitalizationBrkIter;
 #endif
@@ -413,7 +409,6 @@ SimpleDateFormat::SimpleDateFormat(UErrorCode& status)
       fSymbols(NULL),
       fTimeZoneFormat(NULL),
       fSharedNumberFormatters(NULL),
-      fOverrideList(NULL),
       fCapitalizationBrkIter(NULL)
 {
     initializeBooleanAttributes();
@@ -430,7 +425,6 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
     fDateOverride.setToBogus();
@@ -451,7 +445,6 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
     fDateOverride.setTo(override);
@@ -474,7 +467,6 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fLocale(locale),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
 
@@ -497,7 +489,6 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fLocale(locale),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
 
@@ -523,7 +514,6 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fSymbols(symbolsToAdopt),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
 
@@ -546,7 +536,6 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fSymbols(new DateFormatSymbols(symbols)),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
 
@@ -570,7 +559,6 @@ SimpleDateFormat::SimpleDateFormat(EStyle timeStyle,
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
     initializeBooleanAttributes();
@@ -594,7 +582,6 @@ SimpleDateFormat::SimpleDateFormat(const Locale& locale,
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
     if (U_FAILURE(status)) return;
@@ -630,7 +617,6 @@ SimpleDateFormat::SimpleDateFormat(const SimpleDateFormat& other)
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
     fSharedNumberFormatters(NULL),
-    fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
     initializeBooleanAttributes();
@@ -684,11 +670,6 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
                     other.fSharedNumberFormatters[i],
                     fSharedNumberFormatters[i]);
         }
-    }
-
-    if (fOverrideList) {
-        fOverrideList->free();
-        fOverrideList = NULL;
     }
 
     return *this;
@@ -1275,6 +1256,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
     UnicodeString nsName;
     UnicodeString ovrField;
     UBool moreToProcess = TRUE;
+    NSOverride *overrideList = NULL;
 
     while (moreToProcess) {
         int32_t delimiterPosition = str.indexOf((UChar)ULOC_KEYWORD_ITEM_SEPARATOR_UNICODE,start);
@@ -1296,7 +1278,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
 
         int32_t nsNameHash = nsName.hashCode();
         // See if the numbering system is in the override list, if not, then add it.
-        NSOverride *cur = fOverrideList;
+        NSOverride *cur = overrideList;
         const SharedNumberFormat *snf = NULL;
         UBool found = FALSE;
         while ( cur && !found ) {
@@ -1316,18 +1298,24 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
 
                Locale ovrLoc(locale.getLanguage(),locale.getCountry(),locale.getVariant(),kw);
                cur->hash = nsNameHash;
-               cur->next = fOverrideList;
+               cur->next = overrideList;
                cur->snf = NULL;
                SharedObject::copyPtr(
                        createSharedNumberFormat(ovrLoc,status), cur->snf);
                if (U_FAILURE(status)) {
                    uprv_free(cur);
+                   if (overrideList) {
+                       overrideList->free();
+                   }
                    return;
                }
                snf = cur->snf;
-               fOverrideList = cur;
+               overrideList = cur;
            } else {
                status = U_MEMORY_ALLOCATION_ERROR;
+               if (overrideList) {
+                   overrideList->free();
+               }
                return;
            }
         }
@@ -1359,12 +1347,18 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
               DateFormatSymbols::getPatternCharIndex(ovrField.charAt(0));
            if (patternCharIndex == UDAT_FIELD_COUNT) {
                status = U_INVALID_FORMAT_ERROR;
+               if (overrideList) {
+                   overrideList->free();
+               }
                return;
            }
            SharedObject::copyPtr(snf, fSharedNumberFormatters[patternCharIndex]);
         }
 
         start = delimiterPosition + 1;
+    }
+    if (overrideList) {
+        overrideList->free();
     }
 }
 
@@ -1839,10 +1833,6 @@ void SimpleDateFormat::adoptNumberFormat(NumberFormat *formatToAdopt) {
     if (fSharedNumberFormatters) {
         freeSharedNumberFormatters(fSharedNumberFormatters);
         fSharedNumberFormatters = NULL;
-    }
-    if (fOverrideList) {
-        fOverrideList->free();
-        fOverrideList = NULL;
     }
 }
 
