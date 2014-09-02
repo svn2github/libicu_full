@@ -63,16 +63,22 @@ U_CAPI const char * U_EXPORT2
 locale_getKeywordsStart(const char *localeID);
 
 
-U_CFUNC const char*
-uloc_toBcpKey(const char* key);
+U_CFUNC UBool
+ultag_isUnicodeLocaleKey(const char* s, int32_t len);
+
+U_CFUNC UBool
+ultag_isUnicodeLocaleType(const char* s, int32_t len);
 
 U_CFUNC const char*
-uloc_toLegacyKey(const char* key);
+ulocimp_toBcpKey(const char* key);
 
 U_CFUNC const char*
-uloc_toBcpType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType);
+ulocimp_toLegacyKey(const char* key);
 
 U_CFUNC const char*
-uloc_toLegacyType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType);
+ulocimp_toBcpType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType);
+
+U_CFUNC const char*
+ulocimp_toLegacyType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType);
 
 #endif

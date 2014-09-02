@@ -410,8 +410,8 @@ _isPrivateuseValueSubtags(const char* s, int32_t len) {
     return _isPrivateuseValueSubtag(pSubtag, (int32_t)(p - pSubtag));
 }
 
-static UBool
-_isLDMLKey(const char* s, int32_t len) {
+U_CFUNC UBool
+ultag_isUnicodeLocaleKey(const char* s, int32_t len) {
     if (len < 0) {
         len = (int32_t)uprv_strlen(s);
     }
@@ -422,7 +422,7 @@ _isLDMLKey(const char* s, int32_t len) {
 }
 
 static UBool
-_isLDMLType(const char* s, int32_t len) {
+_isUnicodeLocaleTypeSubtag(const char* s, int32_t len) {
     if (len < 0) {
         len = (int32_t)uprv_strlen(s);
     }
@@ -432,6 +432,11 @@ _isLDMLType(const char* s, int32_t len) {
     return FALSE;
 }
 
+U_CFUNC UBool
+ultag_isUnicodeLocaleType(const char*s, int32_t len) {
+    /* TODO */
+    return _isUnicodeLocaleTypeSubtag(s, len);
+}
 /*
 * -------------------------------------------------
 *
@@ -902,7 +907,7 @@ _appendKeywordsToLanguageTag(const char* localeID, char* appendAt, int32_t capac
         const char *bcpKey, *bcpValue;
         UErrorCode tmpStatus = U_ZERO_ERROR;
         int32_t keylen;
-        UBool isLDMLKeyword;
+        UBool isBcpUExt;
 
         while (TRUE) {
             isAttribute = FALSE;
@@ -923,7 +928,7 @@ _appendKeywordsToLanguageTag(const char* localeID, char* appendAt, int32_t capac
             }
 
             keylen = (int32_t)uprv_strlen(key);
-            isLDMLKeyword = (keylen > 1);
+            isBcpUExt = (keylen > 1);
 
             /* special keyword used for representing Unicode locale attributes */
             if (uprv_strcmp(key, LOCALE_ATTRIBUTE_KEY) == 0) {
@@ -971,10 +976,8 @@ _appendKeywordsToLanguageTag(const char* localeID, char* appendAt, int32_t capac
                         }
                     }
                 }
-            } else if (isLDMLKeyword) {
-                UBool isSpecialType = FALSE;
-
-                bcpKey = uloc_toBcpKey(key);
+            } else if (isBcpUExt) {
+                bcpKey = uloc_toUnicodeLocaleKey(key);
                 if (bcpKey == NULL) {
                     if (strict) {
                         *status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -984,7 +987,7 @@ _appendKeywordsToLanguageTag(const char* localeID, char* appendAt, int32_t capac
                 }
 
                 /* we've checked buf is null-terminated above */
-                bcpValue = uloc_toBcpType(key, buf, NULL, &isSpecialType);
+                bcpValue = uloc_toUnicodeLocaleType(key, buf);
                 if (bcpValue == NULL) {
                     if (strict) {
                         *status = U_ILLEGAL_ARGUMENT_ERROR;
@@ -992,8 +995,13 @@ _appendKeywordsToLanguageTag(const char* localeID, char* appendAt, int32_t capac
                     }
                     continue;
                 }
-                if (isSpecialType) {
-                    /* normalized to lower case */
+                if (bcpValue == buf) {
+                    /* 
+                    When uloc_toUnicodeLocaleType(key, buf) returns the
+                    input value as is, the value is well-formed, but has
+                    no known mapping. This implementation normalizes the
+                    the value to lower case
+                    */
                     int32_t bcpValueLen = uprv_strlen(bcpValue);
                     if (bcpValueLen < extBufCapacity) {
                         uprv_strcpy(pExtBuf, bcpValue);
@@ -1202,7 +1210,7 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
         /* locate next separator char */
         for (len = 0; *(pTag + len) && *(pTag + len) != SEP; len++);
 
-        if (_isLDMLKey(pTag, len)) {
+        if (ultag_isUnicodeLocaleKey(pTag, len)) {
             pKwds = pTag;
             break;
         }
@@ -1310,7 +1318,7 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
                 /* locate next separator char */
                 for (len = 0; *(pTag + len) && *(pTag + len) != SEP; len++);
 
-                if (_isLDMLKey(pTag, len)) {
+                if (ultag_isUnicodeLocaleKey(pTag, len)) {
                     if (pBcpKey) {
                         emitKeyword = TRUE;
                         pNextBcpKey = pTag;
@@ -1365,9 +1373,25 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
                     *status = U_ILLEGAL_ARGUMENT_ERROR;
                     goto cleanup;
                 }
+                if (pKey == bcpKeyBuf) {
+                    /*
+                    The key returned by toLegacyKey points to the input buffer.
+                    We normalize the result key to lower case.
+                    */
+                    T_CString_toLowerCase(bcpKeyBuf);
+                    if (bufSize - bufIdx - 1 >= bcpKeyLen) {
+                        uprv_memcpy(buf + bufIdx, bcpKeyBuf, bcpKeyLen);
+                        pKey = buf + bufIdx;
+                        bufIdx += bcpKeyLen;
+                        *(buf + bufIdx) = 0;
+                        bufIdx++;
+                    } else {
+                        *status = U_BUFFER_OVERFLOW_ERROR;
+                        goto cleanup;
+                    }
+                }
 
                 if (pBcpType) {
-                    UBool isSpecialType;
                     char bcpTypeBuf[128];       /* practically long enough even considering multiple subtag type */
                     if (bcpTypeLen >= sizeof(bcpTypeBuf)) {
                         /* the BCP type is too long */
@@ -1379,15 +1403,28 @@ _appendLDMLExtensionAsKeywords(const char* ldmlext, ExtensionListEntry** appendT
                     bcpTypeBuf[bcpTypeLen] = 0;
 
                     /* BCP type to locale type */
-                    pType = uloc_toLegacyType(pKey, bcpTypeBuf, NULL, &isSpecialType);
+                    pType = uloc_toLegacyType(pKey, bcpTypeBuf);
                     if (pType == NULL) {
                         *status = U_ILLEGAL_ARGUMENT_ERROR;
                         goto cleanup;
                     }
-                    if (isSpecialType) {
+                    if (pType == bcpTypeBuf) {
+                        /*
+                        The type returned by toLegacyType points to the input buffer.
+                        We normalize the result type to lower case.
+                        */
                         /* normalize to lower case */
                         T_CString_toLowerCase(bcpTypeBuf);
-                        pType = bcpTypeBuf;
+                        if (bufSize - bufIdx - 1 >= bcpTypeLen) {
+                            uprv_memcpy(buf + bufIdx, bcpTypeBuf, bcpTypeLen);
+                            pType = buf + bufIdx;
+                            bufIdx += bcpTypeLen;
+                            *(buf + bufIdx) = 0;
+                            bufIdx++;
+                        } else {
+                            *status = U_BUFFER_OVERFLOW_ERROR;
+                            goto cleanup;
+                        }
                     }
                 } else {
                     /* typeless - default type value is "yes" */

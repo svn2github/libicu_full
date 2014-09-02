@@ -2527,25 +2527,64 @@ uloc_acceptLanguage(char *result, int32_t resultAvailable,
 U_CAPI const char* U_EXPORT2
 uloc_toUnicodeLocaleKey(const char* keyword)
 {
-    return NULL;
+    const char* bcpKey = ulocimp_toBcpKey(keyword);
+    if (bcpKey == NULL && ultag_isUnicodeLocaleKey(keyword, -1)) {
+        // unknown keyword, but syntax is fine..
+        return keyword;
+    }
+    return bcpKey;
 }
 
 U_CAPI const char* U_EXPORT2
-uloc_toUnicodeLocaleType(const char* keyword, const char* value, UErrorCode* err)
+uloc_toUnicodeLocaleType(const char* keyword, const char* value)
 {
-    return NULL;
+    const char* bcpType = ulocimp_toBcpType(keyword, value, NULL, NULL);
+    if (bcpType == NULL && ultag_isUnicodeLocaleType(value, -1)) {
+        // unknown keyword, but syntax is fine..
+        return value;
+    }
+    return bcpType;
 }
 
 U_CAPI const char* U_EXPORT2
-uloc_toKeyword(const char* keyword)
+uloc_toLegacyKey(const char* keyword)
 {
-    return NULL;
+    const char* legacyKey = ulocimp_toLegacyKey(keyword);
+    if (legacyKey == NULL) {
+        // Checks if the specified locale key is well-formed with the legacy locale syntax.
+        //
+        // Note:
+        //  Neither ICU nor LDML/CLDR provides the definition of keyword syntax.
+        //  However, a key should not contain '=' obviously. For now, all existing
+        //  keys are using ASCII alphabetic letters only. We won't add any new key
+        //  that is not compatible with the BCP 47 syntax. Therefore, we assume
+        //  a valid key consist from [0-9a-zA-Z], no symbols.
+
+        // TODO
+        return keyword;
+    }
+    return legacyKey;
 }
 
 U_CAPI const char* U_EXPORT2
-uloc_toKeywordValue(const char* keyword, const char* value, UErrorCode* err)
+uloc_toLegacyType(const char* keyword, const char* value)
 {
-    return NULL;
+    const char* legacyType = ulocimp_toLegacyType(keyword, value, NULL, NULL);
+    if (legacyType == NULL) {
+        // Checks if the specified locale type is well-formed with the legacy locale syntax.
+        //
+        // Note:
+        //  Neither ICU nor LDML/CLDR provides the definition of keyword syntax.
+        //  However, a type should not contain '=' obviously. For now, all existing
+        //  types are using ASCII alphabetic letters with a few symbol letters. We won't
+        //  add any new type that is not compatible with the BCP 47 syntax except timezone
+        //  IDs. For now, we assume a valid type start with [0-9a-zA-Z], but may contain
+        //  '-' '_' '/' in the middle.
+
+        // TODO
+        return value;
+    }
+    return legacyType;
 }
 
 /*eof*/

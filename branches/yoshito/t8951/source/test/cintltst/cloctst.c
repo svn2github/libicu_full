@@ -5671,7 +5671,6 @@ static void TestLikelySubtags()
 }
 
 const char* const locale_to_langtag[][3] = {
-    {"@x=elmer",    "x-elmer",      "x-elmer"},
     {"",            "und",          "und"},
     {"en",          "en",           "en"},
     {"en_US",       "en-US",        "en-US"},
@@ -5707,7 +5706,7 @@ const char* const locale_to_langtag[][3] = {
     {"en@x=x-y-z;a=a-b-c",  "en-x-x-y-z",   NULL},
     {"it@collation=badcollationtype;colStrength=identical;cu=usd-eur", "it-u-ks-identic",  NULL},
     {"en_US_POSIX", "en-US-u-va-posix", "en-US-u-va-posix"},
-    {"en_US_POSIX@calendar=japanese;currency=EUR","en-US-u-ca-japanese-cu-EUR-va-posix", "en-US-u-ca-japanese-cu-EUR-va-posix"},
+    {"en_US_POSIX@calendar=japanese;currency=EUR","en-US-u-ca-japanese-cu-eur-va-posix", "en-US-u-ca-japanese-cu-eur-va-posix"},
     {"@x=elmer",    "x-elmer",      "x-elmer"},
     {"en@x=elmer",  "en-x-elmer",   "en-x-elmer"},
     {"@x=elmer;a=exta", "und-a-exta-x-elmer",   "und-a-exta-x-elmer"},
@@ -5777,6 +5776,7 @@ static const struct {
     const char  *locID;
     int32_t     len;
 } langtag_to_locale[] = {
+    {"ja-u-ijkl-efgh-abcd-ca-japanese-xx-yyy-zzz-kn",   "ja@attribute=abcd-efgh-ijkl;calendar=japanese;colnumeric=yes;xx=yyy-zzz",  FULL_LENGTH},
     {"en",                  "en",                   FULL_LENGTH},
     {"en-us",               "en_US",                FULL_LENGTH},
     {"und-US",              "_US",                  FULL_LENGTH},
