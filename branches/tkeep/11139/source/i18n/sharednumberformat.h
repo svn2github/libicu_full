@@ -21,6 +21,14 @@ public:
     SharedNumberFormat(NumberFormat *nfToAdopt) : ptr(nfToAdopt) { }
     virtual ~SharedNumberFormat();
     const NumberFormat *get() const { return ptr; }
+
+    /**
+     * If multiple references are held, returns a clone of the internal
+     * number format and removes this reference. If this is the only reference,
+     * it transfers ownership of the internal number format to the caller and
+     * deletes this shared object.
+     */
+    NumberFormat *orphanOrCloneAndRemoveRef() const;
     const NumberFormat *operator->() const { return ptr; }
     const NumberFormat &operator*() const { return *ptr; }
 private:

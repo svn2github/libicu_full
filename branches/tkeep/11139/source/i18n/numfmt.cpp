@@ -242,6 +242,20 @@ NumberFormat::~NumberFormat()
 {
 }
 
+NumberFormat *SharedNumberFormat::orphanOrCloneAndRemoveRef() const {
+    NumberFormat *result;
+    if (getRefCount() <= 1) {
+        // This is the only reference. Orphan instead of clone.
+        result = const_cast<NumberFormat *>(ptr);
+        SharedNumberFormat *mthis = const_cast<SharedNumberFormat *>(this);
+        mthis->ptr = NULL;
+    } else {
+        result = static_cast<NumberFormat *>(ptr->clone());
+    }
+    removeRef();
+    return result;
+}
+
 SharedNumberFormat::~SharedNumberFormat() {
     delete ptr;
 }

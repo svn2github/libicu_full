@@ -214,6 +214,10 @@ public:
     
     void TestHostClone(void);
 
+    void TestHebrewClone(void);
+
+    void TestDateFormatSymbolsClone(void);
+
     void TestTimeZoneDisplayName(void);
 
     void TestRoundtripWithCalendar(void);

@@ -60,6 +60,7 @@
 #include "umutex.h"
 #include <float.h>
 #include "smpdtfst.h"
+#include "sharednumberformat.h"
 
 #if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
 #include <stdio.h>
@@ -220,23 +221,184 @@ static UMutex LOCK = U_MUTEX_INITIALIZER;
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SimpleDateFormat)
 
+void SimpleDateFormat::NSOverride::free() {
+    NSOverride *cur = this;
+    while (cur) {
+        NSOverride *next = cur->next;
+        cur->snf->removeRef();
+        uprv_free(cur);
+        cur = next;
+    }
+}
+
+// no matter what the locale's default number format looked like, we want
+// to modify it so that it doesn't use thousands separators, doesn't always
+// show the decimal point, and recognizes integers only when parsing
+static void fixNumberFormatForDates(NumberFormat &nf) {
+    nf.setGroupingUsed(FALSE);
+    DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(&nf);
+    if (decfmt != NULL) {
+        decfmt->setDecimalSeparatorAlwaysShown(FALSE);
+    }
+    nf.setParseIntegerOnly(TRUE);
+    nf.setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
+}
+
+static const SharedNumberFormat *createSharedNumberFormat(
+        NumberFormat *nfToAdopt) {
+    fixNumberFormatForDates(*nfToAdopt);
+    const SharedNumberFormat *result = new SharedNumberFormat(nfToAdopt);
+    if (result == NULL) {
+        delete nfToAdopt;
+    }
+    return result;
+}
+
+static const SharedNumberFormat *createSharedNumberFormat(
+        const Locale &loc, UErrorCode &status) {
+    NumberFormat *nf = NumberFormat::createInstance(loc, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    const SharedNumberFormat *result = createSharedNumberFormat(nf);
+    if (result == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+    }
+    return result;
+}
+
+static const SharedNumberFormat **allocSharedNumberFormatters() {
+    const SharedNumberFormat **result = (const SharedNumberFormat**)
+            uprv_malloc(UDAT_FIELD_COUNT * sizeof(const SharedNumberFormat*));
+    for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
+        result[i] = NULL;
+    }
+    return result;
+}
+
+static void freeSharedNumberFormatters(const SharedNumberFormat ** list) {
+    for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
+        SharedObject::clearPtr(list[i]);
+    }
+    uprv_free(list);
+}
+
+// Resolves nfToAdopt to an existing SharedNumberFormat in this object.
+// On entry, result must be NULL.
+// On success returns TRUE and sets result to resolved SharedNumberFormat.
+// result may be set to NULL if nfToAdopt resolves to the global NumberFormat
+// for this object.
+// On failure returns FALSE and sets result to NULL. 
+UBool SimpleDateFormat::getSharedNumberFormat(
+        const NumberFormat *nf,
+        const SharedNumberFormat *&result) const {
+    if (nf == fNumberFormat) {
+        return TRUE;
+    }
+    if (fSharedNumberFormatters == NULL) {
+        return FALSE;
+    }
+    for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
+        const SharedNumberFormat *shared = fSharedNumberFormatters[i];
+        if (shared == NULL) {
+            continue;
+        }
+        if (shared->get() == nf) {
+            SharedObject::copyPtr(fSharedNumberFormatters[i], result);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+// Resolves nfToAdopt as a SharedNumberFormat.
+// On entry, result must be NULL.  If a matching SharedNumberFormat does not
+// exist in this object, it creates a new SharedNumberFormat. If it creates
+// a new SharedNumberFormat, it modifies nfToAdopt to be suitable for date
+// formatting. On success returns TRUE and sets result to the resolved
+// SharedNumberFormat. result may be set to NULL if nfToAdopt resolves to
+// the global NumberFormat for this object.
+// On failure returns FALSE and sets result to NULL. 
+UBool SimpleDateFormat::toSharedNumberFormat(
+        NumberFormat *nfToAdopt,
+        const SharedNumberFormat *&result) const {
+    if (getSharedNumberFormat(nfToAdopt, result)) {
+        return TRUE;
+    }
+    SharedObject::copyPtr(createSharedNumberFormat(nfToAdopt), result);
+    return (result != NULL);
+}
+
+const NumberFormat &SimpleDateFormat::getNumberFormatByIndex(
+        UDateFormatField index) const {
+    if (fSharedNumberFormatters == NULL ||
+        fSharedNumberFormatters[index] == NULL) {
+        return *fNumberFormat;
+    }
+    return **fSharedNumberFormatters[index];
+}
+
+class SimpleDateFormatMutableNFNode {
+ public:
+    const NumberFormat *key;
+    NumberFormat *value;
+    SimpleDateFormatMutableNFNode()
+            : key(NULL), value(NULL) { }
+    ~SimpleDateFormatMutableNFNode() {
+        delete value;
+    }
+ private:
+    SimpleDateFormatMutableNFNode(const SimpleDateFormatMutableNFNode &);
+    SimpleDateFormatMutableNFNode &operator=(const SimpleDateFormatMutableNFNode &);
+};
+
+// Single threaded cache of non const NumberFormats. Designed to be stack
+// allocated and used for a single format call.
+class SimpleDateFormatMutableNFs : public UMemory {
+ public:
+    SimpleDateFormatMutableNFs() {
+    }
+
+    // Returns a non-const clone of nf which can be safely modified.
+    // Subsequent calls with same nf will return the same non-const clone.
+    // This object maintains ownership of all returned non-const
+    // NumberFormat objects.
+    NumberFormat *get(const NumberFormat &nf) {
+        int32_t idx = 0;
+        while (nodes[idx].value) {
+            if (&nf == nodes[idx].key) {
+                return nodes[idx].value;
+            }
+            ++idx;
+        }
+        U_ASSERT(idx < UDAT_FIELD_COUNT);
+        nodes[idx].key = &nf;
+        nodes[idx].value = (NumberFormat *) nf.clone();
+        return nodes[idx].value;
+    }
+ private:
+    // +1 extra for sentinel. If each field had its own NumberFormat, this
+    // cache would have to allocate UDAT_FIELD_COUNT mutable versions worst
+    // case.
+    SimpleDateFormatMutableNFNode nodes[UDAT_FIELD_COUNT + 1];
+    SimpleDateFormatMutableNFs(const SimpleDateFormatMutableNFs &);
+    SimpleDateFormatMutableNFs &operator=(const SimpleDateFormatMutableNFs &);
+};
+
 //----------------------------------------------------------------------
 
 SimpleDateFormat::~SimpleDateFormat()
 {
     delete fSymbols;
-    if (fNumberFormatters) {
-        uprv_free(fNumberFormatters);
+    if (fSharedNumberFormatters) {
+        freeSharedNumberFormatters(fSharedNumberFormatters);
     }
     if (fTimeZoneFormat) {
         delete fTimeZoneFormat;
     }
 
-    while (fOverrideList) {
-        NSOverride *cur = fOverrideList;
-        fOverrideList = cur->next;
-        delete cur->nf;
-        uprv_free(cur);
+    if (fOverrideList) {
+        fOverrideList->free();
     }
 
 #if !UCONFIG_NO_BREAK_ITERATION
@@ -250,7 +412,7 @@ SimpleDateFormat::SimpleDateFormat(UErrorCode& status)
   :   fLocale(Locale::getDefault()),
       fSymbols(NULL),
       fTimeZoneFormat(NULL),
-      fNumberFormatters(NULL),
+      fSharedNumberFormatters(NULL),
       fOverrideList(NULL),
       fCapitalizationBrkIter(NULL)
 {
@@ -267,7 +429,7 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fLocale(Locale::getDefault()),
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -288,7 +450,7 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fLocale(Locale::getDefault()),
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -311,7 +473,7 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
 :   fPattern(pattern),
     fLocale(locale),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -334,7 +496,7 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
 :   fPattern(pattern),
     fLocale(locale),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -360,7 +522,7 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fLocale(Locale::getDefault()),
     fSymbols(symbolsToAdopt),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -383,7 +545,7 @@ SimpleDateFormat::SimpleDateFormat(const UnicodeString& pattern,
     fLocale(Locale::getDefault()),
     fSymbols(new DateFormatSymbols(symbols)),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -407,7 +569,7 @@ SimpleDateFormat::SimpleDateFormat(EStyle timeStyle,
 :   fLocale(locale),
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -431,7 +593,7 @@ SimpleDateFormat::SimpleDateFormat(const Locale& locale,
     fLocale(locale),
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -467,7 +629,7 @@ SimpleDateFormat::SimpleDateFormat(const SimpleDateFormat& other)
     fLocale(other.fLocale),
     fSymbols(NULL),
     fTimeZoneFormat(NULL),
-    fNumberFormatters(NULL),
+    fSharedNumberFormatters(NULL),
     fOverrideList(NULL),
     fCapitalizationBrkIter(NULL)
 {
@@ -483,6 +645,8 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
         return *this;
     }
     DateFormat::operator=(other);
+    fDateOverride = other.fDateOverride;
+    fTimeOverride = other.fTimeOverride;
 
     delete fSymbols;
     fSymbols = NULL;
@@ -508,6 +672,24 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
         fCapitalizationBrkIter = (other.fCapitalizationBrkIter)->clone();
     }
 #endif
+
+    if (fSharedNumberFormatters != NULL) {
+        freeSharedNumberFormatters(fSharedNumberFormatters);
+        fSharedNumberFormatters = NULL;
+    }
+    if (other.fSharedNumberFormatters != NULL) {
+        fSharedNumberFormatters = allocSharedNumberFormatters();
+        for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
+            SharedObject::copyPtr(
+                    other.fSharedNumberFormatters[i],
+                    fSharedNumberFormatters[i]);
+        }
+    }
+
+    if (fOverrideList) {
+        fOverrideList->free();
+        fOverrideList = NULL;
+    }
 
     return *this;
 }
@@ -774,18 +956,7 @@ SimpleDateFormat::initialize(const Locale& locale,
     fNumberFormat = NumberFormat::createInstance(locale, status);
     if (fNumberFormat != NULL && U_SUCCESS(status))
     {
-        // no matter what the locale's default number format looked like, we want
-        // to modify it so that it doesn't use thousands separators, doesn't always
-        // show the decimal point, and recognizes integers only when parsing
-
-        fNumberFormat->setGroupingUsed(FALSE);
-        DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(fNumberFormat);
-        if (decfmt != NULL) {
-            decfmt->setDecimalSeparatorAlwaysShown(FALSE);
-        }
-        fNumberFormat->setParseIntegerOnly(TRUE);
-        fNumberFormat->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
-
+        fixNumberFormatForDates(*fNumberFormat);
         //fNumberFormat->setLenient(TRUE); // Java uses a custom DateNumberFormat to format/parse
 
         initNumberFormatters(locale,status);
@@ -901,6 +1072,11 @@ SimpleDateFormat::_format(Calendar& cal, UnicodeString& appendTo,
     int32_t fieldNum = 0;
     UDisplayContext capitalizationContext = getContext(UDISPCTX_TYPE_CAPITALIZATION, status);
 
+    // Create temporary cache of mutable number format objects. This way
+    // subFormat won't have to clone the const NumberFormat for each field.
+    // if several fields share the same NumberFormat, which will almost
+    // always be the case, this is a big save.
+    SimpleDateFormatMutableNFs mutableNFs;
     // loop through the pattern string character by character
     for (int32_t i = 0; i < fPattern.length() && U_SUCCESS(status); ++i) {
         UChar ch = fPattern[i];
@@ -908,7 +1084,7 @@ SimpleDateFormat::_format(Calendar& cal, UnicodeString& appendTo,
         // Use subFormat() to format a repeated pattern character
         // when a different pattern or non-pattern character is seen
         if (ch != prevCh && count > 0) {
-            subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++, handler, *workCal, status);
+            subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++, handler, *workCal, mutableNFs, status);
             count = 0;
         }
         if (ch == QUOTE) {
@@ -936,7 +1112,7 @@ SimpleDateFormat::_format(Calendar& cal, UnicodeString& appendTo,
 
     // Format the last item in the pattern, if any
     if (count > 0) {
-        subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++, handler, *workCal, status);
+        subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++, handler, *workCal, mutableNFs, status);
     }
 
     if (calClone != NULL) {
@@ -1073,13 +1249,9 @@ SimpleDateFormat::initNumberFormatters(const Locale &locale,UErrorCode &status) 
         return;
     }
     umtx_lock(&LOCK);
-    if (fNumberFormatters == NULL) {
-        fNumberFormatters = (NumberFormat**)uprv_malloc(UDAT_FIELD_COUNT * sizeof(NumberFormat*));
-        if (fNumberFormatters) {
-            for (int32_t i = 0; i < UDAT_FIELD_COUNT; i++) {
-                fNumberFormatters[i] = fNumberFormat;
-            }
-        } else {
+    if (fSharedNumberFormatters == NULL) {
+        fSharedNumberFormatters = allocSharedNumberFormatters();
+        if (fSharedNumberFormatters == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
         }
     }
@@ -1092,6 +1264,9 @@ SimpleDateFormat::initNumberFormatters(const Locale &locale,UErrorCode &status) 
 
 void
 SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeString &str, int8_t type, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
     if (str.isBogus()) {
         return;
     }
@@ -1122,11 +1297,11 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
         int32_t nsNameHash = nsName.hashCode();
         // See if the numbering system is in the override list, if not, then add it.
         NSOverride *cur = fOverrideList;
-        NumberFormat *nf = NULL;
+        const SharedNumberFormat *snf = NULL;
         UBool found = FALSE;
         while ( cur && !found ) {
             if ( cur->hash == nsNameHash ) {
-                nf = cur->nf;
+                snf = cur->snf;
                 found = TRUE;
             }
             cur = cur->next;
@@ -1140,34 +1315,17 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
                nsName.extract(0,len,kw+8,ULOC_KEYWORD_AND_VALUES_CAPACITY-8,US_INV);
 
                Locale ovrLoc(locale.getLanguage(),locale.getCountry(),locale.getVariant(),kw);
-               nf = NumberFormat::createInstance(ovrLoc,status);
-
-               // no matter what the locale's default number format looked like, we want
-               // to modify it so that it doesn't use thousands separators, doesn't always
-               // show the decimal point, and recognizes integers only when parsing
-
-               if (U_SUCCESS(status)) {
-                   nf->setGroupingUsed(FALSE);
-                   DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(nf);
-                   if (decfmt != NULL) {
-                       decfmt->setDecimalSeparatorAlwaysShown(FALSE);
-                   }
-                   nf->setParseIntegerOnly(TRUE);
-                   nf->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
-
-                   cur->nf = nf;
-                   cur->hash = nsNameHash;
-                   cur->next = fOverrideList;
-                   fOverrideList = cur;
+               cur->hash = nsNameHash;
+               cur->next = fOverrideList;
+               cur->snf = NULL;
+               SharedObject::copyPtr(
+                       createSharedNumberFormat(ovrLoc,status), cur->snf);
+               if (U_FAILURE(status)) {
+                   uprv_free(cur);
+                   return;
                }
-               else {
-                   // clean up before returning
-                   if (cur != NULL) {
-                       uprv_free(cur);
-                   }
-                  return;
-               }
-
+               snf = cur->snf;
+               fOverrideList = cur;
            } else {
                status = U_MEMORY_ALLOCATION_ERROR;
                return;
@@ -1182,7 +1340,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
                 case kOvrStrDate:
                 case kOvrStrBoth: {
                     for ( int8_t i=0 ; i<kDateFieldsCount; i++ ) {
-                        fNumberFormatters[kDateFields[i]] = nf;
+                        SharedObject::copyPtr(snf, fSharedNumberFormatters[kDateFields[i]]);
                     }
                     if (type==kOvrStrDate) {
                         break;
@@ -1190,7 +1348,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
                 }
                 case kOvrStrTime : {
                     for ( int8_t i=0 ; i<kTimeFieldsCount; i++ ) {
-                        fNumberFormatters[kTimeFields[i]] = nf;
+                        SharedObject::copyPtr(snf, fSharedNumberFormatters[kTimeFields[i]]);
                     }
                     break;
                 }
@@ -1203,9 +1361,7 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
                status = U_INVALID_FORMAT_ERROR;
                return;
            }
-
-           // Set the number formatter in the table
-           fNumberFormatters[patternCharIndex] = nf;
+           SharedObject::copyPtr(snf, fSharedNumberFormatters[patternCharIndex]);
         }
 
         start = delimiterPosition + 1;
@@ -1221,6 +1377,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
                             int32_t fieldNum,
                             FieldPositionHandler& handler,
                             Calendar& cal,
+                            SimpleDateFormatMutableNFs &mutableNFs,
                             UErrorCode& status) const
 {
     if (U_FAILURE(status)) {
@@ -1254,7 +1411,12 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         return;
     }
 
-    currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
+    currentNumberFormat = mutableNFs.get(
+            getNumberFormatByIndex(patternCharIndex));
+    if (currentNumberFormat == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
     UnicodeString hebr("hebr", 4, US_INV);
     
     switch (patternCharIndex) {
@@ -1649,116 +1811,103 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 //----------------------------------------------------------------------
 
 void SimpleDateFormat::adoptNumberFormat(NumberFormat *formatToAdopt) {
-    formatToAdopt->setParseIntegerOnly(TRUE);
-    if (fNumberFormat && fNumberFormat != formatToAdopt){
-        delete fNumberFormat;
-    }
-    fNumberFormat = formatToAdopt;
 
-    if (fNumberFormatters) {
-        for (int32_t i = 0; i < UDAT_FIELD_COUNT; i++) {
-            if (fNumberFormatters[i] == formatToAdopt) {
-                fNumberFormatters[i] = NULL;
-            }
+    // We can't report memory allocation error back to the caller so
+    // the best we can do is to design this method to either change
+    // default number format or do nothing.
+
+    // Adopt first.
+    const SharedNumberFormat *newFormat = NULL;
+    if (!toSharedNumberFormat(formatToAdopt, newFormat)) {
+        return;
+    }
+    if (newFormat == NULL) {
+        // Then our new format is the existing default. Do nothing.
+    } else {
+        // Take ownership of adopted number format away from shared pointers.
+        NumberFormat *newDefault = newFormat->orphanOrCloneAndRemoveRef();
+        if (newDefault == NULL) {
+            // Memory allocation error, do nothing.
+            return;
         }
-        uprv_free(fNumberFormatters);
-        fNumberFormatters = NULL;
+        delete fNumberFormat;
+        fNumberFormat = newDefault;
     }
     
-    while (fOverrideList) {
-        NSOverride *cur = fOverrideList;
-        fOverrideList = cur->next;
-        if (cur->nf != formatToAdopt) { // only delete those not duplicate
-            delete cur->nf;
-            uprv_free(cur);
-        } else {
-            cur->nf = NULL;
-            uprv_free(cur);
-        }
+    // We successfully set the default number format. Now delete the overrides
+    // (can't fail).
+    if (fSharedNumberFormatters) {
+        freeSharedNumberFormatters(fSharedNumberFormatters);
+        fSharedNumberFormatters = NULL;
+    }
+    if (fOverrideList) {
+        fOverrideList->free();
+        fOverrideList = NULL;
     }
 }
 
 void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberFormat *formatToAdopt, UErrorCode &status){
-    // if it has not been initialized yet, initialize
-    if (fNumberFormatters == NULL) {
-        fNumberFormatters = (NumberFormat**)uprv_malloc(UDAT_FIELD_COUNT * sizeof(NumberFormat*));
-        if (fNumberFormatters) {
-            for (int32_t i = 0; i < UDAT_FIELD_COUNT; i++) {
-                fNumberFormatters[i] = fNumberFormat;
-            }
-        } else {
+    // Adopt formatToAdopt into a shared number format before checking
+    // status so that we don't leak memory.
+    const SharedNumberFormat *newFormat = NULL;
+    if (!toSharedNumberFormat(formatToAdopt, newFormat)
+            || U_FAILURE(status)) {
+        // We get in here if either we could not adopt or status is set.
+        // In either case we must return with failure.
+        
+        // release shared number format in case we successfully adopted.
+        SharedObject::clearPtr(newFormat);
+
+        // If no status set, it means we couldn't adopt because there is
+        // no memory left.
+        if (U_SUCCESS(status)) {
             status = U_MEMORY_ALLOCATION_ERROR;
+        }
+        return;
+    }
+
+    // When we get here, formatToAdopt is adopted into newFormat.
+    // if newFormat is NULL, it means that the new format is the same
+    // as the global one.
+
+    // We must ensure fSharedNumberFormatters is allocated.
+    if (fSharedNumberFormatters == NULL) {
+        fSharedNumberFormatters = allocSharedNumberFormatters();
+        if (fSharedNumberFormatters == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            SharedObject::clearPtr(newFormat);
             return;
         }
     }
-    
-    // See if the numbering format is in the override list, if not, then add it.
-    NSOverride *cur = fOverrideList;
-    UBool found = FALSE;
-    while (cur && !found) {
-        if ( cur->nf == formatToAdopt ) {
-            found = TRUE;
-        }
-        cur = cur->next;
-    }
-
-    if (!found) {
-        cur = (NSOverride *)uprv_malloc(sizeof(NSOverride));
-        if (cur) {
-            // no matter what the locale's default number format looked like, we want
-            // to modify it so that it doesn't use thousands separators, doesn't always
-            // show the decimal point, and recognizes integers only when parsing
-            formatToAdopt->setGroupingUsed(FALSE);
-            DecimalFormat* decfmt = dynamic_cast<DecimalFormat*>(formatToAdopt);
-            if (decfmt != NULL) {
-                decfmt->setDecimalSeparatorAlwaysShown(FALSE);
-            }
-            formatToAdopt->setParseIntegerOnly(TRUE);
-            formatToAdopt->setMinimumFractionDigits(0); // To prevent "Jan 1.00, 1997.00"
-
-            cur->nf = formatToAdopt;
-            cur->hash = -1; // set duplicate here (before we set it with NumberSystem Hash, here we cannot get nor use it)
-            cur->next = fOverrideList;
-            fOverrideList = cur;
-        } else {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-    }
-    
     for (int i=0; i<fields.length(); i++) {
         UChar field = fields.charAt(i);
         // if the pattern character is unrecognized, signal an error and bail out
         UDateFormatField patternCharIndex = DateFormatSymbols::getPatternCharIndex(field);
         if (patternCharIndex == UDAT_FIELD_COUNT) {
             status = U_INVALID_FORMAT_ERROR;
+            SharedObject::clearPtr(newFormat);
             return;
         }
 
         // Set the number formatter in the table
-        fNumberFormatters[patternCharIndex] = formatToAdopt;
+        SharedObject::copyPtr(
+                newFormat, fSharedNumberFormatters[patternCharIndex]);
     }
+    SharedObject::clearPtr(newFormat);
 }
 
 const NumberFormat *
 SimpleDateFormat::getNumberFormatForField(UChar field) const {
     UDateFormatField index = DateFormatSymbols::getPatternCharIndex(field);
-    return getNumberFormatByIndex(index);
-}
-
-NumberFormat *
-SimpleDateFormat::getNumberFormatByIndex(UDateFormatField index) const {
-    if (fNumberFormatters != NULL) {
-        return fNumberFormatters[index];
-    } else {
-        return fNumberFormat;
-    }
+    return &getNumberFormatByIndex(index);
 }
 
 //----------------------------------------------------------------------
 void
-SimpleDateFormat::zeroPaddingNumber(NumberFormat *currentNumberFormat,UnicodeString &appendTo,
-                                    int32_t value, int32_t minDigits, int32_t maxDigits) const
+SimpleDateFormat::zeroPaddingNumber(
+        NumberFormat *currentNumberFormat,
+        UnicodeString &appendTo,
+        int32_t value, int32_t minDigits, int32_t maxDigits) const
 {
     if (currentNumberFormat!=NULL) {
         FieldPosition pos(0);
@@ -1829,6 +1978,7 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
     int32_t saveHebrewMonth = -1;
     int32_t count = 0;
     UTimeZoneFormatTimeType tzTimeType = UTZFMT_TIME_TYPE_UNKNOWN;
+    SimpleDateFormatMutableNFs mutableNFs;
 
     // For parsing abutting numeric fields. 'abutPat' is the
     // offset into 'pattern' of the first of 2 or more abutting
@@ -1922,7 +2072,7 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
                 }
 
                 pos = subParse(text, pos, ch, count,
-                               TRUE, FALSE, ambiguousYear, saveHebrewMonth, *workCal, i, numericLeapMonthFormatter, &tzTimeType);
+                               TRUE, FALSE, ambiguousYear, saveHebrewMonth, *workCal, i, numericLeapMonthFormatter, &tzTimeType, mutableNFs);
 
                 // If the parse fails anywhere in the run, back up to the
                 // start of the run and retry.
@@ -1937,7 +2087,7 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
             // fields.
             else if (ch != 0x6C) { // pattern char 'l' (SMALL LETTER L) just gets ignored
                 int32_t s = subParse(text, pos, ch, count,
-                               FALSE, TRUE, ambiguousYear, saveHebrewMonth, *workCal, i, numericLeapMonthFormatter, &tzTimeType);
+                               FALSE, TRUE, ambiguousYear, saveHebrewMonth, *workCal, i, numericLeapMonthFormatter, &tzTimeType, mutableNFs);
 
                 if (s == -pos-1) {
                     // era not present, in special cases allow this to continue
@@ -2543,7 +2693,7 @@ SimpleDateFormat::set2DigitYearStart(UDate d, UErrorCode& status)
  */
 int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UChar ch, int32_t count,
                            UBool obeyCount, UBool allowNegative, UBool ambiguousYear[], int32_t& saveHebrewMonth, Calendar& cal,
-                           int32_t patLoc, MessageFormat * numericLeapMonthFormatter, UTimeZoneFormatTimeType *tzTimeType) const
+                           int32_t patLoc, MessageFormat * numericLeapMonthFormatter, UTimeZoneFormatTimeType *tzTimeType, SimpleDateFormatMutableNFs &mutableNFs) const
 {
     Formattable number;
     int32_t value = 0;
@@ -2564,7 +2714,10 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         return -start;
     }
 
-    currentNumberFormat = getNumberFormatByIndex(patternCharIndex);
+    currentNumberFormat = mutableNFs.get(getNumberFormatByIndex(patternCharIndex));
+    if (currentNumberFormat == NULL) {
+        return -start;
+    }
     UCalendarDateFields field = fgPatternIndexToCalendarField[patternCharIndex];
     UnicodeString hebr("hebr", 4, US_INV);
 

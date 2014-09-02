@@ -45,6 +45,8 @@ class DateFormat;
 class MessageFormat;
 class FieldPositionHandler;
 class TimeZoneFormat;
+class SharedNumberFormat;
+class SimpleDateFormatMutableNFs;
 
 /**
  *
@@ -1254,6 +1256,7 @@ private:
                    int32_t fieldNum,
                    FieldPositionHandler& handler,
                    Calendar& cal,
+                   SimpleDateFormatMutableNFs &mutableNFs,
                    UErrorCode& status) const; // in case of illegal argument
 
     /**
@@ -1400,7 +1403,7 @@ private:
      */
     int32_t subParse(const UnicodeString& text, int32_t& start, UChar ch, int32_t count,
                      UBool obeyCount, UBool allowNegative, UBool ambiguousYear[], int32_t& saveHebrewMonth, Calendar& cal,
-                     int32_t patLoc, MessageFormat * numericLeapMonthFormatter, UTimeZoneFormatTimeType *tzTimeType) const;
+                     int32_t patLoc, MessageFormat * numericLeapMonthFormatter, UTimeZoneFormatTimeType *tzTimeType, SimpleDateFormatMutableNFs &mutableNFs) const;
 
     void parseInt(const UnicodeString& text,
                   Formattable& number,
@@ -1476,11 +1479,6 @@ private:
     void initNumberFormatters(const Locale &locale,UErrorCode &status);
 
     /**
-     * Get the numbering system to be used for a particular field.
-     */
-     NumberFormat * getNumberFormatByIndex(UDateFormatField index) const;
-
-    /**
      * Parse the given override string and set up structures for number formats
      */
     void processOverrideString(const Locale &locale, const UnicodeString &str, int8_t type, UErrorCode &status);
@@ -1499,6 +1497,14 @@ private:
      * Lazy TimeZoneFormat instantiation, semantically const
      */
     TimeZoneFormat *tzFormat() const;
+
+    UBool getSharedNumberFormat(
+            const NumberFormat *nf, const SharedNumberFormat *&result) const;
+
+    UBool toSharedNumberFormat(
+            NumberFormat *nfToAdopt, const SharedNumberFormat *&result) const;
+
+    const NumberFormat &getNumberFormatByIndex(UDateFormatField index) const;
 
     /**
      * Used to map Calendar field to field level.
@@ -1557,12 +1563,17 @@ private:
     /*transient*/ int32_t   fDefaultCenturyStartYear;
 
     typedef struct NSOverride {
-        NumberFormat *nf;
+        const SharedNumberFormat *snf;
         int32_t hash;
         NSOverride *next;
+        void free();
     } NSOverride;
 
-    NumberFormat    **fNumberFormatters;
+    /**
+     * The number format in use for each date field. NULL means fall back
+     * to fNumberFormat in DateFormat.
+     */
+    const SharedNumberFormat    **fSharedNumberFormatters;
 
     NSOverride      *fOverrideList;
 

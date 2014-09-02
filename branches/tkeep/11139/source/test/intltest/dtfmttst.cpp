@@ -79,6 +79,8 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
     TESTCASE_AUTO(TestRelative);
     TESTCASE_AUTO(TestRelativeClone);
     TESTCASE_AUTO(TestHostClone);
+    TESTCASE_AUTO(TestHebrewClone);
+    TESTCASE_AUTO(TestDateFormatSymbolsClone);
     TESTCASE_AUTO(TestTimeZoneDisplayName);
     TESTCASE_AUTO(TestRoundtripWithCalendar);
     TESTCASE_AUTO(Test6338);
@@ -2422,7 +2424,7 @@ void DateFormatTest::TestHostClone(void)
     UDate now = Calendar::getNow();
     DateFormat *full = DateFormat::createDateInstance(DateFormat::kFull, loc);
     if (full == NULL) {
-        dataerrln("FAIL: Can't create Relative date instance");
+        dataerrln("FAIL: Can't create host date instance");
         return;
     }
     UnicodeString result1;
@@ -2438,6 +2440,84 @@ void DateFormatTest::TestHostClone(void)
         errln("FAIL: Clone returned different result from non-clone.");
     }
     delete fullClone;
+}
+
+void DateFormatTest::TestHebrewClone(void)
+{
+    /*
+    Verify that a cloned formatter gives the same results
+    and is useable after the original has been deleted.
+    */
+    // This is mainly important on Windows.
+    UErrorCode status = U_ZERO_ERROR;
+    Locale loc("he@calendar=hebrew");
+    UDate now = Calendar::getNow();
+    DateFormat *fmt = DateFormat::createDateInstance(DateFormat::kLong, loc);
+    if (fmt == NULL) {
+        dataerrln("FAIL: Can't create Hebrew date instance");
+        return;
+    }
+    UnicodeString result1;
+    SimpleDateFormat *sfmt = (SimpleDateFormat *) fmt;
+    fmt->format(now, result1, status);
+    Format *fmtClone = fmt->clone();
+    delete fmt;
+    fmt = NULL;
+
+    UnicodeString result2;
+    SimpleDateFormat *sfmtClone = (SimpleDateFormat *) fmtClone;
+    fmtClone->format(now, result2, status);
+    ASSERT_OK(status);
+    if (result1 != result2) {
+        errln("FAIL: Clone returned different result from non-clone.");
+    }
+    delete fmtClone;
+}
+
+static UBool getActualAndValidLocales(
+        const Format &fmt, Locale &valid, Locale &actual) {
+    const SimpleDateFormat* dat = dynamic_cast<const SimpleDateFormat*>(&fmt);
+    if (dat == NULL) {
+        return FALSE;
+    }
+    const DateFormatSymbols *sym = dat->getDateFormatSymbols();
+    if (sym == NULL) {
+        return FALSE;
+    }
+    UErrorCode status = U_ZERO_ERROR;
+    valid = sym->getLocale(ULOC_VALID_LOCALE, status);
+    actual = sym->getLocale(ULOC_ACTUAL_LOCALE, status);
+    return U_SUCCESS(status);
+}
+
+void DateFormatTest::TestDateFormatSymbolsClone(void)
+{
+    /*
+    Verify that a cloned formatter gives the same results
+    and is useable after the original has been deleted.
+    */
+    // This is mainly important on Windows.
+    Locale loc("de_CH_LUCERNE");
+    DateFormat *fmt = DateFormat::createDateInstance(DateFormat::kDefault, loc);
+    Locale valid1;
+    Locale actual1;
+    if (!getActualAndValidLocales(*fmt, valid1, actual1)) {
+        errln("FAIL: Could not fetch valid + actual locales");
+        return;
+    }
+    Format *fmtClone = fmt->clone();
+    delete fmt;
+    fmt = NULL;
+    Locale valid2;
+    Locale actual2;
+    if (!getActualAndValidLocales(*fmtClone, valid2, actual2)) {
+        errln("FAIL: Could not fetch valid + actual locales");
+        return;
+    }
+    delete fmtClone;
+    if (valid1 != valid2 || actual1 != actual2) {
+        errln("Date format symbol locales of clone don't match original");
+    }
 }
 
 void DateFormatTest::TestTimeZoneDisplayName()
