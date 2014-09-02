@@ -2546,6 +2546,42 @@ uloc_toUnicodeLocaleType(const char* keyword, const char* value)
     return bcpType;
 }
 
+#define ISALPHANUM(c) ( (c) >= '0' && (c) <= '9' || (c) >= 'A' && (c) <= 'Z' || (c) >= 'a' && (c) <= 'z' )
+
+static UBool
+isWellFormedLegacyKey(const char* legacyKey)
+{
+    const char* p = legacyKey;
+    while (*p) {
+        if (!ISALPHANUM(*p)) {
+            return FALSE;
+        }
+        p++;
+    }
+    return TRUE;
+}
+
+static UBool
+isWellFormedLegacyType(const char* legacyType)
+{
+    const char* p = legacyType;
+    int32_t alphaNumLen = 0;
+    while (*p) {
+        if (*p == '_' || *p == '/' || *p == '-') {
+            if (alphaNumLen == 0) {
+                return FALSE;
+            }
+            alphaNumLen = 0;
+        } else if (ISALPHANUM(*p)) {
+            alphaNumLen++;
+        } else {
+            return FALSE;
+        }
+        p++;
+    }
+    return (alphaNumLen != 0);
+}
+
 U_CAPI const char* U_EXPORT2
 uloc_toLegacyKey(const char* keyword)
 {
@@ -2559,9 +2595,9 @@ uloc_toLegacyKey(const char* keyword)
         //  keys are using ASCII alphabetic letters only. We won't add any new key
         //  that is not compatible with the BCP 47 syntax. Therefore, we assume
         //  a valid key consist from [0-9a-zA-Z], no symbols.
-
-        // TODO
-        return keyword;
+        if (isWellFormedLegacyKey(keyword)) {
+            return keyword;
+        }
     }
     return legacyKey;
 }
@@ -2580,9 +2616,9 @@ uloc_toLegacyType(const char* keyword, const char* value)
         //  add any new type that is not compatible with the BCP 47 syntax except timezone
         //  IDs. For now, we assume a valid type start with [0-9a-zA-Z], but may contain
         //  '-' '_' '/' in the middle.
-
-        // TODO
-        return value;
+        if (isWellFormedLegacyType(value)) {
+            return value;
+        }
     }
     return legacyType;
 }

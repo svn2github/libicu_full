@@ -434,8 +434,30 @@ _isUnicodeLocaleTypeSubtag(const char* s, int32_t len) {
 
 U_CFUNC UBool
 ultag_isUnicodeLocaleType(const char*s, int32_t len) {
-    /* TODO */
-    return _isUnicodeLocaleTypeSubtag(s, len);
+    const char* p;
+    int32_t subtagLen = 0;
+
+    if (len < 0) {
+        len = (int32_t)uprv_strlen(s);
+    }
+
+    for (p = s; len > 0; p++, len--) {
+        if (*p == SEP) {
+            if (subtagLen < 3) {
+                return FALSE;
+            }
+            subtagLen = 0;
+        } else if (ISALPHA(*p) || ISNUMERIC(*p)) {
+            subtagLen++;
+            if (subtagLen > 8) {
+                return FALSE;
+            }
+        } else {
+            return FALSE;
+        }
+    }
+
+    return (subtagLen >= 3);
 }
 /*
 * -------------------------------------------------
