@@ -24,8 +24,6 @@
 #include "charstr.h"
 #include "unicode/reldatefmt.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
-
 struct ExpectedResult {
     const Measure *measures;
     int32_t count;
@@ -311,32 +309,32 @@ void MeasureFormatTest::TestExamplesInDocs() {
             "Feet and inches",
             fmtFrFull,
             feetAndInches,
-            LENGTHOF(feetAndInches),
+            UPRV_LENGTHOF(feetAndInches),
             "70 pieds et 5,3 pouces");
     verifyFormatWithPrefix(
             "Feet and inches",
             fmtFrFull,
             "Prefix: ",
             feetAndInches,
-            LENGTHOF(feetAndInches),
+            UPRV_LENGTHOF(feetAndInches),
             "Prefix: 70 pieds et 5,3 pouces");
     verifyFormat(
             "Foot and inch",
             fmtFrFull,
             footAndInch,
-            LENGTHOF(footAndInch),
+            UPRV_LENGTHOF(footAndInch),
             "1 pied et 1 pouce");
     verifyFormat(
             "Foot and inch narrow",
             fmtFrNarrow,
             footAndInch,
-            LENGTHOF(footAndInch),
+            UPRV_LENGTHOF(footAndInch),
             "1\\u2032 1\\u2033");
     verifyFormat(
             "Inch and feet",
             fmtEn,
             inchAndFeet,
-            LENGTHOF(inchAndFeet),
+            UPRV_LENGTHOF(inchAndFeet),
             "1 inch, 2 feet");
 }
 
@@ -424,65 +422,65 @@ void MeasureFormatTest::TestFormatPeriodEn() {
     }
     
     ExpectedResult fullData[] = {
-            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1 minute, 59.9996 seconds"},
-            {t_19m, LENGTHOF(t_19m), "19 minutes"},
-            {t_1h_23_5s, LENGTHOF(t_1h_23_5s), "1 hour, 23.5 seconds"},
-            {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1 hour, 23.5 minutes"},
-            {t_1h_0m_23s, LENGTHOF(t_1h_0m_23s), "1 hour, 0 minutes, 23 seconds"},
-            {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2 years, 5 months, 3 weeks, 4 days"}};
+            {t_1m_59_9996s, UPRV_LENGTHOF(t_1m_59_9996s), "1 minute, 59.9996 seconds"},
+            {t_19m, UPRV_LENGTHOF(t_19m), "19 minutes"},
+            {t_1h_23_5s, UPRV_LENGTHOF(t_1h_23_5s), "1 hour, 23.5 seconds"},
+            {t_1h_23_5m, UPRV_LENGTHOF(t_1h_23_5m), "1 hour, 23.5 minutes"},
+            {t_1h_0m_23s, UPRV_LENGTHOF(t_1h_0m_23s), "1 hour, 0 minutes, 23 seconds"},
+            {t_2y_5M_3w_4d, UPRV_LENGTHOF(t_2y_5M_3w_4d), "2 years, 5 months, 3 weeks, 4 days"}};
 
     ExpectedResult abbrevData[] = {
-            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1 min, 59.9996 secs"},
-            {t_19m, LENGTHOF(t_19m), "19 mins"},
-            {t_1h_23_5s, LENGTHOF(t_1h_23_5s), "1 hr, 23.5 secs"},
-            {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1 hr, 23.5 mins"},
-            {t_1h_0m_23s, LENGTHOF(t_1h_0m_23s), "1 hr, 0 mins, 23 secs"},
-            {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2 yrs, 5 mths, 3 wks, 4 days"}};
+            {t_1m_59_9996s, UPRV_LENGTHOF(t_1m_59_9996s), "1 min, 59.9996 secs"},
+            {t_19m, UPRV_LENGTHOF(t_19m), "19 mins"},
+            {t_1h_23_5s, UPRV_LENGTHOF(t_1h_23_5s), "1 hr, 23.5 secs"},
+            {t_1h_23_5m, UPRV_LENGTHOF(t_1h_23_5m), "1 hr, 23.5 mins"},
+            {t_1h_0m_23s, UPRV_LENGTHOF(t_1h_0m_23s), "1 hr, 0 mins, 23 secs"},
+            {t_2y_5M_3w_4d, UPRV_LENGTHOF(t_2y_5M_3w_4d), "2 yrs, 5 mths, 3 wks, 4 days"}};
 
     ExpectedResult narrowData[] = {
-            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1m 59.9996s"},
-            {t_19m, LENGTHOF(t_19m), "19m"},
-            {t_1h_23_5s, LENGTHOF(t_1h_23_5s), "1h 23.5s"},
-            {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1h 23.5m"},
-            {t_1h_0m_23s, LENGTHOF(t_1h_0m_23s), "1h 0m 23s"},
-            {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2y 5m 3w 4d"}};
+            {t_1m_59_9996s, UPRV_LENGTHOF(t_1m_59_9996s), "1m 59.9996s"},
+            {t_19m, UPRV_LENGTHOF(t_19m), "19m"},
+            {t_1h_23_5s, UPRV_LENGTHOF(t_1h_23_5s), "1h 23.5s"},
+            {t_1h_23_5m, UPRV_LENGTHOF(t_1h_23_5m), "1h 23.5m"},
+            {t_1h_0m_23s, UPRV_LENGTHOF(t_1h_0m_23s), "1h 0m 23s"},
+            {t_2y_5M_3w_4d, UPRV_LENGTHOF(t_2y_5M_3w_4d), "2y 5m 3w 4d"}};
 
     ExpectedResult numericData[] = {
-            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1:59.9996"},
-            {t_19m, LENGTHOF(t_19m), "19m"},
-            {t_1h_23_5s, LENGTHOF(t_1h_23_5s), "1:00:23.5"},
-            {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1:23.5"},
-            {t_1h_0m_23s, LENGTHOF(t_1h_0m_23s), "1:00:23"},
-            {t_5h_17m, LENGTHOF(t_5h_17m), "5:17"},
-            {t_neg5h_17m, LENGTHOF(t_neg5h_17m), "-5h 17m"},
-            {t_19m_28s, LENGTHOF(t_19m_28s), "19:28"},
-            {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2y 5m 3w 4d"},
-            {t_0h_0m_9s, LENGTHOF(t_0h_0m_9s), "0:00:09"},
-            {t_6h_56_92m, LENGTHOF(t_6h_56_92m), "6:56.92"},
-            {t_6_7h_56_92m, LENGTHOF(t_6_7h_56_92m), "6:56.92"},
-            {t_3h_4s_5m, LENGTHOF(t_3h_4s_5m), "3h 4s 5m"},
-            {t_3h_5h, LENGTHOF(t_3h_5h), "3h 5h"}};
+            {t_1m_59_9996s, UPRV_LENGTHOF(t_1m_59_9996s), "1:59.9996"},
+            {t_19m, UPRV_LENGTHOF(t_19m), "19m"},
+            {t_1h_23_5s, UPRV_LENGTHOF(t_1h_23_5s), "1:00:23.5"},
+            {t_1h_23_5m, UPRV_LENGTHOF(t_1h_23_5m), "1:23.5"},
+            {t_1h_0m_23s, UPRV_LENGTHOF(t_1h_0m_23s), "1:00:23"},
+            {t_5h_17m, UPRV_LENGTHOF(t_5h_17m), "5:17"},
+            {t_neg5h_17m, UPRV_LENGTHOF(t_neg5h_17m), "-5h 17m"},
+            {t_19m_28s, UPRV_LENGTHOF(t_19m_28s), "19:28"},
+            {t_2y_5M_3w_4d, UPRV_LENGTHOF(t_2y_5M_3w_4d), "2y 5m 3w 4d"},
+            {t_0h_0m_9s, UPRV_LENGTHOF(t_0h_0m_9s), "0:00:09"},
+            {t_6h_56_92m, UPRV_LENGTHOF(t_6h_56_92m), "6:56.92"},
+            {t_6_7h_56_92m, UPRV_LENGTHOF(t_6_7h_56_92m), "6:56.92"},
+            {t_3h_4s_5m, UPRV_LENGTHOF(t_3h_4s_5m), "3h 4s 5m"},
+            {t_3h_5h, UPRV_LENGTHOF(t_3h_5h), "3h 5h"}};
 
     ExpectedResult fullDataDe[] = {
-            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1 Minute und 59,9996 Sekunden"},
-            {t_19m, LENGTHOF(t_19m), "19 Minuten"},
-            {t_1h_23_5s, LENGTHOF(t_1h_23_5s), "1 Stunde und 23,5 Sekunden"},
-            {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1 Stunde und 23,5 Minuten"},
-            {t_1h_0m_23s, LENGTHOF(t_1h_0m_23s), "1 Stunde, 0 Minuten und 23 Sekunden"},
-            {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2 Jahre, 5 Monate, 3 Wochen und 4 Tage"}};
+            {t_1m_59_9996s, UPRV_LENGTHOF(t_1m_59_9996s), "1 Minute und 59,9996 Sekunden"},
+            {t_19m, UPRV_LENGTHOF(t_19m), "19 Minuten"},
+            {t_1h_23_5s, UPRV_LENGTHOF(t_1h_23_5s), "1 Stunde und 23,5 Sekunden"},
+            {t_1h_23_5m, UPRV_LENGTHOF(t_1h_23_5m), "1 Stunde und 23,5 Minuten"},
+            {t_1h_0m_23s, UPRV_LENGTHOF(t_1h_0m_23s), "1 Stunde, 0 Minuten und 23 Sekunden"},
+            {t_2y_5M_3w_4d, UPRV_LENGTHOF(t_2y_5M_3w_4d), "2 Jahre, 5 Monate, 3 Wochen und 4 Tage"}};
 
     ExpectedResult numericDataDe[] = {
-            {t_1m_59_9996s, LENGTHOF(t_1m_59_9996s), "1:59,9996"},
-            {t_19m, LENGTHOF(t_19m), "19 Min."},
-            {t_1h_23_5s, LENGTHOF(t_1h_23_5s), "1:00:23,5"},
-            {t_1h_23_5m, LENGTHOF(t_1h_23_5m), "1:23,5"},
-            {t_1h_0m_23s, LENGTHOF(t_1h_0m_23s), "1:00:23"},
-            {t_5h_17m, LENGTHOF(t_5h_17m), "5:17"},
-            {t_19m_28s, LENGTHOF(t_19m_28s), "19:28"},
-            {t_2y_5M_3w_4d, LENGTHOF(t_2y_5M_3w_4d), "2 J, 5 M, 3 W und 4 T"},
-            {t_0h_0m_17s, LENGTHOF(t_0h_0m_17s), "0:00:17"},
-            {t_6h_56_92m, LENGTHOF(t_6h_56_92m), "6:56,92"},
-            {t_3h_5h, LENGTHOF(t_3h_5h), "3 Std., 5 Std."}};
+            {t_1m_59_9996s, UPRV_LENGTHOF(t_1m_59_9996s), "1:59,9996"},
+            {t_19m, UPRV_LENGTHOF(t_19m), "19 Min."},
+            {t_1h_23_5s, UPRV_LENGTHOF(t_1h_23_5s), "1:00:23,5"},
+            {t_1h_23_5m, UPRV_LENGTHOF(t_1h_23_5m), "1:23,5"},
+            {t_1h_0m_23s, UPRV_LENGTHOF(t_1h_0m_23s), "1:00:23"},
+            {t_5h_17m, UPRV_LENGTHOF(t_5h_17m), "5:17"},
+            {t_19m_28s, UPRV_LENGTHOF(t_19m_28s), "19:28"},
+            {t_2y_5M_3w_4d, UPRV_LENGTHOF(t_2y_5M_3w_4d), "2 J, 5 M, 3 W und 4 T"},
+            {t_0h_0m_17s, UPRV_LENGTHOF(t_0h_0m_17s), "0:00:17"},
+            {t_6h_56_92m, UPRV_LENGTHOF(t_6h_56_92m), "6:56,92"},
+            {t_3h_5h, UPRV_LENGTHOF(t_3h_5h), "3 Std., 5 Std."}};
 
     Locale en(Locale::getEnglish());
     LocalPointer<NumberFormat> nf(NumberFormat::createInstance(en, status));
@@ -495,34 +493,34 @@ void MeasureFormatTest::TestFormatPeriodEn() {
     if (!assertSuccess("Error creating measure format en WIDE", status)) {
         return;
     }
-    verifyFormat("en WIDE", mf, fullData, LENGTHOF(fullData));
+    verifyFormat("en WIDE", mf, fullData, UPRV_LENGTHOF(fullData));
 
     // exercise copy constructor
     {
         MeasureFormat mf2(mf);
-        verifyFormat("en WIDE copy", mf2, fullData, LENGTHOF(fullData));
+        verifyFormat("en WIDE copy", mf2, fullData, UPRV_LENGTHOF(fullData));
     }
     // exercise clone
     {
         MeasureFormat *mf3 = (MeasureFormat *) mf.clone();
-        verifyFormat("en WIDE copy", *mf3, fullData, LENGTHOF(fullData));
+        verifyFormat("en WIDE copy", *mf3, fullData, UPRV_LENGTHOF(fullData));
         delete mf3;
     }
     mf = MeasureFormat(en, UMEASFMT_WIDTH_SHORT, (NumberFormat *) nf->clone(), status);
     if (!assertSuccess("Error creating measure format en SHORT", status)) {
         return;
     }
-    verifyFormat("en SHORT", mf, abbrevData, LENGTHOF(abbrevData));
+    verifyFormat("en SHORT", mf, abbrevData, UPRV_LENGTHOF(abbrevData));
     mf = MeasureFormat(en, UMEASFMT_WIDTH_NARROW, (NumberFormat *) nf->clone(), status);
     if (!assertSuccess("Error creating measure format en NARROW", status)) {
         return;
     }
-    verifyFormat("en NARROW", mf, narrowData, LENGTHOF(narrowData));
+    verifyFormat("en NARROW", mf, narrowData, UPRV_LENGTHOF(narrowData));
     mf = MeasureFormat(en, UMEASFMT_WIDTH_NUMERIC, (NumberFormat *) nf->clone(), status);
     if (!assertSuccess("Error creating measure format en NUMERIC", status)) {
         return;
     }
-    verifyFormat("en NUMERIC", mf, numericData, LENGTHOF(numericData));
+    verifyFormat("en NUMERIC", mf, numericData, UPRV_LENGTHOF(numericData));
     
     Locale de(Locale::getGerman());
     nf.adoptInstead(NumberFormat::createInstance(de, status));
@@ -534,12 +532,12 @@ void MeasureFormatTest::TestFormatPeriodEn() {
     if (!assertSuccess("Error creating measure format de WIDE", status)) {
         return;
     }
-    verifyFormat("de WIDE", mf, fullDataDe, LENGTHOF(fullDataDe));
+    verifyFormat("de WIDE", mf, fullDataDe, UPRV_LENGTHOF(fullDataDe));
     mf = MeasureFormat(de, UMEASFMT_WIDTH_NUMERIC, (NumberFormat *) nf->clone(), status);
     if (!assertSuccess("Error creating measure format de NUMERIC", status)) {
         return;
     }
-    verifyFormat("de NUMERIC", mf, numericDataDe, LENGTHOF(numericDataDe));
+    verifyFormat("de NUMERIC", mf, numericDataDe, UPRV_LENGTHOF(numericDataDe));
 }
 
 void MeasureFormatTest::Test10219FractionalPlurals() {
@@ -550,8 +548,8 @@ void MeasureFormatTest::Test10219FractionalPlurals() {
             {"1 minute", "1.0 minutes", "1.01 minutes"}
     };
     UErrorCode status = U_ZERO_ERROR;
-    for (int j = 0; j < LENGTHOF(values); j++) {
-        for (int i = 0; i < LENGTHOF(expected[j]); i++) {
+    for (int j = 0; j < UPRV_LENGTHOF(values); j++) {
+        for (int i = 0; i < UPRV_LENGTHOF(expected[j]); i++) {
             DecimalFormat *df =
                 (DecimalFormat *) NumberFormat::createInstance(en, status);
             if (U_FAILURE(status)) {
@@ -599,6 +597,7 @@ void MeasureFormatTest::TestGreek() {
             UMEASFMT_WIDTH_SHORT};
     int32_t numbers[] = {1, 7};
     const char *expected[] = {
+        // "el_GR" 1 wide
         "1 \\u03B4\\u03B5\\u03C5\\u03C4\\u03B5\\u03C1\\u03CC\\u03BB\\u03B5\\u03C0\\u03C4\\u03BF",
         "1 \\u03BB\\u03B5\\u03C0\\u03C4\\u03CC",
         "1 \\u03CE\\u03C1\\u03B1",
@@ -606,13 +605,15 @@ void MeasureFormatTest::TestGreek() {
         "1 \\u03B5\\u03B2\\u03B4\\u03BF\\u03BC\\u03AC\\u03B4\\u03B1",
         "1 \\u03BC\\u03AE\\u03BD\\u03B1\\u03C2",
         "1 \\u03AD\\u03C4\\u03BF\\u03C2",
+        // "el_GR" 1 short
         "1 \\u03B4\\u03B5\\u03C5\\u03C4.",
         "1 \\u03BB\\u03B5\\u03C0.",
         "1 \\u03CE\\u03C1\\u03B1",
         "1 \\u03B7\\u03BC\\u03AD\\u03C1\\u03B1",
         "1 \\u03B5\\u03B2\\u03B4.",
         "1 \\u03BC\\u03AE\\u03BD.",
-        "1 \\u03AD\\u03C4\\u03BF\\u03C2",
+        "1 \\u03AD\\u03C4.",	        // year (one)
+        // "el_GR" 7 wide
         "7 \\u03B4\\u03B5\\u03C5\\u03C4\\u03B5\\u03C1\\u03CC\\u03BB\\u03B5\\u03C0\\u03C4\\u03B1",
         "7 \\u03BB\\u03B5\\u03C0\\u03C4\\u03AC",
         "7 \\u03CE\\u03C1\\u03B5\\u03C2",
@@ -620,13 +621,16 @@ void MeasureFormatTest::TestGreek() {
         "7 \\u03B5\\u03B2\\u03B4\\u03BF\\u03BC\\u03AC\\u03B4\\u03B5\\u03C2",
         "7 \\u03BC\\u03AE\\u03BD\\u03B5\\u03C2",
         "7 \\u03AD\\u03C4\\u03B7",
+        // "el_GR" 7 short
         "7 \\u03B4\\u03B5\\u03C5\\u03C4.",
         "7 \\u03BB\\u03B5\\u03C0.",
-        "7 \\u03CE\\u03C1\\u03B5\\u03C2",
+        "7 \\u03CE\\u03C1.",		    // hour (other)
         "7 \\u03B7\\u03BC\\u03AD\\u03C1\\u03B5\\u03C2",
         "7 \\u03B5\\u03B2\\u03B4.",
         "7 \\u03BC\\u03AE\\u03BD.",
-        "7 \\u03AD\\u03C4\\u03B7",
+        "7 \\u03AD\\u03C4.",            // year (other)
+
+        // "el" 1 wide
         "1 \\u03B4\\u03B5\\u03C5\\u03C4\\u03B5\\u03C1\\u03CC\\u03BB\\u03B5\\u03C0\\u03C4\\u03BF",
         "1 \\u03BB\\u03B5\\u03C0\\u03C4\\u03CC",
         "1 \\u03CE\\u03C1\\u03B1",
@@ -634,13 +638,15 @@ void MeasureFormatTest::TestGreek() {
         "1 \\u03B5\\u03B2\\u03B4\\u03BF\\u03BC\\u03AC\\u03B4\\u03B1",
         "1 \\u03BC\\u03AE\\u03BD\\u03B1\\u03C2",
         "1 \\u03AD\\u03C4\\u03BF\\u03C2",
+        // "el" 1 short
         "1 \\u03B4\\u03B5\\u03C5\\u03C4.",
         "1 \\u03BB\\u03B5\\u03C0.",
         "1 \\u03CE\\u03C1\\u03B1",
         "1 \\u03B7\\u03BC\\u03AD\\u03C1\\u03B1",
         "1 \\u03B5\\u03B2\\u03B4.",
         "1 \\u03BC\\u03AE\\u03BD.",
-        "1 \\u03AD\\u03C4\\u03BF\\u03C2",
+        "1 \\u03AD\\u03C4.",	        // year (one)
+        // "el" 7 wide
         "7 \\u03B4\\u03B5\\u03C5\\u03C4\\u03B5\\u03C1\\u03CC\\u03BB\\u03B5\\u03C0\\u03C4\\u03B1",
         "7 \\u03BB\\u03B5\\u03C0\\u03C4\\u03AC",
         "7 \\u03CE\\u03C1\\u03B5\\u03C2",
@@ -648,19 +654,20 @@ void MeasureFormatTest::TestGreek() {
         "7 \\u03B5\\u03B2\\u03B4\\u03BF\\u03BC\\u03AC\\u03B4\\u03B5\\u03C2",
         "7 \\u03BC\\u03AE\\u03BD\\u03B5\\u03C2",
         "7 \\u03AD\\u03C4\\u03B7",
+        // "el" 7 short
         "7 \\u03B4\\u03B5\\u03C5\\u03C4.",
         "7 \\u03BB\\u03B5\\u03C0.",
-        "7 \\u03CE\\u03C1\\u03B5\\u03C2",
+        "7 \\u03CE\\u03C1.",		    // hour (other)
         "7 \\u03B7\\u03BC\\u03AD\\u03C1\\u03B5\\u03C2",
         "7 \\u03B5\\u03B2\\u03B4.",
         "7 \\u03BC\\u03AE\\u03BD.",
-        "7 \\u03AD\\u03C4\\u03B7"};
+        "7 \\u03AD\\u03C4."};           // year (other)
 
     int32_t counter = 0;
-    for (int32_t locIndex = 0; locIndex < LENGTHOF(locales); ++locIndex ) {
-        for( int32_t numIndex = 0; numIndex < LENGTHOF(numbers); ++numIndex ) {
-            for ( int32_t styleIndex = 0; styleIndex < LENGTHOF(styles); ++styleIndex ) {
-                for ( int32_t unitIndex = 0; unitIndex < LENGTHOF(units); ++unitIndex ) {
+    for (int32_t locIndex = 0; locIndex < UPRV_LENGTHOF(locales); ++locIndex ) {
+        for( int32_t numIndex = 0; numIndex < UPRV_LENGTHOF(numbers); ++numIndex ) {
+            for ( int32_t styleIndex = 0; styleIndex < UPRV_LENGTHOF(styles); ++styleIndex ) {
+                for ( int32_t unitIndex = 0; unitIndex < UPRV_LENGTHOF(units); ++unitIndex ) {
                     Measure measure(numbers[numIndex], new MeasureUnit(units[unitIndex]), status);
                     if (!assertSuccess("Error creating Measure", status)) {
                         return;
@@ -712,7 +719,7 @@ void MeasureFormatTest::TestMultiples() {
     helperTestMultiples(en, UMEASFMT_WIDTH_SHORT, "2 mi, 1 ft, 2.3 in");
     helperTestMultiples(en, UMEASFMT_WIDTH_NARROW, "2mi 1\\u2032 2.3\\u2033");
     helperTestMultiples(ru, UMEASFMT_WIDTH_WIDE, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442 \\u0438 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
-    helperTestMultiples(ru, UMEASFMT_WIDTH_SHORT, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442, 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
+    helperTestMultiples(ru, UMEASFMT_WIDTH_SHORT, "2 \\u043C\\u0438\\u043B\\u0438, 1 \\u0444\\u0443\\u0442, 2,3 \\u0434\\u044E\\u0439\\u043C.");
     helperTestMultiples(ru, UMEASFMT_WIDTH_NARROW, "2 \\u043C\\u0438\\u043B\\u044C 1 \\u0444\\u0443\\u0442 2,3 \\u0434\\u044E\\u0439\\u043C\\u0430");
 }
 
@@ -734,7 +741,7 @@ void MeasureFormatTest::helperTestMultiples(
         return;
     }
     UnicodeString buffer;
-    fmt.formatMeasures(measures, LENGTHOF(measures), buffer, pos, status);
+    fmt.formatMeasures(measures, UPRV_LENGTHOF(measures), buffer, pos, status);
     if (!assertSuccess("Error formatting measures", status)) {
         return;
     }
@@ -857,7 +864,7 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
             fmt,
             prefix,
             first,
-            LENGTHOF(first),
+            UPRV_LENGTHOF(first),
             NumberFormat::kIntegerField,
             8,
             11);
@@ -866,7 +873,7 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
             fmt,
             prefix,
             second,
-            LENGTHOF(second),
+            UPRV_LENGTHOF(second),
             NumberFormat::kDecimalSeparatorField,
             23,
             24);
@@ -875,7 +882,7 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
             fmt,
             prefix,
             third,
-            LENGTHOF(third),
+            UPRV_LENGTHOF(third),
             NumberFormat::kDecimalSeparatorField,
             0,
             0);
@@ -966,7 +973,7 @@ void MeasureFormatTest::TestDoubleZero() {
     }
     nf->setMinimumFractionDigits(2);
     nf->setMaximumFractionDigits(2);
-    fmt.formatMeasures(measures, LENGTHOF(measures), appendTo, pos, status);
+    fmt.formatMeasures(measures, UPRV_LENGTHOF(measures), appendTo, pos, status);
     if (!assertSuccess("Error formatting", status)) {
         return;
     }
@@ -976,7 +983,7 @@ void MeasureFormatTest::TestDoubleZero() {
             appendTo);
     measures[0] = Measure(-4.7, MeasureUnit::createHour(status), status);
     appendTo.remove();
-    fmt.formatMeasures(measures, LENGTHOF(measures), appendTo, pos, status);
+    fmt.formatMeasures(measures, UPRV_LENGTHOF(measures), appendTo, pos, status);
     if (!assertSuccess("Error formatting", status)) {
         return;
     }

@@ -53,8 +53,6 @@
 #include "utf8collationiterator.h"
 #include "uvectr64.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_BEGIN
 
 namespace {
@@ -310,8 +308,8 @@ RuleBasedCollator::getLocale(ULocDataLocaleType type, UErrorCode& errorCode) con
     case ULOC_ACTUAL_LOCALE:
         return actualLocaleIsSameAsValid ? validLocale : tailoring->actualLocale;
     case ULOC_VALID_LOCALE:
-    case ULOC_REQUESTED_LOCALE:  // TODO: Drop this, see ticket #10477.
         return validLocale;
+    case ULOC_REQUESTED_LOCALE:
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return Locale::getRoot();
@@ -329,9 +327,9 @@ RuleBasedCollator::internalGetLocaleID(ULocDataLocaleType type, UErrorCode &erro
         result = actualLocaleIsSameAsValid ? &validLocale : &tailoring->actualLocale;
         break;
     case ULOC_VALID_LOCALE:
-    case ULOC_REQUESTED_LOCALE:  // TODO: Drop this, see ticket #10477.
         result = &validLocale;
         break;
+    case ULOC_REQUESTED_LOCALE:
     default:
         errorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return NULL;
@@ -705,7 +703,7 @@ void
 RuleBasedCollator::setFastLatinOptions(CollationSettings &ownedSettings) const {
     ownedSettings.fastLatinOptions = CollationFastLatin::getOptions(
             data, ownedSettings,
-            ownedSettings.fastLatinPrimaries, LENGTHOF(ownedSettings.fastLatinPrimaries));
+            ownedSettings.fastLatinPrimaries, UPRV_LENGTHOF(ownedSettings.fastLatinPrimaries));
 }
 
 UCollationResult
@@ -1594,21 +1592,21 @@ RuleBasedCollator::internalGetShortDefinitionString(const char *locale,
         appendAttribute(result, 'F', getAttribute(UCOL_FRENCH_COLLATION, errorCode), errorCode);
     }
     // Note: UCOL_HIRAGANA_QUATERNARY_MODE is deprecated and never changes away from default.
-    length = uloc_getKeywordValue(resultLocale, "collation", subtag, LENGTHOF(subtag), &errorCode);
+    length = uloc_getKeywordValue(resultLocale, "collation", subtag, UPRV_LENGTHOF(subtag), &errorCode);
     appendSubtag(result, 'K', subtag, length, errorCode);
-    length = uloc_getLanguage(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    length = uloc_getLanguage(resultLocale, subtag, UPRV_LENGTHOF(subtag), &errorCode);
     appendSubtag(result, 'L', subtag, length, errorCode);
     if(attributeHasBeenSetExplicitly(UCOL_NORMALIZATION_MODE)) {
         appendAttribute(result, 'N', getAttribute(UCOL_NORMALIZATION_MODE, errorCode), errorCode);
     }
-    length = uloc_getCountry(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    length = uloc_getCountry(resultLocale, subtag, UPRV_LENGTHOF(subtag), &errorCode);
     appendSubtag(result, 'R', subtag, length, errorCode);
     if(attributeHasBeenSetExplicitly(UCOL_STRENGTH)) {
         appendAttribute(result, 'S', getAttribute(UCOL_STRENGTH, errorCode), errorCode);
     }
-    length = uloc_getVariant(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    length = uloc_getVariant(resultLocale, subtag, UPRV_LENGTHOF(subtag), &errorCode);
     appendSubtag(result, 'V', subtag, length, errorCode);
-    length = uloc_getScript(resultLocale, subtag, LENGTHOF(subtag), &errorCode);
+    length = uloc_getScript(resultLocale, subtag, UPRV_LENGTHOF(subtag), &errorCode);
     appendSubtag(result, 'Z', subtag, length, errorCode);
 
     if(U_FAILURE(errorCode)) { return 0; }

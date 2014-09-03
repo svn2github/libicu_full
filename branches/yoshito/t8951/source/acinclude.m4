@@ -32,8 +32,18 @@ powerpc*-*-linux*)
 		icu_cv_host_frag=mh-linux-va
 	fi ;;
 *-*-linux*|*-*-gnu|*-*-k*bsd*-gnu|*-*-kopensolaris*-gnu) icu_cv_host_frag=mh-linux ;;
-i[[34567]]86-*-cygwin) icu_cv_host_frag=mh-cygwin ;;
-x86_64-*-cygwin) icu_cv_host_frag=mh-cygwin64 ;;
+i[[34567]]86-*-cygwin) 
+	if test "$GCC" = yes; then
+		icu_cv_host_frag=mh-cygwin
+	else
+		icu_cv_host_frag=mh-cygwin-msvc
+	fi ;;
+x86_64-*-cygwin) 
+	if test "$GCC" = yes; then
+		icu_cv_host_frag=mh-cygwin64
+	else
+		icu_cv_host_frag=mh-cygwin-msvc
+	fi ;;
 *-*-mingw*)
 	if test "$GCC" = yes; then
                 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
@@ -42,7 +52,10 @@ x86_64-*-cygwin) icu_cv_host_frag=mh-cygwin64 ;;
 #endif]])],                        [icu_cv_host_frag=mh-mingw64],
                                    [icu_cv_host_frag=mh-mingw])
 	else
-		icu_cv_host_frag=mh-cygwin-msvc
+	        case "${host}" in
+		*-*-mingw*) icu_cv_host_frag=mh-msys-msvc ;;
+		*-*-cygwin) icu_cv_host_frag=mh-cygwin-msvc ;;
+		esac
 	fi ;;
 *-*-*bsd*|*-*-dragonfly*) 	icu_cv_host_frag=mh-bsd-gcc ;;
 *-*-aix*)
@@ -471,7 +484,9 @@ AC_DEFUN([AC_CHECK_STRICT_COMPILE],
                 if test "`$CC /help 2>&1 | head -c9`" = "Microsoft"
                 then
                     CFLAGS="$CFLAGS /W4"
-                fi
+                fi ;;
+            *-*-mingw*)
+                CFLAGS="$CFLAGS -W4" ;;
             esac
         fi
         if test "$GXX" = yes
@@ -483,7 +498,9 @@ AC_DEFUN([AC_CHECK_STRICT_COMPILE],
                 if test "`$CXX /help 2>&1 | head -c9`" = "Microsoft"
                 then
                     CXXFLAGS="$CXXFLAGS /W4"
-                fi
+                fi ;;
+            *-*-mingw*)
+                CFLAGS="$CFLAGS -W4" ;;
             esac
         fi
     fi

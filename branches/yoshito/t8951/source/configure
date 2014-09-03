@@ -4119,7 +4119,9 @@ $as_echo "$ac_use_strict_options" >&6; }
                 if test "`$CC /help 2>&1 | head -c9`" = "Microsoft"
                 then
                     CFLAGS="$CFLAGS /W4"
-                fi
+                fi ;;
+            *-*-mingw*)
+                CFLAGS="$CFLAGS -W4" ;;
             esac
         fi
         if test "$GXX" = yes
@@ -4131,7 +4133,9 @@ $as_echo "$ac_use_strict_options" >&6; }
                 if test "`$CXX /help 2>&1 | head -c9`" = "Microsoft"
                 then
                     CXXFLAGS="$CXXFLAGS /W4"
-                fi
+                fi ;;
+            *-*-mingw*)
+                CFLAGS="$CFLAGS -W4" ;;
             esac
         fi
     fi
@@ -4892,8 +4896,18 @@ powerpc*-*-linux*)
 		icu_cv_host_frag=mh-linux-va
 	fi ;;
 *-*-linux*|*-*-gnu|*-*-k*bsd*-gnu|*-*-kopensolaris*-gnu) icu_cv_host_frag=mh-linux ;;
-i[34567]86-*-cygwin) icu_cv_host_frag=mh-cygwin ;;
-x86_64-*-cygwin) icu_cv_host_frag=mh-cygwin64 ;;
+i[34567]86-*-cygwin)
+	if test "$GCC" = yes; then
+		icu_cv_host_frag=mh-cygwin
+	else
+		icu_cv_host_frag=mh-cygwin-msvc
+	fi ;;
+x86_64-*-cygwin)
+	if test "$GCC" = yes; then
+		icu_cv_host_frag=mh-cygwin64
+	else
+		icu_cv_host_frag=mh-cygwin-msvc
+	fi ;;
 *-*-mingw*)
 	if test "$GCC" = yes; then
                 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -4917,7 +4931,10 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 	else
-		icu_cv_host_frag=mh-cygwin-msvc
+	        case "${host}" in
+		*-*-mingw*) icu_cv_host_frag=mh-msys-msvc ;;
+		*-*-cygwin) icu_cv_host_frag=mh-cygwin-msvc ;;
+		esac
 	fi ;;
 *-*-*bsd*|*-*-dragonfly*) 	icu_cv_host_frag=mh-bsd-gcc ;;
 *-*-aix*)
@@ -5159,7 +5176,7 @@ $as_echo "$enabled" >&6; }
 MSVC_RELEASE_FLAG=""
 if test $enabled = yes
 then
-    if test $icu_cv_host_frag = mh-cygwin-msvc
+    if test $icu_cv_host_frag = mh-cygwin-msvc -o $icu_cv_host_frag = mh-msys-msvc
     then
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */

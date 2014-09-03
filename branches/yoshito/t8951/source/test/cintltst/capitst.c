@@ -33,8 +33,6 @@
 #include "cstring.h"
 #include "ucol_imp.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 static void TestAttribute(void);
 static void TestDefault(void);
 static void TestDefaultKeyword(void);
@@ -1432,9 +1430,11 @@ void TestGetLocale() {
      * or may not be supported at all. See ticket #10477.
      */
     locale = ucol_getLocaleByType(coll, ULOC_REQUESTED_LOCALE, &status);
-    if(strcmp(locale, testStruct[i].requestedLocale) != 0 && strcmp(locale, testStruct[i].validLocale) != 0) {
+    if(U_SUCCESS(status) &&
+          strcmp(locale, testStruct[i].requestedLocale) != 0 && strcmp(locale, testStruct[i].validLocale) != 0) {
       log_err("[Coll %s]: Error in requested locale, expected %s, got %s\n", testStruct[i].requestedLocale, testStruct[i].requestedLocale, locale);
     }
+    status = U_ZERO_ERROR;
     locale = ucol_getLocaleByType(coll, ULOC_VALID_LOCALE, &status);
     if(strcmp(locale, testStruct[i].validLocale) != 0) {
       log_err("[Coll %s]: Error in valid locale, expected %s, got %s\n", testStruct[i].requestedLocale, testStruct[i].validLocale, locale);
@@ -1477,9 +1477,10 @@ void TestGetLocale() {
   /* collator instantiated from rules should have all three locales NULL */
   coll = ucol_openRules(rlz, rlzLen, UCOL_DEFAULT, UCOL_DEFAULT, NULL, &status);
   locale = ucol_getLocaleByType(coll, ULOC_REQUESTED_LOCALE, &status);
-  if(locale != NULL) {
+  if(U_SUCCESS(status) && locale != NULL) {
     log_err("For collator instantiated from rules, requested locale returned %s instead of NULL\n", locale);
   }
+  status = U_ZERO_ERROR;
   locale = ucol_getLocaleByType(coll, ULOC_VALID_LOCALE, &status);
   if(locale != NULL) {
     log_err("For collator instantiated from rules,  valid locale returned %s instead of NULL\n", locale);
@@ -1857,7 +1858,7 @@ void TestGetTailoredSet() {
   int32_t buffLen = 0;
   USet *set = NULL;
 
-  for(i = 0; i < LENGTHOF(setTest); i++) {
+  for(i = 0; i < UPRV_LENGTHOF(setTest); i++) {
     buffLen = u_unescape(setTest[i].rules, buff, 1024);
     coll = ucol_openRules(buff, buffLen, UCOL_DEFAULT, UCOL_DEFAULT, &pError, &status);
     if(U_SUCCESS(status)) {
@@ -2125,9 +2126,9 @@ doSetsTest(const char *locale, const USet *ref, USet *set, const char* inSet, co
     if(!uset_containsAll(ref, set)) {
         log_err("%s: Some stuff from %s is not present in the set\n", locale, inSet);
         uset_removeAll(set, ref);
-        bufLen = uset_toPattern(set, buffer, LENGTHOF(buffer), TRUE, status);
+        bufLen = uset_toPattern(set, buffer, UPRV_LENGTHOF(buffer), TRUE, status);
         log_info("    missing: %s\n", aescstrdup(buffer, bufLen));
-        bufLen = uset_toPattern(ref, buffer, LENGTHOF(buffer), TRUE, status);
+        bufLen = uset_toPattern(ref, buffer, UPRV_LENGTHOF(buffer), TRUE, status);
         log_info("    total: size=%i  %s\n", uset_getItemCount(ref), aescstrdup(buffer, bufLen));
     }
 
@@ -2424,7 +2425,7 @@ static void TestGetKeywordValuesForLocale(void) {
     const char *locale = NULL, *value = NULL;
     UBool errorOccurred = FALSE;
 
-    for (i = 0; i < LENGTHOF(PREFERRED) && !errorOccurred; i++) {
+    for (i = 0; i < UPRV_LENGTHOF(PREFERRED) && !errorOccurred; i++) {
         locale = PREFERRED[i][0];
         value = NULL;
         valueLength = 0;
