@@ -1832,6 +1832,15 @@ static void TestTZDataDir(void) {
     // The desired path to the individual time zone resource files is 
     //     whatever/.../testdata/out/build
     // printf("Test data path: %s\n", testDataPath);
+
+    ctest_resetICU();
+    u_setTimeZoneFilesDirectory(testDataPath, &status);
+    tzDataVersion = ucal_getTZDataVersion(&status);
+    if (strcmp("2014a", tzDataVersion) != 0) {
+        log_err("File %s:%d - expected \"2014a\"; actual \"%s\"", __FILE__, __LINE__, tzDataVersion);
+    }
+
+#if 0
     len = strlen(testDataPath);
     if (U_FAILURE(status) || len < 20 ||
             strncmp(testDataPath+len- 8, "testdata", 8) != 0 ||
@@ -1856,5 +1865,6 @@ static void TestTZDataDir(void) {
     }
 
     free(zonePath);
+#endif
     ctest_resetICU();   // Return ICU to using its standard tz data.
 }
