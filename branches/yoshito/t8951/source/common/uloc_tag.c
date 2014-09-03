@@ -421,17 +421,6 @@ ultag_isUnicodeLocaleKey(const char* s, int32_t len) {
     return FALSE;
 }
 
-static UBool
-_isUnicodeLocaleTypeSubtag(const char* s, int32_t len) {
-    if (len < 0) {
-        len = (int32_t)uprv_strlen(s);
-    }
-    if (len >= 3 && len <= 8 && _isAlphaNumericString(s, len)) {
-        return TRUE;
-    }
-    return FALSE;
-}
-
 U_CFUNC UBool
 ultag_isUnicodeLocaleType(const char*s, int32_t len) {
     const char* p;

@@ -280,6 +280,10 @@ initFromResourceBundle(UErrorCode& sts) {
                 }
                 t->bcpId = bcpTypeId;
                 t->legacyId = legacyTypeId;
+                gLocExtTypeEntries->addElement((void*)t, sts);
+                if (U_FAILURE(sts)) {
+                    break;
+                }
 
                 uhash_put(typeDataMap, (void*)legacyTypeId, t, &sts);
                 if (bcpTypeId != legacyTypeId) {
@@ -386,6 +390,11 @@ initFromResourceBundle(UErrorCode& sts) {
         keyData->specialTypes = specialTypes;
         keyData->typeMap = typeDataMap;
 
+        gLocExtKeyDataEntries->addElement((void*)keyData, sts);
+        if (U_FAILURE(sts)) {
+            break;
+        }
+
         uhash_put(gLocExtKeyMap, (void*)legacyKeyId, keyData, &sts);
         if (legacyKeyId != bcpKeyId) {
             // different key value
@@ -426,7 +435,8 @@ isSpecialTypeCodepoints(const char* val) {
                 return FALSE;
             }
             subtagLen = 0;
-        } else if ('0' <= *p && *p <= '9' || 'A' <= *p && *p <= 'F' || 'a' <= *p && *p <= 'f') {
+        } else if (('0' <= *p && *p <= '9') ||
+                    ('A' <= *p && *p <= 'F') || ('a' <= *p && *p <= 'f')) {
             subtagLen++;
         } else {
             return FALSE;
@@ -446,7 +456,7 @@ isSpecialTypeReorderCode(const char* val) {
                 return FALSE;
             }
             subtagLen = 0;
-        } else if ('A' <= *p && *p <= 'Z' || 'a' <= *p && *p <= 'z') {
+        } else if (('A' <= *p && *p <= 'Z') || ('a' <= *p && *p <= 'z')) {
             subtagLen++;
         } else {
             return FALSE;
