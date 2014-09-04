@@ -1817,16 +1817,24 @@ static void SetBadCommonData(void) {
 }
 
 // Check the override loading of time zone .res files from a specified path
+//
+// Hand testing notes: 
+//   1. Run this test with the environment variable set. The following should induce faiures:
+//        ICU_TIMEZONE_FILES_DIR=../testdata/out/build LD_LIBRARY_PATH=../../lib:../../stubdata:../../tools/ctestfw:$LD_LIBRARY_PATH  ./cintltst /udatatst/TestTZDataDir
+//   2. Build ICU with with U_TIMEZONE_FILES_DIR defined. This should also induce failures.
+//        CPPFLAGS=-DU_TIMEZONE_FILES_DIR\=`pwd`/test/testdata/out/testdata ./runConfigureICU Linux
+//        make check
 
 static void TestTZDataDir(void) {
     UErrorCode status = U_ZERO_ERROR;
     const char *tzDataVersion;
     const char *testDataPath;
 
+    // Verify that default ICU time zone data version is something newer than 2014a.
     tzDataVersion = ucal_getTZDataVersion(&status);
     // printf("tz data version is %s\n", tzDataVersion);
     if (strcmp("2014a", tzDataVersion) == 0) {
-        log_err("File %s:%d - expected something newer than time zone data 2014a.", __FILE__, __LINE__, tzDataVersion);
+        log_err("File %s:%d - expected something newer than time zone data 2014a.\n", __FILE__, __LINE__, tzDataVersion);
     }
 
     testDataPath = loadTestData(&status);
@@ -1834,12 +1842,18 @@ static void TestTZDataDir(void) {
     //     whatever/.../testdata/out/testdata
     // The test data puts an old (2014a) version of the time zone data there.
 
+    // Switch ICU to the testdata version of zoneinfo64.res, which is verison 2014a.
     ctest_resetICU();
     u_setTimeZoneFilesDirectory(testDataPath, &status);
     tzDataVersion = ucal_getTZDataVersion(&status);
     if (strcmp("2014a", tzDataVersion) != 0) {
-        log_err("File %s:%d - expected \"2014a\"; actual \"%s\"", __FILE__, __LINE__, tzDataVersion);
+        log_err("File %s:%d - expected \"2014a\"; actual \"%s\"\n", __FILE__, __LINE__, tzDataVersion);
     }
 
     ctest_resetICU();   // Return ICU to using its standard tz data.
+    tzDataVersion = ucal_getTZDataVersion(&status);
+    // printf("tz data version is %s\n", tzDataVersion);
+    if (strcmp("2014a", tzDataVersion) == 0) {
+        log_err("File %s:%d - expected something newer than time zone data 2014a.\n", __FILE__, __LINE__, tzDataVersion);
+    }
 }

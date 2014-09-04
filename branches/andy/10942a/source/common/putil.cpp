@@ -1302,13 +1302,16 @@ static void setTimeZoneFilesDir(const char *path, UErrorCode &status) {
     }
     gTimeZoneFilesDirectory->clear();
     gTimeZoneFilesDirectory->append(path, status);
-    #if (U_FILE_SEP_CHAR != U_FILE_ALT_SEP_CHAR)
-        char *p = gTimeZoneFilesDirectory->data();
-        while (p = uprv_strchr(p, U_FILE_ALT_SEP_CHAR)) {
-            *p = U_FILE_SEP_CHAR;
-        }
-    #endif
+#if (U_FILE_SEP_CHAR != U_FILE_ALT_SEP_CHAR)
+    char *p = gTimeZoneFilesDirectory->data();
+    while (p = uprv_strchr(p, U_FILE_ALT_SEP_CHAR)) {
+        *p = U_FILE_SEP_CHAR;
+    }
+#endif
 }
+
+#define TO_STRING(x) TO_STRING_2(x) 
+#define TO_STRING_2(x) #x
 
 static void U_CALLCONV TimeZoneDataDirInitFn(UErrorCode &status) {
     U_ASSERT(gTimeZoneFilesDirectory == NULL);
@@ -1319,11 +1322,12 @@ static void U_CALLCONV TimeZoneDataDirInitFn(UErrorCode &status) {
         return;
     }
     const char *dir = getenv("ICU_TIMEZONE_FILES_DIR");
+#if defined(U_TIMEZONE_FILES_DIR)
     if (dir == NULL) {
-#if defined U_TIMEZONE_FILES_DIR
-        dir = #U_TIMEZONE_FILES_DIR;
+        dir = TO_STRING(U_TIMEZONE_FILES_DIR);
+    }
 #endif
-    } else {
+    if (dir == NULL) {
         dir = "";
     }
     setTimeZoneFilesDir(dir, status);
