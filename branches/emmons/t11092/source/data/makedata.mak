@@ -368,6 +368,27 @@ ZONE_RES_FILES = zone\pool.res $(ZONE_RES_FILES:zone\ =zone\)
 ALL_RES = $(ALL_RES) zone\res_index.res
 !ENDIF
 
+# Read the list of units display name resource bundle files
+!IF EXISTS("$(ICUSRCDATA)\unit\resfiles.mk")
+!INCLUDE "$(ICUSRCDATA)\unit\resfiles.mk"
+!IF EXISTS("$(ICUSRCDATA)\unit\reslocal.mk")
+!INCLUDE "$(ICUSRCDATA)\unit\reslocal.mk"
+UNIT_SOURCE=$(UNIT_SOURCE) $(UNIT_SOURCE_LOCAL)
+!ELSE
+!MESSAGE Information: cannot find "unit\reslocal.mk". Not building user-additional resource bundle files.
+!ENDIF
+!ELSE
+!MESSAGE Warning: cannot find "unit\resfiles.mk"
+!ENDIF
+
+!IFDEF UNIT_SOURCE
+UNIT_FILES = unit\root.txt $(UNIT_ALIAS_SOURCE) $(UNIT_SOURCE)
+UNIT_RES_FILES = $(UNIT_FILES:.txt =.res unit\)
+UNIT_RES_FILES = $(UNIT_RES_FILES:.txt=.res)
+UNIT_RES_FILES = unit\pool.res $(UNIT_RES_FILES:unit\ =unit\)
+ALL_RES = $(ALL_RES) unit\res_index.res
+!ENDIF
+
 # Read the list of collation resource bundle files
 !IF EXISTS("$(ICUSRCDATA)\$(ICUCOL)\colfiles.mk")
 !INCLUDE "$(ICUSRCDATA)\$(ICUCOL)\colfiles.mk"
