@@ -196,8 +196,8 @@ class U_I18N_API MeasureFormat : public Format {
      * formatted string is 3 meters, 3.5 centimeters per second.
      * @param measures array of measure objects.
      * @param measureCount the number of measure objects.
-     * @param adoptedPerUnit The per unit. In the example formatted string,
-     *        it is MeasureUnit::createSecond(status).
+     * @param perUnit The per unit. In the example formatted string,
+     *        it is *MeasureUnit::createSecond(status).
      * @param appendTo formatted string appended here.
      * @param pos the field position.
      * @param status the error.
@@ -208,7 +208,7 @@ class U_I18N_API MeasureFormat : public Format {
     UnicodeString &formatMeasuresPer(
             const Measure *measures,
             int32_t measureCount,
-            MeasureUnit *adoptedPerUnit,
+            const MeasureUnit &perUnit,
             UnicodeString &appendTo,
             FieldPosition &pos,
             UErrorCode &status) const;

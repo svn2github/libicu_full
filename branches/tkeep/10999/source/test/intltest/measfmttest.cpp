@@ -908,7 +908,7 @@ void MeasureFormatTest::helperTestMultiplesWithPer(
     fmt.formatMeasuresPer(
             measures,
             UPRV_LENGTHOF(measures),
-            (MeasureUnit *) perUnit.clone(),
+            perUnit,
             buffer,
             pos,
             status);
@@ -1346,7 +1346,7 @@ void MeasureFormatTest::verifyFieldPositionWithPer(
     fmt.formatMeasuresPer(
             measures,
             measureCount,
-            (MeasureUnit *) perUnit.clone(),
+            perUnit,
             result,
             pos,
             status);

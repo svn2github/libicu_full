@@ -595,17 +595,16 @@ void MeasureFormat::parseObject(
 UnicodeString &MeasureFormat::formatMeasuresPer(
         const Measure *measures,
         int32_t measureCount,
-        MeasureUnit *adoptedPerUnit,
+        const MeasureUnit &perUnit,
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const {
-    LocalPointer<MeasureUnit> perUnit(adoptedPerUnit);
     FieldPosition fpos(pos.getField());
     UnicodeString measuresString;
     int32_t offset = withPerUnit(
             formatMeasures(
                     measures, measureCount, measuresString, fpos, status),
-            *perUnit,
+            perUnit,
             appendTo,
             status);
     if (U_FAILURE(status)) {
