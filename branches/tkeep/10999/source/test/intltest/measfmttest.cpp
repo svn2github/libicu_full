@@ -47,6 +47,7 @@ private:
     void TestGreek();
     void TestFormatSingleArg();
     void TestFormatMeasuresZeroArg();
+    void TestMultiplesWithPer();
     void TestMultiples();
     void TestGram();
     void TestCurrencies();
@@ -74,6 +75,11 @@ private:
         const MeasureFormat &fmt,
         const ExpectedResult *expectedResults,
         int32_t count);
+    void helperTestMultiplesWithPer(
+        const Locale &locale,
+        UMeasureFormatWidth width,
+        const MeasureUnit &unit,
+        const char *expected);
     void helperTestMultiples(
         const Locale &locale,
         UMeasureFormatWidth width,
@@ -105,6 +111,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestGreek);
     TESTCASE_AUTO(TestFormatSingleArg);
     TESTCASE_AUTO(TestFormatMeasuresZeroArg);
+    TESTCASE_AUTO(TestMultiplesWithPer);
     TESTCASE_AUTO(TestMultiples);
     TESTCASE_AUTO(TestGram);
     TESTCASE_AUTO(TestCurrencies);
@@ -839,6 +846,63 @@ void MeasureFormatTest::TestFormatMeasuresZeroArg() {
     UErrorCode status = U_ZERO_ERROR;
     MeasureFormat fmt("en", UMEASFMT_WIDTH_WIDE, status);
     verifyFormat("TestFormatMeasuresZeroArg", fmt, NULL, 0, "");
+}
+
+void MeasureFormatTest::TestMultiplesWithPer() {
+    Locale en("en");
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureUnit *second = MeasureUnit::createSecond(status);
+    MeasureUnit *minute = MeasureUnit::createMinute(status);
+    assertSuccess("", status);
+    helperTestMultiplesWithPer(
+            en, UMEASFMT_WIDTH_WIDE, *second, "2 miles, 1 foot, 2.3 inches per second");
+    helperTestMultiplesWithPer(
+            en, UMEASFMT_WIDTH_SHORT, *second, "2 mi, 1 ft, 2.3 inps");
+    helperTestMultiplesWithPer(
+            en, UMEASFMT_WIDTH_NARROW, *second, "2mi 1\\u2032 2.3\\u2033/s");
+    helperTestMultiplesWithPer(
+            en, UMEASFMT_WIDTH_WIDE, *minute, "2 miles, 1 foot, 2.3 inches per minute");
+    helperTestMultiplesWithPer(
+            en, UMEASFMT_WIDTH_SHORT, *minute, "2 mi, 1 ft, 2.3 in/min");
+    helperTestMultiplesWithPer(
+            en, UMEASFMT_WIDTH_NARROW, *minute, "2mi 1\\u2032 2.3\\u2033/m");
+    delete second;
+    delete minute;
+}
+
+void MeasureFormatTest::helperTestMultiplesWithPer(
+        const Locale &locale,
+        UMeasureFormatWidth width,
+        const MeasureUnit &perUnit,
+        const char *expected) {
+    UErrorCode status = U_ZERO_ERROR;
+    FieldPosition pos(0);
+    MeasureFormat fmt(locale, width, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    Measure measures[] = {
+            Measure(2, MeasureUnit::createMile(status), status),
+            Measure(1, MeasureUnit::createFoot(status), status),
+            Measure(2.3, MeasureUnit::createInch(status), status)};
+    if (!assertSuccess("Error creating measures", status)) {
+        return;
+    }
+    UnicodeString buffer;
+    fmt.formatMeasuresPer(
+            measures,
+            UPRV_LENGTHOF(measures),
+            new MeasureUnit(perUnit),
+            buffer,
+            pos,
+            status);
+    if (!assertSuccess("Error formatting measures with per", status)) {
+        return;
+    }
+    assertEquals(
+            "TestMultiplesWithPer",
+            UnicodeString(expected).unescape(),
+            buffer);
 }
 
 void MeasureFormatTest::TestMultiples() {

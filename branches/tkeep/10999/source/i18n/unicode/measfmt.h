@@ -73,12 +73,14 @@ typedef enum UMeasureFormatWidth UMeasureFormatWidth;
 U_NAMESPACE_BEGIN
 
 class Measure;
+class MeasureUnit;
 class NumberFormat;
 class PluralRules;
 class MeasureFormatCacheData;
 class SharedNumberFormat;
 class SharedPluralRules;
 class QuantityFormatter;
+class SimplePatternFormatter;
 class ListFormatter;
 class DateFormat;
 
@@ -185,6 +187,14 @@ class U_I18N_API MeasureFormat : public Format {
     UnicodeString &formatMeasures(
             const Measure *measures,
             int32_t measureCount,
+            UnicodeString &appendTo,
+            FieldPosition &pos,
+            UErrorCode &status) const;
+
+    UnicodeString &formatMeasuresPer(
+            const Measure *measures,
+            int32_t measureCount,
+            MeasureUnit *adoptedPerUnit,
             UnicodeString &appendTo,
             FieldPosition &pos,
             UErrorCode &status) const;
@@ -317,6 +327,20 @@ class U_I18N_API MeasureFormat : public Format {
             int32_t index,
             int32_t widthIndex,
             UErrorCode &status) const;
+
+    const SimplePatternFormatter *getPerUnitFormatter(
+            int32_t index,
+            int32_t widthIndex) const;
+
+    const SimplePatternFormatter *getPerFormatter(
+            int32_t widthIndex,
+            UErrorCode &status) const;
+
+    int32_t withPerUnit(
+        const UnicodeString &formatted,
+        const MeasureUnit &perUnit,
+        UnicodeString &appendTo,
+        UErrorCode &status) const;
 
     UnicodeString &formatMeasure(
         const Measure &measure,
