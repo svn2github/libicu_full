@@ -191,6 +191,20 @@ class U_I18N_API MeasureFormat : public Format {
             FieldPosition &pos,
             UErrorCode &status) const;
 
+    /**
+     * Works like formatMeasures but adds a per unit. An example of such a
+     * formatted string is 3 meters, 3.5 centimeters per second.
+     * @param measures array of measure objects.
+     * @param measureCount the number of measure objects.
+     * @param adoptedPerUnit The per unit. In the example formatted string,
+     *        it is MeasureUnit::createSecond(status).
+     * @param appendTo formatted string appended here.
+     * @param pos the field position.
+     * @param status the error.
+     * @return appendTo reference
+     *
+     * @draft ICU 54
+     */
     UnicodeString &formatMeasuresPer(
             const Measure *measures,
             int32_t measureCount,

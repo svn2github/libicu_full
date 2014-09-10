@@ -868,12 +868,16 @@ void MeasureFormatTest::TestMultiplesWithPer() {
     if (!assertSuccess("", status)) {
         return;
     }
+
+    // Per unit test.
     helperTestMultiplesWithPer(
             en, UMEASFMT_WIDTH_WIDE, *second, "2 miles, 1 foot, 2.3 inches per second");
     helperTestMultiplesWithPer(
             en, UMEASFMT_WIDTH_SHORT, *second, "2 mi, 1 ft, 2.3 inps");
     helperTestMultiplesWithPer(
             en, UMEASFMT_WIDTH_NARROW, *second, "2mi 1\\u2032 2.3\\u2033/s");
+
+    // Fallback compound per test
     helperTestMultiplesWithPer(
             en, UMEASFMT_WIDTH_WIDE, *minute, "2 miles, 1 foot, 2.3 inches per minute");
     helperTestMultiplesWithPer(
