@@ -53,6 +53,7 @@ private:
     void TestCurrencies();
     void TestFieldPosition();
     void TestFieldPositionMultiple();
+    void TestFieldPositionMultipleWithPer();
     void TestBadArg();
     void TestEquality();
     void TestGroupingSeparator();
@@ -93,6 +94,16 @@ private:
         NumberFormat::EAlignmentFields field,
         int32_t start,
         int32_t end);
+    void verifyFieldPositionWithPer(
+        const char *description,
+        const MeasureFormat &fmt,
+        const UnicodeString &prefix,
+        const Measure *measures,
+        int32_t measureCount,
+        const MeasureUnit &perUnit,
+        NumberFormat::EAlignmentFields field,
+        int32_t start,
+        int32_t end);
 };
 
 void MeasureFormatTest::runIndexedTest(
@@ -117,6 +128,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestCurrencies);
     TESTCASE_AUTO(TestFieldPosition);
     TESTCASE_AUTO(TestFieldPositionMultiple);
+    TESTCASE_AUTO(TestFieldPositionMultipleWithPer);
     TESTCASE_AUTO(TestBadArg);
     TESTCASE_AUTO(TestEquality);
     TESTCASE_AUTO(TestGroupingSeparator);
@@ -851,9 +863,11 @@ void MeasureFormatTest::TestFormatMeasuresZeroArg() {
 void MeasureFormatTest::TestMultiplesWithPer() {
     Locale en("en");
     UErrorCode status = U_ZERO_ERROR;
-    MeasureUnit *second = MeasureUnit::createSecond(status);
-    MeasureUnit *minute = MeasureUnit::createMinute(status);
-    assertSuccess("", status);
+    LocalPointer<MeasureUnit> second(MeasureUnit::createSecond(status));
+    LocalPointer<MeasureUnit> minute(MeasureUnit::createMinute(status));
+    if (!assertSuccess("", status)) {
+        return;
+    }
     helperTestMultiplesWithPer(
             en, UMEASFMT_WIDTH_WIDE, *second, "2 miles, 1 foot, 2.3 inches per second");
     helperTestMultiplesWithPer(
@@ -866,8 +880,6 @@ void MeasureFormatTest::TestMultiplesWithPer() {
             en, UMEASFMT_WIDTH_SHORT, *minute, "2 mi, 1 ft, 2.3 in/min");
     helperTestMultiplesWithPer(
             en, UMEASFMT_WIDTH_NARROW, *minute, "2mi 1\\u2032 2.3\\u2033/m");
-    delete second;
-    delete minute;
 }
 
 void MeasureFormatTest::helperTestMultiplesWithPer(
@@ -892,7 +904,7 @@ void MeasureFormatTest::helperTestMultiplesWithPer(
     fmt.formatMeasuresPer(
             measures,
             UPRV_LENGTHOF(measures),
-            new MeasureUnit(perUnit),
+            (MeasureUnit *) perUnit.clone(),
             buffer,
             pos,
             status);
@@ -1081,6 +1093,99 @@ void MeasureFormatTest::TestFieldPositionMultiple() {
             0);
 }
 
+void MeasureFormatTest::TestFieldPositionMultipleWithPer() {
+    UErrorCode status = U_ZERO_ERROR;
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+    Measure first[] = {
+            Measure(354, MeasureUnit::createMeter(status), status),
+            Measure(23, MeasureUnit::createCentimeter(status), status)};
+    Measure second[] = {
+            Measure(354, MeasureUnit::createMeter(status), status),
+            Measure(23, MeasureUnit::createCentimeter(status), status),
+            Measure(5.4, MeasureUnit::createMillimeter(status), status)};
+    Measure third[] = {
+            Measure(3, MeasureUnit::createMeter(status), status),
+            Measure(23, MeasureUnit::createCentimeter(status), status),
+            Measure(5, MeasureUnit::createMillimeter(status), status)};
+    if (!assertSuccess("Error creating measure objects", status)) {
+        return;
+    }
+    UnicodeString prefix("123456: ");
+
+    LocalPointer<MeasureUnit> secondUnit(MeasureUnit::createSecond(status));
+    LocalPointer<MeasureUnit> minuteUnit(MeasureUnit::createMinute(status));
+    if (!assertSuccess("Error creating format object", status)) {
+        return;
+    }
+
+    // per unit test
+    verifyFieldPositionWithPer(
+            "Integer",
+            fmt,
+            prefix,
+            first,
+            UPRV_LENGTHOF(first),
+            *secondUnit,
+            NumberFormat::kIntegerField,
+            8,
+            11);
+    verifyFieldPositionWithPer(
+            "Decimal separator",
+            fmt,
+            prefix,
+            second,
+            UPRV_LENGTHOF(second),
+            *secondUnit,
+            NumberFormat::kDecimalSeparatorField,
+            23,
+            24);
+    verifyFieldPositionWithPer(
+            "no decimal separator",
+            fmt,
+            prefix,
+            third,
+            UPRV_LENGTHOF(third),
+            *secondUnit,
+            NumberFormat::kDecimalSeparatorField,
+            0,
+            0);
+
+    // Fallback to compound per test
+    verifyFieldPositionWithPer(
+            "Integer",
+            fmt,
+            prefix,
+            first,
+            UPRV_LENGTHOF(first),
+            *minuteUnit,
+            NumberFormat::kIntegerField,
+            8,
+            11);
+    verifyFieldPositionWithPer(
+            "Decimal separator",
+            fmt,
+            prefix,
+            second,
+            UPRV_LENGTHOF(second),
+            *minuteUnit,
+            NumberFormat::kDecimalSeparatorField,
+            23,
+            24);
+    verifyFieldPositionWithPer(
+            "no decimal separator",
+            fmt,
+            prefix,
+            third,
+            UPRV_LENGTHOF(third),
+            *minuteUnit,
+            NumberFormat::kDecimalSeparatorField,
+            0,
+            0);
+}
+
 void MeasureFormatTest::TestBadArg() {
     UErrorCode status = U_ZERO_ERROR;
     MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
@@ -1207,6 +1312,40 @@ void MeasureFormatTest::verifyFieldPosition(
     CharString endIndex;
     endIndex.append(descPrefix, status).append("endIndex", status);
     fmt.formatMeasures(measures, measureCount, result, pos, status);
+    if (!assertSuccess("Error formatting", status)) {
+        return;
+    }
+    assertEquals(beginIndex.data(), start, pos.getBeginIndex());
+    assertEquals(endIndex.data(), end, pos.getEndIndex());
+}
+
+void MeasureFormatTest::verifyFieldPositionWithPer(
+        const char *description,
+        const MeasureFormat &fmt,
+        const UnicodeString &prefix,
+        const Measure *measures,
+        int32_t measureCount,
+        const MeasureUnit &perUnit,
+        NumberFormat::EAlignmentFields field,
+        int32_t start,
+        int32_t end) {
+    UnicodeString result(prefix);
+    FieldPosition pos(field);
+    UErrorCode status = U_ZERO_ERROR;
+    CharString ch;
+    const char *descPrefix = ch.append(description, status)
+            .append(": ", status).data();
+    CharString beginIndex;
+    beginIndex.append(descPrefix, status).append("beginIndex", status);
+    CharString endIndex;
+    endIndex.append(descPrefix, status).append("endIndex", status);
+    fmt.formatMeasuresPer(
+            measures,
+            measureCount,
+            (MeasureUnit *) perUnit.clone(),
+            result,
+            pos,
+            status);
     if (!assertSuccess("Error formatting", status)) {
         return;
     }
