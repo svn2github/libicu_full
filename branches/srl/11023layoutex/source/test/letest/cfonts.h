@@ -4,6 +4,8 @@
  *
  */
 
+#ifndef USING_ICULEHB /* C API not available under HB */
+
 #ifndef __CFONTS_H
 #define __CFONTS_H
 
@@ -29,4 +31,5 @@ void le_deleteUnicodeNameString(le_font *font, const LEUnicode16 *name);
 
 le_uint32 le_getFontChecksum(le_font *font);
 
+#endif
 #endif
