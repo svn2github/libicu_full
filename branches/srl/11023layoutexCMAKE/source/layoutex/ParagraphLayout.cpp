@@ -21,8 +21,14 @@
 
 #if ! UCONFIG_NO_BREAK_ITERATION
 #include "LXUtilities.h"
+#ifdef U_LAYOUTEX_HAVE_COMMON
 #include "usc_impl.h" /* this is currently private! */
 #include "cstring.h"  /* this too! */
+#else
+/* standalone - without icuuc internals */
+#include "../common/usc_impl.h"
+#include "../common/cstring.h"
+#endif
 
 #include "layout/ParagraphLayout.h"
 
