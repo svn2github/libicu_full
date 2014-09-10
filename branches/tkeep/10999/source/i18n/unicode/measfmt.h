@@ -190,7 +190,9 @@ class U_I18N_API MeasureFormat : public Format {
             UnicodeString &appendTo,
             FieldPosition &pos,
             UErrorCode &status) const;
+#endif  /* U_HIDE_DRAFT_API */
 
+#ifndef U_HIDE_INTERNAL_API
     /**
      * Works like formatMeasures but adds a per unit. An example of such a
      * formatted string is 3 meters, 3.5 centimeters per second.
@@ -203,7 +205,7 @@ class U_I18N_API MeasureFormat : public Format {
      * @param status the error.
      * @return appendTo reference
      *
-     * @draft ICU 54
+     * @internal
      */
     UnicodeString &formatMeasuresPer(
             const Measure *measures,
@@ -212,8 +214,7 @@ class U_I18N_API MeasureFormat : public Format {
             UnicodeString &appendTo,
             FieldPosition &pos,
             UErrorCode &status) const;
-#endif  /* U_HIDE_DRAFT_API */
-
+#endif /* U_HIDE_INTERNAL_API */
 
     /**
      * Return a formatter for CurrencyAmount objects in the given
