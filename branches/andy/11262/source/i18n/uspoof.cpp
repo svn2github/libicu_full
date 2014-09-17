@@ -414,15 +414,17 @@ uspoof_areConfusableUnicodeString(const USpoofChecker *sc,
     }
     identifierInfo->setIdentifier(id1, *status);
     int32_t id1ScriptCount = identifierInfo->getScriptCount();
+    int32_t id1FirstScript = identifierInfo->getScripts()->nextSetBit(0);
     identifierInfo->setIdentifier(id2, *status);
     int32_t id2ScriptCount = identifierInfo->getScriptCount();
+    int32_t id2FirstScript = identifierInfo->getScripts()->nextSetBit(0);
     This->releaseIdentifierInfo(identifierInfo);
     identifierInfo = NULL;
 
     if (This->fChecks & USPOOF_SINGLE_SCRIPT_CONFUSABLE) {
         UnicodeString   id1Skeleton;
         UnicodeString   id2Skeleton;
-        if (id1ScriptCount <= 1 && id2ScriptCount <= 1) {
+        if (id1ScriptCount <= 1 && id2ScriptCount <= 1 && id1FirstScript == id2FirstScript) {
             flagsForSkeleton |= USPOOF_SINGLE_SCRIPT_CONFUSABLE;
             uspoof_getSkeletonUnicodeString(sc, flagsForSkeleton, id1, id1Skeleton, status);
             uspoof_getSkeletonUnicodeString(sc, flagsForSkeleton, id2, id2Skeleton, status);
