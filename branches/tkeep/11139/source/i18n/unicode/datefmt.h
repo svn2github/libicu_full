@@ -817,6 +817,7 @@ private:
 
 
     UDisplayContext fCapitalizationContext;
+    friend class DateFmtKeyByStyle;
 
 public:
 #ifndef U_HIDE_OBSOLETE_API
