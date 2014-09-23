@@ -1498,12 +1498,6 @@ private:
      */
     TimeZoneFormat *tzFormat() const;
 
-    UBool getSharedNumberFormat(
-            const NumberFormat *nf, const SharedNumberFormat *&result) const;
-
-    UBool toSharedNumberFormat(
-            NumberFormat *nfToAdopt, const SharedNumberFormat *&result) const;
-
     const NumberFormat &getNumberFormatByIndex(UDateFormatField index) const;
 
     /**

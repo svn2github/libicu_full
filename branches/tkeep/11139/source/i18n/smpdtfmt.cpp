@@ -283,52 +283,6 @@ static void freeSharedNumberFormatters(const SharedNumberFormat ** list) {
     uprv_free(list);
 }
 
-// Resolves nfToAdopt to an existing SharedNumberFormat in this object.
-// On entry, result must be NULL.
-// On success returns TRUE and sets result to resolved SharedNumberFormat.
-// result may be set to NULL if nfToAdopt resolves to the global NumberFormat
-// for this object.
-// On failure returns FALSE and sets result to NULL. 
-UBool SimpleDateFormat::getSharedNumberFormat(
-        const NumberFormat *nf,
-        const SharedNumberFormat *&result) const {
-    if (nf == fNumberFormat) {
-        return TRUE;
-    }
-    if (fSharedNumberFormatters == NULL) {
-        return FALSE;
-    }
-    for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
-        const SharedNumberFormat *shared = fSharedNumberFormatters[i];
-        if (shared == NULL) {
-            continue;
-        }
-        if (shared->get() == nf) {
-            SharedObject::copyPtr(fSharedNumberFormatters[i], result);
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-// Resolves nfToAdopt as a SharedNumberFormat.
-// On entry, result must be NULL.  If a matching SharedNumberFormat does not
-// exist in this object, it creates a new SharedNumberFormat. If it creates
-// a new SharedNumberFormat, it modifies nfToAdopt to be suitable for date
-// formatting. On success returns TRUE and sets result to the resolved
-// SharedNumberFormat. result may be set to NULL if nfToAdopt resolves to
-// the global NumberFormat for this object.
-// On failure returns FALSE and sets result to NULL. 
-UBool SimpleDateFormat::toSharedNumberFormat(
-        NumberFormat *nfToAdopt,
-        const SharedNumberFormat *&result) const {
-    if (getSharedNumberFormat(nfToAdopt, result)) {
-        return TRUE;
-    }
-    SharedObject::copyPtr(createSharedNumberFormat(nfToAdopt), result);
-    return (result != NULL);
-}
-
 const NumberFormat &SimpleDateFormat::getNumberFormatByIndex(
         UDateFormatField index) const {
     if (fSharedNumberFormatters == NULL ||
@@ -1805,28 +1759,9 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
 //----------------------------------------------------------------------
 
 void SimpleDateFormat::adoptNumberFormat(NumberFormat *formatToAdopt) {
-
-    // We can't report memory allocation error back to the caller so
-    // the best we can do is to design this method to either change
-    // default number format or do nothing.
-
-    // Adopt first.
-    const SharedNumberFormat *newFormat = NULL;
-    if (!toSharedNumberFormat(formatToAdopt, newFormat)) {
-        return;
-    }
-    if (newFormat == NULL) {
-        // Then our new format is the existing default. Do nothing.
-    } else {
-        // Take ownership of adopted number format away from shared pointers.
-        NumberFormat *newDefault = newFormat->orphanOrCloneAndRemoveRef();
-        if (newDefault == NULL) {
-            // Memory allocation error, do nothing.
-            return;
-        }
-        delete fNumberFormat;
-        fNumberFormat = newDefault;
-    }
+    fixNumberFormatForDates(*formatToAdopt);
+    delete fNumberFormat;
+    fNumberFormat = formatToAdopt;
     
     // We successfully set the default number format. Now delete the overrides
     // (can't fail).
@@ -1837,37 +1772,24 @@ void SimpleDateFormat::adoptNumberFormat(NumberFormat *formatToAdopt) {
 }
 
 void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberFormat *formatToAdopt, UErrorCode &status){
-    // Adopt formatToAdopt into a shared number format before checking
-    // status so that we don't leak memory.
-    const SharedNumberFormat *newFormat = NULL;
-    if (!toSharedNumberFormat(formatToAdopt, newFormat)
-            || U_FAILURE(status)) {
-        // We get in here if either we could not adopt or status is set.
-        // In either case we must return with failure.
-        
-        // release shared number format in case we successfully adopted.
-        SharedObject::clearPtr(newFormat);
-
-        // If no status set, it means we couldn't adopt because there is
-        // no memory left.
-        if (U_SUCCESS(status)) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-        }
+    fixNumberFormatForDates(*formatToAdopt);
+    LocalPointer<NumberFormat> fmt(formatToAdopt);
+    if (U_FAILURE(status)) {
         return;
     }
-
-    // When we get here, formatToAdopt is adopted into newFormat.
-    // if newFormat is NULL, it means that the new format is the same
-    // as the global one.
 
     // We must ensure fSharedNumberFormatters is allocated.
     if (fSharedNumberFormatters == NULL) {
         fSharedNumberFormatters = allocSharedNumberFormatters();
         if (fSharedNumberFormatters == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
-            SharedObject::clearPtr(newFormat);
             return;
         }
+    }
+    const SharedNumberFormat *newFormat = createSharedNumberFormat(fmt.orphan());
+    if (newFormat == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
     for (int i=0; i<fields.length(); i++) {
         UChar field = fields.charAt(i);
@@ -1875,7 +1797,7 @@ void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberForm
         UDateFormatField patternCharIndex = DateFormatSymbols::getPatternCharIndex(field);
         if (patternCharIndex == UDAT_FIELD_COUNT) {
             status = U_INVALID_FORMAT_ERROR;
-            SharedObject::clearPtr(newFormat);
+            newFormat->deleteIfZeroRefCount();
             return;
         }
 
@@ -1883,7 +1805,7 @@ void SimpleDateFormat::adoptNumberFormat(const UnicodeString& fields, NumberForm
         SharedObject::copyPtr(
                 newFormat, fSharedNumberFormatters[patternCharIndex]);
     }
-    SharedObject::clearPtr(newFormat);
+    newFormat->deleteIfZeroRefCount();
 }
 
 const NumberFormat *

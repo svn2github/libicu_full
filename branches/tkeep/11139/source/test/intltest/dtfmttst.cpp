@@ -4550,17 +4550,19 @@ void DateFormatTest::TestNumberFormatOverride() {
     fmt.adoptInstead(new SimpleDateFormat((UnicodeString)"MM d", status));
     assertSuccess("SimpleDateFormat with pattern MM d", status);
 
-    NumberFormat* check_nf = NumberFormat::createInstance(Locale("en_US"), status);
-    assertSuccess("NumberFormat en_US", status);
 
     // loop 100 times to test setter/getter
-    for(int i=0; i<100; i++){
+    for(int i=0; i<3; i++){
+        NumberFormat* check_nf = NumberFormat::createInstance(Locale("en_US"), status);
+        assertSuccess("NumberFormat en_US", status);
         fmt->adoptNumberFormat(fields, check_nf, status);
         assertSuccess("adoptNumberFormat check_nf", status);
 
         const NumberFormat* get_nf = fmt->getNumberFormatForField('M');
         if (get_nf != check_nf) errln("FAIL: getter and setter do not work");
     }
+    NumberFormat* check_nf = NumberFormat::createInstance(Locale("en_US"), status);
+    assertSuccess("NumberFormat en_US", status);
     fmt->adoptNumberFormat(check_nf); // make sure using the same NF will not crash
 
     const char * DATA [][2] = {

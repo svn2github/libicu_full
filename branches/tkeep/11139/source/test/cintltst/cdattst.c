@@ -1574,14 +1574,14 @@ static void TestOverrideNumberFormat(void) {
     u_uastrcpy(fields, "d");
     u_uastrcpy(pattern,"MM d");
 
+
     fmt=udat_open(UDAT_PATTERN, UDAT_PATTERN,"en_US",NULL,0,pattern, u_strlen(pattern), &status);
     assertSuccess("udat_open()", &status);
 
-    overrideFmt = unum_open(UNUM_DEFAULT, NULL, 0, localeString, NULL, &status);
-    assertSuccess("unum_open()", &status);
-
-    // loop 50 times to check getter/setter
-    for (i = 0; i < 50; i++){
+    // loop 3 times to check getter/setter
+    for (i = 0; i < 3; i++){
+        overrideFmt = unum_open(UNUM_DEFAULT, NULL, 0, localeString, NULL, &status);
+        assertSuccess("unum_open()", &status);
         udat_adoptNumberFormatForFields(fmt, fields, overrideFmt, &status);
         assertSuccess("udat_setNumberFormatForField()", &status);
 
@@ -1589,7 +1589,9 @@ static void TestOverrideNumberFormat(void) {
         if (getter_result != overrideFmt) 
             log_err("FAIL: udat_getNumberFormatForField does not work\n");
     }
-    udat_setNumberFormat(fmt, overrideFmt); // test the same override NF will not crash
+    overrideFmt = unum_open(UNUM_DEFAULT, NULL, 0, localeString, NULL, &status);
+    assertSuccess("unum_open()", &status);
+    udat_adoptNumberFormat(fmt, overrideFmt); // test the same override NF will not crash
     udat_close(fmt);
     
     for (j=0; i<sizeof(overrideNumberFormat)/sizeof(overrideNumberFormat[0]); i++){
