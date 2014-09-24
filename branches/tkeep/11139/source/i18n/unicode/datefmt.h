@@ -571,6 +571,17 @@ public:
                                               EStyle timeStyle = kDefault,
                                               const Locale& aLocale = Locale::getDefault());
 
+    // TODO (travis): Add other flavors one for just skeleton one for skeleton
+    // locale and calendar.
+    static DateFormat* U_EXPORT2 createInstanceForSkeleton(
+            const UnicodeString& skeleton, const Locale &locale);
+
+    static DateFormat* U_EXPORT2 createInstanceForSkeleton(
+            const UnicodeString& skeleton,
+            const Locale &locale,
+            DateTimePatternGenerator &dpng);
+
+
     /**
      * Gets the set of locales for which DateFormats are installed.
      * @param count Filled in with the number of locales in the list that is returned.

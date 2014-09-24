@@ -34,6 +34,8 @@
 #include "hash.h"
 #include "uresimp.h"
 #include "dtptngen_impl.h"
+#include "shareddatetimepatterngenerator.h"
+#include "unifiedcache.h"
 
 #if U_CHARSET_FAMILY==U_EBCDIC_FAMILY
 /**
@@ -123,6 +125,27 @@ static const UChar *ures_a_getNextString(UResourceBundleAIterator *aiter, int32_
 
 
 U_NAMESPACE_BEGIN
+
+SharedDateTimePatternGenerator::~SharedDateTimePatternGenerator() {
+    delete ptr;
+}
+
+template<> U_I18N_API
+const SharedDateTimePatternGenerator *LocaleCacheKey<SharedDateTimePatternGenerator>::createObject(
+        const void * /*creationContext*/, UErrorCode &status) const {
+    DateTimePatternGenerator *fmt = DateTimePatternGenerator::makeInstance(fLoc, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    SharedDateTimePatternGenerator *result = new SharedDateTimePatternGenerator(fmt);
+    if (result == NULL) {
+        delete fmt;
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    result->addRef();
+    return result;
+}
 
 
 // *****************************************************************************
@@ -245,13 +268,33 @@ DateTimePatternGenerator::createInstance(UErrorCode& status) {
 
 DateTimePatternGenerator* U_EXPORT2
 DateTimePatternGenerator::createInstance(const Locale& locale, UErrorCode& status) {
-    DateTimePatternGenerator *result = new DateTimePatternGenerator(locale, status);
+/*
+    const SharedDateTimePatternGenerator *shared = NULL;
+    UnifiedCache::getByLocale(locale, shared, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    DateTimePatternGenerator *result = new DateTimePatternGenerator(**shared);
+    shared->removeRef();
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
     }
+    return result;
+*/
+    return makeInstance(locale, status);
+}
+
+
+DateTimePatternGenerator* U_EXPORT2
+DateTimePatternGenerator::makeInstance(const Locale& locale, UErrorCode& status) {
+    DateTimePatternGenerator *result = new DateTimePatternGenerator(locale, status);
+    if (result == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
     if (U_FAILURE(status)) {
         delete result;
-        result = NULL;
+        return NULL;
     }
     return result;
 }

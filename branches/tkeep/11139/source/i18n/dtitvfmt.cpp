@@ -516,17 +516,11 @@ DateIntervalFormat::createSDFPatternInstance(const UnicodeString& skeleton,
     if ( U_FAILURE(status) ) {
         return NULL;
     }
-
-    const UnicodeString pattern = dtpng->getBestPattern(skeleton, status);
-    if ( U_FAILURE(status) ) {
-        return NULL;
+    DateFormat *df = DateFormat::createInstanceForSkeleton(skeleton, locale, *dtpng);
+    if (df == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
     }
-    SimpleDateFormat* dtfmt = new SimpleDateFormat(pattern, locale, status);
-    if ( U_FAILURE(status) ) {
-        delete dtfmt;
-        return NULL;
-    }
-    return dtfmt;
+    return static_cast<SimpleDateFormat *>(df);
 }
 
 

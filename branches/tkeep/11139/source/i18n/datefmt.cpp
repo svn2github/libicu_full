@@ -28,6 +28,7 @@
 #include "unicode/udisplaycontext.h"
 #include "reldtfmt.h"
 #include "shareddatefmt.h"
+#include "shareddatetimepatterngenerator.h"
 #include "unifiedcache.h"
 
 #include "cstring.h"
@@ -148,16 +149,23 @@ class U_I18N_API DateFmtKeyBySkeleton : public LocaleCacheKey<SharedDateFormat> 
        return new DateFmtKeyBySkeleton(*this);
    }
    virtual const SharedDateFormat *createObject(
-           const void */*creationContext*/, UErrorCode &status) const {
-       LocalPointer<DateTimePatternGenerator> generator(
-               DateTimePatternGenerator::createInstance(fLoc, status));
-       if (U_FAILURE(status)) {
-           return NULL;
-       }
+           const void *creationContext, UErrorCode &status) const {
+       void *mutableCreationContext = const_cast<void *>(creationContext);
+       DateTimePatternGenerator *ownedDtpg = NULL;
+       DateTimePatternGenerator *dtpg =
+               static_cast<DateTimePatternGenerator *>(mutableCreationContext);
+       if (dtpg == NULL) {
+           ownedDtpg = DateTimePatternGenerator::createInstance(fLoc, status);
+           if (U_FAILURE(status)) {
+               return NULL;
+           }
+           dtpg = ownedDtpg;
+       } 
        DateFormat *fmt = new SimpleDateFormat(
-               generator->getBestPattern(fSkeleton, status),
+               dtpg->getBestPattern(fSkeleton, status),
                fLoc,
                status);
+       delete ownedDtpg;
        if (fmt == NULL) {
            status = U_MEMORY_ALLOCATION_ERROR;
            return NULL;
@@ -179,13 +187,15 @@ class U_I18N_API DateFmtKeyBySkeleton : public LocaleCacheKey<SharedDateFormat> 
 
 
 static DateFormat *createFromCache(
-        const CacheKey<SharedDateFormat> &key, UErrorCode &status) {
+        const CacheKey<SharedDateFormat> &key,
+        const void *context,
+        UErrorCode &status) {
     const UnifiedCache *cache = UnifiedCache::getInstance(status);
     if (U_FAILURE(status)) {
         return NULL;
     }
     const SharedDateFormat *ptr = NULL;
-    cache->get(key, NULL, ptr, status);
+    cache->get(key, context, ptr, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -467,7 +477,7 @@ DateFormat::createTimeInstance(DateFormat::EStyle style,
 {
     DateFmtKeyByStyle key(aLocale, kNone, style);
     UErrorCode status = U_ZERO_ERROR;
-    return createFromCache(key, status);
+    return createFromCache(key, NULL, status);
 }
 
 //----------------------------------------------------------------------
@@ -478,7 +488,7 @@ DateFormat::createDateInstance(DateFormat::EStyle style,
 {
     DateFmtKeyByStyle key(aLocale, style, kNone);
     UErrorCode status = U_ZERO_ERROR;
-    return createFromCache(key, status);
+    return createFromCache(key, NULL, status);
 }
 
 //----------------------------------------------------------------------
@@ -490,7 +500,7 @@ DateFormat::createDateTimeInstance(EStyle dateStyle,
 {
     DateFmtKeyByStyle key(aLocale, dateStyle, timeStyle);
     UErrorCode status = U_ZERO_ERROR;
-    return createFromCache(key, status);
+    return createFromCache(key, NULL, status);
 }
 
 //----------------------------------------------------------------------
@@ -500,7 +510,28 @@ DateFormat::createInstance()
 {
     DateFmtKeyByStyle key(Locale::getDefault(), kShort, kShort);
     UErrorCode status = U_ZERO_ERROR;
-    return createFromCache(key, status);
+    return createFromCache(key, NULL, status);
+}
+
+//----------------------------------------------------------------------
+
+DateFormat* U_EXPORT2
+DateFormat::createInstanceForSkeleton(
+        const UnicodeString& skeleton, const Locale &locale) {
+    DateFmtKeyBySkeleton key(locale, skeleton);
+    UErrorCode status = U_ZERO_ERROR;
+    return createFromCache(key, NULL, status);
+
+}
+
+DateFormat* U_EXPORT2
+DateFormat::createInstanceForSkeleton(
+        const UnicodeString& skeleton,
+        const Locale &locale,
+        DateTimePatternGenerator &gen) {
+    DateFmtKeyBySkeleton key(locale, skeleton);
+    UErrorCode status = U_ZERO_ERROR;
+    return createFromCache(key, &gen, status);
 }
 
 //----------------------------------------------------------------------

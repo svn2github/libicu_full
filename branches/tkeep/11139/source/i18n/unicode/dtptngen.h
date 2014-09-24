@@ -31,6 +31,7 @@ class DateTimeMatcher;
 class DistanceInfo;
 class PatternMap;
 class PtnSkeleton;
+class SharedDateTimePatternGenerator;
 
 /**
  * This class provides flexible generation of date format patterns, like "yy-MM-dd". 
@@ -65,6 +66,9 @@ public:
      */
     static DateTimePatternGenerator* U_EXPORT2 createInstance(const Locale& uLocale, UErrorCode& status);
 
+    static DateTimePatternGenerator* U_EXPORT2 makeInstance(const Locale& uLocale, UErrorCode& status);
+
+    /**
     /**
      * Create an empty generator, to be constructed with addPattern(...) etc.
      * @param status  Output param set to success/failure code on exit,
