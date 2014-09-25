@@ -54,6 +54,8 @@ UPerfFunction* DateFormatPerfTest::runIndexedTest(int32_t index, UBool exec,cons
         TESTCASE(20, DTPatternGeneratorBestValue10000);
         TESTCASE(21,DateFmtCopy250);
         TESTCASE(22,DateFmtCopy10000);
+        TESTCASE(23,DateFmtCreate250);
+        TESTCASE(24,DateFmtCreate10000);
 
 
         default: 
@@ -168,6 +170,14 @@ UPerfFunction* DateFormatPerfTest::DateFmtCopy250(){
 
 UPerfFunction* DateFormatPerfTest::DateFmtCopy10000(){
     return new DateFmtCopyFunction(10000, locale);
+}
+
+UPerfFunction* DateFormatPerfTest::DateFmtCreate250(){
+    return new DateFmtCreateFunction(250, locale);
+}
+
+UPerfFunction* DateFormatPerfTest::DateFmtCreate10000(){
+    return new DateFmtCreateFunction(10000, locale);
 }
 
 

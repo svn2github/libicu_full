@@ -232,48 +232,84 @@ public:
 
 };
 
+class DateFmtCreateFunction : public UPerfFunction
+{
+
+private:
+        int num;
+        char locale[25];
+public:
+
+        DateFmtCreateFunction(int a, const char* loc)
+        {
+                num = a;
+                strcpy(locale, loc);
+        }
+
+        virtual void call(UErrorCode* /* status */)
+        {
+
+                Locale loc(locale);
+                DateFormat *fmt;
+                // (dates are imported from datedata.h)
+                for(int j = 0; j < num; j++) {
+                    fmt = DateFormat::createDateTimeInstance(
+                            DateFormat::kShort, DateFormat::kFull, loc);
+                    delete fmt;
+                }
+        }
+
+        virtual long getOperationsPerIteration()
+        {
+                return num;
+        }
+
+};
+
 class DateFmtCopyFunction : public UPerfFunction
 {
 
 private:
-	int num;
+        int num;
     char locale[25];
 public:
-	
-	DateFmtCopyFunction()
-	{
-		num = -1;
-	}
 
-	DateFmtCopyFunction(int a, const char* loc)
-	{
-		num = a;
+        DateFmtCopyFunction()
+        {
+                num = -1;
+        }
+
+        DateFmtCopyFunction(int a, const char* loc)
+        {
+                num = a;
         strcpy(locale, loc);
-	}
+        }
 
-	virtual void call(UErrorCode* /* status */)
-	{
-		UErrorCode status2 = U_ZERO_ERROR;		
-                DateFormat *fmt = DateFormat::createDateTimeInstance();
-		for(int j = 0; j < num; j++) {
+        virtual void call(UErrorCode* /* status */)
+        {
+                Locale loc(locale);
+                UErrorCode status2 = U_ZERO_ERROR;
+                DateFormat *fmt = DateFormat::createDateTimeInstance(
+                            DateFormat::kShort, DateFormat::kFull, loc);
+                for(int j = 0; j < num; j++) {
                     Format *cp = fmt->clone();
                     delete cp;
                 }
                 delete fmt;
-	}
+        }
 
-	virtual long getOperationsPerIteration()
-	{
-		return num;
-	}
+        virtual long getOperationsPerIteration()
+        {
+                return num;
+        }
 
-	// Verify that a UErrorCode is successful; exit(1) if not
-	void check(UErrorCode& status, const char* msg) {
-		if (U_FAILURE(status)) {
-			printf("ERROR: %s (%s)\n", u_errorName(status), msg);
-			exit(1);
-		}
-	}
+        // Verify that a UErrorCode is successful; exit(1) if not
+        void check(UErrorCode& status, const char* msg) {
+                if (U_FAILURE(status)) {
+                        printf("ERROR: %s (%s)\n", u_errorName(status), msg);
+                        exit(1);
+                }
+        }
 
 };
 
@@ -782,6 +818,8 @@ public:
 	UPerfFunction* DateFmt250();
 	UPerfFunction* DateFmt10000();
 	UPerfFunction* DateFmt100000();
+	UPerfFunction* DateFmtCreate250();
+	UPerfFunction* DateFmtCreate10000();
 	UPerfFunction* DateFmtCopy250();
 	UPerfFunction* DateFmtCopy10000();
 	UPerfFunction* BreakItWord250();
