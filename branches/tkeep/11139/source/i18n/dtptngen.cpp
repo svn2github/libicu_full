@@ -268,7 +268,6 @@ DateTimePatternGenerator::createInstance(UErrorCode& status) {
 
 DateTimePatternGenerator* U_EXPORT2
 DateTimePatternGenerator::createInstance(const Locale& locale, UErrorCode& status) {
-/*
     const SharedDateTimePatternGenerator *shared = NULL;
     UnifiedCache::getByLocale(locale, shared, status);
     if (U_FAILURE(status)) {
@@ -280,8 +279,6 @@ DateTimePatternGenerator::createInstance(const Locale& locale, UErrorCode& statu
         status = U_MEMORY_ALLOCATION_ERROR;
     }
     return result;
-*/
-    return makeInstance(locale, status);
 }
 
 
@@ -355,6 +352,10 @@ DateTimePatternGenerator::DateTimePatternGenerator(const DateTimePatternGenerato
 
 DateTimePatternGenerator&
 DateTimePatternGenerator::operator=(const DateTimePatternGenerator& other) {
+    // reflexive case
+    if (&other == this) {
+        return *this;
+    }
     pLocale = other.pLocale;
     fDefaultHourFormatChar = other.fDefaultHourFormatChar;
     *fp = *(other.fp);
@@ -1376,7 +1377,7 @@ PatternMap::copyFrom(const PatternMap& other, UErrorCode& status) {
                 status = U_MEMORY_ALLOCATION_ERROR;
                 return;
             }
-
+            curElem->skeletonWasSpecified = otherElem->skeletonWasSpecified;
             if (prevElem!=NULL) {
                 prevElem->next=curElem;
             }
