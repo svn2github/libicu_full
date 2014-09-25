@@ -594,9 +594,8 @@ void MeasureFormat::parseObject(
     return;
 }
 
-UnicodeString &MeasureFormat::formatMeasuresPer(
-        const Measure *measures,
-        int32_t measureCount,
+UnicodeString &MeasureFormat::formatMeasurePerUnit(
+        const Measure &measure,
         const MeasureUnit &perUnit,
         UnicodeString &appendTo,
         FieldPosition &pos,
@@ -604,8 +603,8 @@ UnicodeString &MeasureFormat::formatMeasuresPer(
     FieldPosition fpos(pos.getField());
     UnicodeString measuresString;
     int32_t offset = withPerUnit(
-            formatMeasures(
-                    measures, measureCount, measuresString, fpos, status),
+            formatMeasure(
+                    measure, **numberFormat, measuresString, fpos, status),
             perUnit,
             appendTo,
             status);
