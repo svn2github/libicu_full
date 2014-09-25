@@ -105,6 +105,7 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
 
     TESTCASE_AUTO(TestParseLeniencyAPIs);
     TESTCASE_AUTO(TestNumberFormatOverride);
+    TESTCASE_AUTO(TestCreateInstanceForSkeleton);
 
     TESTCASE_AUTO_END;
 }
@@ -4617,6 +4618,26 @@ void DateFormatTest::TestNumberFormatOverride() {
             errln("FAIL: Expected " + expected + " get: " + result);
     }
 }
+
+void DateFormatTest::TestCreateInstanceForSkeleton() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<DateFormat> fmt(DateFormat::createInstanceForSkeleton(
+            "yMMMMd", "en"));
+    assertSuccess("Create with pattern yMMMMd", status);
+    UnicodeString result;
+    FieldPosition pos(0);
+    fmt->format(date(98, 5-1, 25), result, pos);
+    assertEquals("format yMMMMd", "May 25, 1998", result);
+    fmt.adoptInstead(DateFormat::createInstanceForSkeleton(
+            "yMd", "en"));
+    assertSuccess("Create with pattern yMd", status);
+    result.remove();
+    fmt->format(date(98, 5-1, 25), result, pos);
+    assertEquals("format yMd", "5/25/1998", result);
+}
+
+
+
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
 //eof
