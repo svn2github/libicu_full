@@ -1014,11 +1014,22 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable, UBo
             //    in their category values.
             //
             if ((category & 0x4000) != 0)  {
+                // Stop matching if non-dictionary characters were previously
+                // matched.
                 if (firstDictionaryPosition == INT32_MAX) {
+                  if (initialPosition < result) {
+                    state = STOP_STATE;
+                    goto continueOn;
+                  } else {
                     firstDictionaryPosition = utext_getNativeIndex(fText);
+                  }
                 }
                 //  And off the dictionary flag bit.
                 category &= ~0x4000;
+            } else if (firstDictionaryPosition != INT32_MAX) {
+              // Current character is a non-dict char but dict chars were found previously.
+              state = STOP_STATE;
+              goto continueOn;
             }
         }
 
@@ -1246,10 +1257,19 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable,
             //
             if ((category & 0x4000) != 0)  {
                 if (firstDictionaryPosition == -1) {
-                    firstDictionaryPosition = utext_getNativeIndex(fText);
+                    if (initialPosition > result) {
+                        state = STOP_STATE;
+                        goto continueOn;
+                    } else {
+                        firstDictionaryPosition = utext_getNativeIndex(fText);
+                    }
                 }
                 //  And off the dictionary flag bit.
                 category &= ~0x4000;
+            } else if (firstDictionaryPosition != -1) {
+                // Current character is a non-dict char but dict chars were found previously.
+                state = STOP_STATE;
+                goto continueOn;
             }
         }
 
@@ -1873,7 +1893,7 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
 
     fRawBreaks->removeAllElements();
     utext_setNativeIndex(fThis->fText, range.fDictStart);
-    uint32_t tagValue = 0;
+    uint32_t tagValue = -1;
     if (range.fLBE != NULL) {
         range.fLBE->findBreaks(fThis->fText, range.fDictLimit, fThis->fBreakType, *fRawBreaks, status);
         tagValue = range.fLBE->getTagValue(fThis->fBreakType);
