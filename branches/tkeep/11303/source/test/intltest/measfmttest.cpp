@@ -1012,9 +1012,9 @@ void MeasureFormatTest::helperTestSimplePer(
             buffer);
     if (field != FieldPosition::DONT_CARE) {
         assertEquals(
-                "Start", expected_start + 8, pos.getBeginIndex());
+                "Start", expected_start, pos.getBeginIndex() - prefix.length());
         assertEquals(
-                "End", expected_end + 8, pos.getEndIndex());
+                "End", expected_end, pos.getEndIndex() - prefix.length());
     }
 }
 
