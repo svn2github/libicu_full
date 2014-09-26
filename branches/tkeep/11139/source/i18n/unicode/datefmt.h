@@ -571,16 +571,42 @@ public:
                                               EStyle timeStyle = kDefault,
                                               const Locale& aLocale = Locale::getDefault());
 
-    // TODO (travis): Add other flavors one for just skeleton one for skeleton
-    // locale and calendar.
+    /**
+     * Creates a date/time formatter for the given skeleton and locale.
+     *
+     * @param skeleton The skeleton e.g "yMMMMd." Fields in the skeleton can
+     *                 be in any order, and this method uses the locale to
+     *                 map the skeleton to a pattern that includes locale
+     *                 specific separators with the fields in the appropriate
+     *                 order for that locale.
+     * @param aLocale  The given locale.
+     * @return         A date/time formatter which the caller owns.
+     * @draft ICU 55
+     */
     static DateFormat* U_EXPORT2 createInstanceForSkeleton(
             const UnicodeString& skeleton, const Locale &locale);
 
+    /**
+     * Creates a date/time formatter for the given skeleton and locale and
+     * uses the given DateTimePatternGenerator to convert the skeleton to
+     * a locale specific pattern. As creating a DateTimePatternGenerator is
+     * expensive, callers can supply it here (if they already have it) to save
+     * this method from creating its own.
+     *
+     * @param skeleton The skeleton e.g "yMMMMd." Fields in the skeleton can
+     *                 be in any order, and this method uses the provided
+     *                 DateTimePatternGenerator to map the skeleton to a
+     *                 pattern that includes appropriate separators with
+     *                 the fields in the appropriate order.
+     * @param aLocale  The given locale.
+     * @param dpng     The user supplied DateTimePatternGenerator.
+     * @return         A date/time formatter which the caller owns.
+     * @draft ICU 55
+     */
     static DateFormat* U_EXPORT2 createInstanceForSkeleton(
             const UnicodeString& skeleton,
             const Locale &locale,
             DateTimePatternGenerator &dpng);
-
 
     /**
      * Gets the set of locales for which DateFormats are installed.
