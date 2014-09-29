@@ -184,6 +184,13 @@ class U_I18N_API MeasureUnit: public UObject {
      * @internal
      */
     static int32_t getIndexCount();
+
+    /**
+     * ICU use only.
+     * @internal
+     */
+    static MeasureUnit *resolveUnitPerUnit(
+            const MeasureUnit &unit, const MeasureUnit &perUnit);
 #endif /* U_HIDE_INTERNAL_API */
 
 // All code between the "Start generated createXXX methods" comment and

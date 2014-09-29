@@ -58,6 +58,7 @@ private:
     void TestEquality();
     void TestGroupingSeparator();
     void TestDoubleZero();
+    void TestUnitPerUnitResolution();
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -135,6 +136,7 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(TestEquality);
     TESTCASE_AUTO(TestGroupingSeparator);
     TESTCASE_AUTO(TestDoubleZero);
+    TESTCASE_AUTO(TestUnitPerUnitResolution);
     TESTCASE_AUTO_END;
 }
 
@@ -1297,6 +1299,26 @@ void MeasureFormatTest::TestDoubleZero() {
             "TestDoubleZero",
             UnicodeString("-4 hours, 23 minutes, 16.00 seconds"),
             appendTo);
+}
+
+void MeasureFormatTest::TestUnitPerUnitResolution() {
+    UErrorCode status = U_ZERO_ERROR;
+    Locale en("en");
+    MeasureFormat fmt("en", UMEASFMT_WIDTH_SHORT, status);
+    Measure measure(50, MeasureUnit::createPound(status), status);
+    LocalPointer<MeasureUnit> sqInch(MeasureUnit::createSquareInch(status));
+    if (!assertSuccess("Create of format unit and per unit", status)) {
+        return;
+    }
+    FieldPosition pos(0);
+    UnicodeString actual;
+    fmt.formatMeasurePerUnit(
+            measure,
+            *sqInch,
+            actual,
+            pos,
+            status);
+    assertEquals("", "50 psi", actual);
 }
 
 void MeasureFormatTest::verifyFieldPosition(

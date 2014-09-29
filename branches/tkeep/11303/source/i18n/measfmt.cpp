@@ -600,6 +600,16 @@ UnicodeString &MeasureFormat::formatMeasurePerUnit(
         UnicodeString &appendTo,
         FieldPosition &pos,
         UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
+    MeasureUnit *resolvedUnit =
+            MeasureUnit::resolveUnitPerUnit(measure.getUnit(), perUnit);
+    if (resolvedUnit != NULL) {
+        Measure newMeasure(measure.getNumber(), resolvedUnit, status);
+        return formatMeasure(
+                newMeasure, **numberFormat, appendTo, pos, status);
+    }
     FieldPosition fpos(pos.getField());
     UnicodeString measuresString;
     int32_t offset = withPerUnit(
