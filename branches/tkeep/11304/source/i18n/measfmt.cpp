@@ -602,20 +602,21 @@ UnicodeString &MeasureFormat::formatMeasuresPer(
         FieldPosition &pos,
         UErrorCode &status) const {
     FieldPosition fpos(pos.getField());
-    UnicodeString measuresString;
-    int32_t offset = withPerUnit(
+    UnicodeString result;
+    int32_t offset = withPerUnitAndReplace(
             formatMeasures(
-                    measures, measureCount, measuresString, fpos, status),
+                    measures, measureCount, result, fpos, status),
             perUnit,
-            appendTo,
+            result,
             status);
     if (U_FAILURE(status)) {
         return appendTo;
     }
     if (fpos.getBeginIndex() != 0 || fpos.getEndIndex() != 0) {
-        pos.setBeginIndex(fpos.getBeginIndex() + offset);
-        pos.setEndIndex(fpos.getEndIndex() + offset);
+        pos.setBeginIndex(appendTo.length() + fpos.getBeginIndex() + offset);
+        pos.setEndIndex(appendTo.length() + fpos.getEndIndex() + offset);
     }
+    appendTo += result;
     return appendTo;
 }
 
@@ -983,10 +984,10 @@ static void getPerUnitString(
     result.trim();
 }
 
-int32_t MeasureFormat::withPerUnit(
+int32_t MeasureFormat::withPerUnitAndReplace(
         const UnicodeString &formatted,
         const MeasureUnit &perUnit,
-        UnicodeString &appendTo,
+        UnicodeString &result,
         UErrorCode &status) const {
     int32_t offset = -1;
     if (U_FAILURE(status)) {
@@ -996,10 +997,10 @@ int32_t MeasureFormat::withPerUnit(
             perUnit.getIndex(), widthToIndex(width));
     if (perUnitFormatter != NULL) {
         const UnicodeString *params[] = {&formatted};
-        perUnitFormatter->format(
+        perUnitFormatter->formatAndReplace(
                 params,
                 UPRV_LENGTHOF(params),
-                appendTo,
+                result,
                 &offset,
                 1,
                 status);
@@ -1015,10 +1016,10 @@ int32_t MeasureFormat::withPerUnit(
     UnicodeString perUnitString;
     getPerUnitString(*qf, perUnitString);
     const UnicodeString *params[] = {&formatted, &perUnitString};
-    perFormatter->format(
+    perFormatter->formatAndReplace(
             params,
             UPRV_LENGTHOF(params),
-            appendTo,
+            result,
             &offset,
             1,
             status);

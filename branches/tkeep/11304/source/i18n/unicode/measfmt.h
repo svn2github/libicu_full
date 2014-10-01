@@ -347,10 +347,10 @@ class U_I18N_API MeasureFormat : public Format {
             int32_t widthIndex,
             UErrorCode &status) const;
 
-    int32_t withPerUnit(
+    int32_t withPerUnitAndReplace(
         const UnicodeString &formatted,
         const MeasureUnit &perUnit,
-        UnicodeString &appendTo,
+        UnicodeString &result,
         UErrorCode &status) const;
 
     UnicodeString &formatMeasure(
