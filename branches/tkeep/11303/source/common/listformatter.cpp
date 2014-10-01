@@ -254,9 +254,10 @@ ListFormatter::~ListFormatter() {
  * On entry offset is an offset into first or -1 if offset unspecified.
  * On exit offset is offset of second in result if recordOffset was set
  * Otherwise if it was >=0 it is set to point into result where it used
- * to point into first.
+ * to point into first. On exit, result is the join of first and second
+ * according to pat. Any previous value of result gets replaced.
  */
-static void joinStrings(
+static void joinStringsAndReplace(
         const SimplePatternFormatter& pat,
         const UnicodeString& first,
         const UnicodeString& second,
@@ -269,7 +270,7 @@ static void joinStrings(
     }
     const UnicodeString *params[2] = {&first, &second};
     int32_t offsets[2];
-    pat.format(
+    pat.formatAndReplace(
             params,
             UPRV_LENGTHOF(params),
             result,
@@ -326,60 +327,54 @@ UnicodeString& ListFormatter::format(
         return appendTo;
     }
     if (nItems == 2) {
-        if (index == 0) {
-            offset = 0;
-        }
-        joinStrings(
-                data->twoPattern,
-                items[0],
-                items[1],
+        const UnicodeString *params[] = {&items[0], &items[1]};
+        int32_t offsets[2];
+        data->twoPattern.formatAndAppend(
+                params,
+                UPRV_LENGTHOF(params),
                 appendTo,
-                index == 1,
-                offset,
+                offsets,
+                UPRV_LENGTHOF(offsets),
                 errorCode);
+        if (U_FAILURE(errorCode)) {
+            return appendTo;
+        }
+        if (offsets[0] == -1 || offsets[1] == -1) {
+            errorCode = U_INVALID_FORMAT_ERROR;
+            return appendTo;
+        }
+        if (index == 0 || index == 1) {
+            offset = offsets[index];
+        }
         return appendTo;
     }
-    UnicodeString temp[2];
+    UnicodeString result(items[0]);
     if (index == 0) {
         offset = 0;
     }
-    joinStrings(
+    joinStringsAndReplace(
             data->startPattern,
-            items[0],
+            result,
             items[1],
-            temp[0],
+            result,
             index == 1,
             offset,
             errorCode);
-    int32_t i;
-    int32_t pos = 0;
-    int32_t npos = 0;
-    UBool startsWithZeroPlaceholder =
-            data->middlePattern.startsWithPlaceholder(0);
-    for (i = 2; i < nItems - 1; ++i) {
-         if (!startsWithZeroPlaceholder) {
-             npos = (pos + 1) & 1;
-             temp[npos].remove();
-         }
-         joinStrings(
+    for (int32_t i = 2; i < nItems - 1; ++i) {
+         joinStringsAndReplace(
                  data->middlePattern,
-                 temp[pos],
+                 result,
                  items[i],
-                 temp[npos],
+                 result,
                  index == i,
                  offset,
                  errorCode);
-         pos = npos;
     }
-    if (!data->endPattern.startsWithPlaceholder(0)) {
-        npos = (pos + 1) & 1;
-        temp[npos].remove();
-    }
-    joinStrings(
+    joinStringsAndReplace(
             data->endPattern,
-            temp[pos],
+            result,
             items[nItems - 1],
-            temp[npos],
+            result,
             index == nItems - 1,
             offset,
             errorCode);
@@ -387,7 +382,7 @@ UnicodeString& ListFormatter::format(
         if (offset >= 0) {
             offset += appendTo.length();
         }
-        appendTo += temp[npos];
+        appendTo += result;
     }
     return appendTo;
 }

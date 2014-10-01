@@ -91,12 +91,6 @@ public:
     }
 
     /**
-     * Returns true if the pattern this object represents starts with
-     * placeholder id; otherwise, returns false.
-     */
-    UBool startsWithPlaceholder(int32_t id) const;
-
-    /**
      * Returns this pattern with none of the placeholders.
      */
     const UnicodeString &getPatternWithNoPlaceholders() const {
@@ -135,29 +129,60 @@ public:
      *
      * The caller retains ownership of all pointers.
      * @param placeholderValues 1st one corresponds to {0}; 2nd to {1};
-     *  3rd to {2} etc.
+     *  3rd to {2} etc. May include pointer to appendTo in which case
+     *  the previous value of appendTo is used for the corresponding
+     *  placeholder.
      * @param placeholderValueCount the number of placeholder values
      *  must be at least large enough to provide values for all placeholders
      *  in this object. Otherwise status set to U_ILLEGAL_ARGUMENT_ERROR.
-     * @param appendTo resulting string appended here. Optimization: If
-     *   the pattern this object represents starts with a placeholder AND
-     *   appendTo references the value of that same placeholder, then that
-     *   placeholder value is not copied to appendTo (Its already there).
-     *   If the value of the starting placeholder is a very large string,
-     *   this optimization can offer huge savings.
+     * @param appendTo resulting string appended here.
      * @param offsetArray The offset of each placeholder value in appendTo
      *  stored here. The first value gets the offset of the value for {0};
      *  the 2nd for {1}; the 3rd for {2} etc. -1 means that the corresponding
      *  placeholder does not exist in this object. If caller is not
      *  interested in offsets, it may pass NULL and 0 for the length.
-     * @param offsetArrayLength the size of offsetArray may be less than
-     *  placeholderValueCount.
+     * @param offsetArrayLength the size of offsetArray. If less than
+     *  placeholderValueCount only the first offsets get recorded. If
+     * greater than placeholderValueCount, then extra values in offset
+     * array are set to -1.
      * @param status any error stored here.
      */
-    UnicodeString &format(
+    UnicodeString &formatAndAppend(
             const UnicodeString * const *placeholderValues,
             int32_t placeholderValueCount,
             UnicodeString &appendTo,
+            int32_t *offsetArray,
+            int32_t offsetArrayLength,
+            UErrorCode &status) const;
+
+    /**
+     * Formats given values.
+     *
+     * The caller retains ownership of all pointers.
+     * @param placeholderValues 1st one corresponds to {0}; 2nd to {1};
+     *  3rd to {2} etc. May include pointer to result in which case
+     *  the previous value of result is used for the corresponding
+     *  placeholder.
+     * @param placeholderValueCount the number of placeholder values
+     *  must be at least large enough to provide values for all placeholders
+     *  in this object. Otherwise status set to U_ILLEGAL_ARGUMENT_ERROR.
+     * @param result resulting string stored here overwriting any previous
+     *   value.
+     * @param offsetArray The offset of each placeholder value in result
+     *  stored here. The first value gets the offset of the value for {0};
+     *  the 2nd for {1}; the 3rd for {2} etc. -1 means that the corresponding
+     *  placeholder does not exist in this object. If caller is not
+     *  interested in offsets, it may pass NULL and 0 for the length.
+     * @param offsetArrayLength the size of offsetArray. If less than
+     *  placeholderValueCount only the first offsets get recorded. If
+     * greater than placeholderValueCount, then extra values in offset
+     * array are set to -1.
+     * @param status any error stored here.
+     */
+    UnicodeString &formatAndReplace(
+            const UnicodeString * const *placeholderValues,
+            int32_t placeholderValueCount,
+            UnicodeString &result,
             int32_t *offsetArray,
             int32_t offsetArrayLength,
             UErrorCode &status) const;
@@ -166,6 +191,20 @@ private:
     MaybeStackArray<PlaceholderInfo, 3> placeholders;
     int32_t placeholderSize;
     int32_t placeholderCount;
+
+    // just like formatAndAppend but uses placeholderValues exactly
+    // as they are. A NULL placeholder value is equivalent to the empty string.
+    UnicodeString &formatAndAppendNoFixValues(
+            const UnicodeString * const *placeholderValues,
+            int32_t placeholderValueCount,
+            UnicodeString &appendTo,
+            int32_t *offsetArray,
+            int32_t offsetArrayLength) const;
+
+    // Returns the placeholder at the beginning of this pattern
+    // (e.g 3 for placeholder {3}). If the beginning of pattern is text
+    // instead of a placeholder, returns -1.
+    int32_t getPlaceholderAtStart() const;
     
     // ensureCapacity ensures that the capacity of the placeholders array
     // is desiredCapacity. If ensureCapacity must resize the placeholders
