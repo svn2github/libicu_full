@@ -347,7 +347,7 @@ class U_I18N_API MeasureFormat : public Format {
     int32_t withPerUnitAndAppend(
         const UnicodeString &formatted,
         const MeasureUnit &perUnit,
-        UnicodeString &result,
+        UnicodeString &appendTo,
         UErrorCode &status) const;
 
     UnicodeString &formatMeasure(

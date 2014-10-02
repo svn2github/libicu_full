@@ -995,7 +995,7 @@ static void getPerUnitString(
 int32_t MeasureFormat::withPerUnitAndAppend(
         const UnicodeString &formatted,
         const MeasureUnit &perUnit,
-        UnicodeString &result,
+        UnicodeString &appendTo,
         UErrorCode &status) const {
     int32_t offset = -1;
     if (U_FAILURE(status)) {
@@ -1008,7 +1008,7 @@ int32_t MeasureFormat::withPerUnitAndAppend(
         perUnitFormatter->formatAndAppend(
                 params,
                 UPRV_LENGTHOF(params),
-                result,
+                appendTo,
                 &offset,
                 1,
                 status);
@@ -1027,7 +1027,7 @@ int32_t MeasureFormat::withPerUnitAndAppend(
     perFormatter->formatAndAppend(
             params,
             UPRV_LENGTHOF(params),
-            result,
+            appendTo,
             &offset,
             1,
             status);
