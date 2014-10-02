@@ -69,16 +69,17 @@ void SimplePatternFormatterIdBuilder::add(UChar ch) {
 // Creates fixed placeholder values given a set of original placeholder
 // values. If a placeholder value is the same UnicodeString as builder,
 // records a copy of builder for the corresponding fixed placeholder
-// value. If emptyIndex is non-negative, records NULL for the emptyIndexth
-// fixed placeholder value. Otherwise, each fixed placeholder value is
-// the same UnicodeString as the original placeholder value.
+// value. Otherwise, each fixed placeholder value is the same UnicodeString
+// as the original placeholder value. If skipIndex is non negative, then
+// the skipIndexth fixed placeholder value is always the same UnicodeString
+// as the original even if it is the same as builder.
 class SimplePatternFormatterFixedValues {
 public:
     SimplePatternFormatterFixedValues(
         const UnicodeString &builder,
         const UnicodeString * const *values,
         int32_t valuesCount,
-        int32_t emptyIndex,
+        int32_t skipIndex,
         UErrorCode &status);
 
     // Returns the fixed placeholder values. This object owns any
@@ -97,7 +98,7 @@ SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
         const UnicodeString &builder,
         const UnicodeString * const *values,
         int32_t valuesCount,
-        int32_t emptyIndex,
+        int32_t skipIndex,
         UErrorCode &status) 
         : originalValues(values),
           fixedValues(values),
@@ -105,9 +106,9 @@ SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
     if (U_FAILURE(status)) {
         return;
     }
-    UBool valuesOk = (emptyIndex < 0);
+    UBool valuesOk = true;
     for (int32_t i = 0; valuesOk && i < valuesCount; ++i) {
-        if (values[i] == &builder) {
+        if (i != skipIndex && values[i] == &builder) {
             valuesOk = false;
         }
     }
@@ -121,9 +122,7 @@ SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
         return;
     }
     for (int32_t i = 0; i < valuesCount; ++i) {
-        if (i == emptyIndex) {
-            newValues[i] = NULL;
-        } else if (values[i] == &builder) {
+        if (i != skipIndex && values[i] == &builder) {
             if (builderCopy == NULL) {
                 builderCopy = new UnicodeString(builder);
                 if (builderCopy == NULL) {
@@ -382,8 +381,9 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
     if (placeholderAtStart >= 0
             && placeholderValues[placeholderAtStart] == &result) {
 
-        // Append to result, but make the value of the placeholderAtStart
-        // placeholder be NULL so that it doesn't show up twice.
+        // Append to result, but let the value of the placeholderAtStart
+        // placeholder remain the same as result so that it is treated
+        // as the empty string.
         SimplePatternFormatterFixedValues fixedValues(
                 result,
                 placeholderValues,
@@ -447,7 +447,7 @@ UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
             offsetArrayLength);
     const UnicodeString *placeholderValue =
             placeholderValues[placeholders[0].id];
-    if (placeholderValue != NULL) {
+    if (placeholderValue != &appendTo) {
         appendTo.append(*placeholderValue);
     }
     for (int32_t i = 1; i < placeholderSize; ++i) {
@@ -463,7 +463,7 @@ UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
                 offsetArrayLength);
         const UnicodeString *placeholderValue =
                 placeholderValues[placeholders[i].id];
-        if (placeholderValue != NULL) {
+        if (placeholderValue != &appendTo) {
             appendTo.append(*placeholderValue);
         }
     }

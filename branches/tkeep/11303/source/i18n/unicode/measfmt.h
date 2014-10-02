@@ -344,7 +344,7 @@ class U_I18N_API MeasureFormat : public Format {
             int32_t widthIndex,
             UErrorCode &status) const;
 
-    int32_t withPerUnitAndReplace(
+    int32_t withPerUnitAndAppend(
         const UnicodeString &formatted,
         const MeasureUnit &perUnit,
         UnicodeString &result,

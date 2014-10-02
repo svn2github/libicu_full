@@ -193,7 +193,8 @@ private:
     int32_t placeholderCount;
 
     // just like formatAndAppend but uses placeholderValues exactly
-    // as they are. A NULL placeholder value is equivalent to the empty string.
+    // as they are. A placeholder value that is the is the same as
+    // appendTo is treated as the empty string.
     UnicodeString &formatAndAppendNoFixValues(
             const UnicodeString * const *placeholderValues,
             int32_t placeholderValueCount,

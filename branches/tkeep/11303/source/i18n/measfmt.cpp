@@ -612,20 +612,19 @@ UnicodeString &MeasureFormat::formatMeasurePerUnit(
     }
     FieldPosition fpos(pos.getField());
     UnicodeString result;
-    int32_t offset = withPerUnitAndReplace(
+    int32_t offset = withPerUnitAndAppend(
             formatMeasure(
                     measure, **numberFormat, result, fpos, status),
             perUnit,
-            result,
+            appendTo,
             status);
     if (U_FAILURE(status)) {
         return appendTo;
     }
     if (fpos.getBeginIndex() != 0 || fpos.getEndIndex() != 0) {
-        pos.setBeginIndex(appendTo.length() + fpos.getBeginIndex() + offset);
-        pos.setEndIndex(appendTo.length() + fpos.getEndIndex() + offset);
+        pos.setBeginIndex(fpos.getBeginIndex() + offset);
+        pos.setEndIndex(fpos.getEndIndex() + offset);
     }
-    appendTo += result;
     return appendTo;
 }
 
@@ -993,7 +992,7 @@ static void getPerUnitString(
     result.trim();
 }
 
-int32_t MeasureFormat::withPerUnitAndReplace(
+int32_t MeasureFormat::withPerUnitAndAppend(
         const UnicodeString &formatted,
         const MeasureUnit &perUnit,
         UnicodeString &result,
@@ -1006,7 +1005,7 @@ int32_t MeasureFormat::withPerUnitAndReplace(
             perUnit.getIndex(), widthToIndex(width));
     if (perUnitFormatter != NULL) {
         const UnicodeString *params[] = {&formatted};
-        perUnitFormatter->formatAndReplace(
+        perUnitFormatter->formatAndAppend(
                 params,
                 UPRV_LENGTHOF(params),
                 result,
@@ -1025,7 +1024,7 @@ int32_t MeasureFormat::withPerUnitAndReplace(
     UnicodeString perUnitString;
     getPerUnitString(*qf, perUnitString);
     const UnicodeString *params[] = {&formatted, &perUnitString};
-    perFormatter->formatAndReplace(
+    perFormatter->formatAndAppend(
             params,
             UPRV_LENGTHOF(params),
             result,
