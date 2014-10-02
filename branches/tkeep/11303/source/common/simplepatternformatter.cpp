@@ -329,6 +329,10 @@ static void appendRange(
         int32_t start,
         int32_t end,
         UnicodeString &dest) {
+    // This check improves performance significantly.
+    if (start == end) {
+        return;
+    }
     dest.append(src, start, end - start);
 }
 
