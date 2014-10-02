@@ -107,9 +107,10 @@ SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
         return;
     }
     UBool valuesOk = true;
-    for (int32_t i = 0; valuesOk && i < valuesCount; ++i) {
+    for (int32_t i = 0; i < valuesCount; ++i) {
         if (i != skipIndex && values[i] == &builder) {
             valuesOk = false;
+            break;
         }
     }
     if (valuesOk) {
