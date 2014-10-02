@@ -76,9 +76,10 @@ private:
         int32_t preceding(int32_t position);
 
         void reset();
-        void populate(int32_t start, int32_t limit, UErrorCode &status);
+        void populate(int32_t start, int32_t limit, int32_t previousTagValue, int32_t defaultTagValue, UErrorCode &status);
 
         void addContainedWords(const DictTextRange &range, UErrorCode &status);
+        void add(const int32_t index, const int32_t tagValue, UErrorCode &status);
 
         /**
          * Returns the rule status of the last break position returned by the break cache.

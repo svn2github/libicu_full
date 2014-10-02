@@ -516,6 +516,7 @@ RuleBasedBreakIterator &RuleBasedBreakIterator::refreshInputText(UText *input, U
  */
 int32_t RuleBasedBreakIterator::first(void) {
     fLastRuleStatusIndex  = 0;
+    fLastTagValue = -1;
     utext_setNativeIndex(fText, 0);
     return 0;
 }
@@ -525,6 +526,7 @@ int32_t RuleBasedBreakIterator::first(void) {
  * @return The text's past-the-end offset.
  */
 int32_t RuleBasedBreakIterator::last(void) {
+    fLastTagValue = -1;
     if (fText == NULL) {
         fLastRuleStatusIndex  = 0;
         return BreakIterator::DONE;
@@ -569,7 +571,6 @@ int32_t RuleBasedBreakIterator::next(void) {
     int32_t startPos = current();
     int32_t result = fBreakCache->following(startPos);
     if (result != BreakIterator::DONE) {
-        fLastRuleStatusIndex = -1;
         fLastTagValue = fBreakCache->getCurrentRuleStatus();
         utext_setNativeIndex(fText, result);
         return result;
@@ -577,9 +578,18 @@ int32_t RuleBasedBreakIterator::next(void) {
 
     UBool useDictionary = FALSE;
     result = handleNext(fData->fForwardTable, &useDictionary);
-    if (useDictionary) {
-        fBreakCache->populate(startPos, result, status);
+    int32_t tagValue = 0;
+    if (fLastRuleStatusIndex >= 0) {
+        // TODO(jchye): copied from getRuleStatus(). Refactor?
+        int32_t  idx = fLastRuleStatusIndex + fData->fRuleStatusTable[fLastRuleStatusIndex];
+        tagValue = fData->fRuleStatusTable[idx];
+    }
+    if (useDictionary) { // if only dict words, or contains mix of dict and non-dict words.
+        fBreakCache->populate(startPos, result, fLastTagValue, tagValue, status);
         result = fBreakCache->following(startPos);
+        fLastTagValue = tagValue;
+    } else {
+      fLastTagValue = -1;
     }
     if (result != BreakIterator::DONE) {
         utext_setNativeIndex(fText, result);
@@ -602,12 +612,13 @@ int32_t RuleBasedBreakIterator::previous(void) {
     }
 
     // If the iteration is in a cached dictionary range, return a boundary from that.
+    fLastTagValue = -1;
     int32_t result = fBreakCache->preceding(startPos);
     if (result != BreakIterator::DONE) {
+        fLastTagValue = fBreakCache->getCurrentRuleStatus();
         utext_setNativeIndex(fText, result);
         return result;
     }
-
 
     // If we have exact reverse rules, use them.
     UErrorCode status = U_ZERO_ERROR;
@@ -615,7 +626,7 @@ int32_t RuleBasedBreakIterator::previous(void) {
         UBool useDictionary = FALSE;
         result = handlePrevious(fData->fReverseTable, &useDictionary);
         if (useDictionary) {
-            fBreakCache->populate(result, startPos, status);
+            fBreakCache->populate(result, startPos, -1, -1, status);
             result = fBreakCache->preceding(startPos);
         }
         utext_setNativeIndex(fText, result);
@@ -1017,19 +1028,10 @@ int32_t RuleBasedBreakIterator::handleNext(const RBBIStateTable *statetable, UBo
                 // Stop matching if non-dictionary characters were previously
                 // matched.
                 if (firstDictionaryPosition == INT32_MAX) {
-                  if (initialPosition < result) {
-                    state = STOP_STATE;
-                    goto continueOn;
-                  } else {
-                    firstDictionaryPosition = utext_getNativeIndex(fText);
-                  }
+                  firstDictionaryPosition = utext_getNativeIndex(fText);
                 }
                 //  And off the dictionary flag bit.
                 category &= ~0x4000;
-            } else if (firstDictionaryPosition != INT32_MAX) {
-              // Current character is a non-dict char but dict chars were found previously.
-              state = STOP_STATE;
-              goto continueOn;
             }
         }
 
@@ -1257,19 +1259,10 @@ int32_t RuleBasedBreakIterator::handlePrevious(const RBBIStateTable *statetable,
             //
             if ((category & 0x4000) != 0)  {
                 if (firstDictionaryPosition == -1) {
-                    if (initialPosition > result) {
-                        state = STOP_STATE;
-                        goto continueOn;
-                    } else {
-                        firstDictionaryPosition = utext_getNativeIndex(fText);
-                    }
+                    firstDictionaryPosition = utext_getNativeIndex(fText);
                 }
                 //  And off the dictionary flag bit.
                 category &= ~0x4000;
-            } else if (firstDictionaryPosition != -1) {
-                // Current character is a non-dict char but dict chars were found previously.
-                state = STOP_STATE;
-                goto continueOn;
             }
         }
 
@@ -1410,18 +1403,20 @@ void RuleBasedBreakIterator::makeRuleStatusValid() {
 
 
 int32_t  RuleBasedBreakIterator::getRuleStatus() const {
-    RuleBasedBreakIterator *nonConstThis  = (RuleBasedBreakIterator *)this;
-    nonConstThis->makeRuleStatusValid();
+    if (fLastTagValue < 0) {
+      RuleBasedBreakIterator *nonConstThis  = (RuleBasedBreakIterator *)this;
+      nonConstThis->makeRuleStatusValid();
+    }
 
-    if (fLastRuleStatusIndex >= 0) {
-      // fLastRuleStatusIndex indexes to the start of the appropriate status record
-      //                                                 (the number of status values.)
-      //   This function returns the last (largest) of the array of status values.
-      int32_t  idx = fLastRuleStatusIndex + fData->fRuleStatusTable[fLastRuleStatusIndex];
-      return fData->fRuleStatusTable[idx];
-    } else {
+    if (fLastTagValue >= 0) {
       return fLastTagValue;
     }
+
+    // fLastRuleStatusIndex indexes to the start of the appropriate status record
+    //                                                 (the number of status values.)
+    //   This function returns the last (largest) of the array of status values.
+    int32_t  idx = fLastRuleStatusIndex + fData->fRuleStatusTable[fLastRuleStatusIndex];
+    return fData->fRuleStatusTable[idx];
 }
 
 
@@ -1434,8 +1429,16 @@ int32_t RuleBasedBreakIterator::getRuleStatusVec(
         return 0;
     }
 
-    RuleBasedBreakIterator *nonConstThis  = (RuleBasedBreakIterator *)this;
-    nonConstThis->makeRuleStatusValid();
+    if (fLastTagValue < 0) {
+      RuleBasedBreakIterator *nonConstThis  = (RuleBasedBreakIterator *)this;
+      nonConstThis->makeRuleStatusValid();
+    }
+
+    if (fLastTagValue >= 0) {
+      fillInVec[0] = fLastTagValue;
+      return 1;
+    }
+
     int32_t  numVals = fData->fRuleStatusTable[fLastRuleStatusIndex];
     int32_t  numValsToCopy = numVals;
     if (numVals > capacity) {
@@ -1751,11 +1754,13 @@ class DictTextRange {
     int fDictStart;     // Index of first dictionary char in range.
     int fDictLimit;     // Dictionary limit: index following last dictionary char in range.
     int fFinalLimit;
+    bool fUseDictionary;// True if the current range is a dictionary range.
+    int fNonDictTagValue;
     const LanguageBreakEngine *fLBE;
 
 
-    DictTextRange(RuleBasedBreakIterator *bi, int32_t start, int32_t limit) 
-            : fBreakIterator(bi), fRangeStart(0), fRangeLimit(start), fFinalLimit(limit) {};
+    DictTextRange(RuleBasedBreakIterator *bi, int32_t start, int32_t limit, int32_t tagValue)
+            : fBreakIterator(bi), fRangeStart(0), fRangeLimit(start), fFinalLimit(limit), fUseDictionary(false), fNonDictTagValue(tagValue) {};
     ~DictTextRange() {};
 
     UBool next();
@@ -1800,7 +1805,8 @@ UBool DictTextRange::next() {
     }
 
     fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
-    if ((category & 0x4000) == 0) {
+    fUseDictionary = (category & 0x4000) != 0;
+    if (!fUseDictionary) {
         // This range contains non-dictionary alphabetic chars.
         // The end of the range is either an occurence of a dictionary character
         // or the overall end of the text identified by the rules.
@@ -1863,16 +1869,16 @@ UBool DictTextRange::next() {
 //       Non-dictionary chars in the interior of a region are handed to the language (dictionary)
 //       breaker, to do with as it will.
 
-void RuleBasedBreakIterator::BreakCache::populate(int32_t start, int32_t limit, UErrorCode &status) {
+void RuleBasedBreakIterator::BreakCache::populate(int32_t start, int32_t limit, int32_t previousTagValue, int32_t defaultTagValue, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
     }
     fBreaks->removeAllElements();
     fBreaks->addElement(start, status);
     fTagValues->removeAllElements();
-    fTagValues->addElement(0, status);
+    fTagValues->addElement(previousTagValue, status);
 
-    DictTextRange  range(fThis, start, limit);
+    DictTextRange  range(fThis, start, limit, defaultTagValue);
     while (range.next()) {
         // Convention: ranges do not add a break at their start.
         //             They do add a break at their end.
@@ -1896,12 +1902,17 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
     uint32_t tagValue = -1;
     if (range.fLBE != NULL) {
         range.fLBE->findBreaks(fThis->fText, range.fDictLimit, fThis->fBreakType, *fRawBreaks, status);
-        tagValue = range.fLBE->getTagValue(fThis->fBreakType);
+        if (range.fUseDictionary) {
+          tagValue = range.fLBE->getTagValue(fThis->fBreakType);
+        } else {
+          tagValue = range.fNonDictTagValue;
+        }
     } else {
         // Range containing non-dictionary characters only.
         // Has boundaries at its start and end only.
         fRawBreaks->addElement(range.fDictStart, status);
         fRawBreaks->addElement(range.fDictLimit, status);
+        tagValue = range.fNonDictTagValue;
     }
 
     // Break engine should always show a break at the start and end
@@ -1923,12 +1934,15 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
         int32_t boundary = fRawBreaks->elementAti(i);
         U_ASSERT(boundary > fBreaks->lastElementi());
         if (fBreaks->size() == 0 || boundary > fBreaks->lastElementi()) {
-            fBreaks->addElement(boundary, status);
-            fTagValues->addElement(tagValue, status);
+            add(boundary, tagValue, status);
         }
     }
     U_ASSERT(fBreaks->lastElementi() < range.fRangeLimit);
-    fBreaks->addElement(range.fRangeLimit, status);
+    add(range.fRangeLimit, tagValue, status);
+}
+
+void RuleBasedBreakIterator::BreakCache::add(const int32_t index, const int32_t tagValue, UErrorCode &status) {
+    fBreaks->addElement(index, status);
     fTagValues->addElement(tagValue, status);
 }
 
