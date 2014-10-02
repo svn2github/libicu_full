@@ -466,7 +466,7 @@ UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
                 appendTo.length(),
                 offsetArray,
                 offsetArrayLength);
-        const UnicodeString *placeholderValue =
+        placeholderValue =
                 placeholderValues[placeholders[i].id];
         if (placeholderValue != &appendTo) {
             appendTo.append(*placeholderValue);
