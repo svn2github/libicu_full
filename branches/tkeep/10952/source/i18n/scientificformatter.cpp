@@ -200,6 +200,10 @@ ScientificFormatter::ScientificFormatter(
     if (U_FAILURE(status)) {
         return;
     }
+    if (fDecimalFormat == NULL || fStyle == NULL) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
     const DecimalFormatSymbols *sym = fDecimalFormat->getDecimalFormatSymbols();
     if (sym == NULL) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
