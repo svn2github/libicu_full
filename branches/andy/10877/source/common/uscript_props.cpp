@@ -17,8 +17,7 @@
 #include "unicode/uscript.h"
 #include "unicode/utf16.h"
 #include "ustr_imp.h"
-
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+#include "cmemory.h"
 
 namespace {
 
@@ -43,7 +42,7 @@ const int32_t CASED = 1 << 26;
 const int32_t SCRIPT_PROPS[] = {
     // Begin copy-paste output from
     // tools/trunk/unicode/py/parsescriptmetadata.py
-    0x0040 | UNKNOWN,  // Zyyy
+    0x0040 | RECOMMENDED,  // Zyyy
     0x0308 | UNKNOWN,  // Zinh
     0x0628 | RECOMMENDED | RTL,  // Arab
     0x0531 | RECOMMENDED | CASED,  // Armn
@@ -214,7 +213,7 @@ const int32_t SCRIPT_PROPS[] = {
 };
 
 int32_t getScriptProps(UScriptCode script) {
-    if (0 <= script && script < LENGTHOF(SCRIPT_PROPS)) {
+    if (0 <= script && script < UPRV_LENGTHOF(SCRIPT_PROPS)) {
         return SCRIPT_PROPS[script];
     } else {
         return 0;

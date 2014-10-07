@@ -34,8 +34,6 @@
 #include "ucase.h"
 #include "ustr_imp.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_USE
 
 #define GET_BIDI_PROPS() ubidi_getSingleton()
@@ -108,7 +106,7 @@ static UBool changesWhenCasefolded(const BinaryProperty &, UChar32, UProperty) {
 static UBool changesWhenCasefolded(const BinaryProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
     UnicodeString nfd;
     UErrorCode errorCode=U_ZERO_ERROR;
-    const Normalizer2 *nfcNorm2=Normalizer2Factory::getNFCInstance(errorCode);
+    const Normalizer2 *nfcNorm2=Normalizer2::getNFCInstance(errorCode);
     if(U_FAILURE(errorCode)) {
         return FALSE;
     }
@@ -135,7 +133,7 @@ static UBool changesWhenCasefolded(const BinaryProperty &/*prop*/, UChar32 c, UP
         /* guess some large but stack-friendly capacity */
         UChar dest[2*UCASE_MAX_STRING_LENGTH];
         int32_t destLength;
-        destLength=u_strFoldCase(dest, LENGTHOF(dest),
+        destLength=u_strFoldCase(dest, UPRV_LENGTHOF(dest),
                                   nfd.getBuffer(), nfd.length(),
                                   U_FOLD_CASE_DEFAULT, &errorCode);
         return (UBool)(U_SUCCESS(errorCode) &&
@@ -381,7 +379,7 @@ static const UHangulSyllableType gcbToHst[]={
 static int32_t getHangulSyllableType(const IntProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
     /* see comments on gcbToHst[] above */
     int32_t gcb=(int32_t)(u_getUnicodeProperties(c, 2)&UPROPS_GCB_MASK)>>UPROPS_GCB_SHIFT;
-    if(gcb<LENGTHOF(gcbToHst)) {
+    if(gcb<UPRV_LENGTHOF(gcbToHst)) {
         return gcbToHst[gcb];
     } else {
         return U_HST_NOT_APPLICABLE;
@@ -571,7 +569,7 @@ u_getFC_NFKC_Closure(UChar32 c, UChar *dest, int32_t destCapacity, UErrorCode *p
     // (What could be useful is a custom normalization table that combines
     // case folding and NFKC.)
     // For the derivation, see Unicode's DerivedNormalizationProps.txt.
-    const Normalizer2 *nfkc=Normalizer2Factory::getNFKCInstance(*pErrorCode);
+    const Normalizer2 *nfkc=Normalizer2::getNFKCInstance(*pErrorCode);
     const UCaseProps *csp=ucase_getSingleton();
     if(U_FAILURE(*pErrorCode)) {
         return 0;

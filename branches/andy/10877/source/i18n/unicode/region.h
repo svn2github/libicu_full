@@ -163,7 +163,7 @@ public:
      * @draft ICU 51 
      */
     StringEnumeration* getPreferredValues() const;
- #endif /* U_HIDE_DRAFT_API */
+#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Return this region's canonical region code.

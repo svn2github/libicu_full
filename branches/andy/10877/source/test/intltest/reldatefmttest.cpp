@@ -18,8 +18,7 @@
 #include "unicode/localpointer.h"
 #include "unicode/numfmt.h"
 #include "unicode/reldatefmt.h"
-
-#define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
+#include "cmemory.h"
 
 static const char *DirectionStr(UDateDirection direction);
 static const char *RelativeUnitStr(UDateRelativeUnit unit);
@@ -218,66 +217,6 @@ static WithQuantityExpected kEnglishShort[] = {
         {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_YEARS, "2 yr. ago"} 
 };
 
-static WithQuantityExpected kEnglishNarrow[] = {
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "+0 s"},
-        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "+0.5 s"},
-        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "+1 s"},
-        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "+2 s"},
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MINUTES, "+0 m"},
-        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MINUTES, "+0.5 m"},
-        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MINUTES, "+1 m"},
-        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MINUTES, "+2 m"},
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_HOURS, "+0 h"},
-        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_HOURS, "+0.5 h"},
-        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_HOURS, "+1 h"},
-        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_HOURS, "+2 h"},
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_DAYS, "+0 days"},
-        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_DAYS, "+0.5 days"},
-        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_DAYS, "+1 day"},
-        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_DAYS, "+2 days"},
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_WEEKS, "+0 wk."},
-        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_WEEKS, "+0.5 wk."},
-        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_WEEKS, "+1 wk."},
-        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_WEEKS, "+2 wk."},
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "+0 mo."},
-        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "+0.5 mo."},
-        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "+1 mo."},
-        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "+2 mo."},
-        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_YEARS, "+0 yr."},
-        {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_YEARS, "+0.5 yr."},
-        {1.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_YEARS, "+1 yr."},
-        {2.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_YEARS, "+2 yr."},
-                
-        {0.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_SECONDS, "-0 s"},
-        {0.5, UDAT_DIRECTION_LAST, UDAT_RELATIVE_SECONDS, "-0.5 s"},
-        {1.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_SECONDS, "-1 s"},
-        {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_SECONDS, "-2 s"},
-        {0.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MINUTES, "-0 m"},
-        {0.5, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MINUTES, "-0.5 m"},
-        {1.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MINUTES, "-1 m"},
-        {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MINUTES, "-2 m"},
-        {0.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_HOURS, "-0 h"},
-        {0.5, UDAT_DIRECTION_LAST, UDAT_RELATIVE_HOURS, "-0.5 h"},
-        {1.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_HOURS, "-1 h"},
-        {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_HOURS, "-2 h"},
-        {0.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_DAYS, "-0 days"},
-        {0.5, UDAT_DIRECTION_LAST, UDAT_RELATIVE_DAYS, "-0.5 days"},
-        {1.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_DAYS, "-1 day"},
-        {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_DAYS, "-2 days"},
-        {0.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_WEEKS, "-0 wk."},
-        {0.5, UDAT_DIRECTION_LAST, UDAT_RELATIVE_WEEKS, "-0.5 wk."},
-        {1.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_WEEKS, "-1 wk."},
-        {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_WEEKS, "-2 wk."},
-        {0.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MONTHS, "-0 mo."},
-        {0.5, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MONTHS, "-0.5 mo."},
-        {1.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MONTHS, "-1 mo."},
-        {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_MONTHS, "-2 mo."},
-        {0.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_YEARS, "-0 yr."},
-        {0.5, UDAT_DIRECTION_LAST, UDAT_RELATIVE_YEARS, "-0.5 yr."},
-        {1.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_YEARS, "-1 yr."},
-        {2.0, UDAT_DIRECTION_LAST, UDAT_RELATIVE_YEARS, "-2 yr."} 
-};
-
 static WithQuantityExpected kEnglishDecimal[] = {
         {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "in 0.0 seconds"},
         {0.5, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_SECONDS, "in 0.5 seconds"},
@@ -289,6 +228,12 @@ static WithQuantityExpected kSerbian[] = {
         {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 0 \\u043c\\u0435\\u0441\\u0435\\u0446\\u0438"},
         {1.2, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 1,2 \\u043c\\u0435\\u0441\\u0435\\u0446\\u0430"},
         {21.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 21 \\u043c\\u0435\\u0441\\u0435\\u0446"}
+};
+
+static WithQuantityExpected kSerbianNarrow[] = {
+        {0.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 0 \\u043c\\u0435\\u0441."},
+        {1.2, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 1,2 \\u043c\\u0435\\u0441."},
+        {21.0, UDAT_DIRECTION_NEXT, UDAT_RELATIVE_MONTHS, "\\u0437\\u0430 21 \\u043c\\u0435\\u0441."}
 };
 
 static WithoutQuantityExpected kEnglishNoQuantity[] = {
@@ -617,7 +562,7 @@ void RelativeDateTimeFormatterTest::runIndexedTest(
 }
 
 void RelativeDateTimeFormatterTest::TestEnglish() {
-    RunTest("en", kEnglish, LENGTHOF(kEnglish));
+    RunTest("en", kEnglish, UPRV_LENGTHOF(kEnglish));
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishCaps() {
@@ -638,27 +583,27 @@ void RelativeDateTimeFormatterTest::TestEnglishCaps() {
     RelativeDateTimeFormatter fmt2(fmt);
     fmt3 = fmt2;
     assertSuccess("", status);
-    RunTest(fmt3, kEnglishCaps, LENGTHOF(kEnglishCaps), "en caps");
+    RunTest(fmt3, kEnglishCaps, UPRV_LENGTHOF(kEnglishCaps), "en caps");
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishShort() {
-    RunTest("en", UDAT_STYLE_SHORT, kEnglishShort, LENGTHOF(kEnglishShort));
+    RunTest("en", UDAT_STYLE_SHORT, kEnglishShort, UPRV_LENGTHOF(kEnglishShort));
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishNarrow() {
-    RunTest("en", UDAT_STYLE_NARROW, kEnglishNarrow, LENGTHOF(kEnglishNarrow));
+    RunTest("en", UDAT_STYLE_NARROW, kEnglishShort, UPRV_LENGTHOF(kEnglishShort));
 }
 
 void RelativeDateTimeFormatterTest::TestSerbian() {
-    RunTest("sr", kSerbian, LENGTHOF(kSerbian));
+    RunTest("sr", kSerbian, UPRV_LENGTHOF(kSerbian));
 }
 
 void RelativeDateTimeFormatterTest::TestSerbianFallback() {
-    RunTest("sr", UDAT_STYLE_NARROW, kSerbian, LENGTHOF(kSerbian));
+    RunTest("sr", UDAT_STYLE_NARROW, kSerbianNarrow, UPRV_LENGTHOF(kSerbianNarrow));
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishNoQuantity() {
-    RunTest("en", kEnglishNoQuantity, LENGTHOF(kEnglishNoQuantity));
+    RunTest("en", kEnglishNoQuantity, UPRV_LENGTHOF(kEnglishNoQuantity));
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishNoQuantityCaps() {
@@ -675,7 +620,7 @@ void RelativeDateTimeFormatterTest::TestEnglishNoQuantityCaps() {
     RunTest(
             fmt,
             kEnglishNoQuantityCaps,
-            LENGTHOF(kEnglishNoQuantityCaps),
+            UPRV_LENGTHOF(kEnglishNoQuantityCaps),
             "en caps no quantity");
 }
 
@@ -684,7 +629,7 @@ void RelativeDateTimeFormatterTest::TestEnglishNoQuantityShort() {
             "en",
             UDAT_STYLE_SHORT,
             kEnglishNoQuantityShort,
-            LENGTHOF(kEnglishNoQuantityShort));
+            UPRV_LENGTHOF(kEnglishNoQuantityShort));
 }
 
 void RelativeDateTimeFormatterTest::TestEnglishNoQuantityNarrow() {
@@ -692,11 +637,11 @@ void RelativeDateTimeFormatterTest::TestEnglishNoQuantityNarrow() {
             "en",
             UDAT_STYLE_NARROW,
             kEnglishNoQuantityNarrow,
-            LENGTHOF(kEnglishNoQuantityNarrow));
+            UPRV_LENGTHOF(kEnglishNoQuantityNarrow));
 }
 
 void RelativeDateTimeFormatterTest::TestSpanishNoQuantity() {
-    RunTest("es", kSpanishNoQuantity, LENGTHOF(kSpanishNoQuantity));
+    RunTest("es", kSpanishNoQuantity, UPRV_LENGTHOF(kSpanishNoQuantity));
 }
 
 void RelativeDateTimeFormatterTest::TestFormatWithQuantityIllegalArgument() {
@@ -740,11 +685,11 @@ void RelativeDateTimeFormatterTest::TestCustomNumberFormat() {
 
     // Test copy constructor.
     RelativeDateTimeFormatter fmt2(fmt);
-    RunTest(fmt2, kEnglishDecimal, LENGTHOF(kEnglishDecimal), "en decimal digits");
+    RunTest(fmt2, kEnglishDecimal, UPRV_LENGTHOF(kEnglishDecimal), "en decimal digits");
 
     // Test assignment
     fmt = RelativeDateTimeFormatter("es", status);
-    RunTest(fmt, kSpanishNoQuantity, LENGTHOF(kSpanishNoQuantity), "assignment operator");
+    RunTest(fmt, kSpanishNoQuantity, UPRV_LENGTHOF(kSpanishNoQuantity), "assignment operator");
 
 }
 

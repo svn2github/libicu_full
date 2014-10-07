@@ -127,9 +127,9 @@ class BasicTimeZone;
  *
  * <p>
  * <strong>Ambiguous Wall Clock Time.</strong> When time offset from UTC has
- * changed, it produces ambiguous time slot around the transition. For example,
+ * changed, it produces an ambiguous time slot around the transition. For example,
  * many US locations observe daylight saving time. On the date switching to daylight
- * saving time in US, wall clock time jumps from 1:00 AM (standard) to 2:00 AM
+ * saving time in US, wall clock time jumps from 12:59 AM (standard) to 2:00 AM
  * (daylight). Therefore, wall clock time from 1:00 AM to 1:59 AM do not exist on
  * the date. When the input wall time fall into this missing time slot, the ICU
  * Calendar resolves the time using the UTC offset before the transition by default.
@@ -2164,7 +2164,7 @@ private:
 
     /**
      * Time zone affects the time calculation done by Calendar. Calendar subclasses use
-     * the time zone data to produce the local time.
+     * the time zone data to produce the local time. Always set; never NULL.
      */
     TimeZone*   fZone;
 
@@ -2486,7 +2486,7 @@ Calendar::roll(EDateFields field, UBool up, UErrorCode& status)
 {
     roll((UCalendarDateFields) field, up, status);
 }
-#endif
+#endif  /* U_HIDE_DEPRECATED_API */
 
 
 // -------------------------------------
@@ -2510,7 +2510,7 @@ inline int32_t  Calendar::weekNumber(int32_t dayOfPeriod, int32_t dayOfWeek)
 {
   return weekNumber(dayOfPeriod, dayOfPeriod, dayOfWeek);
 }
-#endif
+#endif  /* U_HIDE_INTERNAL_API */
 
 U_NAMESPACE_END
 

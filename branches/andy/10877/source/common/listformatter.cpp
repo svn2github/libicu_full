@@ -24,8 +24,6 @@
 #include "ucln_cmn.h"
 #include "uresimp.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
-
 U_NAMESPACE_BEGIN
 
 struct ListFormatInternal : public UMemory {
@@ -273,10 +271,10 @@ static void joinStrings(
     int32_t offsets[2];
     pat.format(
             params,
-            LENGTHOF(params),
+            UPRV_LENGTHOF(params),
             result,
             offsets,
-            LENGTHOF(offsets),
+            UPRV_LENGTHOF(offsets),
             errorCode);
     if (U_FAILURE(errorCode)) {
         return;

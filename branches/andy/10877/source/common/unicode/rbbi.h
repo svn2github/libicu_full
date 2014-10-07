@@ -60,7 +60,7 @@ struct RBBIStateTable;
  *
  * <p>This class is not intended to be subclassed.
  */
-class U_COMMON_API RuleBasedBreakIterator : public BreakIterator {
+class U_COMMON_API RuleBasedBreakIterator /*U_FINAL*/ : public BreakIterator {
 
 private:
 
@@ -436,8 +436,8 @@ public:
     virtual void  setText(UText *text, UErrorCode &status);
 
     /**
-     * Sets the current iteration position to the beginning of the text.
-     * @return The offset of the beginning of the text.
+     * Sets the current iteration position to the beginning of the text, position zero.
+     * @return The offset of the beginning of the text, zero.
      *  @stable ICU 2.0
      */
     virtual int32_t first(void);

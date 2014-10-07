@@ -12,8 +12,6 @@
 #include "intltest.h"
 #include "simplepatternformatter.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array) / sizeof((array)[0]))
-
 class SimplePatternFormatterTest : public IntlTest {
 public:
     SimplePatternFormatterTest() {
@@ -21,6 +19,7 @@ public:
     void TestNoPlaceholders();
     void TestOnePlaceholder();
     void TestManyPlaceholders();
+    void TestGetPatternWithNoPlaceholders();
     void TestOptimization();
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
@@ -31,6 +30,7 @@ void SimplePatternFormatterTest::runIndexedTest(int32_t index, UBool exec, const
   TESTCASE_AUTO(TestNoPlaceholders);
   TESTCASE_AUTO(TestOnePlaceholder);
   TESTCASE_AUTO(TestManyPlaceholders);
+  TESTCASE_AUTO(TestGetPatternWithNoPlaceholders);
   TESTCASE_AUTO(TestOptimization);
   TESTCASE_AUTO_END;
 }
@@ -105,39 +105,43 @@ void SimplePatternFormatterTest::TestManyPlaceholders() {
             "Prefix: Templates frogtommy{0} and leg are out of order.",
             fmt.format(
                     params,
-                    LENGTHOF(params),
+                    UPRV_LENGTHOF(params),
                     appendTo,
                     offsets,
-                    LENGTHOF(offsets),
+                    UPRV_LENGTHOF(offsets),
                     status));
     assertSuccess("Status", status);
-    for (int32_t i = 0; i < LENGTHOF(expectedOffsets); ++i) {
+    for (int32_t i = 0; i < UPRV_LENGTHOF(expectedOffsets); ++i) {
         if (expectedOffsets[i] != offsets[i]) {
             errln("Expected %d, got %d", expectedOffsets[i], offsets[i]);
         }
     }
     appendTo.remove();
+
+    // Not having enough placeholder params results in error.
     fmt.format(
             params,
-            LENGTHOF(params) - 1,
+            UPRV_LENGTHOF(params) - 1,
             appendTo,
             offsets,
-            LENGTHOF(offsets),
+            UPRV_LENGTHOF(offsets),
             status);
     if (status != U_ILLEGAL_ARGUMENT_ERROR) {
         errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
     }
+
+    // Ensure we don't write to offsets array beyond its length.
     status = U_ZERO_ERROR;
-    offsets[LENGTHOF(offsets) - 1] = 289;
+    offsets[UPRV_LENGTHOF(offsets) - 1] = 289;
     appendTo.remove();
     fmt.format(
             params,
-            LENGTHOF(params),
+            UPRV_LENGTHOF(params),
             appendTo,
             offsets,
-            LENGTHOF(offsets) - 1,
+            UPRV_LENGTHOF(offsets) - 1,
             status);
-    assertEquals("Offsets buffer length", 289, offsets[LENGTHOF(offsets) - 1]);
+    assertEquals("Offsets buffer length", 289, offsets[UPRV_LENGTHOF(offsets) - 1]);
 
     // Test assignment
     SimplePatternFormatter s;
@@ -148,7 +152,7 @@ void SimplePatternFormatterTest::TestManyPlaceholders() {
             "Templates frogtommy{0} and leg are out of order.",
             s.format(
                     params,
-                    LENGTHOF(params),
+                    UPRV_LENGTHOF(params),
                     appendTo,
                     NULL,
                     0,
@@ -162,7 +166,7 @@ void SimplePatternFormatterTest::TestManyPlaceholders() {
             "Templates frogtommy{0} and leg are out of order.",
             r.format(
                     params,
-                    LENGTHOF(params),
+                    UPRV_LENGTHOF(params),
                     appendTo,
                     NULL,
                     0,
@@ -191,6 +195,12 @@ void SimplePatternFormatterTest::TestManyPlaceholders() {
     assertSuccess("Status", status);
 }
 
+void SimplePatternFormatterTest::TestGetPatternWithNoPlaceholders() {
+    SimplePatternFormatter fmt("{0} has no {1} placeholders.");
+    assertEquals(
+            "", " has no  placeholders.", fmt.getPatternWithNoPlaceholders());
+}
+
 void SimplePatternFormatterTest::TestOptimization() {
     UErrorCode status = U_ZERO_ERROR;
     SimplePatternFormatter fmt;
@@ -212,13 +222,13 @@ void SimplePatternFormatterTest::TestOptimization() {
             "leg, freddy, frog and by",
             fmt.format(
                     params,
-                    LENGTHOF(params),
+                    UPRV_LENGTHOF(params),
                     values[2],
                     offsets,
-                    LENGTHOF(offsets),
+                    UPRV_LENGTHOF(offsets),
                     status));
     assertSuccess("Status", status);
-    for (int32_t i = 0; i < LENGTHOF(expectedOffsets); ++i) {
+    for (int32_t i = 0; i < UPRV_LENGTHOF(expectedOffsets); ++i) {
         if (expectedOffsets[i] != offsets[i]) {
             errln("Expected %d, got %d", expectedOffsets[i], offsets[i]);
         }

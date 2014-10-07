@@ -151,73 +151,77 @@ typedef enum UNumberFormatStyle {
      * Currency format with a currency symbol, e.g., "$1.00".
      * @stable ICU 2.0
      */
-    UNUM_CURRENCY,
+    UNUM_CURRENCY=2,
     /**
      * Percent format
      * @stable ICU 2.0
      */
-    UNUM_PERCENT,
+    UNUM_PERCENT=3,
     /**
      * Scientific format
      * @stable ICU 2.1
      */
-    UNUM_SCIENTIFIC,
+    UNUM_SCIENTIFIC=4,
     /**
-     * Spellout rule-based format
+     * Spellout rule-based format. The default ruleset can be specified/changed using
+     * unum_setTextAttribute with UNUM_DEFAULT_RULESET; the available public rulesets
+     * can be listed using unum_getTextAttribute with UNUM_PUBLIC_RULESETS.
      * @stable ICU 2.0
      */
-    UNUM_SPELLOUT,
+    UNUM_SPELLOUT=5,
     /** 
-     * Ordinal rule-based format 
+     * Ordinal rule-based format . The default ruleset can be specified/changed using
+     * unum_setTextAttribute with UNUM_DEFAULT_RULESET; the available public rulesets
+     * can be listed using unum_getTextAttribute with UNUM_PUBLIC_RULESETS.
      * @stable ICU 3.0
      */
-    UNUM_ORDINAL,
+    UNUM_ORDINAL=6,
     /** 
      * Duration rule-based format 
      * @stable ICU 3.0
      */
-    UNUM_DURATION,
+    UNUM_DURATION=7,
     /** 
      * Numbering system rule-based format
      * @stable ICU 4.2
      */
-    UNUM_NUMBERING_SYSTEM,
+    UNUM_NUMBERING_SYSTEM=8,
     /** 
      * Rule-based format defined by a pattern string.
      * @stable ICU 3.0
      */
-    UNUM_PATTERN_RULEBASED,
+    UNUM_PATTERN_RULEBASED=9,
     /**
      * Currency format with an ISO currency code, e.g., "USD1.00".
      * @stable ICU 4.8
      */
-    UNUM_CURRENCY_ISO,
+    UNUM_CURRENCY_ISO=10,
     /**
      * Currency format with a pluralized currency name,
      * e.g., "1.00 US dollar" and "3.00 US dollars".
      * @stable ICU 4.8
      */
-    UNUM_CURRENCY_PLURAL,
+    UNUM_CURRENCY_PLURAL=11,
 #ifndef U_HIDE_DRAFT_API
     /**
      * Currency format for accounting, e.g., "($3.00)" for
      * negative currency amount instead of "-$3.00" ({@link #UNUM_CURRENCY}).
      * @draft ICU 53
      */
-    UNUM_CURRENCY_ACCOUNTING,
+    UNUM_CURRENCY_ACCOUNTING=12,
     /**
      * Currency format with a currency symbol given CASH usage, e.g., 
      * "NT$3" instead of "NT$3.23".
      * @draft ICU 54
      */
-    UNUM_CASH_CURRENCY,
+    UNUM_CASH_CURRENCY=13,
 #endif /* U_HIDE_DRAFT_API */
 
     /**
      * One more than the highest number format style constant.
      * @stable ICU 4.8
      */
-    UNUM_FORMAT_STYLE_COUNT,
+    UNUM_FORMAT_STYLE_COUNT=14,
 
     /**
      * Default format
@@ -580,7 +584,6 @@ unum_formatDoubleCurrency(const UNumberFormat* fmt,
                           UFieldPosition* pos,
                           UErrorCode* status);
 
-#ifndef U_HIDE_DRAFT_API
 /**
  * Format a UFormattable into a string.
  * @param fmt the formatter to use
@@ -599,16 +602,15 @@ unum_formatDoubleCurrency(const UNumberFormat* fmt,
  * @return the total buffer size needed; if greater than resultLength,
  * the output was truncated. Will return 0 on error.
  * @see unum_parseToUFormattable
- * @draft ICU 52
+ * @stable ICU 52
  */
-U_DRAFT int32_t U_EXPORT2
+U_STABLE int32_t U_EXPORT2
 unum_formatUFormattable(const UNumberFormat* fmt,
                         const UFormattable *number,
                         UChar *result,
                         int32_t resultLength,
                         UFieldPosition *pos,
                         UErrorCode *status);
-#endif  /* U_HIDE_DRAFT_API */
 
 /**
 * Parse a string into an integer using a UNumberFormat.
@@ -744,7 +746,6 @@ unum_parseDoubleCurrency(const UNumberFormat* fmt,
                          UChar* currency,
                          UErrorCode* status);
 
-#ifndef U_HIDE_DRAFT_API
 /**
  * Parse a UChar string into a UFormattable.
  * Example code:
@@ -761,16 +762,15 @@ unum_parseDoubleCurrency(const UNumberFormat* fmt,
  * @return the UFormattable.  Will be ==result unless NULL was passed in for result, in which case it will be the newly opened UFormattable.
  * @see ufmt_getType
  * @see ufmt_close
- * @draft ICU 52
+ * @stable ICU 52
  */
-U_DRAFT UFormattable* U_EXPORT2
+U_STABLE UFormattable* U_EXPORT2
 unum_parseToUFormattable(const UNumberFormat* fmt,
                          UFormattable *result,
                          const UChar* text,
                          int32_t textLength,
                          int32_t* parsePos, /* 0 = start */
                          UErrorCode* status);
-#endif  /* U_HIDE_DRAFT_API */
 
 /**
  * Set the pattern used by a UNumberFormat.  This can only be used
@@ -940,10 +940,22 @@ typedef enum UNumberFormatAttribute {
    */
   UNUM_PARSE_NO_EXPONENT,
 
+#ifndef U_HIDE_DRAFT_API
+  /** 
+   * if this attribute is set to 1, specifies that, if the pattern contains a 
+   * decimal mark the input is required to have one. If this attribute is set to 0,
+   * specifies that input does not have to contain a decimal mark.
+   * Has no effect on formatting.
+   * Default: 0 (unset)
+   * @draft ICU 54
+   */
+  UNUM_PARSE_DECIMAL_MARK_REQUIRED = UNUM_PARSE_NO_EXPONENT+1,
+#endif  /* U_HIDE_DRAFT_API */
+
   /* The following cannot be #ifndef U_HIDE_INTERNAL_API, needed in .h file variable declararions */
   /** Limit of boolean attributes.
    * @internal */
-  UNUM_LIMIT_BOOLEAN_ATTRIBUTE
+  UNUM_LIMIT_BOOLEAN_ATTRIBUTE = UNUM_PARSE_NO_EXPONENT+2
 } UNumberFormatAttribute;
 
 /**
@@ -1044,14 +1056,20 @@ typedef enum UNumberFormatTextAttribute {
   /** The ISO currency code */
   UNUM_CURRENCY_CODE,
   /**
-   * The default rule set.  This is only available with rule-based formatters.
+   * The default rule set, such as "%spellout-numbering-year:", "%spellout-cardinal:",
+   * "%spellout-ordinal-masculine-plural:", "%spellout-ordinal-feminine:", or
+   * "%spellout-ordinal-neuter:". The available public rulesets can be listed using
+   * unum_getTextAttribute with UNUM_PUBLIC_RULESETS. This is only available with
+   * rule-based formatters.
    * @stable ICU 3.0
    */
   UNUM_DEFAULT_RULESET,
   /**
    * The public rule sets.  This is only available with rule-based formatters.
    * This is a read-only attribute.  The public rulesets are returned as a
-   * single string, with each ruleset name delimited by ';' (semicolon).
+   * single string, with each ruleset name delimited by ';' (semicolon). See the
+   * CLDR LDML spec for more information about RBNF rulesets:
+   * http://www.unicode.org/reports/tr35/tr35-numbers.html#Rule-Based_Number_Formatting
    * @stable ICU 3.0
    */
   UNUM_PUBLIC_RULESETS
@@ -1210,10 +1228,12 @@ typedef enum UNumberFormatSymbol {
    */
   UNUM_NINE_DIGIT_SYMBOL = 26,
 
+#ifndef U_HIDE_DRAFT_API
   /** Multiplication sign
    * @draft ICU 54
    */
   UNUM_EXPONENT_MULTIPLICATION_SYMBOL = 27,
+#endif  /* U_HIDE_DRAFT_API */
 
   /** count symbol constants */
   UNUM_FORMAT_SYMBOL_COUNT = 28

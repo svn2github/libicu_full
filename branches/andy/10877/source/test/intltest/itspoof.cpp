@@ -45,8 +45,6 @@
     errln("Test Failure at file %s, line %d: \"%s\" (%d) == \"%s\" (%d)", \
              __FILE__, __LINE__, #a, (a), #b, (b)); }}
 
-#define LENGTHOF(array) ((int32_t)(sizeof(array)/sizeof((array)[0])))
-
 /*
  *   TEST_SETUP and TEST_TEARDOWN
  *         macros to handle the boilerplate around setting up test case.
@@ -186,18 +184,10 @@ void IntlTestSpoof::testSkeleton() {
     const uint32_t SA = USPOOF_SINGLE_SCRIPT_CONFUSABLE | USPOOF_ANY_CASE;
 
     TEST_SETUP
-        // A long "identifier" that will overflow implementation stack buffers, forcing heap allocations.
-        CHECK_SKELETON(SL, " A 1ong \\u02b9identifier' that will overflow implementation stack buffers, forcing heap allocations."
-                           " A 1ong 'identifier' that will overflow implementation stack buffers, forcing heap allocations."
-                           " A 1ong 'identifier' that will overflow implementation stack buffers, forcing heap allocations."
-                           " A 1ong 'identifier' that will overflow implementation stack buffers, forcing heap allocations.",
-
-               " A long 'identifier' that vvill overflovv irnplernentation stack buffers, forcing heap allocations."
-               " A long 'identifier' that vvill overflovv irnplernentation stack buffers, forcing heap allocations."
-               " A long 'identifier' that vvill overflovv irnplernentation stack buffers, forcing heap allocations."
-               " A long 'identifier' that vvill overflovv irnplernentation stack buffers, forcing heap allocations.")
-
-        CHECK_SKELETON(SL, "nochange", "nochange");
+        CHECK_SKELETON(SL, "nochange", "\\u213C\\u2134\\U0001D41C\\u210E\\u237A\\u213C\\u210A\\u212E");
+        CHECK_SKELETON(SA, "nochange", "\\u213C\\u2134\\U0001D41C\\u210E\\u237A\\u213C\\u210A\\u212E");
+        CHECK_SKELETON(ML, "nochange", "\\u213C\\u2134\\U0001D41C\\u210E\\u237A\\u213C\\u210A\\u212E");
+        CHECK_SKELETON(MA, "nochange", "nochange");
         CHECK_SKELETON(MA, "love", "love"); 
         CHECK_SKELETON(MA, "1ove", "love");   // Digit 1 to letter l
         CHECK_SKELETON(ML, "OOPS", "OOPS");
@@ -206,29 +196,29 @@ void IntlTestSpoof::testSkeleton() {
         CHECK_SKELETON(MA, "00PS", "OOPS");   // Digit 0 to letter O in any case mode only
         CHECK_SKELETON(SL, "\\u059c", "\\u0301");
         CHECK_SKELETON(SL, "\\u2A74", "\\u003A\\u003A\\u003D");
-        CHECK_SKELETON(SL, "\\u247E", "\\u0028\\u006C\\u006C\\u0029");  // "(ll)"
-        CHECK_SKELETON(SL, "\\uFDFB", "\\u062C\\u0644\\u0020\\u062C\\u0644\\u0627\\u0644\\u0647");
+        CHECK_SKELETON(SL, "\\u247E", "\\u0028\\u0031\\u0031\\u0029");  // "(11)"
+        CHECK_SKELETON(SL, "\\uFDFB", "\\u062C\\u0644\\u0020\\u062C\\u0644\\u0031\\u0644\\u2134");
 
         // This mapping exists in the ML and MA tables, does not exist in SL, SA
-        //0C83 ;	0C03 ;	
+        // 0C83 ;	0983 ;	ML
+        // 0C83 ;	0983 ;	MA
+        // 
         CHECK_SKELETON(SL, "\\u0C83", "\\u0C83");
         CHECK_SKELETON(SA, "\\u0C83", "\\u0C83");
         CHECK_SKELETON(ML, "\\u0C83", "\\u0983");
         CHECK_SKELETON(MA, "\\u0C83", "\\u0983");
         
-        // 0391 ; 0041 ;
-        // This mapping exists only in the MA table.
+        // 0391 mappings exist only in MA and SA tables.
         CHECK_SKELETON(MA, "\\u0391", "A");
-        CHECK_SKELETON(SA, "\\u0391", "\\u0391");
+        CHECK_SKELETON(SA, "\\u0391", "\\U0001D400");
         CHECK_SKELETON(ML, "\\u0391", "\\u0391");
         CHECK_SKELETON(SL, "\\u0391", "\\u0391");
 
-        // 13CF ;  0062 ; 
-        // This mapping exists in the ML and MA tables
-        CHECK_SKELETON(ML, "\\u13CF", "b");
+        // 13CF Mappings in all four tables, different in MA.
+        CHECK_SKELETON(ML, "\\u13CF", "\\U0001D41B");
         CHECK_SKELETON(MA, "\\u13CF", "b");
-        CHECK_SKELETON(SL, "\\u13CF", "\\u13CF");
-        CHECK_SKELETON(SA, "\\u13CF", "\\u13CF");
+        CHECK_SKELETON(SL, "\\u13CF", "\\U0001D41B");
+        CHECK_SKELETON(SA, "\\u13CF", "\\U0001D41B");
 
         // 0022 ;  0027 0027 ; 
         // all tables.
@@ -237,10 +227,11 @@ void IntlTestSpoof::testSkeleton() {
         CHECK_SKELETON(ML, "\\u0022", "\\u0027\\u0027");
         CHECK_SKELETON(MA, "\\u0022", "\\u0027\\u0027");
 
-        // 017F ;  0066 ;
-        // This mapping exists in the SA and MA tables
+        // 017F mappings exist only in MA and SA tables.
         CHECK_SKELETON(MA, "\\u017F", "f");
-        CHECK_SKELETON(SA, "\\u017F", "f");
+        CHECK_SKELETON(SA, "\\u017F", "\\U0001D41F");
+        CHECK_SKELETON(ML, "\\u017F", "\\u017F");
+        CHECK_SKELETON(SL, "\\u017F", "\\u017F");
 
     TEST_TEARDOWN;
 }
@@ -511,7 +502,7 @@ void IntlTestSpoof::testIdentifierInfo() {
     };
 
     int testNum;
-    for (testNum = 0; testNum < LENGTHOF(tests); testNum++) {
+    for (testNum = 0; testNum < UPRV_LENGTHOF(tests); testNum++) {
         char testNumStr[40];
         sprintf(testNumStr, "testNum = %d", testNum);
         Test &test = tests[testNum];
@@ -575,7 +566,7 @@ void IntlTestSpoof::testIdentifierInfo() {
 
     status = U_ZERO_ERROR;
     IdentifierInfo identifierInfo(status);
-    for (testNum=0; testNum<LENGTHOF(scriptTests); testNum++) {
+    for (testNum=0; testNum<UPRV_LENGTHOF(scriptTests); testNum++) {
         ScriptTest &test = scriptTests[testNum];
         char msgBuf[100];
         sprintf(msgBuf, "testNum = %d ", testNum);
@@ -691,7 +682,7 @@ void IntlTestSpoof::testRestrictionLevel() {
     TEST_ASSERT_SUCCESS(status);
     idInfo.setIdentifierProfile(*uspoof_getRecommendedUnicodeSet(&status));
     TEST_ASSERT_SUCCESS(status);
-    for (int32_t testNum=0; testNum < LENGTHOF(tests); testNum++) {
+    for (int32_t testNum=0; testNum < UPRV_LENGTHOF(tests); testNum++) {
         status = U_ZERO_ERROR;
         const Test &test = tests[testNum];
         UnicodeString testString = UnicodeString(test.fId).unescape();
@@ -700,7 +691,7 @@ void IntlTestSpoof::testRestrictionLevel() {
         sprintf(msgBuffer, "testNum = %d ", testNum);
         TEST_ASSERT_SUCCESS(status);
         TEST_ASSERT_MSG(expectedLevel == idInfo.getRestrictionLevel(status), msgBuffer);
-        for (int levelIndex=0; levelIndex<LENGTHOF(restrictionLevels); levelIndex++) {
+        for (int levelIndex=0; levelIndex<UPRV_LENGTHOF(restrictionLevels); levelIndex++) {
             status = U_ZERO_ERROR;
             URestrictionLevel levelSetInSpoofChecker = restrictionLevels[levelIndex];
             USpoofChecker *sc = uspoof_open(&status);
@@ -751,7 +742,7 @@ void IntlTestSpoof::testMixedNumbers() {
     };
     UErrorCode status = U_ZERO_ERROR;
     IdentifierInfo idInfo(status);
-    for (int32_t testNum=0; testNum < LENGTHOF(tests); testNum++) {
+    for (int32_t testNum=0; testNum < UPRV_LENGTHOF(tests); testNum++) {
         char msgBuf[100];
         sprintf(msgBuf, "testNum = %d ", testNum);
         Test &test = tests[testNum];

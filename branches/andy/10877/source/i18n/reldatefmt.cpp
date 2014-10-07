@@ -19,7 +19,6 @@
 #include "unicode/decimfmt.h"
 #include "unicode/numfmt.h"
 #include "unicode/brkiter.h"
-#include "lrucache.h"
 #include "uresimp.h"
 #include "unicode/ures.h"
 #include "cstring.h"
@@ -31,25 +30,11 @@
 #include "sharedbreakiterator.h"
 #include "sharedpluralrules.h"
 #include "sharednumberformat.h"
+#include "unifiedcache.h"
 
 // Copied from uscript_props.cpp
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
-static icu::LRUCache *gCache = NULL;
-static UMutex gCacheMutex = U_MUTEX_INITIALIZER;
 static UMutex gBrkIterMutex = U_MUTEX_INITIALIZER;
-static icu::UInitOnce gCacheInitOnce = U_INITONCE_INITIALIZER;
-
-U_CDECL_BEGIN
-static UBool U_CALLCONV reldatefmt_cleanup() {
-    gCacheInitOnce.reset();
-    if (gCache) {
-        delete gCache;
-        gCache = NULL;
-    }
-    return TRUE;
-}
-U_CDECL_END
 
 U_NAMESPACE_BEGIN
 
@@ -352,12 +337,25 @@ static void addTimeUnits(
         cacheData.relativeUnits[UDAT_STYLE_SHORT][relativeUnit],
         cacheData.absoluteUnits[UDAT_STYLE_SHORT][absoluteUnit],
         status);
+    if (U_FAILURE(status)) {
+        return;
+    }
     addTimeUnit(
         resource,
         pathNarrow,
         cacheData.relativeUnits[UDAT_STYLE_NARROW][relativeUnit],
         cacheData.absoluteUnits[UDAT_STYLE_NARROW][absoluteUnit],
         status);
+    if (status == U_MISSING_RESOURCE_ERROR) {
+        // retry addTimeUnit for UDAT_STYLE_NARROW using pathShort
+        status = U_ZERO_ERROR;
+        addTimeUnit(
+            resource,
+            pathShort,
+            cacheData.relativeUnits[UDAT_STYLE_NARROW][relativeUnit],
+            cacheData.absoluteUnits[UDAT_STYLE_NARROW][absoluteUnit],
+            status);
+    }
 }
 
 static void initRelativeUnits(
@@ -376,11 +374,23 @@ static void initRelativeUnits(
             pathShort,
             relativeUnits[UDAT_STYLE_SHORT][relativeUnit],
             status);
+    if (U_FAILURE(status)) {
+        return;
+    }
     initRelativeUnit(
             resource,
             pathNarrow,
             relativeUnits[UDAT_STYLE_NARROW][relativeUnit],
             status);
+    if (status == U_MISSING_RESOURCE_ERROR) {
+        // retry initRelativeUnit for UDAT_STYLE_NARROW using pathShort
+        status = U_ZERO_ERROR;
+        initRelativeUnit(
+                resource,
+                pathShort,
+                relativeUnits[UDAT_STYLE_NARROW][relativeUnit],
+                status);
+    }
 }
 
 static void addWeekDays(
@@ -404,6 +414,9 @@ static void addWeekDays(
             absoluteUnit,
             absoluteUnits[UDAT_STYLE_SHORT],
             status);
+    if (U_FAILURE(status)) {
+        return;
+    }
     addWeekDay(
             resource,
             pathNarrow,
@@ -411,6 +424,17 @@ static void addWeekDays(
             absoluteUnit,
             absoluteUnits[UDAT_STYLE_NARROW],
             status);
+    if (status == U_MISSING_RESOURCE_ERROR) {
+        // retry addWeekDay for UDAT_STYLE_NARROW using pathShort
+        status = U_ZERO_ERROR;
+        addWeekDay(
+                resource,
+                pathShort,
+                daysOfWeek[UDAT_STYLE_NARROW],
+                absoluteUnit,
+                absoluteUnits[UDAT_STYLE_NARROW],
+                status);
+    }
 }
 
 static UBool loadUnitData(
@@ -592,9 +616,9 @@ static UBool getDateTimePattern(
     return getStringByIndex(topLevel.getAlias(), 8, result, status);
 }
 
-// Creates RelativeDateTimeFormatter specific data for a given locale
-static SharedObject *U_CALLCONV createData(
-        const char *localeId, UErrorCode &status) {
+template<> U_I18N_API
+const RelativeDateTimeCacheData *LocaleCacheKey<RelativeDateTimeCacheData>::createObject(const void * /*unused*/, UErrorCode &status) const {
+    const char *localeId = fLoc.getName();
     LocalUResourceBundlePointer topLevel(ures_open(NULL, localeId, &status));
     if (U_FAILURE(status)) {
         return NULL;
@@ -620,30 +644,8 @@ static SharedObject *U_CALLCONV createData(
     if (U_FAILURE(status)) {
         return NULL;
     }
+    result->addRef();
     return result.orphan();
-}
-
-static void U_CALLCONV cacheInit(UErrorCode &status) {
-    U_ASSERT(gCache == NULL);
-    ucln_i18n_registerCleanup(UCLN_I18N_RELDATEFMT, reldatefmt_cleanup);
-    gCache = new SimpleLRUCache(100, &createData, status);
-    if (U_FAILURE(status)) {
-        delete gCache;
-        gCache = NULL;
-    }
-}
-
-static UBool getFromCache(
-        const char *locale,
-        const RelativeDateTimeCacheData *&ptr,
-        UErrorCode &status) {
-    umtx_initOnce(gCacheInitOnce, &cacheInit, status);
-    if (U_FAILURE(status)) {
-        return FALSE;
-    }
-    Mutex lock(&gCacheMutex);
-    gCache->get(locale, ptr, status);
-    return U_SUCCESS(status);
 }
 
 RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) :
@@ -851,7 +853,8 @@ void RelativeDateTimeFormatter::init(
         UErrorCode &status) {
     LocalPointer<NumberFormat> nf(nfToAdopt);
     LocalPointer<BreakIterator> bi(biToAdopt);
-    if (!getFromCache(fLocale.getName(), fCache, status)) {
+    UnifiedCache::getByLocale(fLocale, fCache, status);
+    if (U_FAILURE(status)) {
         return;
     }
     const SharedPluralRules *pr = PluralRules::createSharedInstance(
