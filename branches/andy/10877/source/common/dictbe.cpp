@@ -658,20 +658,26 @@ BurmeseBreakEngine::~BurmeseBreakEngine() {
     delete fDictionary;
 }
 
-int32_t
+void
 BurmeseBreakEngine::divideUpDictionaryRange( UText *text,
                                                 int32_t rangeStart,
                                                 int32_t rangeEnd,
-                                                UStack &foundBreaks ) const {
+                                                int32_t /*breakType*/,
+                                                UVector32 &foundBreaks,
+                                                UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    foundBreaks.addElement(rangeStart, status);
     if ((rangeEnd - rangeStart) < BURMESE_MIN_WORD_SPAN) {
-        return 0;       // Not enough characters for two words
+        foundBreaks.addElement(rangeEnd, status);
+        return;       // Not enough characters for two words
     }
 
     uint32_t wordsFound = 0;
     int32_t cpWordLength = 0;
     int32_t cuWordLength = 0;
     int32_t current;
-    UErrorCode status = U_ZERO_ERROR;
     PossibleWord words[BURMESE_LOOKAHEAD];
     
     utext_setNativeIndex(text, rangeStart);
@@ -798,13 +804,10 @@ foundBest:
         }
     }
 
-    // Don't return a break for the end of the dictionary range if there is one there.
-    if (foundBreaks.peeki() >= rangeEnd) {
-        (void) foundBreaks.popi();
-        wordsFound -= 1;
+    if (foundBreaks.lastElementi() < rangeEnd) {
+        foundBreaks.addElement(rangeEnd, status);
     }
-
-    return wordsFound;
+    return;
 }
 
 /*

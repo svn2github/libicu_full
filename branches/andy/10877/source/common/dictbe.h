@@ -186,7 +186,7 @@ class ThaiBreakEngine : public DictionaryBreakEngine {
   */
   virtual void divideUpDictionaryRange( UText *text,
                                         int32_t rangeStart,
-                                        int32_t rangeLimit,
+                                        int32_t rangeEnd,
                                         int32_t breakType,
                                         UVector32 &foundBreaks,
                                         UErrorCode &status) const;
@@ -300,10 +300,12 @@ class BurmeseBreakEngine : public DictionaryBreakEngine {
   * @param foundBreaks Output of C array of int32_t break positions, or 0 
   * @return The number of breaks found 
   */ 
-  virtual int32_t divideUpDictionaryRange( UText *text, 
-                                           int32_t rangeStart, 
-                                           int32_t rangeEnd, 
-                                           UStack &foundBreaks ) const; 
+  virtual void divideUpDictionaryRange( UText *text,
+                                        int32_t rangeStart,
+                                        int32_t rangeEnd,
+                                        int32_t breakType,
+                                        UVector32 &foundBreaks,
+                                        UErrorCode &status) const;
  
 }; 
  
