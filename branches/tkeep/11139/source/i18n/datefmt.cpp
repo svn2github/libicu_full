@@ -517,20 +517,26 @@ DateFormat::createInstance()
 
 DateFormat* U_EXPORT2
 DateFormat::createInstanceForSkeleton(
-        const UnicodeString& skeleton, const Locale &locale) {
+        const UnicodeString& skeleton,
+        const Locale &locale,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
     DateFmtKeyBySkeleton key(locale, skeleton);
-    UErrorCode status = U_ZERO_ERROR;
     return createFromCache(key, NULL, status);
-
 }
 
 DateFormat* U_EXPORT2
 DateFormat::createInstanceForSkeleton(
         const UnicodeString& skeleton,
         const Locale &locale,
-        DateTimePatternGenerator &gen) {
+        DateTimePatternGenerator &gen,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
     DateFmtKeyBySkeleton key(locale, skeleton);
-    UErrorCode status = U_ZERO_ERROR;
     return createFromCache(key, &gen, status);
 }
 

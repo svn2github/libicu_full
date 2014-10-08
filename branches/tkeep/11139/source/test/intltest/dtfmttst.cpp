@@ -4622,15 +4622,19 @@ void DateFormatTest::TestNumberFormatOverride() {
 void DateFormatTest::TestCreateInstanceForSkeleton() {
     UErrorCode status = U_ZERO_ERROR;
     LocalPointer<DateFormat> fmt(DateFormat::createInstanceForSkeleton(
-            "yMMMMd", "en"));
-    assertSuccess("Create with pattern yMMMMd", status);
+            "yMMMMd", "en", status));
+    if (!assertSuccess("Create with pattern yMMMMd", status)) {
+        return;
+    }
     UnicodeString result;
     FieldPosition pos(0);
     fmt->format(date(98, 5-1, 25), result, pos);
     assertEquals("format yMMMMd", "May 25, 1998", result);
     fmt.adoptInstead(DateFormat::createInstanceForSkeleton(
-            "yMd", "en"));
-    assertSuccess("Create with pattern yMd", status);
+            "yMd", "en", status));
+    if (!assertSuccess("Create with pattern yMd", status)) {
+        return;
+    }
     result.remove();
     fmt->format(date(98, 5-1, 25), result, pos);
     assertEquals("format yMd", "5/25/1998", result);

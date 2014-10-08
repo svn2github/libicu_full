@@ -579,17 +579,20 @@ public:
      *                 map the skeleton to a pattern that includes locale
      *                 specific separators with the fields in the appropriate
      *                 order for that locale.
-     * @param aLocale  The given locale.
+     * @param locale  The given locale.
+     * @param status   Any error returned here.
      * @return         A date/time formatter which the caller owns.
      * @draft ICU 55
      */
     static DateFormat* U_EXPORT2 createInstanceForSkeleton(
-            const UnicodeString& skeleton, const Locale &locale);
+            const UnicodeString& skeleton,
+            const Locale &locale,
+            UErrorCode &status);
 
     /**
      * Creates a date/time formatter for the given skeleton and locale and
      * uses the given DateTimePatternGenerator to convert the skeleton to
-     * a locale specific pattern. As creating a DateTimePatternGenerator is
+     * a format pattern. As creating a DateTimePatternGenerator is
      * expensive, callers can supply it here (if they already have it) to save
      * this method from creating its own.
      *
@@ -598,15 +601,23 @@ public:
      *                 DateTimePatternGenerator to map the skeleton to a
      *                 pattern that includes appropriate separators with
      *                 the fields in the appropriate order.
-     * @param aLocale  The given locale.
-     * @param dpng     The user supplied DateTimePatternGenerator.
+     * @param locale  The given locale.
+     * @param dpng     The user supplied DateTimePatternGenerator. dpng
+     *                 must be created for the same locale as locale.
+     *                 Although dpng is a non-const reference, the caller
+     *                 must not regard it as an out or in-out parameter.
+     *                 The only reason dpng is a non-const reference is
+     *                 because its method, getBestPattern, which converts
+     *                 a skeleton to a date format pattern is non-const.
+     
      * @return         A date/time formatter which the caller owns.
      * @draft ICU 55
      */
     static DateFormat* U_EXPORT2 createInstanceForSkeleton(
             const UnicodeString& skeleton,
             const Locale &locale,
-            DateTimePatternGenerator &dpng);
+            DateTimePatternGenerator &dpng,
+            UErrorCode &status);
 
     /**
      * Gets the set of locales for which DateFormats are installed.
