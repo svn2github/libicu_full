@@ -1957,14 +1957,6 @@ public:
     // Return -1 after reaching end of string.
     virtual  int32_t   next(int32_t i) = 0;
 
-    // Return the dictionary characters set for this break type.
-    // Return NULL if there is no dictionary. (Default behavior).
-    // When synthesizing test data, the monkey test framework will not include any
-    // dictionary characters. setText() will accept data with dictionary chars, but the
-    // breaking then obtained from RBBIMonkeyKind.next() considers only rules,
-    // and does not attempt to find dictionary based boundaries.
-    virtual UnicodeSet *dictionarySet() {return NULL;};
-
     virtual ~RBBIMonkeyKind();
     UErrorCode       deferredStatus;
 
@@ -2254,7 +2246,6 @@ private:
     UnicodeSet  *fExtendSet;
     UnicodeSet  *fExtendNumLetSet;
     UnicodeSet  *fOtherSet;
-    UnicodeSet  *fDictionarySet;
 
     const UnicodeString  *fText;
 };
@@ -2285,7 +2276,7 @@ RBBIWordMonkey::RBBIWordMonkey()
     fOtherSet         = new UnicodeSet();
 
     // This Dictionary set definition matches that from word break rules.
-    fDictionarySet    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Alphabetic} &"
+    UnicodeSet dictionarySet(UNICODE_STRING_SIMPLE("[\\p{Alphabetic} &"
                              "[[\\p{script = Thai}] [\\p{script = Lao}] [\\p{script = Khmer}]"
                              "[\\p{script = Han}] [\\p{script = Hiragana}] [\\p{Word_Break = Katakana}]"
                              "[\uac00-\ud7a3]]]"),        // Hangul Syllable
@@ -2295,9 +2286,9 @@ RBBIWordMonkey::RBBIWordMonkey()
     fALetterSet->addAll(UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_Break = Complex_Context}]"), status));
     fALetterSet->removeAll(*fExtendSet);
     fALetterSet->removeAll(UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Grapheme_Cluster_Break = Control}]"), status));
-    fALetterSet->removeAll(*fDictionarySet);
+    fALetterSet->removeAll(dictionarySet);
 
-    fExtendSet->removeAll(*fDictionarySet);
+    fExtendSet->removeAll(dictionarySet);
 
     if(U_FAILURE(status)) {
         deferredStatus = status;
@@ -2321,7 +2312,7 @@ RBBIWordMonkey::RBBIWordMonkey()
     fOtherSet->removeAll(*fFormatSet);
     fOtherSet->removeAll(*fExtendSet);
     fOtherSet->removeAll(*fExtendNumLetSet);
-    fOtherSet->removeAll(*fDictionarySet);
+    fOtherSet->removeAll(dictionarySet);
 
     fSets->addElement(fCRSet,                status);
     fSets->addElement(fLFSet,                status);
@@ -2339,9 +2330,7 @@ RBBIWordMonkey::RBBIWordMonkey()
     fSets->addElement(fExtendSet,            status);
     fSets->addElement(fExtendNumLetSet,      status);
     fSets->addElement(fOtherSet,             status);
-    // Note: do not add fDictionarySet to fSets because dictionary characters are not
-    //       included when generating the randomized test data.
-    //       Do not add fKatakanaSet because it is included in the dictionary characters. 
+    //  Note: Do not add fKatakanaSet because it is included in the dictionary characters. 
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2546,7 +2535,6 @@ RBBIWordMonkey::~RBBIWordMonkey() {
     delete fExtendSet;
     delete fExtendNumLetSet;
     delete fOtherSet;
-    delete fDictionarySet;
 }
 
 
@@ -4136,7 +4124,6 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
 
     numCharClasses = mk.charClasses()->size();
     chClasses      = mk.charClasses();
-    UnicodeSet *dictionarySet = mk.dictionarySet();
 
     // Check for errors that occured during the construction of the MonkeyKind object.
     //  Can't report them where they occured because errln() is a method coming from intlTest,
@@ -4166,24 +4153,20 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
         seed = m_seed;
 
         // Populate the test string with data, for each character randomly picking first a
-        // character class, then a random character from the class.  Do not choose
-        // dictionary characters.
+        // character class, then a random character from the class.
 
         testText.truncate(0);
         for (i=0; i<TESTSTRINGLEN; i++) {
             int32_t  aClassNum = m_rand() % numCharClasses;
             UnicodeSet *classSet = (UnicodeSet *)chClasses->elementAt(aClassNum);
-            UChar32  c;
-            do {
-                int32_t   charIdx = m_rand() % classSet->size();
-                c = classSet->charAt(charIdx);
-                if (c < 0) {   // TODO:  deal with sets containing strings.
-                    errln("File %s, line %d: Internal test error: set unexpectedly contains a string.",
-                          __FILE__, __LINE__);
-                    c = 0;
-                    break;
-                }
-            } while (dictionarySet != NULL && dictionarySet->contains(c));
+            int32_t   charIdx = m_rand() % classSet->size();
+            UChar32 c = classSet->charAt(charIdx);
+            if (c < 0) {   // TODO:  deal with sets containing strings.
+                errln("File %s, line %d: Internal test error: set unexpectedly contains a string.",
+                      __FILE__, __LINE__);
+                c = 0;
+                break;
+            }
             testText.append(c);
         }
 
