@@ -99,7 +99,7 @@ $ZW = [:LineBreak =  ZWSpace:];
 
 #   Dictionary character set, for triggering language-based break engines.
 
-$dictionary = [[:LineBreak = Complex_Context:] & [[:Script = Thai:][:Script = Lao:][:Script = Khmer:]]];
+$dictionary = [[:LineBreak = Complex_Context:] & [[:Script = Thai:][:Script = Lao:][:Script = Khmer:][:Script = Myanmar:]]];
 
 #
 #  Rule LB1.  By default, treat AI  (characters with ambiguous east Asian width),

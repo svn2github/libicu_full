@@ -612,7 +612,6 @@ int32_t RuleBasedBreakIterator::previous(void) {
     }
 
     // If the iteration is in a cached dictionary range, return a boundary from that.
-    fLastTagValue = -1;
     int32_t result = fBreakCache->preceding(startPos);
     if (result != BreakIterator::DONE) {
         fLastTagValue = fBreakCache->getCurrentRuleStatus();
@@ -626,7 +625,7 @@ int32_t RuleBasedBreakIterator::previous(void) {
         UBool useDictionary = FALSE;
         result = handlePrevious(fData->fReverseTable, &useDictionary);
         if (useDictionary) {
-            fBreakCache->populate(result, startPos, -1, -1, status);
+            fBreakCache->populate(result, startPos, fLastTagValue, -1, status);
             result = fBreakCache->preceding(startPos);
         }
         utext_setNativeIndex(fText, result);
@@ -636,6 +635,7 @@ int32_t RuleBasedBreakIterator::previous(void) {
     // Old rule syntax - reverse rules will move to a safe point at or before
     // the desired boundary.
 
+    fLastTagValue = -1;
     result = handlePrevious(fData->fReverseTable);
     if (result == UBRK_DONE) {
         result = 0;
@@ -1938,6 +1938,11 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
         }
     }
     U_ASSERT(fBreaks->lastElementi() < range.fRangeLimit);
+    // Add the default tag value if there are non-dictionary chars at
+    // the end because the segment's tag value may be changed.
+    if (fRawBreaks->lastElementi() < range.fRangeLimit) {
+      tagValue = range.fNonDictTagValue;
+    }
     add(range.fRangeLimit, tagValue, status);
 }
 

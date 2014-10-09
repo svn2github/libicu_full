@@ -45,19 +45,21 @@ $Hiragana           = [:Hiragana:];
 
 
 #   Dictionary character set, for triggering language-based break engines. 
-#   There are dictionary support in ICU for Thai, Lao, Khmer, Chinese, Japanese and Korean.
+#   There is dictionary support in ICU for Thai, Lao, Khmer, Myanmar,
+#   Chinese, Japanese and Korean.
 #   
 
 $Control          = [\p{Grapheme_Cluster_Break = Control}]; 
 $HangulSyllable   = [\uac00-\ud7a3];
 $ComplexContext   = [:LineBreak = Complex_Context:];
 
-$dictionary       = [\p{Alphabetic} & [[\p{script = Thai}]
-                                       [\p{script = Lao}]
-                                       [\p{script = Khmer}]
-                                       [\p{script = Han}]
-                                       [\p{script = Hiragana}]
-                                       $Katakana]];
+$dictionary       = [[\p{script = Thai}]
+                     [\p{script = Lao}]
+                     [\p{script = Khmer}]
+                     [\p{script = Myanmar}]
+                     [\p{script = Han}]
+                     [\p{script = Hiragana}]
+                     $Katakana];
 
 # ALetterPlus is an adjusted variant of Character Class ALetter from UAX-14.
 #   - Add non-dictionary chars from $ComplexContext.

@@ -72,8 +72,6 @@ int32_t DictionaryBreakEngine::getTagValue(int32_t breakType) const {
   switch (breakType) {
     case UBRK_WORD:
       return 200;
-    case UBRK_LINE:
-      return 100;
     default:
       return 0;
   }
