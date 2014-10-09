@@ -2290,6 +2290,15 @@ RBBIWordMonkey::RBBIWordMonkey()
                              "[\\p{script = Han}] [\\p{script = Hiragana}] [\\p{Word_Break = Katakana}]"
                              "[\uac00-\ud7a3]]]"),        // Hangul Syllable
                              status);
+
+    // Adjust ALetter to match ALetterPlus from the break rules, less any dictionary characters.
+    fALetterSet->addAll(UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_Break = Complex_Context}]"), status));
+    fALetterSet->removeAll(*fExtendSet);
+    fALetterSet->removeAll(UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Grapheme_Cluster_Break = Control}]"), status));
+    fALetterSet->removeAll(*fDictionarySet);
+
+    fExtendSet->removeAll(*fDictionarySet);
+
     if(U_FAILURE(status)) {
         deferredStatus = status;
         return;
@@ -2318,7 +2327,6 @@ RBBIWordMonkey::RBBIWordMonkey()
     fSets->addElement(fLFSet,                status);
     fSets->addElement(fNewlineSet,           status);
     fSets->addElement(fRegionalIndicatorSet, status);
-    fSets->addElement(fKatakanaSet,          status);
     fSets->addElement(fHebrew_LetterSet,     status);
     fSets->addElement(fALetterSet,           status);
     fSets->addElement(fSingle_QuoteSet,      status);
@@ -2333,6 +2341,7 @@ RBBIWordMonkey::RBBIWordMonkey()
     fSets->addElement(fOtherSet,             status);
     // Note: do not add fDictionarySet to fSets because dictionary characters are not
     //       included when generating the randomized test data.
+    //       Do not add fKatakanaSet because it is included in the dictionary characters. 
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2984,6 +2993,13 @@ RBBILineMonkey::RBBILineMonkey()
         fNumberMatcher = NULL;
         return;
     }
+
+    // Remove dictionary characters.
+    // The monkey test reference implementation of line break does not replicate the dictionary behavior,
+    // so dictionary characters are omitted from the monkey test data.
+    UnicodeSet dictionarySet(UNICODE_STRING_SIMPLE(
+            "[[:LineBreak = Complex_Context:] & [[:Script = Thai:][:Script = Lao:][:Script = Khmer:]]]"), status);
+    fSA->removeAll(dictionarySet);
 
     fAL->addAll(*fXX);     // Default behavior for XX is identical to AL
     fAL->addAll(*fAI);     // Default behavior for AI is identical to AL
