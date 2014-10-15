@@ -32,12 +32,17 @@
 #include "cstring.h"
 #include "unicode/numsys.h"
 #include "fmtableimp.h"
+#include "decimalformatpatterntuple.h"
+#include "ucbuf.h"
 
 //#define NUMFMTST_CACHE_DEBUG 1
 #include "stdio.h" /* for sprintf */
 // #include "iostream"   // for cout
 
 //#define NUMFMTST_DEBUG 1
+
+// TODO: Move to ucbuf.h
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
 
 static const UChar EUR[] = {69,85,82,0}; // "EUR"
 static const UChar ISO_CURRENCY_USD[] = {0x55, 0x53, 0x44, 0}; // "USD"
@@ -133,6 +138,10 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
   TESTCASE_AUTO(TestAccountingCurrency);
   TESTCASE_AUTO(TestEquality);
   TESTCASE_AUTO(TestCurrencyUsage);
+  TESTCASE_AUTO(TestDecimalFormatPatternTuple);
+  TESTCASE_AUTO(TestDecimalFormatPatternTupleBadInput);
+  TESTCASE_AUTO(TestDecimalFormatPatternTupleVars);
+  TESTCASE_AUTO(TestDataDrivenPatternParsing);
   TESTCASE_AUTO_END;
 }
 
@@ -683,6 +692,56 @@ NumberFormatTest::TestCurrencySign(void)
 // -------------------------------------
 
 static UChar toHexString(int32_t i) { return (UChar)(i + (i < 10 ? 0x30 : (0x41 - 10))); }
+
+static UBool isCROrLF(UChar c) { return c == 0xa || c == 0xd; }
+static UBool isSpace(UChar c) { return c == 9 || c == 0x20 || c == 0x3000; }
+
+int32_t NumberFormatTest::skipSpaces(int32_t i) {
+    while(isSpace(fFileLine[i])) { ++i; }
+    return i;
+}
+
+int32_t NumberFormatTest::splitFileLine(
+        UnicodeString *parts, int32_t partCount) {
+    if (partCount == 0) {
+        return 0;
+    }
+    if (partCount == 1) {
+        parts[0] = fFileLine;
+        return 1;
+    }
+    int32_t idx = 0;
+    int32_t partIdx = 0;
+    int32_t partStart = INT32_MAX;
+    // 0 = in space; 1 = not in space
+    int32_t state = 0;
+    for (idx = 0; fFileLine[idx] != 0xFFFF; ++idx) {
+        if (state == 0) {
+
+            // We are at end of a string of spaces
+            if (!isSpace(fFileLine[idx])) {
+                state = 1;
+                partStart = idx;
+            }
+        } else {
+
+            // we are at the end of a token
+            if (isSpace(fFileLine[idx])) {
+                state = 0;
+                parts[partIdx++] = fFileLine.tempSubStringBetween(
+                        partStart, idx);
+                if (partIdx + 1 == partCount) {
+                    partStart = idx + 1;
+                    break;
+                }
+            }
+        }
+    }
+    if (partStart <= fFileLine.length()) {
+        parts[partIdx++] = fFileLine.tempSubString(partStart);
+    }
+    return partIdx;
+}
 
 UnicodeString&
 NumberFormatTest::escape(UnicodeString& s)
@@ -7736,4 +7795,420 @@ void NumberFormatTest::TestCurrencyUsage() {
         delete fmt;
     }
 }
+
+void NumberFormatTest::TestDecimalFormatPatternTuple() {
+    DecimalFormatPatternTuple tuple;
+    UErrorCode status = U_ZERO_ERROR;
+
+    if (!tuple.setField(kMinimumIntegerDigits, "-10", status)) {
+        errln("Setting field should have succeeded.");
+    }
+    tuple.setField(
+            DecimalFormatPatternTuple::getFieldByName("useSignificantDigits"),
+            "Y",
+            status);
+    tuple.setField(
+            DecimalFormatPatternTuple::getFieldByName("roundingIncrement"),
+            "0.05",
+            status);
+    tuple.setField(
+            DecimalFormatPatternTuple::getFieldByName("negPrefixPattern"),
+            "abcd",
+            status);
+    tuple.setField(
+            DecimalFormatPatternTuple::getFieldByName("padPosition"),
+            "PadBeforePrefix",
+            status);
+    tuple.setField(
+            DecimalFormatPatternTuple::getFieldByName("pad"),
+            "123AbC",
+            status);
+
+    DecimalFormatPattern pattern;
+    pattern.fMinimumIntegerDigits = -10;
+    pattern.fUseSignificantDigits = TRUE;
+    pattern.fRoundingIncrement.set("0.05", status);
+    pattern.fNegPrefixPattern = UnicodeString("abcd");
+    pattern.fPadPosition = DecimalFormatPattern::kPadBeforePrefix;
+    pattern.fPad = (UChar32) 0x123ABC;
+
+    UnicodeString message;
+    if (!assertSuccess("Expected all calls to succeed.", status)) {
+        return;
+    }
+    if (!tuple.verify(pattern, message) || message.length() > 0) {
+        errln("Expected pattern to verify: " + message);
+    }
+
+    // Now change fields in pattern. Now pattern should not verify
+    pattern.fMinimumIntegerDigits = 24;
+    pattern.fUseSignificantDigits = FALSE;
+    pattern.fRoundingIncrement.set("0.06", status);
+    pattern.fNegPrefixPattern = UnicodeString("xyz");
+    pattern.fPadPosition = DecimalFormatPattern::kPadAfterPrefix;
+    pattern.fPad = (UChar32) 0x1234;
+    // Setting this illustrates that fields outside a tuple aren't verified.
+    pattern.fMultiplier = 133;
+
+    message.remove();
+    if (tuple.verify(pattern, message)) {
+        errln("Pattern should not have verified.");
+    }
+    assertEquals("message", "minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+
+    // Store off the original tuple
+     DecimalFormatPatternTuple oldTuple(tuple);
+
+    // Now clear minimumIntegerDigits out of tuple, it should not be mentioned in the message
+    tuple.clearField(kMinimumIntegerDigits, status);
+
+    message.remove();
+    if (tuple.verify(pattern, message)) {
+        errln("Pattern should not have verified.");
+    }
+    assertEquals("message", "useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+
+    // Now clear the entire tuple, any pattern should verify against an
+    // empty tuple.
+    tuple.clear();
+
+    message.remove();
+    if (!tuple.verify(pattern, message)) {
+        errln("Pattern should have verified.");
+    }
+
+    // Now merge the tuple with the old tuple, this should make verify fail
+    // again with the same error.
+    tuple.merge(oldTuple);
+
+    message.remove();
+    if (tuple.verify(pattern, message)) {
+        errln("Pattern should not have verified.");
+    }
+    assertEquals("message", "minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+    
+    // Now create a second tuple
+    DecimalFormatPatternTuple second;
+    second.setField(kMinimumIntegerDigits, "24", status);
+    if (!assertSuccess("Expected all calls to succeed 2", status)) {
+        return;
+    }
+
+    // Merge this tuple with the main one. The main tuple should
+    // keep all its old values but minimumIntegerDigits should be 24
+    // instead of 10.
+    tuple.merge(second);
+
+    message.remove();
+    if (tuple.verify(pattern, message)) {
+        errln("Pattern should not have verified.");
+    }
+    assertEquals("message", "useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+
+    // Fix the rest of the fields in second and merge again, then the
+    // pattern should verify.
+    second.setField(kRoundingIncrement, "0.06", status);
+    second.setField(kUseSignificantDigits, "n", status);
+    second.setField(kNegPrefixPattern, "xyz", status);
+    second.setField(kPadPosition, "PadAfterPrefix", status);
+    second.setField(kPad, "1234", status);
+    if (!assertSuccess("Expected calls to succeed 3", status)) {
+        return;
+    }
+    tuple.merge(second);
+
+    message.remove();
+    if (!tuple.verify(pattern, message)) {
+        errln("Pattern should have verified.");
+    }
+
+    DecimalFormatPatternTuple third;
+    third.setField(kRoundingIncrement, "1.0", status);
+    third.setField(kNegPrefixPattern, "coffee", status);
+    third.setField(kMultiplier, "9942", status);
+
+    UnicodeString temp;
+    assertEquals("", "{multiplier: 9942, roundingIncrement: 1.0, negPrefixPattern: coffee}", third.toString(temp)); 
+
+    // Now merge with override false. This will only change fields that
+    // are not already set. In this case only kMultiplier
+    tuple.merge(third, FALSE);
+
+    message.remove();
+    if (tuple.verify(pattern, message)) {
+        errln("Pattern should not have verified.");
+    }
+    assertEquals("", "multiplier: Expected: 9942, got: 133; ", message);
+
+}
+    
+void NumberFormatTest::TestDecimalFormatPatternTupleBadInput() {
+    DecimalFormatPatternTuple tuple;
+
+    UErrorCode status = U_ZERO_ERROR;
+    if (tuple.setField(kRoundingIncrement, "abcd", status)) {
+       errln("Setting field should have failed.");
+    }
+    if (U_SUCCESS(status)) {
+        errln("expected error");
+    }
+
+    status = U_ZERO_ERROR;
+    tuple.setField(kUseSignificantDigits, "p", status);
+    if (U_SUCCESS(status)) {
+        errln("expected error");
+    }
+
+    status = U_ZERO_ERROR;
+    tuple.setField(kPadPosition, "p", status);
+    if (U_SUCCESS(status)) {
+        errln("expected error");
+    }
+
+    status = U_ZERO_ERROR;
+    tuple.setField(kMinimumIntegerDigits, "-abc", status);
+    if (U_SUCCESS(status)) {
+        errln("expected error");
+    }
+
+    status = U_ZERO_ERROR;
+    tuple.setField(kPad, "-abc", status);
+    if (U_SUCCESS(status)) {
+        errln("expected error");
+    }
+
+    status = U_ZERO_ERROR;
+    tuple.setField(
+            DecimalFormatPatternTuple::getFieldByName("no such field"),
+            "abc",
+            status);
+    if (U_SUCCESS(status)) {
+        errln("expected error");
+    }
+}
+
+void NumberFormatTest::TestDecimalFormatPatternTupleVars() {
+    DecimalFormatPatternTupleVars vars;
+    DecimalFormatPatternTuple tuple;
+    UErrorCode status = U_ZERO_ERROR;
+
+    tuple.setField(kMinimumIntegerDigits, "5", status);
+    tuple.setField(kMaximumIntegerDigits, "8", status);
+    UnicodeString firstString;
+    tuple.toString(firstString);
+    if (!vars.store("first", tuple, status)) {
+        errln("Saving should have suceeded.");
+    }
+
+    tuple.setField(kMinimumIntegerDigits, "9", status);
+    tuple.setField(kMaximumIntegerDigits, "13", status);
+    UnicodeString secondString;
+    tuple.toString(secondString);
+    vars.store("second", tuple, status);
+
+    if (!assertSuccess("Expected calls to succeed", status)) {
+        return;
+    }
+    assertFalse("", vars.fetch("third", tuple));
+ 
+    UnicodeString temp;
+    assertTrue("", vars.fetch("first", tuple));
+    assertEquals("", firstString, tuple.toString(temp));
+
+    temp.remove();
+    vars.fetch("second", tuple);
+    assertEquals("", secondString, tuple.toString(temp));
+}
+
+UBool NumberFormatTest::readLine(
+        UCHARBUF *f, UErrorCode &status) {
+    int32_t lineLength;
+    const UChar *line = ucbuf_readline(f, &lineLength, &status);
+    if(line == NULL || U_FAILURE(status)) {
+        if (U_FAILURE(status)) {
+            errln("Error reading line from file.");
+        }
+        fFileLine.remove();
+        return FALSE;
+    }
+    ++fFileLineNumber;
+    // Strip trailing CR/LF, comments, and spaces.
+    const UChar *comment = u_memchr(line, 0x23, lineLength);  // '#'
+    if(comment == line) {
+        fFileLine.remove();
+        return TRUE;
+    }
+    while(lineLength > 0 && isCROrLF(line[lineLength - 1])) { --lineLength; }
+    fFileLine.setTo(FALSE, line, lineLength);
+    while(lineLength > 0 && isSpace(line[lineLength - 1])) { --lineLength; }
+    if (lineLength == 0) {
+        fFileLine.remove();
+    }
+    return TRUE;
+}
+
+void NumberFormatTest::setTupleField(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString parts[3];
+    int32_t partCount = splitFileLine(parts, UPRV_LENGTHOF(parts));
+    if (partCount < 3) {
+        showError("Set expects 2 parameters");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    if (!fAccumulator.setField(
+            DecimalFormatPatternTuple::getFieldByName(parts[1]),
+            parts[2],
+            status)) {
+        showError("Unrecognized field name or invalid value");
+    }
+}
+
+void NumberFormatTest::clearTupleField(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString parts[2];
+    int32_t partCount = splitFileLine(parts, UPRV_LENGTHOF(parts));
+    if (partCount < 2) {
+        showError("Clear expects 1 parameter");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    if (!fAccumulator.clearField(
+            DecimalFormatPatternTuple::getFieldByName(parts[1]),
+            status)) {
+        showError("Unrecognized field name.");
+    }
+}
+
+void NumberFormatTest::verifyDecimalFormatPattern(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString parts[2];
+    int32_t partCount = splitFileLine(parts, UPRV_LENGTHOF(parts));
+    if (partCount < 2) {
+        showError("verify expects 1 parameter");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    DecimalFormatPattern pattern;
+    UParseError parseError;
+    fDecimalFormatPatternParser.applyPatternWithoutExpandAffix(
+            parts[1], pattern, parseError, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString message;
+    if (!fAccumulator.verify(pattern, message)) {
+        showFailure(message);
+    }
+}
+
+void NumberFormatTest::mergeTuple(UBool override, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString parts[2];
+    int32_t partCount = splitFileLine(parts, UPRV_LENGTHOF(parts));
+    if (partCount < 2) {
+        showError("[safe]merge expects 1 parameter");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    DecimalFormatPatternTuple toBeMerged;
+    if (!fVars.fetch(parts[1], toBeMerged)) {
+        showError("Unrecognized tuple name.");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    fAccumulator.merge(toBeMerged, override);
+}
+
+void NumberFormatTest::saveTuple(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString parts[2];
+    int32_t partCount = splitFileLine(parts, UPRV_LENGTHOF(parts));
+    if (partCount < 2) {
+        showError("save expects 1 parameter");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    if (!fVars.store(parts[1], fAccumulator, status)) {
+        showError("Variable area full.");
+    }
+}
+
+void NumberFormatTest::TestDataDrivenPatternParsing() {
+    UErrorCode status = U_ZERO_ERROR;
+    CharString path(getSourceTestData(status), status);
+    path.appendPathPart("numberformattestpattern.txt", status);
+    const char *codePage = "UTF-8";
+    LocalUCHARBUFPointer f(ucbuf_open(path.data(), &codePage, TRUE, FALSE, &status));
+    if (!assertSuccess("Can't open data file", status)) {
+        return;
+    }
+
+    while(U_SUCCESS(status)) {
+        // Read a new line if necessary.
+        if(fFileLine.isEmpty()) {
+            if(!readLine(f.getAlias(), status)) { break; }
+            continue;
+        }
+        if(fFileLine.startsWith(UNICODE_STRING("** test: ", 9))) {
+            fFileTestName = fFileLine;
+            logln(fFileLine);
+            fFileLine.remove();
+        } else if(fFileLine.startsWith(UNICODE_STRING("set ", 4))) {
+            setTupleField(status);
+            fFileLine.remove();
+        } else if(fFileLine.startsWith(UNICODE_STRING("clear ", 6))) {
+            clearTupleField(status);
+            fFileLine.remove();
+        } else if (fFileLine.startsWith(UNICODE_STRING("verify ", 7))) {
+            verifyDecimalFormatPattern(status);
+            fAccumulator.clear();
+            fFileLine.remove();
+        } else if (fFileLine.startsWith(UNICODE_STRING("merge ", 6))) {
+            mergeTuple(TRUE, status);
+            fFileLine.remove();
+        } else if (fFileLine.startsWith(UNICODE_STRING("safemerge ", 10))) {
+            mergeTuple(FALSE, status);
+            fFileLine.remove();
+        } else if (fFileLine.startsWith(UNICODE_STRING("save ", 5))) {
+            saveTuple(status);
+            fAccumulator.clear();
+            fFileLine.remove();
+        } else {
+            showError("Syntax error.");
+            return;
+        }
+    }
+}
+
+void NumberFormatTest::showError(const char *message) {
+    CharString pattern;
+    UErrorCode status = U_ZERO_ERROR;
+    pattern.append("line %d: ", status);
+    pattern.append(message, status);
+    errln(pattern.data(), (int) fFileLineNumber);
+    infoln(fFileLine);
+}
+
+void NumberFormatTest::showFailure(const UnicodeString &message) {
+    CharString pattern;
+    UErrorCode status = U_ZERO_ERROR;
+    pattern.appendInvariantChars(fFileTestName, status);
+    pattern.append(": line %d: ", status);
+    pattern.appendInvariantChars(message, status);
+    errln(pattern.data(), (int) fFileLineNumber);
+    infoln(fFileLine);
+}
+
+
 #endif /* #if !UCONFIG_NO_FORMATTING */

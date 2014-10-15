@@ -150,7 +150,7 @@ DecimalFormatPatternParser::applyPatternWithoutExpandAffix(
         const UnicodeString& pattern,
         DecimalFormatPattern& out,
         UParseError& parseError,
-        UErrorCode& status) {
+        UErrorCode& status) const {
     if (U_FAILURE(status))
     {
         return;

@@ -14,6 +14,9 @@
 #include "unicode/numfmt.h"
 #include "unicode/decimfmt.h"
 #include "caltztst.h"
+#include "decimalformatpatterntuple.h"
+
+struct UCHARBUF;
 
 /**
  * Performs various in-depth test on NumberFormat
@@ -183,8 +186,19 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestEquality();
 
     void TestCurrencyUsage();
+    void TestDecimalFormatPatternTuple();
+    void TestDecimalFormatPatternTupleBadInput();
+    void TestDecimalFormatPatternTupleVars();
+    void TestDataDrivenPatternParsing();
 
  private:
+    UnicodeString fFileLine;
+    int32_t fFileLineNumber;
+    UnicodeString fFileTestName;
+    DecimalFormatPatternTuple fAccumulator;
+    DecimalFormatPatternTupleVars fVars;
+    DecimalFormatPatternParser fDecimalFormatPatternParser;
+
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
 
     void expectParseCurrency(const NumberFormat &fmt, const UChar* currency, double amount, const char *text);
@@ -302,6 +316,17 @@ class NumberFormatTest: public CalendarTimeZoneTest {
         const char * const *descriptions,
         int32_t valueSize,
         int32_t roundingModeSize);
+
+    int32_t skipSpaces(int32_t i);
+    int32_t splitFileLine(UnicodeString *parts, int32_t partCount);
+    UBool readLine(UCHARBUF *f, UErrorCode &status);
+    void setTupleField(UErrorCode &status);
+    void clearTupleField(UErrorCode &status);
+    void verifyDecimalFormatPattern(UErrorCode &status);
+    void mergeTuple(UBool override, UErrorCode &status);
+    void saveTuple(UErrorCode &status);
+    void showError(const char *message);
+    void showFailure(const UnicodeString &message);
 
 };
 

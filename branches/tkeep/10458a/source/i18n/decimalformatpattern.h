@@ -75,7 +75,7 @@ class DecimalFormatPatternParser : UMemory {
         const UnicodeString& pattern,
         DecimalFormatPattern& out,
         UParseError& parseError,
-        UErrorCode& status);
+        UErrorCode& status) const;
   private:
     DecimalFormatPatternParser(const DecimalFormatPatternParser&);
     DecimalFormatPatternParser& operator=(DecimalFormatPatternParser& rhs);

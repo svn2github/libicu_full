@@ -571,7 +571,7 @@ int64_t DigitList::getInt64() /*const*/ {
  *     Format is as defined by the decNumber library, for interchange of
  *     decimal numbers.
  */
-void DigitList::getDecimal(CharString &str, UErrorCode &status) {
+void DigitList::getDecimal(CharString &str, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return;
     }

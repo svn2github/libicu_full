@@ -209,7 +209,7 @@ public:
     /**
      *  Utility routine to get the value of the digit list as a decimal string.
      */
-    void getDecimal(CharString &str, UErrorCode &status);
+    void getDecimal(CharString &str, UErrorCode &status) const;
 
     /**
      * Return true if the number represented by this object can fit into
