@@ -270,6 +270,9 @@ static const SharedNumberFormat *createSharedNumberFormat(
 static const SharedNumberFormat **allocSharedNumberFormatters() {
     const SharedNumberFormat **result = (const SharedNumberFormat**)
             uprv_malloc(UDAT_FIELD_COUNT * sizeof(const SharedNumberFormat*));
+    if (result == NULL) {
+        return NULL;
+    }
     for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
         result[i] = NULL;
     }
@@ -316,7 +319,8 @@ class SimpleDateFormatMutableNFs : public UMemory {
     // Returns a non-const clone of nf which can be safely modified.
     // Subsequent calls with same nf will return the same non-const clone.
     // This object maintains ownership of all returned non-const
-    // NumberFormat objects.
+    // NumberFormat objects. On memory allocation error returns NULL.
+    // Caller must check for NULL return value.
     NumberFormat *get(const NumberFormat &nf) {
         int32_t idx = 0;
         while (nodes[idx].value) {
@@ -619,10 +623,12 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
     }
     if (other.fSharedNumberFormatters != NULL) {
         fSharedNumberFormatters = allocSharedNumberFormatters();
-        for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
-            SharedObject::copyPtr(
-                    other.fSharedNumberFormatters[i],
-                    fSharedNumberFormatters[i]);
+        if (fSharedNumberFormatters) {
+            for (int32_t i = 0; i < UDAT_FIELD_COUNT; ++i) {
+                SharedObject::copyPtr(
+                        other.fSharedNumberFormatters[i],
+                        fSharedNumberFormatters[i]);
+            }
         }
     }
 

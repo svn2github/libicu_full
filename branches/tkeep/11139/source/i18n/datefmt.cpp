@@ -72,7 +72,7 @@ class U_I18N_API DateFmtKeyByStyle : public LocaleCacheKey<SharedDateFormat> {
            LocaleCacheKey<SharedDateFormat>(other),
            fDateStyle(other.fDateStyle),
            fTimeStyle(other.fTimeStyle) { }
-   virtual ~DateFmtKeyByStyle() { }
+   virtual ~DateFmtKeyByStyle();
    virtual int32_t hashCode() const {
        int32_t hash = 37 * LocaleCacheKey<SharedDateFormat>::hashCode() + fDateStyle;
        hash = 37 * hash + fTimeStyle;
@@ -118,6 +118,9 @@ class U_I18N_API DateFmtKeyByStyle : public LocaleCacheKey<SharedDateFormat> {
    }
 };
 
+DateFmtKeyByStyle::~DateFmtKeyByStyle() {
+}
+
 class U_I18N_API DateFmtKeyBySkeleton : public LocaleCacheKey<SharedDateFormat> {
  private:
     UnicodeString fSkeleton;
@@ -128,7 +131,7 @@ class U_I18N_API DateFmtKeyBySkeleton : public LocaleCacheKey<SharedDateFormat> 
    DateFmtKeyBySkeleton(const DateFmtKeyBySkeleton &other) :
            LocaleCacheKey<SharedDateFormat>(other),
            fSkeleton(other.fSkeleton) { }
-   virtual ~DateFmtKeyBySkeleton() { }
+   virtual ~DateFmtKeyBySkeleton();
    virtual int32_t hashCode() const {
        return 37 * LocaleCacheKey<SharedDateFormat>::hashCode() + fSkeleton.hashCode();
    }
@@ -185,6 +188,8 @@ class U_I18N_API DateFmtKeyBySkeleton : public LocaleCacheKey<SharedDateFormat> 
    }
 };
 
+DateFmtKeyBySkeleton::~DateFmtKeyBySkeleton() {
+}
 
 static DateFormat *createFromCache(
         const CacheKey<SharedDateFormat> &key,

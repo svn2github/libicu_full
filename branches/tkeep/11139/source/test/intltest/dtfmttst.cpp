@@ -4552,7 +4552,6 @@ void DateFormatTest::TestNumberFormatOverride() {
     assertSuccess("SimpleDateFormat with pattern MM d", status);
 
 
-    // loop 100 times to test setter/getter
     for(int i=0; i<3; i++){
         NumberFormat* check_nf = NumberFormat::createInstance(Locale("en_US"), status);
         assertSuccess("NumberFormat en_US", status);

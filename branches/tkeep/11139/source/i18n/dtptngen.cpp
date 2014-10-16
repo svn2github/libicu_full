@@ -133,7 +133,7 @@ SharedDateTimePatternGenerator::~SharedDateTimePatternGenerator() {
 template<> U_I18N_API
 const SharedDateTimePatternGenerator *LocaleCacheKey<SharedDateTimePatternGenerator>::createObject(
         const void * /*creationContext*/, UErrorCode &status) const {
-    DateTimePatternGenerator *fmt = DateTimePatternGenerator::makeInstance(fLoc, status);
+    DateTimePatternGenerator *fmt = DateTimePatternGenerator::internalMakeInstance(fLoc, status);
     if (U_FAILURE(status)) {
         return NULL;
     }
@@ -283,7 +283,7 @@ DateTimePatternGenerator::createInstance(const Locale& locale, UErrorCode& statu
 
 
 DateTimePatternGenerator* U_EXPORT2
-DateTimePatternGenerator::makeInstance(const Locale& locale, UErrorCode& status) {
+DateTimePatternGenerator::internalMakeInstance(const Locale& locale, UErrorCode& status) {
     DateTimePatternGenerator *result = new DateTimePatternGenerator(locale, status);
     if (result == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
