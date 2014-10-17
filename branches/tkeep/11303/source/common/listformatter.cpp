@@ -326,58 +326,38 @@ UnicodeString& ListFormatter::format(
         appendTo.append(items[0]);
         return appendTo;
     }
-    if (nItems == 2) {
-        const UnicodeString *params[] = {&items[0], &items[1]};
-        int32_t offsets[2];
-        data->twoPattern.formatAndAppend(
-                params,
-                UPRV_LENGTHOF(params),
-                appendTo,
-                offsets,
-                UPRV_LENGTHOF(offsets),
-                errorCode);
-        if (U_FAILURE(errorCode)) {
-            return appendTo;
-        }
-        if (offsets[0] == -1 || offsets[1] == -1) {
-            errorCode = U_INVALID_FORMAT_ERROR;
-            return appendTo;
-        }
-        if (index == 0 || index == 1) {
-            offset = offsets[index];
-        }
-        return appendTo;
-    }
     UnicodeString result(items[0]);
     if (index == 0) {
         offset = 0;
     }
     joinStringsAndReplace(
-            data->startPattern,
+            nItems == 2 ? data->twoPattern : data->startPattern,
             result,
             items[1],
             result,
             index == 1,
             offset,
             errorCode);
-    for (int32_t i = 2; i < nItems - 1; ++i) {
-         joinStringsAndReplace(
-                 data->middlePattern,
-                 result,
-                 items[i],
-                 result,
-                 index == i,
-                 offset,
-                 errorCode);
+    if (nItems > 2) {
+        for (int32_t i = 2; i < nItems - 1; ++i) {
+             joinStringsAndReplace(
+                     data->middlePattern,
+                     result,
+                     items[i],
+                     result,
+                     index == i,
+                     offset,
+                     errorCode);
+        }
+        joinStringsAndReplace(
+                data->endPattern,
+                result,
+                items[nItems - 1],
+                result,
+                index == nItems - 1,
+                offset,
+                errorCode);
     }
-    joinStringsAndReplace(
-            data->endPattern,
-            result,
-            items[nItems - 1],
-            result,
-            index == nItems - 1,
-            offset,
-            errorCode);
     if (U_SUCCESS(errorCode)) {
         if (offset >= 0) {
             offset += appendTo.length();
