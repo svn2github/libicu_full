@@ -1,0 +1,6 @@
+ADD_EXECUTABLE(props EXCLUDE_FROM_ALL
+    props.cpp)
+LINK_ICU_LIBRARIES(props ${COMMON_STUB})
+
+ADD_DEPENDENCIES(samples props)
+
