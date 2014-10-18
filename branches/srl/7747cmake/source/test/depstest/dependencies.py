@@ -44,21 +44,21 @@ _groups_to_be_defined = set()
 def _CheckLibraryName(name):
   global _line_number
   if not name:
-    sys.exit("Error:%d: \"library: \" without name" % _line_number)
+    sys.exit("dependencies.txt:%d: Error: \"library: \" without name" % _line_number)
   if name.endswith(".o"):
-    sys.exit("Error:%d: invalid library name %s"  % (_line_number, name))
+    sys.exit("dependencies.txt:%d: Error: invalid library name %s"  % (_line_number, name))
 
 def _CheckGroupName(name):
   global _line_number
   if not name:
-    sys.exit("Error:%d: \"group: \" without name" % _line_number)
+    sys.exit("dependencies.txt:%d: Error: \"group: \" without name" % _line_number)
   if "/" in name or name.endswith(".o"):
-    sys.exit("Error:%d: invalid group name %s"  % (_line_number, name))
+    sys.exit("dependencies.txt:%d: Error: invalid group name %s"  % (_line_number, name))
 
 def _CheckFileName(name):
   global _line_number
   if "/" in name or not name.endswith(".o"):
-    sys.exit("Error:%d: invalid file name %s"  % (_line_number, name))
+    sys.exit("dependencies.txt:%d: Error: invalid file name %s"  % (_line_number, name))
 
 def _RemoveComment(line):
   global _line_number
@@ -84,7 +84,7 @@ def _ReadFiles(deps_file, item, library_name):
       _CheckFileName(file_name)
       file_name = library_name + "/" + file_name
       if file_name in files:
-        sys.exit("Error:%d: file %s listed in multiple groups" % (_line_number, file_name))
+        sys.exit("dependencies.txt:%d: Error: file %s listed in multiple groups" % (_line_number, file_name))
       files.add(file_name)
       item_files.add(file_name)
       file_to_item[file_name] = item["name"]
@@ -105,7 +105,7 @@ def _ReadDeps(deps_file, item, library_name):
       _CheckGroupName(dep)
       dep_item = items.get(dep)
       if item["type"] == "system_symbols" and (_IsLibraryGroup(dep_item) or _IsLibrary(dep_item)):
-        sys.exit(("Error:%d: system_symbols depend on previously defined " +
+        sys.exit(("dependencies.txt:%d: Error: system_symbols depend on previously defined " +
                   "library or library group %s") % (_line_number, dep))
       if dep_item == None:
         # Add this dependency as a new group.
@@ -132,7 +132,7 @@ def _ReadSystemSymbols(deps_file, item):
       if line.startswith('"') and line.endswith('"') and '"' not in symbol:
         _AddSystemSymbol(item, symbol)
       else:
-        sys.exit("Error:%d: invalid quoted symbol name %s" % (_line_number, line))
+        sys.exit("dependencies.txt:%d: Error: invalid quoted symbol name %s" % (_line_number, line))
     else:
       # One or more space-separate symbols.
       for symbol in line.split(): _AddSystemSymbol(item, symbol)
@@ -152,7 +152,7 @@ def Load():
         name = line[9:].lstrip()
         _CheckLibraryName(name)
         if name in items:
-          sys.exit("Error:%d: library definition using duplicate name %s" % (_line_number, name))
+          sys.exit("dependencies.txt:%d: Error: library definition using duplicate name %s" % (_line_number, name))
         libraries.add(name)
         item = items[name] = {"type": "library", "name": name}
         line = _ReadFiles(deps_file, item, name)
@@ -161,10 +161,10 @@ def Load():
         name = line[7:].lstrip()
         _CheckGroupName(name)
         if name not in items:
-          sys.exit("Error:%d: group %s defined before mentioned as a dependency" %
+          sys.exit("dependencies.txt:%d: Error: group %s defined before mentioned as a dependency" %
                    (_line_number, name))
         if name not in _groups_to_be_defined:
-          sys.exit("Error:%d: group definition using duplicate name %s" % (_line_number, name))
+          sys.exit("dependencies.txt:%d: Error: group definition using duplicate name %s" % (_line_number, name))
         _groups_to_be_defined.remove(name)
         item = items[name]
         item["name"] = name
@@ -183,15 +183,15 @@ def Load():
           item = items[current_type]
           line = _ReadDeps(deps_file, item, None)
         else:
-          sys.exit("Error:%d: deps before any library or group" % _line_number)
+          sys.exit("dependencies.txt:%d: Error: deps before any library or group" % _line_number)
       elif line == "system_symbols:":
         current_type = "system_symbols"
         if current_type in items:
-          sys.exit("Error:%d: duplicate entry for system_symbols" % _line_number)
+          sys.exit("dependencies.txt:%d: Error: duplicate entry for system_symbols" % _line_number)
         item = items[current_type] = {"type": current_type, "name": current_type}
         line = _ReadSystemSymbols(deps_file, item)
       else:
-        sys.exit("Syntax error:%d: %s" % (_line_number, line))
+        sys.exit("dependencies.txt:%d: Syntax error: %s" % (_line_number, line))
   except StopIteration:
     pass
   if _groups_to_be_defined:
