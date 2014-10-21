@@ -6,7 +6,7 @@ ICU_LIBRARY(${TOOLUTIL_STUB}
     pkg_gencmn.c pkg_gencmn.h pkg_icu.cpp pkg_icu.h pkg_imp.h pkgitems.cpp ppucd.cpp ppucd.h
     swapimpl.cpp swapimpl.h toolutil.cpp toolutil.h ucbuf.c ucbuf.h ucln_tu.cpp ucm.c ucm.h
     ucmstate.c udbgutil.cpp udbgutil.h unewdata.c unewdata.h uoptions.c uoptions.h uparse.c
-    uparse.h writesrc.c writesrc.h xmlparser.cpp xmlparser.h
+    uparse.h writesrc.c writesrc.h xmlparser.cpp xmlparser.h collationinfo.cpp collationinfo.h
     ICU_LINK_LIBRARIES
     ${I18N_STUB})
 

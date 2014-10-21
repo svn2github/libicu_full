@@ -52,19 +52,22 @@ for library in dependencies.libraries:
       parLibrary = item['name']
     else:
       parLibrary = item['library']
-    for dep in item.get('deps',{}):
+    allDeps = item.get('deps',{})
+    #print "%s==%s" % (indent, allDeps)
+    for dep in allDeps:
+      #print ".%s" % dep
       subItem = dependencies.items[dep]
       if dep in processed:
         # Already-seen.
         #print "%s~%s" % (indent, dep)
-        return
+        continue
       processed |= set({dep})
       subLib = subItem.get('library', None)
       if parLibrary != subLib:
         # Cross-library dependency.
-        # print "%s-%s [%s]" % (indent, dep, subLib)
+        #print "%s-%s [%s]" % (indent, dep, subLib)
         libDeps |= set({subLib})
-        return
+        continue
       print "%s+%s" % (indent, dep)
       # ADD ALL FILES
       subFiles = subItem.get('files',None)

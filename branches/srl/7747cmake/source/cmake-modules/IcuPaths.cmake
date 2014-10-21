@@ -40,6 +40,8 @@ set(ICU_i18n
     ucol_res.cpp
     collationroot.cpp
     collationdatareader.cpp
+    # uclean_i18n
+    ucln_in.cpp
     # regex
     regexcmp.cpp
     regexst.cpp
@@ -50,6 +52,13 @@ set(ICU_i18n
     regeximp.cpp
     # formattable_cnv
     fmtable_cnv.cpp
+    # formattable
+    measure.cpp
+    fmtable.cpp
+    # digitlist
+    digitlst.cpp
+    decContext.c
+    decNumber.c
     # spoof_detection
     uspoof_impl.cpp
     scriptset.cpp
@@ -158,12 +167,12 @@ set(ICU_i18n
     # pluralrules
     plurrule.cpp
     upluralrules.cpp
-    # digitlist
-    digitlst.cpp
-    decContext.c
-    decNumber.c
-    # uclean_i18n
-    ucln_in.cpp
+    # sharedbreakiterator
+    sharedbreakiterator.cpp
+    # format
+    format.cpp
+    fphdlimp.cpp
+    fpositer.cpp
     # filteredbreakiterator
     filteredbrk.cpp
     # string_search
@@ -172,7 +181,41 @@ set(ICU_i18n
     usearch.cpp
     # localedata
     ulocdata.c
-    # LIBRARY DEPENDENCIES: set(['common'])
+    # regex_cnv
+    uregexc.cpp
+    # alphabetic_index
+    alphaindex.cpp
+    # translit
+    quant.cpp
+    utrans.cpp
+    cpdtrans.cpp
+    casetrn.cpp
+    nultrans.cpp
+    rbt_data.cpp
+    toupptrn.cpp
+    nortrans.cpp
+    esctrn.cpp
+    remtrans.cpp
+    translit.cpp
+    tridpars.cpp
+    strrepl.cpp
+    rbt_rule.cpp
+    transreg.cpp
+    name2uni.cpp
+    anytrans.cpp
+    rbt_pars.cpp
+    strmatch.cpp
+    unesctrn.cpp
+    rbt_set.cpp
+    titletrn.cpp
+    rbt.cpp
+    funcrepl.cpp
+    brktrans.cpp
+    tolowtrn.cpp
+    uni2name.cpp
+    # universal_time_scale
+    utmscale.c
+    # LIBRARY DEPENDENCIES: set([None, 'common'])
     )
 
 set(ICU_stubdata
@@ -226,6 +269,13 @@ set(ICU_common
     udatamem.c
     # uhash
     uhash.c
+    # stringenumeration
+    uenum.c
+    ustrenum.cpp
+    # ucol_swp
+    ucol_swp.cpp
+    # utrie2
+    utrie2.cpp
     # simplepatternformatter
     simplepatternformatter.cpp
     # filterednormalizer2
@@ -237,19 +287,6 @@ set(ICU_common
     utrie2_builder.cpp
     # utrie
     utrie.cpp
-    # uset_props
-    uset_props.cpp
-    # uniset_props
-    ruleiter.cpp
-    uniset_props.cpp
-    # uprops
-    uprops.cpp
-    # unames
-    unames.cpp
-    # uchar
-    uchar.c
-    # utrie2
-    utrie2.cpp
     # uniset_core
     unifilt.cpp
     unisetspan.cpp
@@ -260,8 +297,87 @@ set(ICU_common
     util.cpp
     # patternprops
     patternprops.cpp
+    # uset_props
+    uset_props.cpp
+    # uniset_props
+    ruleiter.cpp
+    uniset_props.cpp
+    # uprops
+    uprops.cpp
+    # ubidi_props
+    ubidi_props.c
+    # ucase
+    ucase.cpp
+    # uchar
+    uchar.c
+    # ustring_case
+    ustrcase.cpp
+    # loadednormalizer2
+    loadednormalizer2impl.cpp
+    # unistr_case
+    unistr_case.cpp
+    # unames
+    unames.cpp
+    # propname
+    propname.cpp
+    # bytestrie
+    bytestrie.cpp
+    # parsepos
+    parsepos.cpp
     # uniset_closure
     uniset_closure.cpp
+    # unistr_titlecase_brkiter
+    unistr_titlecase_brkiter.cpp
+    # ustr_titlecase_brkiter
+    ustr_titlecase_brkiter.cpp
+    # ustring_case_locale
+    ustrcase_locale.cpp
+    # breakiterator
+    rbbirb.cpp
+    rbbitblb.cpp
+    brkiter.cpp
+    brkeng.cpp
+    rbbinode.cpp
+    rbbisetb.cpp
+    dictionarydata.cpp
+    rbbi.cpp
+    rbbistbl.cpp
+    rbbiscan.cpp
+    dictbe.cpp
+    ubrk.cpp
+    rbbidata.cpp
+    # schriter
+    uchriter.cpp
+    schriter.cpp
+    # chariter
+    chariter.cpp
+    # uvector32
+    uvectr32.cpp
+    # normlzr
+    normlzr.cpp
+    # ucharstrie
+    ucharstrie.cpp
+    # utext
+    utext.cpp
+    # service_registration
+    servnotf.cpp
+    servslkf.cpp
+    servlkf.cpp
+    locutil.cpp
+    servrbf.cpp
+    serv.cpp
+    servlk.cpp
+    servls.cpp
+    # locale_display_names
+    locdispnames.cpp
+    # locresdata
+    locresdata.cpp
+    # hashtable
+    uhash_us.cpp
+    # ustack
+    ustack.cpp
+    # unistr_case_locale
+    unistr_case_locale.cpp
     # uvector64
     uvectr64.cpp
     # ucnv_set
@@ -297,12 +413,86 @@ set(ICU_common
     unifiedcache.cpp
     # bytestriebuilder
     bytestriebuilder.cpp
-    # bytestrie
-    bytestrie.cpp
     # stringtriebuilder
     stringtriebuilder.cpp
     # ucat
     ucat.c
+    # messagepattern
+    messagepattern.cpp
+    # uts46
+    uts46.cpp
+    # punycode
+    punycode.cpp
+    # bytestream
+    bytestream.cpp
+    # ubidi
+    ubidiln.c
+    ubidiwrt.c
+    ubidi.c
+    # ucasemap_titlecase_brkiter
+    ucasemap_titlecase_brkiter.cpp
+    # ucasemap
+    ucasemap.cpp
+    # ucnvdisp
+    ucnvdisp.c
+    # resbund_cnv
+    resbund_cnv.cpp
+    # ucharstrieiterator
+    ucharstrieiterator.cpp
+    # bytestrieiterator
+    bytestrieiterator.cpp
+    # unistr_cnv
+    unistr_cnv.cpp
+    # usetiter
+    usetiter.cpp
+    # listformatter
+    listformatter.cpp
+    # canonical_iterator
+    caniter.cpp
+    # errorcode
+    errorcode.cpp
+    # utypes
+    utypes.c
+    # loclikely
+    loclikely.cpp
+    # uscript_props
+    uscript_props.cpp
+    # uinit
+    uinit.cpp
+    # icuplug
+    icuplug.cpp
+    # date_interval
+    dtintrv.cpp
+    # uiter
+    uiter.cpp
+    # converter_selector
+    ucnvsel.cpp
+    # propsvec
+    propsvec.c
+    # icu_utility_with_props
+    util_props.cpp
+    # ulist
+    ulist.c
+    # unistr_props
+    unistr_props.cpp
+    # unormcmp
+    unormcmp.cpp
+    # ustr_wcs
+    ustr_wcs.cpp
+    # idna2003
+    uidna.cpp
+    # stringprep
+    usprep.cpp
+    # unorm
+    unorm.cpp
+    # script_runs
+    usc_impl.c
+    # ucharstriebuilder
+    ucharstriebuilder.cpp
+    # ushape
+    ushape.cpp
+    # uscript
+    uscript.c
     # LIBRARY DEPENDENCIES: set([None])
     )
 
@@ -322,6 +512,6 @@ set(ICU_io
     sprintf.c
     locbund.cpp
     ufmt_cmn.c
-    # LIBRARY DEPENDENCIES: set([None, 'common'])
+    # LIBRARY DEPENDENCIES: set(['i18n', None, 'common'])
     )
 
