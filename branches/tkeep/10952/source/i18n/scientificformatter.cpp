@@ -55,6 +55,70 @@ static UBool copyAsSuperscript(
     return TRUE;
 }
 
+ScientificFormatter *ScientificFormatter::createSuperscriptInstance(
+            DecimalFormat *fmtToAdopt, UErrorCode &status) {
+    return createInstance(fmtToAdopt, new SuperscriptStyle(), status);
+}
+
+ScientificFormatter *ScientificFormatter::createSuperscriptInstance(
+            const Locale &locale, UErrorCode &status) {
+    return createInstance(
+            static_cast<DecimalFormat *>(
+                    DecimalFormat::createScientificInstance(locale, status)),
+            new SuperscriptStyle(),
+            status);
+}
+
+ScientificFormatter *ScientificFormatter::createMarkupInstance(
+        DecimalFormat *fmtToAdopt,
+        const UnicodeString &beginMarkup,
+        const UnicodeString &endMarkup,
+        UErrorCode &status) {
+    return createInstance(
+            fmtToAdopt,
+            new MarkupStyle(beginMarkup, endMarkup),
+            status);
+}
+
+ScientificFormatter *ScientificFormatter::createMarkupInstance(
+        const Locale &locale,
+        const UnicodeString &beginMarkup,
+        const UnicodeString &endMarkup,
+        UErrorCode &status) {
+    return createInstance(
+            static_cast<DecimalFormat *>(
+                    DecimalFormat::createScientificInstance(locale, status)),
+            new MarkupStyle(beginMarkup, endMarkup),
+            status);
+}
+
+ScientificFormatter *ScientificFormatter::createInstance(
+            DecimalFormat *fmtToAdopt,
+            Style *styleToAdopt,
+            UErrorCode &status) {
+    LocalPointer<DecimalFormat> fmt(fmtToAdopt);
+    LocalPointer<Style> style(styleToAdopt);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    ScientificFormatter *result =
+            new ScientificFormatter(
+                    fmt.getAlias(),
+                    style.getAlias(),
+                    status);
+    if (result == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+    fmt.orphan();
+    style.orphan();
+    if (U_FAILURE(status)) {
+        delete result;
+        return NULL;
+    }
+    return result;
+}
+
 ScientificFormatter::Style *ScientificFormatter::SuperscriptStyle::clone() const {
     return new ScientificFormatter::SuperscriptStyle(*this);
 }
@@ -71,12 +135,9 @@ UnicodeString &ScientificFormatter::SuperscriptStyle::format(
     }
     FieldPosition fp;
     int32_t copyFromOffset = 0;
-    UBool exponentSymbolFieldPresent = FALSE;
-    UBool exponentFieldPresent = FALSE;
     while (fpi.next(fp)) {
         switch (fp.getField()) {
         case UNUM_EXPONENT_SYMBOL_FIELD:
-            exponentSymbolFieldPresent = TRUE;
             appendTo.append(
                     original,
                     copyFromOffset,
@@ -109,7 +170,6 @@ UnicodeString &ScientificFormatter::SuperscriptStyle::format(
             }
             break;
         case UNUM_EXPONENT_FIELD:
-            exponentFieldPresent = TRUE;
             appendTo.append(
                     original,
                     copyFromOffset,
@@ -127,10 +187,6 @@ UnicodeString &ScientificFormatter::SuperscriptStyle::format(
         default:
             break;
         }
-    }
-    if (!exponentSymbolFieldPresent || !exponentFieldPresent) {
-      status = U_ILLEGAL_ARGUMENT_ERROR;
-      return appendTo;
     }
     appendTo.append(
             original, copyFromOffset, original.length() - copyFromOffset);
@@ -153,12 +209,9 @@ UnicodeString &ScientificFormatter::MarkupStyle::format(
     }
     FieldPosition fp;
     int32_t copyFromOffset = 0;
-    UBool exponentSymbolFieldPresent = FALSE;
-    UBool exponentFieldPresent = FALSE;
     while (fpi.next(fp)) {
         switch (fp.getField()) {
         case UNUM_EXPONENT_SYMBOL_FIELD:
-            exponentSymbolFieldPresent = TRUE;
             appendTo.append(
                     original,
                     copyFromOffset,
@@ -168,7 +221,6 @@ UnicodeString &ScientificFormatter::MarkupStyle::format(
             appendTo.append(fBeginMarkup);
             break;
         case UNUM_EXPONENT_FIELD:
-            exponentFieldPresent = TRUE;
             appendTo.append(
                     original,
                     copyFromOffset,
@@ -180,16 +232,10 @@ UnicodeString &ScientificFormatter::MarkupStyle::format(
             break;
         }
     }
-    if (!exponentSymbolFieldPresent || !exponentFieldPresent) {
-      status = U_ILLEGAL_ARGUMENT_ERROR;
-      return appendTo;
-    }
     appendTo.append(
             original, copyFromOffset, original.length() - copyFromOffset);
     return appendTo;
-
 }
-
 
 ScientificFormatter::ScientificFormatter(
         DecimalFormat *fmtToAdopt, Style *styleToAdopt, UErrorCode &status)

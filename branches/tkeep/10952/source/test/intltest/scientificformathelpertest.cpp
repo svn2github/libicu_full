@@ -158,9 +158,12 @@ void ScientificFormatHelperTest::TestFixedDecimalMarkup() {
     assertSuccess("", status);
     UnicodeString result;
     helper.insertMarkup(appendTo, fpositer, "<sup>", "</sup>", result, status);
-    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
-        errln("Expected U_ILLEGAL_ARGUMENT_ERROR with fixed decimal number.");
-    }
+    const char *expected = "123,456";
+    assertEquals(
+            "",
+            UnicodeString(expected).unescape(),
+            result);
+    assertSuccess("", status);
 }
 
 void ScientificFormatHelperTest::TestFixedDecimalSuperscript() {
@@ -176,9 +179,12 @@ void ScientificFormatHelperTest::TestFixedDecimalSuperscript() {
     assertSuccess("", status);
     UnicodeString result;
     helper.toSuperscriptExponentDigits(appendTo, fpositer, result, status);
-    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
-        errln("Expected U_ILLEGAL_ARGUMENT_ERROR with fixed decimal number.");
-    }
+    const char *expected = "123,456";
+    assertEquals(
+            "",
+            UnicodeString(expected).unescape(),
+            result);
+    assertSuccess("", status);
 }
 
 extern IntlTest *createScientificFormatHelperTest() {

@@ -34,13 +34,15 @@ class Formattable;
  * Sample code:
  * <pre>
  * UErrorCode status = U_ZERO_ERROR;
- * DecimalFormat *decfmt = (DecimalFormat *)
- *     NumberFormat::createScientificInstance("en", status);
- * ScientificFormatter fmt(decfmt, new MarkupStyle("<sup>", "</sup>"));
+ * LocalPointer<ScientificFormatter> fmt(
+ *         ScientificFormatter::createMarkupInstance(
+ *                 "en", "<sup>", "</sup>", status));
+ * if (U_FAILURE(status)) {
+ *     return;
+ * }
  * UnicodeString appendTo;
- *
  * // appendTo = "1.23456x10<sup>-78</sup>"
- * fmt.format(1.23456e-78, appendTo, status);
+ * fmt->format(1.23456e-78, appendTo, status);
  * </pre>
  *
  * @draft ICU 55
@@ -49,110 +51,64 @@ class U_I18N_API ScientificFormatter : public UObject {
 public:
 
     /**
-     * Base class for ScientificFormatter styles.
+     * Creates a ScientificFormatter instance that uses
+     * superscript characters for exponents.
+     * @param fmtToAdopt The DecimalFormat which must be configured for
+     *   scientific notation.
+     * @param status error returned here.
+     * @return The new ScientificFormatter instance.
      *
      * @draft ICU 55
      */
-    class U_I18N_API Style : public UObject {
-    public:
-
-        /**
-         * Returns a clone of this object.
-         *
-         * @draft ICU 55
-         */
-        virtual Style *clone() const = 0;
-    protected:
-        virtual UnicodeString &format(
-                const UnicodeString &original,
-                FieldPositionIterator &fpi,
-                const UnicodeString &preExponent,
-                const DecimalFormatStaticSets &decimalFormatSets,
-                UnicodeString &appendTo,
-                UErrorCode &status) const = 0;
-    private:
-        friend class ScientificFormatter;
-    };
+    static ScientificFormatter *createSuperscriptInstance(
+            DecimalFormat *fmtToAdopt, UErrorCode &status);
 
     /**
-     * A ScientificFormatter style that uses unicode superscript
-     * codepoints for exponent digits.
+     * Creates a ScientificFormatter instance that uses
+     * superscript characters for exponents for this locale.
+     * @param locale The locale
+     * @param status error returned here.
+     * @return The ScientificFormatter instance.
      *
      * @draft ICU 55
      */
-    class U_I18N_API SuperscriptStyle : public Style {
-    public:
+    static ScientificFormatter *createSuperscriptInstance(
+            const Locale &locale, UErrorCode &status);
 
-        /**
-         * Returns a clone of this object.
-         *
-         * @draft ICU 55
-         */
-        virtual Style *clone() const;
-    protected:
-        virtual UnicodeString &format(
-                const UnicodeString &original,
-                FieldPositionIterator &fpi,
-                const UnicodeString &preExponent,
-                const DecimalFormatStaticSets &decimalFormatSets,
-                UnicodeString &appendTo,
-                UErrorCode &status) const;
-    private:
-        friend class ScientificFormatHelper;
-    };
 
     /**
-     * A ScientificFormatter style that uses html markup for exponent
-     * digits.
+     * Creates a ScientificFormatter instance that uses
+     * mark up for exponents.
+     * @param fmtToAdopt The DecimalFormat which must be configured for
+     *   scientific notation.
+     * @param beginMarkup the mark up to start superscript.
+     * @param endMarkup the mark up to end superscript.
+     * @param status error returned here.
+     * @return The new ScientificFormatter instance.
      *
      * @draft ICU 55
      */
-    class U_I18N_API MarkupStyle : public Style {
-    public:
-        /**
-         * Constructor.
-         * @param beginMarkup the html tag to start superscript e.g "<sup">
-         * @param endMarkup the html tag to end superscript e.g "</sup>"
-         *
-         * @draft ICU 55
-         */
-        MarkupStyle(
-                const UnicodeString &beginMarkup,
-                const UnicodeString &endMarkup)
-                : Style(),
-                  fBeginMarkup(beginMarkup),
-                  fEndMarkup(endMarkup) { }
-        /**
-         * Returns a clone of this object.
-         *
-         * @draft ICU 55
-         */
-        virtual Style *clone() const;
-    protected:
-        virtual UnicodeString &format(
-                const UnicodeString &original,
-                FieldPositionIterator &fpi,
-                const UnicodeString &preExponent,
-                const DecimalFormatStaticSets &decimalFormatSets,
-                UnicodeString &appendTo,
-                UErrorCode &status) const;
-    private:
-        UnicodeString fBeginMarkup;
-        UnicodeString fEndMarkup;
-        friend class ScientificFormatHelper;
-    };
-
-    /**
-     * Constructor.
-     *
-     * @param fmtToAdopt DecimalFormat instance to adopt.
-     * @param styleToAdopt the style to adopt.
-     *
-     * @draft ICU 55
-     */
-    ScientificFormatter(
+    static ScientificFormatter *createMarkupInstance(
             DecimalFormat *fmtToAdopt,
-            Style *styleToAdopt,
+            const UnicodeString &beginMarkup,
+            const UnicodeString &endMarkup,
+            UErrorCode &status);
+
+    /**
+     * Creates a ScientificFormatter instance that uses
+     * mark up for exponents for this locale.
+     * @param locale The locale
+     * @param beginMarkup the mark up to start superscript.
+     * @param endMarkup the mark up to end superscript.
+     * @param status error returned here.
+     * @return The ScientificFormatter instance.
+     *
+     * @draft ICU 55
+     */
+    static ScientificFormatter *createMarkupInstance(
+            const Locale &locale,
+            const UnicodeString &beginMarkup,
+            const UnicodeString &endMarkup,
             UErrorCode &status);
 
     /**
@@ -188,12 +144,77 @@ public:
             UnicodeString &appendTo,
             UErrorCode &status) const;
  private:
+    class U_I18N_API Style : public UObject {
+    public:
+        virtual Style *clone() const = 0;
+    protected:
+        virtual UnicodeString &format(
+                const UnicodeString &original,
+                FieldPositionIterator &fpi,
+                const UnicodeString &preExponent,
+                const DecimalFormatStaticSets &decimalFormatSets,
+                UnicodeString &appendTo,
+                UErrorCode &status) const = 0;
+    private:
+        friend class ScientificFormatter;
+    };
+
+    class U_I18N_API SuperscriptStyle : public Style {
+    public:
+        virtual Style *clone() const;
+    protected:
+        virtual UnicodeString &format(
+                const UnicodeString &original,
+                FieldPositionIterator &fpi,
+                const UnicodeString &preExponent,
+                const DecimalFormatStaticSets &decimalFormatSets,
+                UnicodeString &appendTo,
+                UErrorCode &status) const;
+    private:
+        friend class ScientificFormatHelper;
+    };
+
+    class U_I18N_API MarkupStyle : public Style {
+    public:
+        MarkupStyle(
+                const UnicodeString &beginMarkup,
+                const UnicodeString &endMarkup)
+                : Style(),
+                  fBeginMarkup(beginMarkup),
+                  fEndMarkup(endMarkup) { }
+        virtual Style *clone() const;
+    protected:
+        virtual UnicodeString &format(
+                const UnicodeString &original,
+                FieldPositionIterator &fpi,
+                const UnicodeString &preExponent,
+                const DecimalFormatStaticSets &decimalFormatSets,
+                UnicodeString &appendTo,
+                UErrorCode &status) const;
+    private:
+        UnicodeString fBeginMarkup;
+        UnicodeString fEndMarkup;
+        friend class ScientificFormatHelper;
+    };
+
+    ScientificFormatter(
+            DecimalFormat *fmtToAdopt,
+            Style *styleToAdopt,
+            UErrorCode &status);
+
+    static void getPreExponent(
+            const DecimalFormatSymbols &dfs, UnicodeString &preExponent);
+
+    static ScientificFormatter *createInstance(
+            DecimalFormat *fmtToAdopt,
+            Style *styleToAdopt,
+            UErrorCode &status);
+
     UnicodeString fPreExponent;
     DecimalFormat *fDecimalFormat;
     Style *fStyle;
     const DecimalFormatStaticSets *fStaticSets;
-    static void getPreExponent(
-            const DecimalFormatSymbols &dfs, UnicodeString &preExponent);
+
     friend class ScientificFormatHelper;
 };
 
