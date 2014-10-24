@@ -4,8 +4,8 @@
 * Corporation and others.  All Rights Reserved.
 **********************************************************************
 */
-#ifndef SCIFORMATTER_H
-#define SCIFORMATTER_H
+#ifndef SCINUMBERFORMATTER_H
+#define SCINUMBERFORMATTER_H
 
 #include "unicode/utypes.h"
 
@@ -34,8 +34,8 @@ class Formattable;
  * Sample code:
  * <pre>
  * UErrorCode status = U_ZERO_ERROR;
- * LocalPointer<ScientificFormatter> fmt(
- *         ScientificFormatter::createMarkupInstance(
+ * LocalPointer<ScientificNumberFormatter> fmt(
+ *         ScientificNumberFormatter::createMarkupInstance(
  *                 "en", "<sup>", "</sup>", status));
  * if (U_FAILURE(status)) {
  *     return;
@@ -47,65 +47,65 @@ class Formattable;
  *
  * @draft ICU 55
  */
-class U_I18N_API ScientificFormatter : public UObject {
+class U_I18N_API ScientificNumberFormatter : public UObject {
 public:
 
     /**
-     * Creates a ScientificFormatter instance that uses
+     * Creates a ScientificNumberFormatter instance that uses
      * superscript characters for exponents.
      * @param fmtToAdopt The DecimalFormat which must be configured for
      *   scientific notation.
      * @param status error returned here.
-     * @return The new ScientificFormatter instance.
+     * @return The new ScientificNumberFormatter instance.
      *
      * @draft ICU 55
      */
-    static ScientificFormatter *createSuperscriptInstance(
+    static ScientificNumberFormatter *createSuperscriptInstance(
             DecimalFormat *fmtToAdopt, UErrorCode &status);
 
     /**
-     * Creates a ScientificFormatter instance that uses
+     * Creates a ScientificNumberFormatter instance that uses
      * superscript characters for exponents for this locale.
      * @param locale The locale
      * @param status error returned here.
-     * @return The ScientificFormatter instance.
+     * @return The ScientificNumberFormatter instance.
      *
      * @draft ICU 55
      */
-    static ScientificFormatter *createSuperscriptInstance(
+    static ScientificNumberFormatter *createSuperscriptInstance(
             const Locale &locale, UErrorCode &status);
 
 
     /**
-     * Creates a ScientificFormatter instance that uses
+     * Creates a ScientificNumberFormatter instance that uses
      * mark up for exponents.
      * @param fmtToAdopt The DecimalFormat which must be configured for
      *   scientific notation.
      * @param beginMarkup the mark up to start superscript.
      * @param endMarkup the mark up to end superscript.
      * @param status error returned here.
-     * @return The new ScientificFormatter instance.
+     * @return The new ScientificNumberFormatter instance.
      *
      * @draft ICU 55
      */
-    static ScientificFormatter *createMarkupInstance(
+    static ScientificNumberFormatter *createMarkupInstance(
             DecimalFormat *fmtToAdopt,
             const UnicodeString &beginMarkup,
             const UnicodeString &endMarkup,
             UErrorCode &status);
 
     /**
-     * Creates a ScientificFormatter instance that uses
+     * Creates a ScientificNumberFormatter instance that uses
      * mark up for exponents for this locale.
      * @param locale The locale
      * @param beginMarkup the mark up to start superscript.
      * @param endMarkup the mark up to end superscript.
      * @param status error returned here.
-     * @return The ScientificFormatter instance.
+     * @return The ScientificNumberFormatter instance.
      *
      * @draft ICU 55
      */
-    static ScientificFormatter *createMarkupInstance(
+    static ScientificNumberFormatter *createMarkupInstance(
             const Locale &locale,
             const UnicodeString &beginMarkup,
             const UnicodeString &endMarkup,
@@ -115,19 +115,19 @@ public:
      * Copy constructor.
      * @draft ICU 55
      */
-    ScientificFormatter(const ScientificFormatter &other);
+    ScientificNumberFormatter(const ScientificNumberFormatter &other);
 
     /**
      * Assignment operator.
      * @draft ICU 55
      */
-    ScientificFormatter &operator=(const ScientificFormatter &other);
+    ScientificNumberFormatter &operator=(const ScientificNumberFormatter &other);
 
     /**
      * Destructor.
      * @draft ICU 55
      */
-    virtual ~ScientificFormatter();
+    virtual ~ScientificNumberFormatter();
 
     /**
      * Formats a number into user friendly scientific notation.
@@ -156,7 +156,7 @@ public:
                 UnicodeString &appendTo,
                 UErrorCode &status) const = 0;
     private:
-        friend class ScientificFormatter;
+        friend class ScientificNumberFormatter;
     };
 
     class U_I18N_API SuperscriptStyle : public Style {
@@ -197,7 +197,7 @@ public:
         friend class ScientificFormatHelper;
     };
 
-    ScientificFormatter(
+    ScientificNumberFormatter(
             DecimalFormat *fmtToAdopt,
             Style *styleToAdopt,
             UErrorCode &status);
@@ -205,7 +205,7 @@ public:
     static void getPreExponent(
             const DecimalFormatSymbols &dfs, UnicodeString &preExponent);
 
-    static ScientificFormatter *createInstance(
+    static ScientificNumberFormatter *createInstance(
             DecimalFormat *fmtToAdopt,
             Style *styleToAdopt,
             UErrorCode &status);

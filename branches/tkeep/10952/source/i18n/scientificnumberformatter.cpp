@@ -8,7 +8,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/scientificformatter.h"
+#include "unicode/scientificnumberformatter.h"
 #include "unicode/dcfmtsym.h"
 #include "unicode/fpositer.h"
 #include "unicode/utf16.h"
@@ -55,12 +55,12 @@ static UBool copyAsSuperscript(
     return TRUE;
 }
 
-ScientificFormatter *ScientificFormatter::createSuperscriptInstance(
+ScientificNumberFormatter *ScientificNumberFormatter::createSuperscriptInstance(
             DecimalFormat *fmtToAdopt, UErrorCode &status) {
     return createInstance(fmtToAdopt, new SuperscriptStyle(), status);
 }
 
-ScientificFormatter *ScientificFormatter::createSuperscriptInstance(
+ScientificNumberFormatter *ScientificNumberFormatter::createSuperscriptInstance(
             const Locale &locale, UErrorCode &status) {
     return createInstance(
             static_cast<DecimalFormat *>(
@@ -69,7 +69,7 @@ ScientificFormatter *ScientificFormatter::createSuperscriptInstance(
             status);
 }
 
-ScientificFormatter *ScientificFormatter::createMarkupInstance(
+ScientificNumberFormatter *ScientificNumberFormatter::createMarkupInstance(
         DecimalFormat *fmtToAdopt,
         const UnicodeString &beginMarkup,
         const UnicodeString &endMarkup,
@@ -80,7 +80,7 @@ ScientificFormatter *ScientificFormatter::createMarkupInstance(
             status);
 }
 
-ScientificFormatter *ScientificFormatter::createMarkupInstance(
+ScientificNumberFormatter *ScientificNumberFormatter::createMarkupInstance(
         const Locale &locale,
         const UnicodeString &beginMarkup,
         const UnicodeString &endMarkup,
@@ -92,7 +92,7 @@ ScientificFormatter *ScientificFormatter::createMarkupInstance(
             status);
 }
 
-ScientificFormatter *ScientificFormatter::createInstance(
+ScientificNumberFormatter *ScientificNumberFormatter::createInstance(
             DecimalFormat *fmtToAdopt,
             Style *styleToAdopt,
             UErrorCode &status) {
@@ -101,8 +101,8 @@ ScientificFormatter *ScientificFormatter::createInstance(
     if (U_FAILURE(status)) {
         return NULL;
     }
-    ScientificFormatter *result =
-            new ScientificFormatter(
+    ScientificNumberFormatter *result =
+            new ScientificNumberFormatter(
                     fmt.getAlias(),
                     style.getAlias(),
                     status);
@@ -119,11 +119,11 @@ ScientificFormatter *ScientificFormatter::createInstance(
     return result;
 }
 
-ScientificFormatter::Style *ScientificFormatter::SuperscriptStyle::clone() const {
-    return new ScientificFormatter::SuperscriptStyle(*this);
+ScientificNumberFormatter::Style *ScientificNumberFormatter::SuperscriptStyle::clone() const {
+    return new ScientificNumberFormatter::SuperscriptStyle(*this);
 }
 
-UnicodeString &ScientificFormatter::SuperscriptStyle::format(
+UnicodeString &ScientificNumberFormatter::SuperscriptStyle::format(
         const UnicodeString &original,
         FieldPositionIterator &fpi,
         const UnicodeString &preExponent,
@@ -193,11 +193,11 @@ UnicodeString &ScientificFormatter::SuperscriptStyle::format(
     return appendTo;
 }
 
-ScientificFormatter::Style *ScientificFormatter::MarkupStyle::clone() const {
-    return new ScientificFormatter::MarkupStyle(*this);
+ScientificNumberFormatter::Style *ScientificNumberFormatter::MarkupStyle::clone() const {
+    return new ScientificNumberFormatter::MarkupStyle(*this);
 }
 
-UnicodeString &ScientificFormatter::MarkupStyle::format(
+UnicodeString &ScientificNumberFormatter::MarkupStyle::format(
         const UnicodeString &original,
         FieldPositionIterator &fpi,
         const UnicodeString &preExponent,
@@ -237,7 +237,7 @@ UnicodeString &ScientificFormatter::MarkupStyle::format(
     return appendTo;
 }
 
-ScientificFormatter::ScientificFormatter(
+ScientificNumberFormatter::ScientificNumberFormatter(
         DecimalFormat *fmtToAdopt, Style *styleToAdopt, UErrorCode &status)
         : fPreExponent(),
           fDecimalFormat(fmtToAdopt),
@@ -259,8 +259,8 @@ ScientificFormatter::ScientificFormatter(
     fStaticSets = DecimalFormatStaticSets::getStaticSets(status);
 }
 
-ScientificFormatter::ScientificFormatter(
-        const ScientificFormatter &other)
+ScientificNumberFormatter::ScientificNumberFormatter(
+        const ScientificNumberFormatter &other)
         : UObject(other),
           fPreExponent(other.fPreExponent),
           fDecimalFormat(NULL),
@@ -271,8 +271,8 @@ ScientificFormatter::ScientificFormatter(
     fStyle = other.fStyle->clone();
 }
 
-ScientificFormatter &ScientificFormatter::operator=(
-        const ScientificFormatter &other) {
+ScientificNumberFormatter &ScientificNumberFormatter::operator=(
+        const ScientificNumberFormatter &other) {
     if (this == &other) {
         return *this;
     }
@@ -287,12 +287,12 @@ ScientificFormatter &ScientificFormatter::operator=(
     return *this;
 }
 
-ScientificFormatter::~ScientificFormatter() {
+ScientificNumberFormatter::~ScientificNumberFormatter() {
     delete fDecimalFormat;
     delete fStyle;
 }
 
-UnicodeString &ScientificFormatter::format(
+UnicodeString &ScientificNumberFormatter::format(
         const Formattable &number,
         UnicodeString &appendTo,
         UErrorCode &status) const {
@@ -311,7 +311,7 @@ UnicodeString &ScientificFormatter::format(
             status);
 }
 
-void ScientificFormatter::getPreExponent(
+void ScientificNumberFormatter::getPreExponent(
         const DecimalFormatSymbols &dfs, UnicodeString &preExponent) {
     preExponent.append(dfs.getConstSymbol(
             DecimalFormatSymbols::kExponentMultiplicationSymbol));

@@ -4,7 +4,7 @@
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
-* File SCIFORMATTERTEST.CPP
+* File SCINUMBERFORMATTERTEST.CPP
 *
 *******************************************************************************
 */
@@ -14,12 +14,12 @@
 
 #if !UCONFIG_NO_FORMATTING
 
-#include "unicode/scientificformatter.h"
+#include "unicode/scientificnumberformatter.h"
 #include "unicode/numfmt.h"
 #include "unicode/decimfmt.h"
 #include "unicode/localpointer.h"
 
-class ScientificFormatterTest : public IntlTest {
+class ScientificNumberFormatterTest : public IntlTest {
 public:
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
@@ -31,10 +31,10 @@ private:
     void TestFixedDecimalSuperscript();
 };
 
-void ScientificFormatterTest::runIndexedTest(
+void ScientificNumberFormatterTest::runIndexedTest(
         int32_t index, UBool exec, const char *&name, char *) {
     if (exec) {
-        logln("TestSuite ScientificFormatterTest: ");
+        logln("TestSuite ScientificNumberFormatterTest: ");
     }
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(TestBasic);
@@ -46,14 +46,14 @@ void ScientificFormatterTest::runIndexedTest(
     TESTCASE_AUTO_END;
 }
 
-void ScientificFormatterTest::TestBasic() {
+void ScientificNumberFormatterTest::TestBasic() {
     UErrorCode status = U_ZERO_ERROR;
     UnicodeString prefix("String: ");
     UnicodeString appendTo(prefix);
-    LocalPointer<ScientificFormatter> fmt(
-            ScientificFormatter::createMarkupInstance(
+    LocalPointer<ScientificNumberFormatter> fmt(
+            ScientificNumberFormatter::createMarkupInstance(
                     "en" , "<sup>", "</sup>", status));
-    if (!assertSuccess("Can't create ScientificFormatter", status)) {
+    if (!assertSuccess("Can't create ScientificNumberFormatter", status)) {
         return;
     }
     fmt->format(1.23456e-78, appendTo, status);
@@ -64,10 +64,10 @@ void ScientificFormatterTest::TestBasic() {
             appendTo);
 
     // Test assignment operator while testing superscript style
-    LocalPointer<ScientificFormatter> fmt2(
-            ScientificFormatter::createSuperscriptInstance(
+    LocalPointer<ScientificNumberFormatter> fmt2(
+            ScientificNumberFormatter::createSuperscriptInstance(
                     "en", status));
-    if (!assertSuccess("Can't create ScientificFormatter2", status)) {
+    if (!assertSuccess("Can't create ScientificNumberFormatter2", status)) {
         return;
     }
     *fmt = *fmt2;
@@ -80,7 +80,7 @@ void ScientificFormatterTest::TestBasic() {
             appendTo);
   
     // Test copy constructor
-    ScientificFormatter fmt3(*fmt);
+    ScientificNumberFormatter fmt3(*fmt);
     appendTo = prefix;
     fmt3.format(1.23456e-78, appendTo, status);
     expected = "String: 1.23456\\u00d710\\u207b\\u2077\\u2078";
@@ -91,14 +91,14 @@ void ScientificFormatterTest::TestBasic() {
     assertSuccess("", status);
 }
 
-void ScientificFormatterTest::TestFarsi() {
+void ScientificNumberFormatterTest::TestFarsi() {
     UErrorCode status = U_ZERO_ERROR;
     UnicodeString prefix("String: ");
     UnicodeString appendTo(prefix);
-    LocalPointer<ScientificFormatter> fmt(
-            ScientificFormatter::createMarkupInstance(
+    LocalPointer<ScientificNumberFormatter> fmt(
+            ScientificNumberFormatter::createMarkupInstance(
                     "fa", "<sup>", "</sup>", status));
-    if (!assertSuccess("Can't create ScientificFormatter", status)) {
+    if (!assertSuccess("Can't create ScientificNumberFormatter", status)) {
         return;
     }
     fmt->format(1.23456e-78, appendTo, status);
@@ -110,7 +110,7 @@ void ScientificFormatterTest::TestFarsi() {
     assertSuccess("", status);
 }
 
-void ScientificFormatterTest::TestPlusSignInExponentMarkup() {
+void ScientificNumberFormatterTest::TestPlusSignInExponentMarkup() {
     UErrorCode status = U_ZERO_ERROR;
     LocalPointer<DecimalFormat> decfmt((DecimalFormat *) NumberFormat::createScientificInstance("en", status));
     if (U_FAILURE(status)) {
@@ -122,10 +122,10 @@ void ScientificFormatterTest::TestPlusSignInExponentMarkup() {
         return;
     }
     UnicodeString appendTo;
-    LocalPointer<ScientificFormatter> fmt(
-            ScientificFormatter::createMarkupInstance(
+    LocalPointer<ScientificNumberFormatter> fmt(
+            ScientificNumberFormatter::createMarkupInstance(
                     new DecimalFormat(*decfmt), "<sup>", "</sup>", status));
-    if (!assertSuccess("Can't create ScientificFormatter", status)) {
+    if (!assertSuccess("Can't create ScientificNumberFormatter", status)) {
         return;
     }
     fmt->format(6.02e23, appendTo, status);
@@ -137,7 +137,7 @@ void ScientificFormatterTest::TestPlusSignInExponentMarkup() {
     assertSuccess("", status);
 }
 
-void ScientificFormatterTest::TestPlusSignInExponentSuperscript() {
+void ScientificNumberFormatterTest::TestPlusSignInExponentSuperscript() {
     UErrorCode status = U_ZERO_ERROR;
     LocalPointer<DecimalFormat> decfmt((DecimalFormat *) NumberFormat::createScientificInstance("en", status));
     if (U_FAILURE(status)) {
@@ -149,10 +149,10 @@ void ScientificFormatterTest::TestPlusSignInExponentSuperscript() {
         return;
     }
     UnicodeString appendTo;
-    LocalPointer<ScientificFormatter> fmt(
-            ScientificFormatter::createSuperscriptInstance(
+    LocalPointer<ScientificNumberFormatter> fmt(
+            ScientificNumberFormatter::createSuperscriptInstance(
                     new DecimalFormat(*decfmt), status));
-    if (!assertSuccess("Can't create ScientificFormatter", status)) {
+    if (!assertSuccess("Can't create ScientificNumberFormatter", status)) {
         return;
     }
     fmt->format(6.02e23, appendTo, status);
@@ -164,16 +164,16 @@ void ScientificFormatterTest::TestPlusSignInExponentSuperscript() {
     assertSuccess("", status);
 }
 
-void ScientificFormatterTest::TestFixedDecimalMarkup() {
+void ScientificNumberFormatterTest::TestFixedDecimalMarkup() {
     UErrorCode status = U_ZERO_ERROR;
     LocalPointer<DecimalFormat> decfmt((DecimalFormat *) NumberFormat::createInstance("en", status));
     if (assertSuccess("NumberFormat::createInstance", status, TRUE) == FALSE) {
         return;
     }
-    LocalPointer<ScientificFormatter> fmt(
-            ScientificFormatter::createMarkupInstance(
+    LocalPointer<ScientificNumberFormatter> fmt(
+            ScientificNumberFormatter::createMarkupInstance(
                     new DecimalFormat(*decfmt), "<sup>", "</sup>", status));
-    if (!assertSuccess("Can't create ScientificFormatter", status)) {
+    if (!assertSuccess("Can't create ScientificNumberFormatter", status)) {
         return;
     }
     UnicodeString appendTo;
@@ -186,16 +186,16 @@ void ScientificFormatterTest::TestFixedDecimalMarkup() {
     assertSuccess("", status);
 }
 
-void ScientificFormatterTest::TestFixedDecimalSuperscript() {
+void ScientificNumberFormatterTest::TestFixedDecimalSuperscript() {
     UErrorCode status = U_ZERO_ERROR;
     LocalPointer<DecimalFormat> decfmt((DecimalFormat *) NumberFormat::createInstance("en", status));
     if (assertSuccess("NumberFormat::createInstance", status, TRUE) == FALSE) {
         return;
     }
-    LocalPointer<ScientificFormatter> fmt(
-            ScientificFormatter::createSuperscriptInstance(
+    LocalPointer<ScientificNumberFormatter> fmt(
+            ScientificNumberFormatter::createSuperscriptInstance(
                     new DecimalFormat(*decfmt), status));
-    if (!assertSuccess("Can't create ScientificFormatter", status)) {
+    if (!assertSuccess("Can't create ScientificNumberFormatter", status)) {
         return;
     }
     UnicodeString appendTo;
@@ -208,8 +208,8 @@ void ScientificFormatterTest::TestFixedDecimalSuperscript() {
     assertSuccess("", status);
 }
 
-extern IntlTest *createScientificFormatterTest() {
-    return new ScientificFormatterTest();
+extern IntlTest *createScientificNumberFormatterTest() {
+    return new ScientificNumberFormatterTest();
 }
 
 #endif /* !UCONFIG_NO_FORMATTING */

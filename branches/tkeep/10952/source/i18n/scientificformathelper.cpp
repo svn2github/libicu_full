@@ -9,7 +9,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/scientificformathelper.h"
-#include "unicode/scientificformatter.h"
+#include "unicode/scientificnumberformatter.h"
 #include "decfmtst.h"
 
 U_NAMESPACE_BEGIN
@@ -20,7 +20,7 @@ ScientificFormatHelper::ScientificFormatHelper(
     if (U_FAILURE(status)) {
         return;
     }
-    ScientificFormatter::getPreExponent(dfs, fPreExponent);
+    ScientificNumberFormatter::getPreExponent(dfs, fPreExponent);
     fStaticSets = DecimalFormatStaticSets::getStaticSets(status);
 }
 
@@ -53,7 +53,7 @@ UnicodeString &ScientificFormatHelper::insertMarkup(
     if (U_FAILURE(status)) {
         return result;
     }
-    ScientificFormatter::MarkupStyle style(beginMarkup, endMarkup);
+    ScientificNumberFormatter::MarkupStyle style(beginMarkup, endMarkup);
     return style.format(
             s,
             fpi,
@@ -71,7 +71,7 @@ UnicodeString &ScientificFormatHelper::toSuperscriptExponentDigits(
     if (U_FAILURE(status)) {
       return result;
     }
-    ScientificFormatter::SuperscriptStyle style;
+    ScientificNumberFormatter::SuperscriptStyle style;
     return style.format(
             s,
             fpi,
