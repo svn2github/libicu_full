@@ -29,7 +29,7 @@ class DecimalFormat;
 class Formattable;
 
 /**
- * A formatter that formats in user-friendly scientific notation.
+ * A formatter that formats numbers in user-friendly scientific notation.
  *
  * Sample code:
  * <pre>
