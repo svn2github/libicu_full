@@ -590,6 +590,26 @@ public:
             UErrorCode &status);
 
     /**
+     * Creates a date/time formatter for the given skeleton and locale.
+     *
+     * @param calendarToAdopt the calendar returned DateFormat is to use.
+     * @param skeleton The skeleton e.g "yMMMMd." Fields in the skeleton can
+     *                 be in any order, and this method uses the locale to
+     *                 map the skeleton to a pattern that includes locale
+     *                 specific separators with the fields in the appropriate
+     *                 order for that locale.
+     * @param locale  The given locale.
+     * @param status   Any error returned here.
+     * @return         A date/time formatter which the caller owns.
+     * @draft ICU 55
+     */
+    static DateFormat* U_EXPORT2 createInstanceForSkeleton(
+            Calendar *calendarToAdopt,
+            const UnicodeString& skeleton,
+            const Locale &locale,
+            UErrorCode &status);
+
+    /**
      * Creates a date/time formatter for the given skeleton and locale and
      * uses the given DateTimePatternGenerator to convert the skeleton to
      * a format pattern. As creating a DateTimePatternGenerator is

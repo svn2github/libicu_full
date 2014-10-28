@@ -106,6 +106,7 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
     TESTCASE_AUTO(TestParseLeniencyAPIs);
     TESTCASE_AUTO(TestNumberFormatOverride);
     TESTCASE_AUTO(TestCreateInstanceForSkeleton);
+    TESTCASE_AUTO(TestCreateInstanceForSkeletonWithCalendar);
 
     TESTCASE_AUTO_END;
 }
@@ -4639,7 +4640,34 @@ void DateFormatTest::TestCreateInstanceForSkeleton() {
     assertEquals("format yMd", "5/25/1998", result);
 }
 
+void DateFormatTest::TestCreateInstanceForSkeletonWithCalendar() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<DateFormat> fmt(
+            DateFormat::createInstanceForSkeleton(
+                    Calendar::createInstance(
+                            TimeZone::createTimeZone("GMT-3:00"),
+                            status),
+                    "yMdHm", "en", status));
+    if (!assertSuccess("Create with pattern yMMMMd", status)) {
+        return;
+    }
+    UnicodeString result;
+    FieldPosition pos(0);
 
+    LocalPointer<Calendar> cal(Calendar::createInstance(
+        TimeZone::createTimeZone("GMT-7:00"),
+        status));
+    if (!assertSuccess("Creating GMT-7 time zone failed", status)) {
+        return;
+    }
+    cal->clear();
+    cal->set(1998, 5-1, 25, 0, 0, 0);
+
+    // date format time zone should be 4 hours ahead.
+    fmt->format(cal->getTime(status), result, pos);
+    assertEquals("format yMdHm", "5/25/1998, 04:00", result);
+    assertSuccess("", status);
+}
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 

@@ -522,6 +522,29 @@ DateFormat::createInstance()
 
 DateFormat* U_EXPORT2
 DateFormat::createInstanceForSkeleton(
+        Calendar *calendarToAdopt,
+        const UnicodeString& skeleton,
+        const Locale &locale,
+        UErrorCode &status) {
+    LocalPointer<Calendar> calendar(calendarToAdopt);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    if (calendar.isNull()) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return NULL;
+    }
+    DateFmtKeyBySkeleton key(locale, skeleton);
+    DateFormat *result = createFromCache(key, NULL, status);
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    result->adoptCalendar(calendar.orphan());
+    return result;
+}
+
+DateFormat* U_EXPORT2
+DateFormat::createInstanceForSkeleton(
         const UnicodeString& skeleton,
         const Locale &locale,
         UErrorCode &status) {

@@ -242,6 +242,7 @@ public:
     // test override NumberFormat
     void TestNumberFormatOverride();
     void TestCreateInstanceForSkeleton();
+    void TestCreateInstanceForSkeletonWithCalendar();
 
 private:
     UBool showParse(DateFormat &format, const UnicodeString &formattedString);
