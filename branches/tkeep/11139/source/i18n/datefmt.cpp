@@ -533,7 +533,7 @@ DateFormat::createInstanceForSkeleton(
 }
 
 DateFormat* U_EXPORT2
-DateFormat::createInstanceForSkeleton(
+DateFormat::internalCreateInstanceForSkeleton(
         const UnicodeString& skeleton,
         const Locale &locale,
         DateTimePatternGenerator &gen,

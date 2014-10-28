@@ -604,16 +604,17 @@ public:
      * @param locale  The given locale.
      * @param dpng     The user supplied DateTimePatternGenerator. dpng
      *                 must be created for the same locale as locale.
+     *                 Moreover, the caller must not modify dpng between
+     *                 creating it by locale and calling this method.
      *                 Although dpng is a non-const reference, the caller
      *                 must not regard it as an out or in-out parameter.
      *                 The only reason dpng is a non-const reference is
      *                 because its method, getBestPattern, which converts
      *                 a skeleton to a date format pattern is non-const.
-     
      * @return         A date/time formatter which the caller owns.
-     * @draft ICU 55
+     * @internal For ICU use only
      */
-    static DateFormat* U_EXPORT2 createInstanceForSkeleton(
+    static DateFormat* U_EXPORT2 internalCreateInstanceForSkeleton(
             const UnicodeString& skeleton,
             const Locale &locale,
             DateTimePatternGenerator &dpng,

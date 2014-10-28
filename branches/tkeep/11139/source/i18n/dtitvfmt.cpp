@@ -513,7 +513,7 @@ DateIntervalFormat::createSDFPatternInstance(const UnicodeString& skeleton,
                                              DateTimePatternGenerator* dtpng,
                                              UErrorCode& status)
 {
-    DateFormat *df = DateFormat::createInstanceForSkeleton(
+    DateFormat *df = DateFormat::internalCreateInstanceForSkeleton(
             skeleton, locale, *dtpng, status);
     return static_cast<SimpleDateFormat *>(df);
 }
