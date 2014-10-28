@@ -556,6 +556,17 @@ DateFormat::createInstanceForSkeleton(
 }
 
 DateFormat* U_EXPORT2
+DateFormat::createInstanceForSkeleton(
+        const UnicodeString& skeleton,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return NULL;
+    }
+    DateFmtKeyBySkeleton key(Locale::getDefault(), skeleton);
+    return createFromCache(key, NULL, status);
+}
+
+DateFormat* U_EXPORT2
 DateFormat::internalCreateInstanceForSkeleton(
         const UnicodeString& skeleton,
         const Locale &locale,

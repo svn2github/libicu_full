@@ -572,6 +572,23 @@ public:
                                               const Locale& aLocale = Locale::getDefault());
 
     /**
+     * Creates a date/time formatter for the given skeleton and 
+     * default locale.
+     *
+     * @param skeleton The skeleton e.g "yMMMMd." Fields in the skeleton can
+     *                 be in any order, and this method uses the locale to
+     *                 map the skeleton to a pattern that includes locale
+     *                 specific separators with the fields in the appropriate
+     *                 order for that locale.
+     * @param status   Any error returned here.
+     * @return         A date/time formatter which the caller owns.
+     * @draft ICU 55
+     */
+    static DateFormat* U_EXPORT2 createInstanceForSkeleton(
+            const UnicodeString& skeleton,
+            UErrorCode &status);
+
+    /**
      * Creates a date/time formatter for the given skeleton and locale.
      *
      * @param skeleton The skeleton e.g "yMMMMd." Fields in the skeleton can
