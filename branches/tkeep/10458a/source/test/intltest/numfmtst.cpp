@@ -8157,6 +8157,7 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
         }
         if(fFileLine.startsWith(UNICODE_STRING("** test: ", 9))) {
             fFileTestName = fFileLine;
+            fAccumulator.clear();
             logln(fFileLine);
             fFileLine.remove();
         } else if(fFileLine.startsWith(UNICODE_STRING("set ", 4))) {
@@ -8167,7 +8168,6 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
             fFileLine.remove();
         } else if (fFileLine.startsWith(UNICODE_STRING("verifyPattern ", 14))) {
             verifyDecimalFormatPattern(status);
-            fAccumulator.clear();
             fFileLine.remove();
         } else if (fFileLine.startsWith(UNICODE_STRING("merge ", 6))) {
             mergeTuple(TRUE, status);
