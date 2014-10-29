@@ -34,6 +34,7 @@
 #include "fmtableimp.h"
 #include "decimalformatpatterntuple.h"
 #include "ucbuf.h"
+#include "ustrfmt.h"
 
 //#define NUMFMTST_CACHE_DEBUG 1
 #include "stdio.h" /* for sprintf */
@@ -7821,7 +7822,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
             status);
     tuple.setField(
             DecimalFormatPatternTuple::getFieldByName("pad"),
-            "123AbC",
+            UnicodeString((UChar32) 0x103abc),
             status);
 
     DecimalFormatPattern pattern;
@@ -7830,7 +7831,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     pattern.fRoundingIncrement.set("0.05", status);
     pattern.fNegPrefixPattern = UnicodeString("abcd");
     pattern.fPadPosition = DecimalFormatPattern::kPadBeforePrefix;
-    pattern.fPad = (UChar32) 0x123ABC;
+    pattern.fPad = (UChar32) 0x103ABC;
 
     UnicodeString message;
     if (!assertSuccess("Expected all calls to succeed.", status)) {
@@ -7854,7 +7855,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     if (tuple.verify(pattern, message)) {
         errln("Pattern should not have verified.");
     }
-    assertEquals("message", "minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+    assertEquals("message", UnicodeString("minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103abc, got: \\u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
 
     // Store off the original tuple
      DecimalFormatPatternTuple oldTuple(tuple);
@@ -7866,7 +7867,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     if (tuple.verify(pattern, message)) {
         errln("Pattern should not have verified.");
     }
-    assertEquals("message", "useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+    assertEquals("message", UnicodeString("useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103ABC, got: \\u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
 
     // Now clear the entire tuple, any pattern should verify against an
     // empty tuple.
@@ -7885,7 +7886,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     if (tuple.verify(pattern, message)) {
         errln("Pattern should not have verified.");
     }
-    assertEquals("message", "minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+    assertEquals("message", UnicodeString("minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103ABC, got: \u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
     
     // Now create a second tuple
     DecimalFormatPatternTuple second;
@@ -7903,7 +7904,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     if (tuple.verify(pattern, message)) {
         errln("Pattern should not have verified.");
     }
-    assertEquals("message", "useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: 123ABC, got: 1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ", message);
+    assertEquals("message", UnicodeString("useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103ABC, got: \u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
 
     // Fix the rest of the fields in second and merge again, then the
     // pattern should verify.
@@ -7911,7 +7912,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     second.setField(kUseSignificantDigits, "n", status);
     second.setField(kNegPrefixPattern, "xyz", status);
     second.setField(kPadPosition, "PadAfterPrefix", status);
-    second.setField(kPad, "1234", status);
+    second.setField(kPad, UnicodeString((UChar) 0x1234), status);
     if (!assertSuccess("Expected calls to succeed 3", status)) {
         return;
     }
@@ -7967,12 +7968,6 @@ void NumberFormatTest::TestDecimalFormatPatternTupleBadInput() {
 
     status = U_ZERO_ERROR;
     tuple.setField(kMinimumIntegerDigits, "-abc", status);
-    if (U_SUCCESS(status)) {
-        errln("expected error");
-    }
-
-    status = U_ZERO_ERROR;
-    tuple.setField(kPad, "-abc", status);
     if (U_SUCCESS(status)) {
         errln("expected error");
     }
@@ -8060,7 +8055,7 @@ void NumberFormatTest::setTupleField(UErrorCode &status) {
     }
     if (!fAccumulator.setField(
             DecimalFormatPatternTuple::getFieldByName(parts[1]),
-            parts[2],
+            parts[2].unescape(),
             status)) {
         showError("Unrecognized field name or invalid value");
     }
@@ -8098,7 +8093,7 @@ void NumberFormatTest::verifyDecimalFormatPattern(UErrorCode &status) {
     DecimalFormatPattern pattern;
     UParseError parseError;
     fDecimalFormatPatternParser.applyPatternWithoutExpandAffix(
-            parts[1], pattern, parseError, status);
+            parts[1].unescape(), pattern, parseError, status);
     if (U_FAILURE(status)) {
         return;
     }
@@ -8170,7 +8165,7 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
         } else if(fFileLine.startsWith(UNICODE_STRING("clear ", 6))) {
             clearTupleField(status);
             fFileLine.remove();
-        } else if (fFileLine.startsWith(UNICODE_STRING("verify ", 7))) {
+        } else if (fFileLine.startsWith(UNICODE_STRING("verifyPattern ", 14))) {
             verifyDecimalFormatPattern(status);
             fAccumulator.clear();
             fFileLine.remove();
@@ -8201,12 +8196,12 @@ void NumberFormatTest::showError(const char *message) {
 }
 
 void NumberFormatTest::showFailure(const UnicodeString &message) {
-    CharString pattern;
-    UErrorCode status = U_ZERO_ERROR;
-    pattern.appendInvariantChars(fFileTestName, status);
-    pattern.append(": line %d: ", status);
-    pattern.appendInvariantChars(message, status);
-    errln(pattern.data(), (int) fFileLineNumber);
+    UChar lineStr[20];
+    uprv_itou(
+            lineStr, UPRV_LENGTHOF(lineStr), (uint32_t) fFileLineNumber, 10, 1);
+    UnicodeString fullMessage(fFileTestName);
+    errln(fullMessage.append(": line ")
+            .append(lineStr).append(": ").append(prettify(message)));
     infoln(fFileLine);
 }
 

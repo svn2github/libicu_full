@@ -213,34 +213,17 @@ static void strToUChar32(
     if (U_FAILURE(status)) {
         return;
     }
-    int32_t len = str.length();
-    if (len == 0) {
+    if (str.length() == 0) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
-    uint32_t value = 0;
-    for (int32_t i = 0; i < len; ++i) {
-        UChar ch = str[i];
-        if (ch >= 0x41 && ch <= 0x46) {
-            value = (value << 4) + (int32_t) ch - 0x41 + 10;
-        } else if (ch >= 0x61 && ch <= 0x66) {
-            value = (value << 4) + (int32_t) ch - 0x61 + 10;
-        } else if (ch >= 0x30 && ch <= 0x39) {
-            value = (value << 4) - 0x30 + (int32_t) ch;
-        } else {
-            status = U_ILLEGAL_ARGUMENT_ERROR;
-            return;
-        }
-    }
-    *static_cast<UChar32 *>(uChar32Ptr) = (UChar32) value;
+    *static_cast<UChar32 *>(uChar32Ptr) = str.char32At(0);
 }
 
 static void uChar32ToStr(
         const void *uChar32Ptr, UnicodeString &appendTo) {
-    UChar buffer[20];
     UChar32 x = *static_cast<const UChar32 *>(uChar32Ptr);
-    int32_t len = uprv_itou(buffer, UPRV_LENGTHOF(buffer), (uint32_t) x, 16, 1);
-    appendTo.append(buffer, 0, len);
+    appendTo.append(x);
 }
 
 static void uChar32Copy(const void *src, void *dest) {

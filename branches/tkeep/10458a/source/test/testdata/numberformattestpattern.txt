@@ -10,7 +10,9 @@ set negPatternsBogus N
 set posPatternsBogus N
 set negPrefixPattern '-
 set negSuffixPattern 
-set pad 2A
+set posPrefixPattern 
+set posSuffixPattern 
+set pad *
 save defaults
 
 ** test: Fixed Decimal
@@ -18,14 +20,14 @@ merge defaults
 set minimumIntegerDigits 1
 set minimumFractionDigits 2
 set maximumFractionDigits 2
-verify 0.00
+verifyPattern 0.00
 
 ** test: Variable Decimal
 merge defaults
 set minimumIntegerDigits 1
 set minimumFractionDigits 2
 set maximumFractionDigits 4
-verify 0.00##
+verifyPattern 0.00##
 
 ** test: Grouping
 merge defaults
@@ -35,7 +37,7 @@ set groupingSize 6
 set groupingSize2 0
 set minimumFractionDigits 0
 set maximumFractionDigits 1
-verify #,##0000.#
+verifyPattern #,##0000.#
 
 ** test: Grouping2
 merge defaults
@@ -45,7 +47,7 @@ set groupingSize 6
 set groupingSize2 3
 set minimumFractionDigits 0
 set maximumFractionDigits 1
-verify #,###,##0000.#
+verifyPattern #,###,##0000.#
 
 ** test: Padding
 merge defaults
@@ -55,7 +57,7 @@ set groupingSize 3
 set groupingSize2 0
 set minimumFractionDigits 0
 set maximumFractionDigits 1
-set pad 20
-verify * #,000.#
+set pad \U0010abcd
+verifyPattern *\U0010abcd#,000.#
 
 
