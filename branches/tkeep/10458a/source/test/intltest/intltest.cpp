@@ -332,12 +332,15 @@ IntlTest::prettify(const UnicodeString &source,
 
 // Replace nonprintable characters with unicode escapes
 UnicodeString
-IntlTest::prettify(const UnicodeString &source, UBool parseBackslash)
+IntlTest::prettify(
+        const UnicodeString &source, UBool parseBackslash, UBool hideQuotes)
 {
     int32_t i;
     UnicodeString target;
     target.remove();
-    target += "\"";
+    if (!hideQuotes) {
+        target += "\"";
+    }
 
     for (i = 0; i < source.length();)
     {
@@ -376,7 +379,9 @@ IntlTest::prettify(const UnicodeString &source, UBool parseBackslash)
         }
     }
 
-    target += "\"";
+    if (!hideQuotes) {
+        target += "\"";
+    }
 
     return target;
 }

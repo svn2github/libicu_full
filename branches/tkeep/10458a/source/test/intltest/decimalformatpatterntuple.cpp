@@ -368,15 +368,32 @@ void DecimalFormatPatternTuple::merge(
     }
 }
 
-UBool DecimalFormatPatternTuple::verify(
-        const DecimalFormatPattern &pattern, UnicodeString &message) const {
-    UBool result = TRUE;
+int32_t DecimalFormatPatternTuple::diffCount(
+        const DecimalFormatPattern &pattern) const {
+    int32_t result = 0;
     for (int32_t i = 0; i < kDecimalFormatPatternFieldCount; ++i) {
         if (fFieldsUsed & (1 << i)) {
             if (!gFieldData[i].ops->eq(
                     getFieldAddress(fFieldValues, i),
                     getFieldAddress(pattern, i))) {
-                result = FALSE;
+                ++result;
+            }
+        }
+    }
+    return result;
+}
+
+int32_t DecimalFormatPatternTuple::verify(
+        const DecimalFormatPattern &pattern,
+        UnicodeString &message,
+        UnicodeString *reproduceLines,
+        int32_t reproduceLinesCount) const {
+    int32_t result = 0;
+    for (int32_t i = 0; i < kDecimalFormatPatternFieldCount; ++i) {
+        if (fFieldsUsed & (1 << i)) {
+            if (!gFieldData[i].ops->eq(
+                    getFieldAddress(fFieldValues, i),
+                    getFieldAddress(pattern, i))) {
                 message.append(gFieldData[i].name);
                 message.append(": Expected: ");
                 gFieldData[i].ops->toString(
@@ -385,6 +402,15 @@ UBool DecimalFormatPatternTuple::verify(
                 gFieldData[i].ops->toString(
                         getFieldAddress(pattern, i), message);
                 message.append("; ");
+                if (result < reproduceLinesCount) {
+                    UnicodeString *linePtr = &reproduceLines[result];
+                    *linePtr = UnicodeString("set ");
+                    linePtr->append(gFieldData[i].name);
+                    linePtr->append((UChar) 0x20);
+                    gFieldData[i].ops->toString(
+                            getFieldAddress(fFieldValues, i), *linePtr);
+                }
+                ++result;
             }
         }
     }

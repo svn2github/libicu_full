@@ -353,7 +353,7 @@ protected:
     // used for collation result reporting, defined here for convenience
 
     static UnicodeString &prettify(const UnicodeString &source, UnicodeString &target);
-    static UnicodeString prettify(const UnicodeString &source, UBool parseBackslash=FALSE);
+    static UnicodeString prettify(const UnicodeString &source, UBool parseBackslash=FALSE, UBool hideQuotes=FALSE);
     // digits=-1 determines the number of digits automatically
     static UnicodeString &appendHex(uint32_t number, int32_t digits, UnicodeString &target);
     static UnicodeString toHex(uint32_t number, int32_t digits=-1);

@@ -53,12 +53,14 @@ public:
     UBool clearField(EDecimalFormatPatternField field, UErrorCode &status);
     void merge(const DecimalFormatPatternTuple &other, UBool override=TRUE);
     void clear() { fFieldsUsed = 0; }
-    UBool verify(
+    int32_t diffCount(const DecimalFormatPattern &pattern) const;
+    int32_t verify(
             const DecimalFormatPattern &pattern,
-            UnicodeString &message) const;
+            UnicodeString &appendTo,
+            UnicodeString *reproduceLines,
+            int32_t reproduceLinesCount) const;
     UnicodeString &toString(UnicodeString &appendTo) const;
     static EDecimalFormatPatternField getFieldByName(const UnicodeString &name);
-
 private:
     DecimalFormatPattern fFieldValues;
     uint64_t fFieldsUsed;

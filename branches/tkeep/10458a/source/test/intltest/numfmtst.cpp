@@ -7837,7 +7837,11 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     if (!assertSuccess("Expected all calls to succeed.", status)) {
         return;
     }
-    if (!tuple.verify(pattern, message) || message.length() > 0) {
+    if (tuple.diffCount(pattern) > 0) {
+        errln("Expected no diffs");
+    }
+
+    if (tuple.verify(pattern, message, NULL, 0) > 0 || message.length() > 0) {
         errln("Expected pattern to verify: " + message);
     }
 
@@ -7852,7 +7856,13 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     pattern.fMultiplier = 133;
 
     message.remove();
-    if (tuple.verify(pattern, message)) {
+    int32_t diffCnt = tuple.diffCount(pattern);
+    int32_t verifyCnt = tuple.verify(pattern, message, NULL, 0);
+    if (diffCnt != verifyCnt) {
+        errln("Expected diffCount() and verify() to return same value.");
+        return;
+    }
+    if (verifyCnt == 0) {
         errln("Pattern should not have verified.");
     }
     assertEquals("message", UnicodeString("minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103abc, got: \\u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
@@ -7864,7 +7874,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     tuple.clearField(kMinimumIntegerDigits, status);
 
     message.remove();
-    if (tuple.verify(pattern, message)) {
+    if (tuple.verify(pattern, message, NULL, 0) == 0) {
         errln("Pattern should not have verified.");
     }
     assertEquals("message", UnicodeString("useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103ABC, got: \\u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
@@ -7874,7 +7884,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     tuple.clear();
 
     message.remove();
-    if (!tuple.verify(pattern, message)) {
+    if (tuple.verify(pattern, message, NULL, 0) > 0) {
         errln("Pattern should have verified.");
     }
 
@@ -7883,7 +7893,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     tuple.merge(oldTuple);
 
     message.remove();
-    if (tuple.verify(pattern, message)) {
+    if (tuple.verify(pattern, message, NULL, 0) == 0) {
         errln("Pattern should not have verified.");
     }
     assertEquals("message", UnicodeString("minimumIntegerDigits: Expected: -10, got: 24; useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103ABC, got: \u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
@@ -7901,7 +7911,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     tuple.merge(second);
 
     message.remove();
-    if (tuple.verify(pattern, message)) {
+    if (tuple.verify(pattern, message, NULL, 0) == 0) {
         errln("Pattern should not have verified.");
     }
     assertEquals("message", UnicodeString("useSignificantDigits: Expected: Y, got: N; roundingIncrement: Expected: 0.05, got: 0.06; pad: Expected: \\U00103ABC, got: \u1234; negPrefixPattern: Expected: abcd, got: xyz; padPosition: Expected: PadBeforePrefix, got: PadAfterPrefix; ").unescape(), message);
@@ -7919,7 +7929,7 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     tuple.merge(second);
 
     message.remove();
-    if (!tuple.verify(pattern, message)) {
+    if (tuple.verify(pattern, message, NULL, 0) > 0) {
         errln("Pattern should have verified.");
     }
 
@@ -7936,11 +7946,16 @@ void NumberFormatTest::TestDecimalFormatPatternTuple() {
     tuple.merge(third, FALSE);
 
     message.remove();
-    if (tuple.verify(pattern, message)) {
-        errln("Pattern should not have verified.");
+    UnicodeString reproducible[1];
+    if (tuple.verify(
+            pattern,
+            message,
+            reproducible,
+            UPRV_LENGTHOF(reproducible)) != 1) {
+        errln("Pattern should have exactly one diff.");
     }
     assertEquals("", "multiplier: Expected: 9942, got: 133; ", message);
-
+    assertEquals("", "set multiplier 9942", reproducible[0]);
 }
     
 void NumberFormatTest::TestDecimalFormatPatternTupleBadInput() {
@@ -8098,8 +8113,12 @@ void NumberFormatTest::verifyDecimalFormatPattern(UErrorCode &status) {
         return;
     }
     UnicodeString message;
-    if (!fAccumulator.verify(pattern, message)) {
-        showFailure(message);
+    int32_t diffCount = fAccumulator.diffCount(pattern);
+    if (diffCount > 0) {
+        UnicodeString *reproducible = new UnicodeString[diffCount];
+        fAccumulator.verify(pattern, message, reproducible, diffCount);
+        showFailure(message, reproducible, diffCount);
+        delete [] reproducible;
     }
 }
 
@@ -8195,13 +8214,20 @@ void NumberFormatTest::showError(const char *message) {
     infoln(fFileLine);
 }
 
-void NumberFormatTest::showFailure(const UnicodeString &message) {
+void NumberFormatTest::showFailure(
+        const UnicodeString &message,
+        const UnicodeString *reproducible,
+        int32_t reproducibleCount) {
     UChar lineStr[20];
     uprv_itou(
             lineStr, UPRV_LENGTHOF(lineStr), (uint32_t) fFileLineNumber, 10, 1);
-    UnicodeString fullMessage(fFileTestName);
-    errln(fullMessage.append(": line ")
-            .append(lineStr).append(": ").append(prettify(message)));
+    UnicodeString fullMessage("line ");
+    errln(fullMessage.append(lineStr).append(": ")
+            .append(prettify(message, FALSE, TRUE)));
+    infoln(fFileTestName);
+    for (int32_t i = 0; i < reproducibleCount; ++i) {
+        infoln(prettify(reproducible[i], FALSE, TRUE));
+    }
     infoln(fFileLine);
 }
 

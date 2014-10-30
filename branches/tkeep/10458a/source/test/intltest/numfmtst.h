@@ -326,7 +326,10 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void mergeTuple(UBool override, UErrorCode &status);
     void saveTuple(UErrorCode &status);
     void showError(const char *message);
-    void showFailure(const UnicodeString &message);
+    void showFailure(
+            const UnicodeString &message,
+            const UnicodeString *reproducible,
+            int32_t reproducibleCount);
 
 };
 
