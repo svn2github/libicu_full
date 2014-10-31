@@ -1556,12 +1556,15 @@ private:
      */
     /*transient*/ int32_t   fDefaultCenturyStartYear;
 
-    typedef struct NSOverride {
+    struct NSOverride : public UMemory {
         const SharedNumberFormat *snf;
         int32_t hash;
         NSOverride *next;
         void free();
-    } NSOverride;
+        NSOverride() : snf(NULL), hash(0), next(NULL) {
+        }
+        ~NSOverride();
+    };
 
     /**
      * The number format in use for each date field. NULL means fall back

@@ -2450,30 +2450,28 @@ void DateFormatTest::TestHebrewClone(void)
     Verify that a cloned formatter gives the same results
     and is useable after the original has been deleted.
     */
-    // This is mainly important on Windows.
     UErrorCode status = U_ZERO_ERROR;
     Locale loc("he@calendar=hebrew");
     UDate now = Calendar::getNow();
-    DateFormat *fmt = DateFormat::createDateInstance(DateFormat::kLong, loc);
-    if (fmt == NULL) {
+    LocalPointer<DateFormat> fmt(
+            DateFormat::createDateInstance(DateFormat::kLong, loc));
+    if (fmt.isNull()) {
         dataerrln("FAIL: Can't create Hebrew date instance");
         return;
     }
     UnicodeString result1;
-    SimpleDateFormat *sfmt = (SimpleDateFormat *) fmt;
     fmt->format(now, result1, status);
-    Format *fmtClone = fmt->clone();
-    delete fmt;
-    fmt = NULL;
+    LocalPointer<Format> fmtClone(fmt->clone());
+
+    // free fmt to be sure that fmtClone is independent of fmt.
+    fmt.adoptInstead(NULL);
 
     UnicodeString result2;
-    SimpleDateFormat *sfmtClone = (SimpleDateFormat *) fmtClone;
     fmtClone->format(now, result2, status);
     ASSERT_OK(status);
     if (result1 != result2) {
         errln("FAIL: Clone returned different result from non-clone.");
     }
-    delete fmtClone;
 }
 
 static UBool getActualAndValidLocales(
@@ -2498,25 +2496,25 @@ void DateFormatTest::TestDateFormatSymbolsClone(void)
     Verify that a cloned formatter gives the same results
     and is useable after the original has been deleted.
     */
-    // This is mainly important on Windows.
     Locale loc("de_CH_LUCERNE");
-    DateFormat *fmt = DateFormat::createDateInstance(DateFormat::kDefault, loc);
+    LocalPointer<DateFormat> fmt(
+            DateFormat::createDateInstance(DateFormat::kDefault, loc));
     Locale valid1;
     Locale actual1;
     if (!getActualAndValidLocales(*fmt, valid1, actual1)) {
         errln("FAIL: Could not fetch valid + actual locales");
         return;
     }
-    Format *fmtClone = fmt->clone();
-    delete fmt;
-    fmt = NULL;
+    LocalPointer<Format> fmtClone(fmt->clone());
+
+    // Free fmt to be sure that fmtClone is really independent of fmt.
+    fmt.adoptInstead(NULL);
     Locale valid2;
     Locale actual2;
     if (!getActualAndValidLocales(*fmtClone, valid2, actual2)) {
         errln("FAIL: Could not fetch valid + actual locales");
         return;
     }
-    delete fmtClone;
     if (valid1 != valid2 || actual1 != actual2) {
         errln("Date format symbol locales of clone don't match original");
     }

@@ -221,12 +221,18 @@ static UMutex LOCK = U_MUTEX_INITIALIZER;
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SimpleDateFormat)
 
+SimpleDateFormat::NSOverride::~NSOverride() {
+    if (snf != NULL) {
+        snf->removeRef();
+    }
+}
+
+
 void SimpleDateFormat::NSOverride::free() {
     NSOverride *cur = this;
     while (cur) {
         NSOverride *next = cur->next;
-        cur->snf->removeRef();
-        uprv_free(cur);
+        delete cur;
         cur = next;
     }
 }
@@ -1250,8 +1256,8 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
         }
 
         if (!found) {
-           cur = (NSOverride *)uprv_malloc(sizeof(NSOverride));
-           if (cur) {
+           LocalPointer<NSOverride> cur(new NSOverride);
+           if (!cur.isNull()) {
                char kw[ULOC_KEYWORD_AND_VALUES_CAPACITY];
                uprv_strcpy(kw,"numbers=");
                nsName.extract(0,len,kw+8,ULOC_KEYWORD_AND_VALUES_CAPACITY-8,US_INV);
@@ -1259,18 +1265,16 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
                Locale ovrLoc(locale.getLanguage(),locale.getCountry(),locale.getVariant(),kw);
                cur->hash = nsNameHash;
                cur->next = overrideList;
-               cur->snf = NULL;
                SharedObject::copyPtr(
-                       createSharedNumberFormat(ovrLoc,status), cur->snf);
+                       createSharedNumberFormat(ovrLoc, status), cur->snf);
                if (U_FAILURE(status)) {
-                   uprv_free(cur);
                    if (overrideList) {
                        overrideList->free();
                    }
                    return;
                }
                snf = cur->snf;
-               overrideList = cur;
+               overrideList = cur.orphan();
            } else {
                status = U_MEMORY_ALLOCATION_ERROR;
                if (overrideList) {
