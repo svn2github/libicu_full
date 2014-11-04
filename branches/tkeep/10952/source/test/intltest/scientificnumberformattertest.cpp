@@ -63,14 +63,13 @@ void ScientificNumberFormatterTest::TestBasic() {
             UnicodeString(expected).unescape(),
             appendTo);
 
-    // Test assignment operator while testing superscript style
-    LocalPointer<ScientificNumberFormatter> fmt2(
+    // Test superscript style
+    fmt.adoptInstead(
             ScientificNumberFormatter::createSuperscriptInstance(
                     "en", status));
     if (!assertSuccess("Can't create ScientificNumberFormatter2", status)) {
         return;
     }
-    *fmt = *fmt2;
     appendTo = prefix;
     fmt->format(1.23456e-78, appendTo, status);
     expected = "String: 1.23456\\u00d710\\u207b\\u2077\\u2078";
@@ -79,10 +78,14 @@ void ScientificNumberFormatterTest::TestBasic() {
             UnicodeString(expected).unescape(),
             appendTo);
   
-    // Test copy constructor
-    ScientificNumberFormatter fmt3(*fmt);
+    // Test clone
+    LocalPointer<ScientificNumberFormatter> fmt3(fmt->clone());
+    if (fmt3.isNull()) {
+       errln("Allocating clone failed.");
+       return;
+    }
     appendTo = prefix;
-    fmt3.format(1.23456e-78, appendTo, status);
+    fmt3->format(1.23456e-78, appendTo, status);
     expected = "String: 1.23456\\u00d710\\u207b\\u2077\\u2078";
     assertEquals(
             "superscript style",

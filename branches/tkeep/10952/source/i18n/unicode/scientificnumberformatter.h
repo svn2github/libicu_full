@@ -111,17 +111,14 @@ public:
             const UnicodeString &endMarkup,
             UErrorCode &status);
 
-    /**
-     * Copy constructor.
-     * @draft ICU 55
-     */
-    ScientificNumberFormatter(const ScientificNumberFormatter &other);
 
     /**
-     * Assignment operator.
+     * Returns a copy of this object. Caller must free returned copy.
      * @draft ICU 55
      */
-    ScientificNumberFormatter &operator=(const ScientificNumberFormatter &other);
+    ScientificNumberFormatter *clone() const {
+        return new ScientificNumberFormatter(*this);
+    }
 
     /**
      * Destructor.
@@ -201,6 +198,9 @@ public:
             DecimalFormat *fmtToAdopt,
             Style *styleToAdopt,
             UErrorCode &status);
+
+    ScientificNumberFormatter(const ScientificNumberFormatter &other);
+    ScientificNumberFormatter &operator=(const ScientificNumberFormatter &);
 
     static void getPreExponent(
             const DecimalFormatSymbols &dfs, UnicodeString &preExponent);

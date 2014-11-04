@@ -271,22 +271,6 @@ ScientificNumberFormatter::ScientificNumberFormatter(
     fStyle = other.fStyle->clone();
 }
 
-ScientificNumberFormatter &ScientificNumberFormatter::operator=(
-        const ScientificNumberFormatter &other) {
-    if (this == &other) {
-        return *this;
-    }
-    UObject::operator=(other);
-    fPreExponent = other.fPreExponent;
-    delete fDecimalFormat;
-    fDecimalFormat = static_cast<DecimalFormat *>(
-            other.fDecimalFormat->clone());
-    delete fStyle;
-    fStyle = other.fStyle->clone();
-    fStaticSets = other.fStaticSets;
-    return *this;
-}
-
 ScientificNumberFormatter::~ScientificNumberFormatter() {
     delete fDecimalFormat;
     delete fStyle;
