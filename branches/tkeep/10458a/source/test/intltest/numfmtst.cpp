@@ -8174,7 +8174,8 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
             if(!readLine(f.getAlias(), status)) { break; }
             continue;
         }
-        if(fFileLine.startsWith(UNICODE_STRING("** test: ", 9))) {
+        if (fFileLine.startsWith(UNICODE_STRING("** test: ", 9)) ||
+                fFileLine.startsWith(UNICODE_STRING("** data: ", 9))) {
             fFileTestName = fFileLine;
             fAccumulator.clear();
             logln(fFileLine);
@@ -8196,10 +8197,13 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
             fFileLine.remove();
         } else if (fFileLine.startsWith(UNICODE_STRING("save ", 5))) {
             saveTuple(status);
-            fAccumulator.clear();
             fFileLine.remove();
         } else {
             showError("Syntax error.");
+            return;
+        }
+        if (!assertSuccess("", status)) {
+            showError("Unexpected error.");
             return;
         }
     }
