@@ -60,4 +60,8 @@ set maximumFractionDigits 1
 set pad \U0010abcd
 verifyPattern *\U0010abcd#,000.#
 
+** test: Format
+newFormat en 0.00
+verifyFormat 12345 12345.00
+
 

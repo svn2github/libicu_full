@@ -190,6 +190,8 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestDecimalFormatPatternTupleBadInput();
     void TestDecimalFormatPatternTupleVars();
     void TestDataDrivenPatternParsing();
+    NumberFormatTest() : fFileLineNumber(0), fFmt(NULL) { }
+    virtual ~NumberFormatTest();
 
  private:
     UnicodeString fFileLine;
@@ -198,6 +200,7 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     DecimalFormatPatternTuple fAccumulator;
     DecimalFormatPatternTupleVars fVars;
     DecimalFormatPatternParser fDecimalFormatPatternParser;
+    DecimalFormat *fFmt;
 
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
 
@@ -323,6 +326,8 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void setTupleField(UErrorCode &status);
     void clearTupleField(UErrorCode &status);
     void verifyDecimalFormatPattern(UErrorCode &status);
+    void newDecimalFormat(UErrorCode &status);
+    void verifyDecimalFormat(UErrorCode &status);
     void mergeTuple(UBool override, UErrorCode &status);
     void saveTuple(UErrorCode &status);
     void showError(const char *message);

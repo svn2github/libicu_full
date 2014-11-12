@@ -148,6 +148,10 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
 
 // -------------------------------------
 
+NumberFormatTest::~NumberFormatTest() {
+    delete fFmt;
+}
+
 // Test API (increase code coverage)
 void
 NumberFormatTest::TestAPI(void)
@@ -8122,6 +8126,79 @@ void NumberFormatTest::verifyDecimalFormatPattern(UErrorCode &status) {
     }
 }
 
+void NumberFormatTest::newDecimalFormat(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString parts[3];
+    int32_t partCount = splitFileLine(parts, UPRV_LENGTHOF(parts));
+    if (partCount < 3) {
+        showError("newDecimalFormat expects 2 parameters");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    CharString localeStr;
+    localeStr.appendInvariantChars(parts[1], status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    LocalPointer<DecimalFormatSymbols> symbols(
+            new DecimalFormatSymbols(localeStr.data(), status));
+    if (symbols.isNull()) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    if (U_FAILURE(status)) {
+        return;
+    }
+    delete fFmt;
+    fFmt = new DecimalFormat(parts[2].unescape(), symbols.getAlias(), status);
+    if (fFmt == NULL) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    symbols.orphan();
+    if (U_FAILURE(status)) {
+        return;
+    }
+}
+
+void NumberFormatTest::verifyDecimalFormat(UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if (fFmt == NULL) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        showError("verifyFormat without newFormat");
+        return;
+    }
+    UnicodeString parts[3];
+    int32_t partCount = splitFileLine(parts, UPRV_LENGTHOF(parts));
+    if (partCount < 3) {
+        showError("verifyFormat expects 2 parameters");
+        status = U_PARSE_ERROR;
+        return;
+    }
+    CharString decimalNumber;
+    decimalNumber.appendInvariantChars(parts[1], status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString appendTo;
+    fFmt->format(
+            StringPiece(decimalNumber.data()), appendTo, NULL, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    if (appendTo != parts[2]) {
+        showFailure(
+                UnicodeString("Expected: ") + parts[2] + "; got: "+ appendTo,
+                NULL,
+                0);
+        return;
+    }
+}
+
 void NumberFormatTest::mergeTuple(UBool override, UErrorCode &status) {
     if (U_FAILURE(status)) {
         return;
@@ -8178,6 +8255,8 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
                 fFileLine.startsWith(UNICODE_STRING("** data: ", 9))) {
             fFileTestName = fFileLine;
             fAccumulator.clear();
+            delete fFmt;
+            fFmt = NULL;
             logln(fFileLine);
             fFileLine.remove();
         } else if(fFileLine.startsWith(UNICODE_STRING("set ", 4))) {
@@ -8188,6 +8267,12 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
             fFileLine.remove();
         } else if (fFileLine.startsWith(UNICODE_STRING("verifyPattern ", 14))) {
             verifyDecimalFormatPattern(status);
+            fFileLine.remove();
+        } else if (fFileLine.startsWith(UNICODE_STRING("newFormat ", 10))) {
+            newDecimalFormat(status);
+            fFileLine.remove();
+        } else if (fFileLine.startsWith(UNICODE_STRING("verifyFormat ", 13))) {
+            verifyDecimalFormat(status);
             fFileLine.remove();
         } else if (fFileLine.startsWith(UNICODE_STRING("merge ", 6))) {
             mergeTuple(TRUE, status);
@@ -8210,11 +8295,7 @@ void NumberFormatTest::TestDataDrivenPatternParsing() {
 }
 
 void NumberFormatTest::showError(const char *message) {
-    CharString pattern;
-    UErrorCode status = U_ZERO_ERROR;
-    pattern.append("line %d: ", status);
-    pattern.append(message, status);
-    errln(pattern.data(), (int) fFileLineNumber);
+    errln("line %d: %s", (int) fFileLineNumber, message);
     infoln(fFileLine);
 }
 
