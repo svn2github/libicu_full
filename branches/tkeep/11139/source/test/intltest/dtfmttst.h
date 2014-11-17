@@ -242,6 +242,7 @@ public:
     // test override NumberFormat
     void TestNumberFormatOverride();
     void TestCreateInstanceForSkeleton();
+    void TestCreateInstanceForSkeletonDefault();
     void TestCreateInstanceForSkeletonWithCalendar();
 
 private:

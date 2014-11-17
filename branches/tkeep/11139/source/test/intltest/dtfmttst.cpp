@@ -106,6 +106,7 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
     TESTCASE_AUTO(TestParseLeniencyAPIs);
     TESTCASE_AUTO(TestNumberFormatOverride);
     TESTCASE_AUTO(TestCreateInstanceForSkeleton);
+    TESTCASE_AUTO(TestCreateInstanceForSkeletonDefault);
     TESTCASE_AUTO(TestCreateInstanceForSkeletonWithCalendar);
 
     TESTCASE_AUTO_END;
@@ -4628,6 +4629,30 @@ void DateFormatTest::TestCreateInstanceForSkeleton() {
     FieldPosition pos(0);
     fmt->format(date(98, 5-1, 25), result, pos);
     assertEquals("format yMMMMd", "May 25, 1998", result);
+    fmt.adoptInstead(DateFormat::createInstanceForSkeleton(
+            "yMd", "en", status));
+    if (!assertSuccess("Create with pattern yMd", status)) {
+        return;
+    }
+    result.remove();
+    fmt->format(date(98, 5-1, 25), result, pos);
+    assertEquals("format yMd", "5/25/1998", result);
+}
+
+void DateFormatTest::TestCreateInstanceForSkeletonDefault() {
+    UErrorCode status = U_ZERO_ERROR;
+    Locale savedLocale;
+    Locale::setDefault(Locale::getUS(), status);
+    LocalPointer<DateFormat> fmt(DateFormat::createInstanceForSkeleton(
+            "yMd", status));
+    Locale::setDefault(savedLocale, status);
+    if (!assertSuccess("Create with pattern yMMMMd", status)) {
+        return;
+    }
+    UnicodeString result;
+    FieldPosition pos(0);
+    fmt->format(date(98, 5-1, 25), result, pos);
+    assertEquals("format yMd", "5/25/1998", result);
     fmt.adoptInstead(DateFormat::createInstanceForSkeleton(
             "yMd", "en", status));
     if (!assertSuccess("Create with pattern yMd", status)) {
