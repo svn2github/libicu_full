@@ -66,12 +66,16 @@ public:
      */
     static DateTimePatternGenerator* U_EXPORT2 createInstance(const Locale& uLocale, UErrorCode& status);
 
+#ifndef U_HIDE_INTERNAL_API
+
     /**
      * For ICU use only
      *
      * @internal
      */
     static DateTimePatternGenerator* U_EXPORT2 internalMakeInstance(const Locale& uLocale, UErrorCode& status);
+
+#endif /* U_HIDE_INTERNAL_API */
 
     /**
      * Create an empty generator, to be constructed with addPattern(...) etc.

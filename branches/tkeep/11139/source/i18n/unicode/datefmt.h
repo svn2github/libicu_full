@@ -571,6 +571,8 @@ public:
                                               EStyle timeStyle = kDefault,
                                               const Locale& aLocale = Locale::getDefault());
 
+#ifndef U_HIDE_DRAFT_API
+
     /**
      * Creates a date/time formatter for the given skeleton and 
      * default locale.
@@ -626,6 +628,10 @@ public:
             const Locale &locale,
             UErrorCode &status);
 
+#endif /* U_HIDE_DRAFT_API */
+
+#ifndef U_HIDE_INTERNAL_API 
+
     /**
      * Creates a date/time formatter for the given skeleton and locale and
      * uses the given DateTimePatternGenerator to convert the skeleton to
@@ -656,6 +662,8 @@ public:
             const Locale &locale,
             DateTimePatternGenerator &dpng,
             UErrorCode &status);
+
+#endif /* U_HIDE_INTERNAL_API */
 
     /**
      * Gets the set of locales for which DateFormats are installed.
