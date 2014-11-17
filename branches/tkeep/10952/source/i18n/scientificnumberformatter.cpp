@@ -299,8 +299,8 @@ void ScientificNumberFormatter::getPreExponent(
         const DecimalFormatSymbols &dfs, UnicodeString &preExponent) {
     preExponent.append(dfs.getConstSymbol(
             DecimalFormatSymbols::kExponentMultiplicationSymbol));
-    preExponent.append(dfs.getSymbol(DecimalFormatSymbols::kOneDigitSymbol));
-    preExponent.append(dfs.getSymbol(DecimalFormatSymbols::kZeroDigitSymbol));
+    preExponent.append(dfs.getConstSymbol(DecimalFormatSymbols::kOneDigitSymbol));
+    preExponent.append(dfs.getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol));
 }
 
 U_NAMESPACE_END

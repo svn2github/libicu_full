@@ -78,11 +78,11 @@ public:
 
     /**
      * Creates a ScientificNumberFormatter instance that uses
-     * mark up for exponents.
+     * markup for exponents.
      * @param fmtToAdopt The DecimalFormat which must be configured for
      *   scientific notation.
-     * @param beginMarkup the mark up to start superscript.
-     * @param endMarkup the mark up to end superscript.
+     * @param beginMarkup the markup to start superscript.
+     * @param endMarkup the markup to end superscript.
      * @param status error returned here.
      * @return The new ScientificNumberFormatter instance.
      *
@@ -96,10 +96,10 @@ public:
 
     /**
      * Creates a ScientificNumberFormatter instance that uses
-     * mark up for exponents for this locale.
+     * markup for exponents for this locale.
      * @param locale The locale
-     * @param beginMarkup the mark up to start superscript.
-     * @param endMarkup the mark up to end superscript.
+     * @param beginMarkup the markup to start superscript.
+     * @param endMarkup the markup to end superscript.
      * @param status error returned here.
      * @return The ScientificNumberFormatter instance.
      *
