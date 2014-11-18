@@ -4644,23 +4644,15 @@ void DateFormatTest::TestCreateInstanceForSkeletonDefault() {
     Locale savedLocale;
     Locale::setDefault(Locale::getUS(), status);
     LocalPointer<DateFormat> fmt(DateFormat::createInstanceForSkeleton(
-            "yMd", status));
+            "yMMMd", status));
     Locale::setDefault(savedLocale, status);
-    if (!assertSuccess("Create with pattern yMMMMd", status)) {
+    if (!assertSuccess("Create with pattern yMMMd", status)) {
         return;
     }
     UnicodeString result;
     FieldPosition pos(0);
     fmt->format(date(98, 5-1, 25), result, pos);
-    assertEquals("format yMd", "5/25/1998", result);
-    fmt.adoptInstead(DateFormat::createInstanceForSkeleton(
-            "yMd", "en", status));
-    if (!assertSuccess("Create with pattern yMd", status)) {
-        return;
-    }
-    result.remove();
-    fmt->format(date(98, 5-1, 25), result, pos);
-    assertEquals("format yMd", "5/25/1998", result);
+    assertEquals("format yMMMd", "May 25, 1998", result);
 }
 
 void DateFormatTest::TestCreateInstanceForSkeletonWithCalendar() {
