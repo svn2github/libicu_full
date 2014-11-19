@@ -241,8 +241,6 @@ enum {
 //
 //  Convenience macros for assembling and disassembling a compiled operation.
 //
-// TODO: replace URX_BUILD
-#define URX_BUILD(type, val) buildOp(type, val)
 #define URX_TYPE(x)          ((uint32_t)(x) >> 24)
 #define URX_VAL(x)           ((x) & 0xffffff)
 

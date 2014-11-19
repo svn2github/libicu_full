@@ -5412,9 +5412,6 @@ void RegexTest::TestBug11371() {
         errln("File %s, line %d expected status=U_REGEX_PATTERN_TOO_BIG; got %s.",
               __FILE__, __LINE__, u_errorName(status));
     }
-
-
-
 }
 
 #endif  /* !UCONFIG_NO_REGULAR_EXPRESSIONS  */

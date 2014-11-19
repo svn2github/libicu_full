@@ -2398,10 +2398,7 @@ UBool RegexCompile::compileInlineInterval() {
     //    it was put there when it was originally encountered.
     int32_t i;
     for (i=1; i<fIntervalUpper; i++ ) {
-        if (i == fIntervalLow) {
-            appendOp(saveOp);
-        }
-        if (i > fIntervalLow) {
+        if (i >= fIntervalLow) {
             appendOp(saveOp);
         }
         appendOp(op);

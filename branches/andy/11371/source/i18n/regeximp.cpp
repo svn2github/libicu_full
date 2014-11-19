@@ -12,8 +12,6 @@
 
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
 #include "regeximp.h"
-
-#include "uassert.h"
 #include "unicode/utf16.h"
 
 U_NAMESPACE_BEGIN
@@ -114,6 +112,7 @@ UBool CaseFoldingUCharIterator::inExpansion() {
 int64_t CaseFoldingUCharIterator::getIndex() {
     return fIndex;
 }
+
 
 U_NAMESPACE_END
 
