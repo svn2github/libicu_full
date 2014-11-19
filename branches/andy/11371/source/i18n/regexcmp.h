@@ -105,6 +105,8 @@ private:
     void        insertOp(int32_t where);             // Open up a slot for a new op in the
                                                      //   generated code at the specified location.
     void        appendOp(int32_t op);                // Append a new op to the compiled pattern.
+    void        appendOp(int32_t type, int32_t val); // Build & append a new op to the compiled pattern.
+    int32_t     buildOp(int32_t type, int32_t val);  // Construct a new pcode instruction.
     int32_t     allocateData(int32_t size);          // Allocate space in the matcher data area.
                                                      //   Return index of the newly allocated data.
     int32_t     allocateStackData(int32_t size);     // Allocate space in the match back-track stack frame.

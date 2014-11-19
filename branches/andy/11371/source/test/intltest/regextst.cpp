@@ -5371,6 +5371,10 @@ void RegexTest::TestCase11049(const char *pattern, const char *data, UBool expec
 
 
 void RegexTest::TestBug11371() {
+    if (quick) {
+        logln("Skipping test. Runs in exhuastive mode only.");
+        return;
+    }
     UErrorCode status = U_ZERO_ERROR;
     UnicodeString patternString;
 
@@ -5395,7 +5399,8 @@ void RegexTest::TestBug11371() {
               __FILE__, __LINE__, u_errorName(status));
     }
 
-    // Pattern with too much string data, such that string indexes overflow operand data.
+    // Pattern with too much string data, such that string indexes overflow operand data field size
+    // in compiled instruction.
     status = U_ZERO_ERROR;
     patternString = "";
     while (patternString.length() < 0x00ffffff) {
@@ -5403,7 +5408,6 @@ void RegexTest::TestBug11371() {
     }
     patternString.append(UnicodeString("X? trailing string"));
     LocalPointer<RegexPattern> compiledPat3(RegexPattern::compile(patternString, 0, status));
-    compiledPat3->dumpPattern();
     if (status != U_REGEX_PATTERN_TOO_BIG) {
         errln("File %s, line %d expected status=U_REGEX_PATTERN_TOO_BIG; got %s.",
               __FILE__, __LINE__, u_errorName(status));
