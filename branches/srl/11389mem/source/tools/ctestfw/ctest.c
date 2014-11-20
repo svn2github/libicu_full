@@ -314,6 +314,10 @@ static void print_timeDelta(UDate deltaTime) {
   }
 }
 
+#if defined(UPRV_MEMINFO)
+extern void uprv_meminfo();
+#endif
+
 /**
  * Run or list tests (according to mode) in a subtree.
  *
@@ -341,11 +345,13 @@ static void iterateTestsWithLevel ( const TestNode* root,
 
     if ( root == NULL )
         return;
-
+#if defined(UPRV_MEMINFO)
+    uprv_meminfo();
+#endif
     /* record the current root node, and increment depth. */
     nodeList[depth++] = root;
     /* depth is now the depth of root's children. */
-
+    
     /* Collect the 'path' to the current subtree. */
     for ( i=0;i<(depth-1);i++ )
     {

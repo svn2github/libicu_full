@@ -65,8 +65,15 @@ U_CAPI void uprv_checkValidMemory(const void *p, size_t n) {
     gValidMemorySink = c;
 }
 
-#endif  /* U_DEBUG */
+#if defined(UPRV_MEMINFO)
+#include <malloc.h>
+U_CAPI void uprv_meminfo() {
+  struct meminfo = mallinfo();
+  printf("\n%d/%d>> ", meminfo.usmblks, meminfo.uordblks);
+}
+#endif
 
+#endif  /* U_DEBUG */
 U_CAPI void * U_EXPORT2
 uprv_malloc(size_t s) {
 #if U_DEBUG && defined(UPRV_MALLOC_COUNT)
@@ -82,7 +89,14 @@ uprv_malloc(size_t s) {
         if (pAlloc) {
             return (*pAlloc)(pContext, s);
         } else {
-            return uprv_default_malloc(s);
+          void *p = uprv_default_malloc(s);
+#if defined(UPRV_MALLOCFAIL)
+          if(p==NULL) {
+            printf("MALLOCFAIL(%d)***", s);
+            fflush(stdout);
+          }
+#endif
+          return p;
         }
     } else {
         return (void *)zeroMem;
