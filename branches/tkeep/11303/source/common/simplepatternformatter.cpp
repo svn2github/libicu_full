@@ -151,14 +151,16 @@ SimplePatternFormatter::SimplePatternFormatter() :
         noPlaceholders(),
         placeholders(),
         placeholderSize(0),
-        placeholderCount(0) {
+        placeholderCount(0),
+        firstPlaceholderReused(FALSE) {
 }
 
 SimplePatternFormatter::SimplePatternFormatter(const UnicodeString &pattern) :
         noPlaceholders(),
         placeholders(),
         placeholderSize(0),
-        placeholderCount(0) {
+        placeholderCount(0),
+        firstPlaceholderReused(FALSE) {
     UErrorCode status = U_ZERO_ERROR;
     compile(pattern, status);
 }
@@ -168,7 +170,8 @@ SimplePatternFormatter::SimplePatternFormatter(
         noPlaceholders(other.noPlaceholders),
         placeholders(),
         placeholderSize(0),
-        placeholderCount(other.placeholderCount) {
+        placeholderCount(other.placeholderCount),
+        firstPlaceholderReused(other.firstPlaceholderReused) {
     placeholderSize = ensureCapacity(other.placeholderSize);
     uprv_memcpy(
             placeholders.getAlias(),
@@ -184,6 +187,7 @@ SimplePatternFormatter &SimplePatternFormatter::operator=(
     noPlaceholders = other.noPlaceholders;
     placeholderSize = ensureCapacity(other.placeholderSize);
     placeholderCount = other.placeholderCount;
+    firstPlaceholderReused = other.firstPlaceholderReused;
     uprv_memcpy(
             placeholders.getAlias(),
             other.placeholders.getAlias(),
@@ -378,7 +382,7 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
-    int32_t placeholderAtStart = getPlaceholderAtStart();
+    int32_t placeholderAtStart = getUniquePlaceholderAtStart();
 
     // If pattern starts with a placeholder and the value for that
     // placeholder is result, then we can optimize by just appending to
@@ -480,8 +484,9 @@ UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
     return appendTo;
 }
 
-int32_t SimplePatternFormatter::getPlaceholderAtStart() const {
-    if (placeholderSize == 0 || placeholders[0].offset != 0) {
+int32_t SimplePatternFormatter::getUniquePlaceholderAtStart() const {
+    if (placeholderSize == 0
+            || firstPlaceholderReused || placeholders[0].offset != 0) {
         return -1;
     }
     return placeholders[0].id;
@@ -512,6 +517,10 @@ UBool SimplePatternFormatter::addPlaceholder(int32_t id, int32_t offset) {
     placeholderEnd->id = id;
     if (id >= placeholderCount) {
         placeholderCount = id + 1;
+    }
+    if (placeholderSize > 1
+            && placeholders[placeholderSize - 1].id == placeholders[0].id) {
+        firstPlaceholderReused = TRUE;
     }
     return TRUE;
 }

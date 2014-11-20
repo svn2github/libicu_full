@@ -24,6 +24,7 @@ public:
     void TestFormatReplaceNoOptimization();
     void TestFormatReplaceNoOptimizationLeadingText();
     void TestFormatReplaceOptimization();
+    void TestFormatReplaceNoOptimizationLeadingPlaceholderUsedTwice();
     void TestFormatReplaceOptimizationNoOffsets();
     void TestFormatReplaceNoOptimizationNoOffsets();
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
@@ -44,6 +45,7 @@ void SimplePatternFormatterTest::runIndexedTest(int32_t index, UBool exec, const
   TESTCASE_AUTO(TestFormatReplaceNoOptimization);
   TESTCASE_AUTO(TestFormatReplaceNoOptimizationLeadingText);
   TESTCASE_AUTO(TestFormatReplaceOptimization);
+  TESTCASE_AUTO(TestFormatReplaceNoOptimizationLeadingPlaceholderUsedTwice);
   TESTCASE_AUTO(TestFormatReplaceOptimizationNoOffsets);
   TESTCASE_AUTO(TestFormatReplaceNoOptimizationNoOffsets);
   TESTCASE_AUTO_END;
@@ -320,6 +322,36 @@ void SimplePatternFormatterTest::TestFormatReplaceOptimization() {
         return;
     }
     int32_t expectedOffsets[] = {10, 18, 0, 27};
+    verifyOffsets(expectedOffsets, offsets, UPRV_LENGTHOF(expectedOffsets));
+}
+
+void SimplePatternFormatterTest::TestFormatReplaceNoOptimizationLeadingPlaceholderUsedTwice() {
+    UErrorCode status = U_ZERO_ERROR;
+    SimplePatternFormatter fmt;
+    fmt.compile("{2}, {0}, {1} and {3} {2}", status);
+    if (!assertSuccess("Status", status)) {
+        return;
+    }
+    UnicodeString result("original");
+    int offsets[4];
+    UnicodeString freddy("freddy");
+    UnicodeString frog("frog");
+    UnicodeString by("by");
+    const UnicodeString *params[] = {&freddy, &frog, &result, &by};
+    assertEquals(
+            "",
+            "original, freddy, frog and by original",
+            fmt.formatAndReplace(
+                    params,
+                    UPRV_LENGTHOF(params),
+                    result,
+                    offsets,
+                    UPRV_LENGTHOF(offsets),
+                    status));
+    if (!assertSuccess("Status", status)) {
+        return;
+    }
+    int32_t expectedOffsets[] = {10, 18, 30, 27};
     verifyOffsets(expectedOffsets, offsets, UPRV_LENGTHOF(expectedOffsets));
 }
 

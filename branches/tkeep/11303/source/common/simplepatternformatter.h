@@ -191,6 +191,7 @@ private:
     MaybeStackArray<PlaceholderInfo, 3> placeholders;
     int32_t placeholderSize;
     int32_t placeholderCount;
+    UBool firstPlaceholderReused;
 
     // just like formatAndAppend but uses placeholderValues exactly
     // as they are. A placeholder value that is the is the same as
@@ -203,9 +204,10 @@ private:
             int32_t offsetArrayLength) const;
 
     // Returns the placeholder at the beginning of this pattern
-    // (e.g 3 for placeholder {3}). If the beginning of pattern is text
-    // instead of a placeholder, returns -1.
-    int32_t getPlaceholderAtStart() const;
+    // (e.g 3 for placeholder {3}). Returns -1 if the beginning of pattern
+    // is text or if the placeholder at the beginning of this pattern
+    // is used again in the middle of the pattern.
+    int32_t getUniquePlaceholderAtStart() const;
     
     // ensureCapacity ensures that the capacity of the placeholders array
     // is desiredCapacity. If ensureCapacity must resize the placeholders
