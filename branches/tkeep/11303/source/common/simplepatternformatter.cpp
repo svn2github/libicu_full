@@ -11,6 +11,10 @@
 
 U_NAMESPACE_BEGIN
 
+static UBool isInvalidArray(const void *array, int32_t size) {
+   return (size < 0 || (size > 0 && array == NULL));
+}
+
 typedef enum SimplePatternFormatterCompileState {
     INIT,
     APOSTROPHE,
@@ -89,9 +93,10 @@ public:
     const UnicodeString * const *get() const { return fixedValues; }
     ~SimplePatternFormatterFixedValues();
 private:
-    const UnicodeString * const *originalValues;
+    const UnicodeString *fewNewValues[3];
+    const UnicodeString **manyNewValues;
     const UnicodeString * const *fixedValues;
-    const UnicodeString * builderCopy;
+    UnicodeString builderCopy;
 };
 
 SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
@@ -100,39 +105,35 @@ SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
         int32_t valuesCount,
         int32_t skipIndex,
         UErrorCode &status) 
-        : originalValues(values),
-          fixedValues(values),
-          builderCopy(NULL) {
+        : manyNewValues(NULL),
+          fixedValues(values) {
     if (U_FAILURE(status)) {
         return;
     }
-    UBool valuesOk = true;
-    for (int32_t i = 0; i < valuesCount; ++i) {
+    for (int32_t i = 0; TRUE; ++i) {
+        if (i == valuesCount) {
+          return;
+        }
         if (i != skipIndex && values[i] == &builder) {
-            valuesOk = false;
             break;
         }
     }
-    if (valuesOk) {
-        return;
-    }
-    const UnicodeString **newValues = (const UnicodeString **) uprv_malloc(
+    const UnicodeString **newValues;
+    if (valuesCount <= UPRV_LENGTHOF(fewNewValues)) {
+        newValues = fewNewValues;
+    } else {
+        manyNewValues = (const UnicodeString **) uprv_malloc(
             valuesCount * sizeof(const UnicodeString *));
-    if (newValues == NULL) {
-        status = U_MEMORY_ALLOCATION_ERROR;
-        return;
+        if (manyNewValues == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+            return;
+        }
+        newValues = manyNewValues;
     }
+    builderCopy.append(builder);
     for (int32_t i = 0; i < valuesCount; ++i) {
         if (i != skipIndex && values[i] == &builder) {
-            if (builderCopy == NULL) {
-                builderCopy = new UnicodeString(builder);
-                if (builderCopy == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                    uprv_free(newValues);
-                    return;
-                }
-            }
-            newValues[i] = builderCopy;
+            newValues[i] = &builderCopy;
         } else {
             newValues[i] = values[i];
         }
@@ -141,10 +142,7 @@ SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
 }
 
 SimplePatternFormatterFixedValues::~SimplePatternFormatterFixedValues() {
-    if (fixedValues != originalValues) {
-        uprv_free(const_cast<const UnicodeString **>(fixedValues));
-    }
-    delete builderCopy;
+    uprv_free(manyNewValues);
 }
 
 SimplePatternFormatter::SimplePatternFormatter() :
@@ -351,6 +349,11 @@ UnicodeString& SimplePatternFormatter::formatAndAppend(
     if (U_FAILURE(status)) {
         return appendTo;
     }
+    if (isInvalidArray(placeholderValues, placeholderValueCount)
+            || isInvalidArray(offsetArray, offsetArrayLength)) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return appendTo;
+    }
     if (placeholderValueCount < placeholderCount) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
@@ -362,7 +365,6 @@ UnicodeString& SimplePatternFormatter::formatAndAppend(
     }
     return formatAndAppendNoFixValues(
             fixedValues.get(),
-            placeholderCount,
             appendTo,
             offsetArray,
             offsetArrayLength);
@@ -376,6 +378,11 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
         int32_t offsetArrayLength,
         UErrorCode &status) const {
     if (U_FAILURE(status)) {
+        return result;
+    }
+    if (isInvalidArray(placeholderValues, placeholderValueCount)
+            || isInvalidArray(offsetArray, offsetArrayLength)) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
     if (placeholderValueCount < placeholderCount) {
@@ -404,12 +411,11 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
         }
         formatAndAppendNoFixValues(
                 fixedValues.get(),
-                placeholderCount,
                 result,
                 offsetArray,
                 offsetArrayLength);
         
-        // We have to make the offset for the placholderAtStart
+        // We have to make the offset for the placeholderAtStart
         // placeholder be 0. Otherwise it would be the length of the
         // previous value of result.
         if (offsetArrayLength > placeholderAtStart) {
@@ -425,7 +431,6 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
     result.remove();
     return formatAndAppendNoFixValues(
             fixedValues.get(),
-            placeholderCount,
             result,
             offsetArray,
             offsetArrayLength);
@@ -433,7 +438,6 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
 
 UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
         const UnicodeString * const *placeholderValues,
-        int32_t placeholderValueCount,
         UnicodeString &appendTo,
         int32_t *offsetArray,
         int32_t offsetArrayLength) const {

@@ -20,6 +20,7 @@ public:
     void TestOnePlaceholder();
     void TestManyPlaceholders();
     void TestTooFewPlaceholderValues();
+    void TestBadArguments();
     void TestGetPatternWithNoPlaceholders();
     void TestFormatReplaceNoOptimization();
     void TestFormatReplaceNoOptimizationLeadingText();
@@ -41,6 +42,7 @@ void SimplePatternFormatterTest::runIndexedTest(int32_t index, UBool exec, const
   TESTCASE_AUTO(TestOnePlaceholder);
   TESTCASE_AUTO(TestManyPlaceholders);
   TESTCASE_AUTO(TestTooFewPlaceholderValues);
+  TESTCASE_AUTO(TestBadArguments);
   TESTCASE_AUTO(TestGetPatternWithNoPlaceholders);
   TESTCASE_AUTO(TestFormatReplaceNoOptimization);
   TESTCASE_AUTO(TestFormatReplaceNoOptimizationLeadingText);
@@ -228,6 +230,52 @@ void SimplePatternFormatterTest::TestTooFewPlaceholderValues() {
     }
 }
 
+void SimplePatternFormatterTest::TestBadArguments() {
+    SimplePatternFormatter fmt("pickle");
+    UnicodeString appendTo;
+    UErrorCode status = U_ZERO_ERROR;
+    const UnicodeString *params[1];
+    int32_t offsets[1];
+
+    // These succeed
+    fmt.formatAndAppend(
+            NULL, 0, appendTo, NULL, 0, status);
+    fmt.formatAndReplace(
+            NULL, 0, appendTo, NULL, 0, status);
+    assertSuccess("", status);
+    status = U_ZERO_ERROR;
+
+    // fails
+    fmt.formatAndAppend(
+            NULL, 1, appendTo, NULL, 0, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
+    }
+    status = U_ZERO_ERROR;
+   
+    // fails
+    fmt.formatAndAppend(
+            NULL, 0, appendTo, NULL, 1, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
+    }
+    status = U_ZERO_ERROR;
+   
+    // fails
+    fmt.formatAndReplace(
+            NULL, 1, appendTo, NULL, 0, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
+    }
+    status = U_ZERO_ERROR;
+   
+    // fails
+    fmt.formatAndReplace(
+            NULL, 0, appendTo, NULL, 1, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
+    }
+}
 
 void SimplePatternFormatterTest::TestGetPatternWithNoPlaceholders() {
     SimplePatternFormatter fmt("{0} has no {1} placeholders.");

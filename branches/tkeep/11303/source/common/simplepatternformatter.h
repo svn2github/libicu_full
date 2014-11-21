@@ -195,10 +195,11 @@ private:
 
     // just like formatAndAppend but uses placeholderValues exactly
     // as they are. A placeholder value that is the is the same as
-    // appendTo is treated as the empty string.
+    // appendTo is treated as the empty string. No length for
+    // placeholderValues is passed because checking that there are enough
+    // placeholder values to cover the placeholders is up to the caller.
     UnicodeString &formatAndAppendNoFixValues(
             const UnicodeString * const *placeholderValues,
-            int32_t placeholderValueCount,
             UnicodeString &appendTo,
             int32_t *offsetArray,
             int32_t offsetArrayLength) const;
