@@ -17,6 +17,8 @@
 
 U_NAMESPACE_BEGIN
 
+class SimplePatternFormatterPlaceholderValues;
+
 struct PlaceholderInfo {
   int32_t id;
   int32_t offset;
@@ -39,7 +41,7 @@ struct PlaceholderInfo {
  * UnicodeString result;
  * UErrorCode status = U_ZERO_ERROR;
  * // Evaluates to: "paul {born} in england"
- * fmt.format("englad", "paul", result, status);
+ * fmt.format("england", "paul", result, status);
  * </pre>
  */
 class U_COMMON_API SimplePatternFormatter : public UMemory {
@@ -98,7 +100,7 @@ public:
     }
 
     /**
-     * Formats given value.
+     * Formats given value. arg0 cannot be appendTo.
      */
     UnicodeString &format(
             const UnicodeString &args0,
@@ -106,7 +108,7 @@ public:
             UErrorCode &status) const;
     
     /**
-     * Formats given values.
+     * Formats given values. Neither arg0 nor arg1 can be appendTo.
      */
     UnicodeString &format(
             const UnicodeString &args0,
@@ -115,7 +117,7 @@ public:
             UErrorCode &status) const;
     
     /**
-     * Formats given values.
+     * Formats given values. Neither arg0, arg1, nor arg2 can be appendTo.
      */
     UnicodeString &format(
             const UnicodeString &args0,
@@ -129,9 +131,8 @@ public:
      *
      * The caller retains ownership of all pointers.
      * @param placeholderValues 1st one corresponds to {0}; 2nd to {1};
-     *  3rd to {2} etc. May include pointer to appendTo in which case
-     *  the previous value of appendTo is used for the corresponding
-     *  placeholder.
+     *  3rd to {2} etc. If any of these point to appendTo, this method
+     *  sets status to U_ILLEGAL_ARGUMEN_ERROR.
      * @param placeholderValueCount the number of placeholder values
      *  must be at least large enough to provide values for all placeholders
      *  in this object. Otherwise status set to U_ILLEGAL_ARGUMENT_ERROR.
@@ -193,13 +194,10 @@ private:
     int32_t placeholderCount;
     UBool firstPlaceholderReused;
 
-    // just like formatAndAppend but uses placeholderValues exactly
-    // as they are. A placeholder value that is the is the same as
-    // appendTo is treated as the empty string. No length for
-    // placeholderValues is passed because checking that there are enough
-    // placeholder values to cover the placeholders is up to the caller.
-    UnicodeString &formatAndAppendNoFixValues(
-            const UnicodeString * const *placeholderValues,
+    // A Placeholder value that is the same as appendTo is treated as the
+    // empty string.
+    UnicodeString &formatAndAppend(
+            const SimplePatternFormatterPlaceholderValues &placeholderValues,
             UnicodeString &appendTo,
             int32_t *offsetArray,
             int32_t offsetArrayLength) const;

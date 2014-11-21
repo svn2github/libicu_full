@@ -70,79 +70,65 @@ void SimplePatternFormatterIdBuilder::add(UChar ch) {
     idLen++;
 }
 
-// Creates fixed placeholder values given a set of original placeholder
-// values. If a placeholder value is the same UnicodeString as builder,
-// records a copy of builder for the corresponding fixed placeholder
-// value. Otherwise, each fixed placeholder value is the same UnicodeString
-// as the original placeholder value. If skipIndex is non negative, then
-// the skipIndexth fixed placeholder value is always the same UnicodeString
-// as the original even if it is the same as builder.
-class SimplePatternFormatterFixedValues {
+// Represents placeholder values.
+class SimplePatternFormatterPlaceholderValues {
 public:
-    SimplePatternFormatterFixedValues(
-        const UnicodeString &builder,
-        const UnicodeString * const *values,
-        int32_t valuesCount,
-        int32_t skipIndex,
-        UErrorCode &status);
+    SimplePatternFormatterPlaceholderValues(
+            const UnicodeString * const *values,
+            int32_t valuesCount);
 
-    // Returns the fixed placeholder values. This object owns any
-    // additional memory allocations needed to produce the fixed
-    // placeholder values from the original ones. When this object goes
-    // out of scope, the returned values are no longer valid.
-    const UnicodeString * const *get() const { return fixedValues; }
-    ~SimplePatternFormatterFixedValues();
+    // Returns TRUE if appendTo value is at any index besides exceptIndex.
+    UBool isAppendToInAnyIndexExcept(
+            const UnicodeString &appendTo, int32_t exceptIndex) const;
+
+    // For each appendTo value, stores the snapshot of it in its place.
+    void snapshotAppendTo(const UnicodeString &appendTo);
+
+    // Returns the placeholder value at index. No range checking performed.
+    // Returned reference is valid for as long as this object exists.
+    const UnicodeString &get(int32_t index) const;
 private:
-    const UnicodeString *fewNewValues[3];
-    const UnicodeString **manyNewValues;
-    const UnicodeString * const *fixedValues;
-    UnicodeString builderCopy;
+    const UnicodeString * const *fValues;
+    int32_t fValuesCount;
+    const UnicodeString *fAppendTo;
+    UnicodeString fAppendToCopy;
+    SimplePatternFormatterPlaceholderValues(
+            const SimplePatternFormatterPlaceholderValues &);
+    SimplePatternFormatterPlaceholderValues &operator=(
+            const SimplePatternFormatterPlaceholderValues &);
 };
 
-SimplePatternFormatterFixedValues::SimplePatternFormatterFixedValues(
-        const UnicodeString &builder,
+SimplePatternFormatterPlaceholderValues::SimplePatternFormatterPlaceholderValues(
         const UnicodeString * const *values,
-        int32_t valuesCount,
-        int32_t skipIndex,
-        UErrorCode &status) 
-        : manyNewValues(NULL),
-          fixedValues(values) {
-    if (U_FAILURE(status)) {
-        return;
-    }
-    for (int32_t i = 0; TRUE; ++i) {
-        if (i == valuesCount) {
-          return;
-        }
-        if (i != skipIndex && values[i] == &builder) {
-            break;
-        }
-    }
-    const UnicodeString **newValues;
-    if (valuesCount <= UPRV_LENGTHOF(fewNewValues)) {
-        newValues = fewNewValues;
-    } else {
-        manyNewValues = (const UnicodeString **) uprv_malloc(
-            valuesCount * sizeof(const UnicodeString *));
-        if (manyNewValues == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-        newValues = manyNewValues;
-    }
-    builderCopy.append(builder);
-    for (int32_t i = 0; i < valuesCount; ++i) {
-        if (i != skipIndex && values[i] == &builder) {
-            newValues[i] = &builderCopy;
-        } else {
-            newValues[i] = values[i];
-        }
-    }
-    fixedValues = newValues;
+        int32_t valuesCount) 
+        : fValues(values),
+          fValuesCount(valuesCount),
+          fAppendTo(NULL),
+          fAppendToCopy() {
 }
 
-SimplePatternFormatterFixedValues::~SimplePatternFormatterFixedValues() {
-    uprv_free(manyNewValues);
+UBool SimplePatternFormatterPlaceholderValues::isAppendToInAnyIndexExcept(
+        const UnicodeString &appendTo, int32_t exceptIndex) const {
+    for (int32_t i = 0; i < fValuesCount; ++i) {
+        if (i != exceptIndex && fValues[i] == &appendTo) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void SimplePatternFormatterPlaceholderValues::snapshotAppendTo(
+        const UnicodeString &appendTo) {
+    fAppendTo = &appendTo;
+    fAppendToCopy = appendTo;
+}
+
+const UnicodeString &SimplePatternFormatterPlaceholderValues::get(
+        int32_t index) const {
+    if (fAppendTo == NULL || fAppendTo != fValues[index]) {
+        return *fValues[index];
+    }
+    return fAppendToCopy;
 }
 
 SimplePatternFormatter::SimplePatternFormatter() :
@@ -358,13 +344,15 @@ UnicodeString& SimplePatternFormatter::formatAndAppend(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
-    SimplePatternFormatterFixedValues fixedValues(
-            appendTo, placeholderValues, placeholderCount, -1, status);
-    if (U_FAILURE(status)) {
+    
+    SimplePatternFormatterPlaceholderValues values(
+            placeholderValues, placeholderCount);
+    if (values.isAppendToInAnyIndexExcept(appendTo, -1)) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
     }
-    return formatAndAppendNoFixValues(
-            fixedValues.get(),
+    return formatAndAppend(
+            values,
             appendTo,
             offsetArray,
             offsetArrayLength);
@@ -389,28 +377,29 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return result;
     }
+    SimplePatternFormatterPlaceholderValues values(
+            placeholderValues, placeholderCount);
     int32_t placeholderAtStart = getUniquePlaceholderAtStart();
 
-    // If pattern starts with a placeholder and the value for that
-    // placeholder is result, then we can optimize by just appending to
-    // result.
+    // If pattern starts with a unique placeholder and that placeholder
+    // value is result, we may be able to optimize by just appending to result.
     if (placeholderAtStart >= 0
             && placeholderValues[placeholderAtStart] == &result) {
 
-        // Append to result, but let the value of the placeholderAtStart
-        // placeholder remain the same as result so that it is treated
-        // as the empty string.
-        SimplePatternFormatterFixedValues fixedValues(
-                result,
-                placeholderValues,
-                placeholderCount,
-                placeholderAtStart,
-                status);
-        if (U_FAILURE(status)) {
-            return result;
+        // If result is the value for other placeholders, call off optimization.
+        if (values.isAppendToInAnyIndexExcept(result, placeholderAtStart)) {
+            values.snapshotAppendTo(result);
+            result.remove();
+            return formatAndAppend(
+                    values,
+                    result,
+                    offsetArray,
+                    offsetArrayLength);
         }
-        formatAndAppendNoFixValues(
-                fixedValues.get(),
+
+        // Otherwise we can optimize
+        formatAndAppend(
+                values,
                 result,
                 offsetArray,
                 offsetArrayLength);
@@ -423,21 +412,19 @@ UnicodeString& SimplePatternFormatter::formatAndReplace(
         }
         return result;
     }
-    SimplePatternFormatterFixedValues fixedValues(
-            result, placeholderValues, placeholderCount, -1, status);
-    if (U_FAILURE(status)) {
-        return result;
+    if (values.isAppendToInAnyIndexExcept(result, -1)) {
+        values.snapshotAppendTo(result);
     }
     result.remove();
-    return formatAndAppendNoFixValues(
-            fixedValues.get(),
+    return formatAndAppend(
+            values,
             result,
             offsetArray,
             offsetArrayLength);
 }
 
-UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
-        const UnicodeString * const *placeholderValues,
+UnicodeString& SimplePatternFormatter::formatAndAppend(
+        const SimplePatternFormatterPlaceholderValues &values,
         UnicodeString &appendTo,
         int32_t *offsetArray,
         int32_t offsetArrayLength) const {
@@ -458,8 +445,7 @@ UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
             appendTo.length(),
             offsetArray,
             offsetArrayLength);
-    const UnicodeString *placeholderValue =
-            placeholderValues[placeholders[0].id];
+    const UnicodeString *placeholderValue = &values.get(placeholders[0].id);
     if (placeholderValue != &appendTo) {
         appendTo.append(*placeholderValue);
     }
@@ -474,8 +460,7 @@ UnicodeString& SimplePatternFormatter::formatAndAppendNoFixValues(
                 appendTo.length(),
                 offsetArray,
                 offsetArrayLength);
-        placeholderValue =
-                placeholderValues[placeholders[i].id];
+        placeholderValue = &values.get(placeholders[i].id);
         if (placeholderValue != &appendTo) {
             appendTo.append(*placeholderValue);
         }
