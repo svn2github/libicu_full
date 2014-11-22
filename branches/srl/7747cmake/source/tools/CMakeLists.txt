@@ -18,21 +18,38 @@ ADD_SUBDIRECTORY(toolutil)
 ADD_SUBDIRECTORY(ctestfw)
 
 # These are the actual tools
-#ADD_SUBDIRECTORY(dumpce)
-ADD_SUBDIRECTORY(genbrk)
-ADD_SUBDIRECTORY(genccode)
-ADD_SUBDIRECTORY(gencfu)
-ADD_SUBDIRECTORY(gencmn)
-ADD_SUBDIRECTORY(gencnval)
-#ADD_SUBDIRECTORY(genctd)
-ADD_SUBDIRECTORY(gennorm2)
-ADD_SUBDIRECTORY(genrb)
-ADD_SUBDIRECTORY(gensprep)
-ADD_SUBDIRECTORY(gentest)
-ADD_SUBDIRECTORY(icuinfo)
-ADD_SUBDIRECTORY(icupkg)
-ADD_SUBDIRECTORY(icuswap)
-ADD_SUBDIRECTORY(makeconv)
-ADD_SUBDIRECTORY(pkgdata)
-# ADD_SUBDIRECTORY(tzcode) <=== tzcode tools not yet implemented
+IF(ENABLE_TOOLS)
+	# These tools are "always" built.
+
+	# Informational
+	ADD_SUBDIRECTORY(icuinfo)
+
+	# mapping (converter) tables
+	ADD_SUBDIRECTORY(gencnval)
+	ADD_SUBDIRECTORY(makeconv)
+
+	# resource bundles
+	ADD_SUBDIRECTORY(genrb)
+
+	# packaging
+	ADD_SUBDIRECTORY(icupkg)
+	ADD_SUBDIRECTORY(pkgdata)
+	ADD_SUBDIRECTORY(genccode)
+	#ADD_SUBDIRECTORY(icuswap) <=== obsolete
+
+	# for tests
+	ADD_SUBDIRECTORY(gentest)
+
+	# These are only needed to rebuild data from source.
+	IF(ENABLE_DATAGEN)
+		#ADD_SUBDIRECTORY(dumpce)
+		ADD_SUBDIRECTORY(genbrk)
+		ADD_SUBDIRECTORY(gencfu)
+		ADD_SUBDIRECTORY(gencmn)
+		#ADD_SUBDIRECTORY(genctd)
+		ADD_SUBDIRECTORY(gennorm2)
+		ADD_SUBDIRECTORY(gensprep)
+		#ADD_SUBDIRECTORY(tzcode) <=== tzcode tools not yet implemented
+	ENDIF()
+ENDIF()
 

@@ -1,5 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.4)
 
+# For now, we do use COMPILE_DEFINITIONS_DEBUG in Configure.cmake.
+# TODO: revisit this.
+if(POLICY CMP0043)
+  cmake_policy(SET CMP0043 OLD)
+endif()
+
 PROJECT(ICU C CXX ASM)
 
 # Options
@@ -19,6 +25,8 @@ OPTION(ENABLE_IO "Enable building of the io library" ON)
 OPTION(ENABLE_LAYOUT "Enable building of the layout library" ON)
 OPTION(ENABLE_TESTS "Enable building of tests" ON)
 OPTION(ENABLE_SAMPLES "Enable building of samples" ON)
+OPTION(ENABLE_TOOLS "Enable building of any ICU tools" ON)
+OPTION(ENABLE_DATAGEN "Enable tools needed to rebuild data from source" OFF)
 OPTION(VERBOSE_DATA "Build the full data archive verbosely" OFF)
 
 # User settings
