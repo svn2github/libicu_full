@@ -234,7 +234,6 @@ void SimplePatternFormatterTest::TestBadArguments() {
     SimplePatternFormatter fmt("pickle");
     UnicodeString appendTo;
     UErrorCode status = U_ZERO_ERROR;
-    const UnicodeString *params[1];
     int32_t offsets[1];
 
     // These succeed
@@ -260,6 +259,16 @@ void SimplePatternFormatterTest::TestBadArguments() {
         errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
     }
     status = U_ZERO_ERROR;
+
+    // fails because appendTo used as a parameter value
+    const UnicodeString *params[] = {&appendTo};
+    fmt.formatAndAppend(
+            params, UPRV_LENGTHOF(params), appendTo, NULL, 0, status);
+    if (status != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Expected U_ILLEGAL_ARGUMENT_ERROR");
+    }
+    status = U_ZERO_ERROR;
+
    
     // fails
     fmt.formatAndReplace(

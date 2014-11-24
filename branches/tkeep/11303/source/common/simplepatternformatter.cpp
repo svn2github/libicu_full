@@ -345,8 +345,11 @@ UnicodeString& SimplePatternFormatter::formatAndAppend(
         return appendTo;
     }
     
+    // Since we are disallowing parameter values that are the same as
+    // appendTo, we have to check all placeholderValues as opposed to
+    // the first placeholderCount placeholder values.
     SimplePatternFormatterPlaceholderValues values(
-            placeholderValues, placeholderCount);
+            placeholderValues, placeholderValueCount);
     if (values.isAppendToInAnyIndexExcept(appendTo, -1)) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
