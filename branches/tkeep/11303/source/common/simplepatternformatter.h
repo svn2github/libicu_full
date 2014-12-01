@@ -132,7 +132,7 @@ public:
      * The caller retains ownership of all pointers.
      * @param placeholderValues 1st one corresponds to {0}; 2nd to {1};
      *  3rd to {2} etc. If any of these point to appendTo, this method
-     *  sets status to U_ILLEGAL_ARGUMEN_ERROR.
+     *  sets status to U_ILLEGAL_ARGUMENT_ERROR.
      * @param placeholderValueCount the number of placeholder values
      *  must be at least large enough to provide values for all placeholders
      *  in this object. Otherwise status set to U_ILLEGAL_ARGUMENT_ERROR.
