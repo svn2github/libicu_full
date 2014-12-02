@@ -89,6 +89,7 @@ set(ICU_i18n
     reldatefmt.cpp
     tztrans.cpp
     indiancal.cpp
+    plurfmt.cpp
     measunit.cpp
     curramt.cpp
     tznames.cpp
@@ -109,7 +110,6 @@ set(ICU_i18n
     unumsys.cpp
     decfmtst.cpp
     winnmfmt.cpp
-    plurfmt.cpp
     ucurr.cpp
     chnsecal.cpp
     udat.cpp

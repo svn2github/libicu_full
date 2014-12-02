@@ -111,5 +111,5 @@ for library in dependencies.libraries:
   out.write("    )\n");
   out.write("\n")
 
-print "Done"
+print "# Wrote to   %s" % pathsFile
 
