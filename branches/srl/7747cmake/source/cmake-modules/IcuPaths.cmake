@@ -133,6 +133,7 @@ set(ICU_i18n
     windtfmt.cpp
     vtzone.cpp
     locdspnm.cpp
+    scientificnumberformatter.cpp
     japancal.cpp
     selfmt.cpp
     quantityformatter.cpp

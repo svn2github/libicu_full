@@ -826,7 +826,7 @@ group: formatting
     dcfmtsym.o decfmtst.o decimfmt.o decimalformatpattern.o compactdecimalformat.o
     numfmt.o numsys.o unumsys.o unum.o winnmfmt.o
     # scientificformathelper - would depend on dcfmtsym, so would be circular.
-    scientificformathelper.o
+    scientificformathelper.o scientificnumberformatter.o
     # rbnf
     nfrs.o nfrule.o nfsubs.o rbnf.o
     # measureformat
