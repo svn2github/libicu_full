@@ -71,7 +71,7 @@ void SimplePatternFormatterIdBuilder::add(UChar ch) {
 }
 
 // Represents placeholder values.
-class SimplePatternFormatterPlaceholderValues {
+class SimplePatternFormatterPlaceholderValues : public UMemory {
 public:
     SimplePatternFormatterPlaceholderValues(
             const UnicodeString * const *values,
