@@ -1,0 +1,158 @@
+test basic patterns
+set locale fr_FR
+set format 1234.567
+begin
+pattern	output
+#,##0.##	1\u00a0234,57
+0.##	1234,57
+0	1235
+#,##0.###	1\u00a0234,567
+###0.######	1234,567
+###0.0000#	1234,5670
+00000.0000	01234,5670
+#,##0.00 \u00a4	1\u00a0234,57 \u20ac
+
+
+test minimum and maximum fraction digits
+set locale en
+set minIntegerDigits 2
+set maxIntegerDigits 4
+set minFractionDigits 3
+set maxFractionDigits 5
+begin
+format	output
+6	06.000
+6.000005	06.000
+6.000006	06.00001
+12	12.000
+12345	2345.000
+72.1234	72.1234
+
+test rounding
+set locale fr
+begin
+pattern	format	output
+0.5	1.25	1,0
+0.5	1.75	2,0
+0.5	-1.25	-1,0
+00.5	-1.75	-02,0
+4	2.0	0
+4	6.0	8
+4	10.0	8
+2.70	99.0	99,90
+2.73	272.0	273,00
+#,#3.70	104.0	1\u00a003,60
+
+test significant digits
+set locale en
+set pattern #,#@,@###
+begin
+format	output
+7	7.0
+23	23
+100	100
+1000	1000
+10000	1,0000
+10001	1,0001
+10001.5	1,0002
+1234567	1,23,4600
+-1234567	-1,23,4600
+3.14159	3.1416
+
+test scientific notation
+set locale fr
+begin
+pattern	format	output
+0.00E0	12345	1,23E4
+000.00E0	12300	123,00E2
+000.0#E0	12300	123,0E2
+000.0#E0	12300.1	123,0E2
+000.0#E0	12301.0	123,01E2
+000.0#E+00	12301.0	123,01E+02
+##0.00E0	12345	12,3E3
+##0.0000E0	12300.1	12,300E3
+##0.000#E0	12300.1	12,30E3
+##0.000#E0	12301	12,301E3
+// This should round to nearest 0.05E4 but instead round to nearest 0.05
+// 0.05E0	12301.2	1,25E4
+##0.000#E0	0.17	170,0E-3
+
+test percents
+set locale fr
+begin
+pattern	format	output
+0.0%	0.573	57,3%
+%0.0	0.573	%57,3
+p%p0.0	0.573	p%p57,3
+p'%'p0.0	0.573	p%p0,6
+%@@@@	0.0326	%3,260
+%#,@@@	15.43	%1\u00a0540
+%#,##4.1	16.55	%1\u00a0656,4
+%##0.00E0	162.55	%16,3E3
+
+test permille
+set locale fr
+begin
+pattern	format	output
+0.0\u2030	0.573	573,0\u2030
+\u20300.0	0.573	\u2030573,0
+p\u2030p0.0	0.573	p\u2030p573,0
+p'\u2030'p0.0	0.573	p\u2030p0,6
+\u2030@@@@	0.0326	\u203032,60
+\u2030#,@@@	15.43	\u203015\u00a0400
+\u2030#,##4.1	16.55	\u203016\u00a0551,7
+\u2030##0.00E0	162.55	\u2030163E3
+
+test padding
+set locale fr_FR
+begin
+pattern	format	output	comment
+$**####,##0	1234	$***1\u00a0234
+*x$####,##0	1234	xxx$1\u00a0234
+####,##0*x$	1234	1\u00a0234xxx$
+####,##0$*x	1234	1\u00a0234$xxx
+####,##0$*x;ne#n	-1234	ne1\u00a0234nx
+####,##0$*x;n#'*'	-1234	n1\u00a0234*xx
+*y%4.2######	4.33	yyyy%432,6
+// Doesn't work ICU adds padding as if 'EUR' is only 2 chars (2 * 0xa4)
+// \u00a4\u00a4 **####0.00	433.0	EUR *433,00	Field is 11 chars
+// Doesn't work ICU adds padding as if 'EUR' is only 2 chars (2 * 0xa4)
+// \u00a4\u00a4 **#######0	433.0	EUR *433,00	Field is 11 chars
+
+test padding and currencies
+begin
+locale	currency	pattern	format	output
+fr	JPY	\u00a4\u00a4 **#######0	433.22	JPY ****433
+en	USD	\u00a4\u00a4 **#######0;\u00a4\u00a4 (#)	-433.22	USD (433.22)
+
+test currencies
+set locale fr
+set format 1234.567
+begin
+pattern	currency	output
+#,##0.00 \u00a4	EUR	1\u00a0234,57 \u20ac
+#,##0.00 \u00a4	JPY	1\u00a0235 JPY
+
+test prefixes and suffixes
+set locale en
+set pattern 0.00+;(#)
+begin
+format	output
+7	7.00+
+-3.5	(3.50)
+
+test 3.2.1 minimum grouping digits
+set locale en
+set pattern #,##0
+set minGroupingDigits 2
+begin
+format	output
+// Oops we don't support minGroupingDigits yet.
+// 1000	1000
+10000	10,000
+100000	100,000
+1000000	1,000,000
+
+
+
+

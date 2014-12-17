@@ -14,6 +14,10 @@
 #include "unicode/numfmt.h"
 #include "unicode/decimfmt.h"
 #include "caltztst.h"
+#include "numberformattesttuple.h"
+
+struct UCHARBUF;
+
 
 /**
  * Performs various in-depth test on NumberFormat
@@ -183,8 +187,31 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestEquality();
 
     void TestCurrencyUsage();
-
+    void TestNumberFormatTestTuple();
+    void TestDataDrivenSpecification();
+    NumberFormatTest() : fFileLineNumber(0) { }
  private:
+    UnicodeString fFileLine;
+    int32_t fFileLineNumber;
+    UnicodeString fFileTestName;
+    NumberFormatTestTuple fTuple;
+
+    void setTupleField(UErrorCode &);
+    int32_t splitBy(
+            UnicodeString *columnValues,
+            int32_t columnValueCount,
+            UChar delimiter);
+    void showError(const char *message);
+    void showFailure(const UnicodeString &message);
+    UBool readLine(UCHARBUF *f, UErrorCode &);
+    UBool isPass(
+            const NumberFormatTestTuple &tuple,
+            UnicodeString &appendErrorMessage,
+            UErrorCode &status);
+    UBool isFormatPass(
+            const NumberFormatTestTuple &tuple,
+            UnicodeString &appendErrorMessage,
+            UErrorCode &status);
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
 
     void expectParseCurrency(const NumberFormat &fmt, const UChar* currency, double amount, const char *text);
