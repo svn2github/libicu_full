@@ -61,6 +61,7 @@
 #include <float.h>
 #include "smpdtfst.h"
 #include "sharednumberformat.h"
+#include "ustr_imp.h"
 
 #if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
 #include <stdio.h>
@@ -1587,7 +1588,8 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     case UDAT_TIMEZONE_ISO_FIELD: // 'X'
     case UDAT_TIMEZONE_ISO_LOCAL_FIELD: // 'x'
         {
-            UnicodeString zoneString;
+            UChar zsbuf[64];
+            UnicodeString zoneString(zsbuf, 0, UPRV_LENGTHOF(zsbuf));
             const TimeZone& tz = cal.getTimeZone();
             UDate date = cal.getTime(status);
             if (U_SUCCESS(status)) {
@@ -2237,10 +2239,10 @@ ExitParse:
 //----------------------------------------------------------------------
 
 static UBool
-newBestMatchWithOptionalDot(const UnicodeString &lcaseText,
+matchStringWithOptionalDot(const UnicodeString &text,
+                            int32_t index,
                             const UnicodeString &data,
-                            UnicodeString &bestMatchName,
-                            int32_t &bestMatchLength);
+                            int32_t &matchLength);
 
 int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
                               int32_t start,
@@ -2259,54 +2261,19 @@ int32_t SimpleDateFormat::matchQuarterString(const UnicodeString& text,
     int32_t bestMatchLength = 0, bestMatch = -1;
     UnicodeString bestMatchName;
 
-    // {sfb} kludge to support case-insensitive comparison
-    // {markus 2002oct11} do not just use caseCompareBetween because we do not know
-    // the length of the match after case folding
-    // {alan 20040607} don't case change the whole string, since the length
-    // can change
-    // TODO we need a case-insensitive startsWith function
-    UnicodeString lcaseText;
-    text.extract(start, INT32_MAX, lcaseText);
-    lcaseText.foldCase();
-
-    for (; i < count; ++i)
-    {
-        // Always compare if we have no match yet; otherwise only compare
-        // against potentially better matches (longer strings).
-
-        if (newBestMatchWithOptionalDot(lcaseText, data[i], bestMatchName, bestMatchLength)) {
-            bestMatch = i;
+    for (; i < count; ++i) {
+        int32_t matchLength = 0;
+        if (matchStringWithOptionalDot(text, start, data[i], matchLength)) {
+            if (matchLength > bestMatchLength) {
+                bestMatchLength = matchLength;
+                bestMatch = i;
+            }
         }
     }
-    if (bestMatch >= 0)
-    {
+
+    if (bestMatch >= 0) {
         cal.set(field, bestMatch * 3);
-
-        // Once we have a match, we have to determine the length of the
-        // original source string.  This will usually be == the length of
-        // the case folded string, but it may differ (e.g. sharp s).
-
-        // Most of the time, the length will be the same as the length
-        // of the string from the locale data.  Sometimes it will be
-        // different, in which case we will have to figure it out by
-        // adding a character at a time, until we have a match.  We do
-        // this all in one loop, where we try 'len' first (at index
-        // i==0).
-        int32_t len = bestMatchName.length(); // 99+% of the time
-        int32_t n = text.length() - start;
-        for (i=0; i<=n; ++i) {
-            int32_t j=i;
-            if (i == 0) {
-                j = len;
-            } else if (i == len) {
-                continue; // already tried this when i was 0
-            }
-            text.extract(start, j, lcaseText);
-            lcaseText.foldCase();
-            if (bestMatchName == lcaseText) {
-                return start + j;
-            }
-        }
+        return start + bestMatchLength;
     }
 
     return -start;
@@ -2324,7 +2291,7 @@ UBool SimpleDateFormat::matchLiterals(const UnicodeString &pattern,
     UBool inQuote = FALSE;
     UnicodeString literal;    
     int32_t i = patternOffset;
-	
+
     // scan pattern looking for contiguous literal characters
     for ( ; i < pattern.length(); i += 1) {
         UChar ch = pattern.charAt(i);
@@ -2480,24 +2447,13 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
     UnicodeString bestMatchName;
     int32_t isLeapMonth = 0;
 
-    // {sfb} kludge to support case-insensitive comparison
-    // {markus 2002oct11} do not just use caseCompareBetween because we do not know
-    // the length of the match after case folding
-    // {alan 20040607} don't case change the whole string, since the length
-    // can change
-    // TODO we need a case-insensitive startsWith function
-    UnicodeString lcaseText;
-    text.extract(start, INT32_MAX, lcaseText);
-    lcaseText.foldCase();
-
-    for (; i < count; ++i)
-    {
-        // Always compare if we have no match yet; otherwise only compare
-        // against potentially better matches (longer strings).
-
-        if (newBestMatchWithOptionalDot(lcaseText, data[i], bestMatchName, bestMatchLength)) {
-            bestMatch = i;
-            isLeapMonth = 0;
+    for (; i < count; ++i) {
+        int32_t matchLen = 0;
+        if (matchStringWithOptionalDot(text, start, data[i], matchLen)) {
+            if (matchLen > bestMatchLength) {
+                bestMatch = i;
+                bestMatchLength = matchLen;
+            }
         }
 
         if (monthPattern != NULL) {
@@ -2506,20 +2462,22 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
             Formattable monthName((const UnicodeString&)(data[i]));
             MessageFormat::format(*monthPattern, &monthName, 1, leapMonthName, status);
             if (U_SUCCESS(status)) {
-                if (newBestMatchWithOptionalDot(lcaseText, leapMonthName, bestMatchName, bestMatchLength)) {
-                    bestMatch = i;
-                    isLeapMonth = 1;
+                if (matchStringWithOptionalDot(text, start, leapMonthName, matchLen)) {
+                    if (matchLen > bestMatchLength) {
+                        bestMatch = i;
+                        bestMatchLength = matchLen;
+                        isLeapMonth = 1;
+                    }
                 }
             }
         }
     }
-    if (bestMatch >= 0)
-    {
+
+    if (bestMatch >= 0) {
         // Adjustment for Hebrew Calendar month Adar II
         if (!strcmp(cal.getType(),"hebrew") && field==UCAL_MONTH && bestMatch==13) {
             cal.set(field,6);
-        }
-        else {
+        } else {
             if (field == UCAL_YEAR) {
                 bestMatch++; // only get here for cyclic year names, which match 1-based years 1-60
             }
@@ -2529,64 +2487,40 @@ int32_t SimpleDateFormat::matchString(const UnicodeString& text,
             cal.set(UCAL_IS_LEAP_MONTH, isLeapMonth);
         }
 
-        // Once we have a match, we have to determine the length of the
-        // original source string.  This will usually be == the length of
-        // the case folded string, but it may differ (e.g. sharp s).
-
-        // Most of the time, the length will be the same as the length
-        // of the string from the locale data.  Sometimes it will be
-        // different, in which case we will have to figure it out by
-        // adding a character at a time, until we have a match.  We do
-        // this all in one loop, where we try 'len' first (at index
-        // i==0).
-        int32_t len = bestMatchName.length(); // 99+% of the time
-        int32_t n = text.length() - start;
-        for (i=0; i<=n; ++i) {
-            int32_t j=i;
-            if (i == 0) {
-                j = len;
-            } else if (i == len) {
-                continue; // already tried this when i was 0
-            }
-            text.extract(start, j, lcaseText);
-            lcaseText.foldCase();
-            if (bestMatchName == lcaseText) {
-                return start + j;
-            }
-        }
+        return start + bestMatchLength;
     }
 
     return -start;
 }
 
 static UBool
-newBestMatchWithOptionalDot(const UnicodeString &lcaseText,
+matchStringWithOptionalDot(const UnicodeString &text,
+                            int32_t index,
                             const UnicodeString &data,
-                            UnicodeString &bestMatchName,
-                            int32_t &bestMatchLength) {
-    UnicodeString lcase;
-    lcase.fastCopyFrom(data).foldCase();
-    int32_t length = lcase.length();
-    if (length <= bestMatchLength) {
-        // data cannot provide a better match.
-        return FALSE;
-    }
+                            int32_t &matchLength) {
+    UErrorCode sts = U_ZERO_ERROR;
+    int32_t matchLenText = 0;
+    int32_t matchLenData = 0;
 
-    if (lcaseText.compareBetween(0, length, lcase, 0, length) == 0) {
+    u_caseInsensitivePrefixMatch(text.getBuffer() + index, text.length() - index,
+                                 data.getBuffer(), data.length(),
+                                 0 /* default case option */,
+                                 &matchLenText, &matchLenData,
+                                 &sts);
+    U_ASSERT (U_SUCCESS(sts));
+
+    if (matchLenData == data.length()) {
         // normal match
-        bestMatchName = lcase;
-        bestMatchLength = length;
+        matchLength = matchLenText;
         return TRUE;
     }
-    if (lcase.charAt(--length) == 0x2e) {
-        if (lcaseText.compareBetween(0, length, lcase, 0, length) == 0) {
-            // The input text matches the data except for data's trailing dot.
-            bestMatchName = lcase;
-            bestMatchName.truncate(length);
-            bestMatchLength = length;
-            return TRUE;
-        }
+
+    if (data.charAt(data.length() - 1) == 0x2e && matchLenData == data.length() - 1) {
+        // match without trailing dot
+        matchLength = matchLenText;
+        return TRUE;
     }
+
     return FALSE;
 }
 
