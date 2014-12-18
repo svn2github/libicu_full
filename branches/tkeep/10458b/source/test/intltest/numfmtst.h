@@ -204,6 +204,7 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void showError(const char *message);
     void showFailure(const UnicodeString &message);
     void showLineInfo();
+    UBool breaksC();
     UBool readLine(UCHARBUF *f, UErrorCode &);
     UBool isPass(
             const NumberFormatTestTuple &tuple,

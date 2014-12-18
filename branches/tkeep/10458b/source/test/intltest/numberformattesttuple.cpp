@@ -122,7 +122,8 @@ const NumberFormatTestTupleFieldData gFieldData[] = {
     FIELD_INIT(maxIntegerDigits, &gIntOps),
     FIELD_INIT(minFractionDigits, &gIntOps),
     FIELD_INIT(maxFractionDigits, &gIntOps),
-    FIELD_INIT(minGroupingDigits, &gIntOps)
+    FIELD_INIT(minGroupingDigits, &gIntOps),
+    FIELD_INIT(breaks, &gStrOps)
 };
 
 UBool

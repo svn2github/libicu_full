@@ -7867,13 +7867,19 @@ void NumberFormatTest::TestDataDrivenSpecification() {
                 showError("Invalid column values");
                 return;
             }
-            UnicodeString errorMessage;
-            if (!isPass(fTuple, errorMessage, status)) {
-                showFailure(errorMessage);
+            if (!breaksC()) {
+                UnicodeString errorMessage;
+                if (!isPass(fTuple, errorMessage, status)) {
+                    showFailure(errorMessage);
+                }
             }
         }
         fFileLine.remove();
     }
+}
+
+UBool NumberFormatTest::breaksC() {
+    return (NFTT_GET_FIELD(fTuple, breaks, "").toUpper().indexOf(0x43) != -1);
 }
 
 void NumberFormatTest::setTupleField(UErrorCode &status) {

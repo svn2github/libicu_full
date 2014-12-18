@@ -62,7 +62,7 @@ format	output
 test scientific notation
 set locale fr
 begin
-pattern	format	output
+pattern	format	output	breaks
 0.00E0	12345	1,23E4
 000.00E0	12300	123,00E2
 000.0#E0	12300	123,0E2
@@ -74,7 +74,7 @@ pattern	format	output
 ##0.000#E0	12300.1	12,30E3
 ##0.000#E0	12301	12,301E3
 // This should round to nearest 0.05E4 but instead round to nearest 0.05
-// 0.05E0	12301.2	1,25E4
+0.05E0	12301.2	1,25E4	C
 ##0.000#E0	0.17	170,0E-3
 
 test percents
@@ -106,7 +106,7 @@ p'\u2030'p0.0	0.573	p\u2030p0,6
 test padding
 set locale fr_FR
 begin
-pattern	format	output	comment
+pattern	format	output	breaks
 $**####,##0	1234	$***1\u00a0234
 *x$####,##0	1234	xxx$1\u00a0234
 ####,##0*x$	1234	1\u00a0234xxx$
@@ -114,10 +114,10 @@ $**####,##0	1234	$***1\u00a0234
 ####,##0$*x;ne#n	-1234	ne1\u00a0234nx
 ####,##0$*x;n#'*'	-1234	n1\u00a0234*xx
 *y%4.2######	4.33	yyyy%432,6
-// Doesn't work ICU adds padding as if 'EUR' is only 2 chars (2 * 0xa4)
-// \u00a4\u00a4 **####0.00	433.0	EUR *433,00	Field is 11 chars
-// Doesn't work ICU adds padding as if 'EUR' is only 2 chars (2 * 0xa4)
-// \u00a4\u00a4 **#######0	433.0	EUR *433,00	Field is 11 chars
+// In C ICU adds padding as if 'EUR' is only 2 chars (2 * 0xa4)
+\u00a4\u00a4 **####0.00	433.0	EUR *433,00	C
+// In C ICU adds padding as if 'EUR' is only 2 chars (2 * 0xa4)
+\u00a4\u00a4 **#######0	433.0	EUR *433,00	C
 
 test padding and currencies
 begin
@@ -141,14 +141,13 @@ format	output
 7	7.00+
 -3.5	(3.50)
 
-test 3.2.1 minimum grouping digits
+test minimum grouping digits
 set locale en
 set pattern #,##0
 set minGroupingDigits 2
 begin
-format	output
-// Oops we don't support minGroupingDigits yet.
-// 1000	1000
+format	output	breaks
+1000	1000	C
 10000	10,000
 100000	100,000
 1000000	1,000,000
