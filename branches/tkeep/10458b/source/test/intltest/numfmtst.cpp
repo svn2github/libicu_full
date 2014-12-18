@@ -7855,7 +7855,6 @@ void NumberFormatTest::TestDataDrivenSpecification() {
                     return;
                 }
             }
-            fFileLine.remove();
             state = 2;
         // run the tests
         } else {
@@ -7918,9 +7917,15 @@ NumberFormatTest::splitBy(
     return colIdx;
 }
 
+void NumberFormatTest::showLineInfo() {
+    UnicodeString indent("    ");
+    infoln(indent + fFileTestName);
+    infoln(indent + fFileLine);
+}
+
 void NumberFormatTest::showError(const char *message) {
     errln("line %d: %s", (int) fFileLineNumber, message);
-    infoln(fFileLine);
+    showLineInfo();
 }
 
 void NumberFormatTest::showFailure(const UnicodeString &message) {
@@ -7930,8 +7935,7 @@ void NumberFormatTest::showFailure(const UnicodeString &message) {
     UnicodeString fullMessage("line ");
     errln(fullMessage.append(lineStr).append(": ")
             .append(prettify(message)));
-    infoln(fFileTestName);
-    infoln(fFileLine);
+    showLineInfo();
 }
 
 UBool NumberFormatTest::readLine(

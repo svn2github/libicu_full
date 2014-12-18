@@ -203,6 +203,7 @@ class NumberFormatTest: public CalendarTimeZoneTest {
             UChar delimiter);
     void showError(const char *message);
     void showFailure(const UnicodeString &message);
+    void showLineInfo();
     UBool readLine(UCHARBUF *f, UErrorCode &);
     UBool isPass(
             const NumberFormatTestTuple &tuple,
