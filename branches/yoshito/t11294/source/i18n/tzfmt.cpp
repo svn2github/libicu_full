@@ -1360,9 +1360,9 @@ TimeZoneFormat::formatSpecific(const TimeZone& tz, UTimeZoneNameType stdType, UT
     }
 
     if (isDaylight) {
-        fTimeZoneNames->getDisplayName(UnicodeString(canonicalID), dstType, date, name);
+        fTimeZoneNames->getDisplayName(UnicodeString(TRUE, canonicalID, -1), dstType, date, name);
     } else {
-        fTimeZoneNames->getDisplayName(UnicodeString(canonicalID), stdType, date, name);
+        fTimeZoneNames->getDisplayName(UnicodeString(TRUE, canonicalID, -1), stdType, date, name);
     }
 
     if (timeType && !name.isEmpty()) {
