@@ -549,7 +549,7 @@
 ÷ 005F ÷ 000B ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) ÷ [3.2] <LINE TABULATION> (Newline) ÷ [0.3]
 ÷ 005F × 0308 ÷ 000B ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) × [4.0] COMBINING DIAERESIS (Extend_FE) ÷ [3.2] <LINE TABULATION> (Newline) ÷ [0.3]
 ÷ 005F × 3031 ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) × [13.2] VERTICAL KANA REPEAT MARK (Katakana) ÷ [0.3]
-÷ 005F × 0308 × 3031 ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) × [4.0] COMBINING DIAERESIS (Extend_FE) × [13.2] VERTICAL KANA REPEAT MARK (Katakana) ÷ [0.3]
+÷ 005F × 0308 ÷ 3031 ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) × [4.0] COMBINING DIAERESIS (Extend_FE) × [13.2] VERTICAL KANA REPEAT MARK (Katakana) ÷ [0.3]
 ÷ 005F × 0041 ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) × [13.2] LATIN CAPITAL LETTER A (ALetter) ÷ [0.3]
 ÷ 005F × 0308 × 0041 ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) × [4.0] COMBINING DIAERESIS (Extend_FE) × [13.2] LATIN CAPITAL LETTER A (ALetter) ÷ [0.3]
 ÷ 005F ÷ 003A ÷	#  ÷ [0.2] LOW LINE (ExtendNumLet) ÷ [999.0] COLON (MidLetter) ÷ [0.3]

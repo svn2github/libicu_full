@@ -175,7 +175,7 @@
 #<data>•abc<200>\N{HIRAGANA LETTER SMALL A}<400>\N{HIRAGANA LETTER VU}\N{COMBINING ACUTE ACCENT}<400>\N{HIRAGANA ITERATION MARK}<400>\N{KATAKANA LETTER SMALL A}\N{KATAKANA ITERATION MARK}\N{HALFWIDTH KATAKANA LETTER WO}\N{HALFWIDTH KATAKANA LETTER N}<400>def<200>#•</data>
 
 # test normalization/dictionary handling of halfwidth katakana: same dictionary phrase in fullwidth and halfwidth
-<data>•芽キャベツ<400>芽キャﾍﾞツ<400></data>
+<data>•芽キャベツ<400>芽ｷｬﾍﾞﾂ<400></data>
 
 # more Japanese tests
 # TODO: some script=common characters in the Hiragana and the Katakana block may not be treated correctly

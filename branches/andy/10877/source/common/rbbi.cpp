@@ -578,18 +578,18 @@ int32_t RuleBasedBreakIterator::next(void) {
 
     UBool useDictionary = FALSE;
     result = handleNext(fData->fForwardTable, &useDictionary);
-    int32_t tagValue = 0;
-    if (fLastRuleStatusIndex >= 0) {
-        // TODO(jchye): copied from getRuleStatus(). Refactor?
-        int32_t  idx = fLastRuleStatusIndex + fData->fRuleStatusTable[fLastRuleStatusIndex];
-        tagValue = fData->fRuleStatusTable[idx];
-    }
     if (useDictionary) { // if only dict words, or contains mix of dict and non-dict words.
+        int32_t tagValue = 0;
+        if (fLastRuleStatusIndex >= 0) {
+            // TODO(jchye): copied from getRuleStatus(). Refactor?
+            int32_t  idx = fLastRuleStatusIndex + fData->fRuleStatusTable[fLastRuleStatusIndex];
+            tagValue = fData->fRuleStatusTable[idx];
+        }
         fBreakCache->populate(startPos, result, fLastTagValue, tagValue, status);
         result = fBreakCache->following(startPos);
         fLastTagValue = tagValue;
     } else {
-      fLastTagValue = -1;
+        fLastTagValue = -1;
     }
     if (result != BreakIterator::DONE) {
         utext_setNativeIndex(fText, result);
@@ -1777,38 +1777,57 @@ UBool DictTextRange::next() {
         return FALSE;
     }
 
-    // Advance to the first word-like character. Normally the first char.
-    // This is normally a dictionary character, but could be a non-dictionary alphabetic
-    // if the text contains a mixture of scripts mixed together.
+    // Advance to the first word-like dictionary character. Normally the first char.
 
     fDictStart = -1;
     int32_t category = 0;
     UChar32 c;
+    UChar32 prevC;
     utext_setNativeIndex(fBreakIterator->fText, fRangeStart);
     int32_t index;
     while ((index = utext_getNativeIndex(fBreakIterator->fText)) < fFinalLimit) {
+        prevC = c;
         c = utext_next32(fBreakIterator->fText);
         if (c == U_SENTINEL) {
             break;
         }
         UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
-        if ((category & 0x4000) != 0 || u_isalpha(c)) {
+        if ((category & 0x4000) != 0 && u_isalpha(c)) {
+          // problem: breaks after parenthesis in line break -> problem for thai!
             fDictStart = index;
             break;
         }
     }
 
     if (fDictStart == -1) {
+      // TODO(jchye): faulty because last range may not be handled correctly!
+      // should split out next() and hasNext().
         fLBE = NULL;
         fRangeLimit = fFinalLimit;
-        return FALSE;
+        return TRUE;  // was false
+    }
+
+    // If there was a non-dictionary word range before the dictionary range, back up
+    // and return the non-dictionary range first.
+    if (fDictStart > fRangeStart && !u_ispunct(prevC)) {
+      // TODO: fDictStart and fDictLimit should be removed since next() now
+      // only returns a dict range or a non-dict range. Use fRangeStart and
+      // fRangeLimit instead.
+      // TODO 2: this breaks line-breaking! e.g. (thai-text will break after (
+      // NOTE: if prevC was an extend char isbase == false. how to get around?
+      // only ignore punctuation?
+      fLBE = NULL;
+      fDictStart = fRangeStart;
+      c = utext_previous32(fBreakIterator->fText);
+      fDictLimit = fRangeLimit = utext_getNativeIndex(fBreakIterator->fText);
+      return TRUE;
     }
 
     fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
     fUseDictionary = (category & 0x4000) != 0;
     if (!fUseDictionary) {
         // This range contains non-dictionary alphabetic chars.
-        // The end of the range is either an occurence of a dictionary character
+        // The end of the range is either an occurrence of a dictionary character
         // or the overall end of the text identified by the rules.
         fLBE = NULL;
         while (utext_getNativeIndex(fBreakIterator->fText) < fFinalLimit) {
@@ -1821,7 +1840,7 @@ UBool DictTextRange::next() {
             if ((category & 0x4000) == 0) {
                 fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
             } else {
-                // Hit any dictionary character; this terminates this non-dictionary range.
+                // Hit any base dictionary character; this terminates this non-dictionary range.
                 // Back up to last char in this range.
                 c = utext_previous32(fBreakIterator->fText);
                 break;
@@ -1840,11 +1859,14 @@ UBool DictTextRange::next() {
                 break;
             }
             UTRIE_GET16(&fBreakIterator->fData->fTrie, c, category);
-            if ((category & 0x4000) != 0 || u_isalpha(c)) {   // It's a word-like character
+            // TODO: add || u_isextend(c) or equiv function?
+            //if ((category & 0x4000) != 0/* || u_isbase(c)*/) {   // It's a word-like character
+              // may not be able to just remove dictionary char check. (breaks line segmentation)
                 if (fLBE->handles(c, fBreakIterator->fBreakType)) {
                     // Character belongs to language break engine for this range.
                     fDictLimit = utext_getNativeIndex(fBreakIterator->fText);
-                } else {
+                } else if (u_isbase(c)) { //fBreakIterator->fBreakType == UBRK_WORD
+                  // TODO: should thai chars be separated from numbers?
                     // Character doesn't belong to this range.
                     // It's either a dictionary char belonging to a different language break engine,
                     // or a non-dictionary alphabetic.
@@ -1852,7 +1874,15 @@ UBool DictTextRange::next() {
                     c = utext_previous32(fBreakIterator->fText);
                     break;
                 }
+                /*
+            } else if (u_isbase(c)) {  // Base non-dictionary character.
+              // problem: isbase includes modifier letters like ff9e
+                // Hit any non-dictionary character; this terminates this non-dictionary range.
+                // Back up to last char in this range.
+                c = utext_previous32(fBreakIterator->fText);
+                break;
             }
+            */
         }
     }
 
@@ -1910,6 +1940,7 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
     } else {
         // Range containing non-dictionary characters only.
         // Has boundaries at its start and end only.
+      // TODO: use dict or range limits?
         fRawBreaks->addElement(range.fDictStart, status);
         fRawBreaks->addElement(range.fDictLimit, status);
         tagValue = range.fNonDictTagValue;
@@ -1927,7 +1958,9 @@ void RuleBasedBreakIterator::BreakCache::addContainedWords(const DictTextRange &
     // Omit the last, adding fRangeLimit instead. This has the effect of concatenating any
     //   trailing non-dictionary characters to the last word; happens with line break where,
     //   for example, closing punctuation attaches to a word.
-    // 
+    // TODO(jchye): this poses a problem if the dictionary word is followed by
+    // non-dict alphabetic characters: should be split up but they're put together!
+    // can't just add a break because of possible joiners before dictionary segment.
 
     U_ASSERT(fRawBreaks->elementAti(0) == range.fDictStart);
     for (int32_t i=1; i<fRawBreaks->size()-1; ++i) {

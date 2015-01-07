@@ -193,7 +193,7 @@ ThaiBreakEngine::ThaiBreakEngine(DictionaryMatcher *adoptDictionary, UErrorCode 
     : DictionaryBreakEngine((1<<UBRK_WORD) | (1<<UBRK_LINE)),
       fDictionary(adoptDictionary)
 {
-    fThaiWordSet.applyPattern(UNICODE_STRING_SIMPLE("[[:Thai:]&[:LineBreak=SA:]]"), status);
+    fThaiWordSet.applyPattern(UNICODE_STRING_SIMPLE("[:Thai:]"), status);
     if (U_SUCCESS(status)) {
         setCharacters(fThaiWordSet);
     }

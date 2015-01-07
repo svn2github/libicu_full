@@ -2276,10 +2276,10 @@ RBBIWordMonkey::RBBIWordMonkey()
     fOtherSet         = new UnicodeSet();
 
     // This Dictionary set definition matches that from word break rules.
-    UnicodeSet dictionarySet(UNICODE_STRING_SIMPLE("[\\p{Alphabetic} &"
-                             "[[\\p{script = Thai}] [\\p{script = Lao}] [\\p{script = Khmer}]"
+    UnicodeSet dictionarySet(UNICODE_STRING_SIMPLE("["
+                             "[\\p{script = Thai}] [\\p{script = Lao}] [\\p{script = Khmer}]"// [\\p{script = Myanmar}]"
                              "[\\p{script = Han}] [\\p{script = Hiragana}] [\\p{Word_Break = Katakana}]"
-                             "[\uac00-\ud7a3]]]"),        // Hangul Syllable
+                             "]"),
                              status);
 
     // Adjust ALetter to match ALetterPlus from the break rules, less any dictionary characters.
@@ -3677,6 +3677,8 @@ void RBBITest::TestWordBreaks(void)
     BreakIterator *bi = BreakIterator::createWordInstance(locale, status);
     // Replaced any C+J characters in a row with a random sequence of characters
     // of the same length to make our C+J segmentation not get in the way.
+    // Also removed extend dictionary characters following non-dictionary characters,
+    // or vice versa.
     static const char *strlist[] =
     {
     "\\U000e0032\\u0097\\u0f94\\uc2d8\\u05f4\\U000e0031\\u060d",
@@ -3686,7 +3688,7 @@ void RBBITest::TestWordBreaks(void)
     "\\uac00\\u3588\\u009c\\u0953\\u194b",
     "\\u200e\\U000e0072\\u0a4b\\U000e003f\\ufd2b\\u2027\\u002e\\u002e",
     "\\u2f1f\\u1634\\u05f8\\u0944\\u04f2\\u0cdf\\u1f9c\\u05f4\\u002e",
-    "\\U000e0042\\u002e\\u0fb8\\u09ef\\u0ed1\\u2044",
+    "\\U000e0042\\u002e\\u0fb8\\u09ef\\u0ae1\\u2044",
     "\\u003b\\u024a\\u102e\\U000e0071\\u0600",
     "\\u2027\\U000e0067\\u0a47\\u00b7",
     "\\u1fcd\\u002c\\u07aa\\u0027\\u11b0",
@@ -3841,14 +3843,14 @@ void RBBITest::TestLineBreaks(void)
      "\\ufeff\\ufffc\\u3289\\u0085\\u2772\\u0020\\U000e010a\\u0020\\u2025\\u000a\\U000e0123",
      "\\ufe3c\\u201c\\u000d\\u2025\\u2007\\u201c\\u002d\\u20a0\\u002d\\u30a7\\u17a4",
      "\\u2772\\u0020\\U000e010a\\u0020\\u2025\\u000a\\U000e0123",
-     "\\u002d\\uff1b\\u02c8\\u2029\\ufeff\\u0f22\\u2044\\ufe09\\u003a\\u096d\\u2009\\u000a\\u06f7\\u02cc\\u1019\\u2060",
-     "\\u1781\\u0b68\\u0f0c\\u3010\\u0085\\U00011f7a\\u0020\\u0dd6\\u200b\\U000e007a\\u000a\\u2060\\u2026\\u002f\\u2026\\u24dc\\u101e\\u2014\\u2007\\u30a5",
+     "\\u002d\\uff1b\\u02c8\\u2029\\ufeff\\u0f22\\u2044\\ufe09\\u003a\\u096d\\u2009\\u000a\\u06f7\\u02cc\\u2060",
+     "\\u1a81\\u0b68\\u0f0c\\u3010\\u0085\\U00011f7a\\u0020\\u0dd6\\u200b\\U000e007a\\u000a\\u2060\\u2026\\u002f\\u2026\\u24dc\\u2014\\u2007\\u30a5",
      "\\u2770\\u0020\\U000e010f\\u0020\\u2060\\u000a\\u02cc\\u0bcc\\u060d\\u30e7\\u0f3b\\u002f",
      "\\ufeff\\u0028\\u003b\\U00012fec\\u2010\\u0020\\u0004\\u200b\\u0020\\u275c\\u002f\\u17b1",
      "\\u20a9\\u2014\\u00a2\\u31f1\\u002f\\u0020\\u05b8\\u200b\\u0cc2\\u003b\\u060d\\u02c8\\ua4e8\\u002f\\u17d5",
      "\\u002d\\u136f\\uff63\\u0084\\ua933\\u2028\\u002d\\u431b\\u200b\\u20b0",
      "\\uade3\\u11d6\\u000a\\U0001107d\\u203a\\u201d\\ub070\\u000d\\u2024\\ufffc",
-     "\\uff5b\\u101c\\u1806\\u002f\\u2213\\uff5f",
+     "\\uff5b\\U10900\\u1806\\u002f\\u2213\\uff5f",
      "\\u2014\\u0a83\\ufdfc\\u003f\\u00a0\\u0020\\u000a\\u2991\\U0001d179\\u0020\\u201d\\U000125f6\\u0a67\\u20a7\\ufeff\\u043f",
      "\\u169b\\U000e0130\\u002d\\u1041\\u0f3d\\u0abf\\u00b0\\u31fb\\u00a0\\u002d\\u02c8\\u003b",
      "\\u2762\\u1680\\u002d\\u2028\\u0027\\u01dc\\ufe56\\u003a\\u000a\\uffe6\\u29fd\\u0020\\u30ee\\u007c\\U0001d178\\u0af1\\u0085",
@@ -3866,8 +3868,8 @@ void RBBITest::TestLineBreaks(void)
      "\\u000a\\ufe3c\\u201c\\u000d\\u2025\\u2007\\u201c\\u002d\\u20a0",
      "\\u2473\\u0e9d\\u0020\\u0085\\u000a\\ufe3c\\u201c\\u000d\\u2025",
      "\\U0001d16e\\ufffc\\u2025\\u0021\\u002d",
-     "\\ufffc\\u301b\\u0fa5\\U000e0103\\u2060\\u208e\\u17d5\\u034f\\u1009\\u003a\\u180e\\u2009\\u3111",
-     "\\u2014\\u0020\\u000a\\u17c5\\u24fc",
+     "\\ufffc\\u301b\\u0fa5\\U000e0103\\u2060\\u208e\\u17d5\\u1009\\u003a\\u180e\\u2009\\u3111",
+     "\\u2014\\u0020\\u000a\\u1cde\\u24fc",
      "\\ufffc\\u0020\\u2116\\uff6c\\u200b\\u0ac3\\U0001028f",
      "\\uaeb0\\u0344\\u0085\\ufffc\\u073b\\u2010",
      "\\u09cc\\u256a\\u276d\\u002d\\u3085\\u000d\\u0e05\\u2028\\u0fbb",
