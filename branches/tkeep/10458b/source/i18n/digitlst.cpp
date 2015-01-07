@@ -942,6 +942,42 @@ DigitList::isZero() const
     return decNumberIsZero(fDecNumber);
 }
 
+// -------------------------------------
+DigitInterval
+DigitList::interval() const {
+    int32_t intDigits = fDecNumber->digits + fDecNumber->exponent;
+    int32_t fracDigits = -fDecNumber->exponent;
+    if (intDigits < 0) {
+        intDigits = 0;
+    }
+    if (fracDigits < 0) {
+        fracDigits = 0;
+    }
+    return DigitInterval(intDigits, fracDigits);
+}
+
+uint8_t
+DigitList::getDigitByExponent(int32_t exponent) {
+    idx = exponent - fDecNumber->exponent
+    if (idx < 0 || idx >= fDecNumber->digits) {
+        return 0;
+    }
+    return fDecNumber->lsu[idx];
+}
+
+UnicodeString &
+DigitList::format(
+        const DecimalFormatSymbols &symbols,
+        const DigitGrouping &grouping,
+        const DigitInterval &interval,
+        UBool showTrailingDecimal,
+        UnicodeString &appendTo) const {
+    for (int32_t i = interval.getLargestExclusive() - 1; i >= interval.getSmallestInclusive(); --i) {
+        
+    }
+}
+
+
 U_NAMESPACE_END
 #endif // #if !UCONFIG_NO_FORMATTING
 

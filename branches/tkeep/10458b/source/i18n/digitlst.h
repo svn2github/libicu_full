@@ -51,6 +51,9 @@ typedef enum EDigitListValues {
 U_NAMESPACE_BEGIN
 
 class CharString;
+class DigitGrouping;
+class DigitInterval;
+class UnicodeString;
 
 // Export an explicit template instantiation of the MaybeStackHeaderAndArray that
 //    is used as a data member of DigitList.
@@ -356,6 +359,15 @@ public:
      */
     uint8_t     getDigitValue(int32_t i);
 
+    UnicodeString &format(
+        const DecimalFormatSymbols &symbols,
+        const DigitGrouping &grouping,
+        const DigitInterval &interval,
+        UnicodeString &appendTo) const;
+
+    DigitInterval interval() const;
+
+    uint8_t getDigitByExponent(int32_t i) const;
 
 private:
     /*
