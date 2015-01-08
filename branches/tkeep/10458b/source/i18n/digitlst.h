@@ -51,9 +51,7 @@ typedef enum EDigitListValues {
 U_NAMESPACE_BEGIN
 
 class CharString;
-class DigitGrouping;
 class DigitInterval;
-class UnicodeString;
 
 // Export an explicit template instantiation of the MaybeStackHeaderAndArray that
 //    is used as a data member of DigitList.
@@ -359,15 +357,20 @@ public:
      */
     uint8_t     getDigitValue(int32_t i);
 
-    UnicodeString &format(
-        const DecimalFormatSymbols &symbols,
-        const DigitGrouping &grouping,
-        const DigitInterval &interval,
-        UnicodeString &appendTo) const;
+    /**
+     * Returns the smallest DigitInterval that contains all of the digits
+     * in this DigitList.
+     */
+    DigitInterval& getSmallestInterval(DigitInterval &result) const;
 
-    DigitInterval interval() const;
-
-    uint8_t getDigitByExponent(int32_t i) const;
+    /**
+     * Like getDigitValue, but the digit is identified by exponent.
+     * For example, getDigitByExponent(7) returns the 10^7 place of this
+     * DigitList. Unlike getDigitValue, there are no upper or lower bounds
+     * for passed parameter. Instead, getDigitByExponent returns 0 if
+     * the exponent falls outside the interval for this DigitList.
+     */
+    uint8_t getDigitByExponent(int32_t exponent) const;
 
 private:
     /*

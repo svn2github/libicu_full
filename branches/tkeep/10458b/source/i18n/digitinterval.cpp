@@ -11,12 +11,6 @@
 
 U_NAMESPACE_BEGIN
 
-UBool DigitInterval::DigitInterval(
-        int32_t digitsLeft, int32_t digitsRight) {
-    setDigitsLeft(digitsLeft);
-    setDigitsRight(digitsRight);
-}
-
 void DigitInterval::expandToContain(const DigitInterval &rhs) {
     if (fSmallestInclusive > rhs.fSmallestInclusive) {
         fSmallestInclusive = rhs.fSmallestInclusive;
@@ -46,4 +40,3 @@ void DigitInterval::setDigitsRight(int32_t count) {
 
 U_NAMESPACE_END
 
-#endif  // !UCONFIG_NO_COLLATION

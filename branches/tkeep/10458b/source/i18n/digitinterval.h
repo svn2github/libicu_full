@@ -13,6 +13,7 @@
 #define __DIGIT_INTERVAL_H__
 
 #include "unicode/utypes.h"
+#include "unicode/uobject.h"
 
 U_NAMESPACE_BEGIN
 
@@ -27,14 +28,6 @@ public:
      */
     DigitInterval()
             : fLargestExclusive(INT32_MAX), fSmallestInclusive(INT32_MIN) { }
-
-    /**
-     * Spans digitsLeft of decimal point to digitsRight of decimal point
-     * DigitInterval(0, 0) is empty set. If digitsLeft or digitsRight is
-     * negative, they are treated as spanning all digits to the left or
-     * right of decimal place respectively.
-     */
-    DigitInterval(int32_t digitsLeft, int32_t digitsRight);
 
     /**
      * Expand this interval so that it contains all of rhs.

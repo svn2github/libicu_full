@@ -13,6 +13,7 @@
 #define __DIGITGROUPING_H__
 
 #include "unicode/utypes.h"
+#include "unicode/uobject.h"
 
 U_NAMESPACE_BEGIN
 
@@ -36,7 +37,7 @@ public:
      * @param digitsLeftOfDecimal the total number of digits to the left of
      *   the decimal.
      */
-    int32_t separatorCount(int32_t digitsLeftOfDecimal) const;
+    int32_t getSeparatorCount(int32_t digitsLeftOfDecimal) const;
 
     /**
      * Returns true if grouping is used FALSE otherwise. When

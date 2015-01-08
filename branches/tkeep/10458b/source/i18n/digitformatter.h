@@ -13,21 +13,32 @@
 #define __DIGITFORMATTER_H__
 
 #include "unicode/utypes.h"
+#include "unicode/uobject.h"
+#include "unicode/unistr.h"
 
 U_NAMESPACE_BEGIN
 
+class DecimalFormatSymbols;
+class DigitList;
+class DigitGrouping;
+class DigitInterval;
+class UnicodeString;
+
 class U_I18N_API DigitFormatter : public UMemory {
 public:
-    DigitFormatter() : fStart(2147483647), fEnd(-2147483648) { }
-    :
+DigitFormatter(const DecimalFormatSymbols &symbols);
 
-
-UnicodeString &formatDigits(
-    const DigitList &digits,
-    const DecimalFormatSymbols &symbols,
-    const DigitGrouping &grouping,
-    const FixedDigits &fixedDigits;
-    UnicodeString &appendTo);
+UnicodeString &format(
+        const DigitList &digits,
+        const DigitGrouping &grouping,
+        const DigitInterval &interval,
+        UBool alwaysShowDecimal,
+        UnicodeString &appendTo) const;
+private:
+UChar32 fLocalizedDigits[10];
+UnicodeString fGroupingSeparator;
+UnicodeString fDecimal;
+};
 
 U_NAMESPACE_END
 

@@ -34,6 +34,7 @@
 #include "mutex.h"
 #include "putilimp.h"
 #include "uassert.h"
+#include "digitinterval.h"
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
@@ -943,8 +944,8 @@ DigitList::isZero() const
 }
 
 // -------------------------------------
-DigitInterval
-DigitList::interval() const {
+DigitInterval &
+DigitList::getSmallestInterval(DigitInterval &result) const {
     int32_t intDigits = fDecNumber->digits + fDecNumber->exponent;
     int32_t fracDigits = -fDecNumber->exponent;
     if (intDigits < 0) {
@@ -953,28 +954,18 @@ DigitList::interval() const {
     if (fracDigits < 0) {
         fracDigits = 0;
     }
-    return DigitInterval(intDigits, fracDigits);
+    result.setDigitsLeft(intDigits);
+    result.setDigitsRight(fracDigits);
+    return result;
 }
 
 uint8_t
-DigitList::getDigitByExponent(int32_t exponent) {
-    idx = exponent - fDecNumber->exponent
+DigitList::getDigitByExponent(int32_t exponent) const {
+    int32_t idx = exponent - fDecNumber->exponent;
     if (idx < 0 || idx >= fDecNumber->digits) {
         return 0;
     }
     return fDecNumber->lsu[idx];
-}
-
-UnicodeString &
-DigitList::format(
-        const DecimalFormatSymbols &symbols,
-        const DigitGrouping &grouping,
-        const DigitInterval &interval,
-        UBool showTrailingDecimal,
-        UnicodeString &appendTo) const {
-    for (int32_t i = interval.getLargestExclusive() - 1; i >= interval.getSmallestInclusive(); --i) {
-        
-    }
 }
 
 

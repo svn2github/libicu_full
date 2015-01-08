@@ -13,17 +13,17 @@ U_NAMESPACE_BEGIN
 
 UBool DigitGrouping::isSeparatorAt(
         int32_t digitsLeftOfDecimal, int32_t digitPos) const {
-    if (!isGroupingEnabled(digitsLeftOfDecimal)) {
+    if (!isGroupingEnabled(digitsLeftOfDecimal) || digitPos < fGrouping) {
         return FALSE;
     }
     return ((digitPos - fGrouping) % getGrouping2() == 0);
 }
 
-UBool DigitGrouping::separatorCount(int32_t digitsLeftOfDecimal) const {
+int32_t DigitGrouping::getSeparatorCount(int32_t digitsLeftOfDecimal) const {
     if (!isGroupingEnabled(digitsLeftOfDecimal)) {
         return 0;
     }
-    return (digitsLeftOfDecimal - 1 - fGrouping) / getGrouping2() + 1
+    return (digitsLeftOfDecimal - 1 - fGrouping) / getGrouping2() + 1;
 }
 
 UBool DigitGrouping::isGroupingEnabled(int32_t digitsLeftOfDecimal) const {
@@ -41,4 +41,3 @@ int32_t DigitGrouping::getMinGrouping() const {
 
 U_NAMESPACE_END
 
-#endif  // !UCONFIG_NO_COLLATION
