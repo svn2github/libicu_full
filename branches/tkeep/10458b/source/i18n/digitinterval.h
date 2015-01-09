@@ -54,17 +54,17 @@ public:
     void setFracDigitCount(int32_t count);
 
     /**
-     * If returns 8, the largest digit in interval is the 10^7 digit.
+     * If returns 8, the most significant digit in interval is the 10^7 digit.
      * Returns INT32_MAX if this interval spans all digits to left of
      * decimal point.
      */
-    int32_t getLargestExclusive() const {
+    int32_t getMostSignificantExclusive() const {
         return fLargestExclusive;
     }
 
     /**
      * Returns number of digits to the left of the decimal that this
-     * interval includes. This is a synonym for getLargestExclusive().
+     * interval includes. This is a synonym for getMostSignificantExclusive().
      */
     int32_t getIntDigitCount() const { 
         return fLargestExclusive;
@@ -81,11 +81,11 @@ public:
      }
 
     /**
-     * If returns -3, the smallest digit in interval is the 10^-3 digit.
-     * Returns INT32_MIN if this interval spans all digits to right of
+     * If returns -3, the least significant digit in interval is the 10^-3
+     * digit. Returns INT32_MIN if this interval spans all digits to right of
      * decimal point.
      */
-    int32_t getSmallestInclusive() const {
+    int32_t getLeastSignificantInclusive() const {
         return fSmallestInclusive;
     }
 private:

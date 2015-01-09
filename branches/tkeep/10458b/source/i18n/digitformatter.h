@@ -36,7 +36,7 @@ UnicodeString &format(
         UBool alwaysShowDecimal,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const;
-int32_t getFormatCodePointLength(
+int32_t countChar32(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
         UBool alwaysShowDecimal) const;

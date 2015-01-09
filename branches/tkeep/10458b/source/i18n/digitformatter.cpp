@@ -33,12 +33,12 @@ DigitFormatter::DigitFormatter(const DecimalFormatSymbols &symbols) {
     fDecimal = symbols.getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
 }
 
-int32_t DigitFormatter::getFormatCodePointLength(
+int32_t DigitFormatter::countChar32(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
         UBool alwaysShowDecimal) const {
     int32_t result = interval.length();
-    if (alwaysShowDecimal || interval.getSmallestInclusive() < 0) {
+    if (alwaysShowDecimal || interval.getLeastSignificantInclusive() < 0) {
         result += fDecimal.countChar32();
     }
     result += grouping.getSeparatorCount(interval.getIntDigitCount()) * fGroupingSeparator.countChar32();
@@ -53,8 +53,8 @@ UnicodeString &DigitFormatter::format(
         UBool alwaysShowDecimal,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const {
-    int32_t digitsLeftOfDecimal = interval.getLargestExclusive();
-    int32_t lastDigitPos = interval.getSmallestInclusive();
+    int32_t digitsLeftOfDecimal = interval.getMostSignificantExclusive();
+    int32_t lastDigitPos = interval.getLeastSignificantInclusive();
     int32_t intBegin = appendTo.length();
     int32_t currentLength;
     int32_t fracBegin;

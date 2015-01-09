@@ -140,8 +140,8 @@ void NumberFormat2Test::TestDigitInterval() {
 void NumberFormat2Test::verifyInterval(
         const DigitInterval &interval,
         int32_t minInclusive, int32_t maxExclusive) {
-    assertEquals("", minInclusive, interval.getSmallestInclusive());
-    assertEquals("", maxExclusive, interval.getLargestExclusive());
+    assertEquals("", minInclusive, interval.getLeastSignificantInclusive());
+    assertEquals("", maxExclusive, interval.getMostSignificantExclusive());
     assertEquals("", maxExclusive, interval.getIntDigitCount());
 }
 
@@ -323,7 +323,7 @@ void NumberFormat2Test::verifyDigitFormatter(
     assertEquals(
             "",
             expected.countChar32(),
-            formatter.getFormatCodePointLength(grouping, interval, alwaysShowDecimal));
+            formatter.countChar32(grouping, interval, alwaysShowDecimal));
     UnicodeString appendTo;
     NumberFormat2Test_FieldPositionHandler handler;
     assertEquals(
