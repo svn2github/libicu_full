@@ -33,7 +33,7 @@ DigitFormatter::DigitFormatter(const DecimalFormatSymbols &symbols) {
     fDecimal = symbols.getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
 }
 
-int32_t DigitFormatter::formatLength(
+int32_t DigitFormatter::getFormatCodePointLength(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
         UBool alwaysShowDecimal) const {

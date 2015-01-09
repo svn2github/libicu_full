@@ -322,8 +322,8 @@ void NumberFormat2Test::verifyDigitFormatter(
         const NumberFormat2Test_Attributes *expectedAttributes) {
     assertEquals(
             "",
-            expected.length(),
-            formatter.formatLength(grouping, interval, alwaysShowDecimal));
+            expected.countChar32(),
+            formatter.getFormatCodePointLength(grouping, interval, alwaysShowDecimal));
     UnicodeString appendTo;
     NumberFormat2Test_FieldPositionHandler handler;
     assertEquals(
