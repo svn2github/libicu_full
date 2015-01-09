@@ -23,6 +23,7 @@ class DigitList;
 class DigitGrouping;
 class DigitInterval;
 class UnicodeString;
+class FieldPositionHandler;
 
 class U_I18N_API DigitFormatter : public UMemory {
 public:
@@ -33,7 +34,12 @@ UnicodeString &format(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
         UBool alwaysShowDecimal,
+        FieldPositionHandler &handler,
         UnicodeString &appendTo) const;
+int32_t formatLength(
+        const DigitGrouping &grouping,
+        const DigitInterval &interval,
+        UBool alwaysShowDecimal) const;
 private:
 UChar32 fLocalizedDigits[10];
 UnicodeString fGroupingSeparator;

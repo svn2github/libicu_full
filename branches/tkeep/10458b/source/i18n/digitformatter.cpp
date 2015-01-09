@@ -12,6 +12,8 @@
 #include "digitlst.h"
 #include "digitgrouping.h"
 #include "unicode/dcfmtsym.h"
+#include "unicode/unum.h"
+#include "fphdlimp.h"
 
 
 U_NAMESPACE_BEGIN
@@ -31,24 +33,65 @@ DigitFormatter::DigitFormatter(const DecimalFormatSymbols &symbols) {
     fDecimal = symbols.getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
 }
 
+int32_t DigitFormatter::formatLength(
+        const DigitGrouping &grouping,
+        const DigitInterval &interval,
+        UBool alwaysShowDecimal) const {
+    int32_t result = interval.length();
+    if (alwaysShowDecimal || interval.getSmallestInclusive() < 0) {
+        result += fDecimal.countChar32();
+    }
+    result += grouping.getSeparatorCount(interval.getIntDigitCount()) * fGroupingSeparator.countChar32();
+    return result;
+}
+
+
 UnicodeString &DigitFormatter::format(
         const DigitList &digits,
         const DigitGrouping &grouping,
         const DigitInterval &interval,
         UBool alwaysShowDecimal,
+        FieldPositionHandler &handler,
         UnicodeString &appendTo) const {
     int32_t digitsLeftOfDecimal = interval.getLargestExclusive();
-    for (int32_t i = digitsLeftOfDecimal - 1; i >= interval.getSmallestInclusive(); --i) { 
-        if (!alwaysShowDecimal && i == -1) {
-            appendTo.append(fDecimal);
+    int32_t lastDigitPos = interval.getSmallestInclusive();
+    int32_t intBegin = appendTo.length();
+    int32_t currentLength;
+    int32_t fracBegin;
+    for (int32_t i = digitsLeftOfDecimal - 1; i >= lastDigitPos; --i) { 
+        if (i == -1) {
+            if (!alwaysShowDecimal) {
+                currentLength = appendTo.length();
+                appendTo.append(fDecimal);
+                handler.addAttribute(UNUM_DECIMAL_SEPARATOR_FIELD, currentLength, appendTo.length());
+            }
+            fracBegin = appendTo.length();
         }
         appendTo.append(fLocalizedDigits[digits.getDigitByExponent(i)]);
         if (grouping.isSeparatorAt(digitsLeftOfDecimal, i)) {
+            currentLength = appendTo.length();
             appendTo.append(fGroupingSeparator);
+            handler.addAttribute(UNUM_GROUPING_SEPARATOR_FIELD, currentLength, appendTo.length());
         }
-        if (alwaysShowDecimal && i == 0) {
-            appendTo.append(fDecimal);
+        if (i == 0) {
+            if (digitsLeftOfDecimal > 0) {
+                handler.addAttribute(UNUM_INTEGER_FIELD, intBegin, appendTo.length());
+            }
+            if (alwaysShowDecimal) {
+                currentLength = appendTo.length();
+                appendTo.append(fDecimal);
+                handler.addAttribute(
+                        UNUM_DECIMAL_SEPARATOR_FIELD,
+                        currentLength,
+                        appendTo.length());
+                
+            }
         }
+    }
+    // lastDigitPos is never > 0 so we are guaranteed that kIntegerField
+    // is already added.
+    if (lastDigitPos < 0) {
+        handler.addAttribute(UNUM_FRACTION_FIELD, fracBegin, appendTo.length());
     }
     return appendTo;
 }

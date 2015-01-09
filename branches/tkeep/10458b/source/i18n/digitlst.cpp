@@ -954,8 +954,8 @@ DigitList::getSmallestInterval(DigitInterval &result) const {
     if (fracDigits < 0) {
         fracDigits = 0;
     }
-    result.setDigitsLeft(intDigits);
-    result.setDigitsRight(fracDigits);
+    result.setIntDigitCount(intDigits);
+    result.setFracDigitCount(fracDigits);
     return result;
 }
 

@@ -44,17 +44,17 @@ public:
      * this interval spans. If count is negative, it means span all digits
      * to the left of the decimal point.
      */
-    void setDigitsLeft(int32_t count);
+    void setIntDigitCount(int32_t count);
 
     /**
      * Changes the number of digits to the right of the decimal point that
      * this interval spans. If count is negative, it means span all digits
      * to the right of the decimal point.
      */
-    void setDigitsRight(int32_t count);
+    void setFracDigitCount(int32_t count);
 
     /**
-     * If returns 8. The largest digit in interval is the 10^7 digit.
+     * If returns 8, the largest digit in interval is the 10^7 digit.
      * Returns INT32_MAX if this interval spans all digits to left of
      * decimal point.
      */
@@ -63,7 +63,25 @@ public:
     }
 
     /**
-     * If returns -3. The smallest digit in interval is the 10^-3 digit.
+     * Returns number of digits to the left of the decimal that this
+     * interval includes. This is a synonym for getLargestExclusive().
+     */
+    int32_t getIntDigitCount() const { 
+        return fLargestExclusive;
+    }
+
+    /**
+     * Returns the total number of digits that this interval spans.
+     * Caution: If this interval spans all digits to the left or right of
+     * decimal point instead of some fixed number, then what length()
+     * returns is undefined.
+     */
+    int32_t length() const {
+        return fLargestExclusive - fSmallestInclusive;
+     }
+
+    /**
+     * If returns -3, the smallest digit in interval is the 10^-3 digit.
      * Returns INT32_MIN if this interval spans all digits to right of
      * decimal point.
      */

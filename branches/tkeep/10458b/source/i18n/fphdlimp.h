@@ -24,7 +24,7 @@ class FieldPositionHandler: public UMemory {
   virtual ~FieldPositionHandler();
   virtual void addAttribute(int32_t id, int32_t start, int32_t limit);
   virtual void shiftLast(int32_t delta);
-  virtual UBool isRecording(void);
+  virtual UBool isRecording(void) const;
 };
 
 
@@ -39,7 +39,7 @@ class FieldPositionOnlyHandler : public FieldPositionHandler {
 
   virtual void addAttribute(int32_t id, int32_t start, int32_t limit);
   virtual void shiftLast(int32_t delta);
-  virtual UBool isRecording(void);
+  virtual UBool isRecording(void) const;
 };
 
 
@@ -63,7 +63,7 @@ class FieldPositionIteratorHandler : public FieldPositionHandler {
 
   virtual void addAttribute(int32_t id, int32_t start, int32_t limit);
   virtual void shiftLast(int32_t delta);
-  virtual UBool isRecording(void);
+  virtual UBool isRecording(void) const;
 };
 
 U_NAMESPACE_END

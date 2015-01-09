@@ -29,11 +29,11 @@ void DigitInterval::shrinkToFitWithin(const DigitInterval &rhs) {
     }
 }
 
-void DigitInterval::setDigitsLeft(int32_t count) {
+void DigitInterval::setIntDigitCount(int32_t count) {
     fLargestExclusive = count < 0 ? INT32_MAX : count;
 }
 
-void DigitInterval::setDigitsRight(int32_t count) {
+void DigitInterval::setFracDigitCount(int32_t count) {
     fSmallestInclusive = count < 0 ? INT32_MIN : -count;
 }
 
