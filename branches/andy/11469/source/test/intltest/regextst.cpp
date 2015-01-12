@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 2002-2014, International Business Machines Corporation and
+ * Copyright (c) 2002-2015, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "cmemory.h"
 #include "cstring.h"
 #include "uinvchar.h"
 
@@ -5058,7 +5059,7 @@ void RegexTest::PreAllocatedUTextCAPI () {
         UBool    result;
         int64_t  length = 0;
 
-        u_uastrncpy(text1, "noise abc interior def, and this is off the end",  sizeof(text1)/2);
+        u_uastrncpy(text1, "noise abc interior def, and this is off the end",  UPRV_LENGTHOF(text1));
         //                  012345678901234567890123456789012345678901234567
         //                  0         1         2         3         4
 
@@ -5109,8 +5110,8 @@ void RegexTest::PreAllocatedUTextCAPI () {
         utext_openUnicodeString(&bufferText, &buffer, &status);
 
         status = U_ZERO_ERROR;
-        u_uastrncpy(text1, "Replace xaax x1x x...x.",  sizeof(text1)/2);
-        u_uastrncpy(text2, "No match here.",  sizeof(text2)/2);
+        u_uastrncpy(text1, "Replace xaax x1x x...x.",  UPRV_LENGTHOF(text1));
+        u_uastrncpy(text2, "No match here.",  UPRV_LENGTHOF(text2)/2);
         regextst_openUTF8FromInvariant(&replText, "<$1>", -1, &status);
 
         re = uregex_openC("x(.*?)x", 0, NULL, &status);
