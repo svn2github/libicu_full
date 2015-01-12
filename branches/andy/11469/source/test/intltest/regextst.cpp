@@ -239,7 +239,12 @@ if (status!=errcode) {dataerrln("RegexTest failure at line %d.  Expected status=
 #define REGEX_ASSERT_L(expr, line) {if ((expr)==FALSE) { \
     errln("RegexTest failure at line %d, from %d.", __LINE__, (line)); return;}}
 
-#define REGEX_ASSERT_UNISTR(ustr,inv) {if (!(ustr==inv)) {errln("%s:%d: RegexTest failure: REGEX_ASSERT_UNISTR(%s,%s) failed \n", __FILE__, __LINE__, extractToAssertBuf(ustr),inv);};}
+// expected: const char * , restricted to invariant characters.
+// actual: const UnicodeString &
+#define REGEX_ASSERT_UNISTR(expected, actual) { \
+    if (UnicodeString(expected, -1, US_INV) != (actual)) { \
+        errln("%s:%d: RegexTest failure: REGEX_ASSERT_UNISTR(%s, %s) failed \n",  \
+                __FILE__, __LINE__, expected, extractToAssertBuf(actual));};}
 
 
 static UBool testUTextEqual(UText *uta, UText *utb) {
@@ -2060,46 +2065,62 @@ void RegexTest::API_Match_UTF8() {
         REGEX_ASSERT(result == &destText);
         REGEX_ASSERT(utext_getNativeIndex(result) == 0);
         REGEX_ASSERT(length == 10);
+        REGEX_ASSERT_UTEXT_INVARIANT("0123456789", result);
 
+        // Capture Group 1 == "234567"
         result = matcher->group(1, NULL, length, status);
         REGEX_CHECK_STATUS;
-        //const char str_234567[] = { 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x00 }; /* 234567 */
-        // REGEX_ASSERT_UTEXT_UTF8(str_234567, result);
         REGEX_ASSERT(utext_getNativeIndex(result) == 2);
         REGEX_ASSERT(length == 6);
+        REGEX_ASSERT_UTEXT_INVARIANT("0123456789", result);
         utext_close(result);
+
         result = matcher->group(1, &destText, length, status);
         REGEX_CHECK_STATUS;
         REGEX_ASSERT(result == &destText);
         REGEX_ASSERT(utext_getNativeIndex(result) == 2);
         REGEX_ASSERT(length == 6);
+        REGEX_ASSERT_UTEXT_INVARIANT("0123456789", result);
         utext_close(result);
 
-#if 0
-TODO: fix the rest.
-        result = matcher->group(2, NULL, status);
+        // Capture Group 2 == "45"
+        result = matcher->group(2, NULL, length, status);
         REGEX_CHECK_STATUS;
-        const char str_45[] = { 0x34, 0x35, 0x00 }; /* 45 */
-        REGEX_ASSERT_UTEXT_UTF8(str_45, result);
+        REGEX_ASSERT(utext_getNativeIndex(result) == 4);
+        REGEX_ASSERT(length == 2);
+        REGEX_ASSERT_UTEXT_INVARIANT("0123456789", result);
         utext_close(result);
-        result = matcher->group(2, &destText, status);
+
+        result = matcher->group(2, &destText, length, status);
         REGEX_CHECK_STATUS;
         REGEX_ASSERT(result == &destText);
-        REGEX_ASSERT_UTEXT_UTF8(str_45, result);
-
-        result = matcher->group(3, NULL, status);
-        REGEX_CHECK_STATUS;
-        const char str_89[] = { 0x38, 0x39, 0x00 }; /* 89 */
-        REGEX_ASSERT_UTEXT_UTF8(str_89, result);
+        REGEX_ASSERT(utext_getNativeIndex(result) == 4);
+        REGEX_ASSERT(length == 2);
+        REGEX_ASSERT_UTEXT_INVARIANT("0123456789", result);
         utext_close(result);
-        result = matcher->group(3, &destText, status);
+
+        // Capture Group 3 == "89"
+        result = matcher->group(3, NULL, length, status);
+        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(utext_getNativeIndex(result) == 8);
+        REGEX_ASSERT(length == 2);
+        REGEX_ASSERT_UTEXT_INVARIANT("0123456789", result);
+        utext_close(result);
+
+        result = matcher->group(3, &destText, length, status);
         REGEX_CHECK_STATUS;
         REGEX_ASSERT(result == &destText);
-        REGEX_ASSERT_UTEXT_UTF8(str_89, result);
-#endif
+        REGEX_ASSERT(utext_getNativeIndex(result) == 8);
+        REGEX_ASSERT(length == 2);
+        REGEX_ASSERT_UTEXT_INVARIANT("0123456789", result);
+        utext_close(result);
 
+        // Capture Group number out of range.
+        status = U_ZERO_ERROR;
         REGEX_ASSERT_FAIL(matcher->group(-1, status), U_INDEX_OUTOFBOUNDS_ERROR);
+        status = U_ZERO_ERROR;
         REGEX_ASSERT_FAIL(matcher->group( 4, status), U_INDEX_OUTOFBOUNDS_ERROR);
+        status = U_ZERO_ERROR;
         matcher->reset();
         REGEX_ASSERT_FAIL(matcher->group( 0, status), U_REGEX_INVALID_STATE);
 
@@ -3079,7 +3100,6 @@ void RegexTest::API_Pattern_UTF8() {
 
     //
     // split of a UText based string, with library allocating output UTexts.
-    //        This option is not used by the UnicodeString split implementation.
     //
     {
         status = U_ZERO_ERROR;
@@ -3120,7 +3140,7 @@ void RegexTest::API_Pattern_UTF8() {
     regextst_openUTF8FromInvariant(&re1, helloWorldInvariant, -1, &status);
     pat1 = RegexPattern::compile(&re1, pe, status);
     REGEX_CHECK_STATUS;
-    REGEX_ASSERT_UNISTR(pat1->pattern(),"(Hello, world)*");
+    REGEX_ASSERT_UNISTR("(Hello, world)*", pat1->pattern());
     REGEX_ASSERT_UTEXT_INVARIANT("(Hello, world)*", pat1->patternText(status));
     delete pat1;
 

@@ -1,6 +1,6 @@
 /*
 **************************************************************************
-*   Copyright (C) 2002-2014 International Business Machines Corporation  *
+*   Copyright (C) 2002-2015 International Business Machines Corporation  *
 *   and others. All rights reserved.                                     *
 **************************************************************************
 */
@@ -1201,88 +1201,6 @@ UnicodeString RegexMatcher::group(int32_t groupNum, UErrorCode &status) const {
 }
 
 
-#if 0
-//  Return deep (mutable) clone
-//      Technology Preview (as an API), but note that the UnicodeString API is implemented
-//      using this function.
-UText *RegexMatcher::group(int32_t groupNum, UText *dest, UErrorCode &status) const {
-    if (U_FAILURE(status)) {
-        return dest;
-    }
-
-    if (U_FAILURE(fDeferredStatus)) {
-        status = fDeferredStatus;
-    } else if (fMatch == FALSE) {
-        status = U_REGEX_INVALID_STATE;
-    } else if (groupNum < 0 || groupNum > fPattern->fGroupMap->size()) {
-        status = U_INDEX_OUTOFBOUNDS_ERROR;
-    }
-    if (U_FAILURE(status)) {
-        return dest;
-    }
-
-    int64_t s, e;
-    if (groupNum == 0) {
-        s = fMatchStart;
-        e = fMatchEnd;
-    } else {
-        int32_t groupOffset = fPattern->fGroupMap->elementAti(groupNum-1);
-        U_ASSERT(groupOffset < fPattern->fFrameSize);
-        U_ASSERT(groupOffset >= 0);
-        s = fFrame->fExtra[groupOffset];
-        e = fFrame->fExtra[groupOffset+1];
-    }
-
-    if (s < 0) {
-        // A capture group wasn't part of the match
-        if (dest) {
-            utext_replace(dest, 0, utext_nativeLength(dest), NULL, 0, &status);
-            return dest;
-        } else {
-            return utext_openUChars(NULL, NULL, 0, &status);
-        }
-    }
-    U_ASSERT(s <= e);
-
-    if (UTEXT_FULL_TEXT_IN_CHUNK(fInputText, fInputLength)) {
-        U_ASSERT(e <= fInputLength);
-        if (dest) {
-            utext_replace(dest, 0, utext_nativeLength(dest), fInputText->chunkContents+s, (int32_t)(e-s), &status);
-        } else {
-            UText groupText = UTEXT_INITIALIZER;
-            utext_openUChars(&groupText, fInputText->chunkContents+s, e-s, &status);
-            dest = utext_clone(NULL, &groupText, TRUE, FALSE, &status);
-            utext_close(&groupText);
-        }
-    } else {
-        int32_t len16;
-        if (UTEXT_USES_U16(fInputText)) {
-            len16 = (int32_t)(e-s);
-        } else {
-            UErrorCode lengthStatus = U_ZERO_ERROR;
-            len16 = utext_extract(fInputText, s, e, NULL, 0, &lengthStatus);
-        }
-        UChar *groupChars = (UChar *)uprv_malloc(sizeof(UChar)*(len16+1));
-        if (groupChars == NULL) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return dest;
-        }
-        utext_extract(fInputText, s, e, groupChars, len16+1, &status);
-
-        if (dest) {
-            utext_replace(dest, 0, utext_nativeLength(dest), groupChars, len16, &status);
-        } else {
-            UText groupText = UTEXT_INITIALIZER;
-            utext_openUChars(&groupText, groupChars, len16, &status);
-            dest = utext_clone(NULL, &groupText, TRUE, FALSE, &status);
-            utext_close(&groupText);
-        }
-
-        uprv_free(groupChars);
-    }
-    return dest;
-}
-#endif
 
 //--------------------------------------------------------------------------------
 //
@@ -2058,7 +1976,7 @@ static UText *utext_extract_replace(UText *src, UText *dest, int64_t start, int6
         return dest;
     }
 
-    // Caller did not proved a prexisting UText.
+    // Caller did not provide a prexisting UText.
     // Open a new one, and have it adopt the text buffer storage.
     if (U_FAILURE(*status)) {
         return NULL;

@@ -647,7 +647,7 @@ uregex_group(URegularExpression *regexp2,
 
     if (destCapacity == 0 || regexp->fText != NULL) {
         // If preflighting or if we already have the text as UChars,
-        // this is a little cheaper than going through uregex_groupUTextDeep()
+        // this is a little cheaper than extracting the the UText
 
         //
         // Pick up the range of characters from the matcher
