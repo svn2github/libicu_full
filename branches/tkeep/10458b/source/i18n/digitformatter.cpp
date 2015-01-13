@@ -19,6 +19,12 @@
 U_NAMESPACE_BEGIN
 
 DigitFormatter::DigitFormatter(const DecimalFormatSymbols &symbols) {
+    setDecimalFormatSymbols(symbols);
+}
+
+void
+DigitFormatter::setDecimalFormatSymbols(
+        const DecimalFormatSymbols &symbols) {
     fLocalizedDigits[0] = symbols.getConstSymbol(DecimalFormatSymbols::kZeroDigitSymbol).char32At(0);
     fLocalizedDigits[1] = symbols.getConstSymbol(DecimalFormatSymbols::kOneDigitSymbol).char32At(0);
     fLocalizedDigits[2] = symbols.getConstSymbol(DecimalFormatSymbols::kTwoDigitSymbol).char32At(0);

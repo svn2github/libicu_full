@@ -20,6 +20,8 @@
 #include "digitgrouping.h"
 #include "unicode/localpointer.h"
 #include "fphdlimp.h"
+#include "digitaffixesandpadding.h"
+#include "valueformatter.h"
 
 struct NumberFormat2Test_Attributes {
     int32_t id;
@@ -56,7 +58,7 @@ void NumberFormat2Test_FieldPositionHandler::addAttribute(
     attributes[count].spos = -1;
 }
 
-void NumberFormat2Test_FieldPositionHandler::shiftLast(int32_t delta) {
+void NumberFormat2Test_FieldPositionHandler::shiftLast(int32_t /* delta */) {
 }
 
 UBool NumberFormat2Test_FieldPositionHandler::isRecording() const {
@@ -72,7 +74,25 @@ private:
     void TestGroupingUsed();
     void TestBenchmark();
     void TestDigitListInterval();
+    void TestDigitAffixesAndPadding();
+    void TestValueFormatter();
+    void TestDigitAffix();
     void TestDigitFormatter();
+    void verifyAffix(
+            const UnicodeString &expected,
+            const DigitAffix &affix,
+            const NumberFormat2Test_Attributes *expectedAttributes);
+    void verifyValueFormatter(
+            const UnicodeString &expected,
+            const ValueFormatter &formatter,
+            const DigitList &digits,
+            const NumberFormat2Test_Attributes *expectedAttributes);
+    void verifyAffixesAndPadding(
+            const UnicodeString &expected,
+            const DigitAffixesAndPadding &aaf,
+            DigitList &digits,
+            const ValueFormatter &vf,
+            const NumberFormat2Test_Attributes *expectedAttributes);
     void verifyDigitFormatter(
             const UnicodeString &expected,
             const DigitFormatter &formatter,
@@ -97,6 +117,9 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestDigitListInterval);
     TESTCASE_AUTO(TestDigitFormatter);
     TESTCASE_AUTO(TestBenchmark);
+    TESTCASE_AUTO(TestDigitAffix);
+    TESTCASE_AUTO(TestValueFormatter);
+    TESTCASE_AUTO(TestDigitAffixesAndPadding);
  
     TESTCASE_AUTO_END;
 }
@@ -309,6 +332,237 @@ void NumberFormat2Test::TestDigitFormatter() {
                 interval,
                 FALSE,
                 expectedAttributes);
+    }
+}
+
+void NumberFormat2Test::TestValueFormatter() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols symbols("en", status);
+    DigitFormatter formatter(symbols);
+    DigitGrouping grouping;
+    grouping.fGrouping = 3;
+    DigitInterval smallest;
+    smallest.setIntDigitCount(4);
+    smallest.setFracDigitCount(2);
+    DigitInterval largest;
+    largest.setIntDigitCount(6);
+    largest.setFracDigitCount(4);
+    ValueFormatter vf;
+    vf.prepareFixedDecimalFormatting(
+            formatter,
+            grouping,
+            smallest,
+            largest,
+            FALSE);
+    DigitList digits;
+    {
+        digits.set(3.5);
+        verifyValueFormatter(
+                "0,003.50",
+                vf,
+                digits,
+                NULL);
+    }
+    {
+        digits.set(1234567.89012);
+        verifyValueFormatter(
+                "234,567.8901",
+                vf,
+                digits,
+                NULL);
+    }
+}
+
+void NumberFormat2Test::TestDigitAffix() {
+    DigitAffix affix;
+    {
+        affix.append("foo");
+        affix.append("--", UNUM_SIGN_FIELD);
+        affix.append("%", UNUM_PERCENT_FIELD);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 3, 5},
+            {UNUM_PERCENT_FIELD, 5, 6},
+            {0, -1, 0}};
+        verifyAffix("foo--%", affix, expectedAttributes);
+    }
+    {
+        affix.remove();
+        affix.append("USD", UNUM_CURRENCY_FIELD);
+        affix.append(" ");
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_CURRENCY_FIELD, 0, 3},
+            {0, -1, 0}};
+        verifyAffix("USD ", affix, expectedAttributes);
+    }
+}
+
+void NumberFormat2Test::TestDigitAffixesAndPadding() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols symbols("en", status);
+    DigitFormatter formatter(symbols);
+    DigitGrouping grouping;
+    grouping.fGrouping = 3;
+    DigitInterval smallest;
+    smallest.setIntDigitCount(1);
+    smallest.setFracDigitCount(0);
+    DigitInterval largest;
+    largest.setIntDigitCount(6);
+    largest.setFracDigitCount(4);
+    ValueFormatter vf;
+    vf.prepareFixedDecimalFormatting(
+            formatter,
+            grouping,
+            smallest,
+            largest,
+            TRUE);
+    DigitList digits;
+    DigitAffixesAndPadding aap;
+    aap.fPositivePrefix.append("(+", UNUM_SIGN_FIELD);
+    aap.fPositiveSuffix.append("+)", UNUM_SIGN_FIELD);
+    aap.fNegativePrefix.append("(-", UNUM_SIGN_FIELD);
+    aap.fNegativeSuffix.append("-)", UNUM_SIGN_FIELD);
+    aap.fPadChar = 42;  // '*'
+    aap.fWidth = 10;
+    {
+        aap.fPadPosition = DigitAffixesAndPadding::kPadBeforePrefix;
+        digits.set(3);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 4, 6},
+            {UNUM_INTEGER_FIELD, 6, 7},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 7, 8},
+            {UNUM_SIGN_FIELD, 8, 10},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "****(+3.+)",
+                aap,
+                digits,
+                vf,
+                expectedAttributes);
+    }
+    {
+        aap.fPadPosition = DigitAffixesAndPadding::kPadAfterPrefix;
+        digits.set(3);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 2},
+            {UNUM_INTEGER_FIELD, 6, 7},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 7, 8},
+            {UNUM_SIGN_FIELD, 8, 10},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "(+****3.+)",
+                aap,
+                digits,
+                vf,
+                expectedAttributes);
+    }
+    {
+        aap.fPadPosition = DigitAffixesAndPadding::kPadBeforeSuffix;
+        digits.set(3);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 2},
+            {UNUM_INTEGER_FIELD, 2, 3},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 3, 4},
+            {UNUM_SIGN_FIELD, 8, 10},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "(+3.****+)",
+                aap,
+                digits,
+                vf,
+                expectedAttributes);
+    }
+    {
+        aap.fPadPosition = DigitAffixesAndPadding::kPadAfterSuffix;
+        digits.set(3);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 2},
+            {UNUM_INTEGER_FIELD, 2, 3},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 3, 4},
+            {UNUM_SIGN_FIELD, 4, 6},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "(+3.+)****",
+                aap,
+                digits,
+                vf,
+                expectedAttributes);
+    }
+    {
+        aap.fPadPosition = DigitAffixesAndPadding::kPadAfterSuffix;
+        digits.set(-1234.5);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 2},
+            {UNUM_GROUPING_SEPARATOR_FIELD, 3, 4},
+            {UNUM_INTEGER_FIELD, 2, 7},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 7, 8},
+            {UNUM_FRACTION_FIELD, 8, 9},
+            {UNUM_SIGN_FIELD, 9, 11},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "(-1,234.5-)",
+                aap,
+                digits,
+                vf,
+                expectedAttributes);
+    }
+}
+
+void NumberFormat2Test::verifyAffixesAndPadding(
+        const UnicodeString &expected,
+        const DigitAffixesAndPadding &aaf,
+        DigitList &digits,
+        const ValueFormatter &vf,
+        const NumberFormat2Test_Attributes *expectedAttributes) {
+    UnicodeString appendTo;
+    NumberFormat2Test_FieldPositionHandler handler;
+    assertEquals(
+            "",
+            expected,
+            aaf.format(
+                    digits,
+                    vf,
+                    handler,
+                    appendTo));
+    if (expectedAttributes != NULL) {
+        verifyAttributes(expectedAttributes, handler.attributes);
+    }
+}
+
+void NumberFormat2Test::verifyAffix(
+        const UnicodeString &expected,
+        const DigitAffix &affix,
+        const NumberFormat2Test_Attributes *expectedAttributes) {
+    UnicodeString appendTo;
+    NumberFormat2Test_FieldPositionHandler handler;
+    assertEquals(
+            "",
+            expected,
+            affix.format(handler, appendTo));
+    if (expectedAttributes != NULL) {
+        verifyAttributes(expectedAttributes, handler.attributes);
+    }
+}
+
+void NumberFormat2Test::verifyValueFormatter(
+        const UnicodeString &expected,
+        const ValueFormatter &formatter,
+        const DigitList &digits,
+        const NumberFormat2Test_Attributes *expectedAttributes) {
+    assertEquals(
+            "",
+            expected.countChar32(),
+            formatter.countChar32(digits));
+    UnicodeString appendTo;
+    NumberFormat2Test_FieldPositionHandler handler;
+    assertEquals(
+            "",
+            expected,
+            formatter.format(
+                    digits,
+                    handler,
+                    appendTo));
+    if (expectedAttributes != NULL) {
+        verifyAttributes(expectedAttributes, handler.attributes);
     }
 }
 

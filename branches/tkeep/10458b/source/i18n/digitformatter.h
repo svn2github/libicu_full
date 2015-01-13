@@ -29,6 +29,8 @@ class U_I18N_API DigitFormatter : public UMemory {
 public:
 DigitFormatter(const DecimalFormatSymbols &symbols);
 
+void setDecimalFormatSymbols(const DecimalFormatSymbols &symbols);
+
 UnicodeString &format(
         const DigitList &digits,
         const DigitGrouping &grouping,
