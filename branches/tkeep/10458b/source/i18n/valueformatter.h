@@ -32,7 +32,7 @@ class DigitInterval;
  */
 class ValueFormatter : public UObject {
 public:
-    ValueFormatter() : fDigitFormatter(NULL) {
+    ValueFormatter() : fType(kFormatTypeCount) {
     }
 
     /**
@@ -56,6 +56,16 @@ public:
         const DigitInterval &maximumInterval,
         UBool alwaysShowDecimal);
 private:
+    ValueFormatter(const ValueFormatter &);
+    ValueFormatter &operator=(const ValueFormatter &);
+    enum FormatType {
+        kFixedDecimal,
+        kScientificNotation,
+        kFormatTypeCount
+    }
+
+    FormatType fType;
+
     // for fixed decimal formatting
     const DigitFormatter *fDigitFormatter;
     const DigitGrouping *fGrouping;

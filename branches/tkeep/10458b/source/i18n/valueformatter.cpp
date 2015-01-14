@@ -25,31 +25,43 @@ ValueFormatter::format(
         const DigitList &value,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const {
-    if (fDigitFormatter != NULL) {
-        DigitInterval interval;
-        return fDigitFormatter->format(
-                value,
-                *fGrouping,
-                fixedDecimalInterval(value, interval),
-                fAlwaysShowDecimal,
-                handler,
-                appendTo);
-    } else {
+    switch (fType) {
+    case kFixedDecimal:
+        {
+            DigitInterval interval;
+            return fDigitFormatter->format(
+                    value,
+                    *fGrouping,
+                    fixedDecimalInterval(value, interval),
+                    fAlwaysShowDecimal,
+                    handler,
+                    appendTo);
+        }
+        break;
+    default:
         U_ASSERT(FALSE);
+        break;
     }
+    return appendTo;
 }
 
 int32_t
 ValueFormatter::countChar32(const DigitList &value) const {
-    if (fDigitFormatter != NULL) {
-        DigitInterval interval;
-        return fDigitFormatter->countChar32(
-                *fGrouping,
-                fixedDecimalInterval(value, interval),
-                fAlwaysShowDecimal);
-    } else {
+    switch (fType) {
+    case kFixedDecimal:
+        {
+            DigitInterval interval;
+            return fDigitFormatter->countChar32(
+                    *fGrouping,
+                    fixedDecimalInterval(value, interval),
+                    fAlwaysShowDecimal);
+        }
+        break;
+    default:
         U_ASSERT(FALSE);
+        break;
     }
+    return 0;
 }
 
 void
@@ -59,6 +71,7 @@ ValueFormatter::prepareFixedDecimalFormatting(
         const DigitInterval &minimumInterval,
         const DigitInterval &maximumInterval,
         UBool alwaysShowDecimal) {
+    fType = kFixedDecimal;
     fDigitFormatter = &formatter;
     fGrouping = &grouping;
     fMinimumInterval = &minimumInterval;
