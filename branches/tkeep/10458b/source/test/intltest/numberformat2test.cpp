@@ -495,6 +495,11 @@ void NumberFormat2Test::TestPluralAffix() {
                 pa.getByVariant("many"),
                 expectedAttributes);
     }
+    assertTrue("", pa.hasMultipleVariants());
+    pa.remove();
+    pa.append("$$$", UNUM_CURRENCY_FIELD);
+    assertFalse("", pa.hasMultipleVariants());
+    
 }
 
 void NumberFormat2Test::TestDigitAffixesAndPadding() {

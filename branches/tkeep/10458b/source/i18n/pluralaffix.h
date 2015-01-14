@@ -66,6 +66,11 @@ public:
      * Get the DigitAffix for the other variant.
      */
     const DigitAffix &getOtherVariant() const { return *affixes[0]; }
+
+    /**
+     * Returns TRUE if this instance has variants besides "other"
+     */
+    UBool hasMultipleVariants() const;
 private:
     DigitAffix otherAffix;
     DigitAffix *affixes[6];

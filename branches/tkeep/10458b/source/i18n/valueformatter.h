@@ -62,7 +62,7 @@ private:
         kFixedDecimal,
         kScientificNotation,
         kFormatTypeCount
-    }
+    };
 
     FormatType fType;
 

@@ -153,5 +153,15 @@ PluralAffix::getByVariant(const char *variant) const {
     return *affix;
 }
 
+UBool
+PluralAffix::hasMultipleVariants() const {
+    for (int32_t i = 1; i < UPRV_LENGTHOF(affixes); ++i) {
+        if (affixes[i] != NULL) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 U_NAMESPACE_END
 
