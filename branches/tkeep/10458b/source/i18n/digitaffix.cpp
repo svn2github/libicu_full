@@ -2,7 +2,7 @@
  * Copyright (C) 2015, International Business Machines
  * Corporation and others.  All Rights Reserved.
  *
- * file name: digitformatter.cpp
+ * file name: digitaffix.cpp
  */
 
 #include "unicode/utypes.h"

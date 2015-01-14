@@ -22,8 +22,8 @@ DigitAffixesAndPadding::format(
         UnicodeString &appendTo) const {
     UBool bPositive = value.isPositive();
     value.setPositive(TRUE);
-    const DigitAffix *prefix = bPositive ? &fPositivePrefix : &fNegativePrefix;
-    const DigitAffix *suffix = bPositive ? &fPositiveSuffix : &fNegativeSuffix;
+    const DigitAffix *prefix = bPositive ? &fPositivePrefix.getOtherVariant() : &fNegativePrefix.getOtherVariant();
+    const DigitAffix *suffix = bPositive ? &fPositiveSuffix.getOtherVariant() : &fNegativeSuffix.getOtherVariant();
     int32_t codePointCount = prefix->countChar32() + formatter.countChar32(value) + suffix->countChar32();
     int32_t paddingCount = fWidth - codePointCount;
     switch (fPadPosition) {

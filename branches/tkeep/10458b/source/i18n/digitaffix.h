@@ -21,15 +21,37 @@ U_NAMESPACE_BEGIN
 
 class FieldPositionHandler;
 
+/**
+ * A prefix or suffix of a formatted number.
+ */
 class U_I18N_API DigitAffix : public UMemory {
 public:
-void remove();
-void append(const UnicodeString &value, int32_t fieldId=UNUM_FIELD_COUNT);
-UnicodeString &format(FieldPositionHandler &handler, UnicodeString &appendTo) const;
-int32_t countChar32() const { return fAffix.countChar32(); }
+
+    /**
+     * Makes this affix be the empty string.
+     */
+    void remove();
+
+    /**
+     * Append value to this affix. If fieldId is present, the appended
+     * string is considered to be the type fieldId.
+     */
+    void append(const UnicodeString &value, int32_t fieldId=UNUM_FIELD_COUNT);
+
+    /**
+     * Formats this affix.
+     */
+    UnicodeString &format(
+            FieldPositionHandler &handler, UnicodeString &appendTo) const;
+    int32_t countChar32() const { return fAffix.countChar32(); }
+
+    /**
+     * Returns this affix as a unicode string.
+     */
+    const UnicodeString & toString() const { return fAffix; }
 private:
-UnicodeString fAffix;
-UnicodeString fAnnotations;
+    UnicodeString fAffix;
+    UnicodeString fAnnotations;
 };
 
 

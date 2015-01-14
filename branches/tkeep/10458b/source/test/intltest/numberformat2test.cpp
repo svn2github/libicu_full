@@ -76,6 +76,7 @@ private:
     void TestDigitListInterval();
     void TestDigitAffixesAndPadding();
     void TestValueFormatter();
+    void TestPluralAffix();
     void TestDigitAffix();
     void TestDigitFormatter();
     void verifyAffix(
@@ -117,6 +118,7 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestDigitListInterval);
     TESTCASE_AUTO(TestDigitFormatter);
     TESTCASE_AUTO(TestBenchmark);
+    TESTCASE_AUTO(TestPluralAffix);
     TESTCASE_AUTO(TestDigitAffix);
     TESTCASE_AUTO(TestValueFormatter);
     TESTCASE_AUTO(TestDigitAffixesAndPadding);
@@ -202,6 +204,7 @@ void NumberFormat2Test::TestDigitListInterval() {
 }
 
 void NumberFormat2Test::TestBenchmark() {
+/*
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols symbols("en", status);
     DigitFormatter formatter(symbols);
@@ -224,6 +227,7 @@ void NumberFormat2Test::TestBenchmark() {
                 appendTo);
     }
     errln("Took %f", (double) (clock() - start) / CLOCKS_PER_SEC);
+*/
 }
 
 void NumberFormat2Test::TestDigitFormatter() {
@@ -393,6 +397,103 @@ void NumberFormat2Test::TestDigitAffix() {
             {UNUM_CURRENCY_FIELD, 0, 3},
             {0, -1, 0}};
         verifyAffix("USD ", affix, expectedAttributes);
+    }
+}
+
+void NumberFormat2Test::TestPluralAffix() {
+    UErrorCode status = U_ZERO_ERROR;
+    PluralAffix part;
+    part.setVariant("one", "Dollar", status);
+    part.setVariant("few", "DollarFew", status);
+    part.setVariant("other", "Dollars", status);
+    PluralAffix dollar(part);
+    PluralAffix percent(part);
+    part.remove();
+    part.setVariant("one", "Percent", status);
+    part.setVariant("many", "PercentMany", status);
+    part.setVariant("other", "Percents", status);
+    percent = part;
+    part.remove();
+    part.setVariant("one", "foo", status);
+
+    PluralAffix pa;
+    assertEquals("", "", pa.getOtherVariant().toString());
+    pa.append(dollar, UNUM_CURRENCY_FIELD, status);
+    pa.append(" and ");
+    pa.append(percent, UNUM_PERCENT_FIELD, status);
+    pa.append("-", UNUM_SIGN_FIELD);
+
+    {
+        // other
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_CURRENCY_FIELD, 0, 7},
+            {UNUM_PERCENT_FIELD, 12, 20},
+            {UNUM_SIGN_FIELD, 20, 21},
+            {0, -1, 0}};
+        verifyAffix(
+                "Dollars and Percents-",
+                pa.getByVariant("other"),
+                expectedAttributes);
+    }
+    {
+        // two which is same as other
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_CURRENCY_FIELD, 0, 7},
+            {UNUM_PERCENT_FIELD, 12, 20},
+            {UNUM_SIGN_FIELD, 20, 21},
+            {0, -1, 0}};
+        verifyAffix(
+                "Dollars and Percents-",
+                pa.getByVariant("two"),
+                expectedAttributes);
+    }
+    {
+        // bad which is same as other
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_CURRENCY_FIELD, 0, 7},
+            {UNUM_PERCENT_FIELD, 12, 20},
+            {UNUM_SIGN_FIELD, 20, 21},
+            {0, -1, 0}};
+        verifyAffix(
+                "Dollars and Percents-",
+                pa.getByVariant("bad"),
+                expectedAttributes);
+    }
+    {
+        // one
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_CURRENCY_FIELD, 0, 6},
+            {UNUM_PERCENT_FIELD, 11, 18},
+            {UNUM_SIGN_FIELD, 18, 19},
+            {0, -1, 0}};
+        verifyAffix(
+                "Dollar and Percent-",
+                pa.getByVariant("one"),
+                expectedAttributes);
+    }
+    {
+        // few
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_CURRENCY_FIELD, 0, 9},
+            {UNUM_PERCENT_FIELD, 14, 22},
+            {UNUM_SIGN_FIELD, 22, 23},
+            {0, -1, 0}};
+        verifyAffix(
+                "DollarFew and Percents-",
+                pa.getByVariant("few"),
+                expectedAttributes);
+    }
+    {
+        // many
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_CURRENCY_FIELD, 0, 7},
+            {UNUM_PERCENT_FIELD, 12, 23},
+            {UNUM_SIGN_FIELD, 23, 24},
+            {0, -1, 0}};
+        verifyAffix(
+                "Dollars and PercentMany-",
+                pa.getByVariant("many"),
+                expectedAttributes);
     }
 }
 

@@ -14,7 +14,7 @@
 
 #include "unicode/utypes.h"
 #include "unicode/uobject.h"
-#include "digitaffix.h"
+#include "pluralaffix.h"
 
 U_NAMESPACE_BEGIN
 
@@ -32,10 +32,10 @@ enum EPadPosition {
     kPadAfterSuffix
 };
 
-DigitAffix fPositivePrefix;
-DigitAffix fPositiveSuffix;
-DigitAffix fNegativePrefix;
-DigitAffix fNegativeSuffix;
+PluralAffix fPositivePrefix;
+PluralAffix fPositiveSuffix;
+PluralAffix fNegativePrefix;
+PluralAffix fNegativeSuffix;
 EPadPosition fPadPosition;
 UChar32 fPadChar;
 int32_t fWidth;
