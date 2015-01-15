@@ -41,6 +41,9 @@ EPadPosition fPadPosition;
 UChar32 fPadChar;
 int32_t fWidth;
 
+DigitAffixesAndPadding()
+        : fPadPosition(kPadBeforePrefix), fPadChar(0x2a), fWidth(0) { }
+
 UBool needsPluralRules() const;
 
 UnicodeString &format(

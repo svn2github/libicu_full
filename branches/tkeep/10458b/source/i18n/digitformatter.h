@@ -27,6 +27,7 @@ class FieldPositionHandler;
 
 class U_I18N_API DigitFormatter : public UMemory {
 public:
+DigitFormatter();
 DigitFormatter(const DecimalFormatSymbols &symbols);
 
 void setDecimalFormatSymbols(const DecimalFormatSymbols &symbols);

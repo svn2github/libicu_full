@@ -18,6 +18,12 @@
 
 U_NAMESPACE_BEGIN
 
+DigitFormatter::DigitFormatter() : fGroupingSeparator(","), fDecimal(".") {
+    for (int32_t i = 0; i < 10; ++i) {
+        fLocalizedDigits[i] = (UChar32) (0x30 + i);
+    }
+}
+
 DigitFormatter::DigitFormatter(const DecimalFormatSymbols &symbols) {
     setDecimalFormatSymbols(symbols);
 }

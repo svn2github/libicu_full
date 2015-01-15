@@ -80,6 +80,7 @@ private:
     void TestValueFormatter();
     void TestPluralAffix();
     void TestDigitAffix();
+    void TestDigitFormatterDefaultCtor();
     void TestDigitFormatter();
     void TestDigitListToFixedDecimal();
     void verifyFixedDecimal(
@@ -127,6 +128,7 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestDigitInterval);
     TESTCASE_AUTO(TestGroupingUsed);
     TESTCASE_AUTO(TestDigitListInterval);
+    TESTCASE_AUTO(TestDigitFormatterDefaultCtor);
     TESTCASE_AUTO(TestDigitFormatter);
     TESTCASE_AUTO(TestBenchmark);
     TESTCASE_AUTO(TestPluralAffix);
@@ -241,6 +243,23 @@ void NumberFormat2Test::TestBenchmark() {
     errln("Took %f", (double) (clock() - start) / CLOCKS_PER_SEC);
 */
 }
+
+void NumberFormat2Test::TestDigitFormatterDefaultCtor() {
+    DigitFormatter formatter;
+    DigitList digits;
+    DigitInterval interval;
+    DigitGrouping grouping;
+    digits.set(246.801);
+    verifyDigitFormatter(
+            "246.801",
+            formatter,
+            digits,
+            grouping,
+            digits.getSmallestInterval(interval),
+            FALSE,
+            NULL);
+}
+
 
 void NumberFormat2Test::TestDigitFormatter() {
     UErrorCode status = U_ZERO_ERROR;
