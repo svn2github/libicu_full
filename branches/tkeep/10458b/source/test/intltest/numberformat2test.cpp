@@ -22,6 +22,8 @@
 #include "fphdlimp.h"
 #include "digitaffixesandpadding.h"
 #include "valueformatter.h"
+#include "plurrule_impl.h"
+#include "unicode/plurrule.h"
 
 struct NumberFormat2Test_Attributes {
     int32_t id;
@@ -79,6 +81,14 @@ private:
     void TestPluralAffix();
     void TestDigitAffix();
     void TestDigitFormatter();
+    void TestDigitListToFixedDecimal();
+    void verifyFixedDecimal(
+            const FixedDecimal &result,
+            int64_t numerator,
+            int64_t denominator,
+            UBool bNegative,
+            int32_t v,
+            int64_t f);
     void verifyAffix(
             const UnicodeString &expected,
             const DigitAffix &affix,
@@ -93,6 +103,7 @@ private:
             const DigitAffixesAndPadding &aaf,
             DigitList &digits,
             const ValueFormatter &vf,
+            const PluralRules *optPluralRules,
             const NumberFormat2Test_Attributes *expectedAttributes);
     void verifyDigitFormatter(
             const UnicodeString &expected,
@@ -122,6 +133,7 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestDigitAffix);
     TESTCASE_AUTO(TestValueFormatter);
     TESTCASE_AUTO(TestDigitAffixesAndPadding);
+    TESTCASE_AUTO(TestDigitListToFixedDecimal);
  
     TESTCASE_AUTO_END;
 }
@@ -512,8 +524,6 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
     smallest.setIntDigitCount(1);
     smallest.setFracDigitCount(0);
     DigitInterval largest;
-    largest.setIntDigitCount(6);
-    largest.setFracDigitCount(4);
     ValueFormatter vf;
     vf.prepareFixedDecimalFormatting(
             formatter,
@@ -543,6 +553,7 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 aap,
                 digits,
                 vf,
+                NULL,
                 expectedAttributes);
     }
     {
@@ -559,6 +570,7 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 aap,
                 digits,
                 vf,
+                NULL,
                 expectedAttributes);
     }
     {
@@ -575,6 +587,7 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 aap,
                 digits,
                 vf,
+                NULL,
                 expectedAttributes);
     }
     {
@@ -591,6 +604,7 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 aap,
                 digits,
                 vf,
+                NULL,
                 expectedAttributes);
     }
     {
@@ -609,8 +623,118 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 aap,
                 digits,
                 vf,
+                NULL,
                 expectedAttributes);
     }
+    assertFalse("", aap.needsPluralRules());
+
+    aap.fWidth = 0;
+    aap.fPositivePrefix.remove();
+    aap.fPositiveSuffix.remove();
+    aap.fNegativePrefix.remove();
+    aap.fNegativeSuffix.remove();
+    
+    // Set up for plural currencies.
+    aap.fNegativePrefix.append("-", UNUM_SIGN_FIELD);
+    {
+        PluralAffix part;
+        part.setVariant("one", " Dollar", status);
+        part.setVariant("other", " Dollars", status);
+        aap.fPositiveSuffix.append(part, UNUM_CURRENCY_FIELD, status);
+    }
+    aap.fNegativeSuffix = aap.fPositiveSuffix;
+    
+    LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
+
+    // Now test plurals
+    assertTrue("", aap.needsPluralRules());
+    {
+        digits.set(1);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 1},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
+            {UNUM_CURRENCY_FIELD, 2, 9},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "1. Dollar",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        digits.set(-1);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 1},
+            {UNUM_INTEGER_FIELD, 1, 2},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 2, 3},
+            {UNUM_CURRENCY_FIELD, 3, 10},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "-1. Dollar",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        smallest.setFracDigitCount(2);
+        digits.set(1);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 1},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
+            {UNUM_FRACTION_FIELD, 2, 4},
+            {UNUM_CURRENCY_FIELD, 4, 12},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "1.00 Dollars",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+}
+
+
+void NumberFormat2Test::TestDigitListToFixedDecimal() {
+    DigitList digits;
+    DigitInterval interval;
+    digits.set(-9217.875);
+    {
+        interval.setIntDigitCount(2);
+        interval.setFracDigitCount(1);
+        FixedDecimal result(digits, interval);
+        verifyFixedDecimal(result, 178, 10, TRUE, 1, 8);
+    }
+    {
+        interval.setIntDigitCount(6);
+        interval.setFracDigitCount(7);
+        FixedDecimal result(digits, interval);
+        verifyFixedDecimal(result, 9217875, 1000, TRUE, 7, 8750000);
+    }
+    {
+        digits.set(1234.56);
+        interval.setIntDigitCount(6);
+        interval.setFracDigitCount(25);
+        FixedDecimal result(digits, interval);
+        verifyFixedDecimal(result, 123456, 100, FALSE, 18, 560000000000000000LL);
+    }
+}
+
+void NumberFormat2Test::verifyFixedDecimal(
+        const FixedDecimal &result,
+        int64_t numerator,
+        int64_t denominator,
+        UBool bNegative,
+        int32_t v,
+        int64_t f) {
+    assertEquals("", numerator, (int64_t) (result.source * (double) denominator + 0.5));
+    assertEquals("", v, result.visibleDecimalDigitCount);
+    assertEquals("", f, result.decimalDigits);
+    assertEquals("", bNegative, result.isNegative);
 }
 
 void NumberFormat2Test::verifyAffixesAndPadding(
@@ -618,6 +742,7 @@ void NumberFormat2Test::verifyAffixesAndPadding(
         const DigitAffixesAndPadding &aaf,
         DigitList &digits,
         const ValueFormatter &vf,
+        const PluralRules *optPluralRules,
         const NumberFormat2Test_Attributes *expectedAttributes) {
     UnicodeString appendTo;
     NumberFormat2Test_FieldPositionHandler handler;
@@ -628,6 +753,7 @@ void NumberFormat2Test::verifyAffixesAndPadding(
                     digits,
                     vf,
                     handler,
+                    optPluralRules,
                     appendTo));
     if (expectedAttributes != NULL) {
         verifyAttributes(expectedAttributes, handler.attributes);

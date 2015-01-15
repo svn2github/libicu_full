@@ -11,19 +11,45 @@
 #include "digitaffix.h"
 #include "valueformatter.h"
 #include "uassert.h"
+#include "charstr.h"
 
 U_NAMESPACE_BEGIN
+
+UBool
+DigitAffixesAndPadding::needsPluralRules() const {
+    return (
+            fPositivePrefix.hasMultipleVariants() ||
+            fPositiveSuffix.hasMultipleVariants() ||
+            fNegativePrefix.hasMultipleVariants() ||
+            fNegativeSuffix.hasMultipleVariants());
+}
 
 UnicodeString &
 DigitAffixesAndPadding::format(
         DigitList &value,
         const ValueFormatter &formatter,
         FieldPositionHandler &handler,
+        const PluralRules *optPluralRules,
         UnicodeString &appendTo) const {
     UBool bPositive = value.isPositive();
+    const PluralAffix *pluralPrefix = bPositive ? &fPositivePrefix : &fNegativePrefix;
+    const PluralAffix *pluralSuffix = bPositive ? &fPositiveSuffix : &fNegativeSuffix;
+    
+    const DigitAffix *prefix;
+    const DigitAffix *suffix;
+    if (optPluralRules == NULL) {
+        prefix = &pluralPrefix->getOtherVariant();
+        suffix = &pluralSuffix->getOtherVariant();
+    } else {
+        UnicodeString count;
+        count = formatter.select(*optPluralRules, value);
+        CharString buffer;
+        UErrorCode status = U_ZERO_ERROR;
+        buffer.appendInvariantChars(count, status);
+        prefix = &pluralPrefix->getByVariant(buffer.data());
+        suffix = &pluralSuffix->getByVariant(buffer.data());
+    }
     value.setPositive(TRUE);
-    const DigitAffix *prefix = bPositive ? &fPositivePrefix.getOtherVariant() : &fNegativePrefix.getOtherVariant();
-    const DigitAffix *suffix = bPositive ? &fPositiveSuffix.getOtherVariant() : &fNegativeSuffix.getOtherVariant();
     int32_t codePointCount = prefix->countChar32() + formatter.countChar32(value) + suffix->countChar32();
     int32_t paddingCount = fWidth - codePointCount;
     switch (fPadPosition) {

@@ -31,6 +31,7 @@
 #include "uvectr32.h"
 #include "sharedpluralrules.h"
 #include "unifiedcache.h"
+#include "digitinterval.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -1370,8 +1371,35 @@ PluralKeywordEnumeration::count(UErrorCode& /*status*/) const {
 PluralKeywordEnumeration::~PluralKeywordEnumeration() {
 }
 
+FixedDecimal::FixedDecimal(
+        const DigitList &value, const DigitInterval &interval) {
+    DigitInterval effectiveInterval(interval);
+    DigitInterval maxFracDigits;
 
+    // The most fractional digits we can represent with an int64
+    maxFracDigits.setFracDigitCount(18); 
 
+    effectiveInterval.shrinkToFitWithin(maxFracDigits);
+    double n = 0;
+    for (int32_t i = effectiveInterval.getMostSignificantExclusive() - 1; i >= 0; --i) {
+        n = n * 10.0 + (double) value.getDigitByExponent(i);
+    }
+    int64_t f = 0LL;
+    double fval = 0.0;
+    for (int32_t i = -1; i >= effectiveInterval.getLeastSignificantInclusive(); --i) {
+        f = f * 10LL + (int64_t) value.getDigitByExponent(i);
+    }
+    for (int32_t i = effectiveInterval.getLeastSignificantInclusive(); i < 0; ++i) {
+        fval = (fval + value.getDigitByExponent(i)) / 10.0;
+    }
+    n += fval;
+    if (!value.isPositive()) {
+        n = -n;
+    }
+    init(n, -effectiveInterval.getLeastSignificantInclusive(), f);
+}
+    
+ 
 FixedDecimal::FixedDecimal(double n, int32_t v, int64_t f) {
     init(n, v, f);
     // check values. TODO make into unit test.

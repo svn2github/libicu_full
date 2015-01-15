@@ -22,6 +22,7 @@ class DigitList;
 class ValueFormatter;
 class UnicodeString;
 class FieldPositionHandler;
+class PluralRules;
 
 class U_I18N_API DigitAffixesAndPadding : public UMemory {
 public:
@@ -40,10 +41,13 @@ EPadPosition fPadPosition;
 UChar32 fPadChar;
 int32_t fWidth;
 
+UBool needsPluralRules() const;
+
 UnicodeString &format(
         DigitList &value,
         const ValueFormatter &formatter,
         FieldPositionHandler &handler,
+        const PluralRules *optPluralRules,
         UnicodeString &appendTo) const;
 private:
 UnicodeString &appendPadding(int32_t paddingCount, UnicodeString &appendTo) const;

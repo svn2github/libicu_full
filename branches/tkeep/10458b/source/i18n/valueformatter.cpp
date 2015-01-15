@@ -16,9 +16,19 @@
 #include "digitinterval.h"
 #include "digitformatter.h"
 #include "unicode/unistr.h"
+#include "unicode/plurrule.h"
+#include "plurrule_impl.h"
 #include "uassert.h"
 
 U_NAMESPACE_BEGIN
+
+UnicodeString
+ValueFormatter::select(
+        const PluralRules &rules,
+        const DigitList &value) const {
+    DigitInterval interval;
+    return rules.select(FixedDecimal(value, fixedDecimalInterval(value, interval)));
+}
 
 UnicodeString &
 ValueFormatter::format(

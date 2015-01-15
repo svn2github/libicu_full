@@ -23,6 +23,7 @@ class FieldPositionHandler;
 class DigitGrouping;
 class DigitFormatter;
 class DigitInterval;
+class PluralRules;
 
 /**
  * A closure around formatting a value. As these instances are designed to
@@ -34,6 +35,11 @@ class ValueFormatter : public UObject {
 public:
     ValueFormatter() : fType(kFormatTypeCount) {
     }
+
+    // Return the plural form to use for a given value.
+    UnicodeString select(
+        const PluralRules &rules,
+        const DigitList &value) const;
 
     /**
      * formats value and appends to appendTo. Returns appendTo.
