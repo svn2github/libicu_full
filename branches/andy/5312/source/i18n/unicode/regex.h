@@ -854,6 +854,20 @@ public:
     */
     virtual UnicodeString group(int32_t groupNum, UErrorCode &status) const;
 
+   /**
+    *    Returns a string containing the text captured by the given group
+    *    during the previous match operation.
+    *
+    *    @param groupName the capture group name
+    *    @param   status     A reference to a UErrorCode to receive any errors.
+    *                        Possible errors are  U_REGEX_INVALID_STATE if no match
+    *                        has been attempted or the last match failed and
+    *                        U_REGEX_INVALID_CAPTURE_GROUP_NAME for a bad capture group name.
+    *    @return the captured text
+    *    @draft ICU 55
+    */
+    virtual UnicodeString group(const UnicodeString &groupName, UErrorCode &status) const;
+
 
    /**
     *   Returns the number of capturing groups in this matcher's pattern.
@@ -896,6 +910,23 @@ public:
     */
     virtual UText *group(int32_t groupNum, UText *dest, int64_t &group_len, UErrorCode &status) const;
 
+   /**
+    *   Returns a UText positioned at the requested capture group in the text being matched.
+    *
+    *   @param   groupName   The capture group name.
+    *   @param   dest        A UText struct to be reused for the return value,
+    *                        or NULL if a new UText should be created for the return.
+    *   @param   groupLen    A reference to receive the length of the desired capture group
+    *   @param   status      A reference to a UErrorCode to receive any errors.
+    *                        Possible errors are  U_REGEX_INVALID_STATE if no match
+    *                        has been attempted or the last match failed and
+    *                        U_INDEX_OUTOFBOUNDS_ERROR for a bad capture group number.
+    *   @return              a shallow UText clone of the input text, positioned at the
+    *                        start of the capture group.
+    *
+    *   @draft ICU 55
+    */
+    virtual UText *group(const UnicodeString groupName, UText *dest, int64_t &groupLen, UErrorCode &status) const;
    /**
     *   Returns the index in the input string of the start of the text matched
     *   during the previous match operation.
@@ -945,6 +976,21 @@ public:
     */
     virtual int64_t start64(int32_t group, UErrorCode &status) const;
 
+    /**
+     * Returns the index in the input string of the start of the text matched by the
+     * specified capture group during the previous match operation. Return -1 if
+     * the capture group exists in the pattern, but was not part of the last match.
+     *
+     * @param groupName The capture group name
+     * @param status A reference to a UErrorCode to receive any errors. Possible
+     * errors are U_REGEX_INVALID_STATE if no match has been
+     * attempted or the last match failed, and
+     * U_REGEX_INVALID_CAPTURE_GROUP_NAME for a name that does
+     * not appear in the pattern.
+     * @return the (native) start position of substring matched by the specified group.
+     * @draft ICU 55
+     */
+    virtual int64_t start64(const UnicodeString &groupName, UErrorCode &status) const;
 
    /**
     *    Returns the index in the input string of the first character following the
@@ -1015,6 +1061,25 @@ public:
     */
     virtual int64_t end64(int32_t group, UErrorCode &status) const;
 
+   /**
+    * Returns the index in the input string of the character following the
+    * text matched by the specified capture group during the previous match operation.
+    *
+    * @param group  The capture group name
+    * @param status A reference to a UErrorCode to receive any errors. Possible
+    *               errors are U_REGEX_INVALID_STATE if no match has been
+    *               attempted or the last match failed and
+    *               U_REGEX_INVALID_CAPTURE_GROUP_NAME for a name that does
+    *               not appear in the pattern.
+    * @return       The index of the first character following the text
+    *               captured by the specified group during the previous match operation.
+    *               Return -1 if the capture group exists in the pattern but was not part of the match.
+    *               The index value returned is a native index, corresponding to
+    *               code units for the underlying encoding type, for example,
+    *               a byte index for UTF8.
+    * @draft ICU 55
+    */
+    virtual int64_t end64(const UnicodeString &group, UErrorCode &status) const;
 
    /**
     *   Resets this matcher.  The effect is to remove any memory of previous matches,
