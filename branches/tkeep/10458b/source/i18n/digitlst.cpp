@@ -833,6 +833,9 @@ DigitList::set(double source)
  */
 void
 DigitList::mult(const DigitList &other, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
     fContext.status = 0;
     int32_t requiredDigits = this->digits() + other.digits();
     if (requiredDigits > fContext.digits) {
@@ -903,6 +906,9 @@ DigitList::ensureCapacity(int32_t requestedCapacity, UErrorCode &status) {
 void
 DigitList::round(int32_t maximumDigits)
 {
+    if (maximumDigits >= fDecNumber->digits) {
+        return;
+    }
     int32_t savedDigits  = fContext.digits;
     fContext.digits = maximumDigits;
     uprv_decNumberPlus(fDecNumber, fDecNumber, &fContext);
@@ -968,7 +974,29 @@ DigitList::getDigitByExponent(int32_t exponent) const {
     return fDecNumber->lsu[idx];
 }
 
+void
+DigitList::roundAtExponent(int32_t exponent) {
+    if (exponent <= fDecNumber->exponent) {
+        return;
+    }
+    int32_t digits = fDecNumber->digits + fDecNumber->exponent - exponent;
+    if (digits > 0) {
+        round(digits);
+        return;
+    }
+    roundFixedPoint(-exponent);
+}
 
+void
+DigitList::quantize(const DigitList &quantity, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    div(quantity, status);
+    roundAtExponent(0);
+    mult(quantity, status);
+}
+    
 U_NAMESPACE_END
 #endif // #if !UCONFIG_NO_FORMATTING
 

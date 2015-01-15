@@ -71,6 +71,8 @@ class NumberFormat2Test : public IntlTest {
 public:
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
+    void TestQuantize();
+    void TestRounding();
     void TestDigitInterval();
     void verifyInterval(const DigitInterval &, int32_t minInclusive, int32_t maxExclusive);
     void TestGroupingUsed();
@@ -125,6 +127,8 @@ void NumberFormat2Test::runIndexedTest(
         logln("TestSuite ScientificNumberFormatterTest: ");
     }
     TESTCASE_AUTO_BEGIN;
+    TESTCASE_AUTO(TestQuantize);
+    TESTCASE_AUTO(TestRounding);
     TESTCASE_AUTO(TestDigitInterval);
     TESTCASE_AUTO(TestGroupingUsed);
     TESTCASE_AUTO(TestDigitListInterval);
@@ -217,8 +221,262 @@ void NumberFormat2Test::TestDigitListInterval() {
     }
 }
 
+void NumberFormat2Test::TestQuantize() {
+    DigitList quantity;
+    quantity.set(0.00168);
+    quantity.roundAtExponent(-5);
+    DigitFormatter formatter;
+    DigitInterval interval;
+    DigitGrouping grouping;
+    DigitList digits;
+    UErrorCode status = U_ZERO_ERROR;
+    {
+        digits.set(1);
+        digits.quantize(quantity, status);
+        digits.trim();
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                ".9996",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // round half even up
+        digits.set(1.00044);
+        digits.roundAtExponent(-5);
+        digits.quantize(quantity, status);
+        digits.trim();
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "1.00128",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // round half down
+        digits.set(0.99876);
+        digits.roundAtExponent(-5);
+        digits.quantize(quantity, status);
+        digits.trim();
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                ".99792",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+}
+
+void NumberFormat2Test::TestRounding() {
+    DigitFormatter formatter;
+    DigitInterval interval;
+    DigitGrouping grouping;
+    DigitList digits;
+    uprv_decContextSetRounding(&digits.fContext, DEC_ROUND_CEILING);
+    {
+        // Round at very large exponent
+        digits.set(789.123);
+        digits.roundAtExponent(100);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", // 100 0's after 1
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round at very large exponent
+        digits.set(789.123);
+        digits.roundAtExponent(1);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "790", // 100 0's after 1
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round at positive exponent
+        digits.set(789.123);
+        digits.roundAtExponent(1);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "790",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round at zero exponent
+        digits.set(788.123);
+        digits.roundAtExponent(0);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round at negative exponent
+        digits.set(789.123);
+        digits.roundAtExponent(-2);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789.13",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round to exponent of digits.
+        digits.set(789.123);
+        digits.roundAtExponent(-3);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789.123",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round at large negative exponent
+        digits.set(789.123);
+        digits.roundAtExponent(-100);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789.123",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round negative
+        digits.set(-789.123);
+        digits.roundAtExponent(-2);
+        digits.setPositive(TRUE);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789.12",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round to 1 significant digit
+        digits.set(789.123);
+        digits.round(1);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "800",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round to 5 significant digit
+        digits.set(789.123);
+        digits.round(5);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789.13",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round to 6 significant digit
+        digits.set(789.123);
+        digits.round(6);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789.123",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+    {
+        // Round to 100 significant digit
+        digits.set(789.123);
+        digits.round(100);
+        digits.getSmallestInterval(interval);
+        verifyDigitFormatter(
+                "789.123",
+                formatter,
+                digits,
+                grouping,
+                interval,
+                FALSE,
+                NULL);
+    }
+}
 void NumberFormat2Test::TestBenchmark() {
 /*
+    DigitFormatter formatter;
+    DigitInterval interval;
+    DigitGrouping grouping;
+    UnicodeString appendTo;
+    FieldPosition fpos(FieldPosition::DONT_CARE);
+    FieldPositionOnlyHandler handler(fpos);
+    DigitList digits;
+    uprv_decContextSetRounding(&digits.fContext, DEC_ROUND_UP);
+    digits.set(789.123);
+    digits.roundAtExponent(-100);
+    digits.getSmallestInterval(interval);
+    interval.setFracDigitCount(4);
+    verifyDigitFormatter(
+            "996.000",
+            formatter,
+            digits,
+            grouping,
+            interval,
+            FALSE,
+            NULL);
+
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols symbols("en", status);
     DigitFormatter formatter(symbols);

@@ -358,8 +358,8 @@ public:
     uint8_t     getDigitValue(int32_t i);
 
     /**
-     * Returns the smallest DigitInterval that contains all of the digits
-     * in this DigitList.
+     * Returns the smallest DigitInterval needed to display this
+     * this DigitList in fixed point form.
      */
     DigitInterval& getSmallestInterval(DigitInterval &result) const;
 
@@ -371,6 +371,18 @@ public:
      * the exponent falls outside the interval for this DigitList.
      */
     uint8_t getDigitByExponent(int32_t exponent) const;
+
+    /**
+     * Equivalent to roundFixedPoint(-digitExponent) except unlike
+     * roundFixedPoint, this works for any digitExponent value.
+     */
+    void roundAtExponent(int32_t digitExponent);
+
+    /**
+     * Quantizes according to some amount and rounds according to the
+     * context of this instance. Quantizing 3.233 with 0.05 gives 3.25.
+     */
+    void quantize(const DigitList &amount, UErrorCode &status);
 
 private:
     /*
