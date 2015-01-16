@@ -906,6 +906,7 @@ DigitList::ensureCapacity(int32_t requestedCapacity, UErrorCode &status) {
 void
 DigitList::round(int32_t maximumDigits)
 {
+    trim();
     if (maximumDigits >= fDecNumber->digits) {
         return;
     }

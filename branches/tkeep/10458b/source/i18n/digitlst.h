@@ -314,6 +314,7 @@ public:
      * Round the number to the given number of digits.
      * @param maximumDigits The maximum number of digits to be shown.
      * Upon return, count will be less than or equal to maximumDigits.
+     * result is guaranteed to be trimmed.
      */
     void round(int32_t maximumDigits);
 
