@@ -15,6 +15,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "digitformatter.h"
+#include "sciformatter.h"
 #include "digitinterval.h"
 #include "significantdigitinterval.h"
 #include "digitlst.h"
@@ -25,6 +26,9 @@
 #include "valueformatter.h"
 #include "plurrule_impl.h"
 #include "unicode/plurrule.h"
+
+static const int32_t kIntField = 4938;
+static const int32_t kSignField = 5770;
 
 struct NumberFormat2Test_Attributes {
     int32_t id;
@@ -85,7 +89,10 @@ private:
     void TestPluralAffix();
     void TestDigitAffix();
     void TestDigitFormatterDefaultCtor();
+    void TestDigitIntFormatter();
     void TestDigitFormatter();
+    void TestSciFormatterDefaultCtor();
+    void TestSciFormatter();
     void TestDigitListToFixedDecimal();
     void verifyFixedDecimal(
             const FixedDecimal &result,
@@ -113,6 +120,13 @@ private:
     void verifyDigitList(
         const UnicodeString &expected,
         const DigitList &digits);
+    void verifyDigitIntFormatter(
+            const UnicodeString &expected,
+            const DigitFormatter &formatter,
+            int32_t value,
+            int32_t minDigits,
+            UBool alwaysShowSign,
+            const NumberFormat2Test_Attributes *expectedAttributes);
     void verifyDigitFormatter(
             const UnicodeString &expected,
             const DigitFormatter &formatter,
@@ -120,6 +134,17 @@ private:
             const DigitGrouping &grouping,
             const DigitInterval &interval,
             UBool alwaysShowDecimal,
+            const NumberFormat2Test_Attributes *expectedAttributes);
+    void verifySciFormatter(
+            const UnicodeString &expected,
+            const SciFormatter &sciformatter,
+            const DigitList &mantissa,
+            int32_t exponent,
+            const DigitFormatter &formatter,
+            const DigitInterval &interval,
+            UBool alwaysShowDecimal,
+            int32_t minExponentDigits,
+            UBool alwaysShowExponentSign,
             const NumberFormat2Test_Attributes *expectedAttributes);
     void verifyAttributes(
             const NumberFormat2Test_Attributes *expected,
@@ -138,7 +163,10 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestGroupingUsed);
     TESTCASE_AUTO(TestDigitListInterval);
     TESTCASE_AUTO(TestDigitFormatterDefaultCtor);
+    TESTCASE_AUTO(TestDigitIntFormatter);
     TESTCASE_AUTO(TestDigitFormatter);
+    TESTCASE_AUTO(TestSciFormatterDefaultCtor);
+    TESTCASE_AUTO(TestSciFormatter);
     TESTCASE_AUTO(TestBenchmark);
     TESTCASE_AUTO(TestPluralAffix);
     TESTCASE_AUTO(TestDigitAffix);
@@ -381,16 +409,7 @@ void NumberFormat2Test::TestRounding() {
 }
 void NumberFormat2Test::TestBenchmark() {
 /*
-    DigitFormatter formatter;
-    DigitInterval interval;
-    DigitGrouping grouping;
-    UnicodeString appendTo;
-    FieldPosition fpos(FieldPosition::DONT_CARE);
-    FieldPositionOnlyHandler handler(fpos);
     DigitList digits;
-    uprv_decContextSetRounding(&digits.fContext, DEC_ROUND_UP);
-    digits.set(789.123);
-    digits.roundAtExponent(-100);
     digits.getSmallestInterval(interval);
     interval.setFracDigitCount(4);
     verifyDigitFormatter(
@@ -441,8 +460,131 @@ void NumberFormat2Test::TestDigitFormatterDefaultCtor() {
             digits.getSmallestInterval(interval),
             FALSE,
             NULL);
+    verifyDigitIntFormatter(
+            "+023",
+            formatter,
+            23,
+            3,
+            TRUE,
+            NULL);
 }
 
+void NumberFormat2Test::TestDigitIntFormatter() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols symbols("en", status);
+    DigitFormatter formatter(symbols);
+    {
+        verifyDigitIntFormatter(
+                "",
+                formatter,
+                0,
+                0,
+                FALSE,
+                NULL);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kIntField, 0, 1},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "0",
+                formatter,
+                0,
+                1,
+                FALSE,
+                expectedAttributes);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kSignField, 0, 1},
+            {kIntField, 1, 2},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "+0",
+                formatter,
+                0,
+                1,
+                TRUE,
+                expectedAttributes);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kSignField, 0, 1},
+            {kIntField, 1, 2},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "-2",
+                formatter,
+                -2,
+                1,
+                FALSE,
+                expectedAttributes);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kSignField, 0, 1},
+            {kIntField, 1, 3},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "-02",
+                formatter,
+                -2,
+                2,
+                FALSE,
+                expectedAttributes);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kSignField, 0, 1},
+            {kIntField, 1, 3},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "-02",
+                formatter,
+                -2,
+                2,
+                TRUE,
+                expectedAttributes);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kSignField, 0, 1},
+            {kIntField, 1, 11},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "-2147483648",
+                formatter,
+                INT32_MIN,
+                1,
+                FALSE,
+                expectedAttributes);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kSignField, 0, 1},
+            {kIntField, 1, 11},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "+2147483647",
+                formatter,
+                INT32_MAX,
+                1,
+                TRUE,
+                expectedAttributes);
+    }
+    {
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {kIntField, 0, 9},
+            {0, -1, 0}};
+        verifyDigitIntFormatter(
+                "007654321",
+                formatter,
+                7654321,
+                9,
+                FALSE,
+                expectedAttributes);
+    }
+}
 
 void NumberFormat2Test::TestDigitFormatter() {
     UErrorCode status = U_ZERO_ERROR;
@@ -553,6 +695,90 @@ void NumberFormat2Test::TestDigitFormatter() {
     }
 }
 
+void NumberFormat2Test::TestSciFormatterDefaultCtor() {
+    SciFormatter sciformatter;
+    DigitFormatter formatter;
+    DigitList mantissa;
+    DigitInterval interval;
+    {
+        mantissa.set(6.02);
+        verifySciFormatter(
+                "6.02E+23",
+                sciformatter,
+                mantissa,
+                23,
+                formatter,
+                mantissa.getSmallestInterval(interval),
+                FALSE,
+                1,
+                FALSE,
+                NULL);
+    }
+    {
+        mantissa.set(6.62);
+        verifySciFormatter(
+                "6.62E-34",
+                sciformatter,
+                mantissa,
+                -34,
+                formatter,
+                mantissa.getSmallestInterval(interval),
+                FALSE,
+                1,
+                FALSE,
+                NULL);
+    }
+}
+
+void NumberFormat2Test::TestSciFormatter() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols symbols("en", status);
+    SciFormatter sciformatter(symbols);
+    DigitFormatter formatter(symbols);
+    DigitList mantissa;
+    DigitInterval interval;
+    {
+        mantissa.set(1248);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 4},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 4, 5},
+            {UNUM_EXPONENT_SIGN_FIELD, 5, 6},
+            {UNUM_EXPONENT_FIELD, 6, 9},
+            {0, -1, 0}};
+        verifySciFormatter(
+                "1248E+023",
+                sciformatter,
+                mantissa,
+                23,
+                formatter,
+                mantissa.getSmallestInterval(interval),
+                FALSE,
+                3,
+                TRUE,
+                expectedAttributes);
+    }
+    {
+        mantissa.set(1248);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 4},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 4, 5},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 5, 6},
+            {UNUM_EXPONENT_FIELD, 6, 9},
+            {0, -1, 0}};
+        verifySciFormatter(
+                "1248.E023",
+                sciformatter,
+                mantissa,
+                23,
+                formatter,
+                mantissa.getSmallestInterval(interval),
+                TRUE,
+                3,
+                FALSE,
+                expectedAttributes);
+    }
+}
+
 void NumberFormat2Test::TestValueFormatter() {
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols symbols("en", status);
@@ -584,7 +810,7 @@ void NumberFormat2Test::TestValueFormatter() {
                 NULL);
     }
     {
-        digits.set(1234567.89012);
+        digits.set(1234567.89008);
         verifyValueFormatter(
                 "234,567.8901",
                 vf,
@@ -1149,6 +1375,76 @@ void NumberFormat2Test::verifyDigitList(
             digits.getSmallestInterval(interval),
             FALSE,
             NULL);
+}
+
+void NumberFormat2Test::verifyDigitIntFormatter(
+        const UnicodeString &expected,
+        const DigitFormatter &formatter,
+        int32_t value,
+        int32_t minDigits,
+        UBool alwaysShowSign,
+        const NumberFormat2Test_Attributes *expectedAttributes) {
+    assertEquals(
+            "",
+            expected.countChar32(),
+            formatter.countChar32ForInt(value, minDigits, alwaysShowSign));
+    UnicodeString appendTo;
+    NumberFormat2Test_FieldPositionHandler handler;
+    assertEquals(
+            "",
+            expected,
+            formatter.formatInt32(
+                    value,
+                    minDigits,
+                    alwaysShowSign,
+                    kSignField,
+                    kIntField,
+                    handler,
+                    appendTo));
+    if (expectedAttributes != NULL) {
+        verifyAttributes(expectedAttributes, handler.attributes);
+    }
+}
+
+void NumberFormat2Test::verifySciFormatter(
+        const UnicodeString &expected,
+        const SciFormatter &sciformatter,
+        const DigitList &mantissa,
+        int32_t exponent,
+        const DigitFormatter &formatter,
+        const DigitInterval &interval,
+        UBool alwaysShowDecimal,
+        int32_t minExponentDigits,
+        UBool alwaysShowExponentSign,
+        const NumberFormat2Test_Attributes *expectedAttributes) {
+    assertEquals(
+            "",
+            expected.countChar32(),
+            sciformatter.countChar32(
+                    exponent,
+                    formatter,
+                    interval,
+                    alwaysShowDecimal,
+                    minExponentDigits,
+                    alwaysShowExponentSign));
+    UnicodeString appendTo;
+    NumberFormat2Test_FieldPositionHandler handler;
+    assertEquals(
+            "",
+            expected,
+            sciformatter.format(
+                    mantissa,
+                    exponent,
+                    formatter,
+                    interval,
+                    alwaysShowDecimal,
+                    minExponentDigits,
+                    alwaysShowExponentSign,
+                    handler,
+                    appendTo));
+    if (expectedAttributes != NULL) {
+        verifyAttributes(expectedAttributes, handler.attributes);
+    }
 }
 
 void NumberFormat2Test::verifyDigitFormatter(

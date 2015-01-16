@@ -18,7 +18,7 @@
 
 U_NAMESPACE_BEGIN
 
-DigitFormatter::DigitFormatter() : fGroupingSeparator(","), fDecimal(".") {
+DigitFormatter::DigitFormatter() : fGroupingSeparator(","), fDecimal("."), fNegativeSign("-"), fPositiveSign("+") {
     for (int32_t i = 0; i < 10; ++i) {
         fLocalizedDigits[i] = (UChar32) (0x30 + i);
     }
@@ -43,6 +43,8 @@ DigitFormatter::setDecimalFormatSymbols(
     fLocalizedDigits[9] = symbols.getConstSymbol(DecimalFormatSymbols::kNineDigitSymbol).char32At(0);
     fGroupingSeparator = symbols.getConstSymbol(DecimalFormatSymbols::kGroupingSeparatorSymbol);
     fDecimal = symbols.getConstSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol);
+    fNegativeSign = symbols.getConstSymbol(DecimalFormatSymbols::kMinusSignSymbol);
+    fPositiveSign = symbols.getConstSymbol(DecimalFormatSymbols::kPlusSignSymbol);
 }
 
 int32_t DigitFormatter::countChar32(
@@ -107,6 +109,68 @@ UnicodeString &DigitFormatter::format(
     }
     return appendTo;
 }
+
+static int32_t _formatInt(
+        int64_t value, uint8_t *digits, UBool *neg) {
+    int32_t idx = 0;
+    if (value < 0) {
+        *neg = TRUE;
+        value = -value;
+    } else {
+        *neg = FALSE;
+    }
+    while (value > 0) {
+        digits[idx++] = (uint8_t) (value % 10);
+        value /= 10;
+    }
+    return idx;
+}
+
+UnicodeString &
+DigitFormatter::formatInt32(
+        int32_t value,
+        int32_t minDigits,
+        UBool alwaysShowSign,
+        int32_t signField,
+        int32_t intField,
+        FieldPositionHandler &handler,
+        UnicodeString &appendTo) const {
+    uint8_t digits[10];
+    UBool neg;
+    int32_t count = _formatInt(value, digits, &neg);
+    int32_t begin;
+    if (neg || alwaysShowSign) {
+        begin = appendTo.length();
+        appendTo.append(neg ? fNegativeSign : fPositiveSign);
+        handler.addAttribute(signField, begin, appendTo.length());
+    }
+    begin = appendTo.length();
+    for (int32_t i = minDigits - 1; i >= count; --i) {
+        appendTo.append(fLocalizedDigits[0]);
+    }
+    for (int32_t i = count - 1; i >= 0; --i) {
+        appendTo.append(fLocalizedDigits[digits[i]]);
+    }
+    handler.addAttribute(intField, begin, appendTo.length());
+    return appendTo;
+}
+
+int32_t
+DigitFormatter::countChar32ForInt(
+        int32_t value,
+        int32_t minDigits,
+        UBool alwaysShowSign) const {
+    uint8_t digits[10];
+    UBool neg;
+    int32_t count = _formatInt(value, digits, &neg);
+    int32_t result = 0;
+    if (neg || alwaysShowSign) {
+        result += neg ? fNegativeSign.countChar32() : fPositiveSign.countChar32();
+    }
+    result += count < minDigits ? minDigits : count;
+    return result;
+}
+
 
 
 U_NAMESPACE_END

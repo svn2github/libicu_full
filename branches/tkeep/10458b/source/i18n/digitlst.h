@@ -378,7 +378,7 @@ public:
      * Equivalent to roundFixedPoint(-digitExponent) except unlike
      * roundFixedPoint, this works for any digitExponent value.
      * If maxSigDigits is set then this instance is rounded to have no more
-     * than maxSigDigits.
+     * than maxSigDigits. The end result is guaranteed to be trimmed.
      */
     void roundAtExponent(int32_t digitExponent, int32_t maxSigDigits=INT32_MAX);
 

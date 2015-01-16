@@ -980,7 +980,8 @@ DigitList::getDigitByExponent(int32_t exponent) const {
 
 void
 DigitList::roundAtExponent(int32_t exponent, int32_t maxSigDigits) {
-    if (maxSigDigits != INT32_MAX) {
+    trim();
+    if (maxSigDigits < fDecNumber->digits) {
         int32_t minExponent = fDecNumber->digits + fDecNumber->exponent - maxSigDigits;
         if (exponent < minExponent) {
             exponent = minExponent;
@@ -995,7 +996,6 @@ DigitList::roundAtExponent(int32_t exponent, int32_t maxSigDigits) {
     } else {
         roundFixedPoint(-exponent);
     }
-    trim();
 }
 
 void
