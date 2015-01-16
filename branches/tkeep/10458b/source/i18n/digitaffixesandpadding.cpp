@@ -31,6 +31,7 @@ DigitAffixesAndPadding::format(
         FieldPositionHandler &handler,
         const PluralRules *optPluralRules,
         UnicodeString &appendTo) const {
+    formatter.round(value);
     UBool bPositive = value.isPositive();
     const PluralAffix *pluralPrefix = bPositive ? &fPositivePrefix : &fNegativePrefix;
     const PluralAffix *pluralSuffix = bPositive ? &fPositiveSuffix : &fNegativeSuffix;

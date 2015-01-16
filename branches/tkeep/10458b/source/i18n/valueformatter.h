@@ -24,6 +24,7 @@ class DigitGrouping;
 class DigitFormatter;
 class DigitInterval;
 class PluralRules;
+class SignificantDigitInterval;
 
 /**
  * A closure around formatting a value. As these instances are designed to
@@ -36,14 +37,24 @@ public:
     ValueFormatter() : fType(kFormatTypeCount) {
     }
 
-    // Return the plural form to use for a given value.
+    /**
+     * Rounds the value according to how it will be formatted.
+     * Round must be called to adjust value before calling select.
+     * value is expected to be real e.g not Infinity or NaN.
+     */
+    DigitList &round(DigitList &value) const;
+
+    /**
+     * Return the plural form to use for a given value.
+     * Value should have already been adjusted with round.
+     */
     UnicodeString select(
         const PluralRules &rules,
         const DigitList &value) const;
 
     /**
      * formats value and appends to appendTo. Returns appendTo.
-     * value must be a real, positive number.
+     * value must be positive.
      */
     UnicodeString &format(
         const DigitList &value,
@@ -52,14 +63,19 @@ public:
 
     /**
      * Returns the number of code points needed.
+     * value must be positive.
      */
     int32_t countChar32(const DigitList &value) const;
   
+    /**
+     * Prepares this instance for fixed decimal formatting.
+     */
     void prepareFixedDecimalFormatting(
         const DigitFormatter &formatter,
         const DigitGrouping &grouping,
         const DigitInterval &minimumInterval,
         const DigitInterval &maximumInterval,
+        const SignificantDigitInterval &significantDigits,
         UBool alwaysShowDecimal);
 private:
     ValueFormatter(const ValueFormatter &);
@@ -77,6 +93,7 @@ private:
     const DigitGrouping *fGrouping;
     const DigitInterval *fMinimumInterval;
     const DigitInterval *fMaximumInterval;
+    const SignificantDigitInterval *fSignificantDigitInterval;
     UBool fAlwaysShowDecimal;
     DigitInterval &fixedDecimalInterval(
             const DigitList &value, DigitInterval &interval) const;

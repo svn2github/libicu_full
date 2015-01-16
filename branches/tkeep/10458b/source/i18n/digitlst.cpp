@@ -951,7 +951,8 @@ DigitList::isZero() const
 
 // -------------------------------------
 DigitInterval &
-DigitList::getSmallestInterval(DigitInterval &result) const {
+DigitList::getSmallestInterval(
+        DigitInterval &result, int32_t minSigDigits) const {
     int32_t intDigits = fDecNumber->digits + fDecNumber->exponent;
     int32_t fracDigits = -fDecNumber->exponent;
     if (intDigits < 0) {
@@ -959,6 +960,9 @@ DigitList::getSmallestInterval(DigitInterval &result) const {
     }
     if (fracDigits < 0) {
         fracDigits = 0;
+    }
+    if (fracDigits < minSigDigits - intDigits) {
+        fracDigits = minSigDigits - intDigits;
     }
     result.setIntDigitCount(intDigits);
     result.setFracDigitCount(fracDigits);
@@ -975,16 +979,23 @@ DigitList::getDigitByExponent(int32_t exponent) const {
 }
 
 void
-DigitList::roundAtExponent(int32_t exponent) {
+DigitList::roundAtExponent(int32_t exponent, int32_t maxSigDigits) {
+    if (maxSigDigits != INT32_MAX) {
+        int32_t minExponent = fDecNumber->digits + fDecNumber->exponent - maxSigDigits;
+        if (exponent < minExponent) {
+            exponent = minExponent;
+        }
+    }
     if (exponent <= fDecNumber->exponent) {
         return;
     }
     int32_t digits = fDecNumber->digits + fDecNumber->exponent - exponent;
     if (digits > 0) {
         round(digits);
-        return;
+    } else {
+        roundFixedPoint(-exponent);
     }
-    roundFixedPoint(-exponent);
+    trim();
 }
 
 void
@@ -995,6 +1006,7 @@ DigitList::quantize(const DigitList &quantity, UErrorCode &status) {
     div(quantity, status);
     roundAtExponent(0);
     mult(quantity, status);
+    trim();
 }
     
 U_NAMESPACE_END

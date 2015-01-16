@@ -15,6 +15,7 @@
 #include "fphdlimp.h"
 #include "digitinterval.h"
 #include "digitformatter.h"
+#include "significantdigitinterval.h"
 #include "unicode/unistr.h"
 #include "unicode/plurrule.h"
 #include "plurrule_impl.h"
@@ -26,9 +27,35 @@ UnicodeString
 ValueFormatter::select(
         const PluralRules &rules,
         const DigitList &value) const {
-    DigitInterval interval;
-    return rules.select(FixedDecimal(value, fixedDecimalInterval(value, interval)));
+    switch (fType) {
+    case kFixedDecimal:
+        {
+            DigitInterval interval;
+            return rules.select(FixedDecimal(value, fixedDecimalInterval(value, interval)));
+        }
+        break;
+    default:
+        U_ASSERT(FALSE);
+        break;
+    }
+    return UnicodeString();
 }
+
+DigitList &
+ValueFormatter::round(DigitList &value) const {
+    switch (fType) {
+    case kFixedDecimal:
+        value.roundAtExponent(
+               fMaximumInterval->getLeastSignificantInclusive(),
+               fSignificantDigitInterval->getMax());
+        return value;
+    default:
+        U_ASSERT(FALSE);
+        break;
+    }
+    return value;
+}
+
 
 UnicodeString &
 ValueFormatter::format(
@@ -80,19 +107,21 @@ ValueFormatter::prepareFixedDecimalFormatting(
         const DigitGrouping &grouping,
         const DigitInterval &minimumInterval,
         const DigitInterval &maximumInterval,
+        const SignificantDigitInterval &significantDigitInterval,
         UBool alwaysShowDecimal) {
     fType = kFixedDecimal;
     fDigitFormatter = &formatter;
     fGrouping = &grouping;
     fMinimumInterval = &minimumInterval;
     fMaximumInterval = &maximumInterval;
+    fSignificantDigitInterval = &significantDigitInterval;
     fAlwaysShowDecimal = alwaysShowDecimal;
 }
 
 DigitInterval &
 ValueFormatter::fixedDecimalInterval(
         const DigitList &value, DigitInterval &interval) const {
-    value.getSmallestInterval(interval);
+    value.getSmallestInterval(interval, fSignificantDigitInterval->getMin());
     interval.expandToContain(*fMinimumInterval);
     interval.shrinkToFitWithin(*fMaximumInterval);
     return interval;

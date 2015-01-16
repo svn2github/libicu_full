@@ -359,9 +359,11 @@ public:
 
     /**
      * Returns the smallest DigitInterval needed to display this
-     * this DigitList in fixed point form.
+     * DigitList in fixed point form. If minSigDigits is set then the interval
+     * returned will be large enough to display at least minSigDigits digits.
      */
-    DigitInterval& getSmallestInterval(DigitInterval &result) const;
+    DigitInterval& getSmallestInterval(
+            DigitInterval &result, int32_t minSigDigits=0) const;
 
     /**
      * Like getDigitValue, but the digit is identified by exponent.
@@ -375,8 +377,10 @@ public:
     /**
      * Equivalent to roundFixedPoint(-digitExponent) except unlike
      * roundFixedPoint, this works for any digitExponent value.
+     * If maxSigDigits is set then this instance is rounded to have no more
+     * than maxSigDigits.
      */
-    void roundAtExponent(int32_t digitExponent);
+    void roundAtExponent(int32_t digitExponent, int32_t maxSigDigits=INT32_MAX);
 
     /**
      * Quantizes according to some amount and rounds according to the
