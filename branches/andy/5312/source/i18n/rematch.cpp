@@ -1201,6 +1201,11 @@ UnicodeString RegexMatcher::group(int32_t groupNum, UErrorCode &status) const {
 }
 
 
+UnicodeString RegexMatcher::group(const UnicodeString &name, UErrorCode &status) const {
+    int32_t groupNumber = groupNumberFromName(name, status);
+    return group(groupNumber, status);
+}
+
 
 //--------------------------------------------------------------------------------
 //
@@ -1282,7 +1287,20 @@ int32_t RegexMatcher::groupCount() const {
     return fPattern->fGroupMap->size();
 }
 
+//--------------------------------------------------------------------------------
+//
+//  groupNumberFromName()
+//
+//--------------------------------------------------------------------------------
+int32_t RegexMatcher::groupNumberFromName(const UnicodeString &groupName, UErrorCode &status) const {
+    status = U_REGEX_UNIMPLEMENTED;
+    return 0;
+}
 
+int32_t RegexMatcher::groupNumberFromName(const char *groupName, int32_t nameLength, UErrorCode &status) const {
+    status = U_REGEX_UNIMPLEMENTED;
+    return 0;
+}
 
 //--------------------------------------------------------------------------------
 //

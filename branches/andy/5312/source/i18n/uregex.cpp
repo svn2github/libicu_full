@@ -627,6 +627,36 @@ uregex_groupCount(URegularExpression *regexp2,
 
 //------------------------------------------------------------------------------
 //
+//    uregex_groupNumberFromName
+//
+//------------------------------------------------------------------------------
+int32_t
+uregex_groupNumberFromName(URegularExpression *regexp2,
+                           const UChar        *groupName,
+                           int32_t             nameLength,
+                           UErrorCode          *status) {
+    RegularExpression *regexp = (RegularExpression*)regexp2;
+    if (validateRE(regexp, FALSE, status) == FALSE) {
+        return 0;
+    }
+    int32_t  result = regexp->fMatcher->groupNumberFromName(UnicodeString(groupName, nameLength), *status);
+    return result;
+}
+
+int32_t
+uregex_groupNumberFromCName(URegularExpression *regexp2,
+                            const char         *groupName,
+                            int32_t             nameLength,
+                            UErrorCode          *status) {
+    RegularExpression *regexp = (RegularExpression*)regexp2;
+    if (validateRE(regexp, FALSE, status) == FALSE) {
+        return 0;
+    }
+    return regexp->fMatcher->groupNumberFromName(groupName, nameLength, *status);
+}
+
+//------------------------------------------------------------------------------
+//
 //    uregex_group
 //
 //------------------------------------------------------------------------------

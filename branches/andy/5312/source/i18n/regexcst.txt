@@ -147,6 +147,7 @@ open-paren-extended:
 open-paren-lookbehind:
     '='                  n  term            ^expr-cont              doOpenLookBehind       #  (?<=
     '!'                  n  term            ^expr-cont              doOpenLookBehindNeg    #  (?<!
+    ascii_letter            named-capture                           doBeginNamedCapture    #  (?<name
     default                 errorDeath                              doBadOpenParenType
 
 
@@ -174,6 +175,14 @@ paren-flag:
     ':'                  n  term              ^expr-quant           doMatchModeParen
     default                 errorDeath                              doBadModeFlag
 
+#
+#  named-capture    (?<name> ... ), position currently on the name.
+#
+named-capture:
+    ascii_letter         n  named-capture                           doContinueNamedCapture
+    digit_char           n  named-capture                           doContinueNamedCapture
+    '>'                  n  term               ^expr-quant          doCompleteNamedCapture
+    default                 errorDeath                              doBadNamedCapture
 
 #
 #  quant-star     Scanning a '*' quantifier.  Need to look ahead to decide

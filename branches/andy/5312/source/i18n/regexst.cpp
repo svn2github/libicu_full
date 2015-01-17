@@ -55,11 +55,6 @@ static const UChar gRuleSet_rule_char_pattern[]       = {
  //   \     {    \     }     \     ^     \     $     \     |     \     \     \     .     ]
     0x5c, 0x7b,0x5c, 0x7d, 0x5c, 0x5e, 0x5c, 0x24, 0x5c, 0x7c, 0x5c, 0x5c, 0x5c, 0x2e, 0x5d, 0};
 
-
-static const UChar gRuleSet_digit_char_pattern[] = {
-//    [    0      -    9     ]
-    0x5b, 0x30, 0x2d, 0x39, 0x5d, 0};
-
 //
 //   Here are the backslash escape characters that ICU's unescape() function
 //    will handle.
@@ -213,9 +208,11 @@ fEmptyText(NULL)
 
     // Sets used while parsing rules, but not referenced from the parse state table
     fRuleSets[kRuleSet_rule_char-128]   = UnicodeSet(UnicodeString(TRUE, gRuleSet_rule_char_pattern, -1),   *status);
-    fRuleSets[kRuleSet_digit_char-128]  = UnicodeSet(UnicodeString(TRUE, gRuleSet_digit_char_pattern, -1),  *status);
+    fRuleSets[kRuleSet_digit_char-128].add((UChar)0x30, UChar(0x39));    // [0-9]
+    fRuleSets[kRuleSet_ascii_letter-128].add((UChar)0x41, UChar(0x5A));  // [A-Z]
+    fRuleSets[kRuleSet_ascii_letter-128].add((UChar)0x61, UChar(0x7A));  // [a-z]
     fRuleDigitsAlias = &fRuleSets[kRuleSet_digit_char-128];
-    for (i=0; i<(int32_t)(sizeof(fRuleSets)/sizeof(fRuleSets[0])); i++) {
+    for (i=0; i<UPRV_LENGTHOF(fRuleSets); i++) {
         fRuleSets[i].compact();
     }
     

@@ -148,6 +148,9 @@ void RegexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, ch
         case 25: name = "TestBug11371";
             if (exec) TestBug11371();
             break;
+        case 26: name = "TestBug11480";
+            if (exec) TestBug11480();
+            break;
         default: name = "";
             break; //needed to end loop
     }
@@ -5486,6 +5489,26 @@ void RegexTest::TestBug11371() {
               __FILE__, __LINE__, u_errorName(status));
     }
 }
+
+void RegexTest::TestBug11480() {
+    // C API, get capture group of a group that does not participate in the match.
+    UErrorCode status = U_ZERO_ERROR;
+    URegularExpression *re = uregex_openC("(A)|(B)", 0, NULL, &status);
+    REGEX_CHECK_STATUS;
+    UnicodeString text = UNICODE_STRING_SIMPLE("A");
+    uregex_setText(re, text.getBuffer(), text.length(), &status);
+    REGEX_CHECK_STATUS;
+    REGEX_ASSERT(uregex_lookingAt(re, 0, &status));
+    UChar buf[10] = {(UChar)13, (UChar)13, (UChar)13, (UChar)13};
+    int32_t length = uregex_group(re, 2, buf+1, UPRV_LENGTHOF(buf)-1, &status);
+    printf("length = %d\n", length);
+    REGEX_ASSERT(length == 0);
+    REGEX_ASSERT(buf[0] == 13);
+    REGEX_ASSERT(buf[1] == 0);
+    REGEX_ASSERT(buf[2] == 13);
+}
+
+
 
 #endif  /* !UCONFIG_NO_REGULAR_EXPRESSIONS  */
 
