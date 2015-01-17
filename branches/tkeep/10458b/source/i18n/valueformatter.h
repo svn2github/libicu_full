@@ -13,6 +13,7 @@
 #include "unicode/utypes.h"
 
 #include "unicode/uobject.h"
+#include "digitformatter.h"
 
 
 U_NAMESPACE_BEGIN
@@ -21,10 +22,9 @@ class UnicodeString;
 class DigitList;
 class FieldPositionHandler;
 class DigitGrouping;
-class DigitFormatter;
-class DigitInterval;
 class PluralRules;
-class SignificantDigitInterval;
+class FixedPrecision;
+
 
 /**
  * A closure around formatting a value. As these instances are designed to
@@ -73,10 +73,8 @@ public:
     void prepareFixedDecimalFormatting(
         const DigitFormatter &formatter,
         const DigitGrouping &grouping,
-        const DigitInterval &minimumInterval,
-        const DigitInterval &maximumInterval,
-        const SignificantDigitInterval &significantDigits,
-        UBool alwaysShowDecimal);
+        const FixedPrecision &precision,
+        const DigitFormatter::Options &options);
 private:
     ValueFormatter(const ValueFormatter &);
     ValueFormatter &operator=(const ValueFormatter &);
@@ -91,13 +89,8 @@ private:
     // for fixed decimal formatting
     const DigitFormatter *fDigitFormatter;
     const DigitGrouping *fGrouping;
-    const DigitInterval *fMinimumInterval;
-    const DigitInterval *fMaximumInterval;
-    const SignificantDigitInterval *fSignificantDigitInterval;
-    UBool fAlwaysShowDecimal;
-    DigitInterval &fixedDecimalInterval(
-            const DigitList &value, DigitInterval &interval) const;
-
+    const FixedPrecision *fFixedPrecision;
+    const DigitFormatter::Options *fFixedOptions;
 };
 
 U_NAMESPACE_END

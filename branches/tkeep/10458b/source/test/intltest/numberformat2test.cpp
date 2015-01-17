@@ -24,6 +24,7 @@
 #include "fphdlimp.h"
 #include "digitaffixesandpadding.h"
 #include "valueformatter.h"
+#include "precision.h"
 #include "plurrule_impl.h"
 #include "unicode/plurrule.h"
 
@@ -143,9 +144,7 @@ private:
             int32_t exponent,
             const DigitFormatter &formatter,
             const DigitInterval &interval,
-            UBool alwaysShowDecimal,
-            int32_t minExponentDigits,
-            UBool alwaysShowExponentSign,
+            const SciFormatter::Options &options,
             const NumberFormat2Test_Attributes *expectedAttributes);
     void verifyAttributes(
             const NumberFormat2Test_Attributes *expected,
@@ -783,6 +782,7 @@ void NumberFormat2Test::TestSciFormatterDefaultCtor() {
     DigitFormatter formatter;
     DigitList mantissa;
     DigitInterval interval;
+    SciFormatter::Options options;
     {
         mantissa.set(6.02);
         verifySciFormatter(
@@ -792,9 +792,7 @@ void NumberFormat2Test::TestSciFormatterDefaultCtor() {
                 23,
                 formatter,
                 mantissa.getSmallestInterval(interval),
-                FALSE,
-                1,
-                FALSE,
+                options,
                 NULL);
     }
     {
@@ -806,9 +804,7 @@ void NumberFormat2Test::TestSciFormatterDefaultCtor() {
                 -34,
                 formatter,
                 mantissa.getSmallestInterval(interval),
-                FALSE,
-                1,
-                FALSE,
+                options,
                 NULL);
     }
 }
@@ -820,7 +816,10 @@ void NumberFormat2Test::TestSciFormatter() {
     DigitFormatter formatter(symbols);
     DigitList mantissa;
     DigitInterval interval;
+    SciFormatter::Options options;
+    options.fExponent.fMinDigits = 3;
     {
+        options.fExponent.fAlwaysShowSign = TRUE;
         mantissa.set(1248);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 4},
@@ -835,12 +834,12 @@ void NumberFormat2Test::TestSciFormatter() {
                 23,
                 formatter,
                 mantissa.getSmallestInterval(interval),
-                FALSE,
-                3,
-                TRUE,
+                options,
                 expectedAttributes);
     }
     {
+        options.fMantissa.fAlwaysShowDecimal = TRUE;
+        options.fExponent.fAlwaysShowSign = FALSE;
         mantissa.set(1248);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 4},
@@ -855,9 +854,7 @@ void NumberFormat2Test::TestSciFormatter() {
                 23,
                 formatter,
                 mantissa.getSmallestInterval(interval),
-                TRUE,
-                3,
-                FALSE,
+                options,
                 expectedAttributes);
     }
 }
@@ -869,20 +866,18 @@ void NumberFormat2Test::TestValueFormatter() {
     DigitGrouping grouping;
     SignificantDigitInterval sigDigits;
     grouping.fGrouping = 3;
-    DigitInterval smallest;
-    smallest.setIntDigitCount(4);
-    smallest.setFracDigitCount(2);
-    DigitInterval largest;
-    largest.setIntDigitCount(6);
-    largest.setFracDigitCount(4);
+    FixedPrecision precision;
+    precision.fMin.setIntDigitCount(4);
+    precision.fMin.setFracDigitCount(2);
+    precision.fMax.setIntDigitCount(6);
+    precision.fMax.setFracDigitCount(4);
+    DigitFormatter::Options options;
     ValueFormatter vf;
     vf.prepareFixedDecimalFormatting(
             formatter,
             grouping,
-            smallest,
-            largest,
-            sigDigits,
-            FALSE);
+            precision,
+            options);
     DigitList digits;
     {
         digits.set(3.5);
@@ -901,8 +896,8 @@ void NumberFormat2Test::TestValueFormatter() {
                 NULL);
     }
     // significant digits too
-    sigDigits.setMin(3);
-    sigDigits.setMax(4);
+    precision.fSignificant.setMin(3);
+    precision.fSignificant.setMax(4);
     {
         digits.set(342.562);
         verifyValueFormatter(
@@ -919,8 +914,6 @@ void NumberFormat2Test::TestValueFormatter() {
                 digits,
                 NULL);
     }
-    
-    
 }
 
 void NumberFormat2Test::TestDigitAffix() {
@@ -1054,19 +1047,15 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
     DigitFormatter formatter(symbols);
     DigitGrouping grouping;
     grouping.fGrouping = 3;
-    DigitInterval smallest;
-    smallest.setIntDigitCount(1);
-    smallest.setFracDigitCount(0);
-    DigitInterval largest;
-    SignificantDigitInterval sigDigits;
+    FixedPrecision precision;
+    DigitFormatter::Options options;
+    options.fAlwaysShowDecimal = TRUE;
     ValueFormatter vf;
     vf.prepareFixedDecimalFormatting(
             formatter,
             grouping,
-            smallest,
-            largest,
-            sigDigits,
-            TRUE);
+            precision,
+            options);
     DigitList digits;
     DigitAffixesAndPadding aap;
     aap.fPositivePrefix.append("(+", UNUM_SIGN_FIELD);
@@ -1215,7 +1204,7 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 expectedAttributes);
     }
     {
-        smallest.setFracDigitCount(2);
+        precision.fMin.setFracDigitCount(2);
         digits.set(1);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 1},
@@ -1238,20 +1227,15 @@ void NumberFormat2Test::TestPluralsAndRounding() {
     DecimalFormatSymbols symbols("en", status);
     DigitFormatter formatter(symbols);
     DigitGrouping grouping;
-    DigitInterval smallest;
-    smallest.setIntDigitCount(1);
-    smallest.setFracDigitCount(0);
-    DigitInterval largest;
-    SignificantDigitInterval sigDigits;
-    sigDigits.setMax(3);
+    FixedPrecision precision;
+    precision.fSignificant.setMax(3);
+    DigitFormatter::Options options;
     ValueFormatter vf;
     vf.prepareFixedDecimalFormatting(
             formatter,
             grouping,
-            smallest,
-            largest,
-            sigDigits,
-            FALSE);
+            precision,
+            options);
     DigitList digits;
     DigitAffixesAndPadding aap;
     // Set up for plural currencies.
@@ -1295,7 +1279,7 @@ void NumberFormat2Test::TestPluralsAndRounding() {
                 rules.getAlias(),
                 NULL);
     }
-    sigDigits.setMin(2);
+    precision.fSignificant.setMin(2);
     {
         digits.set(0.9996);
         verifyAffixesAndPadding(
@@ -1316,7 +1300,7 @@ void NumberFormat2Test::TestPluralsAndRounding() {
                 rules.getAlias(),
                 NULL);
     }
-    sigDigits.setMin(0);
+    precision.fSignificant.setMin(0);
     {
         digits.set(-79.214);
         verifyAffixesAndPadding(
@@ -1328,8 +1312,8 @@ void NumberFormat2Test::TestPluralsAndRounding() {
                 NULL);
     }
     // No more sig digits just max fractions
-    sigDigits.setMax(0); 
-    largest.setFracDigitCount(4);
+    precision.fSignificant.setMax(0); 
+    precision.fMax.setFracDigitCount(4);
     {
         digits.set(79.213562);
         verifyAffixesAndPadding(
@@ -1468,10 +1452,13 @@ void NumberFormat2Test::verifyDigitIntFormatter(
         int32_t minDigits,
         UBool alwaysShowSign,
         const NumberFormat2Test_Attributes *expectedAttributes) {
+    DigitFormatter::IntOptions options;
+    options.fMinDigits = minDigits;
+    options.fAlwaysShowSign = alwaysShowSign;
     assertEquals(
             "",
             expected.countChar32(),
-            formatter.countChar32ForInt(value, minDigits, alwaysShowSign));
+            formatter.countChar32ForInt(value, options));
     UnicodeString appendTo;
     NumberFormat2Test_FieldPositionHandler handler;
     assertEquals(
@@ -1479,8 +1466,7 @@ void NumberFormat2Test::verifyDigitIntFormatter(
             expected,
             formatter.formatInt32(
                     value,
-                    minDigits,
-                    alwaysShowSign,
+                    options,
                     kSignField,
                     kIntField,
                     handler,
@@ -1497,9 +1483,7 @@ void NumberFormat2Test::verifySciFormatter(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &interval,
-        UBool alwaysShowDecimal,
-        int32_t minExponentDigits,
-        UBool alwaysShowExponentSign,
+        const SciFormatter::Options &options,
         const NumberFormat2Test_Attributes *expectedAttributes) {
     assertEquals(
             "",
@@ -1508,9 +1492,7 @@ void NumberFormat2Test::verifySciFormatter(
                     exponent,
                     formatter,
                     interval,
-                    alwaysShowDecimal,
-                    minExponentDigits,
-                    alwaysShowExponentSign));
+                    options));
     UnicodeString appendTo;
     NumberFormat2Test_FieldPositionHandler handler;
     assertEquals(
@@ -1521,9 +1503,7 @@ void NumberFormat2Test::verifySciFormatter(
                     exponent,
                     formatter,
                     interval,
-                    alwaysShowDecimal,
-                    minExponentDigits,
-                    alwaysShowExponentSign,
+                    options,
                     handler,
                     appendTo));
     if (expectedAttributes != NULL) {
@@ -1539,10 +1519,12 @@ void NumberFormat2Test::verifyDigitFormatter(
         const DigitInterval &interval,
         UBool alwaysShowDecimal,
         const NumberFormat2Test_Attributes *expectedAttributes) {
+    DigitFormatter::Options options;
+    options.fAlwaysShowDecimal = alwaysShowDecimal;
     assertEquals(
             "",
             expected.countChar32(),
-            formatter.countChar32(grouping, interval, alwaysShowDecimal));
+            formatter.countChar32(grouping, interval, options));
     UnicodeString appendTo;
     NumberFormat2Test_FieldPositionHandler handler;
     assertEquals(
@@ -1552,7 +1534,7 @@ void NumberFormat2Test::verifyDigitFormatter(
                     digits,
                     grouping,
                     interval,
-                    alwaysShowDecimal,
+                    options,
                     handler,
                     appendTo));
     if (expectedAttributes != NULL) {

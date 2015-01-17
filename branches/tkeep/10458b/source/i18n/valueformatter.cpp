@@ -11,11 +11,8 @@
 
 #include "valueformatter.h"
 
-#include "digitlst.h"
-#include "fphdlimp.h"
 #include "digitinterval.h"
-#include "digitformatter.h"
-#include "significantdigitinterval.h"
+#include "precision.h"
 #include "unicode/unistr.h"
 #include "unicode/plurrule.h"
 #include "plurrule_impl.h"
@@ -31,7 +28,10 @@ ValueFormatter::select(
     case kFixedDecimal:
         {
             DigitInterval interval;
-            return rules.select(FixedDecimal(value, fixedDecimalInterval(value, interval)));
+            return rules.select(
+                    FixedDecimal(
+                            value,
+                            fFixedPrecision->getInterval(value, interval)));
         }
         break;
     default:
@@ -45,10 +45,7 @@ DigitList &
 ValueFormatter::round(DigitList &value) const {
     switch (fType) {
     case kFixedDecimal:
-        value.roundAtExponent(
-               fMaximumInterval->getLeastSignificantInclusive(),
-               fSignificantDigitInterval->getMax());
-        return value;
+        return fFixedPrecision->round(value, 0);
     default:
         U_ASSERT(FALSE);
         break;
@@ -69,8 +66,8 @@ ValueFormatter::format(
             return fDigitFormatter->format(
                     value,
                     *fGrouping,
-                    fixedDecimalInterval(value, interval),
-                    fAlwaysShowDecimal,
+                    fFixedPrecision->getInterval(value, interval),
+                    *fFixedOptions,
                     handler,
                     appendTo);
         }
@@ -90,8 +87,8 @@ ValueFormatter::countChar32(const DigitList &value) const {
             DigitInterval interval;
             return fDigitFormatter->countChar32(
                     *fGrouping,
-                    fixedDecimalInterval(value, interval),
-                    fAlwaysShowDecimal);
+                    fFixedPrecision->getInterval(value, interval),
+                    *fFixedOptions);
         }
         break;
     default:
@@ -105,26 +102,13 @@ void
 ValueFormatter::prepareFixedDecimalFormatting(
         const DigitFormatter &formatter,
         const DigitGrouping &grouping,
-        const DigitInterval &minimumInterval,
-        const DigitInterval &maximumInterval,
-        const SignificantDigitInterval &significantDigitInterval,
-        UBool alwaysShowDecimal) {
+        const FixedPrecision &precision,
+        const DigitFormatter::Options &options) {
     fType = kFixedDecimal;
     fDigitFormatter = &formatter;
     fGrouping = &grouping;
-    fMinimumInterval = &minimumInterval;
-    fMaximumInterval = &maximumInterval;
-    fSignificantDigitInterval = &significantDigitInterval;
-    fAlwaysShowDecimal = alwaysShowDecimal;
-}
-
-DigitInterval &
-ValueFormatter::fixedDecimalInterval(
-        const DigitList &value, DigitInterval &interval) const {
-    value.getSmallestInterval(interval, fSignificantDigitInterval->getMin());
-    interval.expandToContain(*fMinimumInterval);
-    interval.shrinkToFitWithin(*fMaximumInterval);
-    return interval;
+    fFixedPrecision = &precision;
+    fFixedOptions = &options;
 }
 
 U_NAMESPACE_END

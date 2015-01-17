@@ -15,6 +15,7 @@
 #include "unicode/utypes.h"
 #include "unicode/uobject.h"
 #include "unicode/unistr.h"
+#include "digitformatter.h"
 
 U_NAMESPACE_BEGIN
 
@@ -23,13 +24,17 @@ class DigitList;
 class DigitInterval;
 class UnicodeString;
 class FieldPositionHandler;
-class DigitFormatter;
 
 /**
  * This class formats scientific notation.
  */
 class U_I18N_API SciFormatter : public UMemory {
 public:
+class U_I18N_API Options : public UMemory {
+    public:
+    DigitFormatter::Options fMantissa;
+    DigitFormatter::IntOptions fExponent;
+};
 SciFormatter();
 SciFormatter(const DecimalFormatSymbols &symbols);
 
@@ -43,9 +48,7 @@ UnicodeString &format(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        UBool alwaysShowDecimal,
-        int32_t minExponentDigits,
-        UBool alwaysShowExponentSign,
+        const Options &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const;
 
@@ -56,9 +59,7 @@ int32_t countChar32(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        UBool alwaysShowDecimal,
-        int32_t minExponentDigits,
-        UBool alwaysShowExponentSign) const;
+        const Options &options) const;
 private:
 UnicodeString fExponent;
 };

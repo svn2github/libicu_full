@@ -30,6 +30,17 @@ class FieldPositionHandler;
  */
 class U_I18N_API DigitFormatter : public UMemory {
 public:
+class U_I18N_API Options : public UMemory {
+    public:
+    Options() : fAlwaysShowDecimal(FALSE) { }
+    UBool fAlwaysShowDecimal;
+};
+class U_I18N_API IntOptions : public UMemory {
+    public:
+    IntOptions() : fMinDigits(1), fAlwaysShowSign(FALSE) { }
+    int32_t fMinDigits;
+    UBool fAlwaysShowSign;
+};
 DigitFormatter();
 DigitFormatter(const DecimalFormatSymbols &symbols);
 
@@ -43,7 +54,7 @@ UnicodeString &format(
         const DigitList &positiveDigits,
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        UBool alwaysShowDecimal,
+        const Options &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const;
 
@@ -55,8 +66,7 @@ UnicodeString &format(
  */
 UnicodeString &formatInt32(
         int32_t value,
-        int32_t minDigits,
-        UBool alwaysShowSign,
+        const IntOptions &options,
         int32_t signField,
         int32_t intField,
         FieldPositionHandler &handler,
@@ -68,15 +78,14 @@ UnicodeString &formatInt32(
 int32_t countChar32(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        UBool alwaysShowDecimal) const;
+        const Options &options) const;
 
 /**
  * Counts the number of code points needed for formatting an int32.
  */
 int32_t countChar32ForInt(
         int32_t value,
-        int32_t minDigits,
-        UBool alwaysShowSign) const;
+        const IntOptions &options) const;
 
 private:
 UChar32 fLocalizedDigits[10];

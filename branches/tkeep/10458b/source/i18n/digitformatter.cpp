@@ -50,9 +50,9 @@ DigitFormatter::setDecimalFormatSymbols(
 int32_t DigitFormatter::countChar32(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        UBool alwaysShowDecimal) const {
+        const Options &options) const {
     int32_t result = interval.length();
-    if (alwaysShowDecimal || interval.getLeastSignificantInclusive() < 0) {
+    if (options.fAlwaysShowDecimal || interval.getLeastSignificantInclusive() < 0) {
         result += fDecimal.countChar32();
     }
     result += grouping.getSeparatorCount(interval.getIntDigitCount()) * fGroupingSeparator.countChar32();
@@ -64,7 +64,7 @@ UnicodeString &DigitFormatter::format(
         const DigitList &digits,
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        UBool alwaysShowDecimal,
+        const Options &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const {
     int32_t digitsLeftOfDecimal = interval.getMostSignificantExclusive();
@@ -74,7 +74,7 @@ UnicodeString &DigitFormatter::format(
     int32_t fracBegin;
     for (int32_t i = digitsLeftOfDecimal - 1; i >= lastDigitPos; --i) { 
         if (i == -1) {
-            if (!alwaysShowDecimal) {
+            if (!options.fAlwaysShowDecimal) {
                 currentLength = appendTo.length();
                 appendTo.append(fDecimal);
                 handler.addAttribute(UNUM_DECIMAL_SEPARATOR_FIELD, currentLength, appendTo.length());
@@ -91,7 +91,7 @@ UnicodeString &DigitFormatter::format(
             if (digitsLeftOfDecimal > 0) {
                 handler.addAttribute(UNUM_INTEGER_FIELD, intBegin, appendTo.length());
             }
-            if (alwaysShowDecimal) {
+            if (options.fAlwaysShowDecimal) {
                 currentLength = appendTo.length();
                 appendTo.append(fDecimal);
                 handler.addAttribute(
@@ -129,8 +129,7 @@ static int32_t _formatInt(
 UnicodeString &
 DigitFormatter::formatInt32(
         int32_t value,
-        int32_t minDigits,
-        UBool alwaysShowSign,
+        const IntOptions &options,
         int32_t signField,
         int32_t intField,
         FieldPositionHandler &handler,
@@ -139,13 +138,13 @@ DigitFormatter::formatInt32(
     UBool neg;
     int32_t count = _formatInt(value, digits, &neg);
     int32_t begin;
-    if (neg || alwaysShowSign) {
+    if (neg || options.fAlwaysShowSign) {
         begin = appendTo.length();
         appendTo.append(neg ? fNegativeSign : fPositiveSign);
         handler.addAttribute(signField, begin, appendTo.length());
     }
     begin = appendTo.length();
-    for (int32_t i = minDigits - 1; i >= count; --i) {
+    for (int32_t i = options.fMinDigits - 1; i >= count; --i) {
         appendTo.append(fLocalizedDigits[0]);
     }
     for (int32_t i = count - 1; i >= 0; --i) {
@@ -158,19 +157,17 @@ DigitFormatter::formatInt32(
 int32_t
 DigitFormatter::countChar32ForInt(
         int32_t value,
-        int32_t minDigits,
-        UBool alwaysShowSign) const {
+        const IntOptions &options) const {
     uint8_t digits[10];
     UBool neg;
     int32_t count = _formatInt(value, digits, &neg);
     int32_t result = 0;
-    if (neg || alwaysShowSign) {
+    if (neg || options.fAlwaysShowSign) {
         result += neg ? fNegativeSign.countChar32() : fPositiveSign.countChar32();
     }
-    result += count < minDigits ? minDigits : count;
+    result += count < options.fMinDigits ? options.fMinDigits : count;
     return result;
 }
-
 
 
 U_NAMESPACE_END

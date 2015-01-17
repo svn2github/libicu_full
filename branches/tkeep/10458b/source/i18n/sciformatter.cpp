@@ -35,9 +35,7 @@ SciFormatter::format(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        UBool alwaysShowDecimal,
-        int32_t minExponentDigits,
-        UBool alwaysShowExponentSign,
+        const Options &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const {
     DigitGrouping grouping;
@@ -45,7 +43,7 @@ SciFormatter::format(
             positiveMantissa,
             grouping,
             mantissaInterval,
-            alwaysShowDecimal,
+            options.fMantissa,
             handler,
             appendTo);
     int32_t expBegin = appendTo.length();
@@ -54,8 +52,7 @@ SciFormatter::format(
             UNUM_EXPONENT_SYMBOL_FIELD, expBegin, appendTo.length());
     return formatter.formatInt32(
             exponent,
-            minExponentDigits,
-            alwaysShowExponentSign,
+            options.fExponent,
             UNUM_EXPONENT_SIGN_FIELD,
             UNUM_EXPONENT_FIELD,
             handler,
@@ -67,15 +64,13 @@ SciFormatter::countChar32(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        UBool alwaysShowDecimal,
-        int32_t minExponentDigits,
-        UBool alwaysShowExponentSign) const {
+        const Options &options) const {
     DigitGrouping grouping;
     int32_t count = formatter.countChar32(
-            grouping, mantissaInterval, alwaysShowDecimal);
+            grouping, mantissaInterval, options.fMantissa);
     count += fExponent.countChar32();
     count += formatter.countChar32ForInt(
-            exponent, minExponentDigits, alwaysShowExponentSign);
+            exponent, options.fExponent);
     return count;
 }
 
