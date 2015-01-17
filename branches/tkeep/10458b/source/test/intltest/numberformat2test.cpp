@@ -77,6 +77,7 @@ public:
     void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0);
 private:
     void TestQuantize();
+    void TestConvertScientificNotation();
     void TestRounding();
     void TestDigitInterval();
     void verifyInterval(const DigitInterval &, int32_t minInclusive, int32_t maxExclusive);
@@ -158,6 +159,7 @@ void NumberFormat2Test::runIndexedTest(
     }
     TESTCASE_AUTO_BEGIN;
     TESTCASE_AUTO(TestQuantize);
+    TESTCASE_AUTO(TestConvertScientificNotation);
     TESTCASE_AUTO(TestRounding);
     TESTCASE_AUTO(TestDigitInterval);
     TESTCASE_AUTO(TestGroupingUsed);
@@ -305,6 +307,87 @@ void NumberFormat2Test::TestQuantize() {
         digits.roundAtExponent(-5);
         digits.quantize(quantity, status);
         verifyDigitList(".99792", digits);
+    }
+}
+
+void NumberFormat2Test::TestConvertScientificNotation() {
+    DigitList digits;
+    {
+        digits.set(186283);
+        assertEquals("", 5, digits.convertToScientificNotation(1, 1));
+        verifyDigitList(
+                "1.86283",
+                digits);
+    }
+    {
+        digits.set(186283);
+        assertEquals("", 0, digits.convertToScientificNotation(6, 1));
+        verifyDigitList(
+                "186283",
+                digits);
+    }
+    {
+        digits.set(186283);
+        assertEquals("", -2, digits.convertToScientificNotation(8, 1));
+        verifyDigitList(
+                "18628300",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", 6, digits.convertToScientificNotation(-1, 3));
+        verifyDigitList(
+                ".043561",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", 3, digits.convertToScientificNotation(0, 3));
+        verifyDigitList(
+                "43.561",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", 3, digits.convertToScientificNotation(2, 3));
+        verifyDigitList(
+                "43.561",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", 0, digits.convertToScientificNotation(3, 3));
+        verifyDigitList(
+                "43561",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", 0, digits.convertToScientificNotation(5, 3));
+        verifyDigitList(
+                "43561",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", -3, digits.convertToScientificNotation(6, 3));
+        verifyDigitList(
+                "43561000",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", -3, digits.convertToScientificNotation(8, 3));
+        verifyDigitList(
+                "43561000",
+                digits);
+    }
+    {
+        digits.set(43561);
+        assertEquals("", -6, digits.convertToScientificNotation(9, 3));
+        verifyDigitList(
+                "43561000000",
+                digits);
     }
 }
 
@@ -703,7 +786,7 @@ void NumberFormat2Test::TestSciFormatterDefaultCtor() {
     {
         mantissa.set(6.02);
         verifySciFormatter(
-                "6.02E+23",
+                "6.02E23",
                 sciformatter,
                 mantissa,
                 23,
@@ -1361,6 +1444,7 @@ void NumberFormat2Test::verifyValueFormatter(
     }
 }
 
+// Right now only works for positive values.
 void NumberFormat2Test::verifyDigitList(
         const UnicodeString &expected,
         const DigitList &digits) {

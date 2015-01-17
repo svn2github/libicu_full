@@ -1009,6 +1009,22 @@ DigitList::quantize(const DigitList &quantity, UErrorCode &status) {
     mult(quantity, status);
     trim();
 }
+
+int32_t
+DigitList::convertToScientificNotation(
+        int32_t minIntDigitCount, int32_t exponentMultiplier) {
+    int32_t intDigitCount = fDecNumber->digits + fDecNumber->exponent;
+    int32_t exponent;
+    if (intDigitCount >= minIntDigitCount) {
+        int32_t maxAdjustment = intDigitCount - minIntDigitCount;
+        exponent = (maxAdjustment / exponentMultiplier) * exponentMultiplier;
+    } else {
+        int32_t minAdjustment = minIntDigitCount - intDigitCount;
+        exponent = ((minAdjustment + exponentMultiplier - 1) / exponentMultiplier) * -exponentMultiplier;
+    }
+    fDecNumber->exponent -= exponent;
+    return exponent;
+}
     
 U_NAMESPACE_END
 #endif // #if !UCONFIG_NO_FORMATTING

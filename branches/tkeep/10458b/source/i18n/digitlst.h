@@ -389,6 +389,19 @@ public:
      */
     void quantize(const DigitList &amount, UErrorCode &status);
 
+    /**
+     * Converts this instance to scientific notation. This instance
+     * becomes the mantissa and the exponent is returned.
+     * @param minIntDigitCount minimum integer digits in mantissa
+     *   Exponent is set so that the actual number of integer digits
+     *   in mantissa is as close to the minimum as possible.
+     * @param exponentMultiplier The exponent is always a multiple of
+     *  This number. Usually 1, but set to 3 for engineering notation.
+     * @return exponent
+     */
+    int32_t convertToScientificNotation(
+            int32_t minIntDigitCount, int32_t exponentMultiplier);
+
 private:
     /*
      * These data members are intentionally public and can be set directly.
