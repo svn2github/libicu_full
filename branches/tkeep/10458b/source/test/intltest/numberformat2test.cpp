@@ -88,6 +88,7 @@ private:
     void TestDigitAffixesAndPadding();
     void TestPluralsAndRounding();
     void TestValueFormatter();
+    void TestValueFormatterScientific();
     void TestPluralAffix();
     void TestDigitAffix();
     void TestDigitFormatterDefaultCtor();
@@ -172,6 +173,7 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestPluralAffix);
     TESTCASE_AUTO(TestDigitAffix);
     TESTCASE_AUTO(TestValueFormatter);
+    TESTCASE_AUTO(TestValueFormatterScientific);
     TESTCASE_AUTO(TestDigitAffixesAndPadding);
     TESTCASE_AUTO(TestPluralsAndRounding);
     TESTCASE_AUTO(TestDigitListToFixedDecimal);
@@ -313,77 +315,77 @@ void NumberFormat2Test::TestConvertScientificNotation() {
     DigitList digits;
     {
         digits.set(186283);
-        assertEquals("", 5, digits.convertToScientificNotation(1, 1));
+        assertEquals("", 5, digits.toScientific(1, 1));
         verifyDigitList(
                 "1.86283",
                 digits);
     }
     {
         digits.set(186283);
-        assertEquals("", 0, digits.convertToScientificNotation(6, 1));
+        assertEquals("", 0, digits.toScientific(6, 1));
         verifyDigitList(
                 "186283",
                 digits);
     }
     {
         digits.set(186283);
-        assertEquals("", -2, digits.convertToScientificNotation(8, 1));
+        assertEquals("", -2, digits.toScientific(8, 1));
         verifyDigitList(
                 "18628300",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", 6, digits.convertToScientificNotation(-1, 3));
+        assertEquals("", 6, digits.toScientific(-1, 3));
         verifyDigitList(
                 ".043561",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", 3, digits.convertToScientificNotation(0, 3));
+        assertEquals("", 3, digits.toScientific(0, 3));
         verifyDigitList(
                 "43.561",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", 3, digits.convertToScientificNotation(2, 3));
+        assertEquals("", 3, digits.toScientific(2, 3));
         verifyDigitList(
                 "43.561",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", 0, digits.convertToScientificNotation(3, 3));
+        assertEquals("", 0, digits.toScientific(3, 3));
         verifyDigitList(
                 "43561",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", 0, digits.convertToScientificNotation(5, 3));
+        assertEquals("", 0, digits.toScientific(5, 3));
         verifyDigitList(
                 "43561",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", -3, digits.convertToScientificNotation(6, 3));
+        assertEquals("", -3, digits.toScientific(6, 3));
         verifyDigitList(
                 "43561000",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", -3, digits.convertToScientificNotation(8, 3));
+        assertEquals("", -3, digits.toScientific(8, 3));
         verifyDigitList(
                 "43561000",
                 digits);
     }
     {
         digits.set(43561);
-        assertEquals("", -6, digits.convertToScientificNotation(9, 3));
+        assertEquals("", -6, digits.toScientific(9, 3));
         verifyDigitList(
                 "43561000000",
                 digits);
@@ -864,7 +866,6 @@ void NumberFormat2Test::TestValueFormatter() {
     DecimalFormatSymbols symbols("en", status);
     DigitFormatter formatter(symbols);
     DigitGrouping grouping;
-    SignificantDigitInterval sigDigits;
     grouping.fGrouping = 3;
     FixedPrecision precision;
     precision.fMin.setIntDigitCount(4);
@@ -880,7 +881,15 @@ void NumberFormat2Test::TestValueFormatter() {
             options);
     DigitList digits;
     {
-        digits.set(3.5);
+        digits.set(3.49951);
+        verifyValueFormatter(
+                "0,003.4995",
+                vf,
+                digits,
+                NULL);
+    }
+    {
+        digits.set(3.499951);
         verifyValueFormatter(
                 "0,003.50",
                 vf,
@@ -914,6 +923,41 @@ void NumberFormat2Test::TestValueFormatter() {
                 digits,
                 NULL);
     }
+}
+
+void NumberFormat2Test::TestValueFormatterScientific() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols symbols("en", status);
+    SciFormatter sciformatter(symbols);
+    DigitFormatter formatter(symbols);
+    ScientificPrecision precision;
+    precision.fMantissa.fSignificant.setMax(3);
+    SciFormatterOptions options;
+    ValueFormatter vf;
+    vf.prepareScientificFormatting(
+            sciformatter,
+            formatter,
+            precision,
+            options);
+    DigitList digits;
+    {
+        digits.set(43560);
+        verifyValueFormatter(
+                "4.36E4",
+                vf,
+                digits,
+                NULL);
+    }
+    {
+        digits.set(43560);
+    precision.setExponentMultiplier(3);
+        verifyValueFormatter(
+                "43.6E3",
+                vf,
+                digits,
+                NULL);
+    }
+    // TODO: more tests!
 }
 
 void NumberFormat2Test::TestDigitAffix() {
