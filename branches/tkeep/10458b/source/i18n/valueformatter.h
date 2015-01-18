@@ -25,6 +25,9 @@ class PluralRules;
 class FixedPrecision;
 class DigitFormatter;
 class DigitFormatterOptions;
+class ScientificPrecision;
+class SciFormatter;
+class SciFormatterOptions;
 
 
 /**
@@ -76,6 +79,14 @@ public:
         const DigitGrouping &grouping,
         const FixedPrecision &precision,
         const DigitFormatterOptions &options);
+    /**
+     * Prepares this instance for scientific formatting.
+     */
+    void prepareScientificFormatting(
+        const SciFormatter &sciformatter,
+        const DigitFormatter &formatter,
+        const ScientificPrecision &precision,
+        const SciFormatterOptions &options);
 private:
     ValueFormatter(const ValueFormatter &);
     ValueFormatter &operator=(const ValueFormatter &);
@@ -87,11 +98,18 @@ private:
 
     FormatType fType;
 
-    // for fixed decimal formatting
+    // for fixed decimal and scientific formatting
     const DigitFormatter *fDigitFormatter;
-    const DigitGrouping *fGrouping;
+
+    // for fixed decimal formatting
     const FixedPrecision *fFixedPrecision;
     const DigitFormatterOptions *fFixedOptions;
+    const DigitGrouping *fGrouping;
+
+    // for scientific formatting
+    const SciFormatter *fSciFormatter;
+    const ScientificPrecision *fScientificPrecision;
+    const SciFormatterOptions *fScientificOptions;
 };
 
 U_NAMESPACE_END

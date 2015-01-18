@@ -34,5 +34,20 @@ FixedPrecision::getInterval(
     return interval;
 }
 
+DigitList &
+ScientificPrecision::round(DigitList &value) const {
+    int32_t exponent = value.getScientificExponent(
+            fMantissa.fMin.getIntDigitCount(), fMultiplier);
+    return fMantissa.round(value, exponent);
+}
+
+int32_t
+ScientificPrecision::toScientific(DigitList &value) const {
+    return value.toScientific(
+            fMantissa.fMin.getIntDigitCount(), fMultiplier);
+}
+
+
+
 U_NAMESPACE_END
 

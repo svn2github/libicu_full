@@ -1011,8 +1011,8 @@ DigitList::quantize(const DigitList &quantity, UErrorCode &status) {
 }
 
 int32_t
-DigitList::convertToScientificNotation(
-        int32_t minIntDigitCount, int32_t exponentMultiplier) {
+DigitList::getScientificExponent(
+        int32_t minIntDigitCount, int32_t exponentMultiplier) const {
     int32_t intDigitCount = fDecNumber->digits + fDecNumber->exponent;
     int32_t exponent;
     if (intDigitCount >= minIntDigitCount) {
@@ -1022,7 +1022,16 @@ DigitList::convertToScientificNotation(
         int32_t minAdjustment = minIntDigitCount - intDigitCount;
         exponent = ((minAdjustment + exponentMultiplier - 1) / exponentMultiplier) * -exponentMultiplier;
     }
+    return exponent;
+}
+
+int32_t
+DigitList::toScientific(
+        int32_t minIntDigitCount, int32_t exponentMultiplier) {
+    int32_t exponent = getScientificExponent(
+            minIntDigitCount, exponentMultiplier);
     fDecNumber->exponent -= exponent;
+    internalClear();
     return exponent;
 }
     

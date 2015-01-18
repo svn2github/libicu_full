@@ -390,6 +390,13 @@ public:
     void quantize(const DigitList &amount, UErrorCode &status);
 
     /**
+     * Like toScientific but only returns the exponent
+     * leaving this instance unchanged.
+     */ 
+    int32_t getScientificExponent(
+            int32_t minIntDigitCount, int32_t exponentMultiplier) const;
+
+    /**
      * Converts this instance to scientific notation. This instance
      * becomes the mantissa and the exponent is returned.
      * @param minIntDigitCount minimum integer digits in mantissa
@@ -399,7 +406,7 @@ public:
      *  This number. Usually 1, but set to 3 for engineering notation.
      * @return exponent
      */
-    int32_t convertToScientificNotation(
+    int32_t toScientific(
             int32_t minIntDigitCount, int32_t exponentMultiplier);
 
 private:

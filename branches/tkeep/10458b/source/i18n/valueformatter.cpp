@@ -12,7 +12,9 @@
 #include "valueformatter.h"
 
 #include "digitinterval.h"
+#include "digitlst.h"
 #include "digitformatter.h"
+#include "sciformatter.h"
 #include "precision.h"
 #include "unicode/unistr.h"
 #include "unicode/plurrule.h"
@@ -20,6 +22,8 @@
 #include "uassert.h"
 
 U_NAMESPACE_BEGIN
+
+const UChar gOther[] = {0x6f, 0x74, 0x68, 0x65, 0x72, 0x0};
 
 UnicodeString
 ValueFormatter::select(
@@ -35,6 +39,8 @@ ValueFormatter::select(
                             fFixedPrecision->getInterval(value, interval)));
         }
         break;
+    case kScientificNotation:
+        return UnicodeString(TRUE, gOther, -1);
     default:
         U_ASSERT(FALSE);
         break;
@@ -47,6 +53,8 @@ ValueFormatter::round(DigitList &value) const {
     switch (fType) {
     case kFixedDecimal:
         return fFixedPrecision->round(value, 0);
+    case kScientificNotation:
+        return fScientificPrecision->round(value);
     default:
         U_ASSERT(FALSE);
         break;
@@ -73,6 +81,21 @@ ValueFormatter::format(
                     appendTo);
         }
         break;
+    case kScientificNotation:
+        {
+            DigitList mantissa(value);
+            int32_t exponent = fScientificPrecision->toScientific(mantissa);
+            DigitInterval interval;
+            return fSciFormatter->format(
+                    mantissa,
+                    exponent,
+                    *fDigitFormatter,
+                    fScientificPrecision->fMantissa.getInterval(mantissa, interval),
+                    *fScientificOptions,
+                    handler,
+                    appendTo);
+        }
+        break;
     default:
         U_ASSERT(FALSE);
         break;
@@ -90,6 +113,18 @@ ValueFormatter::countChar32(const DigitList &value) const {
                     *fGrouping,
                     fFixedPrecision->getInterval(value, interval),
                     *fFixedOptions);
+        }
+        break;
+    case kScientificNotation:
+        {
+            DigitList mantissa(value);
+            int32_t exponent = fScientificPrecision->toScientific(mantissa);
+            DigitInterval interval;
+            return fSciFormatter->countChar32(
+                    exponent,
+                    *fDigitFormatter,
+                    fScientificPrecision->fMantissa.getInterval(mantissa, interval),
+                    *fScientificOptions);
         }
         break;
     default:
@@ -110,6 +145,19 @@ ValueFormatter::prepareFixedDecimalFormatting(
     fGrouping = &grouping;
     fFixedPrecision = &precision;
     fFixedOptions = &options;
+}
+
+void
+ValueFormatter::prepareScientificFormatting(
+        const SciFormatter &sciformatter,
+        const DigitFormatter &formatter,
+        const ScientificPrecision &precision,
+        const SciFormatterOptions &options) {
+    fType = kScientificNotation;
+    fSciFormatter = &sciformatter;
+    fDigitFormatter = &formatter;
+    fScientificPrecision = &precision;
+    fScientificOptions = &options;
 }
 
 U_NAMESPACE_END
