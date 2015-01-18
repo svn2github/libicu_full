@@ -8,7 +8,6 @@
 #include "unicode/utypes.h"
 
 #include "sciformatter.h"
-#include "digitformatter.h"
 #include "digitgrouping.h"
 #include "unicode/dcfmtsym.h"
 #include "unicode/unum.h"
@@ -35,7 +34,7 @@ SciFormatter::format(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        const Options &options,
+        const SciFormatterOptions &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const {
     DigitGrouping grouping;
@@ -64,7 +63,7 @@ SciFormatter::countChar32(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        const Options &options) const {
+        const SciFormatterOptions &options) const {
     DigitGrouping grouping;
     int32_t count = formatter.countChar32(
             grouping, mantissaInterval, options.fMantissa);

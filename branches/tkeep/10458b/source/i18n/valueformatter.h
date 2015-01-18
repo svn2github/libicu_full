@@ -13,7 +13,6 @@
 #include "unicode/utypes.h"
 
 #include "unicode/uobject.h"
-#include "digitformatter.h"
 
 
 U_NAMESPACE_BEGIN
@@ -24,6 +23,8 @@ class FieldPositionHandler;
 class DigitGrouping;
 class PluralRules;
 class FixedPrecision;
+class DigitFormatter;
+class DigitFormatterOptions;
 
 
 /**
@@ -74,7 +75,7 @@ public:
         const DigitFormatter &formatter,
         const DigitGrouping &grouping,
         const FixedPrecision &precision,
-        const DigitFormatter::Options &options);
+        const DigitFormatterOptions &options);
 private:
     ValueFormatter(const ValueFormatter &);
     ValueFormatter &operator=(const ValueFormatter &);
@@ -90,7 +91,7 @@ private:
     const DigitFormatter *fDigitFormatter;
     const DigitGrouping *fGrouping;
     const FixedPrecision *fFixedPrecision;
-    const DigitFormatter::Options *fFixedOptions;
+    const DigitFormatterOptions *fFixedOptions;
 };
 
 U_NAMESPACE_END

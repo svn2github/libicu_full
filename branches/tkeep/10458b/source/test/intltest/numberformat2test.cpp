@@ -144,7 +144,7 @@ private:
             int32_t exponent,
             const DigitFormatter &formatter,
             const DigitInterval &interval,
-            const SciFormatter::Options &options,
+            const SciFormatterOptions &options,
             const NumberFormat2Test_Attributes *expectedAttributes);
     void verifyAttributes(
             const NumberFormat2Test_Attributes *expected,
@@ -782,7 +782,7 @@ void NumberFormat2Test::TestSciFormatterDefaultCtor() {
     DigitFormatter formatter;
     DigitList mantissa;
     DigitInterval interval;
-    SciFormatter::Options options;
+    SciFormatterOptions options;
     {
         mantissa.set(6.02);
         verifySciFormatter(
@@ -816,7 +816,7 @@ void NumberFormat2Test::TestSciFormatter() {
     DigitFormatter formatter(symbols);
     DigitList mantissa;
     DigitInterval interval;
-    SciFormatter::Options options;
+    SciFormatterOptions options;
     options.fExponent.fMinDigits = 3;
     {
         options.fExponent.fAlwaysShowSign = TRUE;
@@ -871,7 +871,7 @@ void NumberFormat2Test::TestValueFormatter() {
     precision.fMin.setFracDigitCount(2);
     precision.fMax.setIntDigitCount(6);
     precision.fMax.setFracDigitCount(4);
-    DigitFormatter::Options options;
+    DigitFormatterOptions options;
     ValueFormatter vf;
     vf.prepareFixedDecimalFormatting(
             formatter,
@@ -1048,7 +1048,7 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
     DigitGrouping grouping;
     grouping.fGrouping = 3;
     FixedPrecision precision;
-    DigitFormatter::Options options;
+    DigitFormatterOptions options;
     options.fAlwaysShowDecimal = TRUE;
     ValueFormatter vf;
     vf.prepareFixedDecimalFormatting(
@@ -1229,7 +1229,7 @@ void NumberFormat2Test::TestPluralsAndRounding() {
     DigitGrouping grouping;
     FixedPrecision precision;
     precision.fSignificant.setMax(3);
-    DigitFormatter::Options options;
+    DigitFormatterOptions options;
     ValueFormatter vf;
     vf.prepareFixedDecimalFormatting(
             formatter,
@@ -1452,7 +1452,7 @@ void NumberFormat2Test::verifyDigitIntFormatter(
         int32_t minDigits,
         UBool alwaysShowSign,
         const NumberFormat2Test_Attributes *expectedAttributes) {
-    DigitFormatter::IntOptions options;
+    DigitFormatterIntOptions options;
     options.fMinDigits = minDigits;
     options.fAlwaysShowSign = alwaysShowSign;
     assertEquals(
@@ -1483,7 +1483,7 @@ void NumberFormat2Test::verifySciFormatter(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &interval,
-        const SciFormatter::Options &options,
+        const SciFormatterOptions &options,
         const NumberFormat2Test_Attributes *expectedAttributes) {
     assertEquals(
             "",
@@ -1519,7 +1519,7 @@ void NumberFormat2Test::verifyDigitFormatter(
         const DigitInterval &interval,
         UBool alwaysShowDecimal,
         const NumberFormat2Test_Attributes *expectedAttributes) {
-    DigitFormatter::Options options;
+    DigitFormatterOptions options;
     options.fAlwaysShowDecimal = alwaysShowDecimal;
     assertEquals(
             "",

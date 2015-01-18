@@ -12,6 +12,7 @@
 #include "valueformatter.h"
 
 #include "digitinterval.h"
+#include "digitformatter.h"
 #include "precision.h"
 #include "unicode/unistr.h"
 #include "unicode/plurrule.h"
@@ -103,7 +104,7 @@ ValueFormatter::prepareFixedDecimalFormatting(
         const DigitFormatter &formatter,
         const DigitGrouping &grouping,
         const FixedPrecision &precision,
-        const DigitFormatter::Options &options) {
+        const DigitFormatterOptions &options) {
     fType = kFixedDecimal;
     fDigitFormatter = &formatter;
     fGrouping = &grouping;

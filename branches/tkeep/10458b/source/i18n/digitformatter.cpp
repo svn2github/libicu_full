@@ -50,7 +50,7 @@ DigitFormatter::setDecimalFormatSymbols(
 int32_t DigitFormatter::countChar32(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        const Options &options) const {
+        const DigitFormatterOptions &options) const {
     int32_t result = interval.length();
     if (options.fAlwaysShowDecimal || interval.getLeastSignificantInclusive() < 0) {
         result += fDecimal.countChar32();
@@ -64,7 +64,7 @@ UnicodeString &DigitFormatter::format(
         const DigitList &digits,
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        const Options &options,
+        const DigitFormatterOptions &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const {
     int32_t digitsLeftOfDecimal = interval.getMostSignificantExclusive();
@@ -129,7 +129,7 @@ static int32_t _formatInt(
 UnicodeString &
 DigitFormatter::formatInt32(
         int32_t value,
-        const IntOptions &options,
+        const DigitFormatterIntOptions &options,
         int32_t signField,
         int32_t intField,
         FieldPositionHandler &handler,
@@ -157,7 +157,7 @@ DigitFormatter::formatInt32(
 int32_t
 DigitFormatter::countChar32ForInt(
         int32_t value,
-        const IntOptions &options) const {
+        const DigitFormatterIntOptions &options) const {
     uint8_t digits[10];
     UBool neg;
     int32_t count = _formatInt(value, digits, &neg);

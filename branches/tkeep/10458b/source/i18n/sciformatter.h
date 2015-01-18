@@ -25,16 +25,17 @@ class DigitInterval;
 class UnicodeString;
 class FieldPositionHandler;
 
+class U_I18N_API SciFormatterOptions : public UMemory {
+    public:
+    DigitFormatterOptions fMantissa;
+    DigitFormatterIntOptions fExponent;
+};
+
 /**
  * This class formats scientific notation.
  */
 class U_I18N_API SciFormatter : public UMemory {
 public:
-class U_I18N_API Options : public UMemory {
-    public:
-    DigitFormatter::Options fMantissa;
-    DigitFormatter::IntOptions fExponent;
-};
 SciFormatter();
 SciFormatter(const DecimalFormatSymbols &symbols);
 
@@ -48,7 +49,7 @@ UnicodeString &format(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        const Options &options,
+        const SciFormatterOptions &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const;
 
@@ -59,7 +60,7 @@ int32_t countChar32(
         int32_t exponent,
         const DigitFormatter &formatter,
         const DigitInterval &mantissaInterval,
-        const Options &options) const;
+        const SciFormatterOptions &options) const;
 private:
 UnicodeString fExponent;
 };

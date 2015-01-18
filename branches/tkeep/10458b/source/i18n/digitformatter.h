@@ -25,22 +25,24 @@ class DigitInterval;
 class UnicodeString;
 class FieldPositionHandler;
 
+class U_I18N_API DigitFormatterOptions : public UMemory {
+    public:
+    DigitFormatterOptions() : fAlwaysShowDecimal(FALSE) { }
+    UBool fAlwaysShowDecimal;
+};
+
+class U_I18N_API DigitFormatterIntOptions : public UMemory {
+    public:
+    DigitFormatterIntOptions() : fMinDigits(1), fAlwaysShowSign(FALSE) { }
+    int32_t fMinDigits;
+    UBool fAlwaysShowSign;
+};
+
 /**
  * Does fixed point formatting.
  */
 class U_I18N_API DigitFormatter : public UMemory {
 public:
-class U_I18N_API Options : public UMemory {
-    public:
-    Options() : fAlwaysShowDecimal(FALSE) { }
-    UBool fAlwaysShowDecimal;
-};
-class U_I18N_API IntOptions : public UMemory {
-    public:
-    IntOptions() : fMinDigits(1), fAlwaysShowSign(FALSE) { }
-    int32_t fMinDigits;
-    UBool fAlwaysShowSign;
-};
 DigitFormatter();
 DigitFormatter(const DecimalFormatSymbols &symbols);
 
@@ -54,7 +56,7 @@ UnicodeString &format(
         const DigitList &positiveDigits,
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        const Options &options,
+        const DigitFormatterOptions &options,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const;
 
@@ -66,7 +68,7 @@ UnicodeString &format(
  */
 UnicodeString &formatInt32(
         int32_t value,
-        const IntOptions &options,
+        const DigitFormatterIntOptions &options,
         int32_t signField,
         int32_t intField,
         FieldPositionHandler &handler,
@@ -78,14 +80,14 @@ UnicodeString &formatInt32(
 int32_t countChar32(
         const DigitGrouping &grouping,
         const DigitInterval &interval,
-        const Options &options) const;
+        const DigitFormatterOptions &options) const;
 
 /**
  * Counts the number of code points needed for formatting an int32.
  */
 int32_t countChar32ForInt(
         int32_t value,
-        const IntOptions &options) const;
+        const DigitFormatterIntOptions &options) const;
 
 private:
 UChar32 fLocalizedDigits[10];
