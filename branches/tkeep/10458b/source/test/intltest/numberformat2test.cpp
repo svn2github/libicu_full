@@ -87,6 +87,7 @@ private:
     void TestDigitListInterval();
     void TestDigitAffixesAndPadding();
     void TestPluralsAndRounding();
+    void TestPluralsAndRoundingScientific();
     void TestValueFormatter();
     void TestValueFormatterScientific();
     void TestPluralAffix();
@@ -176,6 +177,7 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestValueFormatterScientific);
     TESTCASE_AUTO(TestDigitAffixesAndPadding);
     TESTCASE_AUTO(TestPluralsAndRounding);
+    TESTCASE_AUTO(TestPluralsAndRoundingScientific);
     TESTCASE_AUTO(TestDigitListToFixedDecimal);
  
     TESTCASE_AUTO_END;
@@ -950,14 +952,34 @@ void NumberFormat2Test::TestValueFormatterScientific() {
     }
     {
         digits.set(43560);
-    precision.setExponentMultiplier(3);
+        precision.setExponentMultiplier(3);
         verifyValueFormatter(
                 "43.6E3",
                 vf,
                 digits,
                 NULL);
     }
-    // TODO: more tests!
+    {
+        digits.set(43560);
+        precision.setExponentMultiplier(1);
+        precision.fMantissa.fMin.setIntDigitCount(3);
+        verifyValueFormatter(
+                "436E2",
+                vf,
+                digits,
+                NULL);
+    }
+    {
+        digits.set(43560);
+        options.fExponent.fAlwaysShowSign = TRUE;
+        options.fExponent.fMinDigits = 2;
+        verifyValueFormatter(
+                "436E+02",
+                vf,
+                digits,
+                NULL);
+    }
+
 }
 
 void NumberFormat2Test::TestDigitAffix() {
@@ -1369,6 +1391,124 @@ void NumberFormat2Test::TestPluralsAndRounding() {
                 NULL);
     }
 
+}
+
+
+void NumberFormat2Test::TestPluralsAndRoundingScientific() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols symbols("en", status);
+    DigitFormatter formatter(symbols);
+    SciFormatter sciformatter(symbols);
+    ScientificPrecision precision;
+    precision.fMantissa.fSignificant.setMax(4);
+    SciFormatterOptions options;
+    ValueFormatter vf;
+    vf.prepareScientificFormatting(
+            sciformatter,
+            formatter,
+            precision,
+            options);
+    DigitList digits;
+    DigitAffixesAndPadding aap;
+    aap.fNegativePrefix.append("-", UNUM_SIGN_FIELD);
+    {
+        PluralAffix part;
+        part.setVariant("one", " Meter", status);
+        part.setVariant("other", " Meters", status);
+        aap.fPositiveSuffix.append(part, UNUM_FIELD_COUNT, status);
+    }
+    aap.fNegativeSuffix = aap.fPositiveSuffix;
+    LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
+    {
+        digits.set(0.9996);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 1},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 1, 2},
+            {UNUM_EXPONENT_FIELD, 2, 3},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "1E0 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        digits.set(0.9996);
+        options.fMantissa.fAlwaysShowDecimal = TRUE;
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 1},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 2, 3},
+            {UNUM_EXPONENT_FIELD, 3, 4},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "1.E0 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        digits.set(-299792458);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 1},
+            {UNUM_INTEGER_FIELD, 1, 2},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 2, 3},
+            {UNUM_FRACTION_FIELD, 3, 6},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 6, 7},
+            {UNUM_EXPONENT_FIELD, 7, 8},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "-2.998E8 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        digits.set(3);
+        precision.fMantissa.fSignificant.setMin(4);
+        options.fExponent.fAlwaysShowSign = TRUE;
+        options.fExponent.fMinDigits = 3;
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 1},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
+            {UNUM_FRACTION_FIELD, 2, 5},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 5, 6},
+            {UNUM_EXPONENT_SIGN_FIELD, 6, 7},
+            {UNUM_EXPONENT_FIELD, 7, 10},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "3.000E+000 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        digits.set(0.00025001);
+        precision.setExponentMultiplier(3);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 3},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 3, 4},
+            {UNUM_FRACTION_FIELD, 4, 5},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 5, 6},
+            {UNUM_EXPONENT_SIGN_FIELD, 6, 7},
+            {UNUM_EXPONENT_FIELD, 7, 10},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "250.0E-006 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
 }
 
 
