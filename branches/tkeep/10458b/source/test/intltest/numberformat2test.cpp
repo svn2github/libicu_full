@@ -492,6 +492,16 @@ void NumberFormat2Test::TestRounding() {
         digits.roundAtExponent(-1, 3);
         verifyDigitList("789", digits);
     }
+    {
+        digits.set(123.456);
+        digits.round(INT32_MAX);
+        verifyDigitList("123.456", digits);
+    }
+    {
+        digits.set(123.456);
+        digits.round(1);
+        verifyDigitList("200", digits);
+    }
 }
 void NumberFormat2Test::TestBenchmark() {
 /*
@@ -952,7 +962,7 @@ void NumberFormat2Test::TestValueFormatterScientific() {
     }
     {
         digits.set(43560);
-        precision.setExponentMultiplier(3);
+        precision.fMantissa.fMax.setIntDigitCount(3);
         verifyValueFormatter(
                 "43.6E3",
                 vf,
@@ -961,7 +971,6 @@ void NumberFormat2Test::TestValueFormatterScientific() {
     }
     {
         digits.set(43560);
-        precision.setExponentMultiplier(1);
         precision.fMantissa.fMin.setIntDigitCount(3);
         verifyValueFormatter(
                 "436E2",
@@ -1420,7 +1429,7 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
     aap.fNegativeSuffix = aap.fPositiveSuffix;
     LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
     {
-        digits.set(0.9996);
+        digits.set(0.99996);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 1},
             {UNUM_EXPONENT_SYMBOL_FIELD, 1, 2},
@@ -1435,7 +1444,7 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 expectedAttributes);
     }
     {
-        digits.set(0.9996);
+        digits.set(0.99996);
         options.fMantissa.fAlwaysShowDecimal = TRUE;
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 1},
@@ -1492,7 +1501,7 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
     }
     {
         digits.set(0.00025001);
-        precision.setExponentMultiplier(3);
+        precision.fMantissa.fMax.setIntDigitCount(3);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 3},
             {UNUM_DECIMAL_SEPARATOR_FIELD, 3, 4},
@@ -1508,6 +1517,94 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 vf,
                 rules.getAlias(),
                 expectedAttributes);
+    }
+    {
+        digits.set(0.0000025001);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 1},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
+            {UNUM_FRACTION_FIELD, 2, 5},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 5, 6},
+            {UNUM_EXPONENT_SIGN_FIELD, 6, 7},
+            {UNUM_EXPONENT_FIELD, 7, 10},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "2.500E-006 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        digits.set(0.0000025499);
+        precision.fMantissa.fMax.setFracDigitCount(1);
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_INTEGER_FIELD, 0, 1},
+            {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
+            {UNUM_FRACTION_FIELD, 2, 3},
+            {UNUM_EXPONENT_SYMBOL_FIELD, 3, 4},
+            {UNUM_EXPONENT_SIGN_FIELD, 4, 5},
+            {UNUM_EXPONENT_FIELD, 5, 8},
+            {0, -1, 0}};
+        verifyAffixesAndPadding(
+                "2.5E-006 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                expectedAttributes);
+    }
+    {
+        digits.set(299792458);
+        precision.fMantissa.fMax.setIntDigitCount(1);
+        precision.fMantissa.fMax.setFracDigitCount(2);
+        verifyAffixesAndPadding(
+                "3.00E+008 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                NULL);
+    }
+    // clear significant digits
+    precision.fMantissa.fSignificant.setMin(0);
+    precision.fMantissa.fSignificant.setMax(0);
+
+    // set int and fraction digits
+    precision.fMantissa.fMin.setFracDigitCount(2);
+    precision.fMantissa.fMax.setFracDigitCount(4);
+    precision.fMantissa.fMin.setIntDigitCount(2);
+    precision.fMantissa.fMax.setIntDigitCount(3);
+    {
+        digits.set(-0.0000025300001);
+        verifyAffixesAndPadding(
+                "-253.00E-008 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                NULL);
+    }
+    {
+        digits.set(-0.0000025300006);
+        verifyAffixesAndPadding(
+                "-253.0001E-008 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                NULL);
+    }
+    {
+        digits.set(-0.000025300006);
+        verifyAffixesAndPadding(
+                "-25.30E-006 Meters",
+                aap,
+                digits,
+                vf,
+                rules.getAlias(),
+                NULL);
     }
 }
 

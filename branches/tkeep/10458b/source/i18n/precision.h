@@ -43,15 +43,11 @@ DigitInterval &getInterval(
 class U_I18N_API ScientificPrecision : public UMemory {
 public:
     FixedPrecision fMantissa;
-    ScientificPrecision() : fMultiplier(1) { }
-    void setExponentMultiplier(int32_t value) {
-        fMultiplier = value < 1 ? 1 : value;
-    }
-    int32_t getExponentMultiplier() const { return fMultiplier; }
     DigitList &round(DigitList &value) const;
     int32_t toScientific(DigitList &value) const;
 private:
-    int32_t fMultiplier;
+    int32_t getMultiplier() const;
+
 };
 
 

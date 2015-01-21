@@ -19,9 +19,14 @@ FixedPrecision::FixedPrecision() {
 
 DigitList &
 FixedPrecision::round(DigitList &value, int32_t exponent) const {
-    value.roundAtExponent(
-            exponent + fMax.getLeastSignificantInclusive(),
-            fSignificant.getMax());
+    int32_t leastSig = fMax.getLeastSignificantInclusive();
+    if (leastSig == INT32_MIN) {
+        value.round(fSignificant.getMax());
+    } else {
+        value.roundAtExponent(
+                exponent + leastSig,
+                fSignificant.getMax());
+    }
     return value;
 }
 
@@ -37,16 +42,26 @@ FixedPrecision::getInterval(
 DigitList &
 ScientificPrecision::round(DigitList &value) const {
     int32_t exponent = value.getScientificExponent(
-            fMantissa.fMin.getIntDigitCount(), fMultiplier);
+            fMantissa.fMin.getIntDigitCount(), getMultiplier());
     return fMantissa.round(value, exponent);
 }
 
 int32_t
 ScientificPrecision::toScientific(DigitList &value) const {
     return value.toScientific(
-            fMantissa.fMin.getIntDigitCount(), fMultiplier);
+            fMantissa.fMin.getIntDigitCount(), getMultiplier());
 }
 
+int32_t
+ScientificPrecision::getMultiplier() const {
+    int32_t maxIntDigitCount = fMantissa.fMax.getIntDigitCount();
+    if (maxIntDigitCount == INT32_MAX) {
+        return 1;
+    }
+    int32_t multiplier =
+        maxIntDigitCount - fMantissa.fMin.getIntDigitCount() + 1;
+    return (multiplier < 1 ? 1 : multiplier);
+}
 
 
 U_NAMESPACE_END
