@@ -49,12 +49,12 @@ ValueFormatter::select(
 }
 
 DigitList &
-ValueFormatter::round(DigitList &value) const {
+ValueFormatter::round(DigitList &value, UErrorCode &status) const {
     switch (fType) {
     case kFixedDecimal:
-        return fFixedPrecision->round(value, 0);
+        return fFixedPrecision->round(value, 0, status);
     case kScientificNotation:
-        return fScientificPrecision->round(value);
+        return fScientificPrecision->round(value, status);
     default:
         U_ASSERT(FALSE);
         break;

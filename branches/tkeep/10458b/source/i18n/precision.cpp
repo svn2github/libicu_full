@@ -18,7 +18,23 @@ FixedPrecision::FixedPrecision() {
 }
 
 DigitList &
-FixedPrecision::round(DigitList &value, int32_t exponent) const {
+FixedPrecision::round(
+        DigitList &value, int32_t exponent, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return value;
+    }
+    if (!fRoundingIncrement.isZero()) {
+        if (exponent == 0) {
+            value.quantize(fRoundingIncrement, status);
+        } else {
+            DigitList adjustedIncrement(fRoundingIncrement);
+            adjustedIncrement.shiftDecimalRight(exponent);
+            value.quantize(adjustedIncrement, status);
+        }
+        if (U_FAILURE(status)) {
+            return value;
+        }
+    }
     int32_t leastSig = fMax.getLeastSignificantInclusive();
     if (leastSig == INT32_MIN) {
         value.round(fSignificant.getMax());
@@ -40,10 +56,13 @@ FixedPrecision::getInterval(
 }
 
 DigitList &
-ScientificPrecision::round(DigitList &value) const {
+ScientificPrecision::round(DigitList &value, UErrorCode &status) const {
+    if (U_FAILURE(status)) {
+        return value;
+    }
     int32_t exponent = value.getScientificExponent(
             fMantissa.fMin.getIntDigitCount(), getMultiplier());
-    return fMantissa.round(value, exponent);
+    return fMantissa.round(value, exponent, status);
 }
 
 int32_t

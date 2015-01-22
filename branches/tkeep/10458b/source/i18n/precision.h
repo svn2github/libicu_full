@@ -16,10 +16,10 @@
 #include "unicode/uobject.h"
 #include "digitinterval.h"
 #include "significantdigitinterval.h"
+#include "digitlst.h"
 
 U_NAMESPACE_BEGIN
 
-class DigitList;
 
 /**
  * A precision manager for values to be expressed as fixed point .
@@ -29,10 +29,11 @@ public:
 DigitInterval fMin;
 DigitInterval fMax;
 SignificantDigitInterval fSignificant;
+DigitList fRoundingIncrement;
 
 FixedPrecision();
 
-DigitList &round(DigitList &value, int32_t exponent) const;
+DigitList &round(DigitList &value, int32_t exponent, UErrorCode &status) const;
 DigitInterval &getInterval(
         const DigitList &value, DigitInterval &interval) const;
 };
@@ -43,7 +44,7 @@ DigitInterval &getInterval(
 class U_I18N_API ScientificPrecision : public UMemory {
 public:
     FixedPrecision fMantissa;
-    DigitList &round(DigitList &value) const;
+    DigitList &round(DigitList &value, UErrorCode &status) const;
     int32_t toScientific(DigitList &value) const;
 private:
     int32_t getMultiplier() const;

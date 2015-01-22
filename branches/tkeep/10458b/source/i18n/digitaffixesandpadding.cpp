@@ -30,8 +30,12 @@ DigitAffixesAndPadding::format(
         const ValueFormatter &formatter,
         FieldPositionHandler &handler,
         const PluralRules *optPluralRules,
-        UnicodeString &appendTo) const {
-    formatter.round(value);
+        UnicodeString &appendTo,
+        UErrorCode &status) const {
+    formatter.round(value, status);
+    if (U_FAILURE(status)) {
+        return appendTo;
+    }
     UBool bPositive = value.isPositive();
     const PluralAffix *pluralPrefix = bPositive ? &fPositivePrefix : &fNegativePrefix;
     const PluralAffix *pluralSuffix = bPositive ? &fPositiveSuffix : &fNegativeSuffix;
@@ -45,8 +49,10 @@ DigitAffixesAndPadding::format(
         UnicodeString count;
         count = formatter.select(*optPluralRules, value);
         CharString buffer;
-        UErrorCode status = U_ZERO_ERROR;
         buffer.appendInvariantChars(count, status);
+        if (U_FAILURE(status)) {
+            return appendTo;
+        }
         prefix = &pluralPrefix->getByVariant(buffer.data());
         suffix = &pluralSuffix->getByVariant(buffer.data());
     }

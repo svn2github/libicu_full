@@ -51,7 +51,8 @@ UnicodeString &format(
         const ValueFormatter &formatter,
         FieldPositionHandler &handler,
         const PluralRules *optPluralRules,
-        UnicodeString &appendTo) const;
+        UnicodeString &appendTo,
+        UErrorCode &status) const;
 private:
 UnicodeString &appendPadding(int32_t paddingCount, UnicodeString &appendTo) const;
 

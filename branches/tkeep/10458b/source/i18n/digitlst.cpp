@@ -1030,9 +1030,14 @@ DigitList::toScientific(
         int32_t minIntDigitCount, int32_t exponentMultiplier) {
     int32_t exponent = getScientificExponent(
             minIntDigitCount, exponentMultiplier);
-    fDecNumber->exponent -= exponent;
-    internalClear();
+    shiftDecimalRight(-exponent);
     return exponent;
+}
+
+void
+DigitList::shiftDecimalRight(int32_t n) {
+    fDecNumber->exponent += n;
+    internalClear();
 }
     
 U_NAMESPACE_END

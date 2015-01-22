@@ -409,6 +409,11 @@ public:
     int32_t toScientific(
             int32_t minIntDigitCount, int32_t exponentMultiplier);
 
+    /**
+     * Shifts decimal to the right.
+     */
+    void shiftDecimalRight(int32_t numPlaces);
+
 private:
     /*
      * These data members are intentionally public and can be set directly.

@@ -46,7 +46,7 @@ public:
      * Round must be called to adjust value before calling select.
      * value is expected to be real e.g not Infinity or NaN.
      */
-    DigitList &round(DigitList &value) const;
+    DigitList &round(DigitList &value, UErrorCode &status) const;
 
     /**
      * Return the plural form to use for a given value.

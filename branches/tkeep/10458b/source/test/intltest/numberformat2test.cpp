@@ -80,6 +80,7 @@ private:
     void TestQuantize();
     void TestConvertScientificNotation();
     void TestRounding();
+    void TestRoundingIncrement();
     void TestDigitInterval();
     void verifyInterval(const DigitInterval &, int32_t minInclusive, int32_t maxExclusive);
     void TestGroupingUsed();
@@ -162,6 +163,7 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestQuantize);
     TESTCASE_AUTO(TestConvertScientificNotation);
     TESTCASE_AUTO(TestRounding);
+    TESTCASE_AUTO(TestRoundingIncrement);
     TESTCASE_AUTO(TestDigitInterval);
     TESTCASE_AUTO(TestGroupingUsed);
     TESTCASE_AUTO(TestDigitListInterval);
@@ -1138,8 +1140,8 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
     aap.fNegativePrefix.append("(-", UNUM_SIGN_FIELD);
     aap.fNegativeSuffix.append("-)", UNUM_SIGN_FIELD);
     aap.fWidth = 10;
+    aap.fPadPosition = DigitAffixesAndPadding::kPadBeforePrefix;
     {
-        aap.fPadPosition = DigitAffixesAndPadding::kPadBeforePrefix;
         digits.set(3);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_SIGN_FIELD, 4, 6},
@@ -1155,8 +1157,8 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 NULL,
                 expectedAttributes);
     }
+    aap.fPadPosition = DigitAffixesAndPadding::kPadAfterPrefix;
     {
-        aap.fPadPosition = DigitAffixesAndPadding::kPadAfterPrefix;
         digits.set(3);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_SIGN_FIELD, 0, 2},
@@ -1172,8 +1174,8 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 NULL,
                 expectedAttributes);
     }
+    aap.fPadPosition = DigitAffixesAndPadding::kPadBeforeSuffix;
     {
-        aap.fPadPosition = DigitAffixesAndPadding::kPadBeforeSuffix;
         digits.set(3);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_SIGN_FIELD, 0, 2},
@@ -1189,8 +1191,8 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 NULL,
                 expectedAttributes);
     }
+    aap.fPadPosition = DigitAffixesAndPadding::kPadAfterSuffix;
     {
-        aap.fPadPosition = DigitAffixesAndPadding::kPadAfterSuffix;
         digits.set(3);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_SIGN_FIELD, 0, 2},
@@ -1206,8 +1208,8 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 NULL,
                 expectedAttributes);
     }
+    aap.fPadPosition = DigitAffixesAndPadding::kPadAfterSuffix;
     {
-        aap.fPadPosition = DigitAffixesAndPadding::kPadAfterSuffix;
         digits.set(-1234.5);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_SIGN_FIELD, 0, 2},
@@ -1278,8 +1280,8 @@ void NumberFormat2Test::TestDigitAffixesAndPadding() {
                 rules.getAlias(),
                 expectedAttributes);
     }
+    precision.fMin.setFracDigitCount(2);
     {
-        precision.fMin.setFracDigitCount(2);
         digits.set(1);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 1},
@@ -1443,9 +1445,9 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 rules.getAlias(),
                 expectedAttributes);
     }
+    options.fMantissa.fAlwaysShowDecimal = TRUE;
     {
         digits.set(0.99996);
-        options.fMantissa.fAlwaysShowDecimal = TRUE;
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 1},
             {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
@@ -1478,11 +1480,11 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 rules.getAlias(),
                 expectedAttributes);
     }
+    precision.fMantissa.fSignificant.setMin(4);
+    options.fExponent.fAlwaysShowSign = TRUE;
+    options.fExponent.fMinDigits = 3;
     {
         digits.set(3);
-        precision.fMantissa.fSignificant.setMin(4);
-        options.fExponent.fAlwaysShowSign = TRUE;
-        options.fExponent.fMinDigits = 3;
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 1},
             {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
@@ -1499,9 +1501,9 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 rules.getAlias(),
                 expectedAttributes);
     }
+    precision.fMantissa.fMax.setIntDigitCount(3);
     {
         digits.set(0.00025001);
-        precision.fMantissa.fMax.setIntDigitCount(3);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 3},
             {UNUM_DECIMAL_SEPARATOR_FIELD, 3, 4},
@@ -1536,9 +1538,9 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 rules.getAlias(),
                 expectedAttributes);
     }
+    precision.fMantissa.fMax.setFracDigitCount(1);
     {
         digits.set(0.0000025499);
-        precision.fMantissa.fMax.setFracDigitCount(1);
         NumberFormat2Test_Attributes expectedAttributes[] = {
             {UNUM_INTEGER_FIELD, 0, 1},
             {UNUM_DECIMAL_SEPARATOR_FIELD, 1, 2},
@@ -1555,10 +1557,10 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 rules.getAlias(),
                 expectedAttributes);
     }
+    precision.fMantissa.fMax.setIntDigitCount(1);
+    precision.fMantissa.fMax.setFracDigitCount(2);
     {
         digits.set(299792458);
-        precision.fMantissa.fMax.setIntDigitCount(1);
-        precision.fMantissa.fMax.setFracDigitCount(2);
         verifyAffixesAndPadding(
                 "3.00E+008 Meters",
                 aap,
@@ -1605,6 +1607,112 @@ void NumberFormat2Test::TestPluralsAndRoundingScientific() {
                 vf,
                 rules.getAlias(),
                 NULL);
+    }
+}
+
+
+void NumberFormat2Test::TestRoundingIncrement() {
+    UErrorCode status = U_ZERO_ERROR;
+    DecimalFormatSymbols symbols("en", status);
+    DigitFormatter formatter(symbols);
+    SciFormatter sciformatter(symbols);
+    ScientificPrecision precision;
+    SciFormatterOptions options;
+    precision.fMantissa.fRoundingIncrement.set(0.25);
+    precision.fMantissa.fSignificant.setMax(4);
+    DigitGrouping grouping;
+    ValueFormatter vf;
+
+    // fixed
+    vf.prepareFixedDecimalFormatting(
+            formatter,
+            grouping,
+            precision.fMantissa,
+            options.fMantissa);
+    DigitList digits;
+    DigitAffixesAndPadding aap;
+    aap.fNegativePrefix.append("-", UNUM_SIGN_FIELD);
+    {
+        digits.set(3.7);
+        verifyAffixesAndPadding(
+                "3.75",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
+    }
+    {
+        digits.set(-7.4);
+        verifyAffixesAndPadding(
+                "-7.5",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
+    }
+    {
+        digits.set(99.8);
+        verifyAffixesAndPadding(
+                "99.75",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
+    }
+    precision.fMantissa.fMin.setFracDigitCount(2);
+    {
+        digits.set(99.1);
+        verifyAffixesAndPadding(
+                "99.00",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
+    }
+    {
+        digits.set(-639.65);
+        verifyAffixesAndPadding(
+                "-639.80",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
+    }
+
+    precision.fMantissa.fMin.setIntDigitCount(2);
+    // Scientific notation
+    vf.prepareScientificFormatting(
+            sciformatter,
+            formatter,
+            precision,
+            options);
+    {
+        digits.set(-6396.5);
+        verifyAffixesAndPadding(
+                "-64.00E2",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
+    }
+    {
+        digits.set(-0.00092374);
+        verifyAffixesAndPadding(
+                "-92.25E-5",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
+    }
+    precision.fMantissa.fMax.setIntDigitCount(3);
+    {
+        digits.set(-0.00092374);
+        verifyAffixesAndPadding(
+                "-923.80E-6",
+                aap,
+                digits,
+                vf,
+                NULL, NULL);
     }
 }
 
@@ -1656,6 +1764,7 @@ void NumberFormat2Test::verifyAffixesAndPadding(
         const NumberFormat2Test_Attributes *expectedAttributes) {
     UnicodeString appendTo;
     NumberFormat2Test_FieldPositionHandler handler;
+    UErrorCode status = U_ZERO_ERROR;
     assertEquals(
             "",
             expected,
@@ -1664,7 +1773,9 @@ void NumberFormat2Test::verifyAffixesAndPadding(
                     vf,
                     handler,
                     optPluralRules,
-                    appendTo));
+                    appendTo,
+                    status));
+    assertSuccess("", status);
     if (expectedAttributes != NULL) {
         verifyAttributes(expectedAttributes, handler.attributes);
     }
@@ -1690,7 +1801,9 @@ void NumberFormat2Test::verifyValueFormatter(
         const ValueFormatter &formatter,
         DigitList &digits,
         const NumberFormat2Test_Attributes *expectedAttributes) {
-    formatter.round(digits);
+    UErrorCode status = U_ZERO_ERROR;
+    formatter.round(digits, status);
+    assertSuccess("", status);
     assertEquals(
             "",
             expected.countChar32(),
