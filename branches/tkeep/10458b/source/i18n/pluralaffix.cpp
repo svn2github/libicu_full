@@ -102,6 +102,16 @@ PluralAffix::remove() {
 }
 
 void
+PluralAffix::appendUChar(
+        const UChar value, int32_t fieldId) {
+    for (int32_t i = 0; i < UPRV_LENGTHOF(affixes); ++i) {
+        if (affixes[i] != NULL) {
+            affixes[i]->appendUChar(value, fieldId);
+        }
+    }
+}
+
+void
 PluralAffix::append(
         const UnicodeString &value, int32_t fieldId) {
     for (int32_t i = 0; i < UPRV_LENGTHOF(affixes); ++i) {

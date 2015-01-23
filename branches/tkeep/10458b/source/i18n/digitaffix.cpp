@@ -20,6 +20,11 @@ DigitAffix::remove() {
 }
 
 void
+DigitAffix::appendUChar(UChar value, int32_t fieldId) {
+    fAffix.append(value);
+    fAnnotations.append((UChar) fieldId);
+}
+void
 DigitAffix::append(const UnicodeString &value, int32_t fieldId) {
     fAffix.append(value);
     int32_t len = value.length();

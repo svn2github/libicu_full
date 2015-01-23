@@ -97,7 +97,8 @@ tzfmt.o compactdecimalformat.o gender.o region.o scriptset.o identifier_info.o \
 uregion.o reldatefmt.o quantityformatter.o measunit.o filteredbrk.o \
 sharedbreakiterator.o scientificnumberformatter.o digitgrouping.o \
 digitinterval.o digitformatter.o digitaffix.o valueformatter.o \
-digitaffixesandpadding.o pluralaffix.o sciformatter.o precision.o
+digitaffixesandpadding.o pluralaffix.o sciformatter.o precision.o \
+affixpatternparser.o
 
 ## Header files to install
 HEADERS = $(srcdir)/unicode/*.h

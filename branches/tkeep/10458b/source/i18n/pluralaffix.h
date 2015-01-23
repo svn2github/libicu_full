@@ -47,6 +47,12 @@ public:
      * Append value to all variants. If fieldId present, value is that
      * field type.
      */
+    void appendUChar(UChar value, int32_t fieldId=UNUM_FIELD_COUNT);
+
+    /**
+     * Append value to all variants. If fieldId present, value is that
+     * field type.
+     */
     void append(const UnicodeString &value, int32_t fieldId=UNUM_FIELD_COUNT);
 
     /**

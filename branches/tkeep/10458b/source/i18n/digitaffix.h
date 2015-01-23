@@ -36,6 +36,12 @@ public:
      * Append value to this affix. If fieldId is present, the appended
      * string is considered to be the type fieldId.
      */
+    void appendUChar(UChar value, int32_t fieldId=UNUM_FIELD_COUNT);
+
+    /**
+     * Append value to this affix. If fieldId is present, the appended
+     * string is considered to be the type fieldId.
+     */
     void append(const UnicodeString &value, int32_t fieldId=UNUM_FIELD_COUNT);
 
     /**
