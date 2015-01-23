@@ -139,6 +139,24 @@ AffixPatternParser::usesCurrencies(const UnicodeString &affixStr) {
     return FALSE;
 }
 
+UnicodeString &
+AffixPatternParser::unescape(
+        const UnicodeString &affixStr, UnicodeString &appendTo) {
+    const UChar *buffer = affixStr.getBuffer();
+    int32_t len = affixStr.length();
+    for (int32_t i = 0; i < len; ) {
+        UChar token;
+        int32_t tokenSize = nextToken(buffer, i, len, &token);
+        i += tokenSize;
+        if (tokenSize == 1) {
+            appendTo.append((UChar) token);
+        } else {
+            appendTo.append(buffer, i - tokenSize + 1, tokenSize - 1);
+        }
+    }
+    return appendTo;
+}
+
 int32_t
 AffixPatternParser::parse(
         const UnicodeString &affixStr,

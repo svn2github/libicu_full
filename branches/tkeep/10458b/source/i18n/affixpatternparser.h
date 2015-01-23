@@ -49,6 +49,8 @@ int32_t parse(
         UErrorCode &status) const;
 static UBool usesCurrencies(
         const UnicodeString &affixStr);
+static UnicodeString &unescape(
+        const UnicodeString &affixStr, UnicodeString &appendTo);
 private:
 UnicodeString fPercent;
 UnicodeString fPermill;

@@ -906,7 +906,7 @@ DigitList::ensureCapacity(int32_t requestedCapacity, UErrorCode &status) {
 void
 DigitList::round(int32_t maximumDigits)
 {
-    trim();
+    reduce();
     if (maximumDigits >= fDecNumber->digits) {
         return;
     }
@@ -914,14 +914,14 @@ DigitList::round(int32_t maximumDigits)
     fContext.digits = maximumDigits;
     uprv_decNumberPlus(fDecNumber, fDecNumber, &fContext);
     fContext.digits = savedDigits;
-    uprv_decNumberTrim(fDecNumber);
+    reduce();
     internalClear();
 }
 
 
 void
 DigitList::roundFixedPoint(int32_t maximumFractionDigits) {
-    trim();        // Remove trailing zeros.
+    reduce();        // Remove trailing zeros.
     if (fDecNumber->exponent >= -maximumFractionDigits) {
         return;
     }
@@ -931,7 +931,7 @@ DigitList::roundFixedPoint(int32_t maximumFractionDigits) {
     scale.lsu[0] = 1;
     
     uprv_decNumberQuantize(fDecNumber, fDecNumber, &scale, &fContext);
-    trim();
+    reduce();
     internalClear();
 }
 
@@ -981,7 +981,7 @@ DigitList::getDigitByExponent(int32_t exponent) const {
 
 void
 DigitList::roundAtExponent(int32_t exponent, int32_t maxSigDigits) {
-    trim();
+    reduce();
     if (maxSigDigits < fDecNumber->digits) {
         int32_t minExponent = fDecNumber->digits + fDecNumber->exponent - maxSigDigits;
         if (exponent < minExponent) {
@@ -1007,7 +1007,7 @@ DigitList::quantize(const DigitList &quantity, UErrorCode &status) {
     div(quantity, status);
     roundAtExponent(0);
     mult(quantity, status);
-    trim();
+    reduce();
 }
 
 int32_t
