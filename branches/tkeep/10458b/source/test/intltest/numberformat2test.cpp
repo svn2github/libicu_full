@@ -27,6 +27,8 @@
 #include "precision.h"
 #include "plurrule_impl.h"
 #include "unicode/plurrule.h"
+#include "decimalformatpattern.h"
+#include "affixpatternparser.h"
 
 static const int32_t kIntField = 4938;
 static const int32_t kSignField = 5770;
@@ -85,12 +87,15 @@ private:
     void verifyInterval(const DigitInterval &, int32_t minInclusive, int32_t maxExclusive);
     void TestGroupingUsed();
     void TestBenchmark();
+    void TestBenchmark2();
     void TestDigitListInterval();
     void TestDigitAffixesAndPadding();
     void TestPluralsAndRounding();
     void TestPluralsAndRoundingScientific();
     void TestValueFormatter();
     void TestValueFormatterScientific();
+    void TestCurrencyAffixInfo();
+    void TestAffixPatternParser();
     void TestPluralAffix();
     void TestDigitAffix();
     void TestDigitFormatterDefaultCtor();
@@ -173,6 +178,9 @@ void NumberFormat2Test::runIndexedTest(
     TESTCASE_AUTO(TestSciFormatterDefaultCtor);
     TESTCASE_AUTO(TestSciFormatter);
     TESTCASE_AUTO(TestBenchmark);
+    TESTCASE_AUTO(TestBenchmark2);
+    TESTCASE_AUTO(TestCurrencyAffixInfo);
+    TESTCASE_AUTO(TestAffixPatternParser);
     TESTCASE_AUTO(TestPluralAffix);
     TESTCASE_AUTO(TestDigitAffix);
     TESTCASE_AUTO(TestValueFormatter);
@@ -507,42 +515,69 @@ void NumberFormat2Test::TestRounding() {
 }
 void NumberFormat2Test::TestBenchmark() {
 /*
-    DigitList digits;
-    digits.getSmallestInterval(interval);
-    interval.setFracDigitCount(4);
-    verifyDigitFormatter(
-            "996.000",
-            formatter,
-            digits,
-            grouping,
-            interval,
-            FALSE,
-            NULL);
-
     UErrorCode status = U_ZERO_ERROR;
     DecimalFormatSymbols symbols("en", status);
     DigitFormatter formatter(symbols);
-    DigitInterval interval;
-    DigitGrouping grouping;
-    UnicodeString appendTo;
-    grouping.fGrouping = 3;
-    clock_t start = clock();
+    SciFormatter sciformatter(symbols);
+    ScientificPrecision precision;
+    precision.fMantissa.fMax.setFracDigitCount(5);
+    SciFormatterOptions options;
+    ValueFormatter vf;
+    vf.prepareScientificFormatting(
+            sciformatter, formatter, precision, options);
+    DigitAffixesAndPadding aap;
+    aap.fNegativePrefix.append("-", UNUM_SIGN_FIELD);
     FieldPosition fpos(FieldPosition::DONT_CARE);
-    FieldPositionOnlyHandler handler(fpos);
+    clock_t start = clock();
     for (int32_t i = 0; i < 1000000; ++i) {
+        UnicodeString appendTo;
         DigitList digits;
-        digits.set(8192);
-        formatter.format(
+        digits.set(299792458);
+        FieldPositionOnlyHandler handler(fpos);
+        aap.format(
                 digits,
-                grouping,
-                digits.getSmallestInterval(interval),
-                TRUE,
+                vf,
                 handler,
-                appendTo);
+                NULL,
+                appendTo,
+                status);
     }
     errln("Took %f", (double) (clock() - start) / CLOCKS_PER_SEC);
 */
 }
+
+void NumberFormat2Test::TestBenchmark2() {
+/*
+    UErrorCode status = U_ZERO_ERROR;
+    UParseError perror;
+    NumberFormat *nf = NumberFormat::createScientificInstance("en", status);
+    nf->setMaximumFractionDigits(5);
+    FieldPosition fpos(FieldPosition::DONT_CARE);
+    clock_t start = clock();
+    for (int32_t i = 0; i < 1000000; ++i) {
+        UnicodeString appendTo;
+        DigitList digits;
+        digits.set(299792458);
+        nf->format(digits, appendTo, fpos, status);
+    }
+    errln("Took %f", (double) (clock() - start) / CLOCKS_PER_SEC);
+    UErrorCode status = U_ZERO_ERROR;
+    UParseError perror;
+    DecimalFormatSymbols symbols("en", status);
+    DecimalFormatPatternParser parser;
+    parser.useSymbols(symbols);
+    UnicodeString pattern("\u00a4\u00a4% 0.00;\u00a4\u00a4 (-#)");
+    pattern = pattern.unescape();
+    DecimalFormatPattern out;
+    parser.applyPatternWithoutExpandAffix(
+            pattern, out, perror, status);
+    assertSuccess("", status);
+    errln(out.fPosPrefixPattern);
+    errln(out.fNegPrefixPattern);
+    errln(out.fNegSuffixPattern);
+*/
+}
+
 
 void NumberFormat2Test::TestDigitFormatterDefaultCtor() {
     DigitFormatter formatter;
@@ -1117,6 +1152,93 @@ void NumberFormat2Test::TestPluralAffix() {
     assertFalse("", pa.hasMultipleVariants());
     
 }
+
+void NumberFormat2Test::TestCurrencyAffixInfo() {
+    UErrorCode status = U_ZERO_ERROR;
+    static UChar USD[] = {0x55, 0x53, 0x44};
+    LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
+    CurrencyAffixInfo info;
+    info.set("en", rules.getAlias(), USD, status);
+    assertEquals("", "$", info.fSymbol);
+    assertEquals("", "USD", info.fISO);
+    assertEquals("", "US dollar", info.fLong.getByVariant("one").toString());
+    assertEquals("", "US dollars", info.fLong.getByVariant("other").toString());
+    assertEquals("", "US dollars", info.fLong.getByVariant("two").toString());
+    info.set("en", NULL, NULL, status);
+    UnicodeString expectedSymbol("\u00a4");
+    UnicodeString expectedSymbolIso("\u00a4\u00a4");
+    UnicodeString expectedSymbols("\u00a4\u00a4\u00a4");
+    assertEquals("", expectedSymbol.unescape(), info.fSymbol);
+    assertEquals("", expectedSymbolIso.unescape(), info.fISO);
+    assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("one").toString());
+    assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("other").toString());
+    assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("two").toString());
+}
+
+void NumberFormat2Test::TestAffixPatternParser() {
+    UErrorCode status = U_ZERO_ERROR;
+    static UChar USD[] = {0x55, 0x53, 0x44};
+    LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
+    AffixPatternParser parser;
+    parser.fCurrencyAffixInfo.set("en", rules.getAlias(), USD, status);
+    PluralAffix affix;
+    UnicodeString str("'--y'''dz'%'\u00a4\u00a4\u00a4\u00a4 y '\u00a4\u00a4\u00a4 or '\u00a4\u00a4 but '\u00a4");
+    str = str.unescape();
+    assertSuccess("", status);
+    assertEquals("", 2, parser.parse(str, affix, status));
+    assertSuccess("", status);
+    assertTrue("", AffixPatternParser::usesCurrencies(str));
+    assertTrue("", affix.hasMultipleVariants());
+    {
+        // other
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 1},
+            {UNUM_PERCENT_FIELD, 6, 7},
+            {UNUM_CURRENCY_FIELD, 7, 17},
+            {UNUM_CURRENCY_FIELD, 21, 31},
+            {UNUM_CURRENCY_FIELD, 35, 38},
+            {UNUM_CURRENCY_FIELD, 43, 44},
+            {0, -1, 0}};
+        verifyAffix(
+                "--y'dz%US dollars\u00a4 y US dollars or USD but $",
+                affix.getByVariant("other"),
+                expectedAttributes);
+    }
+    {
+        // one
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 0, 1},
+            {UNUM_PERCENT_FIELD, 6, 7},
+            {UNUM_CURRENCY_FIELD, 7, 16},
+            {UNUM_CURRENCY_FIELD, 20, 29},
+            {UNUM_CURRENCY_FIELD, 33, 36},
+            {UNUM_CURRENCY_FIELD, 41, 42},
+            {0, -1, 0}};
+        verifyAffix(
+                "--y'dz%US dollar\u00a4 y US dollar or USD but $",
+                affix.getByVariant("one"),
+                expectedAttributes);
+    }
+    affix.remove();
+    str = "%'-";
+    assertFalse("", AffixPatternParser::usesCurrencies(str));
+    assertEquals("", 0, parser.parse(str, affix, status));
+    assertSuccess("", status);
+    assertFalse("", affix.hasMultipleVariants());
+    {
+        // other
+        NumberFormat2Test_Attributes expectedAttributes[] = {
+            {UNUM_SIGN_FIELD, 1, 2},
+            {0, -1, 0}};
+        verifyAffix(
+                "%-",
+                affix.getByVariant("other"),
+                expectedAttributes);
+    }
+    UnicodeString a4("\u00a4");
+    assertFalse("", AffixPatternParser::usesCurrencies(a4.unescape()));
+}
+
 
 void NumberFormat2Test::TestDigitAffixesAndPadding() {
     UErrorCode status = U_ZERO_ERROR;
@@ -1789,7 +1911,7 @@ void NumberFormat2Test::verifyAffix(
     NumberFormat2Test_FieldPositionHandler handler;
     assertEquals(
             "",
-            expected,
+            expected.unescape(),
             affix.format(handler, appendTo));
     if (expectedAttributes != NULL) {
         verifyAttributes(expectedAttributes, handler.attributes);
