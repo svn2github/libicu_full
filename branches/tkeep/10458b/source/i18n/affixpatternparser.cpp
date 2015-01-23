@@ -11,6 +11,7 @@
 #include "unicode/ucurr.h"
 #include "unicode/plurrule.h"
 #include "precision.h"
+#include "unicode/dcfmtsym.h"
 
 U_NAMESPACE_BEGIN
 
@@ -27,6 +28,11 @@ nextToken(const UChar *buffer, int32_t idx, int32_t len, UChar *token) {
         return i;
     }
     return 2;
+}
+
+CurrencyAffixInfo::CurrencyAffixInfo() {
+    UErrorCode status = U_ZERO_ERROR;
+    set(NULL, NULL, NULL, status);
 }
 
 void
@@ -80,24 +86,6 @@ CurrencyAffixInfo::set(
     delete keywords;
 }
 
-UBool
-AffixPatternParser::usesCurrencies(const UnicodeString &affixStr) {
-    const UChar *buffer = affixStr.getBuffer();
-    int32_t len = affixStr.length();
-    for (int32_t i = 0; i < len; ) {
-        UChar token;
-        int32_t tokenSize = nextToken(buffer, i, len, &token);
-        i += tokenSize;
-        if (tokenSize == 1) {
-            continue;
-        }
-        if (token == 0xa4) {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
 void
 CurrencyAffixInfo::adjustPrecision(
         const UChar *currency, const UCurrencyUsage usage,
@@ -118,6 +106,37 @@ CurrencyAffixInfo::adjustPrecision(
         // guard against round-off error
         precision.fRoundingIncrement.round(6);
     }
+}
+
+AffixPatternParser::AffixPatternParser(
+        const DecimalFormatSymbols &symbols) {
+    setDecimalFormatSymbols(symbols);
+}
+
+void
+AffixPatternParser::setDecimalFormatSymbols(
+        const DecimalFormatSymbols &symbols) {
+    fPercent = symbols.getConstSymbol(DecimalFormatSymbols::kPercentSymbol);
+    fPermill = symbols.getConstSymbol(DecimalFormatSymbols::kPerMillSymbol);
+    fNegative = symbols.getConstSymbol(DecimalFormatSymbols::kMinusSignSymbol);
+}
+
+UBool
+AffixPatternParser::usesCurrencies(const UnicodeString &affixStr) {
+    const UChar *buffer = affixStr.getBuffer();
+    int32_t len = affixStr.length();
+    for (int32_t i = 0; i < len; ) {
+        UChar token;
+        int32_t tokenSize = nextToken(buffer, i, len, &token);
+        i += tokenSize;
+        if (tokenSize == 1) {
+            continue;
+        }
+        if (token == 0xa4) {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 int32_t
@@ -141,15 +160,15 @@ AffixPatternParser::parse(
         }
         switch (token) {
         case 0x25:
-            affix.appendUChar(token, UNUM_PERCENT_FIELD);
+            affix.append(fPercent, UNUM_PERCENT_FIELD);
             result = 2;
             break;
         case 0x2030:
-            affix.appendUChar(token, UNUM_PERMILL_FIELD);
+            affix.append(fPermill, UNUM_PERMILL_FIELD);
             result = 3;
             break;
         case 0x2D:
-            affix.appendUChar(token, UNUM_SIGN_FIELD);
+            affix.append(fNegative, UNUM_SIGN_FIELD);
             break;
         case 0xA4:
         {

@@ -35,7 +35,72 @@
 #include "numberformattesttuple.h"
 #include "ucbuf.h"
 #include "ustrfmt.h"
+#include "datadrivennumberformattestsuite.h"
 
+class NumberFormatTestDataDriven : public icu::DataDrivenNumberFormatTestSuite {
+public:
+NumberFormatTestDataDriven(IntlTest *t) : DataDrivenNumberFormatTestSuite(t) { }
+protected:
+UBool isFormatPass(
+        const NumberFormatTestTuple &tuple,
+        UnicodeString &appendErrorMessage,
+        UErrorCode &status);
+
+};
+
+UBool NumberFormatTestDataDriven::isFormatPass(
+        const NumberFormatTestTuple &tuple,
+        UnicodeString &appendErrorMessage,
+        UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
+    Locale en("en");
+    DecimalFormat fmt(
+            NFTT_GET_FIELD(tuple, pattern, "0"),
+            new DecimalFormatSymbols(NFTT_GET_FIELD(tuple, locale, en), status),
+            status);
+    if (U_FAILURE(status)) {
+        appendErrorMessage.append("Error creating DecimalFormat");
+        return FALSE;
+    }
+    if (tuple.minIntegerDigitsFlag) {
+        fmt.setMinimumIntegerDigits(tuple.minIntegerDigits);
+    }
+    if (tuple.maxIntegerDigitsFlag) {
+        fmt.setMaximumIntegerDigits(tuple.maxIntegerDigits);
+    }
+    if (tuple.minFractionDigitsFlag) {
+        fmt.setMinimumFractionDigits(tuple.minFractionDigits);
+    }
+    if (tuple.maxFractionDigitsFlag) {
+        fmt.setMaximumFractionDigits(tuple.maxFractionDigits);
+    }
+    if (tuple.currencyFlag) {
+        UnicodeString currency(tuple.currency);
+        fmt.setCurrency(currency.getTerminatedBuffer());
+    }
+    if (tuple.minGroupingDigitsFlag) {
+        // Oops, we don't support this
+        // fmt.setMinimumGroupingDigits(tuple.minGroupingDigits);
+    }
+    UnicodeString appendTo;
+    FieldPositionIterator posIter;
+    CharString formatValue;
+    formatValue.appendInvariantChars(tuple.format, status);
+    fmt.format(StringPiece(formatValue.data()), appendTo, &posIter, status);
+    if (U_FAILURE(status)) {
+        appendErrorMessage.append("Error formatting.");
+        return FALSE;
+    }
+    if (appendTo != tuple.output) {
+        appendErrorMessage.append(
+                UnicodeString("Expected: ") + tuple.output + ", got: " + appendTo);
+        return FALSE;
+    }
+    return TRUE;
+}
+    
 U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
 
 //#define NUMFMTST_CACHE_DEBUG 1
@@ -690,9 +755,6 @@ NumberFormatTest::TestCurrencySign(void)
 // -------------------------------------
 
 static UChar toHexString(int32_t i) { return (UChar)(i + (i < 10 ? 0x30 : (0x41 - 10))); }
-
-static UBool isCROrLF(UChar c) { return c == 0xa || c == 0xd; } 
-static UBool isSpace(UChar c) { return c == 9 || c == 0x20 || c == 0x3000; }
 
 UnicodeString&
 NumberFormatTest::escape(UnicodeString& s)
@@ -7805,247 +7867,10 @@ void NumberFormatTest::TestNumberFormatTestTuple() {
     }
 }
 
-void NumberFormatTest::TestDataDrivenSpecification() {
-    UErrorCode status = U_ZERO_ERROR;
-    CharString path(getSourceTestData(status), status);
-    path.appendPathPart("numberformattestspecification.txt", status);
-    const char *codePage = "UTF-8";
-    LocalUCHARBUFPointer f(ucbuf_open(path.data(), &codePage, TRUE, FALSE, &status));
-    if (!assertSuccess("Can't open data file", status)) {
-        return;
-    }
-    UnicodeString columnValues[kNumberFormatTestTupleFieldCount];
-    ENumberFormatTestTupleField columnTypes[kNumberFormatTestTupleFieldCount];
-    int32_t columnCount;
-    int32_t state = 0;
-    while(U_SUCCESS(status)) {
-        // Read a new line if necessary.
-        if(fFileLine.isEmpty()) {
-            if(!readLine(f.getAlias(), status)) { break; }
-            if (fFileLine.isEmpty() && state == 2) {
-                state = 0;
-            }
-            continue;
-        }
-        if (fFileLine.startsWith("//")) {
-            fFileLine.remove();
-            continue;
-        }
-        // Initial setup of test.
-        if (state == 0) {
-            if (fFileLine.startsWith(UNICODE_STRING("test ", 5))) {
-                fFileTestName = fFileLine;
-                fTuple.clear();
-            } else if(fFileLine.startsWith(UNICODE_STRING("set ", 4))) {
-                setTupleField(status);
-            } else if(fFileLine.startsWith(UNICODE_STRING("begin", 5))) {
-                state = 1;
-            } else {
-                showError("Unrecognized verb.");
-                return;
-            }
-        // column specification
-        } else if (state == 1) {
-            columnCount = splitBy(columnValues, UPRV_LENGTHOF(columnValues), 0x9);
-            for (int32_t i = 0; i < columnCount; ++i) {
-                columnTypes[i] = NumberFormatTestTuple::getFieldByName(
-                    columnValues[i]);
-                if (columnTypes[i] == kNumberFormatTestTupleFieldCount) {
-                    showError("Unrecognized field name.");
-                    return;
-                }
-            }
-            state = 2;
-        // run the tests
-        } else {
-            int32_t columnsInThisRow = splitBy(columnValues, columnCount, 0x9);
-            for (int32_t i = 0; i < columnsInThisRow; ++i) {
-                fTuple.setField(
-                        columnTypes[i], columnValues[i].unescape(), status);
-            }
-            if (U_FAILURE(status)) {
-                showError("Invalid column values");
-                return;
-            }
-            if (!breaksC()) {
-                UnicodeString errorMessage;
-                if (!isPass(fTuple, errorMessage, status)) {
-                    showFailure(errorMessage);
-                }
-            }
-        }
-        fFileLine.remove();
-    }
+void
+NumberFormatTest::TestDataDrivenSpecification() {
+    NumberFormatTestDataDriven dd(this);
+    dd.run("numberformattestspecification.txt", FALSE);
 }
-
-UBool NumberFormatTest::breaksC() {
-    return (NFTT_GET_FIELD(fTuple, breaks, "").toUpper().indexOf(0x43) != -1);
-}
-
-void NumberFormatTest::setTupleField(UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return;
-    }
-    UnicodeString parts[3];
-    int32_t partCount = splitBy(parts, UPRV_LENGTHOF(parts), 0x20);
-    if (partCount < 3) {
-        showError("Set expects 2 parameters");
-        status = U_PARSE_ERROR;
-        return;
-    }
-    if (!fTuple.setField(
-            NumberFormatTestTuple::getFieldByName(parts[1]),
-            parts[2].unescape(),
-            status)) {
-        showError("Invalid field value");
-    }
-}
-
-
-int32_t
-NumberFormatTest::splitBy(
-        UnicodeString *columnValues,
-        int32_t columnValuesCount,
-        UChar delimiter) {
-    int32_t colIdx = 0;
-    int32_t colStart = 0;
-    int32_t len = fFileLine.length();
-    for (int32_t idx = 0; colIdx < columnValuesCount - 1 && idx < len; ++idx) {
-        UChar ch = fFileLine.charAt(idx);
-        if (ch == delimiter) {
-            columnValues[colIdx++] = 
-                    fFileLine.tempSubString(colStart, idx - colStart);
-            colStart = idx + 1;
-        }
-    }
-    columnValues[colIdx++] = 
-            fFileLine.tempSubString(colStart, len - colStart);
-    return colIdx;
-}
-
-void NumberFormatTest::showLineInfo() {
-    UnicodeString indent("    ");
-    infoln(indent + fFileTestName);
-    infoln(indent + fFileLine);
-}
-
-void NumberFormatTest::showError(const char *message) {
-    errln("line %d: %s", (int) fFileLineNumber, message);
-    showLineInfo();
-}
-
-void NumberFormatTest::showFailure(const UnicodeString &message) {
-    UChar lineStr[20];
-    uprv_itou(
-            lineStr, UPRV_LENGTHOF(lineStr), (uint32_t) fFileLineNumber, 10, 1);
-    UnicodeString fullMessage("line ");
-    errln(fullMessage.append(lineStr).append(": ")
-            .append(prettify(message)));
-    showLineInfo();
-}
-
-UBool NumberFormatTest::readLine(
-        UCHARBUF *f, UErrorCode &status) {
-    int32_t lineLength;
-    const UChar *line = ucbuf_readline(f, &lineLength, &status);
-    if(line == NULL || U_FAILURE(status)) {
-        if (U_FAILURE(status)) {
-            errln("Error reading line from file.");
-        }
-        fFileLine.remove();
-        return FALSE;
-    }
-    ++fFileLineNumber;
-    // Strip trailing CR/LF, comments, and spaces.
-    while(lineLength > 0 && isCROrLF(line[lineLength - 1])) { --lineLength; }
-    fFileLine.setTo(FALSE, line, lineLength);
-    while(lineLength > 0 && isSpace(line[lineLength - 1])) { --lineLength; }
-    if (lineLength == 0) {
-        fFileLine.remove();
-    }
-    return TRUE;
-}
-
-UBool NumberFormatTest::isPass(
-        const NumberFormatTestTuple &tuple,
-        UnicodeString &appendErrorMessage,
-        UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return FALSE;
-    }
-    UBool result = FALSE;
-    if (tuple.formatFlag && tuple.outputFlag) {
-        result = isFormatPass(tuple, appendErrorMessage, status);
-    } else {
-        appendErrorMessage.append("At least format and outputFlag must be set.");
-        status = U_ILLEGAL_ARGUMENT_ERROR;
-    }
-    if (!result) {
-        if (appendErrorMessage.length() > 0) {
-            appendErrorMessage.append(": ");
-        }
-        if (U_FAILURE(status)) {
-            appendErrorMessage.append(u_errorName(status));
-            appendErrorMessage.append(": ");
-        }
-        tuple.toString(appendErrorMessage);
-    }
-    return result;
-}
-
-UBool NumberFormatTest::isFormatPass(
-        const NumberFormatTestTuple &tuple,
-        UnicodeString &appendErrorMessage,
-        UErrorCode &status) {
-    if (U_FAILURE(status)) {
-        return FALSE;
-    }
-    Locale en("en");
-    DecimalFormat fmt(
-            NFTT_GET_FIELD(tuple, pattern, "0"),
-            new DecimalFormatSymbols(NFTT_GET_FIELD(tuple, locale, en), status),
-            status);
-    if (U_FAILURE(status)) {
-        appendErrorMessage.append("Error creating DecimalFormat");
-        return FALSE;
-    }
-    if (tuple.minIntegerDigitsFlag) {
-        fmt.setMinimumIntegerDigits(tuple.minIntegerDigits);
-    }
-    if (tuple.maxIntegerDigitsFlag) {
-        fmt.setMaximumIntegerDigits(tuple.maxIntegerDigits);
-    }
-    if (tuple.minFractionDigitsFlag) {
-        fmt.setMinimumFractionDigits(tuple.minFractionDigits);
-    }
-    if (tuple.maxFractionDigitsFlag) {
-        fmt.setMaximumFractionDigits(tuple.maxFractionDigits);
-    }
-    if (tuple.currencyFlag) {
-        UnicodeString currency(tuple.currency);
-        fmt.setCurrency(currency.getTerminatedBuffer());
-    }
-    if (tuple.minGroupingDigitsFlag) {
-        // Oops, we don't support this
-        // fmt.setMinimumGroupingDigits(tuple.minGroupingDigits);
-    }
-    UnicodeString appendTo;
-    FieldPositionIterator posIter;
-    CharString formatValue;
-    formatValue.appendInvariantChars(tuple.format, status);
-    fmt.format(StringPiece(formatValue.data()), appendTo, &posIter, status);
-    if (U_FAILURE(status)) {
-        appendErrorMessage.append("Error formatting.");
-        return FALSE;
-    }
-    if (appendTo != tuple.output) {
-        appendErrorMessage.append(
-                UnicodeString("Expected: ") + tuple.output + ", got: " + appendTo);
-        return FALSE;
-    }
-    return TRUE;
-}
-    
-
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

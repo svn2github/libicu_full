@@ -1154,17 +1154,7 @@ void NumberFormat2Test::TestPluralAffix() {
 }
 
 void NumberFormat2Test::TestCurrencyAffixInfo() {
-    UErrorCode status = U_ZERO_ERROR;
-    static UChar USD[] = {0x55, 0x53, 0x44};
-    LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
     CurrencyAffixInfo info;
-    info.set("en", rules.getAlias(), USD, status);
-    assertEquals("", "$", info.fSymbol);
-    assertEquals("", "USD", info.fISO);
-    assertEquals("", "US dollar", info.fLong.getByVariant("one").toString());
-    assertEquals("", "US dollars", info.fLong.getByVariant("other").toString());
-    assertEquals("", "US dollars", info.fLong.getByVariant("two").toString());
-    info.set("en", NULL, NULL, status);
     UnicodeString expectedSymbol("\u00a4");
     UnicodeString expectedSymbolIso("\u00a4\u00a4");
     UnicodeString expectedSymbols("\u00a4\u00a4\u00a4");
@@ -1173,13 +1163,23 @@ void NumberFormat2Test::TestCurrencyAffixInfo() {
     assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("one").toString());
     assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("other").toString());
     assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("two").toString());
+    UErrorCode status = U_ZERO_ERROR;
+    static UChar USD[] = {0x55, 0x53, 0x44};
+    LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
+    info.set("en", rules.getAlias(), USD, status);
+    assertEquals("", "$", info.fSymbol);
+    assertEquals("", "USD", info.fISO);
+    assertEquals("", "US dollar", info.fLong.getByVariant("one").toString());
+    assertEquals("", "US dollars", info.fLong.getByVariant("other").toString());
+    assertEquals("", "US dollars", info.fLong.getByVariant("two").toString());
 }
 
 void NumberFormat2Test::TestAffixPatternParser() {
     UErrorCode status = U_ZERO_ERROR;
     static UChar USD[] = {0x55, 0x53, 0x44};
     LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
-    AffixPatternParser parser;
+    DecimalFormatSymbols symbols("en", status);
+    AffixPatternParser parser(symbols);
     parser.fCurrencyAffixInfo.set("en", rules.getAlias(), USD, status);
     PluralAffix affix;
     UnicodeString str("'--y'''dz'%'\u00a4\u00a4\u00a4\u00a4 y '\u00a4\u00a4\u00a4 or '\u00a4\u00a4 but '\u00a4");

@@ -21,9 +21,11 @@ U_NAMESPACE_BEGIN
 
 class PluralRules;
 class FixedPrecision;
+class DecimalFormatSymbols;
 
 class U_I18N_API CurrencyAffixInfo : public UMemory {
 public:
+    CurrencyAffixInfo();
     UnicodeString fSymbol;
     UnicodeString fISO;
     PluralAffix fLong;
@@ -38,6 +40,8 @@ public:
 
 class U_I18N_API AffixPatternParser : public UMemory {
 public:
+AffixPatternParser(const DecimalFormatSymbols &symbols);
+void setDecimalFormatSymbols(const DecimalFormatSymbols &symbols);
 CurrencyAffixInfo fCurrencyAffixInfo;
 int32_t parse(
         const UnicodeString &affixStr,
@@ -45,6 +49,10 @@ int32_t parse(
         UErrorCode &status) const;
 static UBool usesCurrencies(
         const UnicodeString &affixStr);
+private:
+UnicodeString fPercent;
+UnicodeString fPermill;
+UnicodeString fNegative;
 };
 
 

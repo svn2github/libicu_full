@@ -189,31 +189,7 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void TestCurrencyUsage();
     void TestNumberFormatTestTuple();
     void TestDataDrivenSpecification();
-    NumberFormatTest() : fFileLineNumber(0) { }
  private:
-    UnicodeString fFileLine;
-    int32_t fFileLineNumber;
-    UnicodeString fFileTestName;
-    NumberFormatTestTuple fTuple;
-
-    void setTupleField(UErrorCode &);
-    int32_t splitBy(
-            UnicodeString *columnValues,
-            int32_t columnValueCount,
-            UChar delimiter);
-    void showError(const char *message);
-    void showFailure(const UnicodeString &message);
-    void showLineInfo();
-    UBool breaksC();
-    UBool readLine(UCHARBUF *f, UErrorCode &);
-    UBool isPass(
-            const NumberFormatTestTuple &tuple,
-            UnicodeString &appendErrorMessage,
-            UErrorCode &status);
-    UBool isFormatPass(
-            const NumberFormatTestTuple &tuple,
-            UnicodeString &appendErrorMessage,
-            UErrorCode &status);
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
 
     void expectParseCurrency(const NumberFormat &fmt, const UChar* currency, double amount, const char *text);
