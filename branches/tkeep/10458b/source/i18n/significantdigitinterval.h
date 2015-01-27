@@ -29,18 +29,30 @@ public:
     SignificantDigitInterval()
             : fMax(INT32_MAX), fMin(0) { }
 
+    /**
+     * Sets maximum significant digits. 0 or negative means no maximum.
+     */
     void setMax(int32_t count) {
         fMax = count <= 0 ? INT32_MAX : count;
     }
 
+    /**
+     * Get maximum significant digits. INT32_MAX means no maximum.
+     */
     int32_t getMax() const {
         return fMax;
     }
 
+    /**
+     * Sets minimum significant digits. 0 or negative means no minimum.
+     */
     void setMin(int32_t count) {
         fMin = count <= 0 ? 0 : count;
     }
 
+    /**
+     * Get maximum significant digits. 0 means no minimum.
+     */
     int32_t getMin() const {
         return fMin;
     }

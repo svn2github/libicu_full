@@ -93,12 +93,16 @@ CurrencyAffixInfo::adjustPrecision(
     if (U_FAILURE(status)) {
         return;
     }
+    UChar theCurrency[4];
+    u_strncpy(theCurrency, currency, 3);
+    theCurrency[3] = 0;
+
     int32_t digitCount = ucurr_getDefaultFractionDigitsForUsage(
-            currency, usage, &status);
+            theCurrency, usage, &status);
     precision.fMin.setFracDigitCount(digitCount);
     precision.fMax.setFracDigitCount(digitCount);
     double increment = ucurr_getRoundingIncrementForUsage(
-            currency, usage, &status);
+            theCurrency, usage, &status);
     if (increment == 0.0) {
         precision.fRoundingIncrement.clear();
     } else {

@@ -18,14 +18,19 @@
 U_NAMESPACE_BEGIN
 
 /**
- * Handles grouping when formatting a number.
+ * The digit grouping policy.
  */
 class U_I18N_API DigitGrouping : public UMemory {
 public:
+    /**
+     * Default is no digit grouping.
+     */
     DigitGrouping() : fGrouping(0), fGrouping2(0), fMinGrouping(0) { }
 
     /**
      * Returns true if a separator is needed after a particular digit.
+     * @param digitsLeftOfDecimal the total count of digits left of the
+     *  decimal.
      * @param digitPos 0 is the one's place; 1 is the 10's place; -1 is the
      *   1/10's place etc.
      */

@@ -24,8 +24,19 @@ class UnicodeString;
 class FieldPositionHandler;
 class PluralRules;
 
+/**
+ * A formatter of numbers. This class can format any numerical value
+ * except for not a number (NaN), positive infinity, and negative infinity.
+ * This class manages prefixes, suffixes, and padding but delegates the
+ * formatting of actual positive values to a ValueFormatter.
+ */
 class U_I18N_API DigitAffixesAndPadding : public UMemory {
 public:
+
+/**
+ * Equivalent to DecimalFormat EPadPosition, but redeclared here to prevent
+ * depending on DecimalFormat which would cause a circular dependency.
+ */
 enum EPadPosition {
     kPadBeforePrefix,
     kPadAfterPrefix,
@@ -33,19 +44,71 @@ enum EPadPosition {
     kPadAfterSuffix
 };
 
+/**
+ * The positive prefix
+ */
 PluralAffix fPositivePrefix;
+
+/**
+ * The positive suffix
+ */
 PluralAffix fPositiveSuffix;
+
+/**
+ * The negative suffix
+ */
 PluralAffix fNegativePrefix;
+
+/**
+ * The negative suffix
+ */
 PluralAffix fNegativeSuffix;
+
+/**
+ * The padding position
+ */
 EPadPosition fPadPosition;
+
+/**
+ * The padding character.
+ */
 UChar32 fPadChar;
+
+/**
+ * The field width in code points. The format method inserts instances of
+ * the padding character as needed in the desired padding position so that
+ * the entire formatted string contains this many code points. If the
+ * formatted string already exceeds this many code points, the format method
+ * inserts no padding.
+ */
 int32_t fWidth;
 
+/**
+ * Pad position is before prefix; padding character is '*' field width is 0.
+ * The affixes are all the empty string with no annotated fields with just
+ * the 'other' plural variation.
+ */
 DigitAffixesAndPadding()
         : fPadPosition(kPadBeforePrefix), fPadChar(0x2a), fWidth(0) { }
 
+/**
+ * Returns TRUE if a plural rules instance is needed to complete the
+ * formatting by detecting if any of the affixes have multiple plural
+ * variations.
+ */
 UBool needsPluralRules() const;
 
+/**
+ * Formats value and appends to appendTo.
+ *
+ * @param value the value to format.
+ * @param formatter handles the details of formatting the actual value.
+ * @param handler records field positions
+ * @param optPluralRules the plural rules, but may be NULL if
+ *   needsPluralRules returns FALSE. 
+ * @appendTo formatted string appended here.
+ * @status any error returned here.
+ */
 UnicodeString &format(
         DigitList &value,
         const ValueFormatter &formatter,

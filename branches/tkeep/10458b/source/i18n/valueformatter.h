@@ -31,8 +31,8 @@ class SciFormatterOptions;
 
 
 /**
- * A closure around formatting a value. As these instances are designed to
- * be short lived (they only exist while formatting a value), they
+ * A closure around rounding and formatting a value. As these instances are
+ * designed to be short lived (they only exist while formatting a value), they
  * do not make defensive copies nor do they adopt their attributes. Rather
  * the caller maintains ownership of all attributes.
  */
@@ -45,12 +45,16 @@ public:
      * Rounds the value according to how it will be formatted.
      * Round must be called to adjust value before calling select.
      * value is expected to be real e.g not Infinity or NaN.
+     *
+     * @param value this value is rounded in place.
+     * @param status any error returned here.
      */
     DigitList &round(DigitList &value, UErrorCode &status) const;
 
     /**
      * Return the plural form to use for a given value.
      * Value should have already been adjusted with round.
+     * @return 'zero', 'one', 'two', 'few', 'many', or 'other'
      */
     UnicodeString select(
         const PluralRules &rules,
@@ -61,7 +65,7 @@ public:
      * value must be positive.
      */
     UnicodeString &format(
-        const DigitList &value,
+        const DigitList &positiveValue,
         FieldPositionHandler &handler,
         UnicodeString &appendTo) const;
 
@@ -69,7 +73,7 @@ public:
      * Returns the number of code points needed.
      * value must be positive.
      */
-    int32_t countChar32(const DigitList &value) const;
+    int32_t countChar32(const DigitList &positiveValue) const;
   
     /**
      * Prepares this instance for fixed decimal formatting.

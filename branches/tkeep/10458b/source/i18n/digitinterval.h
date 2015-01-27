@@ -9,8 +9,8 @@
 * created by: Travis Keep
 */
 
-#ifndef __DIGIT_INTERVAL_H__
-#define __DIGIT_INTERVAL_H__
+#ifndef __DIGITINTERVAL_H__
+#define __DIGITINTERVAL_H__
 
 #include "unicode/utypes.h"
 #include "unicode/uobject.h"
