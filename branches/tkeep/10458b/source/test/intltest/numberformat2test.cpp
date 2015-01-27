@@ -161,7 +161,14 @@ NumberFormat2TestDecimalFormat::format(
 void NumberFormat2TestDecimalFormat::setCurrency(
         const UChar *currency, UErrorCode &status) {
     if (usesCurrency()) {
-        parseAffixes(currency, status);
+        if (currency == NULL || currency[0] == 0) {
+            parseAffixes(NULL, status);
+        } else {
+            UChar theCurrency[4];
+            u_strncpy(theCurrency, currency, 3);
+            theCurrency[3] = 0;
+            parseAffixes(theCurrency, status);
+        }
     }
 }
 
@@ -187,14 +194,9 @@ int32_t NumberFormat2TestDecimalFormat::parseAffixes(
             }
         }
         UChar currencyBuf[4];
-        if (currency == NULL || currency[0] == 0) {
-            if (U_FAILURE(status)) {
-                return 0;
-            }
-            status = U_ZERO_ERROR;
+        if (currency == NULL) {
             ucurr_forLocale(fLocale.getName(), currencyBuf, UPRV_LENGTHOF(currencyBuf), &status);
             if (U_SUCCESS(status)) {
-                currencyBuf[3] = 0;
                 currency = currencyBuf;
             } else {
                 status = U_ZERO_ERROR;
@@ -1454,7 +1456,7 @@ void NumberFormat2Test::TestCurrencyAffixInfo() {
     assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("other").toString());
     assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("two").toString());
     UErrorCode status = U_ZERO_ERROR;
-    static UChar USD[] = {0x55, 0x53, 0x44};
+    static UChar USD[] = {0x55, 0x53, 0x44, 0x0};
     LocalPointer<PluralRules> rules(PluralRules::forLocale("en", status));
     info.set("en", rules.getAlias(), USD, status);
     assertEquals("", "$", info.fSymbol);
@@ -1462,6 +1464,12 @@ void NumberFormat2Test::TestCurrencyAffixInfo() {
     assertEquals("", "US dollar", info.fLong.getByVariant("one").toString());
     assertEquals("", "US dollars", info.fLong.getByVariant("other").toString());
     assertEquals("", "US dollars", info.fLong.getByVariant("two").toString());
+    info.set(NULL, NULL, NULL, status);
+    assertEquals("", expectedSymbol.unescape(), info.fSymbol);
+    assertEquals("", expectedSymbolIso.unescape(), info.fISO);
+    assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("one").toString());
+    assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("other").toString());
+    assertEquals("", expectedSymbols.unescape(), info.fLong.getByVariant("two").toString());
 }
 
 void NumberFormat2Test::TestAffixPatternParser() {

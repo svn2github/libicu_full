@@ -58,10 +58,9 @@ public:
      *
      * @param locale the locale for the currency forms.
      * @param rules The plural rules for the locale. 
-     * @param currency the 3 character ISO code of the currency. Does not
-     *  have to be NULL terminated. If NULL, or the NULL terminated empty
-     *  string, resets this instance as if it were just created. In this
-     *  case, the first 2 parameters may be NULL as well.
+     * @param currency the null terminated, 3 character ISO code of the
+     * currency. If NULL, resets this instance as if it were just created.
+     * In this case, the first 2 parameters may be NULL as well.
      * @param status any error returned here.
      */
     void set(
@@ -70,8 +69,8 @@ public:
 
     /**
      * Adjusts the precision used for a particular currency.
-     * @param currency the 3 character ISO code of the currency. Does not
-     *  have to be NULL terminated.
+     * @param currency the null terminated, 3 character ISO code of the
+     * currency.
      * @param usage the usage of the currency
      * @param precision min/max fraction digits and rounding increment
      *  adjusted.

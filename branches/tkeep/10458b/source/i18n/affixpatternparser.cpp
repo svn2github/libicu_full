@@ -44,14 +44,7 @@ CurrencyAffixInfo::set(
     if (U_FAILURE(status)) {
         return;
     }
-    UChar theCurrency[4];
-    if (currency) {
-        u_strncpy(theCurrency, currency, 3);
-        theCurrency[3] = 0;
-    } else {
-        theCurrency[0] = 0;
-    }
-    if (theCurrency[0] == 0) {
+    if (currency == NULL) {
         static UChar defaultSymbols[] = {0xa4, 0xa4, 0xa4};
         fSymbol.setTo(defaultSymbols, 1);
         fISO.setTo(defaultSymbols, 2);
@@ -62,13 +55,13 @@ CurrencyAffixInfo::set(
     int32_t len;
     UBool unusedIsChoice;
     const UChar *symbol = ucurr_getName(
-            theCurrency, locale, UCURR_SYMBOL_NAME, &unusedIsChoice,
+            currency, locale, UCURR_SYMBOL_NAME, &unusedIsChoice,
             &len, &status);
     if (U_FAILURE(status)) {
         return;
     }
     fSymbol.setTo(symbol, len);
-    fISO.setTo(theCurrency, u_strlen(theCurrency));
+    fISO.setTo(currency, u_strlen(currency));
     fLong.remove();
     StringEnumeration* keywords = rules->getKeywords(status);
     if (U_FAILURE(status)) {
@@ -79,7 +72,7 @@ CurrencyAffixInfo::set(
         CharString pCount;
         pCount.appendInvariantChars(*pluralCount, status);
         const UChar *pluralName = ucurr_getPluralName(
-            theCurrency, locale, &unusedIsChoice, pCount.data(),
+            currency, locale, &unusedIsChoice, pCount.data(),
             &len, &status);
         fLong.setVariant(pCount.data(), UnicodeString(pluralName, len), status);
     }
@@ -93,16 +86,13 @@ CurrencyAffixInfo::adjustPrecision(
     if (U_FAILURE(status)) {
         return;
     }
-    UChar theCurrency[4];
-    u_strncpy(theCurrency, currency, 3);
-    theCurrency[3] = 0;
 
     int32_t digitCount = ucurr_getDefaultFractionDigitsForUsage(
-            theCurrency, usage, &status);
+            currency, usage, &status);
     precision.fMin.setFracDigitCount(digitCount);
     precision.fMax.setFracDigitCount(digitCount);
     double increment = ucurr_getRoundingIncrementForUsage(
-            theCurrency, usage, &status);
+            currency, usage, &status);
     if (increment == 0.0) {
         precision.fRoundingIncrement.clear();
     } else {
