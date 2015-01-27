@@ -33,8 +33,11 @@ class SciFormatterOptions;
 /**
  * A closure around rounding and formatting a value. As these instances are
  * designed to be short lived (they only exist while formatting a value), they
- * do not make defensive copies nor do they adopt their attributes. Rather
- * the caller maintains ownership of all attributes.
+ * do not own their own attributes. Rather the caller maintains ownership of
+ * all attributes. A caller first calls a prepareXXX method on an instance
+ * to share its data before using that instance. Using an
+ * instance without first calling a prepareXXX method results in an
+ * assertion error and a program crash.
  */
 class ValueFormatter : public UObject {
 public:
